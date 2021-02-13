@@ -18,8 +18,10 @@ import datapipes.nonblocking as nonblocking
 
 DEFAULT_NON_BLOCKING_SLEEP = 0.001
 
+
 def default_not_available_hook():
     time.sleep(DEFAULT_NON_BLOCKING_SLEEP)
+
 
 class NonBlocking(IterDataPipe):
     not_available_hook = default_not_available_hook
@@ -64,7 +66,8 @@ def EnsureNonBlockingNextDataPipe(validated_datapipe):
     if isinstance(validated_datapipe, IterableDataset):
         validated_datapipe = IterDatasetWrapper(validated_datapipe)
     if not isinstance(validated_datapipe, IterDataPipe):
-        raise Exception('Not Iterable DataPipe ' + str(validated_datapipe.__class__))
+        raise Exception('Not Iterable DataPipe ' +
+                        str(validated_datapipe.__class__))
     if isinstance(validated_datapipe, NonBlocking):
         return validated_datapipe
     if not hasattr(validated_datapipe, '_as_iterator'):
@@ -203,7 +206,8 @@ class QueueWrapper(NonBlocking):
 
     def reset_iterator(self):
         if self._req_sent:
-            raise Exception('Can not reset QueueWrapper while it is still waiting for response')
+            raise Exception(
+                'Can not reset QueueWrapper while it is still waiting for response')
         self._stop_iteration = False
         self.counter = 0
         self._req_q.put(datapipes.nonblocking.ResetIteratorRequest())
@@ -228,7 +232,7 @@ class QueueWrapper(NonBlocking):
 
         try:
             value = self._res_q.get(
-                block=True, timeout = self._response_wait_time)
+                block=True, timeout=self._response_wait_time)
         except:  # TODO: Catch only timeout exceptions
             raise nonblocking.NotAvailable
         self._req_sent = False
