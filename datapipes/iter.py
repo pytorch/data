@@ -71,7 +71,7 @@ def EnsureNonBlockingNextDataPipe(validated_datapipe):
             nonblocking_next, validated_datapipe)
     if not hasattr(validated_datapipe, 'reset_iterator'):
         def reset_iterator(self):
-            self._as_iterator = iter(self)
+            self._as_iterator = None
         setattr(validated_datapipe, 'reset_iterator', reset_iterator)
         validated_datapipe.reset_iterator = types.MethodType(
             reset_iterator, validated_datapipe)
@@ -241,6 +241,9 @@ class _Router():
         if len(self._reset_calls.keys()) == self._instances:
             self._source_dp.reset_iterator()
             self._reset_calls = {}
+            self._stop_iteration = False
+            self._next_item = None
+            self._get_guards = {}
 
 
 class Router():

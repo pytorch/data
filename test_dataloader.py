@@ -16,7 +16,6 @@ class NumbersDataset(IterableDataset):
         self.size = size
 
     def __iter__(self):
-        print("Called __iter__ on", self)
         for i in range(self.size):
             yield i
 
@@ -75,7 +74,6 @@ class TestClass(unittest.TestCase):
         with self.assertRaises(Exception):
             _ = list(joined_dp)
 
-    # Not supposed to be broken
     @timeout_decorator.timeout(5)
     def _test_router_datapipe_iterate_multiple_times(self):
         numbers_dp = NumbersDataset(size=10)
