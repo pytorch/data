@@ -27,6 +27,7 @@ class NonBlocking(IterDataPipe):
     not_available_hook = default_not_available_hook
 
     def __iter__(self):
+        print("Called __iter__ on", self)
         self.reset_iterator()
         return self
 
@@ -41,7 +42,8 @@ class NonBlocking(IterDataPipe):
                     NonBlocking.not_available_hook()
 
     def nonblocking_next(self):
-        raise NotImplementedError
+        raise NotImplementedError(
+            "nonblocking_next not implemented for %s" % self.__class__)
 
     def reset_iterator(self):
         raise NotImplementedError(str(self.__class__))
@@ -63,8 +65,6 @@ class IterDatasetWrapper(IterDataPipe):
 
 
 def EnsureNonBlockingNextDataPipe(validated_datapipe):
-    if isinstance(validated_datapipe, IterableDataset):
-        validated_datapipe = IterDatasetWrapper(validated_datapipe)
     if not isinstance(validated_datapipe, IterDataPipe):
         raise Exception('Not Iterable DataPipe ' +
                         str(validated_datapipe.__class__))
@@ -119,6 +119,7 @@ class GreedyJoin(NonBlocking):
             raise StopIteration
 
 
+# Not real prefetcher, need to be replaced with the queues implementation
 class Prefetcher(NonBlocking):
     def __init__(self, source_dp, buffer_size=10):
         self._source_dp = EnsureNonBlockingNextDataPipe(source_dp)
@@ -194,6 +195,70 @@ class Multiply():
     def __init__(self, *arg):
         raise Exception('__init__ called instead of __new__')
 
+
+class RoutedIterDataPipe(NonBlocking):
+    def __init__(self, router, pipe_id):
+        self._router = router
+        self._id = pipe_id
+
+    def nonblocking_next(self):
+        return self._router.nonblocking_next_mult(self._id)
+
+    def reset_iterator(self):
+        self._router.reset_iterator(self._id)
+
+# Implementation with one element buffer
+class _Router():
+    def __init__(self, source_dp, priority_fns):
+        self._source_dp = source_dp
+        self._priority_fns = priority_fns
+        self._instances = len(priority_fns)
+        self._stop_iteration = False
+        self._next_item = None
+        self._reset_calls = {}
+
+    def nonblocking_next_mult(self, pipe_id):
+        # If ANY of my pipes requested reset that means all pipes should request reset
+        if len(self._reset_calls.keys()) > 0:
+            raise nonblocking.NotAvailable
+
+        if self._next_item is None:
+            # if one of the pipes got StopIteration other pipes should get it too
+            if self._stop_iteration:
+                raise StopIteration
+            try:
+                value = self._source_dp.nonblocking_next()
+            except StopIteration:
+                self._stop_iteration = True
+                raise StopIteration
+            except nonblocking.NotAvailable:
+                raise nonblocking.NotAvailable
+            self._next_item = value
+        value = self._next_item
+        if self._priority_fns[pipe_id](value):
+            self._next_item = None
+            return value
+        else:
+            raise nonblocking.NotAvailable
+
+    def reset_iterator(self, pipe_id):
+        # Only reset after all pipes agreed to reset
+        self._reset_calls[pipe_id] = True
+        if len(self._reset_calls.keys()) == self._instances:
+            self._source_dp.reset_iterator()
+            self._reset_calls = {}
+
+
+class Router():
+    def __new__(cls, source_dp, priority_fns):
+        source_dp = EnsureNonBlockingNextDataPipe(source_dp)
+        connector = _Router(source_dp, priority_fns)
+        return [RoutedIterDataPipe(connector, i) for i in range(len(priority_fns))]
+
+    def __init__(self, *arg):
+        raise Exception('__init__ called instead of __new__')
+
+
 # Creates iter.DataPipe which reads data from the DataLoader.Queue
 class QueueWrapper(NonBlocking):
     def __init__(self, request_queue, response_queue, response_wait_time=0.00001):
@@ -207,11 +272,18 @@ class QueueWrapper(NonBlocking):
     def reset_iterator(self):
         if self._req_sent:
             raise Exception(
-                'Can not reset QueueWrapper while it is still waiting for response')
+                'Can not reset QueueWrapper while it is still waiting for response for', self._req_q.name)
         self._stop_iteration = False
         self.counter = 0
         self._req_q.put(datapipes.nonblocking.ResetIteratorRequest())
-        value = self._res_q.get(block=True)
+        while True:
+            try:
+                value = self._res_q.get(block=False)
+                break
+            except:
+                if NonBlocking.not_available_hook is not None:
+                    NonBlocking.not_available_hook()
+
         if not isinstance(value, datapipes.nonblocking.ResetIteratorResponse):
             raise Exception('Invalid response received')
 
@@ -248,7 +320,7 @@ class Callable(IterDataPipe):
         self.func = func
 
     def __iter__(self):
-        for i in iter(self.source_datapipe):
+        for i in self.source_datapipe:
             yield self.func(i)
 
 

@@ -42,12 +42,13 @@ class EventLoop:
                     if uid not in cls.stack:
                         stack_len = len(cls.stack)
                         cls.stack.append(uid)
-                        yield next(handle)
+                        value = next(handle)
                         stack_copy = copy.deepcopy(cls.stack)
                         cls.stack.clear()
                         if stack_len:
                             for i in range(stack_len):
                                 cls.stack.append(stack_copy[i])
+                        yield value
                     else:
                         pass
                 except Exception as e:
