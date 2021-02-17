@@ -6,16 +6,6 @@ from torch.utils.data import IterDataPipe, IterableDataset
 import datapipes
 import datapipes.nonblocking as nonblocking
 
-# class IterDataPipe:
-#     pass
-#     def __reduce_ex__(self, *args, **kwargs):
-#         if graph.reduce_ex_hook is not None:
-#             try:
-#                 return graph.reduce_ex_hook(self)
-#             except NotImplementedError:
-#                 pass
-#         return super().__reduce_ex__(*args, **kwargs)
-
 DEFAULT_NON_BLOCKING_SLEEP = 0.001
 
 
