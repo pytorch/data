@@ -2,6 +2,7 @@ import unittest
 import timeout_decorator
 
 from torch.utils.data import IterDataPipe, IterableDataset
+from torch.utils.data.datapipes.iter import Map
 import torch.multiprocessing as multiprocessing
 
 import datapipes
@@ -50,7 +51,7 @@ class TestClass(unittest.TestCase):
         (even_dp, odd_dp) = datapipes.iter.Router(
             numbers_dp, [is_even, is_odd])
         odd_dp = dataloader.eventloop.WrapDatasetToEventHandler(odd_dp, 'Odd')
-        updated_even_dp = datapipes.iter.Callable(even_dp, mult_100)
+        updated_even_dp = Map(even_dp, fn=mult_100)
         updated_even_dp = dataloader.eventloop.WrapDatasetToEventHandler(
             updated_even_dp, 'MultipliedEven')
         joined_dp = datapipes.iter.GreedyJoin(updated_even_dp, odd_dp)
@@ -64,7 +65,7 @@ class TestClass(unittest.TestCase):
         (even_dp, odd_dp) = datapipes.iter.Router(
             numbers_dp, [is_even, is_even])
         odd_dp = dataloader.eventloop.WrapDatasetToEventHandler(odd_dp, 'Odd')
-        updated_even_dp = datapipes.iter.Callable(even_dp, mult_100)
+        updated_even_dp = Map(even_dp, fn=mult_100)
         updated_even_dp = dataloader.eventloop.WrapDatasetToEventHandler(
             updated_even_dp, 'MultipliedEven')
         joined_dp = datapipes.iter.GreedyJoin(updated_even_dp, odd_dp)
@@ -76,12 +77,12 @@ class TestClass(unittest.TestCase):
 
     # Not supposed to be broken
     @timeout_decorator.timeout(5)
-    def test_router_datapipe_iterate_multiple_times(self):
+    def _test_router_datapipe_iterate_multiple_times(self):
         numbers_dp = NumbersDataset(size=10)
         (even_dp, odd_dp) = datapipes.iter.Router(
             numbers_dp, [is_even, is_odd])
         odd_dp = dataloader.eventloop.WrapDatasetToEventHandler(odd_dp, 'Odd')
-        updated_even_dp = datapipes.iter.Callable(even_dp, mult_100)
+        updated_even_dp = Map(even_dp, fn=mult_100)
         updated_even_dp = dataloader.eventloop.WrapDatasetToEventHandler(
             updated_even_dp, 'MultipliedEven')
         joined_dp = datapipes.iter.GreedyJoin(updated_even_dp, odd_dp)

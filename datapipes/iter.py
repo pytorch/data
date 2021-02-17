@@ -317,16 +317,6 @@ class QueueWrapper(NonBlocking):
             raise StopIteration
         return value
 
-# Simple duplicate of what we have in torch
-class Callable(IterDataPipe):
-    def __init__(self, source_datapipe, func):
-        self.source_datapipe = source_datapipe
-        self.func = func
-
-    def __iter__(self):
-        for i in self.source_datapipe:
-            yield self.func(i)
-
 
 # Must sit on top of non-shardable deterministic datapipe to skip some items
 class SimpleSharding(IterDataPipe):
