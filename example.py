@@ -84,7 +84,11 @@ def example_many_workers():
     for worker in all_workers:
         worker.join()
 
-example_many_workers()
+def is_even(data):
+    return data % 2 == 0
+
+def is_odd(data):
+    return data % 2 == 1
 
 def slow_mult(x):
     return x * 100
@@ -92,7 +96,36 @@ def slow_mult(x):
 def mult111(x):
     return x*111
 
+def test_reset_iterator():
+    numbers_dp = ds.NumbersDataset()
+    wrapped_numbers_dp = dataloader.eventloop.WrapDatasetToEventHandler(numbers_dp, 'NumbersDataset')
+    for item in wrapped_numbers_dp:
+        print(item)
+    print('----')
+    for item in wrapped_numbers_dp:
+        print(item)
+    
+test_reset_iterator()
 
+def example_router():
+    numbers_dp = ds.NumbersDataset()
+    # numbers_dp = dataloader.eventloop.WrapDatasetToEventHandler(numbers_dp, 'NumbersDS')
+    (even_dp, odd_dp) = datapipes.iter.Router(numbers_dp, [is_even, is_odd])
+    # even_dp = dataloader.eventloop.WrapDatasetToEventHandler(even_dp, 'EvenDP')
+    odd_dp = dataloader.eventloop.WrapDatasetToEventHandler(odd_dp, 'OddDP')
+    updated_even_dp = datapipes.iter.Callable(even_dp, slow_mult)
+    updated_even_dp = dataloader.eventloop.WrapDatasetToEventHandler(updated_even_dp, 'slow_mult')
+    joined_dp = datapipes.iter.GreedyJoin(updated_even_dp, odd_dp)
+    joined_dp = dataloader.eventloop.WrapDatasetToEventHandler(joined_dp, 'JoinedDP')
+    even_more_dp = datapipes.iter.Callable(joined_dp, slow_mult)
+    # even_more_dp = dataloader.eventloop.WrapDatasetToEventHandler(even_more_dp, 'MultAgain')
+    for item in even_more_dp:
+        print(item)
+    print('----')
+    for item in even_more_dp:
+        print(item)
+
+# example_router()
 
 def example_2():
     ds0 = ds.NumbersDataset()

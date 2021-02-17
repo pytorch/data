@@ -27,7 +27,6 @@ class NonBlocking(IterDataPipe):
     not_available_hook = default_not_available_hook
 
     def __iter__(self):
-        print("Called __iter__ on", self)
         self.reset_iterator()
         return self
 
@@ -216,6 +215,7 @@ class _Router():
         self._stop_iteration = False
         self._next_item = None
         self._reset_calls = {}
+        self._get_guards = {}
 
     def nonblocking_next_mult(self, pipe_id):
         # If ANY of my pipes requested reset that means all pipes should request reset
@@ -234,11 +234,16 @@ class _Router():
             except nonblocking.NotAvailable:
                 raise nonblocking.NotAvailable
             self._next_item = value
+            self._get_guards = {}
         value = self._next_item
+        
         if self._priority_fns[pipe_id](value):
             self._next_item = None
             return value
         else:
+            self._get_guards[pipe_id] = True
+            if len(self._get_guards.keys()) == self._instances:
+                raise Exception("None of the priority functions satisfy input data", value)
             raise nonblocking.NotAvailable
 
     def reset_iterator(self, pipe_id):

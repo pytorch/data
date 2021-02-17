@@ -59,6 +59,21 @@ class TestClass(unittest.TestCase):
         items = list(joined_dp)
         self.assertEqual(sorted(items), [0, 1, 3, 5, 7, 9, 200, 400, 600, 800])
 
+    def test_router_datapipe_wrong_priority_fns(self):
+        numbers_dp = NumbersDataset(size=10)
+        (even_dp, odd_dp) = datapipes.iter.Router(
+            numbers_dp, [is_even, is_even])
+        odd_dp = dataloader.eventloop.WrapDatasetToEventHandler(odd_dp, 'Odd')
+        updated_even_dp = datapipes.iter.Callable(even_dp, mult_100)
+        updated_even_dp = dataloader.eventloop.WrapDatasetToEventHandler(
+            updated_even_dp, 'MultipliedEven')
+        joined_dp = datapipes.iter.GreedyJoin(updated_even_dp, odd_dp)
+        joined_dp = dataloader.eventloop.WrapDatasetToEventHandler(
+            joined_dp, 'JoinedDP')
+
+        with self.assertRaises(Exception):
+            _ = list(joined_dp)
+
     # Not supposed to be broken
     @timeout_decorator.timeout(5)
     def test_router_datapipe_iterate_multiple_times(self):
