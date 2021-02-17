@@ -93,7 +93,6 @@ class GreedyJoin(NonBlocking):
         self.datapipes = [
             EnsureNonBlockingNextDataPipe(dp) for dp in datapipes]
         self.exclude_datapipes = []
-        pass
 
     def reset_iterator(self):
         self.exclude_datapipes = []
@@ -118,7 +117,7 @@ class GreedyJoin(NonBlocking):
             raise StopIteration
 
 
-# Not real prefetcher, need to be replaced with the queues implementation
+# Not real prefetcher, used only as reference, need to be replaced with the queues implementation
 class Prefetcher(NonBlocking):
     def __init__(self, source_dp, buffer_size=10):
         self._source_dp = EnsureNonBlockingNextDataPipe(source_dp)

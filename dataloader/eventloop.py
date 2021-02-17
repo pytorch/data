@@ -63,11 +63,10 @@ class EventLoop:
 # Turns IterDataPipe into two mp.Queues, terminates when getting StopIteration
 def IterDataPipeToQueuesLoop(source_datapipe, req_queue, res_queue):
     torch.set_num_threads(1)
-    steps = 0
     # Stop EventLoop for MultiProcessing case
     EventLoop.enabled = False
     for _ in IterDataPipeBehindQueues(source_datapipe, req_queue, res_queue, full_stop=False, blocking_request_get=True):
-        steps += 1
+        pass
 
 # Indefinitely iterates over req_queue and passing values from source_datapipe to res_queue
 # If raise_stop is true, raises exception when StopIteration received from the source_datapipe
@@ -121,11 +120,8 @@ def WrapDatasetToEventHandler(source_datapipe, dp_name='unnamed dataset'):
     request_queue = dataloader.queue.LocalQueue(name=dp_name + ' request')
     response_queue = dataloader.queue.LocalQueue(name=dp_name + ' response')
 
-    function = getattr(source_datapipe, 'nonblocking_next')
-    setattr(source_datapipe, 'original_nonblocking_next', function)
-
     handler = iter(IterDataPipeBehindQueues(source_datapipe, request_queue,
-                                            response_queue, nonblocking_next_function_name='original_nonblocking_next'))
+                                            response_queue, nonblocking_next_function_name='nonblocking_next'))
     EventLoop.add_handler(handler, dp_name)
     datapipe = datapipes.iter.QueueWrapper(request_queue, response_queue)
     datapipe._wrapped_source_datapipe = source_datapipe

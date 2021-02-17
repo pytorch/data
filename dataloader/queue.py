@@ -16,6 +16,7 @@ class LocalQueue():
         self.items.append(item)
 
     def get(self, block=True, timeout=0):
+        # TODO(VitalyFedyunin): Add support of block and timeout arguments
         LocalQueue.ops += 1
         if not len(self.items):
             LocalQueue.empty += 1
