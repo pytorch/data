@@ -58,6 +58,16 @@ class TestClass(unittest.TestCase):
             joined_dp, 'JoinedDP')
         items = list(joined_dp)
         self.assertEqual(sorted(items), [0, 1, 3, 5, 7, 9, 200, 400, 600, 800])
+        
+    def test_multiply_datapipe(self):
+        numbers_dp = NumbersDataset(size=10)
+        (one, two, three) = datapipes.iter.Multiply(
+            numbers_dp, 3)
+        joined_dp = datapipes.iter.GreedyJoin(one, two, three)
+        joined_dp = dataloader.eventloop.WrapDatasetToEventHandler(
+            joined_dp, 'JoinedDP')
+        items = list(joined_dp)
+        self.assertEqual(sorted(items), [0, 1, 3, 5, 7, 9, 200, 400, 600, 800])
 
     def test_router_datapipe_wrong_priority_fns(self):
         numbers_dp = NumbersDataset(size=10)

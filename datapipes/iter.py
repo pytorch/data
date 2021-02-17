@@ -32,10 +32,11 @@ class NonBlocking(IterDataPipe):
 
     def nonblocking_next(self):
         raise NotImplementedError(
-            "nonblocking_next not implemented for %s" % self.__class__)
+            "nonblocking_next is not implemented for %s" % self.__class__)
 
     def reset_iterator(self):
-        raise NotImplementedError(str(self.__class__))
+        raise NotImplementedError(
+            "reset_iterator is not implemented for %s" % self.__class__)
 
     @staticmethod
     def register_not_available_hook(hook_function):
