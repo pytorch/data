@@ -146,15 +146,27 @@ class MultipliedIterDataPipe(NonBlocking):
     def nonblocking_next(self):
         return self._multiplier.nonblocking_next_mult(self._id)
 
+    def reset_iterator(self):
+        self._multiplier.reset_iterator(self._id)
+
+
 # Implementation with one element buffer
 class _Multiply():
     def __init__(self, source_dp, instances):
         self._source_dp = source_dp
         self._instances = instances
+        self._reset_vars()
+
+    def _reset_vars(self):
+        self._reset_calls = {}
         self._stop_iteration = False
         self._data = {}
 
     def nonblocking_next_mult(self, pipe_id):
+        # If ANY of my pipes requested reset that means all pipes should request reset
+        if len(self._reset_calls.keys()) > 0:
+            raise nonblocking.NotAvailable
+
         if not self._data.keys():
             # if one of the pipes got StopIteration other pipes should get it too
             if self._stop_iteration:
@@ -173,6 +185,13 @@ class _Multiply():
             return value
         else:
             raise nonblocking.NotAvailable
+
+    def reset_iterator(self, pipe_id):
+        # Only reset after all pipes agreed to reset
+        self._reset_calls[pipe_id] = True
+        if len(self._reset_calls.keys()) == self._instances:
+            self._source_dp.reset_iterator()
+            self._reset_vars()
 
 
 class Multiply():
