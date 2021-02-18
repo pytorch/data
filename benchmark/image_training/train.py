@@ -1,5 +1,10 @@
 from __future__ import print_function, division
 
+# These 2 lines is to enable importing `datapipes` and `dataloader` from current path
+# Feel free to update/remove this as needed
+import sys
+sys.path.insert(0, '../..')
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -10,7 +15,10 @@ from torchvision import datasets, models, transforms
 import time
 import os
 import copy
-
+import datapipes
+import torch.multiprocessing as multiprocessing
+import dataloader
+from torch.utils.data import IterDataPipe
 
 import argparse
 import json
@@ -18,6 +26,48 @@ import torch.utils.data.datapipes as dp
 from torch.utils.data.datapipes.utils.decoder import (
     basichandlers as decoder_basichandlers,
     imagehandler as decoder_imagehandler)
+
+
+class TransferDatapipe(IterDataPipe):
+    def __init__(self, datapipe, phase, length=-1):
+        super().__init__()
+        self.datapipe = datapipe
+        self.transform = get_transform_api()[phase]
+
+    def __iter__(self):
+        for item in self.datapipe:
+            yield (self.transform(item[0][1]), item[1][1])
+
+
+class ClassesDatapipe(IterDataPipe):
+    def __init__(self, datapipe):
+        super().__init__()
+        self.datapipe = datapipe
+        self.classes = []
+        self.class_ids = {}
+        self.curr_id = -1
+
+    def __iter__(self):
+        for image, category in self.datapipe:
+            label = category['category_id']
+            if label not in self.class_ids:
+                self.classes.append(label)
+                self.curr_id = self.curr_id + 1
+                self.class_ids[label] = self.curr_id
+            yield (image, self.class_ids[label])
+
+cleanups = []
+
+def cleanup_calls():
+    global cleanups
+    for fn, q1, q2, p in cleanups:
+        fn(q1, q2, p)
+
+
+def add_cleanup(fn, *args):
+    global cleanups
+    cleanups.append((fn, *args))
+
 
 def train_model(model, criterion, optimizer, scheduler, dataloaders, dataset_sizes, device, num_epochs=25):
     since = time.time()
@@ -29,7 +79,6 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, dataset_siz
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 10)
 
-        count = 0
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
             if phase == 'train':
@@ -37,6 +86,7 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, dataset_siz
             else:
                 model.eval()
 
+            count = 0
             running_loss = 0.0
             running_corrects = 0
 
@@ -67,11 +117,17 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, dataset_siz
             if phase == 'train':
                 scheduler.step()
 
-            epoch_loss = running_loss / dataset_sizes[phase]
-            epoch_acc = running_corrects.double() / dataset_sizes[phase]
+            #epoch_loss = running_loss / dataset_sizes[phase]
+            #epoch_acc = running_corrects.double() / dataset_sizes[phase]
 
-            print('{} Loss: {:.4f} Acc: {:.4f}'.format(
-                phase, epoch_loss, epoch_acc))
+            # Temporary use count since it is not cheap to get length from iter datapipe
+            # Assume the batch size is always 1 for now
+            assert count > 0
+            epoch_loss = running_loss / count
+            epoch_acc = running_corrects.double() / count
+
+            print('{} Loss: {:.4f} Acc: {:.4f} Img_n: {}'.format(
+                phase, epoch_loss, epoch_acc, count))
 
             # deep copy the model
             if phase == 'val' and epoch_acc > best_acc:
@@ -108,56 +164,53 @@ def get_transform_api():
     return data_transforms
 
 
-def prepare_datapipe(data_dir):
-    from torch.utils.data import IterDataPipe
-    # a temp class to do mimic the current dataset behavior
-    # so dataloader can use the datapipe directly.
-    class TransferDatapipe(IterDataPipe):
-        def __init__(self, datapipe, phase, length = -1):
-            super().__init__()
-            self.datapipe = datapipe
-            self.length = length
-            self.transform = get_transform_api()[phase]
-            self.classes = []
-            self.class_ids = {}
-            self.curr_id = -1
+def prepare_datapipe(data_dir, num_workers):
+    all_pipes = []
+    all_workers = []
 
-        def __iter__(self):
-            for item in self.datapipe:
-                label = item[1][1]['category_id']
-                if label not in self.class_ids:
-                    self.classes.append(label)
-                    self.curr_id = self.curr_id + 1
-                    self.class_ids[label] = self.curr_id
-                yield (self.transform(item[0][1]), self.class_ids[label])
+    ctx = multiprocessing.get_context('spawn')
 
+    for i in range(num_workers):
+        datapipe1_t = dp.iter.ListDirFiles(data_dir, 'train*.tar.gz')
+        wrapped_dp1_t = datapipes.iter.IterDatasetWrapper(datapipe1_t)
+        shard_dp1_t = datapipes.iter.SimpleSharding(wrapped_dp1_t)
+        shard_dp1_t.sharding_settings(num_workers, i)
+        datapipe2_t = dp.iter.LoadFilesFromDisk(shard_dp1_t)
+        datapipe3_t = dp.iter.ReadFilesFromTar(datapipe2_t)
+        datapipe4_t = dp.iter.RoutedDecoder(
+            datapipe3_t, handlers=[decoder_imagehandler('pilrgb'), decoder_basichandlers])
+        datapipe5_t = dp.iter.GroupByKey(datapipe4_t, group_size=2)
+        transfered_dp_t = TransferDatapipe(datapipe5_t, 'train')
+        wrapped_trans_dp_t = datapipes.iter.IterDatasetWrapper(transfered_dp_t)
+        (process, req_queue, res_queue) = dataloader.eventloop.SpawnProcessForDataPipeline(
+            ctx, wrapped_trans_dp_t)
+        process.start()
 
-        def __len__(self):
-            if self.length == -1:
-                raise NotImplementedError
-            return self.length
+        all_workers.append(process)
+        local_datapipe = datapipes.iter.QueueWrapper(req_queue, res_queue)
+        all_pipes.append(local_datapipe)
 
-    datapipe1_t = dp.iter.ListDirFiles(data_dir, 'train*.tar.gz')
-    datapipe2_t = dp.iter.LoadFilesFromDisk(datapipe1_t)
-    datapipe3_t = dp.iter.ReadFilesFromTar(datapipe2_t)
-    count = 0
-    for x in datapipe3_t:
-        count = count + 1
-    datapipe4_t = dp.iter.RoutedDecoder(datapipe3_t, handlers=[decoder_imagehandler('pilrgb'), decoder_basichandlers])
-    datapipe5_t = dp.iter.GroupByKey(datapipe4_t, group_size=2)
-    datapipe6_t = TransferDatapipe(datapipe5_t, 'train', int(count/2))
+        def clean_me(req_queue, res_queue, process):
+            req_queue.put(datapipes.nonblocking.StopIteratorRequest())
+            value = res_queue.get()
+            process.join()
+
+        add_cleanup(clean_me, req_queue, res_queue, process)
+
+    joined_dp_t = datapipes.iter.GreedyJoin(*all_pipes)
+    final_dp_t = ClassesDatapipe(joined_dp_t)
+
 
     datapipe1_v = dp.iter.ListDirFiles(data_dir, 'val*.tar.gz')
     datapipe2_v = dp.iter.LoadFilesFromDisk(datapipe1_v)
     datapipe3_v = dp.iter.ReadFilesFromTar(datapipe2_v)
-    count = 0
-    for x in datapipe3_v:
-        count = count + 1
-    datapipe4_v = dp.iter.RoutedDecoder(datapipe3_v, handlers=[decoder_imagehandler('pilrgb'), decoder_basichandlers])
+    datapipe4_v = dp.iter.RoutedDecoder(
+        datapipe3_v, handlers=[decoder_imagehandler('pilrgb'), decoder_basichandlers])
     datapipe5_v = dp.iter.GroupByKey(datapipe4_v, group_size=2)
-    datapipe6_v = TransferDatapipe(datapipe5_v, 'val', int(count/2))
+    datapipe6_v = TransferDatapipe(datapipe5_v, 'val')
+    final_dp_v = ClassesDatapipe(datapipe6_v)
 
-    return {'train': datapipe6_t, 'val': datapipe6_v}
+    return {'train': final_dp_t, 'val': final_dp_v}
 
 
 def prepare_dataset(data_dir):
@@ -169,18 +222,20 @@ def prepare_dataset(data_dir):
 def main(args):
 
     root = args.root
+    num_workers = args.num_of_workers if args.num_of_workers is not None else 2
     if args.dataset:
         image_datasets = prepare_dataset(root)
         num_of_classes = len(image_datasets['train'].classes)
         dl_shuffle = True
     else:
-        image_datasets = prepare_datapipe(root)
+        image_datasets = prepare_datapipe(root, num_workers)
         num_of_classes = args.num_of_labels
         assert num_of_classes
         dl_shuffle = False
 
     dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=1, shuffle=dl_shuffle, num_workers=1) for x in ['train', 'val']}
-    dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
+    #dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
+    dataset_sizes = {x: 0 for x in ['train', 'val']}
     class_names = image_datasets['train'].classes
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -204,5 +259,7 @@ if __name__ == "__main__":
     group.add_argument("-dp", "--datapipe", action="store_true", help="use datapipe for training if set")
     parser.add_argument("-r", "--root", required=True, help="root dir of images")
     parser.add_argument("-n", "--num_of_labels", type=int, help="must set if using datapipe")
+    parser.add_argument("-nk", "--num_of_workers", type=int, help="number of workers")
 
     main(parser.parse_args())
+    cleanup_calls()

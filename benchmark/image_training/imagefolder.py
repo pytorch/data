@@ -62,6 +62,7 @@ class ImageFolder:
                 # do not allow any non image file exist in the folder
                 if not is_img_ext(ext):
                     warnings.warn("Image folder {} contains non image file {}, skip!".format(root_path, pathname))
+                continue
 
                 src_files_pathnames.append((pathname, root_path))
         # shuffle pathnames
