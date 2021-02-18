@@ -60,8 +60,8 @@ cleanups = []
 
 def cleanup_calls():
     global cleanups
-    for fn, q1, q2, p in cleanups:
-        fn(q1, q2, p)
+    for fn, *args in cleanups:
+        fn(*args)
 
 
 def add_cleanup(fn, *args):
