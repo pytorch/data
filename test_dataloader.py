@@ -1,5 +1,6 @@
 import unittest
 import timeout_decorator
+import threading
 
 from torch.utils.data import IterDataPipe, IterableDataset
 from torch.utils.data.datapipes.iter import Map
@@ -58,7 +59,7 @@ class TestClass(unittest.TestCase):
             joined_dp, 'JoinedDP')
         items = list(joined_dp)
         self.assertEqual(sorted(items), [0, 1, 3, 5, 7, 9, 200, 400, 600, 800])
-        
+
     def test_multiply_datapipe(self):
         numbers_dp = NumbersDataset(size=10)
         (one, two, three) = datapipes.iter.Multiply(
@@ -100,6 +101,48 @@ class TestClass(unittest.TestCase):
         items = list(joined_dp)
         items += list(joined_dp)
         expected = [0, 1, 3, 5, 7, 9, 200, 400, 600, 800] * 2
+        self.assertEqual(sorted(items), sorted(expected))
+
+    @timeout_decorator.timeout(30)
+    def test_threading(self):
+
+        def SpawnThreadForDataPipeGraph(dp):
+            req_queue = dataloader.queue.ThreadingQueue()
+            res_queue = dataloader.queue.ThreadingQueue()
+            process = threading.Thread(target=dataloader.eventloop.IterDataPipeToQueuesLoop, args=(
+                dp, req_queue, res_queue))
+            return process, req_queue, res_queue
+
+        num_workers = 6
+        all_pipes = []
+        cleanup_fn_args = []
+
+        def clean_me(req_queue, res_queue, process, pid):
+            req_queue.put(datapipes.nonblocking.StopIteratorRequest())
+            _ = res_queue.get()
+            process.join()
+
+        for i in range(num_workers):
+            numbers_dp = NumbersDataset(size=50)
+            shard_dp = datapipes.iter.SimpleSharding(numbers_dp)
+            shard_dp.sharding_settings(num_workers, i)
+            (process, req_queue, res_queue) = SpawnThreadForDataPipeGraph(shard_dp)
+            process.start()
+            local_datapipe = datapipes.iter.QueueWrapper(req_queue, res_queue)
+            all_pipes.append(local_datapipe)
+
+            cleanup_fn_args.append((req_queue, res_queue, process, i))
+
+        joined_dp = datapipes.iter.GreedyJoin(*all_pipes)
+
+        items = list(joined_dp)
+        items += list(joined_dp)  # Reiterate second time
+
+        for args in cleanup_fn_args:
+            clean_me(*args)
+
+        expected = list(range(50)) + list(range(50))
+
         self.assertEqual(sorted(items), sorted(expected))
 
     @timeout_decorator.timeout(60)
