@@ -2,7 +2,7 @@ import unittest
 import timeout_decorator
 
 from torch.utils.data import IterDataPipe, IterableDataset
-from torch.utils.data.datapipes.iter import Map
+from torch.utils.data.datapipes.iter import Map, Filter
 import torch.multiprocessing as multiprocessing
 
 import datapipes
@@ -45,6 +45,12 @@ class TestClass(unittest.TestCase):
         self.assertEqual(
             sorted(items), [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9])
 
+    def test_functional(self):
+        numbers_dp = NumbersDataset(size=10).filter(
+            filter_fn=lambda x: x % 2 == 1).map(fn=lambda x: x * 10)
+        actual = [i for i in numbers_dp]
+        self.assertEqual(actual, [10, 30, 50, 70, 90])
+
     def test_router_datapipe(self):
         numbers_dp = NumbersDataset(size=10)
         (even_dp, odd_dp) = datapipes.iter.Router(
@@ -58,7 +64,7 @@ class TestClass(unittest.TestCase):
             joined_dp, 'JoinedDP')
         items = list(joined_dp)
         self.assertEqual(sorted(items), [0, 1, 3, 5, 7, 9, 200, 400, 600, 800])
-        
+
     def test_multiply_datapipe(self):
         numbers_dp = NumbersDataset(size=10)
         (one, two, three) = datapipes.iter.Multiply(
