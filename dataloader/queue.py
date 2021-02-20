@@ -36,14 +36,14 @@ class ThreadingQueue():
         self.name = name
 
     def put(self, item, block=True):
-        with self.lock:
+        with self.lock:            
             self.items.append(item)
 
     def get(self, block=True, timeout=0):
         # TODO(VitalyFedyunin): Add support of block and timeout arguments
         while True:
             with self.lock:
-                if len(self.items):
+                if len(self.items) > 0:
                     return self.items.pop()
             if not block:
                 raise Exception("Not available")
