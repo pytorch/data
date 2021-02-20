@@ -1,6 +1,5 @@
 import unittest
 import timeout_decorator
-import threading
 
 from torch.utils.data import IterDataPipe, IterableDataset
 from torch.utils.data.datapipes.iter import Map

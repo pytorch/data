@@ -2,7 +2,6 @@ import copy
 import threading
 
 import torch
-import time
 
 import datapipes
 import dataloader.queue
