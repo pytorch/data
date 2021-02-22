@@ -229,11 +229,15 @@ def main(args):
         dl_shuffle = True
     else:
         image_datasets = prepare_datapipe(root, num_workers)
+        # We want to compare classic DataSet with N workers with DataPipes
+        # which use N separate processes (self managed, so DataLoader is not
+        # allowed to spawn anything)
+        num_workers = 0
         num_of_classes = args.num_of_labels
         assert num_of_classes
         dl_shuffle = False
 
-    dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=1, shuffle=dl_shuffle, num_workers=1) for x in ['train', 'val']}
+    dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=1, shuffle=dl_shuffle, num_workers=num_workers) for x in ['train', 'val']}
     #dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
     dataset_sizes = {x: 0 for x in ['train', 'val']}
     class_names = image_datasets['train'].classes
