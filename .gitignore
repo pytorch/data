@@ -1,1 +1,13 @@
+# Editor temporaries
+*.swn
+*.swo
+*.swp
+*.swm
+*~
+
+# macOS dir files
+.DS_Store
+
+# Compiled python
 *.pyc
+*.pyd
