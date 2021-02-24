@@ -157,7 +157,7 @@ def get_transform_api():
     return data_transforms
 
 
-def prepare_datapipe(data_dir, num_workers):
+def prepare_datapipe(data_dir, num_workers, shuffle_buffer):
     all_pipes = []
     all_workers = []
 
@@ -216,7 +216,7 @@ def _get_categoryid(json_obj):
     return json_obj["category_id"]
 
 
-def prepare_webdataset(data_dir, shuffle_buffer=0, decoder="pil"):
+def prepare_webdataset(data_dir, shuffle_buffer, decoder="pil"):
     try:
         import webdataset as wds
     except ImportError:
@@ -252,9 +252,9 @@ def main(args):
     if args.dataset:
         image_datasets = prepare_dataset(root)
         num_of_classes = len(image_datasets['train'].classes)
-        dl_shuffle = True
+        dl_shuffle = args.shuffle_buffer > 0
     elif args.datapipe:
-        image_datasets = prepare_datapipe(root, num_workers)
+        image_datasets = prepare_datapipe(root, num_workers, args.shuffle_buffer)
         # We want to compare classic DataSet with N workers with DataPipes
         # which use N separate processes (self managed, so DataLoader is not
         # allowed to spawn anything)
@@ -263,7 +263,7 @@ def main(args):
         assert num_of_classes
         dl_shuffle = False
     else:
-        image_datasets = prepare_webdataset(root)
+        image_datasets = prepare_webdataset(root, args.shuffle_buffer)
         num_of_classes = args.num_of_labels
         assert num_of_classes
         dl_shuffle = False
@@ -302,6 +302,9 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--num_of_labels", type=int,
                         help="required for datapipe or webdataset")
     parser.add_argument("-nk", "--num_of_workers", type=int, help="number of workers")
+    parser.add_argument("-s", "--shuffle-buffer", type=int, default=0,
+                        help="size of buffer for shuffle. shuffle will be disabled "
+                        "if `shuffle_buffer` is not set or is set to zero")
 
     main(parser.parse_args())
 
