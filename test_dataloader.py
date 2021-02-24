@@ -59,7 +59,7 @@ class TestClass(unittest.TestCase):
         updated_even_dp = Map(even_dp, fn=mult_100)
         updated_even_dp = dataloader.eventloop.WrapDatasetToEventHandler(
             updated_even_dp, 'MultipliedEven')
-        joined_dp = datapipes.iter.GreedyJoin(updated_even_dp, odd_dp)
+        joined_dp = updated_even_dp.join(odd_dp)
         joined_dp = dataloader.eventloop.WrapDatasetToEventHandler(
             joined_dp, 'JoinedDP')
         items = list(joined_dp)
