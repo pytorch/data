@@ -1,28 +1,30 @@
 from __future__ import print_function, division
 
-# These 2 lines is to enable importing `datapipes` and `dataloader` from current path
-# Feel free to update/remove this as needed
-import sys
-sys.path.insert(0, '../..')
+import argparse
+from collections import defaultdict
+import copy
+import os
+import time
 
 import torch
-import torch.nn as nn
 import torch.optim as optim
-from torch.optim import lr_scheduler
-from torchvision import datasets, models, transforms
-import time
-import os
-import copy
-import datapipes
 import torch.multiprocessing as multiprocessing
-import dataloader
+import torch.nn as nn
+from torch.optim import lr_scheduler
 from torch.utils.data import IterDataPipe
+from torchvision import datasets, models, transforms
 
-import argparse
 import torch.utils.data.datapipes as dp
 from torch.utils.data.datapipes.utils.decoder import (
     basichandlers as decoder_basichandlers,
     imagehandler as decoder_imagehandler)
+
+# These 2 lines is to enable importing `datapipes` and `dataloader` from current path
+# Feel free to update/remove this as needed
+import sys
+sys.path.insert(0, '../..')
+import dataloader
+import datapipes
 
 
 class TransferDatapipe(IterDataPipe):
@@ -210,6 +212,40 @@ def prepare_dataset(data_dir):
     return image_datasets
 
 
+def _get_categoryid(json_obj):
+    return json_obj["category_id"]
+
+
+def prepare_webdataset(data_dir, shuffle_buffer=0, decoder="pil"):
+    try:
+        import webdataset as wds
+    except ImportError:
+        raise RuntimeError("Webdataset is required to be installed for benchmark.")
+
+    image_datasets = {}
+    tar_files = defaultdict(list)
+    for root, dirs, files in os.walk(data_dir):
+        for file in files:
+            for phase in ("train", "val"):
+                if file.endswith(".tar.gz") and file.startswith(phase):
+                    tar_files[phase].append(os.path.join(root, file))
+
+    for phase in ["train", "val"]:
+        # Default buffer size 8192 for each file, not shuffle in each shard
+        ds = wds.WebDataset(tar_files[phase], shardshuffle=False)
+        # Yield dict{"__key__": fname, "png": image_data, "json": json_data}
+
+        if shuffle_buffer > 0:
+            ds = ds.shuffle(shuffle_buffer)
+
+        ds = ds.decode(decoder) \
+               .to_tuple("jpg;png", "json") \
+               .map_tuple(get_transform_api()[phase], _get_categoryid)
+        image_datasets[phase] = ds
+
+    return image_datasets
+
+
 def main(args):
     root = args.root
     num_workers = args.num_of_workers if args.num_of_workers is not None else 2
@@ -217,12 +253,17 @@ def main(args):
         image_datasets = prepare_dataset(root)
         num_of_classes = len(image_datasets['train'].classes)
         dl_shuffle = True
-    else:
+    elif args.datapipe:
         image_datasets = prepare_datapipe(root, num_workers)
         # We want to compare classic DataSet with N workers with DataPipes
         # which use N separate processes (self managed, so DataLoader is not
         # allowed to spawn anything)
         num_workers = 0
+        num_of_classes = args.num_of_labels
+        assert num_of_classes
+        dl_shuffle = False
+    else:
+        image_datasets = prepare_webdataset(root)
         num_of_classes = args.num_of_labels
         assert num_of_classes
         dl_shuffle = False
@@ -251,11 +292,17 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Datapipe Benchmark Script")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-ds", "--dataset", action="store_true", help="use dataset for training if set")
-    group.add_argument("-dp", "--datapipe", action="store_true", help="use datapipe for training if set")
+    group.add_argument("-ds", "--dataset", action="store_true",
+                       help="use dataset for training if set")
+    group.add_argument("-dp", "--datapipe", action="store_true",
+                       help="use datapipe for training if set")
+    group.add_argument("-wds", "--webdataset", action="store_true",
+                       help="use webdataset for training if set")
     parser.add_argument("-r", "--root", required=True, help="root dir of images")
-    parser.add_argument("-n", "--num_of_labels", type=int, help="must set if using datapipe")
+    parser.add_argument("-n", "--num_of_labels", type=int,
+                        help="required for datapipe or webdataset")
     parser.add_argument("-nk", "--num_of_workers", type=int, help="number of workers")
 
     main(parser.parse_args())
+
     cleanup_calls()
