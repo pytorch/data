@@ -9,8 +9,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
-import numpy as np
-import torchvision
 from torchvision import datasets, models, transforms
 import time
 import os
@@ -21,7 +19,6 @@ import dataloader
 from torch.utils.data import IterDataPipe
 
 import argparse
-import json
 import torch.utils.data.datapipes as dp
 from torch.utils.data.datapipes.utils.decoder import (
     basichandlers as decoder_basichandlers,
@@ -43,20 +40,14 @@ class ClassesDatapipe(IterDataPipe):
     def __init__(self, datapipe):
         super().__init__()
         self.datapipe = datapipe
-        self.classes = []
-        self.class_ids = {}
-        self.curr_id = -1
 
     def __iter__(self):
         for image, category in self.datapipe:
-            label = category['category_id']
-            if label not in self.class_ids:
-                self.classes.append(label)
-                self.curr_id = self.curr_id + 1
-                self.class_ids[label] = self.curr_id
-            yield (image, self.class_ids[label])
+            yield image, category["category_id"]
+
 
 cleanups = []
+
 
 def cleanup_calls():
     global cleanups
@@ -117,8 +108,8 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, dataset_siz
             if phase == 'train':
                 scheduler.step()
 
-            #epoch_loss = running_loss / dataset_sizes[phase]
-            #epoch_acc = running_corrects.double() / dataset_sizes[phase]
+            # epoch_loss = running_loss / dataset_sizes[phase]
+            # epoch_acc = running_corrects.double() / dataset_sizes[phase]
 
             # Temporary use count since it is not cheap to get length from iter datapipe
             # Assume the batch size is always 1 for now
@@ -149,16 +140,16 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, dataset_siz
 def get_transform_api():
     data_transforms = {
         'train': transforms.Compose([
-             transforms.RandomResizedCrop(224),
-             transforms.RandomHorizontalFlip(),
-             transforms.ToTensor(),
-             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
         'val': transforms.Compose([
-             transforms.Resize(256),
-             transforms.CenterCrop(224),
-             transforms.ToTensor(),
-             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
     }
     return data_transforms
@@ -220,7 +211,6 @@ def prepare_dataset(data_dir):
 
 
 def main(args):
-
     root = args.root
     num_workers = args.num_of_workers if args.num_of_workers is not None else 2
     if args.dataset:
@@ -237,10 +227,11 @@ def main(args):
         assert num_of_classes
         dl_shuffle = False
 
-    dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=1, shuffle=dl_shuffle, num_workers=num_workers) for x in ['train', 'val']}
-    #dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
+    dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=1,
+                                                  shuffle=dl_shuffle, num_workers=num_workers)
+                   for x in ['train', 'val']}
+    # dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
     dataset_sizes = {x: 0 for x in ['train', 'val']}
-    class_names = image_datasets['train'].classes
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -255,6 +246,7 @@ def main(args):
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
     model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler, dataloaders, dataset_sizes, device, num_epochs=5)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Datapipe Benchmark Script")
