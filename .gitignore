@@ -1,3 +1,8 @@
+# image folder
+benchmark/image_training/images_dataset_ds/train/*/
+benchmark/image_training/images_dataset_ds/val/*/
+benchmark/image_training/images_dataset_tar
+
 # Editor temporaries
 *.swn
 *.swo
