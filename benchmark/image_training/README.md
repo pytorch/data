@@ -11,6 +11,3 @@ To train using webdataset, run `python3 ./train.py -r ./images_dataset_tar -wds 
 TODO:
 1. The iterable datapipe has no way to tell how many labels within the datapipe, so need to specify explicitly at the moment.
 2. We currently shuffle the input files in preprocessing stage (when generating tar file). We will add a shuffle layer later for datapipe.
-3. We still keep the fast-forwarding logic when training with datapipe to get the size of the whole datapipe. 
-   We need this to calculate the training accuracy, can not get rid of this logic when batch size is not 1.
-   Another way is to explicitly assign the size (length) to the datapipe. Need to research on this later.

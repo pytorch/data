@@ -25,6 +25,7 @@ import sys
 sys.path.insert(0, '../..')
 import dataloader
 import datapipes
+from benchmark.utils import AccMeter, AverageMeter, ProgressMeter
 
 
 class TransferDatapipe(IterDataPipe):
@@ -62,74 +63,86 @@ def add_cleanup(fn, *args):
     cleanups.append((fn, *args))
 
 
-def train_model(model, criterion, optimizer, scheduler, dataloaders, dataset_sizes, device, num_epochs=25):
-    since = time.time()
+def get_progress_meters():
+    pmeters = dict()
+    for phase in ('train', 'val'):
+        pm = ProgressMeter(prefix=phase.upper())
+        pm.add_meter(AverageMeter('EpochTime', ':6.3f'))
+        pm.add_meter(AverageMeter('IterTime', ':6.3f'))
+        pm.add_meter(AverageMeter('DataTime', ':6.3f'))
+        pm.add_meter(AverageMeter('Loss', ':.4e'))
+        pm.add_meter(AccMeter('Acc', (1, 5), ':6.2f'))
+        pmeters[phase] = pm
+    return pmeters
 
+
+def train_model(model, criterion, optimizer, scheduler,
+                dataloaders, device, num_epochs=25, log_interval=500):
+    pms = get_progress_meters()
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
 
+    start = time.time()
     for epoch in range(num_epochs):
-        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
-        print('-' * 10)
-
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
+            pm = pms[phase]
             if phase == 'train':
                 model.train()
             else:
                 model.eval()
 
-            count = 0
-            running_loss = 0.0
-            running_corrects = 0
+            epoch_start = time.time()
 
-            # Iterate over data.
-            for inputs, labels in dataloaders[phase]:
-                count = count + 1
-                inputs = inputs.to(device)
-                labels = labels.to(device)
+            # forward
+            # track history if only in train
+            with torch.set_grad_enabled(phase == 'train'):
 
-                # zero the parameter gradients
-                optimizer.zero_grad()
+                iter_end = time.time()
+                # Iterate over data.
+                for idx, (inputs, labels) in enumerate(dataloaders[phase]):
+                    pm.update('DataTime', time.time() - iter_end)
+                    inputs = inputs.to(device)
+                    labels = labels.to(device)
 
-                # forward
-                # track history if only in train
-                with torch.set_grad_enabled(phase == 'train'):
                     outputs = model(inputs)
                     _, preds = torch.max(outputs, 1)
                     loss = criterion(outputs, labels)
 
+                    pm.update('Loss', loss.item(), inputs.size(0))
+                    pm.update('Acc', outputs, labels)
+
                     # backward + optimize only if in training phase
                     if phase == 'train':
+                        # zero the parameter gradients
+                        optimizer.zero_grad()
                         loss.backward()
                         optimizer.step()
 
-                # statistics
-                running_loss += loss.item() * inputs.size(0)
-                running_corrects += torch.sum(preds == labels.data)
+                    pm.update('IterTime', time.time() - iter_end)
+
+                    if phase == 'train' and idx % log_interval == 0:
+                        pm.display(epoch, idx, exclude=['EpochTime'])
+
+                    iter_end = time.time()
+
+            pm.update('EpochTime', time.time() - epoch_start)
+            print("=" * 10)
+            pm.display(epoch, exclude=['IterTime', 'DataTime'])
+            print("=" * 10)
+
             if phase == 'train':
                 scheduler.step()
 
-            # epoch_loss = running_loss / dataset_sizes[phase]
-            # epoch_acc = running_corrects.double() / dataset_sizes[phase]
-
-            # Temporary use count since it is not cheap to get length from iter datapipe
-            # Assume the batch size is always 1 for now
-            assert count > 0
-            epoch_loss = running_loss / count
-            epoch_acc = running_corrects.double() / count
-
-            print('{} Loss: {:.4f} Acc: {:.4f} Img_n: {}'.format(
-                phase, epoch_loss, epoch_acc, count))
-
             # deep copy the model
-            if phase == 'val' and epoch_acc > best_acc:
-                best_acc = epoch_acc
+            top1_avg = pm.get_meter('Acc').get_meter('Acc@1').avg
+            if phase == 'val' and top1_avg > best_acc:
+                best_acc = top1_avg
                 best_model_wts = copy.deepcopy(model.state_dict())
 
-        print()
+            epoch_end = time.time()
 
-    time_elapsed = time.time() - since
+    time_elapsed = time.time() - start
     print('Training complete in {:.0f}m {:.0f}s'.format(
         time_elapsed // 60, time_elapsed % 60))
     print('Best val Acc: {:4f}'.format(best_acc))
@@ -271,8 +284,6 @@ def main(args):
     dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=1,
                                                   shuffle=dl_shuffle, num_workers=num_workers)
                    for x in ['train', 'val']}
-    # dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
-    dataset_sizes = {x: 0 for x in ['train', 'val']}
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -286,7 +297,8 @@ def main(args):
     # Decay LR by a factor of 0.1 every 7 epochs
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
-    model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler, dataloaders, dataset_sizes, device, num_epochs=5)
+    model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler,
+                           dataloaders, device, args.num_epochs, args.log_interval)
 
 
 if __name__ == "__main__":
@@ -305,6 +317,10 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--shuffle-buffer", type=int, default=0,
                         help="size of buffer for shuffle. shuffle will be disabled "
                         "if `shuffle_buffer` is not set or is set to zero")
+    parser.add_argument("-ep", "--num-epochs", type=int, default=5,
+                        help="number of epochs")
+    parser.add_argument("--log-interval", type=int, default=500,
+                        help="number of batches to wait before logging training status")
 
     main(parser.parse_args())
 
