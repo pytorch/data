@@ -149,7 +149,7 @@ def train_model(model, criterion, optimizer, scheduler,
 
     # load best model weights
     model.load_state_dict(best_model_wts)
-    return model
+    return model, pms
 
 
 def get_transform_api():
@@ -297,8 +297,14 @@ def main(args):
     # Decay LR by a factor of 0.1 every 7 epochs
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
-    model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler,
-                           dataloaders, device, args.num_epochs, args.log_interval)
+    model_ft, pms = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler,
+                                dataloaders, device, args.num_epochs, args.log_interval)
+    if args.file_path is not None:
+        torch.save({
+            'state_dict': model_ft.state_dict(),
+            'train_statistic': pms['train'].get_state(),
+            'val_statistic': pms['val'].get_state(),
+        }, args.file_path)
 
 
 if __name__ == "__main__":
@@ -321,6 +327,8 @@ if __name__ == "__main__":
                         help="number of epochs")
     parser.add_argument("--log-interval", type=int, default=500,
                         help="number of batches to wait before logging training status")
+    parser.add_argument("-f", "--file-path", type=str,
+                        help="file path to save the best model and statistics")
 
     main(parser.parse_args())
 

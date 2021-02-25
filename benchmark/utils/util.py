@@ -25,6 +25,9 @@ class AverageMeter(object):
         fmtstr = '{name} {val' + self.fmt + '} ({avg' + self.fmt + '})'
         return fmtstr.format(**self.__dict__)
 
+    def get_state(self):
+        return {self.name: self.avg}
+
 
 class AccMeter(object):
     """Computes and stores the average and current values of accuracy"""
@@ -60,6 +63,12 @@ class AccMeter(object):
     def __str__(self):
         return '\t'.join([str(meter) for meter in self.meters.values()])
 
+    def get_state(self):
+        state = {}
+        for meter in self.meters.values():
+            state.update(meter.get_state())
+        return state
+
 
 class ProgressMeter(object):
     def __init__(self, meters=None, prefix=""):
@@ -94,3 +103,9 @@ class ProgressMeter(object):
             exclude = []
         entries = [prefix] + [str(m) for n, m in self.meters.items() if n not in exclude]
         print('\t'.join(entries))
+
+    def get_state(self):
+        state = {}
+        for meter in self.meters.values():
+            state.update(meter.get_state())
+        return state
