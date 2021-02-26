@@ -1,7 +1,7 @@
 import time
 import types
 
-from torch.utils.data import IterDataPipe, IterableDataset
+from torch.utils.data import IterDataPipe, IterableDataset, functional_datapipe
 
 import datapipes
 import datapipes.nonblocking as nonblocking
@@ -78,7 +78,7 @@ def EnsureNonBlockingNextDataPipe(validated_datapipe):
             reset_iterator, validated_datapipe)
     return validated_datapipe
 
-
+@functional_datapipe('join')
 class GreedyJoin(NonBlocking):
     def __init__(self, *datapipes):
         self.datapipes = [
