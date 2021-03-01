@@ -151,6 +151,14 @@ class TestClass(unittest.TestCase):
 
         self.assertEqual(sorted(items), sorted(expected))
 
+    def test_graph(self):
+        numbers_dp = NumbersDataset(size=50)
+        mapped_dp = Map(numbers_dp, mult_100)
+        graph = dataloader.graph.traverse(mapped_dp)
+        expected = {mapped_dp : {numbers_dp : {}}}
+        self.assertEqual(graph, expected)
+
+
 
 if __name__ == '__main__':
     unittest.main()
