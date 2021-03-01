@@ -11,7 +11,6 @@ def list_connected_datapipes(scan_obj):
 
     f = io.BytesIO()
     p = pickle.Pickler(f)  # Not going to work for lambdas, but dill infinite loops on typing and can't be used as is
-    p.dispatch_table = copyreg.dispatch_table.copy()
 
     def stub_pickler(obj):
         return stub_unpickler, ()
