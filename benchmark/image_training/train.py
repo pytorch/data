@@ -204,7 +204,8 @@ def prepare_datapipe(data_dir, num_workers, shuffle_buffer):
         add_cleanup(clean_me, req_queue, res_queue, process)
 
     joined_dp_t = datapipes.iter.GreedyJoin(*all_pipes)
-    final_dp_t = ClassesDatapipe(joined_dp_t)
+    shuffled_dp_t = dp.iter.Shuffle(joined_dp_t, buffer_size=shuffle_buffer)
+    final_dp_t = ClassesDatapipe(shuffled_dp_t)
 
 
     datapipe1_v = dp.iter.ListDirFiles(data_dir, 'val*.tar.gz')
@@ -248,7 +249,7 @@ def prepare_webdataset(data_dir, shuffle_buffer, decoder="pil"):
         ds = wds.WebDataset(tar_files[phase], shardshuffle=False)
         # Yield dict{"__key__": fname, "png": image_data, "json": json_data}
 
-        if shuffle_buffer > 0:
+        if phase == 'train' and shuffle_buffer > 0:
             ds = ds.shuffle(shuffle_buffer)
 
         ds = ds.decode(decoder) \
@@ -281,9 +282,11 @@ def main(args):
         assert num_of_classes
         dl_shuffle = False
 
-    dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=1,
-                                                  shuffle=dl_shuffle, num_workers=num_workers)
-                   for x in ['train', 'val']}
+    dataloaders = {'train': torch.utils.data.DataLoader(image_datasets['train'], batch_size=1,
+                                                        shuffle=dl_shuffle, num_workers=num_workers),
+                   'val': torch.utils.data.DataLoader(image_datasets['val'], batch_size=1,
+                                                      shuffle=False, num_workers=num_workers)
+                   }
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -320,9 +323,9 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--num_of_labels", type=int,
                         help="required for datapipe or webdataset")
     parser.add_argument("-nk", "--num_of_workers", type=int, help="number of workers")
-    parser.add_argument("-s", "--shuffle-buffer", type=int, default=0,
-                        help="size of buffer for shuffle. shuffle will be disabled "
-                        "if `shuffle_buffer` is not set or is set to zero")
+    parser.add_argument("-s", "--shuffle-buffer", type=int, default=100,
+                        help="size of buffer for shuffle. shuffling is enabled as "
+                        "default, and it can be disabled by setting buffer to 0")
     parser.add_argument("-ep", "--num-epochs", type=int, default=5,
                         help="number of epochs")
     parser.add_argument("--log-interval", type=int, default=500,
