@@ -5,6 +5,8 @@ from collections import defaultdict
 import copy
 import os
 import time
+import queue
+import psutil
 
 import torch
 import torch.optim as optim
@@ -61,6 +63,11 @@ def cleanup_calls():
 def add_cleanup(fn, *args):
     global cleanups
     cleanups.append((fn, *args))
+
+
+def insert_cleanup(idx, fn, *args):
+    global cleanups
+    cleanups.insert(idx, (fn, *args))
 
 
 def get_progress_meters():
@@ -260,6 +267,91 @@ def prepare_webdataset(data_dir, shuffle_buffer, decoder="pil"):
     return image_datasets
 
 
+def resource_monitor_loop(parent_pid, msg_queue, logfile_pathname):
+
+    def should_stop(msg_queue):
+        try:
+            msg = msg_queue.get(block=False)
+            if msg == "STOP":
+                return True
+            return False
+        except queue.Empty:
+            return False
+        except Exception as e:
+            print("Monitor process crashed due to ", e)
+            raise e
+
+    logfile = open(logfile_pathname, 'w')
+
+    monitor_pid = os.getpid()
+    processes = {}
+
+    # give 1 sec for system warm up
+    time.sleep(1)
+    while True:
+        if should_stop(msg_queue):
+            break
+        try:
+            cpu_all = 0.0
+            mem_all = 0.0
+            if parent_pid not in processes:
+                processes[parent_pid] = psutil.Process(parent_pid)
+            main_process = processes[parent_pid]
+
+            logfile.write("Time:," + str(int(time.time())) + ",")
+            logfile.write("Main Process:," + str(parent_pid) + ",")
+            cpu_p = main_process.cpu_percent()
+            logfile.write("CPU:," + str(cpu_p) + ",")
+            mem_p = main_process.memory_full_info().rss
+            logfile.write("MEM:," + str(mem_p / 1024.0 ** 3) + "G,")
+            cpu_all = cpu_all + cpu_p
+            mem_all = mem_all + mem_p
+
+            count = 0
+            children = main_process.children(recursive=True)
+            for child in children:
+                cid = child.pid
+                if cid == monitor_pid:
+                    continue
+                if cid not in processes:
+                    processes[cid] = psutil.Process(cid)
+                c_process = processes[cid]
+                logfile.write("SubProcess " + str(count) + ":," + str(cid) + ",")
+                cpu_p = c_process.cpu_percent()
+                logfile.write("CPU:," + str(cpu_p) + ",")
+                mem_p = c_process.memory_full_info().rss
+                logfile.write("MEM:," + str(mem_p / 1024.0 ** 3) + "G,")
+                cpu_all = cpu_all + cpu_p
+                mem_all = mem_all + mem_p
+                count = count + 1
+
+            logfile.write("CPU_ALL:," + str(cpu_all) + ",")
+            logfile.write("MEM_ALL:," + str(mem_all / 1024.0 ** 3) + "G\n")
+            logfile.flush()
+            # sleep 1 sec before next monitoring cycle
+            time.sleep(1)
+        except Exception as e:
+            # it is possible that when training is done, some of the child processes (works) are completed
+            # while this loop is still runnig, so we simply passed such exceptions.
+            pass
+    logfile.close()
+
+def start_resource_monitor(logfile_pathname):
+    print("Creating resource monitor and log file", logfile_pathname)
+    ctx = multiprocessing.get_context('spawn')
+    pid = os.getpid()
+    msg_queue = ctx.Queue()
+    process = ctx.Process(target=resource_monitor_loop, args=(pid,msg_queue, logfile_pathname))
+    process.start()
+
+    def clean_helper(process, msg_queue):
+        msg_queue.put("STOP")
+        process.join()
+        print("Resource monitor stopped")
+    # it is really doesn't matter, but logically we should put this 1st item in the cleaning queue
+    insert_cleanup(0, clean_helper, process, msg_queue)
+
+
 def main(args):
     root = args.root
     num_workers = args.num_of_workers if args.num_of_workers is not None else 2
@@ -300,6 +392,9 @@ def main(args):
     # Decay LR by a factor of 0.1 every 7 epochs
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
+    if args.resource_monitor_file:
+        start_resource_monitor(args.resource_monitor_file)
+
     model_ft, pms = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler,
                                 dataloaders, device, args.num_epochs, args.log_interval)
     if args.file_path is not None:
@@ -332,6 +427,9 @@ if __name__ == "__main__":
                         help="number of batches to wait before logging training status")
     parser.add_argument("-f", "--file-path", type=str,
                         help="file path to save the best model and statistics")
+    parser.add_argument("-rmf", "--resource-monitor-file", nargs="?", type=str,
+                        default="", const="./resource_usage.csv",
+                        help="path and name of resource monitor log file, default is `./resource_usage.csv`")
 
     main(parser.parse_args())
 
