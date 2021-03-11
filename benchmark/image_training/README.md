@@ -8,6 +8,8 @@ To train using dataset, run `python3 ./train.py -r ./images_dataset_ds -ds`. <br
 To train using datapipe, run `python3 ./train.py -r ./images_dataset_tar -dp -n 10`. <br>
 To train using webdataset, run `python3 ./train.py -r ./images_dataset_tar -wds -n 10`.
 
+To enable resource montior for CPU+MEMORY usage, simply add -rmf <logfilepath> (default is ./resource_usage.csv)
+
 TODO:
 1. The iterable datapipe has no way to tell how many labels within the datapipe, so need to specify explicitly at the moment.
 2. We currently shuffle the input files in preprocessing stage (when generating tar file). We will add a shuffle layer later for datapipe.
