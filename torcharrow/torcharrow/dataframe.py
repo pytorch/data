@@ -1,950 +1,1009 @@
+
+
 import operator
-from os import stat
-import statistics
-import math
-
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Callable, Sequence, Type, Union, Optional, List, Dict, ClassVar, Callable, Any
-from tabulate import tabulate
-
-# low level stuff -- all vectors are in arrays of primitive type
+import copy
 import array as ar
 
-# high level stuff -- all types are described here
-from .dtypes import (DType, MetaData, derive_operator, String, boolean, Int64, Boolean, List_, Struct,
-is_numerical, is_string,  is_boolean, is_primitive, is_map, is_struct, is_list, infer_dtype, 
-derive_dtype, derive_operator, Field, Schema)
+from collections import OrderedDict
 
-# -----------------------------------------------------------------------------
-# Buffer types...
-NullBuffer = ar.array
-DataBuffer = ar.array
-OffsetBuffer = ar.array
+from typing import Callable, Union, Optional, List, Dict,  Callable, Any, Iterable, Literal, Sequence, Mapping
 
-# -----------------------------------------------------------------------------
-# Aux -  needed for pretty princting 
-OPEN = "{"
-CLOSE = "}"
-NL="\n"
+from torcharrow.tabulate import tabulate
 
+from torcharrow.dtypes import (
+    DType, Struct, Field, is_numerical, is_struct, int64, is_tuple, string, infer_dtype_from_prefix,
+    ScalarTypes, ScalarTypeValues, OPEN, CLOSE, NL)
 
-# ------------------------------------------------------------------------------
-# _Column - the astract baseclass; even dataframes are just struct columns
-
-@dataclass
-class _Column(ABC):
-    _dtype: DType
-    _count: int = 0
-    _null_count:int = 0
-
-    @property
-    def dtype(self):
-        return self._dtype
-
-    @property
-    def size(self):
-        # count is used on strings and lists already
-        return self._count
-  
-    def __len__(self):
-        return self._count
-
-    def __repr__(self):
-        return self.__str__()
-
-    # constructor factory -----------------------------------------------------
-
-
-
-    # selectors ------------------------------------------------------------
-
-    @abstractmethod
-    def get(self, i, fill_value):
-        pass
-    
-    def __getitem__(self, i):
-        # _lookup by string
-        # TODO maybe check that the subclass has actually a _lookup.
-        if isinstance(i, str):
-            return self._lookup(i)
-        if isinstance(i, (list,tuple)) and all(isinstance(k, str) for k in i):
-            return tuple( self._lookup(k) for  k in i)
-        # _lookup by int and slice
-        if isinstance(i, int):
-            return self.get(i, None)
-        if isinstance(i, slice):
-            # TODO generalize this...
-            assert i.start is not None and i.stop is not None
-            # TODO fix this: e.g. by creating a new columns instead
-            # res = _create_column(self._dtype)
-            # for j in range(i.start, i.stop):
-            #     res.append( self.get(j, None))
-            # return res
-            # # but this requires  changes in tests, so skip for now!
-            return [ self.get(j, None) for j in range(i.start, i.stop)] 
-
-        # filter/where
-        if isinstance(i, _BooleanColumn):
-            res = _create_column(self._dtype)
-            for x,m in zip(list(self), list(i)):
-                if m:
-                    res.append(x)
-            return res
-        # raise AssertionError('unexpected case')
-
-    def slice(self, start=None, stop=None, step=1):
-        if (step < 1):
-            raise ValueError(f"step must be > 0. given: {step}")
-        res = _create_column(self._dtype)
-        for j in range(start, stop, step):
-            res.append( self.get(j, None))
-        return res
-
-
-
-    # builders ------------------------------------------------------------
-
-    @abstractmethod
-    def append(self, value):
-        pass
-
-    def extend(self, iterable):
-        for i in iterable:
-            self.append(i)
-
-    # list ----------------------------------------------------------------
-    @abstractmethod 
-    def __iter__(self):
-        while False:
-            yield None
-
-    def to_list(self):
-        return list(self.__iter__())
-
-    # binary operators --------------------------------------------------------
-
-    def _broadcast(self, operator, const, dtype):
-        assert is_primitive(self._dtype) and is_primitive(dtype) 
-        res = _create_column(dtype)
-        for i in range(self._count):
-            if self._validity[i]:
-                res.append(operator( self._data[i], const))
-            else:
-                res.append(None)   
-        return res
-
-    def _pointwise(self, operator, other, dtype):
-        assert is_primitive(self._dtype) and is_primitive(dtype) 
-        res = _create_column(dtype)
-        for i in range(self._count):
-            if self._validity[i] and other._validity[i]:
-                res.append(operator( self._data[i], other._data[i]))
-            else:
-                res.append(None)   
-        return res
-           
-
-    def _binary_operator(self, operator, other):
-        if isinstance(other, (int, float, list, set, type(None))):  
-            return self._broadcast(derive_operator(operator), other,  derive_dtype(self._dtype, operator))
-        else:
-            return self._pointwise( derive_operator(operator), other,  derive_dtype(self._dtype, operator))
-
-    def __add__(self, other):
-        return self._binary_operator("add", other)
-
-    def __sub__(self, other):
-        return self._binary_operator("sub", other)
-
-    def __mul__(self, other):
-        return self._binary_operator("mul", other)
-
-    def __eq__(self, other):
-        return self._binary_operator("eq", other)
-
-    def __ne__(self, other):
-        return self._binary_operator("ne", other)
-
-    def __or__(self, other):
-        return self._binary_operator("or", other)
-
-    def __and__(self, other):
-        return self._binary_operator("and", other)
-
-    def __floordiv__(self, other):
-        return self._binary_operator("floordiv", other)
-
-    def __truediv__(self, other):
-        return self._binary_operator("truediv", other)
-
-    def __mod__(self, other):
-        return self._binary_operator("mod", other)
-
-    def __pow__(self, other):
-        return self._binary_operator("pow", other)
-
-    def __lt__(self, other):
-        return self._binary_operator("lt", other)
-
-    def __gt__(self, other):
-        return self._binary_operator("gt", other)
-
-    def __le__(self, other):
-        return self._binary_operator("le", other)
-
-    def __ge__(self, other):
-        return self._binary_operator("ge", other)
-
-    def isin(self, collection):
-        return self._binary_operator("in", collection)
-
-    # other ops ------------------------------------------------------------
-
-    def fillna(self,fill_value):
-        assert fill_value is not None
-        res = _create_column(self._dtype)
-        for i in range(self._count):
-            if self._validity[i]:
-                res.append(self[i])
-            else:
-                res.append(fill_value)   
-        return res
-        
-    def dropna(self):
-        res = _create_column(self._dtype)
-        for i in range(self._count):
-            if self._validity[i]:
-                res.append(self[i])
-        return res
-
-    def head(self, n):
-        res = _create_column(self._dtype)
-        for i in range(0,n):
-            if self._validity[i]:
-                res.append(self[i])
-            else:
-                res.append(None)
-        return res
-
-    def min(self):
-        return min(list(self))
-    
-    def max(self):
-        return max(list(self))
-    
-    # fnuctools ---------------------------------------------------------------
-
-    def map(self, fun, dtype:Optional[DType]=None):
-        #dtype must be given, if result is different from argument column
-        if dtype is None:
-            dtype = self._dtype
-        res = _create_column(dtype)
-        for i in range(self._count):
-            if self._validity[i]:
-                res.append(fun(self[i]))
-            else:
-                res.append(None)
-        return res
-        
-    def filter(self, pred):
-        res = _create_column(self._dtype)
-        for i in range(self._count):
-            if self._validity[i]:
-                if pred(self[i]):
-                    res.append(self[i])
-                    continue          
-            else:
-                res.append(None)
-        return res
-
-    def reduce(self, fun, initializer=None):
-        if self._count==0:
-            if initializer is not None:
-                return initializer
-            else:
-                raise TypeError("reduce of empty sequence with no initial value")
-        start = 0
-        if initializer is None:
-            value = self[0]
-            start = 1
-        else: 
-            value = initializer
-        for i in range(start,self._count):
-            value = fun(value, self[i])
-        return value
-
-    def flatmap(self, fun, dtype:Optional[DType]=None):
-        #dtype must be given, if result is different from argument column
-        if dtype is None:
-            dtype = self._dtype
-        res = _create_column(dtype)
-        for i in range(self._count):
-            if self._validity[i]:
-                res.extend(fun(self[i]))
-            else:
-                res.append(None)
-        return res
-        
-
-# ------------------------------------------------------------------------------
-# _Column
-
-class _NumericalColumn(_Column):
-
-    def __init__(self, dtype):
-        assert is_numerical(dtype)
-
-        super().__init__(dtype)
-        self._data = ar.array(dtype.arraycode)
-        self._validity = ar.array('b')
-        self._null_count = 0
-        self._offset = 0
-        self._count = 0
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __str__(self):
-        if self._null_count> 0:
-            tab = tabulate([[l,v] for (l,v) in zip(self._data, self._validity)],['data', 'validity'])
-        else:
-            tab = tabulate([[l] for l in self._data],['data'])
-        typ = f"dtype: {self._dtype}, count: {self._count}, null_count: {self._null_count}" 
-        return tab+NL+typ
-          
-    def append(self, x):
-        if x is None and self._dtype.nullable:
-            self._data.append(self._dtype.default)
-            self._validity.append(False)
-            self._null_count += 1
-        else:
-            self._data.append(x)
-            self._validity.append(True)
-        self._count += 1
-
-
-    def get(self, i, fill_value):
-        if self._null_count==0:
-            return self._data[i]
-        elif not self._validity[i]:
-            return fill_value
-        else:
-            return self._data[i]
-
-    def __iter__(self):
-        if self._null_count==0:
-            for x in self._data:
-                yield x
-        else:
-            for x,n in zip(self._data, self._validity):
-                if not n:
-                    yield None
-                else:
-                    yield x
-
-    # descriptive statistics --------------------------------------------------
-    # special operations on Numerical Columns
-
-    def sum(self):
-        if self._null_count==0:
-            return sum(self._data)
-        else:
-            return sum(self._data[i] 
-                        for i in range(self._count) 
-                        if self._validity[i])
-
-    def mean(self):
-        if self._null_count==0:
-            return statistics.mean(self._data)
-        else:
-            return statistics.mean(self._data[i] 
-                        for i in range(self._count) 
-                        if self._validity[i])
-
-# ------------------------------------------------------------------------------
-# _Column
-
-class _BooleanColumn(_Column):
-
-    def __init__(self, dtype):
-        super().__init__(dtype)
-        self._data = ar.array('b') 
-        self._validity = ar.array('b')
-        self._null_count = 0
-        self._offset = 0
-        self._count = 0
-
-    def __str__(self):
-        if self._null_count> 0:
-            tab = tabulate([[bool(l),v] for (l,v) in zip(self._data, self._validity)],['data', 'validity'])
-        else:
-            tab = tabulate([[bool(l)] for l in self._data],['data'])
-        typ = f"dtype: {self._dtype}, count: {self._count}, null_count: {self._null_count}" 
-        return tab+NL+typ
-            
-    def append(self, x):
-        if x is None and self._dtype.nullable:
-            self._data.append(self._dtype.default)
-            self._validity.append(False)
-            self._null_count += 1
-        else:
-            self._data.append(x)
-            self._validity.append(True)
-        self._count += 1
-
-
-
-    def get(self, i, fill_value):
-        if self._null_count==0:
-            return bool(self._data[i])
-        elif not self._validity[i]:
-            return fill_value
-        else:
-            return bool(self._data[i])
-
-    def __iter__(self):
-        if self._null_count==0:
-            for x in self._data:
-                yield bool(x)
-        else:
-            for x,n in zip(self._data, self._validity):
-                if not n:
-                    yield None
-                else:
-                    yield bool(x)
-
-
-# ------------------------------------------------------------------------------
-# _StringColumn
-
-class _StringColumn(_Column):
-    # private
-
-    def __init__(self,  dtype):
-        super().__init__(dtype)
-        # for simplicty always add a null validity
-        self._validity = ar.array('b')
-        self._offsets = ar.array('I', [0])
-        self._data = ar.array('u') 
-        self._offset = 0
-        self._null_count = 0
-        self._count =0
-
-    def __str__(self):
-            if self._null_count> 0:
-                tab = tabulate([ [self._data[self._offsets[i]:
-                                  self._offsets[i+1]].tounicode(),o,v] 
-                                 for i,(o,v) in enumerate(zip(self._offsets, self._validity))],
-                                 ['data', 'offsets', 'validity'])
-            else:
-                tab = tabulate([ [self._data[self._offsets[i]:
-                                  self._offsets[i+1]].tounicode(),o] 
-                                 for i,(o,v) in enumerate(zip(self._offsets, self._validity))],
-                                 ['data', 'offsets'])
-            typ = f"dtype: {self._dtype}, count: {self._count}, null_count: {self._null_count}" 
-            return tab+NL+typ
-
-    def append(self, cs):
-        if cs is None:
-            self._null_count += 1
-            self._validity.append(False)
-            self._offsets.append(self._offsets[-1])
-        else:
-            self._validity.append(True)
-            self._data.extend(cs)
-            self._offsets.append(self._offsets[-1]+len(cs))
-        self._count += 1
-            
-
-    def get(self, i, fill_value):
-        if self._null_count==0:
-            return self._data[self._offsets[i]:self._offsets[i+1]].tounicode()
-        elif not self._validity[i]:
-            return fill_value
-        else:
-            return self._data[self._offsets[i]:self._offsets[i+1]].tounicode()
-
-
-    def __iter__(self):
-        for i in range(self._count):
-            if self._validity[i]:
-                yield self._data[self._offsets[i]:self._offsets[i+1]].tounicode()
-            else:
-                yield None
-
-
-    # string ops --------------------------------------------------------------
-    # special operations on String Columns
-
-    def count(self, x):     
-        "total number of occurrences of x in s"
-        res = _NumericalColumn(Int64(self._dtype.nullable))
-        for i in self.iter():
-            res.append(i._count(x))
-        return res
-
-    def capitalize(self):
-        res = _StringColumn(String(self._dtype.nullable))
-        for i in range(self._count):
-            if self._validity[i]:
-                res.append(self[i].capitalize())
-            else:
-                 res.append(None)
-        return res
-
-    def startswith(self, x):
-        res = _BooleanColumn(String(self._dtype.nullable))
-        for i in self.iter():
-            res.append(i.startswith(x))
-        return res
-    
-# ops on strings --------------------------------------------------------------
-#  'capitalize',
-#  'casefold',
-#  'center',
-#  'count',
-#  'encode',
-#  'endswith',
-#  'expandtabs',
-#  'find',
-#  'format',
-#  'format_map',
-#  'offset',
-#  'isalnum',
-#  'isalpha',
-#  'isascii',
-#  'isdecimal',
-#  'isdigit',
-#  'isidentifier',
-#  'islower',
-#  'isnumeric',
-#  'isprintable',
-#  'isspace',
-#  'istitle',
-#  'isupper',
-#  'join',
-#  'ljust',
-#  'lower',
-#  'lstrip',
-#  'maketrans',
-#  'partition',
-#  'removeprefix',
-#  'removesuffix',
-#  'replace',
-#  'rfind',
-#  'rindex',
-#  'rjust',
-#  'rpartition',
-#  'rsplit',
-#  'rstrip',
-#  'split',
-#  'splitlines',
-#  'startswith',
-#  'strip',
-#  'swapcase',
-#  'title',
-#  'translate',
-#  'upper',
-#  'zfill']
-
-# -----------------------------------------------------------------------------
-# List
-
-class _ListColumn(_Column):
-
-    def __init__(self,  dtype, item_col: _Column):
-        super().__init__(dtype)
-        # TODO: Check offset logic ... for now assume
-        assert(len(item_col)==0)
-        self._offsets = ar.array('I', [0])  
-        self._item_data = item_col
-        self._offset = 0
-        self._null_count = 0
-        self._count=len(item_col)
-        self._validity = ar.array('b',[True]*self._count)
-    
-    def __str__(self):
-            if self._null_count> 0:
-                tab = tabulate([ [self._item_data[self._offsets[i]:
-                                  self._offsets[i+1]],o,v] 
-                                 for i,(o,v) in enumerate(zip(self._offsets, self._validity))],
-                                 ['data', 'offsets', 'validity'])
-            else:
-                tab = tabulate([ [self._item_data[self._offsets[i]:
-                                  self._offsets[i+1]],o] 
-                                 for i,(o,v) in enumerate(zip(self._offsets, self._validity))],
-                                 ['data', 'offsets'])
-            typ = f"dtype: {self._dtype}, count: {self._count}, null_count: {self._null_count}" 
-            return tab+NL+typ
-
-    def append(self, values):        
-        if values is None:
-            self._null_count += 1
-            self._validity.append(False)
-            self._offsets.append(self._offsets[-1])
-        else:
-            self._validity.append(True)
-            self._item_data.extend(values)
-            self._offsets.append(self._item_data._count)
-        self._count += 1
-
-
-    def get(self, i, fill_value):
-        if self._null_count==0:
-            return self._item_data[self._offsets[i]:self._offsets[i+1]]
-        elif not self._validity[i]:
-            return fill_value
-        else:
-            return self._item_data[self._offsets[i]:self._offsets[i+1]]
-
-
-    def __iter__(self):
-        for i in range(self._count):
-            if self._validity[i]:
-                yield self._item_data[self._offsets[i]:self._offsets[i+1]]
-            else:
-                yield None
-
-
-    # list_ops-----------------------------------------------------------------
-
-    def count(self, x):     
-        "total number of occurrences of x in s"
-        res = _NumericalColumn(Int64(self._dtype.nullable))
-        for i in self.iter():
-            res.append(i._count(x))
-        return res
-
-# ops on list  --------------------------------------------------------------
-#  'count',
-#  'extend',
-#  'index',
-#  'insert',
-#  'pop',
-#  'remove',
-#  'reverse',
-
-
-# -----------------------------------------------------------------------------
-# Map
-
-class _MapColumn(_Column):
-    def __init__(self,  dtype, key_col: _Column, item_col: _Column):
-        super().__init__(dtype)
-        # TODO: Check offset logic, in caxe you pass an existsing column... for now assume
-        assert(len(item_col)==0)
-        self._offsets = ar.array('I', [0])
-        self._key_data = key_col
-        self._item_data = item_col
-        self._offset = 0
-        self._null_count = 0
-        if len(key_col) != len(item_col):
-                raise TypeError("key and item columns must have eual length")
-        self ._count = len(key_col)
-        self._validity = ar.array('b',[True]*self._count)
-
-    
-    def __str__(self):
-        return f"_MapColumn[{id(self)}]({self._dtype}, {self._count}, {self._null_count}, {self._offset}, {self._offsets}, {self._validity}, ID{id(self._key_data)}, ID{id(self._key_data)})"
-
-
-    def append(self, map):        
-        if map is None:
-            self._null_count += 1
-            self._validity.append(False)
-            self._offsets.append(self._offsets[-1])
-        else:
-            self._validity.append(True)
-            self._key_data.extend([k for k in map.keys()])
-            self._item_data.extend([v for v in map.values()]) 
-            self._offsets.append(self._key_data._count)
-        self._count += 1
-
-    def get(self, i, fill_value):
-        if self._null_count==0:
-            return {self._key_data[i] : self._item_data[i] 
-                    for i in range(self._offsets[i], self._offsets[i+1])}
-        elif not self._validity[i]:
-            return fill_value
-        else:
-            return {self._key_data[i] : self._item_data[i] 
-                    for i in range(self._offsets[i], self._offsets[i+1])}
-
-
-    def __iter__(self):
-        for i in range(self._count):
-            if self._validity[i]:
-                yield {self._key_data[i] : self._item_data[i] 
-                    for i in range(self._offsets[i], self._offsets[i+1])}
-            else:
-                yield None
-
-    
-        
-# ops on maps --------------------------------------------------------------      
-#  'get',
-#  'items',
-#  'keys',
-#  'pop',
-#  'popitem',
-#  'setdefault',
-#  'update',
-#  'values'
+from torcharrow.column import AbstractColumn, Column, _set_column_constructor, _column_constructor
 
 
 
 # -----------------------------------------------------------------------------
-# Struct
+# DataFrames aka (StructColumns, can be nested as StructColumns:-)
 
+DataOrDTypeOrNone = Union[Mapping, Sequence, DType, Literal[None]]
+class DataFrame(AbstractColumn):
+    """ Dataframe, ordered dict of typed columns of the same length  """
+    def __init__(self,data: DataOrDTypeOrNone =None, dtype: Optional[DType]=None, columns: Optional[List[str]]=None):
 
-class _StructColumn(_Column):
+         # handling cyclic references...
+        import torcharrow.numerical_column 
+        import torcharrow.string_column 
+        import torcharrow.map_column 
+        import torcharrow.list_column 
 
-    internal_fields = ["_dtype", "_null_count", "_offset", "_count", "_validity","_field_data"]
-
-    def __init__(self,  dtype, field_col: Dict[str,_Column]):
         super().__init__(dtype)
-        if  set(f.name for f in dtype.fields) != set(field_col.keys()):
-            raise TypeError("type and columns ust match")
-        #invariant, field_data order is dtype_order
         self._field_data = {}
-        for f in dtype.fields:
-            self._field_data[f.name]= field_col[f.name]
-            if f.name in _StructColumn.internal_fields:
-                 raise TypeError("column name cannot be one of '{_StructColumn.internal_fields}'")
 
-        self._offset = 0
-        self._null_count = 0
-        self._count = -1
-        for k in field_col.keys():
-            if  self._count == -1:
-                self._count = len(field_col[k])
-                continue
-            if self._count != len(field_col[k]):
-                raise TypeError("all columns must have eual length")
-        self._count = max(0,self._count )
-        self._validity = ar.array('b',[True]*self._count)
+        if data is None and dtype is None:
+            assert columns is None
+            self._dtype = Struct([])
+            return 
         
-    def __str__(self):
-            cols = {f:list(c) for f,c in self._field_data.items()}
-            if self._null_count> 0:
-                cols["validity"]= list(self._validity)
-                tab = tabulate(cols,self._field_data.keys()+["validity"])
+        if data is not None and isinstance(data, DType):
+            if dtype is not None and isinstance(dtype, DType):
+                raise TypeError('Dataframe can only have one dtype parameter') 
+            dtype = data
+            data = None
+
+        # dtype given, optional data
+        if dtype is not None:
+            if not is_struct(dtype):
+                raise TypeError(f'Dataframe takes a Struct dtype as parameter (got {dtype})') 
+            self._dtype = dtype
+            for f in dtype.fields:
+                self._field_data[f.name] = _column_constructor(f.dtype)
+            if data is not None:
+                if isinstance(data, Sequence):  
+                    for i in data:
+                        self.append(i)
+                    return
+                elif isinstance(data, Mapping):  
+                    for n,c in  data.items():
+                        self[n] = c if isinstance(c,AbstractColumn) else Column(c)
+                    return
+                else:
+                    raise TypeError(f'Dataframe does not support constructor for data of type {type(data).__name__}') 
+
+        # data given, optional column 
+        if data is not None:
+            if isinstance(data, list):  
+                prefix = []
+                for i,v in enumerate(data):
+                    prefix.append(v)
+                    if i>5:
+                        break  
+                dtype = infer_dtype_from_prefix(prefix)
+                if dtype is None or not is_tuple(dtype):
+                    raise TypeError('Dataframe cannot infer struct type from data')
+                columns = [] if columns is None else columns
+                if len(dtype.fields) != len(columns):
+                    raise TypeError('Dataframe column length must equal row length')
+                self._dtype = Struct( [Field(n,t) for n,t in zip(columns, dtype.fields)])
+                for f in self._dtype.fields:
+                    self._field_data[f.name] = _column_constructor(f.dtype)
+                for i in data:
+                    self.append(i)
+                return
+            elif isinstance(data, dict):
+                self._dtype = Struct([])
+                for n,c in  data.items():
+                    self[n] = c if isinstance(c,AbstractColumn) else Column(c)
+                return
             else:
-                tab = tabulate(cols,self._field_data.keys())
-            typ = f"dtype: {self._dtype}, count: {self._count}, null_count: {self._null_count}" 
-            return tab+NL+typ
-
-    def _lookup(self,name):
-        return self._field_data[name]
+                raise TypeError(f'Dataframe does not support constructor for data of type {type(data).__name__}') 
+          
+    # implementing abstract methods ----------------------------------------------
     
-    def columns(self):
-        return self._field_data
+    @property
+    def ismutable(self):
+        """Can this column/frame be extended"""
+        rlengths = self._raw_lengths()
+        rset = set(rlengths)
+        if len(rset)==0:
+            return True
+        elif len(rset) == 1:
+            return rlengths[0] == self._offset+self._length
+        else:
+            return False
 
-    # for now struct values are just tuples
-    # TODO add named tuples, dataclasses
-    def append(self, tup):        
+    def memory_usage(self, deep=False):
+        """Return the memory usage of the Frame (if deep then buffer sizes)."""
+        vsize = self._validity.itemsize
+        fusage = sum(c.memory_usage(deep) for c in self._field_data.values())
+        if not deep:
+            return self._length * vsize  +  fusage
+        else:
+            return len(self._validity)*vsize + fusage
+
+    @property
+    def ndim(self):
+        """Column ndim is always 1, Frame ndim is always 2"""
+        return 2
+    
+    @property
+    def size(self):  
+        """ Number of rows if column; number of rows * number of columns if Frame. """
+        return self._length * len(self.columns)
+
+    def append(self, tup):    
+        """Append value to the end of the column/frame"""   
         if tup is None:
+            if not self.dtype.nullable:
+                raise TypeError(f'a tuple of type {self.dtype} is required, got None')
             self._null_count += 1
             self._validity.append(False)
-            self._offsets.append(self._offsets[-1])
+            for f in self._dtype.fields:
+                # TODO Design decision: null for struct value requires null for its fields
+                self._field_data[f.name].append(None)
         else:
             assert isinstance(tup, tuple)
             self._validity.append(True)
             for i,v in enumerate(tup):
                 self._field_data[self._dtype.fields[i].name].append(v)
-        self._count += 1
+        self._length += 1
 
     def get(self, i, fill_value):
+        """Get ith row from column/frame"""
         if self._null_count==0:
             return tuple(self._field_data[f.name][i] for f in self._dtype.fields)
-        elif not self._validity[i]:
+        elif not  self._valid(i):
             return fill_value
         else:
             return tuple(self._field_data[f.name][i] for f in self._dtype.fields)
 
 
     def __iter__(self):
-        for i in range(self._count):
-            if self._validity[i]:
-                yield tuple(self._field_data[f.name][i] for f in self._dtype.fields)
+        """Return the iterator object itself."""
+        for i in range(self._length):
+            j = self._offset + i
+            if self._validity[j]:
+                yield tuple(self._field_data[f.name][j] for f in self._dtype.fields)
             else:
                 yield None
 
-    # project/rename --------------------------------------------------------------
-    def drop(self,col_names):
-        flds = []
-        cols = {}
-        for f in self._dtype.fields:
-            if f.name not in col_names:
-                flds.append(f)
-                cols[f.name] = self._field_data[f.name]
-        return _StructColumn(Struct(flds, self._dtype.nullable, self._dtype.is_dataframe), cols)
+    def _copy(self, deep, offset, length):
+        if deep:
+            res = DataFrame(self.dtype)
+            res._length = length
+            res._field_data = {n: c._copy(deep, offset, length) for n,c in self._field_data.items()}
+            res._validity = self._validity[offset: offset+length]
+            res._null_count= sum(res._validity)
+            return res
+        else:
+            return copy.copy(self)
+    
+    def _raw_lengths(self):
+        return AbstractColumn._flatten([c._raw_lengths() for c in self._field_data.values()])
 
-    def keep(self,col_names):
-        flds = []
-        cols = {}
-        for f in self._dtype.fields:
-            if f.name in col_names:
-                flds.append(f)
-                cols[f.name] = self._field_data[f.name]
-        return _StructColumn(Struct(flds, self._dtype.nullable, self._dtype.is_dataframe), cols)
+    # implementing abstract methods ----------------------------------------------
+   
+    @property
+    def columns(self):
+        """The column labels of the DataFrame."""
+        return list(self._field_data.keys())
 
-    def rename(self,map):
-        assert isinstance(map, dict) and all(isinstance(k, str) and isinstance(v, str) for k,v in map.items())
-        flds = []
-        cols = {}
-        for f in self._dtype.fields:
-            if f.name in map:
-                flds.append(Field(map[f.name], f._dtype))
-                cols[f.name] = self._field_data[f.name]
-        return _StructColumn(Struct(flds, self._dtype.nullable, self._dtype.is_dataframe), cols)
-
-
-    # getter/setter--------------------------------------------------------------
-    # TODO CLEAN Up setter.getter 
 
     def __setitem__(self, name: str, value: Any) -> None:
-        if name in self.__dict__ or name in _StructColumn.internal_fields :
-            self.__dict__[name] = value
-            return 
-       
-        if not isinstance(value, _Column):
-            raise TypeError(f"only columns can be updated {name} {value}")
-       
-        if len(self._dtype.fields)==0:
-            # first column added
-            self._dtype.fields.append(Field(name, value._dtype))
-            self._field_data[name]=value
-            self._count=len(value)
-            self._null_count=0
-            self._validity = ar.array('b',[True]*self._count)
-            return
-
-        if len(value) != self._count:
-            raise TypeError("all columns must have same length")
-       
-        if name in self._field_data:
-            # update the fields type and column.
-            self._field_data[name]=value
-            for f in self._dtype.fields:
-                if f.name == name:
-                    f.type = value._dtype
-                    return # early
+        d = None      
+        if isinstance(value,AbstractColumn):
+            d = value 
+        elif isinstance(value,list):
+            d = Column(value)
         else:
-            # add the column (add the end)
-            self._dtype.fields.append(Field(name, value._dtype))
-            self._field_data[name]=value
-
+            raise TypeError('data must be a column or list')
     
-
-    def __getitem__(self, name) -> None:
-        if isinstance(name,str) and (name in self.__dict__ or name in _StructColumn.internal_fields) :
-             return self.__dict__[name]
-        if isinstance(name, (str, tuple, slice, int, _BooleanColumn)):
-            return super().__getitem__(name)
-        else:
-            try:
-                return self._field_data[name]
-            except KeyError:
-                raise AttributeError(f"{type(self)} object has no attribute '{name}'") from None
-
-    # def __setitem__(self, name: str, value: Any) -> None:
-    #     self.__setattr__(name,value)
-
-
-
-# -----------------------------------------------------------------------------
-# Column and Dataframe factories.
-# -- note that Dataframe is in qutessence an alias for a _StructColumn 
-
-# public factory API
-
-def DataFrame(initializer: Union[Dict, DType, None]= None, dtype: Optional[DType]=None) -> _Column:
-    if initializer is None and dtype is None:
-        return _StructColumn(Schema([]), {})
+        if all(len(c) == 0 for c in self._field_data.values()):
+            self._length = len(d)
+            self._validity= ar.array('b', [True] * self._length)
+    
+        elif len(d) != self._length:
+            raise TypeError('all columns/lists must have equal length')
         
-    if isinstance(initializer, DType):
-        assert dtype is None
-        dtype = initializer
-        initializer = None
+        if name in self._field_data:
+            raise TypeError('cannot override existsing column')
+        # side effect on field_data
+        self._field_data[name]=d
+        # no side effect on dtype
+        fields = list(self._dtype.fields)
+        fields.append(Field(name, d._dtype))
+        self._dtype= Struct(fields)
 
-    if dtype is not None:
-        col = _create_column(dtype)
-        if initializer is not None:
-            for i in initializer:
-                col.append(i)
-        return col
-    else:
-        if isinstance(initializer, dict):
-            cols= {}
-            fields=[]
-            for k,vs in initializer.items():
-                cols[k] = Column(vs)
-                fields.append(Field(k,cols[k]._dtype))
-            return _StructColumn(Schema(fields), cols)
+    # printing ----------------------------------------------------------------
+    def __str__(self):
+        quote = lambda n: f"'{n}'"
+        return f"Dataframe({OPEN}{', '.join(f'{quote(n)}:{str(c)}' for n,c in self._field_data.items())}{CLOSE})"
+
+    def __repr__(self):
+        data = []
+        for i in self:
+            if i is None:
+                data.append(['None'] * len(self.columns))
+            else:
+                assert len(i)== len(self.columns)
+                data.append(list(i))
+        tab = tabulate(data, headers=["index"]+self.columns, tablefmt='simple',showindex=True)
+        typ = f"dtype: {self._dtype}, count: {self._length}, null_count: {self._null_count}" 
+        return tab+NL+typ
+
+
+    # def __repr__(self):
+    #         cols = {f:list(c) for f,c in self._field_data.items()}
+    #         if self._null_count> 0:
+    #             cols["validity"]= list(self._validity)
+    #             tab = tabulate(cols,self._field_data.keys()+["validity"])
+    #         else:
+    #             tab = tabulate(cols,self._field_data.keys())
+    #         typ = f"dtype: {self._dtype}, count: {self._length}, null_count: {self._null_count}" 
+    #         return tab+NL+typ
+
+    # selectors -----------------------------------------------------------
+    def _get_column(self, arg, default=None):
+        # TODO delete the default, no?
+        return self._field_data[arg]
+
+    def _slice_columns(self,arg):
+        if arg.step is not None:
+            raise ValueError('slicing column names requires step parameter to be None')
+        
+        start = 0
+        columns = self.columns
+        if arg.start is not None:
+            self._field_data[arg.start] # triggers keyerror
+            start = columns.index(arg.start)
         else:
-            raise ValueError('cannot infer type of initializer')
+            start = 0
+        if arg.stop is not None: 
+            self._field_data[arg.stop] # trigger keyerror
+            stop = columns.index(arg.stop)
+        else:
+            stop = len(columns)
+        res = DataFrame()
+        for i in range(start, stop):
+            res[columns[i]] = self._field_data[columns[i]]
+        return res
+        
     
+    def _pick_columns(self,arg):
+        res = DataFrame()
+        for i in arg:
+            res[i] = self._field_data[i]
+        return res 
+   
+    # conversions -------------------------------------------------------------
+   
 
 
-def Column(initializer: Union[Dict, List, DType, None]= None, dtype: Optional[DType]=None) -> _Column:
-    if isinstance(initializer, DType):
-        assert dtype is None
-        dtype = initializer
-        initializer = None
+   # map and filter -----------------------------------------------------------
 
-    if dtype is not None:
-        col = _create_column(dtype)
-        if initializer is not None:
-            for i in initializer:
-                col.append(i)
-        return col
-    elif isinstance(initializer, dict):
-            cols= {}
-            fields=[]
-            for k,vs in initializer.items():
-                cols[k] = Column(vs)
-                fields.append(Field(k,cols[k]._dtype))
-            return _StructColumn(Struct(fields), cols)
-    elif isinstance(initializer, list):
-        dtype = infer_dtype(initializer[0:5])
-        if dtype is None:
-            raise ValueError('cannot infer type of initializer')
-        col = _create_column(dtype)
-        for i in initializer:
-            col.append(i)
-        return col
-    else:
-        raise ValueError('cannot infer type of initializer')
+   # TODO add callables...
 
+    def map(self, arg: Union[Dict, Callable], na_action: Literal['ignore', None]=None):
+        """Map values of data according to input correspondence."""
+        res= DataFrame()
+        for n,c in  self._field_data.items():
+            res[n]= c.map(arg,na_action)
+        return res
+       
+    def where(self,cond, other):
+        """Replace values where the condition is False; other must have same type and size as self."""
+        res= DataFrame()
+        for (n,c),(m,d) in zip(self._field_data.items(), other._field_data.items()):
+            if (n!= m) or (len(c) != len(d)):
+                # TODO add type chcek
+                raise TypeError(f"column names,types and lengths have to match between self['{n}] and other['{m}']")
+        for n,c in self._field_data.items():
+            d = other._field_data[n]
+            res[n]= c.where(cond,d)
+        return res
+
+    def applymap(self, func, na_action: Literal['ignore', None]=None, dtype: Optional[DType]= None):
+        """Apply a function to a Dataframe elementwise"""
+        return self._lift(lambda c: c._map, func=func, na_action=na_action, dtype=dtype)
+
+   
+
+    # sorting ----------------------------------------------------------------
+  
+    def sort_values(
+        self,
+        by : Union[str,List[str],Literal[None]] = None,
+        ascending=True,
+        na_position:Literal['last','first']="last",
+        
+    ):
+        """Sort a column/a dataframe in ascending or descending order"""
+        # Not allowing None in comparison might be too harsh... 
+        # Move all rows with None that in sort index to back...
+        func = None
+        if isinstance(by,str):
+           by = [by]
+        if isinstance(by,list):
+            xs=[]
+            for i in by:
+                _ = self._field_data[i] # throws key error
+                xs.append(self.columns.index(i))
+            reorder = xs+[j for j in range(len(self._field_data)) if j not in xs]
+            func = lambda tup: tuple(tup[i] for i in reorder)
+
+        res = DataFrame(self.dtype)
+        if na_position == 'first':
+            res.extend([None] * self._null_count)
+        res.extend(sorted((i for i in self if i is not None), reverse = not ascending, key=func))
+        if na_position == 'last':
+            res.extend([None] * self._null_count)
+        return res
+
+    def nlargest(self, 
+            n=5,  
+            columns : Union[str,List[str],Literal[None]] = None, 
+            keep :Literal['last','first']= "first"):
+        """Returns a new data of the *n* largest element."""
+        # Todo add keep arg
+        return  self.sort_values(by=columns, ascending=False).head(n)
+
+    def nsmallest(self, 
+            n=5, 
+            columns : Union[str,List[str],Literal[None]] = None, 
+            keep :Literal['last','first']= "first"):
+        """Returns a new data of the *n* smallest element. """
+        # keep="all" not supported
+         # Todo add keep arg
+        return self.sort_values(by=columns, ascending=True).head(n)
+
+
+    # operators --------------------------------------------------------------
+
+
+    # arithmetic
+
+    def add(self,other,fill_value=None):
+        return self._binary_operator("add", other, fill_value=fill_value)
     
-@staticmethod
-def arange(
-        start: Union[int, float],
-        stop: Union[int, float,None] = None,
-        step: Union[int, float] = 1,
-        dtype:Optional[DType]=None) -> "_Column":
-        return Column(list(range(start,stop,step)),dtype)
+    def radd(self,other,fill_value=None):
+        return self._binary_operator("add", other, fill_value=fill_value, reflect=True)
 
-# private factory method
-def _create_column(dtype: Optional[DType] = None):
-        if dtype is None:
-            return _StructColumn(Struct([]))
-        if is_numerical(dtype):
-            return _NumericalColumn(dtype)
-        if is_string(dtype):
-            return _StringColumn(dtype) 
-        if is_boolean(dtype):
-            return _BooleanColumn(dtype)
-        if is_list(dtype):
-            return _ListColumn(dtype, _create_column(dtype.item_dtype))
-        if is_map(dtype):
-            return _MapColumn(dtype, 
-                _create_column(dtype.key_dtype), 
-                _create_column(dtype.item_dtype))
-        if is_struct(dtype):
-            return _StructColumn(dtype, {f.name: _create_column(f.dtype) for f in dtype.fields})
-        raise AssertionError(f'unexpected case: {dtype}')
+    def __add__(self, other):
+        return self._binary_operator("add", other)
+
+    def __radd__(self, other):
+        return self._binary_operator("add", other,reflect=True)        
+
+    def sub(self,other,fill_value=None):
+        return self._binary_operator("sub", other, fill_value=fill_value)
+    
+    def rsub(self,other,fill_value=None):
+        return self._binary_operator("sub", other, fill_value=fill_value, reflect=True)
+
+    def __sub__(self, other):
+        return self._binary_operator("sub", other)
+
+    def __rsub__(self, other):
+        return self._binary_operator("sub", other, reflect= True)
+
+    def mul(self,other,fill_value=None):
+        return self._binary_operator("mul", other, fill_value=fill_value)
+    
+    def rmul(self,other,fill_value=None):
+        return self._binary_operator("mul", other, fill_value=fill_value, reflect=True)
+
+    def __mul__(self, other):
+        return self._binary_operator("mul", other)
+
+    def __rmul__(self, other):
+        return self._binary_operator("mul", other, reflect=True)
+
+    def floordiv(self, other,fill_value=None):
+        return self._binary_operator("floordiv", other, fill_value=fill_value,)
+
+    def rfloordiv(self, other,fill_value=None):
+        return self._binary_operator("floordiv", other, fill_value=fill_value,reflect=True)
+
+    def __floordiv__(self, other):
+        return self._binary_operator("floordiv", other)
+
+    def __rfloordiv__(self, other):
+        return self._binary_operator("floordiv", other, reflect=True)
+   
+    def truediv(self, other,fill_value=None):
+        return self._binary_operator("truediv", other,fill_value=fill_value,)
+    
+    def rtruediv(self, other,fill_value=None):
+        return self._binary_operator("truediv", other, fill_value=fill_value, reflect=True)
+
+    def __truediv__(self, other):
+        return self._binary_operator("truediv", other)
+    
+    def __rtruediv__(self, other):
+        return self._binary_operator("truediv", other, reflect=True)
+
+    # No vectorized shift support, or?
+    # def __lshift__(self, other):
+    #     return self._binary_operator("lshift", other)
+
+    # def __rlshift__(self, other):
+    #     return self._binary_operator("rlshift", other,reflect=True)
+
+    def mod(self, other,fill_value=None):
+        return self._binary_operator("mod", other,fill_value=fill_value)
+
+    def rmod(self, other,fill_value=None):
+        return self._binary_operator("mod", other, fill_value=fill_value,reflect=True)
+
+    def __mod__(self, other):
+        return self._binary_operator("mod", other)
+
+    def __rmod__(self, other):
+        return self._binary_operator("mod", other, reflect=True)
+    
+    def pow(self, other,fill_value=None):
+        return self._binary_operator("pow", other,fill_value=fill_value,)
+
+    def rpow(self, other,fill_value=None):
+        return self._binary_operator("pow", other, fill_value=fill_value,reflect=True)
 
 
+    def __pow__(self, other):
+        return self._binary_operator("pow", other)
+
+    def __rpow__(self, other):
+        return self._binary_operator("pow", other, reflect=True)
+
+    # comparison
+
+    def eq(self, other,fill_value=None):
+        return self._binary_operator("eq", other,fill_value=fill_value)
+
+    def __eq__(self, other):
+        return self._binary_operator("eq", other)
+
+    def ne(self, other,fill_value=None):
+        return self._binary_operator("ne", other,fill_value=fill_value)
+
+    def __ne__(self, other):
+        return self._binary_operator("ne", other)
+
+    def lt(self, other,fill_value=None):
+        return self._binary_operator("lt", other,fill_value=fill_value)
+    
+    def __lt__(self, other):
+        return self._binary_operator("lt", other)
+
+    def gt(self, other,fill_value=None):
+        return self._binary_operator("gt", other,fill_value=fill_value)
+    
+    def __gt__(self, other):
+        return self._binary_operator("gt", other)
+
+    def le(self, other,fill_value=None):
+        return self._binary_operator("le", other,fill_value=fill_value)
+  
+    def __le__(self, other):
+        return self._binary_operator("le", other)
+
+    def ge(self, other,fill_value=None):
+        return self._binary_operator("ge", other,fill_value=fill_value)
+   
+    def __ge__(self, other):
+        return self._binary_operator("ge", other)
+
+    # bitwise (reused for logical)
+
+    # bitwise or (|), used for logical or
+    def __or__(self, other):
+        return self._binary_operator("or", other)
+
+    def __ror__(self, other):
+        return self._binary_operator("or", other, reflect=True)
+
+    # bitwise and (&), used for logical and
+    def __and__(self, other):
+        return self._binary_operator("and", other)
+
+    def __rand__(self, other):
+        return self._binary_operator("and", other, reflect=True)
+    
+    # bitwise complement (~), used for logical not
+    def __invert__(self):
+        return self._unary_operator(operator.inv)
+
+    # arithmetic
+    def __neg__(self):
+        return self._unary_operator( operator.neg)
+
+    def __pos__(self):
+        return self._unary_operator( operator.pos)
+
+    def _lift(self, func, /, kwargs):
+        res = DataFrame()
+        if self._null_count == 0:
+            for n,c in self._field_data.items():
+                res[n]= func(c)(**kwargs)
+            return res
+        raise NotImplementedError('Dataframe row is not allowed to have nulls')
+
+
+    def _lift_pairs(self, func, other, /, kwargs):
+        res = DataFrame()
+        if self._null_count == 0:
+            for n,c in self._field_data.items():
+                res[n]= func(c)(** {'other':other[n], **kwargs})
+            return res
+        raise NotImplementedError('Dataframe row is not allowed to have nulls')
+
+    def _unary_operator(self, operator):    
+        res = DataFrame()
+        if self._null_count == 0:
+            for n,c in self._field_data.items():
+                res[n]= c._unary_operator(operator, c.dtype)
+            return res
+        raise NotImplementedError('Dataframe row is not allowed to have nulls')
+
+
+    def _binary_operator(self, operator, other, fill_value=None, reflect=False):
+
+        if isinstance(other, ScalarTypeValues):  
+            return self._lift( lambda c: c._binary_operator, {'operator':operator,  'other':other, 'fill_value':fill_value, 'reflect':reflect})
+        elif isinstance(other, DataFrame): # order important
+            return self._lift_pairs( lambda c: c._binary_operator, other, {'operator':operator,  'fill_value':fill_value, 'reflect':reflect})
+        elif isinstance(other, AbstractColumn): # order important 
+            # replicate column to match Dataframe:
+            other_replicated = DataFrame()
+            for n in self._field_data.keys():
+                other_replicated[n] = other
+            return self._lift_pairs( lambda c: c._binary_operator, other_replicated, {'operator':operator,  'fill_value':fill_value, 'reflect':reflect})
+
+        else:
+            raise TypeError(f"cannot apply '{operator}' on {type(self).__name__} and {type(other).__name__}")
+
+
+  
+    # isin ---------------------------------------------------------------
+  
+    def isin(self, values: Union[list,"DataFrame",dict]):
+        """Check whether values are contained in data."""
+        res = DataFrame()
+        if isinstance(values,Iterable):
+            return  self._lift(lambda c: c.isin, {'values':values})
+        if isinstance(values,dict):
+            for i in values.keys():
+                _ = self[i] # throws key error
+            res = DataFrame()
+            for n,c in self._field_data.items():
+                res[n] = c.isin(values=values[n]) # throws key error
+            return res 
+        if isinstance(values,DataFrame):
+            for i in values.keys():
+                _ = self[i] # throws key error
+            res = DataFrame()
+            for n,c in self._field_data.items():
+                res[n] = c.isin(values=list(values[n])) # throws key error
+            return res  
+        else:
+            raise ValueError(f'isin undefined for values of type {type(self).__name__}.') 
+
+
+    # data cleaning -----------------------------------------------------------
+    def fillna(self,fill_value: Union[ScalarTypes, Dict, AbstractColumn, Literal[None]]):
+        if fill_value is None:
+            return self
+        
+        if isinstance(fill_value, ScalarTypeValues):  
+            return self._lift(lambda c: c.fillna, {'fill_value':fill_value})
+        elif isinstance(fill_value, dict):
+            res = DataFrame()
+            for n in fill_value.keys():
+                _= self._field_data[n] # throw key error for undefined keys
+            for n,c in self._field_data.items():            
+                res[n] = c.fillna(fill_value=fill_value[n]) if n in dict else c
+            return res
+        elif isinstance(fill_value, DataFrame):
+            res = DataFrame()
+            if self._shapeix != fill_value._shapeix:
+                TypeError(
+                f"fillna between differently 'shaped' and 'indexed' dataframes is not supported"
+            ) 
+                
+            for n,c,d in zip(self._field_data.items(), fill_value.values()):            
+                res[n] = c.fillna(fill_value=d)
+            return res
+        else:
+            raise TypeError(
+                f"fillna with {type(fill_value)} is not supported"
+            ) 
+    
+    def dropna(self, how: Literal['any','all']='any'):
+        """Return a Frame with rows removed where the has any or all nulls."""
+        # TODO only flat columns supported...
+        res = DataFrame(self._dtype.constructor(nullable=False))
+        if how == 'any':
+            for i in self:
+                if not DataFrame._has_any_null(i):
+                    res.append(i)
+        elif how == 'all':
+            for i in self:
+                if not DataFrame._has_all_null(i):
+                    res.append(i)
+        return res
+
+    def drop_duplicates(self, 
+            subset: Union[str, List[str], Literal[None]]=None,  
+            keep:Literal['first','last', False] = "first"):
+        """ Remove duplicate values from data but keep the first, last, none (keep=False)"""
+        # Todo Add functionality
+        assert keep== 'first'
+        res = DataFrame(self.dtype)
+        if subset is None:
+            res.extend( list(OrderedDict.fromkeys(self)))
+        else:
+            if isinstance(subset, str):
+                subset = [subset]
+        
+            if isinstance(subset, list):
+                for s in subset:
+                    _ = self._field_data[s] # throws key error
+                idxs= [ self.columns.index(s) for s in subset]
+                seen = set()
+                for tup in self:
+                    row = tuple(tup[i] for i in idxs)
+                    if row in seen:
+                        continue
+                    else:
+                        seen.add(row)
+                        res.append(tup)
+        return res
+
+    @staticmethod
+    def _has_any_null(tup)-> bool:
+        for t in tup:
+            if t is None:
+                return True
+            if isinstance(t, tuple) and DataFrame._has_any_null(t):
+                return True
+        return False    
+
+    @staticmethod
+    def _has_all_null(tup)-> bool:
+        for t in tup:
+            if t is not None:
+                return False
+            if isinstance(t, tuple) and not DataFrame._has_all_null(t):
+                return False
+        return True    
+
+     # universal ---------------------------------------------------------
+   
+    def min(self, numeric_only= None):
+        """Return the minimum of the nonnull values of the Column."""
+        return self._summarize(lambda c: c.min, {'numeric_only':numeric_only})
+
+
+    def max(self, numeric_only= None):
+        """Return the maximum of the nonnull values of the column."""
+        # skipna == True
+        return self._summarize(lambda c: c.max, {'numeric_only':numeric_only})
+
+    def all(self, boolean_only= None):
+        """Return whether all nonull elements are True in Column"""
+        return self._summarize(lambda c: c.all, {'boolean_only':boolean_only})
+
+
+    def any(self, skipna=True, boolean_only= None):
+        """Return whether any nonull element is True in Column""" 
+        return self._summarize(lambda c: c.any,  {'boolean_only':boolean_only})
+
+    def sum(self):
+        """Return sum of all nonull elements in Column"""
+        return self._summarize(lambda c: c.sum, {})
+
+    def prod(self):
+        """Return produce of the values in the data"""
+        return self._summarize(lambda c: c.prod,{})
+
+    def cummin(self, skipna= True):
+        """Return cumulative minimum of the data."""
+        return self._lift(lambda c: c.cummin, {'skipna': skipna})
+
+    def cummax(self, skipna= True):
+        """Return cumulative maximum of the data."""
+        return self._lift(lambda c: c.cummax, {'skipna': skipna})
+
+    def cumsum(self, skipna= True):
+        """Return cumulative sum of the data."""
+        return self._lift(lambda c: c.cumsum, {'skipna': skipna})
+
+
+    def cumprod(self, skipna= True):
+        """Return cumulative product of the data."""
+        return self._lift(lambda c: c.cumprod, {'skipna': skipna})
+        
+    def mean(self):
+        """Return the mean of the values in the series."""
+        return self._summarize(lambda c: c.mean, {})
+        
+
+    def median(self):
+        """Return the median of the values in the data."""
+        return self._summarize(lambda c: c.median,{})
+
+    def mode(self):
+        """Return the mode(s) of the data."""
+        return self._summarize(lambda c: c.mode,{})
+
+    def std(self):
+        """Return the stddev(s) of the data."""
+        return self._summarize(lambda c: c.std,{})
+            
+
+    def nunique(self, dropna=True):
+        """Returns the number of unique values per column"""
+        res = DataFrame(Struct([Field('column', string), Field('nunique', int64)]))
+        for n,c in self._field_data.items():
+            res.append((n, c.nunique(dropna)))
+        return res
+         
+
+    def _summarize(self, func, /, kwargs):
+        res = DataFrame()
+        # if self._null_count == 0:
+        for n,c in self._field_data.items():
+            res[n]= Column([func(c)(**kwargs)])
+        return res
+        # raise NotImplementedError('Dataframe row is not allowed to have nulls')
+
+
+    # describe ----------------------------------------------------------------
+    def describe(
+            self,
+            percentiles=None,
+            include_columns=None,
+            exclude_columns=None,
+        ):
+        """Generate descriptive statistics."""
+        # Not supported: datetime_is_numeric=False,
+        includes=[]
+        if include_columns is  None:
+            includes = [n for n,c in self._field_data.items() if is_numerical(c.dtype)]
+        elif isinstance(include_columns, list):
+            includes = [n for n,c in self._field_data.items() if c.dtype in include_columns]
+        else:
+            raise TypeError(
+                f"describe with include_columns of type {type(include_columns).__name__} is not supported"
+            ) 
+
+        excludes=[]
+        if exclude_columns is  None:
+            excludes = []
+        elif isinstance(exclude_columns, list):
+            excludes = [n for n,c in self._field_data.items() if c.dtype in exclude_columns]
+        else:
+            raise TypeError(
+                f"describe with exclude_columns of type {type(exclude_columns).__name__} is not supported"
+            ) 
+        selected = [i for i in includes if i not in excludes]
+
+        if percentiles is None:
+            percentiles = [25,50,75]
+        percentiles = sorted(set(percentiles))
+        if len(percentiles)>0:
+            if percentiles[0]<0 or percentiles[-1]>100: 
+                raise ValueError("percentiles must be betwen 0 and 100")
+
+        res = DataFrame()
+        res['metric'] = ['count','mean','std','min'] + [f'{p}%' for p in percentiles] + ['max']
+        for s in selected:
+            c = self._field_data[s]
+            res[s]= [c.count(), c.mean(), c.std(), c.min()] + c._percentiles(percentiles) + [c.max()]
+        return res
+
+
+    # Dataframe specific ops --------------------------------------------------    # 
+    def drop(self, columns:List[str]):
+        """
+        Returns DataFrame without the removed columns.
+        """
+        if isinstance(columns,list):
+            for n in columns:
+                _ = self._field_data[n] # creates key error 
+            res = DataFrame()
+            for n,c in self._field_data.items():
+                if n not in columns:
+                    res[n] = c
+            return res
+        else:
+            TypeError(
+                f"drop with column parameter of type {type(column).__name__} is not supported"
+            ) 
+
+    def keep(self,columns:List[str]):
+        """
+        Returns DataFrame with the kept columns only.
+        """
+        if isinstance(columns,list):
+            for n in columns:
+                _ = self._field_data[n] # creates key error 
+            res = DataFrame()
+            for n,c in self._field_data.items():
+                if n in columns:
+                    res[n] = c
+            return res
+        else:
+            TypeError(
+                f"keep with column parameter of type {type(column).__name__} is not supported"
+            ) 
+
+    def rename(self,column_mapper:Dict[str,str]):
+        if isinstance(column_mapper,dict):
+            for n in column_mapper:
+                _ = self._field_data[n] # creates key error 
+            res = DataFrame()
+            for n,c in self._field_data.items():
+                if n in column_mapper:
+                    res[column_mapper[n]] = c
+            return res
+        else:
+            TypeError(
+                f"rename with column_mapper parameter of type {type(column).__name__} is not supported"
+            ) 
+
+    def reorder(self, columns:List[str]):
+        if isinstance(columns,list):
+            for n in columns:
+                _ = self._field_data[n] # creates key error 
+        res = DataFrame()
+        for n in columns:
+            res[n] = self._field_data[n]
+        return res
+
+
+# ------------------------------------------------------------------------------
+# registering the factory
+_set_column_constructor(is_struct, DataFrame)
+_set_column_constructor(is_tuple, DataFrame)
+
+# ------------------------------------------------------------------------------
+# Other datafrem ops, still TBD
+
+# @annotate("JOIN", color="blue", domain="cudf_python")
+#     def merge(
+#         self,
+#         right,
+#         on=None,
+#         left_on=None,
+#         right_on=None,
+#         left_index=False,
+#         right_index=False,
+#         how="inner",
+#         sort=False,
+#         lsuffix=None,
+#         rsuffix=None,
+#         method="hash",
+#         indicator=False,
+#         suffixes=("_x", "_y"),
+#     ):
+#         """Merge GPU DataFrame objects by performing a database-style join
+#         operation by columns or indexes."""
+
+
+
+#         def join(
+#             self,
+#             other,
+#             on=None,
+#             how="left",
+#             lsuffix="",
+#             rsuffix="",
+#             sort=False,
+#             method="hash",
+#         ):
+#         """Join columns with other DataFrame on index or on a key column."""
+
+
+#     def groupby(
+#             self,
+#             by=None,
+#             axis=0,
+#             level=None,
+#             as_index=True,
+#             sort=False,
+#             group_keys=True,
+#             squeeze=False,
+#             observed=False,
+#             dropna=True,
+#         ):
+
+#         def query(self, expr, local_dict=None):
+#         """
+#         Query with a boolean expression using Numba to compile a GPU kernel.
+#         See pandas.DataFrame.query.
+#         Parameters
+#         ----------
+#         expr : str
+#             A boolean expression. Names in expression refer to columns.
+#             `index` can be used instead of index name, but this is not
+#             supported for MultiIndex.
+#             Names starting with `@` refer to Python variables.
+#             An output value will be `null` if any of the input values are
+#             `null` regardless of expression.
+#             """
+
+#     def rolling(
+#         self, window, min_periods=None, center=False, axis=0, win_type=None
+#     ):
+#         return Rolling(
+#             self,
+#             window,
+#             min_periods=min_periods,
+#             center=center,
+#             axis=axis,
+#             win_type=win_type,
+#         )
+
+#     def apply_rows(
+#         self,
+#         func,
+#         incols,
+#         outcols,
+#         kwargs,
+#         pessimistic_nulls=True,
+#         cache_key=None,
+#     ):
+#         """
+#         Apply a row-wise user defined function.
+# def info(
+#         self,
+#         verbose=None,
+#         buf=None,
+#         max_cols=None,
+#         memory_usage=None,
+#         null_counts=None,
+#     ):
+#         """
+#         Print a concise summary of a DataFrame.
+#         This method prints information about a DataFrame including
+#         the index dtype and column dtypes, non-null values and memory usage.
+
+# @docutils.doc_describe()
+#     def describe(
+#         self,
+#         percentiles=None,
+#         include=None,
+#         exclude=None,
+#         datetime_is_numeric=False,
+#     ):
+
+#     def to_pandas(self, nullable=False, **kwargs):
+#         """
+#         Convert to a Pandas DataFrame.
+
+#  @classmethod
+#     def from_pandas(cls, dataframe, nan_as_null=None):
+#         """
+#         Convert from a Pandas DataFrame.
+
+# @classmethod 
+
+#     def from_arrow(cls, table):
+#         """
+#         Convert from PyArrow Table to DataFrame.
+
+
+#         def to_records(self, index=True):
+#         """Convert to a numpy recarray
+
+#     @classmethod
+#     def _from_arrays(cls, data, index=None, columns=None, nan_as_null=False):
+#         """Convert a numpy/cupy array to DataFrame.
+
+
+#     def keys(self):
+#         """
+#         Get the columns.
+#         This is index for Series, columns for DataFrame.
+#         """"
+
+
+# def from_pandas(obj, nan_as_null=None):
+#     """
+#     Convert certain Pandas objects into the cudf equivalent.
+#     Supports DataFrame, Series, Index, or MultiIndex.
