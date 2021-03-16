@@ -1,18 +1,17 @@
-import copy
-
 import array as ar
+import copy
 from dataclasses import dataclass
-
 from typing import Literal
 
+from .column import AbstractColumn, Column, _set_column_constructor
+from .dtypes import (NL, Boolean, Field, Int64, List_, String, Struct,
+                     is_string, string)
+from .numerical_column import BooleanColumn, NumericalColumn
 from .tabulate import tabulate
-
-from torcharrow.dtypes import Int64, Boolean, List_, string, String, is_string,  Struct, Field, NL
-from torcharrow.column import Column, AbstractColumn, _set_column_constructor
-from torcharrow.numerical_column import NumericalColumn, BooleanColumn
 
 # ------------------------------------------------------------------------------
 # StringColumn
+
 
 class StringColumn(AbstractColumn):
     # private
@@ -20,40 +19,41 @@ class StringColumn(AbstractColumn):
     def __init__(self,  dtype, kwargs=None):
         assert is_string(dtype)
         super().__init__(dtype)
-        self._offsets = ar.array('I', [0]) # Uint32
-        self._data = ar.array('u') 
+        self._offsets = ar.array('I', [0])  # Uint32
+        self._data = ar.array('u')
         self.str = StringMethods(self)
 
     def _invariant(self):
-        assert len(self._data) == len(self._validity) 
-        assert len(self._data) == len(self._offsets)-1 
+        assert len(self._data) == len(self._validity)
+        assert len(self._data) == len(self._offsets)-1
         assert self.offsets[-1] == len(self._data)
-        assert all(self.offset[i]<=self.offset[i+1] for i in range(0,len(self.offsets)+1))
-        assert 0<= self._offset and self._offset <= len(self._data)
-        assert 0<= self._length and self._offset+self._length <= len(self._data)
+        assert all(self.offset[i] <= self.offset[i+1]
+                   for i in range(0, len(self.offsets)+1))
+        assert 0 <= self._offset and self._offset <= len(self._data)
+        assert 0 <= self._length and self._offset + \
+            self._length <= len(self._data)
         rng = range(self._offset, self._offset+self._length)
         assert self.null_count == sum(self.validity[i] for i in rng)
 
-   
     # implementing abstract methods ----------------------------------------------
 
-   
     def _raw_lengths(self):
         return [len(self._data)]
 
     @property
     def ismutable(self):
         """Can this column/frame be extended without side effecting """
-        return self._raw_lengths()[0] == self._offsets[self._offset+ self._length]
-    
+        return self._raw_lengths()[0] == self._offsets[self._offset + self._length]
+
     def memory_usage(self, deep=False):
         """The mimimal memory usage in bytes of the column/frame; if deep then memory usage of referenced buffers."""
         osize = self._offsets.itemsize
         vsize = self._validity.itemsize
         dsize = self._data.itemsize
         if not deep:
-            nchars = (self._offsets[self._offset+self.length]-self._offsets[self._offset])
-            return self._length * vsize  +  self._length * osize + nchars * dsize
+            nchars = (self._offsets[self._offset +
+                      self.length]-self._offsets[self._offset])
+            return self._length * vsize + self._length * osize + nchars * dsize
         else:
             return len(self._validity)*vsize + len(self.self._offsets)*osize + len(self._data)*dsize
 
@@ -71,17 +71,16 @@ class StringColumn(AbstractColumn):
             self._data.extend(cs)
             self._offsets.append(self._offsets[-1]+len(cs))
         self._length += 1
-            
+
     def get(self, i, fill_value):
         """Get item from column/frame for given integer index"""
         j = self._offset+i
-        if self._null_count==0:
+        if self._null_count == 0:
             return self._data[self._offsets[j]:self._offsets[j+1]].tounicode()
         elif not self._validity[j]:
             return fill_value
         else:
             return self._data[self._offsets[j]:self._offsets[j+1]].tounicode()
-
 
     def __iter__(self):
         """Return the iterator object itself."""
@@ -96,9 +95,9 @@ class StringColumn(AbstractColumn):
         if deep:
             res = StringColumn(self.dtype)
             res._length = length
-            res._data = self._data[ self._offsets[self._offset]: self._offsets[offset+length]]
+            res._data = self._data[self._offsets[self._offset]: self._offsets[offset+length]]
             res._validity = self._validity[offset: offset+length]
-            res._null_count= sum(res._validity)
+            res._null_count = sum(res._validity)
             return res
         else:
             return copy.copy(self)
@@ -107,19 +106,23 @@ class StringColumn(AbstractColumn):
     def __str__(self):
         return f"Column([{', '.join('None' if i is None else i for i in self)}])"
 
+    
     def __repr__(self):
-            if self._null_count> 0:
-                tab = tabulate([ [self._data[self._offsets[i]:
-                                  self._offsets[i+1]].tounicode(),o,v] 
-                                 for i,(o,v) in enumerate(zip(self._offsets, self._validity))],
-                                 ['data', 'offsets', 'validity'])
-            else:
-                tab = tabulate([ [self._data[self._offsets[i]:
-                                  self._offsets[i+1]].tounicode(),o] 
-                                 for i,(o,v) in enumerate(zip(self._offsets, self._validity))],
-                                 ['data', 'offsets'])
-            typ = f"dtype: {self._dtype}, count: {self._length}, null_count: {self._null_count}" 
-            return tab+NL+typ
+        tab = tabulate([['None' if i is None else f"'{i}'"]
+                       for i in self], tablefmt='plain', showindex=True)
+        typ = f"dtype: {self._dtype}, length: {self._length}, null_count: {self._null_count}"
+        return tab+NL+typ
+
+    def show_details(self):
+        return _Repr(self)
+
+
+@dataclass
+class _Repr:
+    parent: StringColumn
+
+    def __repr__(self):
+        raise NotImplementedError()
 
 
 # ------------------------------------------------------------------------------
@@ -128,6 +131,7 @@ _set_column_constructor(is_string, StringColumn)
 
 # ------------------------------------------------------------------------------
 # StringMethods
+
 
 @dataclass(frozen=True)
 class StringMethods:
@@ -154,16 +158,16 @@ class StringMethods:
     #     """
     #     data = self._parent
     #     # result is a string
-    #     if others is None and na_rep is None:      
+    #     if others is None and na_rep is None:
     #         return sep.join(s for s in data._iter_drop_na())
     #     if others is None and na_rep is not None:
     #         return sep.join(s for s in data._iter_fill_na(na_rep))
-        
+
     #     # result is a vector
     #     # TODO should be generalized to list of list
     #     assert isinstance(others, (StringColumn, list)) and len(others) == len(data)
     #     nullable = na_rep is None or self.parent.dtype.nullable
-        
+
     #     res = StringColumn(Int64(nullable))
     #     if na_rep is None:
     #         #Todo should chcek fro same length
@@ -177,7 +181,6 @@ class StringMethods:
     #             res.append(i+sep+j)
     #     return res
 
-        
     def slice(
         self, start: int = None, stop: int = None, step: int = None
     ) -> StringColumn:
@@ -215,29 +218,27 @@ class StringMethods:
     #     """Replace the specified section of each string with a new string."""
     #     pass
 
-
     def split(self, sep=None, maxsplit=-1, expand=False):
         """Split strings around given separator/delimiter."""
         # if expand = True then return struct columns (labeled"0", "1")
-        fun = lambda i: i.split(sep,maxsplit)
+        def fun(i): return i.split(sep, maxsplit)
         if not expand:
-            return self._to_1_list(sep, maxsplit, direction = 'left')
+            return self._to_1_list(sep, maxsplit, direction='left')
         else:
-            return self._to_n_lists(sep, maxsplit, direction = 'left')
+            return self._to_n_lists(sep, maxsplit, direction='left')
 
-
-    def _to_1_list (self, sep, maxsplit, direction):
+    def _to_1_list(self, sep, maxsplit, direction):
         # cyclic import
-        from torcharrow.list_column import ListColumn
+        from .list_column import ListColumn
 
         assert direction in {'left', 'right'}
 
         me = self._parent
         fun = None
-        if direction =="left":
-            fun = lambda i: i.split(sep,maxsplit)
+        if direction == "left":
+            def fun(i): return i.split(sep, maxsplit)
         elif direction == 'right':
-            fun = lambda i: i.rsplit(sep,maxsplit)
+            def fun(i): return i.rsplit(sep, maxsplit)
         res = ListColumn(List_(me.dtype))
         for i in me:
             if i is None:
@@ -248,29 +249,30 @@ class StringMethods:
 
     def _to_n_lists(self, sep, maxsplit, direction):
         # cyclic import
-        from torcharrow.dataframe import DataFrame
+        from .dataframe import DataFrame
 
         assert direction in {'left', 'right'}
         assert maxsplit >= 0
-    
+
         me = self._parent
-        res = DataFrame(Struct([ Field(str(i), String(nullable=True)) for i in range(maxsplit+1)]))
+        res = DataFrame(
+            Struct([Field(str(i), String(nullable=True)) for i in range(maxsplit+1)]))
         for i in me:
             if i is None:
                 res.append(tuple([None]*maxsplit))
             else:
-                if direction=='left':
-                    ws = i.split(sep,maxsplit)
+                if direction == 'left':
+                    ws = i.split(sep, maxsplit)
                     ws = ws + ([None] * (maxsplit+1-len(ws)))
                 elif direction == 'right':
-                    ws = i.rsplit(sep,maxsplit)
+                    ws = i.rsplit(sep, maxsplit)
                     ws = ([None] * (maxsplit+1-len(ws)))+ws
                 else:
-                    raise AssertionError("direction must be in {'left', 'right'}")
-                res.append(tuple(ws))  
+                    raise AssertionError(
+                        "direction must be in {'left', 'right'}")
+                res.append(tuple(ws))
         return res
 
-    
     def isinteger(self):
         """Check whether string forms a positive/negative integer"""
         def _isinteger(s):
@@ -293,7 +295,6 @@ class StringMethods:
                 return False
         return self._map_boolean(_isfloat)
 
-     
     def isalnum(self): return self._map_boolean(str.isalnum)
     def isalpha(self): return self._map_boolean(str.isalpha)
     def isascii(self): return self._map_boolean(str.isascii)
@@ -310,7 +311,7 @@ class StringMethods:
     def _map_boolean(self, pred):
         return self._map_boolean_na(pred, None)
 
-    def _map_boolean_na(self, pred, na:Literal[True, False, None]):
+    def _map_boolean_na(self, pred, na: Literal[True, False, None]):
         me = self._parent
         res = BooleanColumn(Boolean(me.dtype.nullable))
         for i in me:
@@ -320,7 +321,7 @@ class StringMethods:
                 res.append(pred(i))
         return res
 
-    def _map_string(self,fun):
+    def _map_string(self, fun):
         me = self._parent
         res = StringColumn(me.dtype)
         for i in me:
@@ -330,7 +331,7 @@ class StringMethods:
                 res.append(fun(i))
         return res
 
-    def _map_int64(self,fun):
+    def _map_int64(self, fun):
         me = self._parent
         res = NumericalColumn(Int64(me.dtype.nullable))
         for i in me:
@@ -343,7 +344,7 @@ class StringMethods:
     def capitalize(self):
         """Convert strings in the data/Index to be capitalized"""
         return self._map_string(str.capitalize)
-        
+
     def swapcase(self) -> StringColumn:
         """Change each lowercase character to uppercase and vice versa."""
         return self._map_string(str.swapcase)
@@ -357,10 +358,8 @@ class StringMethods:
     def upper(self) -> StringColumn:
         return self._map_string(str.upper)
 
-
     def casefold(self) -> StringColumn:
         return self._map_string(str.casefold)
-
 
     def repeat(self, repeats):
         """
@@ -370,72 +369,71 @@ class StringMethods:
 
     def pad(self, width, side="left", fillchar=" "):
         fun = None
-        if side =="left":
-            fun = lambda i: i.ljust(width, fillchar)
-        if side =="right":
-            fun = lambda i: i.rjust(width, fillchar)
-        if side =="center":
-            fun = lambda i: i.center(width, fillchar)
+        if side == "left":
+            def fun(i): return i.ljust(width, fillchar)
+        if side == "right":
+            def fun(i): return i.rjust(width, fillchar)
+        if side == "center":
+            def fun(i): return i.center(width, fillchar)
         return self._map_string(fun)
 
     def ljust(self, width, fillchar=" "):
-        fun = lambda i: i.ljust(width, fillchar)
+        def fun(i): return i.ljust(width, fillchar)
         return self._map_string(fun)
 
     def rjust(self, width, fillchar=" "):
-        fun = lambda i: i.rjust(width, fillchar)
+        def fun(i): return i.rjust(width, fillchar)
         return self._map_string(fun)
 
     def center(self, width, fillchar=" "):
-        fun = lambda i: i.center(width, fillchar)
+        def fun(i): return i.center(width, fillchar)
         return self._map_string(fun)
 
     def zfill(self, width):
-        fun = lambda i: i.zfill(width)
+        def fun(i): return i.zfill(width)
         return self._map_string(fun)
 
     def translate(self, table):
-        fun = lambda i: i.translate(table)
+        def fun(i): return i.translate(table)
         return self._map_string(fun)
 
-    def count(self, pat, flags=0):  
+    def count(self, pat, flags=0):
+        """Count occurrences of pattern in each string"""
         assert flags == 0
-        "Count occurrences of pattern in each string"
         # TODOL for now just count of FIXED strings, i..e no RE
-        fun = lambda i: i.count(pat)
+        def fun(i): return i.count(pat)
         return self._map_int64(fun)
 
-
-    def startswith(self, pat, na:Literal[True, False, None]=None):
+    def startswith(self, pat, na: Literal[True, False, None] = None):
         """Test if the beginning of each string element matches a pattern."""
-        pred =  lambda i: i.startswith(pat)
+        def pred(i): return i.startswith(pat)
         return self._map_boolean_na(pred, na)
 
-    def endswith(self, pat, na:Literal[True, False, None]=None):
+    def endswith(self, pat, na: Literal[True, False, None] = None):
         """Test if the end of each string element matches a pattern."""
-        pred =  lambda i: i.endswith(pat)
+        def pred(i): return i.endswith(pat)
         return self._map_boolean_na(pred, na)
-        
+
     def find(self, sub, start=0, end=None):
-        fun = lambda i: i.find(sub,start,end)
+        def fun(i): return i.find(sub, start, end)
         return self._map_int64(fun)
-        
+
     def rfind(self, sub, start=0, end=None):
-        fun = lambda i: i.rfind(sub,start,end)
+        def fun(i): return i.rfind(sub, start, end)
         return self._map_int64(fun)
 
     def index(self, sub, start=0, end=None):
-        def fun(i): 
-            try: 
-                return i.index(sub,start,end)
+        def fun(i):
+            try:
+                return i.index(sub, start, end)
             except ValueError:
                 return -1
         return self._map_int64(fun)
 
     def rindex(self, sub, start=0, end=None):
-        def fun(i): 
-            try: 
-                return i.rindex(sub,start,end)
+        def fun(i):
+            try:
+                return i.rindex(sub, start, end)
             except ValueError:
                 return -1
         return self._map_int64(fun)
