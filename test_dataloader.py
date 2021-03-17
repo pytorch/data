@@ -2,7 +2,7 @@ import unittest
 import timeout_decorator
 
 import torch.utils.data
-from torch.utils.data import IterDataPipe, IterableDataset
+from torch.utils.data import IterDataPipe, IterableDataset, Dataset
 from torch.utils.data.datapipes.iter import Map, Filter
 import torch.multiprocessing as multiprocessing
 
@@ -21,6 +21,42 @@ class NumbersDataset(IterableDataset):
             yield i
 
 
+class MapNumbersDataset(Dataset):
+    def __init__(self, size=TOTAL_NUMBERS):
+        self.size = size
+
+    def __getitem__(self, key):
+        return key * 10
+
+    def __len__(self):
+        return self.size
+
+
+# This is fake class until we implement `.map` for Map style DataPipes
+class MapMapDataPipe(Dataset):
+    def __init__(self, source_dp, fn):
+        self.source_dp = source_dp
+        self.fn = fn
+
+    def __getitem__(self, key):
+        return self.fn(self.source_dp[key])
+
+    def __len__(self):
+        return self.source_dp.__len__()
+
+
+class SumMapDataPipe(Dataset):
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+    def __getitem__(self, key):
+        return self.a[key] + self.b[key]
+
+    def __len__(self):
+        return min(len(self.a), len(self.b))
+
+
 def is_even(data):
     return data % 2 == 0
 
@@ -34,6 +70,21 @@ def mult_100(x):
 
 
 class TestClass(unittest.TestCase):
+    def test_mapdataset(self):
+        numbers_dp = MapNumbersDataset(size=10)
+        numbers_dp = dataloader.eventloop.WrapDatasetToEventHandler(
+            numbers_dp, 'NumbersDataset_1')
+        numbers_dp = MapMapDataPipe(numbers_dp, lambda x: x + 1)
+
+        numbers_dp_2 = MapNumbersDataset(size=10)
+        numbers_dp_2 = dataloader.eventloop.WrapDatasetToEventHandler(
+            numbers_dp_2, 'NumbersDataset_2')
+
+        sum_dp = SumMapDataPipe(numbers_dp, numbers_dp_2)
+
+        for i in range(len(sum_dp)):
+            print(sum_dp[i])
+
     def test_reset_iterator(self):
         numbers_dp = NumbersDataset(size=10)
         wrapped_numbers_dp = dataloader.eventloop.WrapDatasetToEventHandler(
@@ -115,7 +166,7 @@ class TestClass(unittest.TestCase):
         def SpawnProcessForDataPipeGraph(ctx, dp):
             req_queue = ctx.Queue()
             res_queue = ctx.Queue()
-            process = ctx.Process(target=dataloader.eventloop.IterDataPipeToQueuesLoop, args=(
+            process = ctx.Process(target=dataloader.eventloop.DataPipeToQueuesLoop, args=(
                 dp, req_queue, res_queue))
             return process, req_queue, res_queue
 
@@ -152,11 +203,46 @@ class TestClass(unittest.TestCase):
 
         self.assertEqual(sorted(items), sorted(expected))
 
+    @timeout_decorator.timeout(60)
+    def test_multiple_multiprocessing_workers_map_dataset(self):
+
+        num_workers = 6
+        all_pipes = []
+        cleanup_fn_args = []
+        ctx = multiprocessing.get_context('fork')
+
+        def clean_me(req_queue, res_queue, process, pid):
+            req_queue.put(datapipes.nonblocking.StopIteratorRequest())
+            _ = res_queue.get()
+            process.join()
+
+        for i in range(num_workers):
+            numbers_dp = MapNumbersDataset(size=50)
+            (process, req_queue, res_queue) = dataloader.eventloop.SpawnProcessForDataPipeline(ctx, numbers_dp)
+            process.start()
+            # TODO(VitalyFedyunin): This is prone to error, do IterProtocol and MapProtocol to join Queue couples
+            local_datapipe = datapipes.map.QueueWrapper(req_queue, res_queue)
+            all_pipes.append(local_datapipe)
+            cleanup_fn_args.append((req_queue, res_queue, process, i))
+
+        total_dp = MapNumbersDataset(size=50)
+
+        for dp in all_pipes:
+            total_dp = SumMapDataPipe(total_dp, dp)
+
+        items = [total_dp[i] for i in range(len(total_dp))]
+        expected = [i * 70 for i in range(50)]
+
+        for args in cleanup_fn_args:
+            clean_me(*args)
+
+        self.assertEqual(items, expected)
+
     def test_graph(self):
         numbers_dp = NumbersDataset(size=50)
         mapped_dp = Map(numbers_dp, mult_100)
         graph = dataloader.graph.traverse(mapped_dp)
-        expected = {mapped_dp : {numbers_dp : {}}}
+        expected = {mapped_dp: {numbers_dp: {}}}
         self.assertEqual(graph, expected)
 
     def test_determinism(self):
