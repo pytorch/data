@@ -872,7 +872,7 @@ class DataFrame(AbstractColumn):
         import pyarrow as pa
         map = {}
         for n, c in self._field_data.items():
-            map[n] = c.to_pandas()
+            map[n] = c.to_arrow()
         return pa.table(map)
 # ------------------------------------------------------------------------------
 

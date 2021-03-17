@@ -1060,7 +1060,6 @@ class AbstractColumn(ABC, Sized, Iterable):
     def _flatten(a):
         return functools.reduce(operator.iconcat, a, [])
 
-
     # interop ----------------------------------------------------------------
 
     def to_pandas(self):
@@ -1073,7 +1072,7 @@ class AbstractColumn(ABC, Sized, Iterable):
         """Convert selef to pandas dataframe"""
         # TODO Add type translation
         import pyarrow as pa
-        return pa.Array(self)
+        return pa.array(self)
 
   # windows ---------------------------------------------------------------
 
