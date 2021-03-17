@@ -282,9 +282,9 @@ class Router():
 
 # Creates iter.DataPipe which reads data from the DataLoader.Queue
 class QueueWrapper(NonBlocking):
-    def __init__(self, request_queue, response_queue, response_wait_time=0.00001):
-        self._req_q = request_queue
-        self._res_q = response_queue
+    def __init__(self, protocol, response_wait_time=0.00001):
+        self._req_q = protocol.request_queue
+        self._res_q = protocol.response_queue
         self._req_sent = False
         self.counter = 0
         self._stop_iteration = False
@@ -336,7 +336,9 @@ class QueueWrapper(NonBlocking):
 
 # Indefinitely iterates over req_queue and passing values from source_datapipe to res_queue
 # If raise_stop is true, raises exception when StopIteration received from the source_datapipe
-def DataPipeBehindQueues(source_datapipe, req_queue, res_queue, full_stop=False, nonblocking_next_function_name='nonblocking_next', blocking_request_get=False):
+def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, nonblocking_next_function_name='nonblocking_next', blocking_request_get=False):
+    req_queue = protocol.request_queue
+    res_queue = protocol.response_queue
     source_datapipe = datapipes.iter.EnsureNonBlockingDataPipe(
         source_datapipe)
     forever = True

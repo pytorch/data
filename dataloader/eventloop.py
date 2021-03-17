@@ -8,7 +8,6 @@ import dataloader.queue
 from torch.utils.data import IterDataPipe, IterableDataset, functional_datapipe, non_deterministic
 
 
-
 class EventLoop:
     '''
     Threading and multi-processing will require own versions of EventLoop,
@@ -69,32 +68,36 @@ class EventLoop:
 def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue):
     if isinstance(source_datapipe, IterDataPipe):
         pipe_type = datapipes.iter
+        protocol_type = dataloader.queue.IterDataPipeQueueProtocol
     else:
         pipe_type = datapipes.map
-        
+        protocol_type = dataloader.queue.MapDataPipeQueueProtocol
+
     torch.set_num_threads(1)
     # Stop EventLoop for MultiProcessing case
     EventLoop.enabled = False
-    for _ in pipe_type.DataPipeBehindQueues(source_datapipe, req_queue, res_queue, blocking_request_get=True):
+    for _ in pipe_type.DataPipeBehindQueues(source_datapipe, protocol_type(req_queue, res_queue), blocking_request_get=True):
         pass
 
 # Puts datapipe behind two (request, response) queues, adds Iterator to the EventLoop to process messages
 def WrapDatasetToEventHandler(source_datapipe, dp_name='unnamed dataset'):
     if isinstance(source_datapipe, IterDataPipe):
         pipe_type = datapipes.iter
+        protocol_type = dataloader.queue.IterDataPipeQueueProtocol
     else:
         pipe_type = datapipes.map
+        protocol_type = dataloader.queue.MapDataPipeQueueProtocol
 
     source_datapipe = pipe_type.EnsureNonBlockingDataPipe(
         source_datapipe)
 
     request_queue = dataloader.queue.LocalQueue(name=dp_name + ' request')
     response_queue = dataloader.queue.LocalQueue(name=dp_name + ' response')
-
-    handler = iter(pipe_type.DataPipeBehindQueues(source_datapipe, request_queue,
-                                                  response_queue))
+    protocol = protocol_type(request_queue,
+                             response_queue)
+    handler = iter(pipe_type.DataPipeBehindQueues(source_datapipe, protocol))
     EventLoop.add_handler(handler, dp_name)
-    datapipe = pipe_type.QueueWrapper(request_queue, response_queue)
+    datapipe = pipe_type.QueueWrapper(protocol)
     datapipe._wrapped_source_datapipe = source_datapipe
     return datapipe
 

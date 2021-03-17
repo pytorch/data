@@ -82,8 +82,10 @@ class TestClass(unittest.TestCase):
 
         sum_dp = SumMapDataPipe(numbers_dp, numbers_dp_2)
 
-        for i in range(len(sum_dp)):
-            print(sum_dp[i])
+        actual = [sum_dp[i] for i in range(len(sum_dp))]
+        expected = [i * 20 + 1 for i in range(10)]
+
+        self.assertEqual(actual, expected)
 
     def test_reset_iterator(self):
         numbers_dp = NumbersDataset(size=10)
@@ -186,7 +188,8 @@ class TestClass(unittest.TestCase):
             shard_dp.sharding_settings(num_workers, i)
             (process, req_queue, res_queue) = SpawnProcessForDataPipeGraph(ctx, shard_dp)
             process.start()
-            local_datapipe = datapipes.iter.QueueWrapper(req_queue, res_queue)
+            local_datapipe = datapipes.iter.QueueWrapper(
+                dataloader.queue.IterDataPipeQueueProtocol(req_queue, res_queue))
             all_pipes.append(local_datapipe)
 
             cleanup_fn_args.append((req_queue, res_queue, process, i))
@@ -221,7 +224,7 @@ class TestClass(unittest.TestCase):
             (process, req_queue, res_queue) = dataloader.eventloop.SpawnProcessForDataPipeline(ctx, numbers_dp)
             process.start()
             # TODO(VitalyFedyunin): This is prone to error, do IterProtocol and MapProtocol to join Queue couples
-            local_datapipe = datapipes.map.QueueWrapper(req_queue, res_queue)
+            local_datapipe = datapipes.map.QueueWrapper(dataloader.queue.MapDataPipeQueueProtocol(req_queue, res_queue))
             all_pipes.append(local_datapipe)
             cleanup_fn_args.append((req_queue, res_queue, process, i))
 
