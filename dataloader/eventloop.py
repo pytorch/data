@@ -80,13 +80,17 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue):
         pass
 
 # Puts datapipe behind two (request, response) queues, adds Iterator to the EventLoop to process messages
-def WrapDatasetToEventHandler(source_datapipe, dp_name='unnamed dataset'):
+
+
+def WrapDatasetToEventHandler(source_datapipe, dp_name='unnamed dataset', prefetch=False):
     if isinstance(source_datapipe, IterDataPipe):
         pipe_type = datapipes.iter
         protocol_type = dataloader.queue.IterDataPipeQueueProtocol
+        is_iter = True
     else:
         pipe_type = datapipes.map
         protocol_type = dataloader.queue.MapDataPipeQueueProtocol
+        is_iter = False
 
     source_datapipe = pipe_type.EnsureNonBlockingDataPipe(
         source_datapipe)
@@ -95,7 +99,12 @@ def WrapDatasetToEventHandler(source_datapipe, dp_name='unnamed dataset'):
     response_queue = dataloader.queue.LocalQueue(name=dp_name + ' response')
     protocol = protocol_type(request_queue,
                              response_queue)
-    handler = iter(pipe_type.DataPipeBehindQueues(source_datapipe, protocol))
+    if prefetch and is_iter:
+        loop_generator = pipe_type.PrefetcherDataPipeBehindQueues
+    else:
+        loop_generator = pipe_type.DataPipeBehindQueues
+
+    handler = iter(loop_generator(source_datapipe, protocol))
     EventLoop.add_handler(handler, dp_name)
     datapipe = pipe_type.QueueWrapper(protocol)
     datapipe._wrapped_source_datapipe = source_datapipe

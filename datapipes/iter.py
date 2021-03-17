@@ -379,7 +379,69 @@ def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, nonblocking
             yield True  # Returns control
             break
 
+def PrefetcherDataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_request_get=False, prefetch_items = 100):
+    req_queue = protocol.request_queue
+    res_queue = protocol.response_queue
+    source_datapipe = datapipes.iter.EnsureNonBlockingDataPipe(
+        source_datapipe)
+    forever = True
+    prefetched = []
+    source_depleted = False
+    prefetch_unlocked = False
+    request = None
+    print('init pipe with source', source_datapipe)
+    while forever:
 
+        if request is None:
+            try:
+                print('getting request for ', source_datapipe, req_queue.name)
+                # Non-blocking call is Extremely slow here for python.mp, need to figureout good workaround
+                request = req_queue.get(block=blocking_request_get)
+                prefetch_unlocked = True
+                print('got request for ', source_datapipe, request)
+            except:
+                print('no request for ', source_datapipe, 'returning control')
+                yield True
+
+        if request is not None and isinstance(request, datapipes.nonblocking.ResetIteratorRequest):
+            source_datapipe.reset_iterator()
+            prefetched = []
+            source_depleted = False
+            res_queue.put(datapipes.nonblocking.ResetIteratorResponse())
+            request = None
+            prefetch_unlocked = False
+            continue
+
+        if request is not None and isinstance(request, datapipes.nonblocking.StopIteratorRequest):
+            forever = False
+            res_queue.put(datapipes.nonblocking.StopIteratorResponse())
+            continue
+
+        # Prefetch up to `prefetch_items` items, one at a time
+        if (True or prefetch_unlocked) and not source_depleted and len(prefetched) < prefetch_items:
+            print('prefetching from ', source_datapipe, len(prefetched))
+            try:
+                item = source_datapipe.nonblocking_next()
+                prefetched.append(item)
+            except StopIteration:
+                source_depleted = True
+            except datapipes.nonblocking.NotAvailable:
+                pass
+            print('prefetching for  ', source_datapipe, ' completed with ', len(prefetched))
+            yield True
+
+        if request is not None:
+            if len(prefetched) > 0:
+                request = None
+                value = prefetched.pop()
+                res_queue.put(value, block=True)
+            elif source_depleted:
+                request = None
+                res_queue.put(StopIteration())
+            else:
+                # Need prefetch more items meanwhile do nothing
+                pass
+            yield True
 
 # Must sit on top of non-shardable deterministic datapipe to skip some items
 class SimpleSharding(IterDataPipe):
