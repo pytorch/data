@@ -6,12 +6,13 @@ from .string_column import *
 from .map_column import *
 from .list_column import *
 from .dataframe import *
+from .interop import *
 
 
-# 0.1.0 
+# 0.1.0
 # Arrow types and columns
 
-# 0.2.0 
+# 0.2.0
 # Pandas -- the Good parts --
 
 __version__ = "0.2.0"

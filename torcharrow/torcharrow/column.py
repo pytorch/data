@@ -6,7 +6,7 @@ import statistics
 from abc import ABC, abstractmethod, abstractproperty
 from collections import OrderedDict
 from typing import (Callable, Dict, Iterable, List, Literal,  Optional,
-                    Sequence, Sized, Tuple, Union)
+                    Sequence, Sized, Tuple, Union, Iterable)
 
 from .dtypes import (DType, Field, Float64, Int64, ScalarTypes,
                      ScalarTypeValues, Struct, boolean, derive_dtype,
@@ -18,7 +18,7 @@ from .dtypes import (DType, Field, Float64, Int64, ScalarTypes,
 # Column - the factory method for specialized columns.
 
 
-def Column(data: Union[Sequence, DType, Literal[None]] = None, dtype: Optional[DType] = None):
+def Column(data: Union[Iterable, DType, Literal[None]] = None, dtype: Optional[DType] = None):
     """
     Column factory method; returned column type has elements of homogenous dtype.    
     """
@@ -51,8 +51,10 @@ def Column(data: Union[Sequence, DType, Literal[None]] = None, dtype: Optional[D
                 f'dtype parameter of DType expected (got {type(dtype).__name__})')
 
     # data given, optional column
-    elif data is not None:
+    if data is not None:
         if isinstance(data, Sequence):
+            data = iter(data)
+        if isinstance(data, Iterable):
             prefix = []
             for i, v in enumerate(data):
                 prefix.append(v)
@@ -65,8 +67,11 @@ def Column(data: Union[Sequence, DType, Literal[None]] = None, dtype: Optional[D
                 raise TypeError(
                     'Column cannot be used to created structs, use Dataframe constructor instead')
             col = _column_constructor(dtype)
-            for i in data:
-                col.append(i)
+            # add prefix and ...
+            col.extend(prefix)
+            # ... continue enumerate the data
+            for _, v in enumerate(data):
+                col.append(v)
             return col
         else:
             raise TypeError(
@@ -1055,6 +1060,21 @@ class AbstractColumn(ABC, Sized, Iterable):
     def _flatten(a):
         return functools.reduce(operator.iconcat, a, [])
 
+
+    # interop ----------------------------------------------------------------
+
+    def to_pandas(self):
+        """Convert selef to pandas dataframe"""
+        # TODO Add type translation
+        import pandas as pd
+        return pd.Series(self)
+
+    def to_arrow(self):
+        """Convert selef to pandas dataframe"""
+        # TODO Add type translation
+        import pyarrow as pa
+        return pa.Array(self)
+
   # windows ---------------------------------------------------------------
 
     # def rolling(
@@ -1121,5 +1141,3 @@ class AbstractColumn(ABC, Sized, Iterable):
     #         else:
     #             res.append(None)
     #     return res
-
-    # stats ----------------------------------------------------------------

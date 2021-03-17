@@ -104,12 +104,13 @@ class StringColumn(AbstractColumn):
 
     # printing ----------------------------------------------------------------
     def __str__(self):
-        return f"Column([{', '.join('None' if i is None else i for i in self)}])"
+        def quote(x): return f"'{x}'"
 
-    
+        return f"Column([{', '.join('None' if i is None else quote(i) for i in self)}])"
+
     def __repr__(self):
         tab = tabulate([['None' if i is None else f"'{i}'"]
-                       for i in self], tablefmt='plain', showindex=True)
+                        for i in self], tablefmt='plain', showindex=True)
         typ = f"dtype: {self._dtype}, length: {self._length}, null_count: {self._null_count}"
         return tab+NL+typ
 

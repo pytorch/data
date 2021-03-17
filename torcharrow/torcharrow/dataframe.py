@@ -193,7 +193,7 @@ class DataFrame(AbstractColumn):
         d = None
         if isinstance(value, AbstractColumn):
             d = value
-        elif isinstance(value, list):
+        elif isinstance(value, Iterable):
             d = Column(value)
         else:
             raise TypeError('data must be a column or list')
@@ -217,7 +217,7 @@ class DataFrame(AbstractColumn):
     # printing ----------------------------------------------------------------
     def __str__(self):
         def quote(n): return f"'{n}'"
-        return f"Dataframe({OPEN}{', '.join(f'{quote(n)}:{str(c)}' for n,c in self._field_data.items())}{CLOSE})"
+        return f"DataFrame({OPEN}{', '.join(f'{quote(n)}:{str(c)}' for n,c in self._field_data.items())}{CLOSE})"
 
     def __repr__(self):
         data = []
@@ -855,6 +855,25 @@ class DataFrame(AbstractColumn):
             res[n] = self._field_data[n]
         return res
 
+    # interop ----------------------------------------------------------------
+
+    def to_pandas(self):
+        """Convert self to pandas dataframe"""
+        # TODO Add type translation.
+        import pandas as pd
+        map = {}
+        for n, c in self._field_data.items():
+            map[n] = c.to_pandas()
+        return pd.DataFrame(map)
+
+    def to_arrow(self):
+        """Convert self to arrow table"""
+        # TODO Add type translation
+        import pyarrow as pa
+        map = {}
+        for n, c in self._field_data.items():
+            map[n] = c.to_pandas()
+        return pa.table(map)
 # ------------------------------------------------------------------------------
 
 
@@ -1010,9 +1029,3 @@ _set_column_constructor(is_tuple, DataFrame)
 #         Get the columns.
 #         This is index for Series, columns for DataFrame.
 #         """"
-
-
-# def from_pandas(obj, nan_as_null=None):
-#     """
-#     Convert certain Pandas objects into the cudf equivalent.
-#     Supports DataFrame, Series, Index, or MultiIndex.

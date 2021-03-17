@@ -29,4 +29,6 @@ Still to be done:
 * Arrow and Panda interoperability
 * Relational operators and fluent style programming
 * Columns implemented by Velox and not in Python proper
+* Add tabular.py as package in setup and not as code
+* Implement tracing and rerunning
 
