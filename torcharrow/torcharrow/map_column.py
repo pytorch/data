@@ -34,13 +34,18 @@ class MapColumn(AbstractColumn):
     # implementing abstract methods ----------------------------------------------
 
     @property
-    def ismutable(self):
+    def is_appendable(self):
         """Can this column/frame be extended without side effecting """
-        rlengths = self._raw_lengths()
-        if len(set(rlengths)) == 1:
-            return rlengths[0] == self._offset+self._length
-        else:
-            return False
+        return all(c.is_appendable and len(c) == self._offset + self._length for c in [self._key_data, self._item_data])
+
+    #    rlengths = self._raw_lengths()
+    #     print('_is_appendable', self._key_data, self._item_data, rlengths,
+    #           len(set(rlengths)), rlengths[0] == self._offset+self._length)
+    #     if len(set(rlengths)) == 1:
+
+    #         return rlengths[0] == self._offset+self._length
+    #     else:
+    #         return False
 
     def memory_usage(self, deep=False):
         """Return the memory usage of the Frame (if deep then buffer sizes)."""
@@ -55,8 +60,7 @@ class MapColumn(AbstractColumn):
         else:
             return len(self._validity)*vsize + len(self.self._offsets)*osize + kusage + iusage
 
-    def append(self, value):
-        """Append value to the end of the column/frame"""
+    def _append(self, value):
         if value is None:
             if self._dtype.nullable:
                 self._null_count += 1
@@ -65,8 +69,8 @@ class MapColumn(AbstractColumn):
                 raise TypeError("a map/dict is required (got type NoneType)")
         else:
             self._validity.append(True)
-            self._key_data.append(list(value.keys()))
-            self._item_data.append(list(value.values()))
+            self._key_data._append(list(value.keys()))
+            self._item_data._append(list(value.values()))
         self._length += 1
 
     def get(self, i, fill_value):
@@ -157,9 +161,9 @@ class MapMethods:
         for i in range(me._length):
             j = me._offset+i
             if me._validity[j]:
-                res.append(fun(me[j]))
+                res._append(fun(me[j]))
             else:
-                res.append(None)
+                res._append(None)
         return res
 
     def get(self, i, fill_value):
@@ -175,9 +179,9 @@ class MapMethods:
     #     for i in range(me._length):
     #         j = me._offset+i
     #         if me._validity[j]:
-    #             res.append(fun(me[j]))
+    #             res._append(fun(me[j]))
     #         else:
-    #             res.append(None)
+    #             res._append(None)
     #     return res
 
     # def map_values(self, fun, dtype:Optional[DType]=None):

@@ -43,9 +43,9 @@ class ListColumn(AbstractColumn):
         return self._data._raw_lengths()
 
     @property
-    def ismutable(self):
+    def is_appendable(self):
         """Can this column/frame be extended without side effecting """
-        return self._raw_lengths()[0] == self._offsets[self._offset + self._length]
+        return self._data.is_appendable and len(self._data) == self._offsets[self._offset + self._length]
 
     def memory_usage(self, deep=False):
         """Return the memory usage of the column/frame (if deep then include buffer sizes)."""
@@ -65,13 +65,13 @@ class ListColumn(AbstractColumn):
             res._length = length
             res._data = self._data[self._offsets[self._offset]: self._offsets[offset+length]]
             res._validity = self._validity[offset: offset+length]
+            res._offsets = self._offsets[offset: offset+length+1]
             res._null_count = sum(res._validity)
             return res
         else:
             return copy.copy(self)
 
-    def append(self, values):
-        """Append value to the end of the column/frame"""
+    def _append(self, values):
         if values is None:
             if self._dtype.nullable:
                 self._null_count += 1
@@ -82,7 +82,7 @@ class ListColumn(AbstractColumn):
         else:
             self._validity.append(True)
             self._data.extend(values)
-            self._offsets.append(self._data._length)
+            self._offsets.append(self._offsets[-1]+len(values))
         self._length += 1
 
     def get(self, i, fill_value):
@@ -147,15 +147,12 @@ class ListMethods:
 
     def _map_map(self, fun, dtype: Optional[DType] = None):
         func = fun
-        # print("MAPMAP", fun, str(type(fun)), dtype)
         me = self._parent
         assert dtype is not None
         res = _column_constructor(dtype)
         for i in range(me._length):
             j = me._offset+i
             if me._validity[j]:
-                # x = me[j]
-                # print('me[j]',x, func(x))
                 res.append(fun(me[j]))
             else:
                 res.append(None)

@@ -22,9 +22,9 @@ class NumericalColumn(AbstractColumn):
         return [len(self._data)]
 
     @property
-    def ismutable(self):
+    def is_appendable(self):
         """Can this column/frame be extended without side effecting """
-        return self._raw_lengths()[0] == self._offset + self._length
+        return len(self._data) == self._offset + self._length
 
     def memory_usage(self, deep=False):
         """Return the memory usage of the column/frame (if deep then include buffer sizes)."""
@@ -46,8 +46,7 @@ class NumericalColumn(AbstractColumn):
         else:
             return copy.copy(self)
 
-    def append(self, x):
-        """Append value to the end of the column/frame"""
+    def _append(self, x):
         if x is None:
             if self._dtype.nullable:
                 self._data.append(self._dtype.default)

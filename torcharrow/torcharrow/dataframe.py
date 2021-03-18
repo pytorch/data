@@ -101,16 +101,9 @@ class DataFrame(AbstractColumn):
     # implementing abstract methods ----------------------------------------------
 
     @property
-    def ismutable(self):
+    def is_appendable(self):
         """Can this column/frame be extended"""
-        rlengths = self._raw_lengths()
-        rset = set(rlengths)
-        if len(rset) == 0:
-            return True
-        elif len(rset) == 1:
-            return rlengths[0] == self._offset+self._length
-        else:
-            return False
+        return all(c.is_appendable and len(c) == self._offset + self._length for c in self._field_data.values())
 
     def memory_usage(self, deep=False):
         """Return the memory usage of the Frame (if deep then buffer sizes)."""
@@ -131,7 +124,7 @@ class DataFrame(AbstractColumn):
         """ Number of rows if column; number of rows * number of columns if Frame. """
         return self._length * len(self.columns)
 
-    def append(self, tup):
+    def _append(self, tup):
         """Append value to the end of the column/frame"""
         if tup is None:
             if not self.dtype.nullable:
@@ -143,7 +136,10 @@ class DataFrame(AbstractColumn):
                 # TODO Design decision: null for struct value requires null for its fields
                 self._field_data[f.name].append(None)
         else:
-            assert isinstance(tup, tuple)
+            # TODO recursive analysis of tuple structure
+            if not isinstance(tup, tuple) and len(tup) == len(self.dtype.files):
+                raise TypeError(
+                    f"f'a tuple of type {self.dtype} is required, got {tup}')")
             self._validity.append(True)
             for i, v in enumerate(tup):
                 self._field_data[self._dtype.fields[i].name].append(v)
@@ -171,6 +167,7 @@ class DataFrame(AbstractColumn):
         if deep:
             res = DataFrame(self.dtype)
             res._length = length
+            # TODO optimize (here and everywhere): only non-appendable columns need to be copied
             res._field_data = {n: c._copy(deep, offset, length)
                                for n, c in self._field_data.items()}
             res._validity = self._validity[offset: offset+length]
@@ -205,14 +202,17 @@ class DataFrame(AbstractColumn):
         elif len(d) != self._length:
             raise TypeError('all columns/lists must have equal length')
 
-        if name in self._field_data:
-            raise TypeError('cannot override existsing column')
-        # side effect on field_data
-        self._field_data[name] = d
-        # no side effect on dtype
-        fields = list(self._dtype.fields)
-        fields.append(Field(name, d._dtype))
-        self._dtype = Struct(fields)
+        if name in self._field_data.keys():
+            raise AttributeError('cannot override existing column')
+        elif len(self._dtype.fields) < len(self._field_data):
+            raise AttributeError('cannot append column to view')
+        else:
+            # side effect on field_data
+            self._field_data[name] = d
+            # no side effect on dtype
+            fields = list(self._dtype.fields)
+            fields.append(Field(name, d._dtype))
+            self._dtype = Struct(fields)
 
     # printing ----------------------------------------------------------------
     def __str__(self):
@@ -619,11 +619,11 @@ class DataFrame(AbstractColumn):
         if how == 'any':
             for i in self:
                 if not DataFrame._has_any_null(i):
-                    res.append(i)
+                    res._append(i)
         elif how == 'all':
             for i in self:
                 if not DataFrame._has_all_null(i):
-                    res.append(i)
+                    res._append(i)
         return res
 
     def drop_duplicates(self,
@@ -650,7 +650,7 @@ class DataFrame(AbstractColumn):
                         continue
                     else:
                         seen.add(row)
-                        res.append(tup)
+                        res._append(tup)
         return res
 
     @staticmethod
@@ -735,7 +735,7 @@ class DataFrame(AbstractColumn):
         res = DataFrame(
             Struct([Field('column', string), Field('nunique', int64)]))
         for n, c in self._field_data.items():
-            res.append((n, c.nunique(dropna)))
+            res._append((n, c.nunique(dropna)))
         return res
 
     def _summarize(self, func, /, kwargs):

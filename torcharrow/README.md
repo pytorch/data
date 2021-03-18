@@ -19,7 +19,7 @@ python3 -m unittest
 ## Documentation
 All documentation is available via Notebooks:
 * [TorchArrow in 10 minutes (a tutorial)](https://github.com/facebookexternal/torchdata/blob/main/torcharrow/torcharrow10min.ipynb)
-* TorchArrow mutability (TBD)
+* [TorchArrow mutability] (https://github.com/facebookexternal/torchdata/blob/main/torcharrow/torcharrow_mutability.ipynb)
 * TorchArrow tracing and rerunning (TBD) 
 
 ## Status

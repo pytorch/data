@@ -114,30 +114,30 @@ class TestNumericalColumn(unittest.TestCase):
         self.assertEqual(df.ndim, 2)
         self.assertEqual(df.size, len(df)*2)
         self.assertTrue(df.isnullable)
-        self.assertTrue(df.ismutable)
+        self.assertTrue(df.is_appendable)
 
         self.assertEqual(list(df), list(df.copy(deep=False)))
         self.assertEqual(list(df), list(df.copy(deep=True)))
 
         # a prefix can't be mutated
         ef = df[:4]
-        self.assertFalse(ef.ismutable)
-        self.assertTrue(df.ismutable)
+        self.assertFalse(ef.is_appendable)
+        self.assertTrue(df.is_appendable)
 
         # a suffix can be mutated
         gf = df[4:]
-        self.assertTrue(gf.ismutable)
+        self.assertTrue(gf.is_appendable)
 
         # a suffix can be mutated
         gf = df[4:]
-        self.assertTrue(gf.ismutable)
+        self.assertTrue(gf.is_appendable)
 
         # a column can be mutated ...
         gf['a'].append(None)
 
         # but it destroys mutability of the dataframe
         # since now the frames are out of wack.
-        self.assertFalse(gf.ismutable)
+        self.assertFalse(gf.is_appendable)
 
         # But you can reassemble the frame from its individual columns
         # however reassemble will throow if its invarinat is violated

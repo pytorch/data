@@ -41,9 +41,9 @@ class StringColumn(AbstractColumn):
         return [len(self._data)]
 
     @property
-    def ismutable(self):
+    def is_appendable(self):
         """Can this column/frame be extended without side effecting """
-        return self._raw_lengths()[0] == self._offsets[self._offset + self._length]
+        return len(self._data) == self._offsets[self._offset + self._length]
 
     def memory_usage(self, deep=False):
         """The mimimal memory usage in bytes of the column/frame; if deep then memory usage of referenced buffers."""
@@ -57,8 +57,7 @@ class StringColumn(AbstractColumn):
         else:
             return len(self._validity)*vsize + len(self.self._offsets)*osize + len(self._data)*dsize
 
-    def append(self, cs):
-        """Append value to the end of the column/frame"""
+    def _append(self, cs):
         if cs is None:
             if self._dtype.nullable:
                 self._null_count += 1
@@ -70,6 +69,7 @@ class StringColumn(AbstractColumn):
             self._validity.append(True)
             self._data.extend(cs)
             self._offsets.append(self._offsets[-1]+len(cs))
+            assert len(self._data) == self._offsets[-1]
         self._length += 1
 
     def get(self, i, fill_value):
@@ -95,8 +95,9 @@ class StringColumn(AbstractColumn):
         if deep:
             res = StringColumn(self.dtype)
             res._length = length
-            res._data = self._data[self._offsets[self._offset]: self._offsets[offset+length]]
+            res._data = self._data[self._offsets[self._offset]                                   :self._offsets[offset+length]]
             res._validity = self._validity[offset: offset+length]
+            res._offsets = self._offsets[offset: offset+length+1]
             res._null_count = sum(res._validity)
             return res
         else:
@@ -147,9 +148,9 @@ class StringMethods:
             j = data._offset+i
             # shoud be optimized...
             if data._validity[j]:
-                res.append(data._offsets[j+1]-data._offsets[j])
+                res._append(data._offsets[j+1]-data._offsets[j])
             else:
-                res.append(None)
+                res._append(None)
         return res
 
     # CUDF only
@@ -174,12 +175,12 @@ class StringMethods:
     #         #Todo should chcek fro same length
     #         for i,j in zip(data,others):
     #             if i is None or j is None:
-    #                 res.append(None)
+    #                 res._append(None)
     #             else:
-    #                 res.append(i+sep+j)
+    #                 res._append(i+sep+j)
     #     else:
     #         for i,j in zip(data._iter_fill_na(na_rep),others._iter_fill_na(na_rep)):
-    #             res.append(i+sep+j)
+    #             res._append(i+sep+j)
     #     return res
 
     def slice(
@@ -190,9 +191,9 @@ class StringMethods:
         res = StringColumn(String(data.dtype.nullable))
         for s in data:
             if s is None:
-                res.append(None)
+                res._append(None)
             else:
-                res.append(s[start:stop:step])
+                res._append(s[start:stop:step])
         return res
 
     # CUDF only
@@ -204,12 +205,12 @@ class StringMethods:
     #     res = StringColumn(String(data.dtype.nullable))
     #     for i,start,stop in zip(data, starts, stops):
     #         if i is None or start is None or stop is None:
-    #             res.append(None)
+    #             res._append(None)
     #         else:
     #             if stop ==-1:
-    #                 res.append(i[stop:])
+    #                 res._append(i[stop:])
     #             else:
-    #                 res.append(i[stop:stop])
+    #                 res._append(i[stop:stop])
     #     return res
 
     # CUDF only
@@ -243,9 +244,9 @@ class StringMethods:
         res = ListColumn(List_(me.dtype))
         for i in me:
             if i is None:
-                res.append(None)
+                res._append(None)
             else:
-                res.append(fun(i))
+                res._append(fun(i))
         return res
 
     def _to_n_lists(self, sep, maxsplit, direction):
@@ -260,7 +261,7 @@ class StringMethods:
             Struct([Field(str(i), String(nullable=True)) for i in range(maxsplit+1)]))
         for i in me:
             if i is None:
-                res.append(tuple([None]*maxsplit))
+                res._append(tuple([None]*maxsplit))
             else:
                 if direction == 'left':
                     ws = i.split(sep, maxsplit)
@@ -271,7 +272,7 @@ class StringMethods:
                 else:
                     raise AssertionError(
                         "direction must be in {'left', 'right'}")
-                res.append(tuple(ws))
+                res._append(tuple(ws))
         return res
 
     def isinteger(self):
@@ -317,9 +318,9 @@ class StringMethods:
         res = BooleanColumn(Boolean(me.dtype.nullable))
         for i in me:
             if i is None:
-                res.append(na)
+                res._append(na)
             else:
-                res.append(pred(i))
+                res._append(pred(i))
         return res
 
     def _map_string(self, fun):
@@ -327,9 +328,9 @@ class StringMethods:
         res = StringColumn(me.dtype)
         for i in me:
             if i is None:
-                res.append(None)
+                res._append(None)
             else:
-                res.append(fun(i))
+                res._append(fun(i))
         return res
 
     def _map_int64(self, fun):
@@ -337,9 +338,9 @@ class StringMethods:
         res = NumericalColumn(Int64(me.dtype.nullable))
         for i in me:
             if i is None:
-                res.append(None)
+                res._append(None)
             else:
-                res.append(fun(i))
+                res._append(fun(i))
         return res
 
     def capitalize(self):

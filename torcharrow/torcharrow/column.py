@@ -132,7 +132,7 @@ class AbstractColumn(ABC, Sized, Iterable):
         return self.dtype.nullable
 
     @abstractproperty
-    def ismutable(self):
+    def is_appendable(self):
         """Can this column/frame be extended without side effecting """
         pass
 
@@ -167,17 +167,23 @@ class AbstractColumn(ABC, Sized, Iterable):
         return self._validity[self._offset+i]
 
     # builders and iterators---------------------------------------------------
-    @abstractmethod
     def append(self, value):
         """Append value to the end of the column/frame"""
-        if not (self.ismutable):
-            raise AssertionError(
-                'append can only be applied on mutable columns/frames')
+        if not self.is_appendable:
+            raise AttributeError('column is not appendable')
+        else:
+            return self._append(value)
+
+    @abstractmethod
+    def _append(self, value):
+        pass
 
     def extend(self, iterable: Iterable):
         """Append items from iterable to the end of the column/frame"""
+        if not self.is_appendable:
+            raise AttributeError('column is not appendable')
         for i in iterable:
-            self.append(i)
+            self._append(i)
 
     def concat(self, others: List["AbstractColumn"]):
         """Concatenate columns/frames."""
@@ -260,7 +266,7 @@ class AbstractColumn(ABC, Sized, Iterable):
     def reverse(self):
         res = _column_constructor(self.dtype)
         for i in range(len(self)):
-            res.append(self[(len(self)-1)-i])
+            res._append(self[(len(self)-1)-i])
         return res
 
     def _pick_columns(self, arg):
@@ -272,7 +278,7 @@ class AbstractColumn(ABC, Sized, Iterable):
     def _pick_rows(self, arg):
         res = _column_constructor(self.dtype)
         for i in arg:
-            res.append(self[i])
+            res._append(self[i])
         return res
 
     def _slice_rows(self, arg):
@@ -315,7 +321,7 @@ class AbstractColumn(ABC, Sized, Iterable):
         # usual slice
         res = _column_constructor(self.dtype)
         for i in range(start, stop, step):
-            res.append(self.get(i, None))
+            res._append(self.get(i, None))
         return res
 
     def _get_column(self, arg, default=None):
@@ -388,7 +394,7 @@ class AbstractColumn(ABC, Sized, Iterable):
             if self._valid(i) or na_action == "ignore":
                 res.extend(func(self[i]))
             else:
-                res.append(None)
+                res._append(None)
         return res
 
     def filter(self, predicate: Union[Callable, Iterable]):
@@ -404,11 +410,11 @@ class AbstractColumn(ABC, Sized, Iterable):
         if isinstance(predicate, Callable):
             for x in self:
                 if predicate(x):
-                    res.append(x)
+                    res._append(x)
         elif isinstance(predicate, Iterable):
             for x, p in zip(self, predicate):
                 if p:
-                    res.append(x)
+                    res._append(x)
         else:
             pass
         return res
@@ -445,9 +451,9 @@ class AbstractColumn(ABC, Sized, Iterable):
         res = _column_constructor(dtype)
         for i in range(self._length):
             if self._valid(i) or na_action == "ignore":
-                res.append(func(self[i]))
+                res._append(func(self[i]))
             else:
-                res.append(None)
+                res._append(None)
         return res
 
     # ifthenelse -----------------------------------------------------------------
@@ -462,16 +468,16 @@ class AbstractColumn(ABC, Sized, Iterable):
         if isinstance(other, ScalarTypeValues):
             for s, m in zip(self, condition):
                 if m:
-                    res.append(s)
+                    res._append(s)
                 else:
-                    res.append(other)
+                    res._append(other)
             return res
         elif isinstance(other, Iterable):
             for s, m, o in zip(self, condition, other):
                 if m:
-                    res.append(s)
+                    res._append(s)
                 else:
-                    res.append(o)
+                    res._append(o)
             return res
         else:
             raise TypeError(f"where on type {type(other)} is not supported")
@@ -718,16 +724,16 @@ class AbstractColumn(ABC, Sized, Iterable):
         for i in range(self._length):
             if self._valid(i):
                 if reflect:
-                    res.append(operator(const, self.get(i, None)))
+                    res._append(operator(const, self.get(i, None)))
                 else:
-                    res.append(operator(self.get(i, None), const))
+                    res._append(operator(self.get(i, None), const))
             elif fill_value is not None:
                 if reflect:
-                    res.append(operator(const, fill_value))
+                    res._append(operator(const, fill_value))
                 else:
-                    res.append(operator(fill_value, const))
+                    res._append(operator(fill_value, const))
             else:
-                res.append(None)
+                res._append(None)
         return res
 
     def _pointwise(self, operator, other,  fill_value, dtype, reflect):
@@ -738,27 +744,27 @@ class AbstractColumn(ABC, Sized, Iterable):
         for i in range(self._length):
             if self._valid(i) and other._valid(i):
                 if reflect:
-                    res.append(operator(other.get(i, None), self.get(i, None)))
+                    res._append(operator(other.get(i, None), self.get(i, None)))
                 else:
-                    res.append(operator(self.get(i, None), other.get(i, None)))
+                    res._append(operator(self.get(i, None), other.get(i, None)))
             elif fill_value is not None:
                 l = self.get(i, None) if self._valid(i) else fill_value
                 r = other.get(i, None) if other._valid(i) else fill_value
                 if reflect:
-                    res.append(operator(r, l))
+                    res._append(operator(r, l))
                 else:
-                    res.append(operator(l, r))
+                    res._append(operator(l, r))
             else:
-                res.append(None)
+                res._append(None)
         return res
 
     def _unary_operator(self, operator, dtype):
         res = _column_constructor(dtype)
         for i in range(self._length):
             if self._valid(i):
-                res.append(operator(self[i]))
+                res._append(operator(self[i]))
             else:
-                res.append(None)
+                res._append(None)
         return res
 
     def _binary_operator(self, operator, other, fill_value=None, reflect=False):
@@ -776,7 +782,7 @@ class AbstractColumn(ABC, Sized, Iterable):
         if isinstance(values, list):
             res = _column_constructor(boolean)
             for i in self:
-                res.append(i in values)
+                res._append(i in values)
             return res
         else:
             raise ValueError(
@@ -792,16 +798,16 @@ class AbstractColumn(ABC, Sized, Iterable):
         if isinstance(fill_value, ScalarTypeValues):
             for value in self:
                 if value is not None:
-                    res.append(value)
+                    res._append(value)
                 else:
-                    res.append(fill_value)
+                    res._append(fill_value)
             return res
         elif isinstance(fill_value, Column):  # TODO flat Column   --> needs a test
             for value, fill in zip(self, fill_value):
                 if value is not None:
-                    res.append(value)
+                    res._append(value)
                 else:
-                    res.append(fill)
+                    res._append(fill)
             return res
         else:  # Dict and Dataframe only self is dataframe
             raise TypeError(
@@ -815,7 +821,7 @@ class AbstractColumn(ABC, Sized, Iterable):
         res = _column_constructor(self._dtype.constructor(nullable=False))
         for i in range(self._offset, self._offset+self._length):
             if self._validity[i]:
-                res.append(self[i])
+                res._append(self[i])
         return res
 
     def drop_duplicates(self, subset: Union[str, List[str], Literal[None]] = None, keep: Literal['first', 'last', False] = "first"):
@@ -948,19 +954,19 @@ class AbstractColumn(ABC, Sized, Iterable):
     def _percentiles(self, percentiles):
         if len(self) == 0 or len(percentiles) == 0:
             return []
-        res = []
+        out = []
         s = sorted(self)
         for percent in percentiles:
             k = (len(self)-1) * (percent/100)
             f = math.floor(k)
             c = math.ceil(k)
             if f == c:
-                res.append(s[int(k)])
+                out.append(s[int(k)])
                 continue
             d0 = s[int(f)] * (c-k)
             d1 = s[int(c)] * (k-f)
-            res.append(d0+d1)
-        return res
+            out.append(d0+d1)
+        return out
 
     def _accumulate_column(self, func, *, skipna=True, initial=None):
         it = iter(self)
@@ -975,20 +981,20 @@ class AbstractColumn(ABC, Sized, Iterable):
         if total is None:
             raise ValueError(
                 f'cum[min/max] undefined for columns with row 0 as null.')
-        res.append(total)
+        res._append(total)
         for element in it:
             if rest_is_null:
-                res.append(None)
+                res._append(None)
                 continue
             if element is None:
                 if skipna:
-                    res.append(None)
+                    res._append(None)
                 else:
-                    res.append(None)
+                    res._append(None)
                     rest_is_null = True
             else:
                 total = func(total, element)
-                res.append(total)
+                res._append(total)
         return res
 
     # describe ----------------------------------------------------------------
@@ -1015,14 +1021,14 @@ class AbstractColumn(ABC, Sized, Iterable):
         if is_numerical(self.dtype):
             res = DataFrame(
                 Struct([Field('statistic', string), Field('value', float64)]))
-            res.append(('count', self.count()))
-            res.append(('mean', self.mean()))
-            res.append(('std', self.std()))
-            res.append(('min', self.min()))
+            res._append(('count', self.count()))
+            res._append(('mean', self.mean()))
+            res._append(('std', self.std()))
+            res._append(('min', self.min()))
             values = self._percentiles(percentiles)
             for p, v in zip(percentiles, values):
-                res.append((f'{p}%', v))
-            res.append(('max', self.max()))
+                res._append((f'{p}%', v))
+            res._append(('max', self.max()))
             return res
         else:
             raise ValueError(f'median undefined for {type(self).__name__}.')
@@ -1097,9 +1103,9 @@ class AbstractColumn(ABC, Sized, Iterable):
     #     res = _create_column(dtype)
     #     for i in range(self._length):
     #         if self._validity[i]:
-    #             res.append(fun(self[i]))
+    #             res._append(fun(self[i]))
     #         else:
-    #             res.append(None)
+    #             res._append(None)
     #     return res
 
     # def filter(self, pred):
@@ -1107,10 +1113,10 @@ class AbstractColumn(ABC, Sized, Iterable):
     #     for i in range(self._length):
     #         if self._validity[i]:
     #             if pred(self[i]):
-    #                 res.append(self[i])
+    #                 res._append(self[i])
     #                 continue
     #         else:
-    #             res.append(None)
+    #             res._append(None)
     #     return res
 
     # def reduce(self, fun, initializer=None):
@@ -1138,5 +1144,5 @@ class AbstractColumn(ABC, Sized, Iterable):
     #         if self._validity[i]:
     #             res.extend(fun(self[i]))
     #         else:
-    #             res.append(None)
+    #             res._append(None)
     #     return res

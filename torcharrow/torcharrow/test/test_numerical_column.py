@@ -139,7 +139,7 @@ class TestNumericalColumn(unittest.TestCase):
         self.assertEqual(col.ndim, 1)
         self.assertEqual(col.size, len(col))
         self.assertTrue(col.isnullable)
-        self.assertTrue(col.ismutable)
+        self.assertTrue(col.is_appendable)
 
         self.assertEqual(list(col), list(col.copy(deep=False)))
         self.assertEqual(list(col), list(col.copy(deep=True)))
@@ -398,32 +398,17 @@ class TestNumericalColumn(unittest.TestCase):
                           ('75%', 2.5),
                           ('max', 3.0)])
 
-# Some renamaing test case,...
-# class TestFunc(unittest.TestCase):
-#     def test_functool(self):
-#         col= Column([1,2,3,4])
-#         odd = col.filter(lambda x: x%2 ==0)
-#         self.assertEqual(list(odd),list(filter(lambda x: x%2 ==0,[1,2,3,4])))
-
-#         succ = col.map(lambda x: x*2)
-#         self.assertEqual(list(succ),list(map(lambda x: x*2,[1,2,3,4])))
-
-#         res = col.reduce(lambda res,elem: res*elem)
-#         self.assertEqual(res,functools.reduce(lambda res,elem: res*elem, [1,2,3,4]))
-
-#         col = Column(List_(string))
-#         col.append(["hello", "world"])
-#         res = col.map(lambda xs: ' '.join(xs), string)
-#         self.assertEqual(res[0], "hello world")
-
-
-#         col = Column(string)
-#         col.append("hello")
-#         col.append("world")
-
-#         res = col.flatmap(lambda x: [x,x])
-#         self.assertEqual(res[0], "hello")
-#         self.assertEqual(res[1], "hello")
+    def test_mutability(self):
+        x = Column([0, 1, 2, 3])
+        y = x[:3]
+        x.append(44)
+        with self.assertRaises(AttributeError):
+            #AttributeError: column is not appendable
+            y.append(33)
+        y = y.copy()
+        y.append(33)
+        self.assertEqual(list(y), list(Column([0, 1, 2, 33])))
+        self.assertEqual(list(x), list(Column([0, 1, 2, 3, 44])))
 
 
 if __name__ == '__main__':
