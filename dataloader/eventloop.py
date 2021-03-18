@@ -1,7 +1,7 @@
 import copy
 
 import torch
-
+import time
 import datapipes
 import dataloader.queue
 
@@ -39,12 +39,20 @@ class EventLoop:
     @classmethod
     def _loop_iterator(cls):
         while True:
+            loop_name = ''
+            for handle, _handle_name, uid in cls.handlers:
+                loop_name += ' ' + _handle_name + '_' + str(uid)
+            print('running loop for', loop_name, cls.stack)
+            dataloader.queue.LocalQueue.report()
+            
             for handle, _handle_name, uid in cls.handlers:
                 try:
                     if uid not in cls.stack:
                         stack_len = len(cls.stack)
                         cls.stack.append(uid)
+                        print("Going inside of", stack_len, _handle_name)
                         value = next(handle)
+                        print("Going out of", stack_len, _handle_name)
                         stack_copy = copy.deepcopy(cls.stack)
                         cls.stack.clear()
                         if stack_len:
@@ -56,6 +64,10 @@ class EventLoop:
                 except Exception as e:
                     print(e)
                     raise
+            print('----------------------------------------------- completed one loop at ', cls.depth)
+            # time.sleep(5)
+        
+        
 
     @classmethod
     def add_handler(cls, handler, handle_name='unnamed'):

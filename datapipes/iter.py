@@ -233,6 +233,7 @@ class _Router():
     def nonblocking_next_mult(self, pipe_id):
         # If ANY of my pipes requested reset that means all pipes should request reset
         if len(self._reset_calls.keys()) > 0:
+            print("Router pipe is in reset state and can't return items")
             raise nonblocking.NotAvailable
 
         if self._next_item is None:
@@ -283,23 +284,27 @@ class Router():
 # Creates iter.DataPipe which reads data from the DataLoader.Queue
 class QueueWrapper(NonBlocking):
     def __init__(self, protocol, response_wait_time=0.00001):
+        self.protocol = protocol
         self._req_q = protocol.request_queue
         self._res_q = protocol.response_queue
-        self._req_sent = False
+        # self.protocol._req_sent = False
         self.counter = 0
         self._stop_iteration = False
         self._response_wait_time = response_wait_time
+        self._pending_reset = False
 
     def reset_iterator(self):
-        if self._req_sent:
+        if not self.protocol.can_take_request():
             raise Exception(
                 'Can not reset QueueWrapper while it is still waiting for response for', self._req_q.name)
         self._stop_iteration = False
         self.counter = 0
         self._req_q.put(datapipes.nonblocking.ResetIteratorRequest())
+        self.protocol.request_sent()
         while True:
             try:
                 value = self._res_q.get(block=False)
+                self.protocol.request_served()
                 break
             except:
                 if NonBlocking.not_available_hook is not None:
@@ -312,10 +317,10 @@ class QueueWrapper(NonBlocking):
         if self._stop_iteration:
             raise Exception(
                 '`next` or `nonblocking_next` called after receiving StopIteration')
-        if not self._req_sent:
+        if self.protocol.can_take_request():
             self._req_q.put(self.counter)
             self.counter += 1
-            self._req_sent = True
+            self.protocol.request_sent()
 
             # return control to eventloop to fill results if possible
             # eventloop.EventLoop.iteration()
@@ -326,9 +331,9 @@ class QueueWrapper(NonBlocking):
         try:
             value = self._res_q.get(
                 block=True, timeout=self._response_wait_time)
+            self.protocol.request_served()
         except:  # TODO: Catch only timeout exceptions
             raise nonblocking.NotAvailable
-        self._req_sent = False
         if isinstance(value, StopIteration):
             self._stop_iteration = True
             raise StopIteration
@@ -380,6 +385,10 @@ def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, nonblocking
             break
 
 def PrefetcherDataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_request_get=False, prefetch_items = 100):
+    if not isinstance(source_datapipe, QueueWrapper):
+        print(type(source_datapipe),dir(source_datapipe))
+        raise Exception('Prefetcher can be only applied to DataPipe behind Queue')
+    
     req_queue = protocol.request_queue
     res_queue = protocol.response_queue
     source_datapipe = datapipes.iter.EnsureNonBlockingDataPipe(
@@ -389,6 +398,7 @@ def PrefetcherDataPipeBehindQueues(source_datapipe, protocol, full_stop=False, b
     source_depleted = False
     prefetch_unlocked = False
     request = None
+    prefetch_queued = False
     print('init pipe with source', source_datapipe)
     while forever:
 
@@ -403,7 +413,7 @@ def PrefetcherDataPipeBehindQueues(source_datapipe, protocol, full_stop=False, b
                 print('no request for ', source_datapipe, 'returning control')
                 yield True
 
-        if request is not None and isinstance(request, datapipes.nonblocking.ResetIteratorRequest):
+        if request is not None and isinstance(request, datapipes.nonblocking.ResetIteratorRequest) and not prefetch_queued:
             source_datapipe.reset_iterator()
             prefetched = []
             source_depleted = False
@@ -421,12 +431,18 @@ def PrefetcherDataPipeBehindQueues(source_datapipe, protocol, full_stop=False, b
         if (True or prefetch_unlocked) and not source_depleted and len(prefetched) < prefetch_items:
             print('prefetching from ', source_datapipe, len(prefetched))
             try:
+                prefetch_queued = True
                 item = source_datapipe.nonblocking_next()
                 prefetched.append(item)
+                prefetch_queued = False
             except StopIteration:
                 source_depleted = True
+                prefetch_queued = False
             except datapipes.nonblocking.NotAvailable:
                 pass
+            except Exception as e:
+                print('unknown exception')
+                print(e)
             print('prefetching for  ', source_datapipe, ' completed with ', len(prefetched))
             yield True
 
