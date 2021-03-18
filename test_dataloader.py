@@ -105,24 +105,18 @@ class TestClass(unittest.TestCase):
         actual = [i for i in numbers_dp]
         self.assertEqual(actual, [10, 30, 50, 70, 90])
 
-    @timeout_decorator.timeout(60)
+    @timeout_decorator.timeout(5)
     def test_router_datapipe(self):
         numbers_dp = NumbersDataset(size=10)
         (even_dp, odd_dp) = datapipes.iter.Router(
             numbers_dp, [is_even, is_odd])
-        odd_dp = dataloader.eventloop.WrapDatasetToEventHandler(odd_dp, 'Odd', prefetch = False)
-        # odd_dp = dataloader.eventloop.WrapDatasetToEventHandler(odd_dp, 'Odd_pf', prefetch = True)
-        even_dp = dataloader.eventloop.WrapDatasetToEventHandler(even_dp, 'Even', prefetch = False)
-        # even_dp = dataloader.eventloop.WrapDatasetToEventHandler(even_dp, 'Even_pf', prefetch = True)
+        odd_dp = dataloader.eventloop.WrapDatasetToEventHandler(odd_dp, 'Odd', prefetch = True)
         updated_even_dp = Map(even_dp, fn=mult_100)
-        updated_even_dp = dataloader.eventloop.WrapDatasetToEventHandler(updated_even_dp, 'updated_even_dp', prefetch = False)
-        # updated_even_dp = dataloader.eventloop.WrapDatasetToEventHandler(
-        #     updated_even_dp, 'MultipliedEven', prefetch = True)
+        updated_even_dp = dataloader.eventloop.WrapDatasetToEventHandler(
+            updated_even_dp, 'MultipliedEven', prefetch = True)
         joined_dp = updated_even_dp.join(odd_dp)
         joined_dp = dataloader.eventloop.WrapDatasetToEventHandler(
-            joined_dp, 'JoinedDP', prefetch = False)
-        # joined_dp = dataloader.eventloop.WrapDatasetToEventHandler(
-        #     joined_dp, 'JoinedDP_pf', prefetch = True)
+            joined_dp, 'JoinedDP', prefetch = True)
         items = list(joined_dp)
         self.assertEqual(sorted(items), [0, 1, 3, 5, 7, 9, 200, 400, 600, 800])
 
