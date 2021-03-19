@@ -4,10 +4,11 @@
 
 from __future__ import print_function
 from __future__ import unicode_literals
-from collections import namedtuple
-import sys
-import re
+
 import math
+import re
+import sys
+from collections import namedtuple
 
 
 if sys.version_info >= (3, 3):
@@ -16,8 +17,8 @@ else:
     from collections import Iterable
 
 if sys.version_info[0] < 3:
-    from itertools import izip_longest
     from functools import partial
+    from itertools import izip_longest
 
     _none_type = type(None)
     _bool_type = bool
@@ -32,8 +33,8 @@ if sys.version_info[0] < 3:
 
 
 else:
-    from itertools import zip_longest as izip_longest
     from functools import reduce, partial
+    from itertools import zip_longest as izip_longest
 
     _none_type = type(None)
     _bool_type = bool
