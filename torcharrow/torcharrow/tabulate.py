@@ -52,14 +52,18 @@ else:
 
 
 try:
-    import wcwidth  # optional wide-character (CJK) support
+    # Skipping analyzing 'wcwidth': found module but no type hints or library stubs
+    # optional wide-character (CJK) support
+    import wcwidth  # type: ignore
 except ImportError:
     wcwidth = None
 
 try:
     from html import escape as htmlescape
 except ImportError:
-    from cgi import escape as htmlescape
+    # Module 'cgi' has no attribute 'escape'
+    # Name 'htmlescape' already defined (possibly by an import)
+    from cgi import escape as htmlescape  # type: ignore
 
 
 __all__ = ["tabulate", "tabulate_formats", "simple_separated_format"]

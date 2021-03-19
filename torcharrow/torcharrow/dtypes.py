@@ -22,10 +22,6 @@ ScalarTypeValues = (int, float, bool, str)
 MetaData = Dict[str, str]
 
 
-def Schema(fields):
-    return Struct(fields, nullable=False)
-
-
 @dataclass(frozen=True)
 class Field:
     name: str
@@ -45,7 +41,7 @@ class Field:
 # Immutable Types with structural equality...
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True)  # type: ignore
 class DType(ABC):
     @property
     def size(self):
@@ -74,7 +70,7 @@ class Void(DType):
     typecode: ClassVar[str] = "n"
     arraycode: ClassVar[str] = "b"
     name: ClassVar[str] = "void"
-    default: ClassVar[bool] = None
+    default: ClassVar[Optional[bool]] = None
 
     @property
     def size(self):
@@ -85,7 +81,7 @@ class Void(DType):
         return Void(nullable)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True)  # type: ignore
 class Numeric(DType):
     @property
     def size(self):
@@ -384,15 +380,15 @@ def Schema(
 # TorchArrow does not yet support these types
 
 # abstract
-@dataclass(frozen=True)
-class Union(DType):
+@dataclass(frozen=True)  # type: ignore
+class Union_(DType):
     pass
 
 
 Tag = str
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True)  # type: ignore
 class DenseUnion(DType):
     tags: List[Tag]
     name: ClassVar[str] = "DenseUnion"
@@ -400,7 +396,7 @@ class DenseUnion(DType):
     arraycode: ClassVar[str] = ""
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True)  # type: ignore
 class SparseUnion(DType):
     tags: List[Tag]
     name: ClassVar[str] = "SparseUnion"

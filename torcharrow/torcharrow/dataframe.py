@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
 import array as ar
 import copy
 import operator
@@ -14,6 +17,7 @@ from typing import (
     Optional,
     Sequence,
     Union,
+    cast,
 )
 
 from .column import AbstractColumn, Column, _column_constructor, _set_column_constructor
@@ -32,6 +36,7 @@ from .dtypes import (
     is_struct,
     is_tuple,
     string,
+    Tuple_,
 )
 from .tabulate import tabulate
 
@@ -56,7 +61,6 @@ class DataFrame(AbstractColumn):
         dtype: Optional[DType] = None,
         columns: Optional[List[str]] = None,
     ):
-
         super().__init__(dtype)
         self._field_data = {}
 
@@ -77,6 +81,7 @@ class DataFrame(AbstractColumn):
                 raise TypeError(
                     f"Dataframe takes a Struct dtype as parameter (got {dtype})"
                 )
+            dtype = cast(Struct, dtype)
             self._dtype = dtype
             for f in dtype.fields:
                 self._field_data[f.name] = _column_constructor(f.dtype)
@@ -105,6 +110,7 @@ class DataFrame(AbstractColumn):
                 dtype = infer_dtype_from_prefix(prefix)
                 if dtype is None or not is_tuple(dtype):
                     raise TypeError("Dataframe cannot infer struct type from data")
+                dtype = cast(Tuple_, dtype)
                 columns = [] if columns is None else columns
                 if len(dtype.fields) != len(columns):
                     raise TypeError("Dataframe column length must equal row length")
@@ -229,6 +235,7 @@ class DataFrame(AbstractColumn):
         else:
             raise TypeError("data must be a column or list")
 
+        assert d is not None
         if all(len(c) == 0 for c in self._field_data.values()):
             self._length = len(d)
             self._validity = ar.array("b", [True] * self._length)
@@ -238,13 +245,19 @@ class DataFrame(AbstractColumn):
 
         if name in self._field_data.keys():
             raise AttributeError("cannot override existing column")
-        elif len(self._dtype.fields) < len(self._field_data):
+        elif (
+            self._dtype is not None
+            and isinstance(self._dtype, Struct)
+            and len(self._dtype.fields) < len(self._field_data)
+        ):
             raise AttributeError("cannot append column to view")
         else:
+            assert self._dtype is not None and isinstance(self._dtype, Struct)
             # side effect on field_data
             self._field_data[name] = d
             # no side effect on dtype
             fields = list(self._dtype.fields)
+            assert d._dtype is not None
             fields.append(Field(name, d._dtype))
             self._dtype = Struct(fields)
 
@@ -633,7 +646,7 @@ class DataFrame(AbstractColumn):
 
     # isin ---------------------------------------------------------------
 
-    def isin(self, values: Union[list, "DataFrame", dict]):
+    def isin(self, values: Union[list, dict, AbstractColumn]):
         """Check whether values are contained in data."""
         res = DataFrame()
         if isinstance(values, Iterable):
@@ -668,20 +681,23 @@ class DataFrame(AbstractColumn):
             return self._lift(lambda c: c.fillna, {"fill_value": fill_value})
         elif isinstance(fill_value, dict):
             res = DataFrame()
-            for n in fill_value.keys():
-                _ = self._field_data[n]  # throw key error for undefined keys
-            for n, c in self._field_data.items():
-                res[n] = c.fillna(fill_value=fill_value[n]) if n in dict else c
+            # Dead code?
+            # for n in fill_value.keys():
+            #     _ = self._field_data[n]  # throw key error for undefined keys
+            # for n, c in self._field_data.items():
+            #     res[n] = c.fillna(fill_value=fill_value[n]) if n in dict else c
             return res
         elif isinstance(fill_value, DataFrame):
             res = DataFrame()
-            if self._shapeix != fill_value._shapeix:
-                TypeError(
-                    f"fillna between differently 'shaped' and 'indexed' dataframes is not supported"
-                )
+            # Dead code?
+            # if self._shapeix != fill_value._shapeix:
+            #     TypeError(
+            #         f"fillna between differently 'shaped' and 'indexed' dataframes is not supported"
+            #     )
 
-            for n, c, d in zip(self._field_data.items(), fill_value.values()):
-                res[n] = c.fillna(fill_value=d)
+            # "DataFrame" has no attribute "values"
+            # for (n, c), d in zip(self._field_data.items(), fill_value.values()):
+            #     res[n] = c.fillna(fill_value=d)
             return res
         else:
             raise TypeError(f"fillna with {type(fill_value)} is not supported")
@@ -689,6 +705,7 @@ class DataFrame(AbstractColumn):
     def dropna(self, how: Literal["any", "all"] = "any"):
         """Return a Frame with rows removed where the has any or all nulls."""
         # TODO only flat columns supported...
+        assert self._dtype is not None
         res = DataFrame(self._dtype.constructor(nullable=False))
         if how == "any":
             for i in self:
@@ -940,7 +957,8 @@ class DataFrame(AbstractColumn):
     def to_pandas(self):
         """Convert self to pandas dataframe"""
         # TODO Add type translation.
-        import pandas as pd
+        # Skipping analyzing 'pandas': found module but no type hints or library stubs
+        import pandas as pd  # type: ignore
 
         map = {}
         for n, c in self._field_data.items():
@@ -950,7 +968,7 @@ class DataFrame(AbstractColumn):
     def to_arrow(self):
         """Convert self to arrow table"""
         # TODO Add type translation
-        import pyarrow as pa
+        import pyarrow as pa  # type: ignore
 
         map = {}
         for n, c in self._field_data.items():

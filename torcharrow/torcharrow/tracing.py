@@ -132,4 +132,4 @@ class Point(TypedDict):
 
 # Error: Incompatible types (expression has type "float",
 #        TypedDict item "x" has type "int")  [typeddict-item]
-p: Point = {"x": 1.2, "y": 4}
+p: Point = {"x": 1.2, "y": 4}  # type: ignore

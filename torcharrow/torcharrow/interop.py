@@ -1,10 +1,13 @@
 import operator
 import unittest
-from typing import List, Optional
+from typing import List, Optional, cast
 
-import numpy as np
-import pandas as pd
-import pyarrow as pa
+# Skipping analyzing 'numpy': found module but no type hints or library stubs
+import numpy as np  # type: ignore
+
+# Skipping analyzing 'pandas': found module but no type hints or library stubs
+import pandas as pd  # type: ignore
+import pyarrow as pa  # type: ignore
 from torcharrow import (
     Boolean,
     Column,
@@ -42,6 +45,7 @@ def from_arrow_table(
     assert isinstance(table, pa.Table)
     if dtype is not None:
         assert is_struct(dtype)
+        dtype = cast(Struct, dtype)
         res = DataFrame()
         for f in dtype.fields:
             chunked_array = table.column(f.name)
@@ -71,6 +75,7 @@ def from_pandas_dataframe(
     """
     if dtype is not None:
         assert is_struct(dtype)
+        dtype = cast(Struct, dtype)
         res = DataFrame()
         for f in dtype.fields:
             # this shows that Column shoud also construct Dataframes!

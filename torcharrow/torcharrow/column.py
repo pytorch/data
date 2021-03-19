@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
 import array as ar
 import functools
 import math
@@ -111,13 +114,12 @@ def Column(
         raise AssertionError("unexpected case")
 
 
-@staticmethod
 def arange(
-    start: Union[int, float],
-    stop: Union[int, float, None] = None,
-    step: Union[int, float] = 1,
+    start: int,
+    stop: int,
+    step: int = 1,
     dtype: Optional[DType] = None,
-) -> Column:
+) -> AbstractColumn:
     return Column(list(range(start, stop, step)), dtype)
 
 
@@ -145,7 +147,7 @@ def _column_constructor(dtype, kwargs=None):
 class AbstractColumn(ABC, Sized, Iterable):
     """AbstractColumn are one dimenensionalcolumns or two dimensional dataframes"""
 
-    def __init__(self, dtype: DType):
+    def __init__(self, dtype: Optional[DType]):
         self._dtype = dtype
         self._offset = 0
         self._length = 0
@@ -386,10 +388,6 @@ class AbstractColumn(ABC, Sized, Iterable):
     # def to_array(self, fillna=None):
     #     """Get a dense numpy array for the data."""
 
-    def to_pandas(self, nullable=False):
-        """Convert to a Pandas data."""
-        raise NotImplementedError()
-
     def astype(self, dtype):
         """Cast the Column to the given dtype"""
         raise NotImplementedError()
@@ -411,8 +409,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         Map rows according to input correspondence.
         dtype required if result type != item type.
         """
-        if isinstance(arg, dict):
-            return self._map(lambda x: arg.get(x, None), na_action, dtype)
+        if isinstance(arg, Dict):
+            return self._map(lambda x: arg.get(x, None), na_action, dtype)  # type: ignore
         else:
             return self._map(arg, na_action, dtype)
 
@@ -444,12 +442,12 @@ class AbstractColumn(ABC, Sized, Iterable):
         Select rows where predicate is True.
         Different from Pandas. Use keep for Pandas filter.
         """
-        if not isinstance(predicate, (Callable, Iterable)):
+        if not isinstance(predicate, Iterable) and not callable(predicate):
             raise TypeError(
                 "predicate must be a unary boolean predicate or iterable of booleans"
             )
         res = _column_constructor(self._dtype)
-        if isinstance(predicate, Callable):
+        if callable(predicate):
             for x in self:
                 if predicate(x):
                     res._append(x)
@@ -852,7 +850,7 @@ class AbstractColumn(ABC, Sized, Iterable):
             )
 
     # isin --------------------------------------------------------------------
-    def isin(self, values: Union[list, dict, "AbstractColumn"]):
+    def isin(self, values: Union[list, dict, AbstractColumn]):
         """Check whether list values are contained in data, or column/dataframe (row/column specific)."""
         if isinstance(values, list):
             res = _column_constructor(boolean)
@@ -867,11 +865,12 @@ class AbstractColumn(ABC, Sized, Iterable):
     # data cleaning -----------------------------------------------------------
 
     def fillna(
-        self, fill_value: Union[ScalarTypes, Dict, "AbstractColumn", Literal[None]]
+        self, fill_value: Union[ScalarTypes, Dict, AbstractColumn, Literal[None]]
     ):
         """Fill NA/NaN values with scalar (like 0) or column/dataframe (row/column specific)"""
         if fill_value is None:
             return self
+        assert self._dtype is not None
         res = _column_constructor(self._dtype.constructor(nullable=False))
         if isinstance(fill_value, ScalarTypeValues):
             for value in self:
@@ -880,7 +879,9 @@ class AbstractColumn(ABC, Sized, Iterable):
                 else:
                     res._append(fill_value)
             return res
-        elif isinstance(fill_value, Column):  # TODO flat Column   --> needs a test
+        elif isinstance(
+            fill_value, AbstractColumn
+        ):  # TODO flat Column   --> needs a test
             for value, fill in zip(self, fill_value):
                 if value is not None:
                     res._append(value)
@@ -890,10 +891,11 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:  # Dict and Dataframe only self is dataframe
             raise TypeError(f"fillna with {type(fill_value)} is not supported")
 
-    def dropna(self, how: Literal["any", "all"] = any):
+    def dropna(self, how: Literal["any", "all"] = "any"):
         """Return a column/frame with rows removed where a row has any or all nulls."""
         # TODO only flat columns supported...
         # notet hat any and all play nor role for flat columns,,,
+        assert self._dtype is not None
         res = _column_constructor(self._dtype.constructor(nullable=False))
         for i in range(self._offset, self._offset + self._length):
             if self._validity[i]:
@@ -1150,14 +1152,15 @@ class AbstractColumn(ABC, Sized, Iterable):
     def to_pandas(self):
         """Convert selef to pandas dataframe"""
         # TODO Add type translation
-        import pandas as pd
+        # Skipping analyzing 'pandas': found module but no type hints or library stubs
+        import pandas as pd  # type: ignore
 
         return pd.Series(self)
 
     def to_arrow(self):
         """Convert selef to pandas dataframe"""
         # TODO Add type translation
-        import pyarrow as pa
+        import pyarrow as pa  # type: ignore
 
         return pa.array(self)
 
