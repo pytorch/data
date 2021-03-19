@@ -1,6 +1,7 @@
 import unittest
 import timeout_decorator
 
+import torch.utils.data
 from torch.utils.data import IterDataPipe, IterableDataset
 from torch.utils.data.datapipes.iter import Map, Filter
 import torch.multiprocessing as multiprocessing
@@ -158,6 +159,31 @@ class TestClass(unittest.TestCase):
         expected = {mapped_dp : {numbers_dp : {}}}
         self.assertEqual(graph, expected)
 
+    def test_determinism(self):
+        num_dp1 = NumbersDataset(size=50)
+        num_dp2 = NumbersDataset(size=50)
+        self.assertEqual(torch.utils.data.decorator._determinism, False)
+        # Determinism guaranteed
+        with torch.utils.data.guaranteed_datapipes_determinism():
+            self.assertEqual(torch.utils.data.decorator._determinism, True)
+            # Error thrown at the construction time
+            # Sequential API
+            with self.assertRaises(TypeError):
+                joined_dp = datapipes.iter.GreedyJoin(num_dp1, num_dp2)
+            # Functional API
+            with self.assertRaises(TypeError):
+                joined_dp = num_dp1.join(num_dp2)
+            # With deterministic_fn
+            joined_dp = datapipes.iter.GreedyJoin(num_dp1)
+            self.assertEqual(sorted(list(joined_dp)), list(range(50)))
+            joined_dp = num_dp1.join()
+            self.assertEqual(sorted(list(joined_dp)), list(range(50)))
+        # Determinism not guaranteed
+        self.assertEqual(torch.utils.data.decorator._determinism, False)
+        joined_dp = num_dp1.join(num_dp2)
+        import itertools
+        exp = list(itertools.chain.from_iterable(itertools.repeat(i, 2) for i in range(50)))
+        self.assertEqual(sorted(list(joined_dp)), exp)
 
 
 if __name__ == '__main__':

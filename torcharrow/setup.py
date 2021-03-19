@@ -2,16 +2,17 @@ from setuptools import setup
 
 setup(
     name='torcharrow',
-    version='0.1.0',    
-    description='Panda inspired, Arrow compatble Dataframes for PyTorch',
-    url='https://github.com/...',
+    version='0.2.0',    
+    description='Panda inspired, Arrow compatble, Velox supported Dataframes for PyTorch',
+    url='https://github.com/facebookexternal/torchdata',
     author='Facebook',
-    author_email='shudson@anl.gov',
+    author_email='...@fb.com',
     license='BSD 2-clause',
     packages=['torcharrow'],
     install_requires=['arrow',
                       'numpy',
-                      'pandas'                     
+                      'pandas',
+                      'typing',
                       ],
 
     classifiers=[
