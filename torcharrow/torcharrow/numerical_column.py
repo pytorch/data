@@ -11,7 +11,6 @@ from .tabulate import tabulate
 
 
 class NumericalColumn(AbstractColumn):
-
     def __init__(self, dtype, kwargs=None):
         assert is_numerical(dtype) or is_boolean(dtype)
         super().__init__(dtype)
@@ -33,14 +32,14 @@ class NumericalColumn(AbstractColumn):
         if not deep:
             return self._length * vsize + self._length * dsize
         else:
-            return len(self._validity)*vsize + len(self._data)*dsize
+            return len(self._validity) * vsize + len(self._data) * dsize
 
     def _copy(self, deep, offset, length):
         if deep:
             res = NumericalColumn(self.dtype)
             res._length = length
-            res._data = self._data[offset: offset+length]
-            res._validity = self._validity[offset: offset+length]
+            res._data = self._data[offset : offset + length]
+            res._validity = self._validity[offset : offset + length]
             res._null_count = sum(res._validity)
             return res
         else:
@@ -64,21 +63,21 @@ class NumericalColumn(AbstractColumn):
     def get(self, i, fill_value):
         """Get item from column/frame for given integer index"""
         if self._null_count == 0:
-            return self._data[self._offset+i]
-        elif not self._validity[self._offset+i]:
+            return self._data[self._offset + i]
+        elif not self._validity[self._offset + i]:
             return fill_value
         else:
-            return self._data[self._offset+i]
+            return self._data[self._offset + i]
 
     def __iter__(self):
         """Return the iterator object itself."""
         if self._null_count == 0:
             for i in range(self._length):
-                yield self._data[self._offset+i]
+                yield self._data[self._offset + i]
         else:
             for i in range(self._length):
-                if self._validity[self._offset+i]:
-                    yield self._data[self._offset+i]
+                if self._validity[self._offset + i]:
+                    yield self._data[self._offset + i]
                 else:
                     yield None
 
@@ -87,10 +86,13 @@ class NumericalColumn(AbstractColumn):
         return f"Column([{', '.join(str(i) for i in self)}])"
 
     def __repr__(self):
-        tab = tabulate([[l if l is not None else 'None']
-                       for l in self], tablefmt='plain', showindex=True)
+        tab = tabulate(
+            [[l if l is not None else "None"] for l in self],
+            tablefmt="plain",
+            showindex=True,
+        )
         typ = f"dtype: {self._dtype}, length: {self._length}, null_count: {self._null_count}"
-        return tab+NL+typ
+        return tab + NL + typ
 
     def show_details(self):
         return _NumericalRepr(self)
@@ -102,42 +104,48 @@ class _NumericalRepr:
 
     def __repr__(self):
         me = self.parent
-        tab = tabulate([[l if l is not None else 'None', v] for (
-            l, v) in zip(me._data, me._validity)], ['data', 'validity'])
+        tab = tabulate(
+            [
+                [l if l is not None else "None", v]
+                for (l, v) in zip(me._data, me._validity)
+            ],
+            ["data", "validity"],
+        )
         typ = f"dtype: {me._dtype}, count: {me._length}, null_count: {me._null_count}, offset: {me._offset}"
-        return tab+NL+typ
+        return tab + NL + typ
+
+
 # ------------------------------------------------------------------------------
 # BooleanColumn
 
 
 class BooleanColumn(NumericalColumn):
-
     def __init__(self, dtype, kwargs=None):
         assert is_boolean(dtype)
         super().__init__(dtype)
-        self._data = ar.array('b')
+        self._data = ar.array("b")
 
     # implementing abstract methods ----------------------------------------------
     def get(self, i, fill_value):
         """Get item from column/frame for given integer index"""
         if self._null_count == 0:
-            return bool(self._data[self._offset+i])
-        elif not self._validity[self._offset+i]:
+            return bool(self._data[self._offset + i])
+        elif not self._validity[self._offset + i]:
             return fill_value
         else:
-            return bool(self._data[self._offset+i])
+            return bool(self._data[self._offset + i])
 
     def __iter__(self):
         """Return the iterator object itself."""
         if self._null_count == 0:
             # print('case _null_count==0')
             for i in range(self._length):
-                yield bool(self._data[self._offset+i])
+                yield bool(self._data[self._offset + i])
         else:
             # print('case _null_count>0')
             for i in range(self._length):
-                if self._validity[self._offset+i]:
-                    yield bool(self._data[self._offset+i])
+                if self._validity[self._offset + i]:
+                    yield bool(self._data[self._offset + i])
                 else:
                     yield None
 
@@ -146,10 +154,13 @@ class BooleanColumn(NumericalColumn):
         return f"Column([{', '.join(str(bool(i)) for i in self._data)}])"
 
     def __repr__(self):
-        tab = tabulate([[str(bool(l)) if l is not None else 'None']
-                       for l in self], tablefmt='plain', showindex=True)
+        tab = tabulate(
+            [[str(bool(l)) if l is not None else "None"] for l in self],
+            tablefmt="plain",
+            showindex=True,
+        )
         typ = f"dtype: {self._dtype}, count: {self._length}, null_count: {self._null_count}"
-        return tab+NL+typ
+        return tab + NL + typ
 
     def show_details(self):
         return _BooleanRepr(self)
@@ -161,10 +172,15 @@ class _BooleanRepr:
 
     def __repr__(self):
         me = self.parent
-        tab = tabulate([[str(bool(l)) if l is not None else 'None', v] for (
-            l, v) in zip(me._data, me._validity)], ['data', 'validity'])
+        tab = tabulate(
+            [
+                [str(bool(l)) if l is not None else "None", v]
+                for (l, v) in zip(me._data, me._validity)
+            ],
+            ["data", "validity"],
+        )
         typ = f"dtype: {me._dtype}, count: {me._length}, null_count: {me._null_count}, offset: {me._offset}"
-        return tab+NL+typ
+        return tab + NL + typ
 
 
 # ------------------------------------------------------------------------------

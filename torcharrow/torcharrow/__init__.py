@@ -17,5 +17,5 @@ from .interop import *
 # Pandas -- the Good parts --
 
 __version__ = "0.2.0"
-__author__ = 'Facebook'
-__credits__ = 'Pandas, CuDF, Arrow'
+__author__ = "Facebook"
+__credits__ = "Pandas, CuDF, Arrow"

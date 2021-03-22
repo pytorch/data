@@ -22,10 +22,6 @@ ScalarTypeValues = (int, float, bool, str)
 MetaData = Dict[str, str]
 
 
-def Schema(fields):
-    return Struct(fields, nullable=False)
-
-
 @dataclass(frozen=True)
 class Field:
     name: str
@@ -35,16 +31,18 @@ class Field:
     def __str__(self):
         meta = ""
         if self.metadata is not None:
-            meta = f"meta = {OPEN}{', '.join(f'{k}: {v}' for k,v in self.metadata)}{CLOSE}"
+            meta = (
+                f"meta = {OPEN}{', '.join(f'{k}: {v}' for k,v in self.metadata)}{CLOSE}"
+            )
         return f"Field('{self.name}', {str(self.dtype)}{meta})"
 
 
 # -----------------------------------------------------------------------------
 # Immutable Types with structural equality...
 
-@dataclass(frozen=True)
-class DType(ABC):
 
+@dataclass(frozen=True)  # type: ignore
+class DType(ABC):
     @property
     def size(self):
         return -1  # means unknown
@@ -62,16 +60,17 @@ class DType(ABC):
     def with_null(self, nullable=True):
         return self.constructor(nullable)
 
+
 # for now: no float16, and all date and time stuff, categoricals, (and Null is called Void)
 
 
 @dataclass(frozen=True)
 class Void(DType):
     nullable: bool = True
-    typecode: ClassVar[str] = 'n'
-    arraycode: ClassVar[str] = 'b'
+    typecode: ClassVar[str] = "n"
+    arraycode: ClassVar[str] = "b"
     name: ClassVar[str] = "void"
-    default: ClassVar[bool] = None
+    default: ClassVar[Optional[bool]] = None
 
     @property
     def size(self):
@@ -82,7 +81,7 @@ class Void(DType):
         return Void(nullable)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True)  # type: ignore
 class Numeric(DType):
     @property
     def size(self):
@@ -94,14 +93,14 @@ class Numeric(DType):
             return 2
         if self.name.endswith("8"):
             return 1
-        raise AssertionError('missing case')
+        raise AssertionError("missing case")
 
 
 @dataclass(frozen=True)
 class Boolean(DType):
     nullable: bool = False
-    typecode: ClassVar[str] = 'b'
-    arraycode: ClassVar[str] = 'b'
+    typecode: ClassVar[str] = "b"
+    arraycode: ClassVar[str] = "b"
     name: ClassVar[str] = "boolean"
     default: ClassVar[bool] = False
 
@@ -115,10 +114,10 @@ class Boolean(DType):
 
 
 @dataclass(frozen=True)
-class Int8 (Numeric):
+class Int8(Numeric):
     nullable: bool = False
-    typecode: ClassVar[str] = 'c'
-    arraycode: ClassVar[str] = 'b'
+    typecode: ClassVar[str] = "c"
+    arraycode: ClassVar[str] = "b"
     name: ClassVar[str] = "int8"
     default: ClassVar[int] = 0
 
@@ -129,8 +128,8 @@ class Int8 (Numeric):
 @dataclass(frozen=True)
 class Uint8(Numeric):
     nullable: bool = False
-    typecode: ClassVar[str] = 'C'
-    arraycode: ClassVar[str] = 'B'
+    typecode: ClassVar[str] = "C"
+    arraycode: ClassVar[str] = "B"
     name: ClassVar[str] = "uint8"
     default: ClassVar[int] = 0
 
@@ -141,8 +140,8 @@ class Uint8(Numeric):
 @dataclass(frozen=True)
 class Int16(Numeric):
     nullable: bool = False
-    typecode: ClassVar[str] = 's'
-    arraycode: ClassVar[str] = 'h'
+    typecode: ClassVar[str] = "s"
+    arraycode: ClassVar[str] = "h"
     name: ClassVar[str] = "int16"
     default: ClassVar[int] = 0
 
@@ -151,10 +150,10 @@ class Int16(Numeric):
 
 
 @dataclass(frozen=True)
-class Uint16 (Numeric):
+class Uint16(Numeric):
     nullable: bool = False
-    typecode = 'S'
-    arraycode: ClassVar[str] = 'h'
+    typecode = "S"
+    arraycode: ClassVar[str] = "h"
     name: ClassVar[str] = "uint16"
     default: ClassVar[int] = 0
 
@@ -165,8 +164,8 @@ class Uint16 (Numeric):
 @dataclass(frozen=True)
 class Int32(Numeric):
     nullable: bool = False
-    typecode: ClassVar[str] = 'i'
-    arraycode: ClassVar[str] = 'i'
+    typecode: ClassVar[str] = "i"
+    arraycode: ClassVar[str] = "i"
     name: ClassVar[str] = "int32"
     default: ClassVar[int] = 0
 
@@ -175,10 +174,10 @@ class Int32(Numeric):
 
 
 @dataclass(frozen=True)
-class Uint32 (Numeric):
+class Uint32(Numeric):
     nullable: bool = False
-    typecode: ClassVar[str] = 'I'
-    arraycode: ClassVar[str] = 'I'
+    typecode: ClassVar[str] = "I"
+    arraycode: ClassVar[str] = "I"
     name: ClassVar[str] = "uint32"
     default: ClassVar[int] = 0
 
@@ -189,8 +188,8 @@ class Uint32 (Numeric):
 @dataclass(frozen=True)
 class Int64(Numeric):
     nullable: bool = False
-    typecode: ClassVar[str] = 'l'
-    arraycode: ClassVar[str] = 'l'
+    typecode: ClassVar[str] = "l"
+    arraycode: ClassVar[str] = "l"
     name: ClassVar[str] = "int64"
     default: ClassVar[int] = 0
 
@@ -199,10 +198,10 @@ class Int64(Numeric):
 
 
 @dataclass(frozen=True)
-class Uint64 (Numeric):
+class Uint64(Numeric):
     nullable: bool = False
-    typecode: ClassVar[str] = 'L'
-    arraycode: ClassVar[str] = 'L'
+    typecode: ClassVar[str] = "L"
+    arraycode: ClassVar[str] = "L"
     name: ClassVar[str] = "uint64"
     default: ClassVar[int] = 0
 
@@ -213,8 +212,8 @@ class Uint64 (Numeric):
 @dataclass(frozen=True)
 class Float32(Numeric):
     nullable: bool = False
-    typecode: ClassVar[str] = 'f'
-    arraycode: ClassVar[str] = 'f'
+    typecode: ClassVar[str] = "f"
+    arraycode: ClassVar[str] = "f"
     name: ClassVar[str] = "float32"
     default: ClassVar[float] = 0.0
 
@@ -225,8 +224,8 @@ class Float32(Numeric):
 @dataclass(frozen=True)
 class Float64(Numeric):
     nullable: bool = False
-    typecode: ClassVar[str] = 'd'  # CHECK Spec ???
-    arraycode: ClassVar[str] = 'd'
+    typecode: ClassVar[str] = "d"  # CHECK Spec ???
+    arraycode: ClassVar[str] = "d"
     name: ClassVar[str] = "float64"
     default: ClassVar[float] = 0.0
 
@@ -239,8 +238,8 @@ class String(DType):
     nullable: bool = False
     # no support yet for
     # fixed_size: int = -1
-    typecode: ClassVar[str] = 'u'  # utf8 string (n byte)
-    arraycode: ClassVar[str] = 'w'  # wchar_t (2 byte)
+    typecode: ClassVar[str] = "u"  # utf8 string (n byte)
+    arraycode: ClassVar[str] = "w"  # wchar_t (2 byte)
     name: ClassVar[str] = "string"
     default: ClassVar[str] = ""
 
@@ -276,7 +275,7 @@ class Map(DType):
         return Map(self.key_dtype, self.item_dtype, nullable)
 
     def __str__(self):
-        nullable = ', nullable=' + str(self.nullable) if self.nullable else ""
+        nullable = ", nullable=" + str(self.nullable) if self.nullable else ""
         return f"Map({self.key_dtype}, {self.item_dtype}{nullable})"
 
 
@@ -295,15 +294,17 @@ class List_(DType):
             return f"+w:{self.fixed_size}"
         else:
             return "+l"
+
     arraycode: ClassVar[str] = ""
 
     def constructor(self, nullable):
         return List_(self.item_dtype, nullable)
 
     def __str__(self):
-        nullable = ', nullable=' + str(self.nullable) if self.nullable else ""
-        fixed_size = ', fixed_size=' + \
-            str(self.fixed_size) if self.fixed_size >= 0 else ""
+        nullable = ", nullable=" + str(self.nullable) if self.nullable else ""
+        fixed_size = (
+            ", fixed_size=" + str(self.fixed_size) if self.fixed_size >= 0 else ""
+        )
         return f"List_({self.item_dtype}{nullable}{fixed_size})"
 
 
@@ -322,7 +323,8 @@ class Struct(DType):
             for f in self.fields:
                 if not f.dtype.nullable:
                     raise TypeError(
-                        f'nullable structs require each field (like {f.name}) to be nullable as well.')
+                        f"nullable structs require each field (like {f.name}) to be nullable as well."
+                    )
 
     def constructor(self, nullable):
         return Struct(self.fields, nullable)
@@ -331,10 +333,10 @@ class Struct(DType):
         for f in self.fields:
             if f.name == arg:
                 return f.dtype
-        raise KeyError('{arg} not among fields')
+        raise KeyError("{arg} not among fields")
 
     def __str__(self):
-        nullable = ', nullable=' + str(self.nullable) if self.nullable else ""
+        nullable = ", nullable=" + str(self.nullable) if self.nullable else ""
         flds = f"[{', '.join(str(f) for f in self.fields)}]"
         meta = ""
         if self.metadata is not None:
@@ -343,6 +345,7 @@ class Struct(DType):
             return f"Schema({flds}{nullable}{meta})"
         else:
             return f"Struct({flds}{nullable}{meta})"
+
 
 # only used internally for type inference
 
@@ -360,10 +363,15 @@ class Tuple_(DType):
     def constructor(self, nullable):
         return Tuple_(self.fields, nullable)
 
+
 # Schema is just a struct that is maked as standing for a dataframe
 
 
-def Schema(fields: Optional[List[Field]] = None, nullable: bool = False, metadata: Optional[MetaData] = None):
+def Schema(
+    fields: Optional[List[Field]] = None,
+    nullable: bool = False,
+    metadata: Optional[MetaData] = None,
+):
     if fields is None:
         fields = []
     return Struct(fields, nullable, is_dataframe=True)
@@ -372,15 +380,15 @@ def Schema(fields: Optional[List[Field]] = None, nullable: bool = False, metadat
 # TorchArrow does not yet support these types
 
 # abstract
-@dataclass(frozen=True)
-class Union(DType):
+@dataclass(frozen=True)  # type: ignore
+class Union_(DType):
     pass
 
 
 Tag = str
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True)  # type: ignore
 class DenseUnion(DType):
     tags: List[Tag]
     name: ClassVar[str] = "DenseUnion"
@@ -388,7 +396,7 @@ class DenseUnion(DType):
     arraycode: ClassVar[str] = ""
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True)  # type: ignore
 class SparseUnion(DType):
     tags: List[Tag]
     name: ClassVar[str] = "SparseUnion"
@@ -423,7 +431,7 @@ def is_void(t):
     Return True if value is an instance of a void type.
     """
     # print('is_boolean', t.typecode)
-    return t.typecode == 'n'
+    return t.typecode == "n"
 
 
 def is_boolean(t):
@@ -431,7 +439,7 @@ def is_boolean(t):
     Return True if value is an instance of a boolean type.
     """
     # print('is_boolean', t.typecode)
-    return t.typecode == 'b'
+    return t.typecode == "b"
 
 
 def is_numerical(t):
@@ -463,56 +471,56 @@ def is_int8(t):
     """
     Return True if value is an instance of an int8 type.
     """
-    return t.typecode == 'c'
+    return t.typecode == "c"
 
 
 def is_int16(t):
     """
     Return True if value is an instance of an int16 type.
     """
-    return t.typecode == 's'
+    return t.typecode == "s"
 
 
 def is_int32(t):
     """
     Return True if value is an instance of an int32 type.
     """
-    return t.typecode == 'i'
+    return t.typecode == "i"
 
 
 def is_int64(t):
     """
     Return True if value is an instance of an int64 type.
     """
-    return t.typecode == 'l'
+    return t.typecode == "l"
 
 
 def is_uint8(t):
     """
     Return True if value is an instance of an uint8 type.
     """
-    return t.typecode == 'C'
+    return t.typecode == "C"
 
 
 def is_uint16(t):
     """
     Return True if value is an instance of an uint16 type.
     """
-    return t.typecode == 'S'
+    return t.typecode == "S"
 
 
 def is_uint32(t):
     """
     Return True if value is an instance of an uint32 type.
     """
-    return t.typecode == 'I'
+    return t.typecode == "I"
 
 
 def is_uint64(t):
     """
     Return True if value is an instance of an uint64 type.
     """
-    return t.typecode == 'L'
+    return t.typecode == "L"
 
 
 def is_floating(t):
@@ -526,7 +534,7 @@ def is_float32(t):
     """
     Return True if value is an instance of a float32 (single precision) type.
     """
-    return t.typecode == 'f'
+    return t.typecode == "f"
 
 
 def is_string(t):
@@ -537,7 +545,7 @@ def is_float64(t):
     """
     Return True if value is an instance of a float32 (single precision) type.
     """
-    return t.typecode == 'd'
+    return t.typecode == "d"
 
 
 def is_list(t):
@@ -580,8 +588,7 @@ def _infer_dtype_from_value(value):
         return List_(dtype)
     if isinstance(value, dict):
         key_dtype = infer_dtype_from_prefix(list(value.keys())[:PREFIX_LENGTH])
-        items_dtype = infer_dtype_from_prefix(
-            list(value.values())[:PREFIX_LENGTH])
+        items_dtype = infer_dtype_from_prefix(list(value.values())[:PREFIX_LENGTH])
         return Map(key_dtype, items_dtype)
     if isinstance(value, tuple):
         dtypes = []
@@ -592,7 +599,7 @@ def _infer_dtype_from_value(value):
 
 def infer_dtype_from_prefix(prefix):
     if len(prefix) == 0:
-        raise ValueError(f'Cannot infer type of f{prefix}')
+        raise ValueError(f"Cannot infer type of f{prefix}")
     dtype = _infer_dtype_from_value(prefix[0])
     for p in prefix:
         next_dtype = _infer_dtype_from_value(p)
@@ -600,8 +607,9 @@ def infer_dtype_from_prefix(prefix):
         dtype = _lub_dtype(dtype, next_dtype)
         # print('LUB', rtype, next_dtype, '->', dtype)
         if dtype is None:
-            raise ValueError(f'Cannot infer type of f{prefix}')
+            raise ValueError(f"Cannot infer type of f{prefix}")
     return dtype
+
 
 # lub of two types for inference ----------------------------------------------
 
@@ -639,21 +647,8 @@ def _lub_dtype(l, r):
 
 # DESIGN BUG: TODO Fix me later
 # -- needs actually both sides, due to symetric promotion rules for //...
-_arithmetic_ops = [
-    "add",
-    "sub",
-    "mul",
-    "floordiv",
-    "truediv",
-    "mod",
-    "pow"]
-_comparison_ops = [
-    "eq",
-    "ne",
-    "lt",
-    "gt",
-    "le",
-    "ge"]
+_arithmetic_ops = ["add", "sub", "mul", "floordiv", "truediv", "mod", "pow"]
+_comparison_ops = ["eq", "ne", "lt", "gt", "le", "ge"]
 _logical_ops = ["and", "or"]
 
 
@@ -673,15 +668,20 @@ def derive_dtype(left_dtype, op):
     if op in _comparison_ops:
         return Boolean(left_dtype.nullable)
     raise AssertionError(
-        f"derive_dtype, unexpected type {left_dtype} for operation {op}")
+        f"derive_dtype, unexpected type {left_dtype} for operation {op}"
+    )
 
 
 def derive_operator(op):
     return _operator_map[op]
 
 
-def _or(a, b): return a or b
-def _and(a, b): return a and b
+def _or(a, b):
+    return a or b
+
+
+def _and(a, b):
+    return a and b
 
 
 _operator_map = {
@@ -699,7 +699,8 @@ _operator_map = {
     "lt": operator.lt,
     "gt": operator.gt,
     "le": operator.le,
-    "ge": operator.ge}
+    "ge": operator.ge,
+}
 
 
 # -----------------------------------------------------------------------------

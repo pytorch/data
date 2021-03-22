@@ -1,11 +1,19 @@
 import array as ar
 import copy
 from dataclasses import dataclass
-from typing import (Any, Callable, ClassVar, Dict, List, Literal, Optional,
-                    TypeVar, Union)
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    TypeVar,
+    Union,
+)
 
-from .column import (AbstractColumn, Column, _column_constructor,
-                     _set_column_constructor)
+from .column import AbstractColumn, Column, _column_constructor, _set_column_constructor
 from .dtypes import NL, DType, List_, is_map
 from .list_column import ListColumn
 from .tabulate import tabulate
@@ -15,7 +23,7 @@ from .tabulate import tabulate
 
 
 class MapColumn(AbstractColumn):
-    def __init__(self,  dtype, kwargs):
+    def __init__(self, dtype, kwargs):
         assert is_map(dtype)
         super().__init__(dtype)
         self._key_data = _column_constructor(List_(dtype.key_dtype))
@@ -26,9 +34,8 @@ class MapColumn(AbstractColumn):
         assert len(self._key_data) == len(self._item_data)
         assert len(self._item_data) == len(self._validity)
         assert 0 <= self._offset and self._offset <= len(self._item_data)
-        assert 0 <= self._length and self._offset + \
-            self._length <= len(self._item_data)
-        rng = range(self._offset, self._offset+self._length)
+        assert 0 <= self._length and self._offset + self._length <= len(self._item_data)
+        rng = range(self._offset, self._offset + self._length)
         assert self.null_count == sum(self._validity[i] for i in rng)
 
     # implementing abstract methods ----------------------------------------------
@@ -36,7 +43,10 @@ class MapColumn(AbstractColumn):
     @property
     def is_appendable(self):
         """Can this column/frame be extended without side effecting """
-        return all(c.is_appendable and len(c) == self._offset + self._length for c in [self._key_data, self._item_data])
+        return all(
+            c.is_appendable and len(c) == self._offset + self._length
+            for c in [self._key_data, self._item_data]
+        )
 
     #    rlengths = self._raw_lengths()
     #     print('_is_appendable', self._key_data, self._item_data, rlengths,
@@ -54,11 +64,17 @@ class MapColumn(AbstractColumn):
         kusage = self._key_data.memory_usage(deep)
         iusage = self._item_data.memory_usage(deep)
         if not deep:
-            nchars = (self._offsets[self._offset +
-                      self.length]-self._offsets[self._offset])
+            nchars = (
+                self._offsets[self._offset + self.length] - self._offsets[self._offset]
+            )
             return self._length * vsize + self._length * osize + kusage + iusage
         else:
-            return len(self._validity)*vsize + len(self.self._offsets)*osize + kusage + iusage
+            return (
+                len(self._validity) * vsize
+                + len(self.self._offsets) * osize
+                + kusage
+                + iusage
+            )
 
     def _append(self, value):
         if value is None:
@@ -75,7 +91,7 @@ class MapColumn(AbstractColumn):
 
     def get(self, i, fill_value):
         """Get ith row from column/frame"""
-        j = self._offset+i
+        j = self._offset + i
         if not self._validity[j]:
             return fill_value
         else:
@@ -86,7 +102,7 @@ class MapColumn(AbstractColumn):
     def __iter__(self):
         """Return the iterator object itself."""
         for i in range(self._length):
-            j = self._offset+i
+            j = self._offset + i
             if self._validity[j]:
                 keys = self._key_data[j]
                 items = self._item_data[j]
@@ -100,7 +116,7 @@ class MapColumn(AbstractColumn):
             res._length = length
             res._key_data = self._key_data._copy(deep, offset, length)
             res._item_data = self._item_data._copy(deep, offset, length)
-            res._validity = self._validity[offset: offset+length]
+            res._validity = self._validity[offset : offset + length]
             res._null_count = sum(res._validity)
             return res
         else:
@@ -114,10 +130,13 @@ class MapColumn(AbstractColumn):
         return f"Column([{', '.join('None' if i is None else str(i) for i in self)}])"
 
     def __repr__(self):
-        tab = tabulate([['None' if i is None else str(i)]
-                       for i in self], tablefmt='plain', showindex=True)
+        tab = tabulate(
+            [["None" if i is None else str(i)] for i in self],
+            tablefmt="plain",
+            showindex=True,
+        )
         typ = f"dtype: {self._dtype}, length: {self._length}, null_count: {self._null_count}"
-        return tab+NL+typ
+        return tab + NL + typ
 
 
 def show_details(self):
@@ -143,6 +162,7 @@ _set_column_constructor(is_map, MapColumn)
 @dataclass
 class MapMethods:
     """Vectorized list functions for ListColumn"""
+
     _parent: MapColumn
 
     def keys(self):
@@ -159,7 +179,7 @@ class MapMethods:
             dtype = me._dtype
         res = _column_constructor(dtype)
         for i in range(me._length):
-            j = me._offset+i
+            j = me._offset + i
             if me._validity[j]:
                 res._append(fun(me[j]))
             else:
@@ -168,7 +188,10 @@ class MapMethods:
 
     def get(self, i, fill_value):
         me = self._parent
-        def fun(xs): return xs.get(i, fill_value)
+
+        def fun(xs):
+            return xs.get(i, fill_value)
+
         return self._map_map(fun, me.dtype.item_dtype)
 
     # def _map_map(self, fun, dtype:Optional[DType]=None):

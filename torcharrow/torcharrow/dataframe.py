@@ -1,17 +1,44 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
 import array as ar
 import copy
 import operator
 import functools
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import (Any, Callable, Dict, Iterable, List, Literal, Mapping,
-                    Optional, Sequence, Union)
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+    Union,
+    cast,
+)
 
-from .column import (AbstractColumn, Column, _column_constructor,
-                     _set_column_constructor)
-from .dtypes import (CLOSE, NL, OPEN, DType, Field, ScalarTypes,
-                     ScalarTypeValues, Struct, infer_dtype_from_prefix, int64,
-                     is_numerical, is_struct, is_tuple, string)
+from .column import AbstractColumn, Column, _column_constructor, _set_column_constructor
+from .dtypes import (
+    CLOSE,
+    NL,
+    OPEN,
+    DType,
+    Field,
+    ScalarTypes,
+    ScalarTypeValues,
+    Struct,
+    infer_dtype_from_prefix,
+    int64,
+    is_numerical,
+    is_struct,
+    is_tuple,
+    string,
+    Tuple_,
+)
 from .tabulate import tabulate
 
 
@@ -30,8 +57,12 @@ DataOrDTypeOrNone = Union[Mapping, Sequence, DType, Literal[None]]
 class DataFrame(AbstractColumn):
     """ Dataframe, ordered dict of typed columns of the same length  """
 
-    def __init__(self, data: DataOrDTypeOrNone = None, dtype: Optional[DType] = None, columns: Optional[List[str]] = None):
-
+    def __init__(
+        self,
+        data: DataOrDTypeOrNone = None,
+        dtype: Optional[DType] = None,
+        columns: Optional[List[str]] = None,
+    ):
         super().__init__(dtype)
         self._field_data = {}
 
@@ -42,7 +73,7 @@ class DataFrame(AbstractColumn):
 
         if data is not None and isinstance(data, DType):
             if dtype is not None and isinstance(dtype, DType):
-                raise TypeError('Dataframe can only have one dtype parameter')
+                raise TypeError("Dataframe can only have one dtype parameter")
             dtype = data
             data = None
 
@@ -50,7 +81,9 @@ class DataFrame(AbstractColumn):
         if dtype is not None:
             if not is_struct(dtype):
                 raise TypeError(
-                    f'Dataframe takes a Struct dtype as parameter (got {dtype})')
+                    f"Dataframe takes a Struct dtype as parameter (got {dtype})"
+                )
+            dtype = cast(Struct, dtype)
             self._dtype = dtype
             for f in dtype.fields:
                 self._field_data[f.name] = _column_constructor(f.dtype)
@@ -61,12 +94,12 @@ class DataFrame(AbstractColumn):
                     return
                 elif isinstance(data, Mapping):
                     for n, c in data.items():
-                        self[n] = c if isinstance(
-                            c, AbstractColumn) else Column(c)
+                        self[n] = c if isinstance(c, AbstractColumn) else Column(c)
                     return
                 else:
                     raise TypeError(
-                        f'Dataframe does not support constructor for data of type {type(data).__name__}')
+                        f"Dataframe does not support constructor for data of type {type(data).__name__}"
+                    )
 
         # data given, optional column
         if data is not None:
@@ -78,14 +111,14 @@ class DataFrame(AbstractColumn):
                         break
                 dtype = infer_dtype_from_prefix(prefix)
                 if dtype is None or not is_tuple(dtype):
-                    raise TypeError(
-                        'Dataframe cannot infer struct type from data')
+                    raise TypeError("Dataframe cannot infer struct type from data")
+                dtype = cast(Tuple_, dtype)
                 columns = [] if columns is None else columns
                 if len(dtype.fields) != len(columns):
-                    raise TypeError(
-                        'Dataframe column length must equal row length')
-                self._dtype = Struct([Field(n, t)
-                                     for n, t in zip(columns, dtype.fields)])
+                    raise TypeError("Dataframe column length must equal row length")
+                self._dtype = Struct(
+                    [Field(n, t) for n, t in zip(columns, dtype.fields)]
+                )
                 for f in self._dtype.fields:
                     self._field_data[f.name] = _column_constructor(f.dtype)
                 for i in data:
@@ -98,14 +131,18 @@ class DataFrame(AbstractColumn):
                 return
             else:
                 raise TypeError(
-                    f'Dataframe does not support constructor for data of type {type(data).__name__}')
+                    f"Dataframe does not support constructor for data of type {type(data).__name__}"
+                )
 
     # implementing abstract methods ----------------------------------------------
 
     @property
     def is_appendable(self):
         """Can this column/frame be extended"""
-        return all(c.is_appendable and len(c) == self._offset + self._length for c in self._field_data.values())
+        return all(
+            c.is_appendable and len(c) == self._offset + self._length
+            for c in self._field_data.values()
+        )
 
     def memory_usage(self, deep=False):
         """Return the memory usage of the Frame (if deep then buffer sizes)."""
@@ -114,7 +151,7 @@ class DataFrame(AbstractColumn):
         if not deep:
             return self._length * vsize + fusage
         else:
-            return len(self._validity)*vsize + fusage
+            return len(self._validity) * vsize + fusage
 
     @property
     def ndim(self):
@@ -130,8 +167,7 @@ class DataFrame(AbstractColumn):
         """Append value to the end of the column/frame"""
         if tup is None:
             if not self.dtype.nullable:
-                raise TypeError(
-                    f'a tuple of type {self.dtype} is required, got None')
+                raise TypeError(f"a tuple of type {self.dtype} is required, got None")
             self._null_count += 1
             self._validity.append(False)
             for f in self._dtype.fields:
@@ -141,7 +177,8 @@ class DataFrame(AbstractColumn):
             # TODO recursive analysis of tuple structure
             if not isinstance(tup, tuple) and len(tup) == len(self.dtype.files):
                 raise TypeError(
-                    f"f'a tuple of type {self.dtype} is required, got {tup}')")
+                    f"f'a tuple of type {self.dtype} is required, got {tup}')"
+                )
             self._validity.append(True)
             for i, v in enumerate(tup):
                 self._field_data[self._dtype.fields[i].name].append(v)
@@ -170,16 +207,19 @@ class DataFrame(AbstractColumn):
             res = DataFrame(self.dtype)
             res._length = length
             # TODO optimize (here and everywhere): only non-appendable columns need to be copied
-            res._field_data = {n: c._copy(deep, offset, length)
-                               for n, c in self._field_data.items()}
-            res._validity = self._validity[offset: offset+length]
+            res._field_data = {
+                n: c._copy(deep, offset, length) for n, c in self._field_data.items()
+            }
+            res._validity = self._validity[offset : offset + length]
             res._null_count = sum(res._validity)
             return res
         else:
             return copy.copy(self)
 
     def _raw_lengths(self):
-        return AbstractColumn._flatten([c._raw_lengths() for c in self._field_data.values()])
+        return AbstractColumn._flatten(
+            [c._raw_lengths() for c in self._field_data.values()]
+        )
 
     # implementing abstract methods ----------------------------------------------
 
@@ -195,44 +235,54 @@ class DataFrame(AbstractColumn):
         elif isinstance(value, Iterable):
             d = Column(value)
         else:
-            raise TypeError('data must be a column or list')
+            raise TypeError("data must be a column or list")
 
+        assert d is not None
         if all(len(c) == 0 for c in self._field_data.values()):
             self._length = len(d)
-            self._validity = ar.array('b', [True] * self._length)
+            self._validity = ar.array("b", [True] * self._length)
 
         elif len(d) != self._length:
-            raise TypeError('all columns/lists must have equal length')
+            raise TypeError("all columns/lists must have equal length")
 
         if name in self._field_data.keys():
-            raise AttributeError('cannot override existing column')
-        elif len(self._dtype.fields) < len(self._field_data):
-            raise AttributeError('cannot append column to view')
+            raise AttributeError("cannot override existing column")
+        elif (
+            self._dtype is not None
+            and isinstance(self._dtype, Struct)
+            and len(self._dtype.fields) < len(self._field_data)
+        ):
+            raise AttributeError("cannot append column to view")
         else:
+            assert self._dtype is not None and isinstance(self._dtype, Struct)
             # side effect on field_data
             self._field_data[name] = d
             # no side effect on dtype
             fields = list(self._dtype.fields)
+            assert d._dtype is not None
             fields.append(Field(name, d._dtype))
             self._dtype = Struct(fields)
 
     # printing ----------------------------------------------------------------
     def __str__(self):
-        def quote(n): return f"'{n}'"
+        def quote(n):
+            return f"'{n}'"
+
         return f"DataFrame({OPEN}{', '.join(f'{quote(n)}:{str(c)}' for n,c in self._field_data.items())}{CLOSE})"
 
     def __repr__(self):
         data = []
         for i in self:
             if i is None:
-                data.append(['None'] * len(self.columns))
+                data.append(["None"] * len(self.columns))
             else:
                 assert len(i) == len(self.columns)
                 data.append(list(i))
         tab = tabulate(
-            data, headers=["index"]+self.columns, tablefmt='simple', showindex=True)
+            data, headers=["index"] + self.columns, tablefmt="simple", showindex=True
+        )
         typ = f"dtype: {self._dtype}, count: {self._length}, null_count: {self._null_count}"
-        return tab+NL+typ
+        return tab + NL + typ
 
     def show_details(self):
         return _Repr(self)
@@ -244,8 +294,7 @@ class DataFrame(AbstractColumn):
 
     def _slice_columns(self, arg):
         if arg.step is not None:
-            raise ValueError(
-                'slicing column names requires step parameter to be None')
+            raise ValueError("slicing column names requires step parameter to be None")
 
         start = 0
         columns = self.columns
@@ -314,8 +363,7 @@ class DataFrame(AbstractColumn):
         self,
         by: Union[str, List[str], Literal[None]] = None,
         ascending=True,
-        na_position: Literal['last', 'first'] = "last",
-
+        na_position: Literal["last", "first"] = "last",
     ):
         """Sort a column/a dataframe in ascending or descending order"""
         # Not allowing None in comparison might be too harsh...
@@ -328,17 +376,18 @@ class DataFrame(AbstractColumn):
             for i in by:
                 _ = self._field_data[i]  # throws key error
                 xs.append(self.columns.index(i))
-            reorder = xs + \
-                [j for j in range(len(self._field_data)) if j not in xs]
+            reorder = xs + [j for j in range(len(self._field_data)) if j not in xs]
 
-            def func(tup): return tuple(tup[i] for i in reorder)
+            def func(tup):
+                return tuple(tup[i] for i in reorder)
 
         res = DataFrame(self.dtype)
-        if na_position == 'first':
+        if na_position == "first":
             res.extend([None] * self._null_count)
-        res.extend(sorted((i for i in self if i is not None),
-                   reverse=not ascending, key=func))
-        if na_position == 'last':
+        res.extend(
+            sorted((i for i in self if i is not None), reverse=not ascending, key=func)
+        )
+        if na_position == "last":
             res.extend([None] * self._null_count)
         return res
 
@@ -360,10 +409,12 @@ class DataFrame(AbstractColumn):
         # Todo add keep arg
         return self.sort_values(by=columns, ascending=False).head(n)
 
-    def nsmallest(self,
-                  n=5,
-                  columns: Union[str, List[str], Literal[None]] = None,
-                  keep: Literal['last', 'first'] = "first"):
+    def nsmallest(
+        self,
+        n=5,
+        columns: Union[str, List[str], Literal[None]] = None,
+        keep: Literal["last", "first"] = "first",
+    ):
         """Returns a new data of the *n* smallest element. """
         # keep="all" not supported
         # Todo add keep arg
@@ -410,10 +461,16 @@ class DataFrame(AbstractColumn):
         return self._binary_operator("mul", other, reflect=True)
 
     def floordiv(self, other, fill_value=None):
-        return self._binary_operator("floordiv", other, fill_value=fill_value,)
+        return self._binary_operator(
+            "floordiv",
+            other,
+            fill_value=fill_value,
+        )
 
     def rfloordiv(self, other, fill_value=None):
-        return self._binary_operator("floordiv", other, fill_value=fill_value, reflect=True)
+        return self._binary_operator(
+            "floordiv", other, fill_value=fill_value, reflect=True
+        )
 
     def __floordiv__(self, other):
         return self._binary_operator("floordiv", other)
@@ -422,10 +479,16 @@ class DataFrame(AbstractColumn):
         return self._binary_operator("floordiv", other, reflect=True)
 
     def truediv(self, other, fill_value=None):
-        return self._binary_operator("truediv", other, fill_value=fill_value,)
+        return self._binary_operator(
+            "truediv",
+            other,
+            fill_value=fill_value,
+        )
 
     def rtruediv(self, other, fill_value=None):
-        return self._binary_operator("truediv", other, fill_value=fill_value, reflect=True)
+        return self._binary_operator(
+            "truediv", other, fill_value=fill_value, reflect=True
+        )
 
     def __truediv__(self, other):
         return self._binary_operator("truediv", other)
@@ -453,7 +516,11 @@ class DataFrame(AbstractColumn):
         return self._binary_operator("mod", other, reflect=True)
 
     def pow(self, other, fill_value=None):
-        return self._binary_operator("pow", other, fill_value=fill_value,)
+        return self._binary_operator(
+            "pow",
+            other,
+            fill_value=fill_value,
+        )
 
     def rpow(self, other, fill_value=None):
         return self._binary_operator("pow", other, fill_value=fill_value, reflect=True)
@@ -535,15 +602,15 @@ class DataFrame(AbstractColumn):
             for n, c in self._field_data.items():
                 res[n] = func(c)(**kwargs)
             return res
-        raise NotImplementedError('Dataframe row is not allowed to have nulls')
+        raise NotImplementedError("Dataframe row is not allowed to have nulls")
 
     def _lift_pairs(self, func, other, /, kwargs):
         res = DataFrame()
         if self._null_count == 0:
             for n, c in self._field_data.items():
-                res[n] = func(c)(** {'other': other[n], **kwargs})
+                res[n] = func(c)(**{"other": other[n], **kwargs})
             return res
-        raise NotImplementedError('Dataframe row is not allowed to have nulls')
+        raise NotImplementedError("Dataframe row is not allowed to have nulls")
 
     def _unary_operator(self, operator):
         res = DataFrame()
@@ -551,32 +618,49 @@ class DataFrame(AbstractColumn):
             for n, c in self._field_data.items():
                 res[n] = c._unary_operator(operator, c.dtype)
             return res
-        raise NotImplementedError('Dataframe row is not allowed to have nulls')
+        raise NotImplementedError("Dataframe row is not allowed to have nulls")
 
     def _binary_operator(self, operator, other, fill_value=None, reflect=False):
 
         if isinstance(other, ScalarTypeValues):
-            return self._lift(lambda c: c._binary_operator, {'operator': operator,  'other': other, 'fill_value': fill_value, 'reflect': reflect})
+            return self._lift(
+                lambda c: c._binary_operator,
+                {
+                    "operator": operator,
+                    "other": other,
+                    "fill_value": fill_value,
+                    "reflect": reflect,
+                },
+            )
         elif isinstance(other, DataFrame):  # order important
-            return self._lift_pairs(lambda c: c._binary_operator, other, {'operator': operator,  'fill_value': fill_value, 'reflect': reflect})
+            return self._lift_pairs(
+                lambda c: c._binary_operator,
+                other,
+                {"operator": operator, "fill_value": fill_value, "reflect": reflect},
+            )
         elif isinstance(other, AbstractColumn):  # order important
             # replicate column to match Dataframe:
             other_replicated = DataFrame()
             for n in self._field_data.keys():
                 other_replicated[n] = other
-            return self._lift_pairs(lambda c: c._binary_operator, other_replicated, {'operator': operator,  'fill_value': fill_value, 'reflect': reflect})
+            return self._lift_pairs(
+                lambda c: c._binary_operator,
+                other_replicated,
+                {"operator": operator, "fill_value": fill_value, "reflect": reflect},
+            )
 
         else:
             raise TypeError(
-                f"cannot apply '{operator}' on {type(self).__name__} and {type(other).__name__}")
+                f"cannot apply '{operator}' on {type(self).__name__} and {type(other).__name__}"
+            )
 
     # isin ---------------------------------------------------------------
 
-    def isin(self, values: Union[list, "DataFrame", dict]):
+    def isin(self, values: Union[list, dict, AbstractColumn]):
         """Check whether values are contained in data."""
         res = DataFrame()
         if isinstance(values, Iterable):
-            return self._lift(lambda c: c.isin, {'values': values})
+            return self._lift(lambda c: c.isin, {"values": values})
         if isinstance(values, dict):
             for i in values.keys():
                 _ = self[i]  # throws key error
@@ -593,57 +677,64 @@ class DataFrame(AbstractColumn):
             return res
         else:
             raise ValueError(
-                f'isin undefined for values of type {type(self).__name__}.')
+                f"isin undefined for values of type {type(self).__name__}."
+            )
 
     # data cleaning -----------------------------------------------------------
-    def fillna(self, fill_value: Union[ScalarTypes, Dict, AbstractColumn, Literal[None]]):
+    def fillna(
+        self, fill_value: Union[ScalarTypes, Dict, AbstractColumn, Literal[None]]
+    ):
         if fill_value is None:
             return self
 
         if isinstance(fill_value, ScalarTypeValues):
-            return self._lift(lambda c: c.fillna, {'fill_value': fill_value})
+            return self._lift(lambda c: c.fillna, {"fill_value": fill_value})
         elif isinstance(fill_value, dict):
             res = DataFrame()
-            for n in fill_value.keys():
-                _ = self._field_data[n]  # throw key error for undefined keys
-            for n, c in self._field_data.items():
-                res[n] = c.fillna(fill_value=fill_value[n]) if n in dict else c
+            # Dead code?
+            # for n in fill_value.keys():
+            #     _ = self._field_data[n]  # throw key error for undefined keys
+            # for n, c in self._field_data.items():
+            #     res[n] = c.fillna(fill_value=fill_value[n]) if n in dict else c
             return res
         elif isinstance(fill_value, DataFrame):
             res = DataFrame()
-            if self._shapeix != fill_value._shapeix:
-                TypeError(
-                    f"fillna between differently 'shaped' and 'indexed' dataframes is not supported"
-                )
+            # Dead code?
+            # if self._shapeix != fill_value._shapeix:
+            #     TypeError(
+            #         f"fillna between differently 'shaped' and 'indexed' dataframes is not supported"
+            #     )
 
-            for n, c, d in zip(self._field_data.items(), fill_value.values()):
-                res[n] = c.fillna(fill_value=d)
+            # "DataFrame" has no attribute "values"
+            # for (n, c), d in zip(self._field_data.items(), fill_value.values()):
+            #     res[n] = c.fillna(fill_value=d)
             return res
         else:
-            raise TypeError(
-                f"fillna with {type(fill_value)} is not supported"
-            )
+            raise TypeError(f"fillna with {type(fill_value)} is not supported")
 
-    def dropna(self, how: Literal['any', 'all'] = 'any'):
+    def dropna(self, how: Literal["any", "all"] = "any"):
         """Return a Frame with rows removed where the has any or all nulls."""
         # TODO only flat columns supported...
+        assert self._dtype is not None
         res = DataFrame(self._dtype.constructor(nullable=False))
-        if how == 'any':
+        if how == "any":
             for i in self:
                 if not DataFrame._has_any_null(i):
                     res._append(i)
-        elif how == 'all':
+        elif how == "all":
             for i in self:
                 if not DataFrame._has_all_null(i):
                     res._append(i)
         return res
 
-    def drop_duplicates(self,
-                        subset: Union[str, List[str], Literal[None]] = None,
-                        keep: Literal['first', 'last', False] = "first"):
+    def drop_duplicates(
+        self,
+        subset: Union[str, List[str], Literal[None]] = None,
+        keep: Literal["first", "last", False] = "first",
+    ):
         """ Remove duplicate values from data but keep the first, last, none (keep=False)"""
         # Todo Add functionality
-        assert keep == 'first'
+        assert keep == "first"
         res = DataFrame(self.dtype)
         if subset is None:
             res.extend(list(OrderedDict.fromkeys(self)))
@@ -683,24 +774,24 @@ class DataFrame(AbstractColumn):
                 return False
         return True
 
-     # universal ---------------------------------------------------------
+    # universal ---------------------------------------------------------
 
     def min(self, numeric_only=None):
         """Return the minimum of the nonnull values of the Column."""
-        return self._summarize(lambda c: c.min, {'numeric_only': numeric_only})
+        return self._summarize(lambda c: c.min, {"numeric_only": numeric_only})
 
     def max(self, numeric_only=None):
         """Return the maximum of the nonnull values of the column."""
         # skipna == True
-        return self._summarize(lambda c: c.max, {'numeric_only': numeric_only})
+        return self._summarize(lambda c: c.max, {"numeric_only": numeric_only})
 
     def all(self, boolean_only=None):
         """Return whether all nonull elements are True in Column"""
-        return self._summarize(lambda c: c.all, {'boolean_only': boolean_only})
+        return self._summarize(lambda c: c.all, {"boolean_only": boolean_only})
 
     def any(self, skipna=True, boolean_only=None):
         """Return whether any nonull element is True in Column"""
-        return self._summarize(lambda c: c.any,  {'boolean_only': boolean_only})
+        return self._summarize(lambda c: c.any, {"boolean_only": boolean_only})
 
     def sum(self):
         """Return sum of all nonull elements in Column"""
@@ -712,19 +803,19 @@ class DataFrame(AbstractColumn):
 
     def cummin(self, skipna=True):
         """Return cumulative minimum of the data."""
-        return self._lift(lambda c: c.cummin, {'skipna': skipna})
+        return self._lift(lambda c: c.cummin, {"skipna": skipna})
 
     def cummax(self, skipna=True):
         """Return cumulative maximum of the data."""
-        return self._lift(lambda c: c.cummax, {'skipna': skipna})
+        return self._lift(lambda c: c.cummax, {"skipna": skipna})
 
     def cumsum(self, skipna=True):
         """Return cumulative sum of the data."""
-        return self._lift(lambda c: c.cumsum, {'skipna': skipna})
+        return self._lift(lambda c: c.cumsum, {"skipna": skipna})
 
     def cumprod(self, skipna=True):
         """Return cumulative product of the data."""
-        return self._lift(lambda c: c.cumprod, {'skipna': skipna})
+        return self._lift(lambda c: c.cumprod, {"skipna": skipna})
 
     def mean(self):
         """Return the mean of the values in the series."""
@@ -744,8 +835,7 @@ class DataFrame(AbstractColumn):
 
     def nunique(self, dropna=True):
         """Returns the number of unique values per column"""
-        res = DataFrame(
-            Struct([Field('column', string), Field('nunique', int64)]))
+        res = DataFrame(Struct([Field("column", string), Field("nunique", int64)]))
         for n, c in self._field_data.items():
             res._append((n, c.nunique(dropna)))
         return res
@@ -770,11 +860,11 @@ class DataFrame(AbstractColumn):
         # Not supported: datetime_is_numeric=False,
         includes = []
         if include_columns is None:
-            includes = [n for n, c in self._field_data.items()
-                        if is_numerical(c.dtype)]
+            includes = [n for n, c in self._field_data.items() if is_numerical(c.dtype)]
         elif isinstance(include_columns, list):
-            includes = [n for n, c in self._field_data.items()
-                        if c.dtype in include_columns]
+            includes = [
+                n for n, c in self._field_data.items() if c.dtype in include_columns
+            ]
         else:
             raise TypeError(
                 f"describe with include_columns of type {type(include_columns).__name__} is not supported"
@@ -784,8 +874,9 @@ class DataFrame(AbstractColumn):
         if exclude_columns is None:
             excludes = []
         elif isinstance(exclude_columns, list):
-            excludes = [n for n, c in self._field_data.items()
-                        if c.dtype in exclude_columns]
+            excludes = [
+                n for n, c in self._field_data.items() if c.dtype in exclude_columns
+            ]
         else:
             raise TypeError(
                 f"describe with exclude_columns of type {type(exclude_columns).__name__} is not supported"
@@ -800,12 +891,16 @@ class DataFrame(AbstractColumn):
                 raise ValueError("percentiles must be betwen 0 and 100")
 
         res = DataFrame()
-        res['metric'] = ['count', 'mean', 'std', 'min'] + \
-            [f'{p}%' for p in percentiles] + ['max']
+        res["metric"] = (
+            ["count", "mean", "std", "min"] + [f"{p}%" for p in percentiles] + ["max"]
+        )
         for s in selected:
             c = self._field_data[s]
-            res[s] = [c.count(), c.mean(), c.std(), c.min()] + \
-                c._percentiles(percentiles) + [c.max()]
+            res[s] = (
+                [c.count(), c.mean(), c.std(), c.min()]
+                + c._percentiles(percentiles)
+                + [c.max()]
+            )
         return res
 
     # Dataframe specific ops --------------------------------------------------    #
@@ -873,7 +968,9 @@ class DataFrame(AbstractColumn):
     def to_pandas(self):
         """Convert self to pandas dataframe"""
         # TODO Add type translation.
-        import pandas as pd
+        # Skipping analyzing 'pandas': found module but no type hints or library stubs
+        import pandas as pd  # type: ignore
+
         map = {}
         for n, c in self._field_data.items():
             map[n] = c.to_pandas()
@@ -882,7 +979,8 @@ class DataFrame(AbstractColumn):
     def to_arrow(self):
         """Convert self to arrow table"""
         # TODO Add type translation
-        import pyarrow as pa
+        import pyarrow as pa  # type: ignore
+
         map = {}
         for n, c in self._field_data.items():
             map[n] = c.to_arrow()
