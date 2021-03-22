@@ -1,6 +1,7 @@
 import array as ar
 import copy
 import operator
+import functools
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import (Any, Callable, Dict, Iterable, List, Literal, Mapping,
@@ -12,6 +13,7 @@ from .dtypes import (CLOSE, NL, OPEN, DType, Field, ScalarTypes,
                      ScalarTypeValues, Struct, infer_dtype_from_prefix, int64,
                      is_numerical, is_struct, is_tuple, string)
 from .tabulate import tabulate
+
 
 # assumes that these have been importd already:
 # from .numerical_column import NumericalColumn
@@ -339,6 +341,16 @@ class DataFrame(AbstractColumn):
         if na_position == 'last':
             res.extend([None] * self._null_count)
         return res
+
+    def sort(
+        self,
+        by: Union[str, List[str], Literal[None]] = None,
+        ascending=True,
+        na_position: Literal['last', 'first'] = "last",
+
+    ):
+        """Sort a column/a dataframe in ascending or descending order (aka sort_values)"""
+        return self.sort_values(by, ascending, na_position)
 
     def nlargest(self,
                  n=5,
@@ -811,7 +823,7 @@ class DataFrame(AbstractColumn):
                     res[n] = c
             return res
         else:
-            TypeError(
+            raise TypeError(
                 f"drop with column parameter of type {type(columns).__name__} is not supported"
             )
 
@@ -819,6 +831,7 @@ class DataFrame(AbstractColumn):
         """
         Returns DataFrame with the kept columns only.
         """
+        print("KEEP", self, columns)
         if isinstance(columns, list):
             for n in columns:
                 _ = self._field_data[n]  # creates key error
@@ -828,7 +841,7 @@ class DataFrame(AbstractColumn):
                     res[n] = c
             return res
         else:
-            TypeError(
+            raise TypeError(
                 f"keep with column parameter of type {type(columns).__name__} is not supported"
             )
 
@@ -842,7 +855,7 @@ class DataFrame(AbstractColumn):
                     res[column_mapper[n]] = c
             return res
         else:
-            TypeError(
+            raise TypeError(
                 f"rename with column_mapper parameter of type {type(column_mapper).__name__} is not supported"
             )
 
@@ -874,6 +887,117 @@ class DataFrame(AbstractColumn):
         for n, c in self._field_data.items():
             map[n] = c.to_arrow()
         return pa.table(map)
+
+    # fluent with symbolic expressions ----------------------------------------
+
+    def _where(self, *conditions):
+        """
+        Analogous to SQL's where.
+
+        Filter a dataframe to only include
+        rows satisfying a given set of conditions.
+        """
+        from .symexp import Symbol, eval_symbolic
+
+        if not conditions:
+            return self
+
+        evalled_conditions = [eval_symbolic(condition, {'me': self})
+                              for condition in conditions]
+        anded_evalled_conditions = functools.reduce(
+            lambda x, y: x & y, evalled_conditions)
+        return self[anded_evalled_conditions]
+
+    def _select(self, *args, **kwargs):
+        """
+        Analogous to SQL's ``SELECT`.
+
+        Transform a dataframe by selecting old columns and new (computed)
+        columns.
+        """
+        from .symexp import Symbol, eval_symbolic
+
+        input_columns = set(self.columns)
+        # print("SELECT", self, input_columns, '|', args, kwargs)
+
+        has_star = False
+        include_columns = []
+        exclude_columns = []
+        for arg in args:
+            if not isinstance(arg, str):
+                raise TypeError('args must be column names')
+            if arg == '*':
+                if has_star:
+                    raise ValueError('select received repeated stars')
+                has_star = True
+            elif arg in input_columns:
+                if arg in include_columns:
+                    raise ValueError(
+                        f'select received a repeated column-include ({arg})')
+                include_columns.append(arg)
+            elif arg[0] == '-' and arg[1:] in input_columns:
+                if arg in exclude_columns:
+                    raise ValueError(
+                        f'select received a repeated column-exclude ({arg[1:]})')
+                exclude_columns.append(arg[1:])
+            else:
+                raise ValueError(
+                    f'argument ({arg}) does not denote an existing column')
+        if exclude_columns and not has_star:
+            raise ValueError(
+                'select received column-exclude without a star')
+        if has_star and include_columns:
+            raise ValueError(
+                'select received both a star and column-includes')
+        if set(include_columns) & set(exclude_columns):
+            raise ValueError(
+                'select received overlapping column-includes and ' +
+                'column-excludes')
+
+        include_columns_inc_star = self.columns if has_star else include_columns
+
+        output_columns = [col for col in include_columns_inc_star
+                          if col not in exclude_columns]
+
+        res = DataFrame()
+        for n, c in self._field_data.items():
+            if n in output_columns:
+                res[n] = c
+        for n, c in kwargs.items():
+            res[n] = eval_symbolic(c, {'me': self})
+        return res
+
+    def pipe(self, func, *args, **kwargs):
+        """
+        Apply func(self, \*args, \*\*kwargs).
+        """
+        return func(self, *args, **kwargs)
+
+#     def _groupby(self, by: List[str],
+#             sort=False,
+#             dropna=True,
+#         ):
+#         grouping_columns = by
+#         colected_columns =[]
+#         for tup in zip([self_field_dat])
+
+#         for
+
+# @dataclass
+# class GroupedBy:
+#     groups: Dict
+#     def agg(self, *args, **kwargs):
+
+#         res = Datafarme()
+#         for n, c in self._field_data.items():
+#             if n in output_columns:
+#                 res[n] = c
+#         for n, c in kwargs.item():
+#             res[n] = eval_symbolic(c, {'me': self})
+#         return res
+
+
+# class dataFRame
 # ------------------------------------------------------------------------------
 
 
@@ -892,6 +1016,7 @@ _set_column_constructor(is_tuple, DataFrame)
 
 # ------------------------------------------------------------------------------
 # Relational operators, still TBD
+
 
 # @annotate("JOIN", color="blue", domain="cudf_python")
 #     def merge(
@@ -926,34 +1051,6 @@ _set_column_constructor(is_tuple, DataFrame)
 #         ):
 #         """Join columns with other DataFrame on index or on a key column."""
 
-
-#     def groupby(
-#             self,
-#             by=None,
-#             axis=0,
-#             level=None,
-#             as_index=True,
-#             sort=False,
-#             group_keys=True,
-#             squeeze=False,
-#             observed=False,
-#             dropna=True,
-#         ):
-
-#         def query(self, expr, local_dict=None):
-#         """
-#         Query with a boolean expression using Numba to compile a GPU kernel.
-#         See pandas.DataFrame.query.
-#         Parameters
-#         ----------
-#         expr : str
-#             A boolean expression. Names in expression refer to columns.
-#             `index` can be used instead of index name, but this is not
-#             supported for MultiIndex.
-#             Names starting with `@` refer to Python variables.
-#             An output value will be `null` if any of the input values are
-#             `null` regardless of expression.
-#             """
 
 #     def rolling(
 #         self, window, min_periods=None, center=False, axis=0, win_type=None
@@ -991,41 +1088,4 @@ _set_column_constructor(is_tuple, DataFrame)
 #         This method prints information about a DataFrame including
 #         the index dtype and column dtypes, non-null values and memory usage.
 
-# @docutils.doc_describe()
-#     def describe(
-#         self,
-#         percentiles=None,
-#         include=None,
-#         exclude=None,
-#         datetime_is_numeric=False,
-#     ):
-
-#     def to_pandas(self, nullable=False, **kwargs):
-#         """
-#         Convert to a Pandas DataFrame.
-
-#  @classmethod
-#     def from_pandas(cls, dataframe, nan_as_null=None):
-#         """
-#         Convert from a Pandas DataFrame.
-
-# @classmethod
-
-#     def from_arrow(cls, table):
-#         """
-#         Convert from PyArrow Table to DataFrame.
-
-
-#         def to_records(self, index=True):
-#         """Convert to a numpy recarray
-
-#     @classmethod
-#     def _from_arrays(cls, data, index=None, columns=None, nan_as_null=False):
-#         """Convert a numpy/cupy array to DataFrame.
-
-
-#     def keys(self):
-#         """
-#         Get the columns.
-#         This is index for Series, columns for DataFrame.
 #         """"

@@ -4,7 +4,7 @@ import unittest
 
 from torcharrow import (Boolean, Column, DataFrame, Field, Float64, Int64,
                         String, Struct, boolean, float64, int32, int64,
-                        is_numerical, string)
+                        is_numerical, string, Symbol, eval_symbolic)
 
 # run python3 -m unittest outside this directory to run all tests
 
@@ -415,7 +415,7 @@ class TestNumericalColumn(unittest.TestCase):
                           ('75%', 2.5),
                           ('max', 3.0)])
 
-    def test_drop_keep_rename_reorder(self):
+    def test_drop_keep_rename_reorder_pipe(self):
         df = DataFrame()
         df['a'] = [1, 2, 3]
         df['b'] = [11, 22, 33]
@@ -432,6 +432,35 @@ class TestNumericalColumn(unittest.TestCase):
                          (1, 111), (2, 222), (3, 333)])
         self.assertEqual(list(df.reorder(list(reversed(df.columns)))), [
                          (111, 11, 1), (222, 22, 2), (333, 33, 3)])
+
+        def f(df): return df
+
+        self.assertEqual(list(df), list(df.pipe(f)))
+
+        def g(df, num): return df+num
+
+        self.assertEqual(list(df+13), list(df.pipe(g, 13)))
+
+    def test_syemexpr(self):
+        df = DataFrame()
+        df['a'] = [1, 2, 3]
+        df['b'] = [11, 22, 33]
+
+        me = Symbol('me')
+
+        self.assertEqual(
+            list(df._where((me['a'] > 1) & (me['b'] == 33))),
+            list(df[(df['a'] > 1) & (df['b'] == 33)]))
+
+        self.assertEqual(list(df._select('*')), list(df))
+        print(list(df._select('a')))
+        print(list(df.keep(['a'])))
+
+        self.assertEqual(list(df._select('a')), list(df.keep(['a'])))
+        self.assertEqual(list(df._select('*', '-a')), list(df.drop(['a'])))
+
+        gf = DataFrame({'a': df['a'], 'b': df['b'], 'c': df['a'] + df['b']})
+        self.assertEqual(list(df._select('*', c=me['a'] + me['b'])), list(gf))
 
 
 if __name__ == '__main__':

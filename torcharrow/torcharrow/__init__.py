@@ -6,6 +6,7 @@ from .string_column import *
 from .map_column import *
 from .list_column import *
 from .dataframe import *
+from .symexp import *
 from .interop import *
 
 
