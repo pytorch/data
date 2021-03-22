@@ -17,7 +17,7 @@ from torcharrow import (
     int64,
     is_numerical,
     string,
-    Symbol, 
+    Symbol,
     eval_symbolic
 )
 
@@ -50,8 +50,8 @@ class TestNumericalColumn(unittest.TestCase):
         self.assertEqual(len(df._field_data), 1)
         self.assertEqual(len(df._validity), 4)
         self.assertEqual(list(df), list((i,) for i in range(4)))
-        m = df[0 : len(df)]
-        self.assertEqual(list(df[0 : len(df)]), list((i,) for i in range(4)))
+        m = df[0: len(df)]
+        self.assertEqual(list(df[0: len(df)]), list((i,) for i in range(4)))
         with self.assertRaises(TypeError):
             # TypeError: a tuple of type Struct([Field(a, int64)]) is required, got None
             df.append(None)
@@ -94,7 +94,8 @@ class TestNumericalColumn(unittest.TestCase):
 
         # extend
         df.extend([(4, 4 * 4), (5, 5 * 5)])
-        self.assertEqual(list(df), [None, None, None, (3, 9), (4, 16), (5, 25)])
+        self.assertEqual(
+            list(df), [None, None, None, (3, 9), (4, 16), (5, 25)])
 
         # len
         self.assertEqual(len(df), 6)
@@ -121,7 +122,8 @@ class TestNumericalColumn(unittest.TestCase):
 
     def test_metastuff(self):
         df = DataFrame(
-            Struct([Field("a", Int64(True)), Field("b", Int64(True))], nullable=True)
+            Struct([Field("a", Int64(True)), Field(
+                "b", Int64(True))], nullable=True)
         )
         df.extend([None] * 3)
         df.extend([i for i in [(3, 33), (4, 44), (5, 55)]])
@@ -165,7 +167,8 @@ class TestNumericalColumn(unittest.TestCase):
         df = DataFrame({"a": [1, 2, 3], "b": [1.0, None, 3]})
         self.assertEqual(df.columns, ["a", "b"])
         self.assertEqual(
-            df.dtype, Struct([Field("a", int64), Field("b", Float64(nullable=True))])
+            df.dtype, Struct(
+                [Field("a", int64), Field("b", Float64(nullable=True))])
         )
 
         self.assertEqual(df._dtype.get("a"), int64)
@@ -245,7 +248,8 @@ class TestNumericalColumn(unittest.TestCase):
             list(df.nsmallest(n=2, columns=["c", "a"], keep="first")),
             [(3, 3.0, 1), (1, 1.0, 4)],
         )
-        self.assertEqual(list(df.reverse()), [(3, 3.0, 1), (2, None, 4), (1, 1.0, 4)])
+        self.assertEqual(list(df.reverse()), [
+                         (3, 3.0, 1), (2, None, 4), (1, 1.0, 4)])
 
     def test_operators(self):
         # without None
@@ -265,7 +269,8 @@ class TestNumericalColumn(unittest.TestCase):
         #       or write (a==b).all()
 
         self.assertEqual(list(c == 1), [(i,) for i in [False, True, False]])
-        self.assertTrue(((c == 1) == DataFrame({"a": [False, True, False]})).all())
+        self.assertTrue(((c == 1) == DataFrame(
+            {"a": [False, True, False]})).all())
 
         # <, <=, >=, >
 
@@ -328,8 +333,10 @@ class TestNumericalColumn(unittest.TestCase):
         c = DataFrame({"a": [0, 1, 3, None]})
         self.assertEqual(list(c.add(1)), [(i,) for i in [1, 2, 4, None]])
 
-        self.assertEqual(list(c.add(1, fill_value=17)), [(i,) for i in [1, 2, 4, 18]])
-        self.assertEqual(list(c.radd(1, fill_value=-1)), [(i,) for i in [1, 2, 4, 0]])
+        self.assertEqual(list(c.add(1, fill_value=17)),
+                         [(i,) for i in [1, 2, 4, 18]])
+        self.assertEqual(list(c.radd(1, fill_value=-1)),
+                         [(i,) for i in [1, 2, 4, 0]])
         f = Column([None, 1, 3, None])
         self.assertEqual(
             list(c.radd(f, fill_value=100)), [(i,) for i in [100, 2, 6, 200]]
@@ -363,7 +370,8 @@ class TestNumericalColumn(unittest.TestCase):
         self.assertEqual(list(c.dropna()), [(i,) for i in [2, 17.0]])
 
         c.append((2,))
-        self.assertEqual(list(c.drop_duplicates()), [(i,) for i in [None, 2, 17.0]])
+        self.assertEqual(list(c.drop_duplicates()), [
+                         (i,) for i in [None, 2, 17.0]])
 
         # duplicates with subset
         d = DataFrame({"a": [None, 2, 17.0, 7, 2], "b": [1, 2, 17.0, 2, 1]})
@@ -372,7 +380,8 @@ class TestNumericalColumn(unittest.TestCase):
             [(None, 1.0), (2.0, 2.0), (17.0, 17.0), (7.0, 2.0)],
         )
         self.assertEqual(
-            list(d.drop_duplicates(subset="b")), [(None, 1.0), (2.0, 2.0), (17.0, 17.0)]
+            list(d.drop_duplicates(subset="b")), [
+                (None, 1.0), (2.0, 2.0), (17.0, 17.0)]
         )
         self.assertEqual(
             list(d.drop_duplicates(subset=["b", "a"])),
@@ -401,15 +410,18 @@ class TestNumericalColumn(unittest.TestCase):
 
         self.assertEqual(
             list(C.cummin()),
-            [(i,) for i in [min(c[:i]) for i in range(1, len(c) + 1)] + [None]],
+            [(i,) for i in [min(c[:i])
+                            for i in range(1, len(c) + 1)] + [None]],
         )
         self.assertEqual(
             list(C.cummax()),
-            [(i,) for i in [max(c[:i]) for i in range(1, len(c) + 1)] + [None]],
+            [(i,) for i in [max(c[:i])
+                            for i in range(1, len(c) + 1)] + [None]],
         )
         self.assertEqual(
             list(C.cumsum()),
-            [(i,) for i in [sum(c[:i]) for i in range(1, len(c) + 1)] + [None]],
+            [(i,) for i in [sum(c[:i])
+                            for i in range(1, len(c) + 1)] + [None]],
         )
         self.assertEqual(
             list(C.cumprod()),
@@ -429,7 +441,8 @@ class TestNumericalColumn(unittest.TestCase):
         c = [1, 4, 2, 7]
         C = DataFrame({"a": c + [None]})
         self.assertEqual(
-            list(C.isin([1, 2, 3])), [(i,) for i in [True, False, True, False, False]]
+            list(C.isin([1, 2, 3])), [(i,)
+                                      for i in [True, False, True, False, False]]
         )
 
     def test_isin2(self):
@@ -468,14 +481,17 @@ class TestNumericalColumn(unittest.TestCase):
         df["a"] = [1, 2, 3]
         df["b"] = [11, 22, 33]
         df["c"] = [111, 222, 333]
-        self.assertEqual(list(df.drop([])), [(1, 11, 111), (2, 22, 222), (3, 33, 333)])
+        self.assertEqual(list(df.drop([])), [
+                         (1, 11, 111), (2, 22, 222), (3, 33, 333)])
         self.assertEqual(list(df.drop(["c", "a"])), [(11,), (22,), (33,)])
 
         self.assertEqual(list(df.keep([])), [])
-        self.assertEqual(list(df.keep(["c", "a"])), [(1, 111), (2, 222), (3, 333)])
+        self.assertEqual(list(df.keep(["c", "a"])), [
+                         (1, 111), (2, 222), (3, 333)])
 
         self.assertEqual(
-            list(df.rename({"a": "c", "c": "a"})), [(1, 111), (2, 222), (3, 333)]
+            list(df.rename({"a": "c", "c": "a"})), [
+                (1, 111), (2, 222), (3, 333)]
         )
         self.assertEqual(
             list(df.reorder(list(reversed(df.columns)))),
@@ -502,8 +518,6 @@ class TestNumericalColumn(unittest.TestCase):
             list(df[(df['a'] > 1) & (df['b'] == 33)]))
 
         self.assertEqual(list(df._select('*')), list(df))
-        print(list(df._select('a')))
-        print(list(df.keep(['a'])))
 
         self.assertEqual(list(df._select('a')), list(df.keep(['a'])))
         self.assertEqual(list(df._select('*', '-a')), list(df.drop(['a'])))

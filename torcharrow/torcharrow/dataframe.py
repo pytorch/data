@@ -94,7 +94,8 @@ class DataFrame(AbstractColumn):
                     return
                 elif isinstance(data, Mapping):
                     for n, c in data.items():
-                        self[n] = c if isinstance(c, AbstractColumn) else Column(c)
+                        self[n] = c if isinstance(
+                            c, AbstractColumn) else Column(c)
                     return
                 else:
                     raise TypeError(
@@ -111,11 +112,13 @@ class DataFrame(AbstractColumn):
                         break
                 dtype = infer_dtype_from_prefix(prefix)
                 if dtype is None or not is_tuple(dtype):
-                    raise TypeError("Dataframe cannot infer struct type from data")
+                    raise TypeError(
+                        "Dataframe cannot infer struct type from data")
                 dtype = cast(Tuple_, dtype)
                 columns = [] if columns is None else columns
                 if len(dtype.fields) != len(columns):
-                    raise TypeError("Dataframe column length must equal row length")
+                    raise TypeError(
+                        "Dataframe column length must equal row length")
                 self._dtype = Struct(
                     [Field(n, t) for n, t in zip(columns, dtype.fields)]
                 )
@@ -167,7 +170,8 @@ class DataFrame(AbstractColumn):
         """Append value to the end of the column/frame"""
         if tup is None:
             if not self.dtype.nullable:
-                raise TypeError(f"a tuple of type {self.dtype} is required, got None")
+                raise TypeError(
+                    f"a tuple of type {self.dtype} is required, got None")
             self._null_count += 1
             self._validity.append(False)
             for f in self._dtype.fields:
@@ -210,7 +214,7 @@ class DataFrame(AbstractColumn):
             res._field_data = {
                 n: c._copy(deep, offset, length) for n, c in self._field_data.items()
             }
-            res._validity = self._validity[offset : offset + length]
+            res._validity = self._validity[offset: offset + length]
             res._null_count = sum(res._validity)
             return res
         else:
@@ -294,7 +298,8 @@ class DataFrame(AbstractColumn):
 
     def _slice_columns(self, arg):
         if arg.step is not None:
-            raise ValueError("slicing column names requires step parameter to be None")
+            raise ValueError(
+                "slicing column names requires step parameter to be None")
 
         start = 0
         columns = self.columns
@@ -376,7 +381,8 @@ class DataFrame(AbstractColumn):
             for i in by:
                 _ = self._field_data[i]  # throws key error
                 xs.append(self.columns.index(i))
-            reorder = xs + [j for j in range(len(self._field_data)) if j not in xs]
+            reorder = xs + \
+                [j for j in range(len(self._field_data)) if j not in xs]
 
             def func(tup):
                 return tuple(tup[i] for i in reorder)
@@ -385,7 +391,8 @@ class DataFrame(AbstractColumn):
         if na_position == "first":
             res.extend([None] * self._null_count)
         res.extend(
-            sorted((i for i in self if i is not None), reverse=not ascending, key=func)
+            sorted((i for i in self if i is not None),
+                   reverse=not ascending, key=func)
         )
         if na_position == "last":
             res.extend([None] * self._null_count)
@@ -835,7 +842,8 @@ class DataFrame(AbstractColumn):
 
     def nunique(self, dropna=True):
         """Returns the number of unique values per column"""
-        res = DataFrame(Struct([Field("column", string), Field("nunique", int64)]))
+        res = DataFrame(
+            Struct([Field("column", string), Field("nunique", int64)]))
         for n, c in self._field_data.items():
             res._append((n, c.nunique(dropna)))
         return res
@@ -860,7 +868,8 @@ class DataFrame(AbstractColumn):
         # Not supported: datetime_is_numeric=False,
         includes = []
         if include_columns is None:
-            includes = [n for n, c in self._field_data.items() if is_numerical(c.dtype)]
+            includes = [n for n, c in self._field_data.items()
+                        if is_numerical(c.dtype)]
         elif isinstance(include_columns, list):
             includes = [
                 n for n, c in self._field_data.items() if c.dtype in include_columns
@@ -892,7 +901,8 @@ class DataFrame(AbstractColumn):
 
         res = DataFrame()
         res["metric"] = (
-            ["count", "mean", "std", "min"] + [f"{p}%" for p in percentiles] + ["max"]
+            ["count", "mean", "std", "min"] +
+            [f"{p}%" for p in percentiles] + ["max"]
         )
         for s in selected:
             c = self._field_data[s]
