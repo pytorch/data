@@ -1017,7 +1017,7 @@ class DataFrame(AbstractColumn):
         Filter a dataframe to only include
         rows satisfying a given set of conditions.
         """
-        from .symexp import Symbol, eval_symbolic
+        from .expression import Symbol, eval_symbolic
 
         if not conditions:
             return self
@@ -1035,7 +1035,7 @@ class DataFrame(AbstractColumn):
         Transform a dataframe by selecting old columns and new (computed)
         columns.
         """
-        from .symexp import Symbol, eval_symbolic
+        from .expression import Symbol, eval_symbolic
 
         input_columns = set(self.columns)
 
@@ -1319,7 +1319,7 @@ class GroupedBy:
         """
         Like select for dataframes, except for groups
         """
-        from .symexp import Symbol, eval_symbolic
+        from .expression import Symbol, eval_symbolic
 
         res = DataFrame()
         for f, c in zip(self._key_fields, self._unzip_group_keys()):
