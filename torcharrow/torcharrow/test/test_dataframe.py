@@ -491,7 +491,7 @@ class TestNumericalColumn(unittest.TestCase):
 
         self.assertEqual(
             list(df.rename({"a": "c", "c": "a"})), [
-                (1, 111), (2, 222), (3, 333)]
+                (1, 11, 111), (2, 22, 222), (3, 33, 333)]
         )
         self.assertEqual(
             list(df.reorder(list(reversed(df.columns)))),
@@ -514,16 +514,61 @@ class TestNumericalColumn(unittest.TestCase):
         me = Symbol('me')
 
         self.assertEqual(
-            list(df._where((me['a'] > 1) & (me['b'] == 33))),
+            list(df.where((me['a'] > 1) & (me['b'] == 33))),
             list(df[(df['a'] > 1) & (df['b'] == 33)]))
 
-        self.assertEqual(list(df._select('*')), list(df))
+        self.assertEqual(list(df.select('*')), list(df))
 
-        self.assertEqual(list(df._select('a')), list(df.keep(['a'])))
-        self.assertEqual(list(df._select('*', '-a')), list(df.drop(['a'])))
+        self.assertEqual(list(df.select('a')), list(df.keep(['a'])))
+        self.assertEqual(list(df.select('*', '-a')), list(df.drop(['a'])))
 
         gf = DataFrame({'a': df['a'], 'b': df['b'], 'c': df['a'] + df['b']})
-        self.assertEqual(list(df._select('*', c=me['a'] + me['b'])), list(gf))
+        self.assertEqual(list(df.select('*', c=me['a'] + me['b'])), list(gf))
+
+    def test_groupby_size_pipe(self):
+        df = DataFrame(
+            {'a': [1, 1, 2], 'b': [1, 2, 3], 'c': [2, 2, 1]})
+        self.assertEqual(list(df.groupby('a').size), [(1, 2), (2, 1)])
+
+        df = DataFrame({'A': ['a', 'b', 'a', 'b'], 'B': [1, 2, 3, 4]})
+
+        # TODO have to add type inference here
+        # self.assertEqual(list(df.groupby('A').pipe({'B': lambda x: x.max() - x.min()})),
+        #                  [('a',  2), ('b', 2)])
+
+        # self.assertEqual(list(df.groupby('A').select(B=me['B'].max() - me['B'].min())),
+        #                  [('a',  2), ('b', 2)])
+
+    def test_groupby_agg(self):
+        df = DataFrame({'A': ['a', 'b', 'a', 'b'], 'B': [1, 2, 3, 4]})
+
+        self.assertEqual(list(df.groupby('A').agg('sum')),
+                         [('a', 4), ('b', 6)])
+
+        df = DataFrame(
+            {'a': [1, 1, 2], 'b': [1, 2, 3], 'c': [2, 2, 1]})
+
+        self.assertEqual(list(df.groupby('a').agg('sum')),
+                         [(1, 3, 4), (2, 3, 1)])
+
+        self.assertEqual(list(df.groupby('a').agg(['sum', 'min'])), [
+            (1, 3, 4, 1, 2), (2, 3, 1, 3, 1)])
+
+        self.assertEqual(list(df.groupby('a').agg({'c': 'max', 'b': ['min', 'mean']})),
+                         [(1, 2, 1, 1.5), (2, 1, 3, 3.0)])
+
+    def test_groupby_iter_get_item_ops(self):
+        df = DataFrame({'A': ['a', 'b', 'a', 'b'], 'B': [1, 2, 3, 4]})
+        for g, gf in df.groupby('A'):
+            if g == ('a',):
+                self.assertEqual(list(gf), [(1,), (3,)])
+            elif g == ('b',):
+                self.assertEqual(list(gf), [(2,), (4,)])
+            else:
+                self.assertTrue(False)
+
+        self.assertEqual(list(df.groupby('A').sum()), [('a', 4), ('b', 6)])
+        self.assertEqual(list(df.groupby('A')['B'].sum()), [4, 6])
 
 
 if __name__ == "__main__":

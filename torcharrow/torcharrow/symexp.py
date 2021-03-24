@@ -156,3 +156,7 @@ class Call(Expression):
 def eval_symbolic(obj, env):
     # print('eval_symbolic', obj, env, obj.eval_symbolic(env) if hasattr(obj, 'eval_symbolic') else obj)
     return obj.eval_symbolic(env) if hasattr(obj, 'eval_symbolic') else obj
+
+
+# The super variable....]
+me = Symbol('me')

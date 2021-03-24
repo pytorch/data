@@ -1,7 +1,7 @@
 import operator
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import ClassVar, Dict, List, Optional, Union
+from typing import ClassVar, Dict, List, Optional, Union, Tuple, Callable
 
 # -----------------------------------------------------------------------------
 # Aux
@@ -303,7 +303,8 @@ class List_(DType):
     def __str__(self):
         nullable = ", nullable=" + str(self.nullable) if self.nullable else ""
         fixed_size = (
-            ", fixed_size=" + str(self.fixed_size) if self.fixed_size >= 0 else ""
+            ", fixed_size=" +
+            str(self.fixed_size) if self.fixed_size >= 0 else ""
         )
         return f"List_({self.item_dtype}{nullable}{fixed_size})"
 
@@ -329,11 +330,11 @@ class Struct(DType):
     def constructor(self, nullable):
         return Struct(self.fields, nullable)
 
-    def get(self, arg):
+    def get(self, name):
         for f in self.fields:
-            if f.name == arg:
+            if f.name == name:
                 return f.dtype
-        raise KeyError("{arg} not among fields")
+        raise KeyError(f"{name} not among fields")
 
     def __str__(self):
         nullable = ", nullable=" + str(self.nullable) if self.nullable else ""
@@ -588,7 +589,8 @@ def _infer_dtype_from_value(value):
         return List_(dtype)
     if isinstance(value, dict):
         key_dtype = infer_dtype_from_prefix(list(value.keys())[:PREFIX_LENGTH])
-        items_dtype = infer_dtype_from_prefix(list(value.values())[:PREFIX_LENGTH])
+        items_dtype = infer_dtype_from_prefix(
+            list(value.values())[:PREFIX_LENGTH])
         return Map(key_dtype, items_dtype)
     if isinstance(value, tuple):
         dtypes = []
@@ -702,6 +704,31 @@ _operator_map = {
     "ge": operator.ge,
 }
 
+
+def get_agg_op(op: str, dtype: DType) -> Tuple[Callable, DType]:
+    if op not in _agg_ops:
+        raise ValueError(f"undefined aggregation operator ({op})")
+    if op in ["min", "max", "sum", "prod", "mode"]:
+        return (_agg_ops[op], dtype)
+    if op in ["mean", "median"]:
+        return (_agg_ops[op], Float64(dtype.nullable))
+    if op in ["count"]:
+        return (_agg_ops[op], Int64(dtype.nullable))
+    raise AssertionError('unexpected case')
+
+
+_agg_ops = {
+    'min': lambda c: c.min(),
+    'max': lambda c: c.max(),
+    'all': lambda c: c.all(),
+    'any': lambda c: c.any(),
+    'sum': lambda c: c.sum(),
+    'prod': lambda c: c.prod(),
+    'mean': lambda c: c.mean(),
+    'median': lambda c: c.median(),
+    'mode': lambda c: c.mode(),
+    'count': lambda c: c.count(),
+}
 
 # -----------------------------------------------------------------------------
 # Appendix

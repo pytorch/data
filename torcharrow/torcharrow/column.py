@@ -247,17 +247,18 @@ class AbstractColumn(ABC, Sized, Iterable):
 
     def __getitem__(self, arg):
         """
-        If *arg* is a ``str`` type, return the str'th column (only defined for Frames).
-        If *arg* is a ``int`` type, return a Frame with the int'th row.
-        If *arg* is a ``slice`` of column names, return a new Frame with all columns
+        If *arg* is a ``str`` type, return the column named *arg*
+        If *arg* is a ``int`` type, return the arg'th row.
+        If *arg* is a ``slice`` of column names, return a new DataFrame with all columns
         sliced to the specified range.
-        If *arg* is a ``slice`` of ints, return a new DataFrame with all rows
+        If *arg* is a ``slice`` of ints, return a new Column or DataFrame with all rows
         sliced to the specified range.
         If *arg* is an ``list`` containing column names, return a new
         DataFrame with the corresponding columns.
         If *arg* is an ``list`` containing row numbers, return a new
-        DataFrame with the corresponding rows.
-        If *arg* is a ``BooleanColumn``, return the rows marked True
+        Column/DataFrame with the corresponding rows.
+        If *arg* is a ``BooleanColumn``, return a new Column or DataFrame 
+        with rows which have been  marked True
         """
         # print('slice', arg, str(type(arg)))
         if isinstance(arg, int):
@@ -265,18 +266,13 @@ class AbstractColumn(ABC, Sized, Iterable):
         elif isinstance(arg, str):
             return self._get_column(arg)
         elif isinstance(arg, slice):
-            if (
-                isinstance(arg.start, str)
-                or isinstance(arg.stop, str)
-                or isinstance(arg.step, str)
-            ):
+            args = [arg.start, arg.stop, arg.step]
+            if all(a is None or isinstance(a, str) for a in args):
                 return self._slice_columns(arg)
-            elif (
-                isinstance(arg.start, int)
-                or isinstance(arg.stop, int)
-                or isinstance(arg.step, int)
-            ):
+            elif all(a is None or isinstance(a, int) for a in args):
                 return self._slice_rows(arg)
+            else:
+                TypeError("slice arguments should be ints or strings")
         if isinstance(arg, (tuple, list)):
             if len(arg) == 0:
                 return self._empty()
@@ -291,18 +287,19 @@ class AbstractColumn(ABC, Sized, Iterable):
         elif isinstance(arg, AbstractColumn) and is_boolean(arg.dtype):
             return self.filter(arg)
         else:
-            raise TypeError(f"__getitem__ on type {type(arg)} is not supported")
+            raise TypeError(
+                f"__getitem__ on type {type(arg)} is not supported")
 
     def slice(self, start=None, stop=None, step=1):
         return self._slice_rows(slice(start, stop, step))
 
     def head(self, n=5):
         """Return the first `n` rows."""
-        return self._slice_rows(slice(0, n, None))
+        return self[:n]
 
     def tail(self, n=5):
         """Return the last `n` rows."""
-        return self._slice_rows(slice(-n, len(self), None))
+        return self[-n:]
 
     def reverse(self):
         res = _column_constructor(self.dtype)
@@ -323,47 +320,24 @@ class AbstractColumn(ABC, Sized, Iterable):
         return res
 
     def _slice_rows(self, arg):
-        # TODO compare Pandas/TorchArrow/Python slices, last index is included or not?
-        # here like Python!
-        # print('slice_rows', arg, str(type(arg)))
+        # TODO This is Python Slice! (Pandas last is inclusive, Python it is exclusive)
 
-        step = 1
-        if arg.step is not None:
-            step = arg.step
+        start, stop, step = arg.indices(len(self))
 
-        start = 0
-        if arg.start is not None:
-            if arg.start >= 0:
-                start = arg.start
-            elif arg.start < 0:
-                start = arg.start + len(self)
-
-        stop = len(self)
-        if arg.stop is not None:
-            if arg.stop >= 0:
-                stop = arg.stop
-            elif arg.stop < 0 and not (step < 0 and arg.stop == -1):
-                stop = arg.stop + len(self)
-
-        # print('_slice_rows', start, stop, step)
-        # empty slice
-        if (step > 0 and start >= stop) or (step < 0 and start <= stop):
-            return _column_constructor(self.dtype)
-
-        # create a view
         if start <= stop and step == 1:
+            # create a view
             res = self.copy(deep=False)
             res._offset = res._offset + start
             res._length = stop - start
             # update null_count
             res._nullcount = sum(self._valid(i) for i in range(len(self)))
             return res
-
-        # usual slice
-        res = _column_constructor(self.dtype)
-        for i in range(start, stop, step):
-            res._append(self.get(i, None))
-        return res
+        else:
+            # usual slice
+            res = _column_constructor(self.dtype)
+            for i in range(start, stop, step):
+                res._append(self.get(i, None))
+            return res
 
     def _get_column(self, arg, default=None):
         raise AttributeError(f"{type(self)} has no column to get")
@@ -410,7 +384,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         dtype required if result type != item type.
         """
         if isinstance(arg, Dict):
-            return self._map(lambda x: arg.get(x, None), na_action, dtype)  # type: ignore
+            # type: ignore
+            return self._map(lambda x: arg.get(x, None), na_action, dtype)
         else:
             return self._map(arg, na_action, dtype)
 
@@ -468,7 +443,8 @@ class AbstractColumn(ABC, Sized, Iterable):
             if initializer is not None:
                 return initializer
             else:
-                raise TypeError("reduce of empty sequence with no initial value")
+                raise TypeError(
+                    "reduce of empty sequence with no initial value")
         start = 0
         if initializer is None:
             value = self[0]
@@ -536,11 +512,13 @@ class AbstractColumn(ABC, Sized, Iterable):
         """Sort a column/a dataframe in ascending or descending order"""
         # key:Callable, optional missing
         if by is not None:
-            raise TypeError("sorting a non-structured column can't have 'by' parameter")
+            raise TypeError(
+                "sorting a non-structured column can't have 'by' parameter")
         res = _column_constructor(self.dtype)
         if na_position == "first":
             res.extend([None] * self._null_count)
-        res.extend(sorted((i for i in self if i is not None), reverse=not ascending))
+        res.extend(
+            sorted((i for i in self if i is not None), reverse=not ascending))
         if na_position == "last":
             res.extend([None] * self._null_count)
         return res
@@ -804,9 +782,11 @@ class AbstractColumn(ABC, Sized, Iterable):
         for i in range(self._length):
             if self._valid(i) and other._valid(i):
                 if reflect:
-                    res._append(operator(other.get(i, None), self.get(i, None)))
+                    res._append(
+                        operator(other.get(i, None), self.get(i, None)))
                 else:
-                    res._append(operator(self.get(i, None), other.get(i, None)))
+                    res._append(
+                        operator(self.get(i, None), other.get(i, None)))
             elif fill_value is not None:
                 l = self.get(i, None) if self._valid(i) else fill_value
                 r = other.get(i, None) if other._valid(i) else fill_value
@@ -1059,7 +1039,8 @@ class AbstractColumn(ABC, Sized, Iterable):
             except StopIteration:
                 raise ValueError(f"cum[min/max] undefined for empty column.")
         if total is None:
-            raise ValueError(f"cum[min/max] undefined for columns with row 0 as null.")
+            raise ValueError(
+                f"cum[min/max] undefined for columns with row 0 as null.")
         res._append(total)
         for element in it:
             if rest_is_null:

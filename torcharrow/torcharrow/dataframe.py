@@ -19,6 +19,7 @@ from typing import (
     Sequence,
     Union,
     cast,
+    Tuple,
 )
 
 from .column import AbstractColumn, Column, _column_constructor, _set_column_constructor
@@ -38,6 +39,7 @@ from .dtypes import (
     is_tuple,
     string,
     Tuple_,
+    get_agg_op
 )
 from .tabulate import tabulate
 
@@ -179,7 +181,7 @@ class DataFrame(AbstractColumn):
                 self._field_data[f.name].append(None)
         else:
             # TODO recursive analysis of tuple structure
-            if not isinstance(tup, tuple) and len(tup) == len(self.dtype.files):
+            if not isinstance(tup, tuple) and len(tup) == len(self.dtype.fields):
                 raise TypeError(
                     f"f'a tuple of type {self.dtype} is required, got {tup}')"
                 )
@@ -292,29 +294,38 @@ class DataFrame(AbstractColumn):
         return _Repr(self)
 
     # selectors -----------------------------------------------------------
-    def _get_column(self, arg, default=None):
-        # TODO delete the default, no?
+    def _get_column(self, arg):
         return self._field_data[arg]
 
-    def _slice_columns(self, arg):
-        if arg.step is not None:
-            raise ValueError(
-                "slicing column names requires step parameter to be None")
+    def _index(self, arg):
+        if arg is None:
+            return None
+        if arg in self.columns:
+            return self.columns.index(arg)
+        try:
+            return int(arg)
+        except:
+            raise TypeError(
+                'column slice indices must be column names or strings that can be converted to integers or None')
 
-        start = 0
+    def _slice_columns(self, arg):
         columns = self.columns
-        if arg.start is not None:
-            self._field_data[arg.start]  # triggers keyerror
-            start = columns.index(arg.start)
-        else:
-            start = 0
-        if arg.stop is not None:
-            self._field_data[arg.stop]  # trigger keyerror
-            stop = columns.index(arg.stop)
-        else:
-            stop = len(columns)
+
+        start_ = self._index(arg.start)
+        stop_ = self._index(arg.stop)
+        step_ = None
+        if arg.step is not None:
+            try:
+                step_ = int(arg.step)
+            except:
+                raise TypeError(
+                    'column step argument must a string that can be converted to an integer or None')
+
+        start, stop, step = slice(
+            start_, stop_, step_).indices(len(columns))
+
         res = DataFrame()
-        for i in range(start, stop):
+        for i in range(start, stop, step):
             res[columns[i]] = self._field_data[columns[i]]
         return res
 
@@ -936,7 +947,6 @@ class DataFrame(AbstractColumn):
         """
         Returns DataFrame with the kept columns only.
         """
-        print("KEEP", self, columns)
         if isinstance(columns, list):
             for n in columns:
                 _ = self._field_data[n]  # creates key error
@@ -958,6 +968,8 @@ class DataFrame(AbstractColumn):
             for n, c in self._field_data.items():
                 if n in column_mapper:
                     res[column_mapper[n]] = c
+                else:
+                    res[n] = c
             return res
         else:
             raise TypeError(
@@ -998,9 +1010,9 @@ class DataFrame(AbstractColumn):
 
     # fluent with symbolic expressions ----------------------------------------
 
-    def _where(self, *conditions):
+    def where(self, *conditions):
         """
-        Analogous to SQL's where.
+        Analogous to SQL's where (NOT Pandas where)
 
         Filter a dataframe to only include
         rows satisfying a given set of conditions.
@@ -1016,7 +1028,7 @@ class DataFrame(AbstractColumn):
             lambda x, y: x & y, evalled_conditions)
         return self[anded_evalled_conditions]
 
-    def _select(self, *args, **kwargs):
+    def select(self, *args, **kwargs):
         """
         Analogous to SQL's ``SELECT`.
 
@@ -1026,7 +1038,6 @@ class DataFrame(AbstractColumn):
         from .symexp import Symbol, eval_symbolic
 
         input_columns = set(self.columns)
-        # print("SELECT", self, input_columns, '|', args, kwargs)
 
         has_star = False
         include_columns = []
@@ -1081,35 +1092,304 @@ class DataFrame(AbstractColumn):
         """
         return func(self, *args, **kwargs)
 
-#     def _groupby(self, by: List[str],
-#             sort=False,
-#             dropna=True,
-#         ):
-#         grouping_columns = by
-#         colected_columns =[]
-#         for tup in zip([self_field_dat])
+    def groupby(self, by: List[str],
+                sort=False,
+                dropna=True,
+                ):
+        # TODO implement
+        assert not sort
+        assert dropna
 
-#         for
+        key_columns = by
+        key_fields = []
+        item_fields = []
+        for k in key_columns:
+            if k not in self._field_data.keys():
+                raise ValueError(
+                    f'groupby received a non existent column ({k})')
+            key_fields.append(Field(k, self.dtype.get(k)))
+        for f in self.dtype.fields:
+            if f.name not in key_columns:
+                item_fields.append(f)
 
-# @dataclass
-# class GroupedBy:
-#     groups: Dict
-#     def agg(self, *args, **kwargs):
-
-#         res = Datafarme()
-#         for n, c in self._field_data.items():
-#             if n in output_columns:
-#                 res[n] = c
-#         for n, c in kwargs.item():
-#             res[n] = eval_symbolic(c, {'me': self})
-#         return res
-
-
-# class dataFRame
-# ------------------------------------------------------------------------------
+        groups: Dict[Tuple, Sequence[int]] = {}
+        for i in range(self._length):
+            j = self._offset + i
+            if self._validity[j]:
+                key = tuple(self._field_data[f.name][j] for f in key_fields)
+                if key not in groups:
+                    groups[key] = ar.array('I')
+                df = groups[key]
+                df.append(j)
+            else:
+                pass
+        return GroupedBy(key_fields, item_fields, groups, self)
 
 
-@dataclass
+@ dataclass
+class GroupedBy:
+    _key_fields: List[Field]
+    _item_fields: List[Field]
+    _groups: Dict[Tuple, Sequence]
+    _parent: Dataframe
+
+    @property
+    def size(self):
+        """
+        Return the size of each group (including nulls).
+        """
+        res = DataFrame(Struct(self._key_fields+[Field('size', int64)]))
+        for k, c in self._groups.items():
+            row = k + (len(c),)
+            res._append(row)
+        return res
+
+    def __iter__(self):
+        """
+        Yield pairs of grouped tuple and the grouped dataframe
+        """
+        for g, xs in self._groups.items():
+            df = DataFrame(Struct(self._item_fields))
+            for x in xs:
+                df.append(
+                    tuple(self._parent._field_data[f.name][x] for f in self._item_fields))
+            yield g, df
+
+    def _lift(self, op: str) -> AbstractColumn:
+        if len(self._key_fields) > 0:
+            # it is a dataframe operation:
+            return self._combine(op)
+        elif len(self._item_fields) == 1:
+            return self._apply1(self._item_fields[0], op)
+        raise AssertionError("unexpected case")
+
+    def _combine(self, op: str) -> DataFrame:
+        agg_fields = [Field(f"{f.name}.{op}", f.dtype)
+                      for f in self._item_fields]
+        res = DataFrame()
+        for f, c in zip(self._key_fields, self._unzip_group_keys()):
+            res[f.name] = c
+        for f, c in zip(agg_fields, self._apply(op)):
+            res[f.name] = c
+        return res
+
+    def _apply(self, op: str) -> List[AbstractColumn]:
+        cols = []
+        for f in self._item_fields:
+            cols.append(self._apply1(f, op))
+        return cols
+
+    def _apply1(self, f: Field, op: str) -> AbstractColumn:
+        src_t = f.dtype
+        dest_f, dest_t = get_agg_op(op, src_t)
+        col = _column_constructor(dest_t)
+        src_c = self._parent._field_data[f.name]
+        for g, xs in self._groups.items():
+            dest_c = dest_f(Column((src_c[x] for x in xs), dtype=dest_t))
+            col.append(dest_c)
+        return col
+
+    def _unzip_group_keys(self) -> List[AbstractColumn]:
+        cols = []
+        for f in self._key_fields:
+            cols.append(_column_constructor(f.dtype))
+        for tup in self._groups.keys():
+            for i, t in enumerate(tup):
+                cols[i].append(t)
+        return cols
+
+        # res_fields = []
+        # tmp_ops = []
+        # for f in self._item_fields:
+        #     c_op, c_type = get_agg_op(op, f.dtype)
+        #     res_fields.append(Field(f"{f.name}.{op}", c_type))
+        #     tmp_ops.append(c_op)
+
+        # res = DataFrame(self._key_fields + self._res_fields)
+        # for g, xs in self._groups.items():
+        #     tup = list(g)
+        #     for i, (f, r) in enumerate(zip(self._item_fields, res_fields)):
+        #         tup.append(
+        #             tmp_ops[i](Column((self._parent._field_data[f.name][x]
+        #                        for x in xs), dtype=r.dtype)))
+        #     res.append(tuple(tup))
+        # return res
+
+    def __getitem__(self, arg):
+        """
+        Return the named grouped column
+        """
+        # TODO extend that this works inside struct frames as well,
+        # e.g. grouped['a']['b'] where grouped returns a struct column having 'b' as field
+        if isinstance(arg, str):
+            for f in self._item_fields:
+                if f.name == arg:
+                    return GroupedBy([], [f], self._groups, self._parent)
+            for i, f in enumerate(self._key_fields):
+                if f.name == arg:
+                    col = _column_constructor(f.dtype)
+                    for tup in self._groups.keys():
+                        col.append(tup[i])
+                    return col
+            raise ValueError(f"no column named ({arg}) in grouped dataframe")
+        raise TypeError(f"unexpected type for arg ({type(arg).__name})")
+
+    def min(self, numeric_only=None):
+        """Return the minimum of the nonnull values of the Column."""
+        assert numeric_only == None
+        return self._lift("min")
+
+    def max(self, numeric_only=None):
+        """Return the minimum of the nonnull values of the Column."""
+        assert numeric_only == None
+        return self._lift("min")
+
+    def all(self, boolean_only=None):
+        """Return whether all nonull elements are True in Column"""
+        # skipna == True
+        return self._lift("all")
+
+    def any(self, skipna=True, boolean_only=None):
+        """Return whether any nonull element is True in Column"""
+        # skipna == True
+        return self._lift("any")
+
+    def sum(self):
+        """Return sum of all nonull elements in Column"""
+        # skipna == True
+        # only_numerical == True
+        # skipna == True
+        return self._lift("sum")
+
+    def prod(self):
+        """Return produce of the values in the data"""
+        # skipna == True
+        # only_numerical == True
+        return self._lift("prod")
+
+    def mean(self):
+        """Return the mean of the values in the series."""
+        return self._lift("mean")
+
+    def median(self):
+        """Return the median of the values in the data."""
+        return self._lift("median")
+
+    def mode(self):
+        """Return the mode(s) of the data."""
+        return self._lift("mode")
+
+    def std(self):
+        """Return the stddev(s) of the data."""
+        return self._lift("std")
+
+    def count(self):
+        """Return the stddev(s) of the data."""
+        return self._lift("count")
+    # TODO should add reduce here as well...
+
+    def agg(self, arg):
+        """
+        Apply aggregation(s) to the groups.
+        """
+        # DataFrame{'a': [1, 1, 2], 'b': [1, 2, 3], 'c': [2, 2, 1]})
+        # a.groupby('a').agg('sum') -- applied on rest
+        # a.groupby('a').agg(['sum', 'min']) -- both applied on rest
+        # a.groupby('a').agg({'b': ['min', 'mean']}) -- applied on
+        # TODO
+        # a.groupby('a').aggregate( a= me['a'].mean(), b_min =me['b'].min(), b_mean=me['c'].mean()))
+        # f1 = lambda x: x.quantile(0.5); f1.__name__ = "q0.5"
+        # f2 = lambda x: x.quantile(0.75); f2.__name__ = "q0.75"
+        # a.groupby('a').agg([f1, f2])
+
+        res = DataFrame()
+        for f, c in zip(self._key_fields, self._unzip_group_keys()):
+            res[f.name] = c
+        for agg_name, field, op in self._normalize_agg_arg(arg):
+            res[agg_name] = self._apply1(field, op)
+        return res
+
+    def aggregate(self, arg):
+        """
+        Apply aggregation(s) to the groups.
+        """
+        return self.agg(arg)
+
+    def select(self, **kwargs):
+        """
+        Like select for dataframes, except for groups
+        """
+        from .symexp import Symbol, eval_symbolic
+
+        res = DataFrame()
+        for f, c in zip(self._key_fields, self._unzip_group_keys()):
+            res[f.name] = c
+        for n, c in kwargs.items():
+            res[n] = eval_symbolic(c, {'me': self})
+        return res
+
+    def _normalize_agg_arg(self, arg):
+        res = []  # triple name, field, op
+        if isinstance(arg, str):
+            # normalize
+            arg = [arg]
+        if isinstance(arg, list):
+            for op in arg:
+                for f in self._item_fields:
+                    res.append((f"{f.name}.{op}", f, op))
+        elif isinstance(arg, dict):
+            for n, ops in arg.items():
+                fields = [f for f in self._item_fields if f.name == n]
+                if len(fields) == 0:
+                    raise ValueError(f"column ({n}) does not exist")
+                # TODO handle duplicate columns, if ever...
+                assert len(fields) == 1
+                if isinstance(ops, str):
+                    ops = [ops]
+                for op in ops:
+                    res.append((f"{n}.{op}", fields[0], op))
+        else:
+            raise TypeError(f"unexpected arg type ({type(arg).__name__})")
+        return res
+
+        # (lambda c: c.sum())(df['b'])
+        # TODO
+        # def pipe(self, func, *args, **kwargs):
+        #     """
+        #     Apply func(self, \*args, \*\*kwargs).
+        #     """
+        #     df = DataFrame({'A': ['a', 'b', 'a', 'b'], 'B': [1, 2, 3, 4]})
+        #     df.groupby('A').pipe({'B': lambda x: x.max() - x.min()}
+
+    # def _apply(aggFuns)
+
+    #     res = DataFrame(Struct(self._key_fields + agg_fields))
+    #     for k, xs in self._groups.items():
+
+    #         res.append(k+tuple(op(Column((self._parent._field_data[n][x]
+    #                            for x in xs), dtype=f.dtype))) for (n, op), f in zip(agg_funs, agg_fields))
+    #     return res
+
+    # def _lift(self, op):
+    #     res_fields = []
+    #     tmp_ops = []
+    #     for f in self._item_fields:
+    #         c_op, c_type = get_agg_op(op, f.dtype)
+    #         res_fields.append(Field(f"{f.name}.{op}", c_type))
+    #         tmp_ops.append(c_op)
+
+    #     res = DataFrame(self._key_fields + self._res_fields)
+    #     for g, xs in self._groups.items():
+    #         tup = list(g)
+    #         for i, (f, r) in enumerate(zip(self._item_fields, res_fields)):
+    #             tup.append(
+    #                 tmp_ops[i](Column((self._parent._field_data[f.name][x]
+    #                            for x in xs), dtype=r.dtype)))
+    #         res.append(tuple(tup))
+    #     return res
+
+
+@ dataclass
 class _Repr:
     parent: DataFrame
 
@@ -1124,27 +1404,6 @@ _set_column_constructor(is_tuple, DataFrame)
 
 # ------------------------------------------------------------------------------
 # Relational operators, still TBD
-
-
-# @annotate("JOIN", color="blue", domain="cudf_python")
-#     def merge(
-#         self,
-#         right,
-#         on=None,
-#         left_on=None,
-#         right_on=None,
-#         left_index=False,
-#         right_index=False,
-#         how="inner",
-#         sort=False,
-#         lsuffix=None,
-#         rsuffix=None,
-#         method="hash",
-#         indicator=False,
-#         suffixes=("_x", "_y"),
-#     ):
-#         """Merge GPU DataFrame objects by performing a database-style join
-#         operation by columns or indexes."""
 
 
 #         def join(
@@ -1183,17 +1442,5 @@ _set_column_constructor(is_tuple, DataFrame)
 #     ):
 #         """
 #         Apply a row-wise user defined function.
-# def info(
-#         self,
-#         verbose=None,
-#         buf=None,
-#         max_cols=None,
-#         memory_usage=None,
-#         null_counts=None,
-#     ):
-#         """
-#         Print a concise summary of a DataFrame.
-#         This method prints information about a DataFrame including
-#         the index dtype and column dtypes, non-null values and memory usage.
-
-#         """"
+#
+#       all set operations: union, uniondistinct, except, etc.
