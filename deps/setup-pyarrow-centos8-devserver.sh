@@ -21,6 +21,7 @@ git clone -b apache-arrow-3.0.0 https://github.com/apache/arrow/
 
 # adopted from https://arrow.apache.org/docs/developers/python.html#building-on-linux-and-macos
 
+sudo dnf install -y python36-devel
 with-proxy pip install -r arrow/python/requirements-wheel-build.txt
 
 # we need to install in the local directory because otherwise for some reason python build can't find the libarrow_python.so
