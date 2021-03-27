@@ -6,8 +6,11 @@
 
 # This assumes that you have virtualenv, so you probably want to run
 #   source f4d-deps/python-env/bin/activate
+#
+# if you're using system python on CentOS you might need to do:
+#   sudo dnf install -y python36-devel
 
-set -e # better be safe than sorry
+set -xe # better be safe than sorry
 
 function with-proxy() {
   (
@@ -21,7 +24,6 @@ git clone -b apache-arrow-3.0.0 https://github.com/apache/arrow/
 
 # adopted from https://arrow.apache.org/docs/developers/python.html#building-on-linux-and-macos
 
-sudo dnf install -y python36-devel
 with-proxy pip install -r arrow/python/requirements-wheel-build.txt
 
 # we need to install in the local directory because otherwise for some reason python build can't find the libarrow_python.so
@@ -38,5 +40,5 @@ pushd arrow/python
 with-proxy pip install wheel
 export PYARROW_WITH_PARQUET=1
 with-proxy python setup.py build_ext --bundle-arrow-cpp bdist_wheel
-pip install dist/pyarrow-3.0.0-cp36-cp36m-linux_x86_64.whl
+pip install dist/pyarrow-3.0.0-*.whl
 popd
