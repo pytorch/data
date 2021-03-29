@@ -1,5 +1,4 @@
 # Take reference from https://github.com/pytorch/examples/blob/master/imagenet/main.py
-# num_batches is not available
 import torch
 
 class AverageMeter(object):

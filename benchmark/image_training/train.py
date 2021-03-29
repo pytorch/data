@@ -30,6 +30,8 @@ import datapipes
 from benchmark.utils import AccMeter, AverageMeter, ProgressMeter
 
 
+# The following DataPipe is temporary for benchmarking
+# will be replaced by new datapipe in main repo
 class TransferDatapipe(IterDataPipe):
     def __init__(self, datapipe, phase, length=-1):
         super().__init__()
@@ -51,23 +53,29 @@ class ClassesDatapipe(IterDataPipe):
             yield image, category["category_id"]
 
 
-cleanups = []
+class TrainingManagement:
+    cleanups = []
 
+    def __init__(self, rmf):
+        self.rmf = rmf
 
-def cleanup_calls():
-    global cleanups
-    for fn, *args in cleanups:
-        fn(*args)
+    def __enter__(self):
+        if self.rmf:
+            start_resource_monitor(self.rmf)
+        return self
 
+    def __exit__(self, exc_ty, exc_val, tb):
+        for fn, *args in TrainingManagement.cleanups:
+            fn(*args)
+        TrainingManagement.cleanups.clear()
 
-def add_cleanup(fn, *args):
-    global cleanups
-    cleanups.append((fn, *args))
+    @classmethod
+    def add_cleanup(cls, fn, *args):
+        cls.cleanups.append((fn, *args))
 
-
-def insert_cleanup(idx, fn, *args):
-    global cleanups
-    cleanups.insert(idx, (fn, *args))
+    @classmethod
+    def insert_cleanup(cls, idx, fn, *args):
+        cls.cleanups.insert(idx, (fn, *args))
 
 
 def get_progress_meters():
@@ -177,7 +185,7 @@ def get_transform_api():
     return data_transforms
 
 
-def prepare_datapipe(data_dir, num_workers, shuffle_buffer):
+def prepare_datapipe(data_dir, num_workers, shuffle_buffer, batch_size, drop_last=False):
     all_pipes = []
     all_workers = []
 
@@ -208,11 +216,13 @@ def prepare_datapipe(data_dir, num_workers, shuffle_buffer):
             value = res_queue.get()
             process.join()
 
-        add_cleanup(clean_me, req_queue, res_queue, process)
+        TrainingManagement.add_cleanup(clean_me, req_queue, res_queue, process)
 
     joined_dp_t = datapipes.iter.GreedyJoin(*all_pipes)
     shuffled_dp_t = dp.iter.Shuffle(joined_dp_t, buffer_size=shuffle_buffer)
-    final_dp_t = ClassesDatapipe(shuffled_dp_t)
+    class_dp_t = ClassesDatapipe(shuffled_dp_t)
+    batch_dp_t = dp.iter.Batch(class_dp_t, batch_size, drop_last)
+    final_dp_t = dp.iter.Collate(batch_dp_t)
 
 
     datapipe1_v = dp.iter.ListDirFiles(data_dir, 'val*.tar.gz')
@@ -222,7 +232,9 @@ def prepare_datapipe(data_dir, num_workers, shuffle_buffer):
         datapipe3_v, handlers=[decoder_imagehandler('pilrgb'), decoder_basichandlers])
     datapipe5_v = dp.iter.GroupByKey(datapipe4_v, group_size=2)
     datapipe6_v = TransferDatapipe(datapipe5_v, 'val')
-    final_dp_v = ClassesDatapipe(datapipe6_v)
+    class_dp_v = ClassesDatapipe(datapipe6_v)
+    batch_dp_v = dp.iter.Batch(class_dp_v, batch_size, drop_last)
+    final_dp_v = dp.iter.Collate(batch_dp_v)
 
     return {'train': final_dp_t, 'val': final_dp_v}
 
@@ -281,67 +293,66 @@ def resource_monitor_loop(parent_pid, msg_queue, logfile_pathname):
             print("Monitor process crashed due to ", e)
             raise e
 
-    logfile = open(logfile_pathname, 'w')
-
     monitor_pid = os.getpid()
     processes = {}
 
-    # give 1 sec for system warm up
-    time.sleep(1)
-    while True:
-        if should_stop(msg_queue):
-            break
-        try:
-            cpu_all = 0.0
-            mem_all = 0.0
-            if parent_pid not in processes:
-                processes[parent_pid] = psutil.Process(parent_pid)
-            main_process = processes[parent_pid]
+    with open(logfile_pathname, 'w') as logfile:
 
-            logfile.write("Time:," + str(int(time.time())) + ",")
-            logfile.write("Main Process:," + str(parent_pid) + ",")
-            cpu_p = main_process.cpu_percent()
-            logfile.write("CPU:," + str(cpu_p) + ",")
-            mem_p = main_process.memory_full_info().rss
-            logfile.write("MEM:," + str(mem_p / 1024.0 ** 3) + "G,")
-            cpu_all = cpu_all + cpu_p
-            mem_all = mem_all + mem_p
+        # give 1 sec for system warm up
+        time.sleep(1)
+        while True:
+            if should_stop(msg_queue):
+                break
+            try:
+                cpu_all = 0.0
+                mem_all = 0.0
+                if parent_pid not in processes:
+                    processes[parent_pid] = psutil.Process(parent_pid)
+                main_process = processes[parent_pid]
 
-            count = 0
-            children = main_process.children(recursive=True)
-            for child in children:
-                cid = child.pid
-                if cid == monitor_pid:
-                    continue
-                if cid not in processes:
-                    processes[cid] = psutil.Process(cid)
-                c_process = processes[cid]
-                logfile.write("SubProcess " + str(count) + ":," + str(cid) + ",")
-                cpu_p = c_process.cpu_percent()
+                logfile.write("Time:," + str(int(time.time())) + ",")
+                logfile.write("Main Process:," + str(parent_pid) + ",")
+                cpu_p = main_process.cpu_percent()
                 logfile.write("CPU:," + str(cpu_p) + ",")
-                mem_p = c_process.memory_full_info().rss
+                mem_p = main_process.memory_full_info().rss
                 logfile.write("MEM:," + str(mem_p / 1024.0 ** 3) + "G,")
                 cpu_all = cpu_all + cpu_p
                 mem_all = mem_all + mem_p
-                count = count + 1
 
-            logfile.write("CPU_ALL:," + str(cpu_all) + ",")
-            logfile.write("MEM_ALL:," + str(mem_all / 1024.0 ** 3) + "G\n")
-            logfile.flush()
-            # sleep 1 sec before next monitoring cycle
-            time.sleep(1)
-        except Exception as e:
-            # it is possible that when training is done, some of the child processes (works) are completed
-            # while this loop is still runnig, so we simply passed such exceptions.
-            pass
-    logfile.close()
+                count = 0
+                children = main_process.children(recursive=True)
+                for child in children:
+                    cid = child.pid
+                    if cid == monitor_pid:
+                        continue
+                    if cid not in processes:
+                        processes[cid] = psutil.Process(cid)
+                    c_process = processes[cid]
+                    logfile.write("SubProcess " + str(count) + ":," + str(cid) + ",")
+                    cpu_p = c_process.cpu_percent()
+                    logfile.write("CPU:," + str(cpu_p) + ",")
+                    mem_p = c_process.memory_full_info().rss
+                    logfile.write("MEM:," + str(mem_p / 1024.0 ** 3) + "G,")
+                    cpu_all = cpu_all + cpu_p
+                    mem_all = mem_all + mem_p
+                    count = count + 1
+
+                logfile.write("CPU_ALL:," + str(cpu_all) + ",")
+                logfile.write("MEM_ALL:," + str(mem_all / 1024.0 ** 3) + "G\n")
+                logfile.flush()
+                # sleep 1 sec before next monitoring cycle
+                time.sleep(1)
+            except Exception as e:
+                # it is possible that when training is done, some of the child processes (works) are completed
+                # while this loop is still runnig, so we simply passed such exceptions.
+                pass
 
 def start_resource_monitor(logfile_pathname):
     print("Creating resource monitor and log file", logfile_pathname)
     ctx = multiprocessing.get_context('spawn')
     pid = os.getpid()
     msg_queue = ctx.Queue()
-    process = ctx.Process(target=resource_monitor_loop, args=(pid,msg_queue, logfile_pathname))
+    process = ctx.Process(target=resource_monitor_loop, args=(pid, msg_queue, logfile_pathname))
     process.start()
 
     def clean_helper(process, msg_queue):
@@ -349,35 +360,43 @@ def start_resource_monitor(logfile_pathname):
         process.join()
         print("Resource monitor stopped")
     # it is really doesn't matter, but logically we should put this 1st item in the cleaning queue
-    insert_cleanup(0, clean_helper, process, msg_queue)
+    TrainingManagement.insert_cleanup(0, clean_helper, process, msg_queue)
 
+def dummy_collate_fn(d):
+    return d
 
 def main(args):
-    root = args.root
-    num_workers = args.num_of_workers if args.num_of_workers is not None else 2
+    batch_size = args.batch_size
+    num_workers = args.num_of_workers
+    collate_fn = None
     if args.dataset:
-        image_datasets = prepare_dataset(root)
+        image_datasets = prepare_dataset(args.root)
         num_of_classes = len(image_datasets['train'].classes)
         dl_shuffle = args.shuffle_buffer > 0
     elif args.datapipe:
-        image_datasets = prepare_datapipe(root, num_workers, args.shuffle_buffer)
+        image_datasets = prepare_datapipe(args.root, num_workers, args.shuffle_buffer,
+                                          args.batch_size, args.drop_last)
         # We want to compare classic DataSet with N workers with DataPipes
         # which use N separate processes (self managed, so DataLoader is not
         # allowed to spawn anything)
+        batch_size = None
         num_workers = 0
+        collate_fn = None
         num_of_classes = args.num_of_labels
         assert num_of_classes
         dl_shuffle = False
     else:
-        image_datasets = prepare_webdataset(root, args.shuffle_buffer)
+        image_datasets = prepare_webdataset(args.root, args.shuffle_buffer)
         num_of_classes = args.num_of_labels
         assert num_of_classes
         dl_shuffle = False
 
-    dataloaders = {'train': torch.utils.data.DataLoader(image_datasets['train'], batch_size=1,
-                                                        shuffle=dl_shuffle, num_workers=num_workers),
-                   'val': torch.utils.data.DataLoader(image_datasets['val'], batch_size=1,
-                                                      shuffle=False, num_workers=num_workers)
+    dataloaders = {'train': torch.utils.data.DataLoader(image_datasets['train'], batch_size=batch_size,
+                                                        shuffle=dl_shuffle, num_workers=num_workers,
+                                                        collate_fn=collate_fn, drop_last=args.drop_last),
+                   'val': torch.utils.data.DataLoader(image_datasets['val'], batch_size=batch_size,
+                                                      shuffle=False, num_workers=num_workers,
+                                                      collate_fn=collate_fn, drop_last=args.drop_last)
                    }
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -392,11 +411,9 @@ def main(args):
     # Decay LR by a factor of 0.1 every 7 epochs
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
-    if args.resource_monitor_file:
-        start_resource_monitor(args.resource_monitor_file)
-
-    model_ft, pms = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler,
-                                dataloaders, device, args.num_epochs, args.log_interval)
+    with TrainingManagement(args.resource_monitor_file) as tm:
+        model_ft, pms = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler,
+                                    dataloaders, device, args.num_epochs, args.log_interval)
     if args.file_path is not None:
         torch.save({
             'state_dict': model_ft.state_dict(),
@@ -417,10 +434,12 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--root", required=True, help="root dir of images")
     parser.add_argument("-n", "--num_of_labels", type=int,
                         help="required for datapipe or webdataset")
-    parser.add_argument("-nk", "--num_of_workers", type=int, help="number of workers")
+    parser.add_argument("-bs", "--batch-size", type=int, default=1, help="size of mini-batch")
     parser.add_argument("-s", "--shuffle-buffer", type=int, default=100,
                         help="size of buffer for shuffle. shuffling is enabled as "
                         "default, and it can be disabled by setting buffer to 0")
+    parser.add_argument("-nk", "--num_of_workers", type=int, default=2, help="number of workers")
+    parser.add_argument("-dl", "--drop-last", type=bool, default=False, help="option for dropping last partly full batch")
     parser.add_argument("-ep", "--num-epochs", type=int, default=5,
                         help="number of epochs")
     parser.add_argument("--log-interval", type=int, default=500,
@@ -432,5 +451,3 @@ if __name__ == "__main__":
                         help="path and name of resource monitor log file, default is `./resource_usage.csv`")
 
     main(parser.parse_args())
-
-    cleanup_calls()
