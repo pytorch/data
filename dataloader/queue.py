@@ -1,4 +1,5 @@
-
+import threading
+import time
 
 class LocalQueue():
     ops = 0
@@ -33,3 +34,25 @@ class LocalQueue():
             raise Exception('LocalQueue is empty')
         LocalQueue.stored -= 1
         return self.items.pop()
+
+
+class ThreadingQueue():
+    def __init__(self, name='unnamed'):
+        self.lock = threading.Lock()
+        self.items = []
+        self.name = name
+
+    def put(self, item, block=True):
+        with self.lock:            
+            self.items.append(item)
+
+    def get(self, block=True, timeout=0):
+        # TODO(VitalyFedyunin): Add support of block and timeout arguments
+        while True:
+            with self.lock:
+                if len(self.items) > 0:
+                    return self.items.pop()
+            if not block:
+                raise Exception("Not available")
+            # TODO(VitalyFedyunin): Figure out what to do if nothing in the queue
+            time.sleep(0.000001)

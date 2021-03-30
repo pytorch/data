@@ -70,6 +70,15 @@ def mult_100(x):
 
 
 class TestClass(unittest.TestCase):
+
+    def setUp(self):
+        dataloader.eventloop.EventLoop.init()
+
+    def tearDown(self):
+        # TODO(VitalyFedyunin): Make sure we clean it internally if something fails,
+        # as currently it is broken after Exceptions between runs
+        dataloader.eventloop.EventLoop.init()
+
     def test_mapdataset(self):
         numbers_dp = MapNumbersDataset(size=10)
         numbers_dp = dataloader.eventloop.WrapDatasetToEventHandler(
@@ -170,22 +179,27 @@ class TestClass(unittest.TestCase):
         expected = [0, 1, 3, 5, 7, 9, 200, 400, 600, 800] * 2
         self.assertEqual(sorted(items), sorted(expected))
 
-    @timeout_decorator.timeout(60)
-    def test_multiple_multiprocessing_workers(self):
+    @timeout_decorator.timeout(10)
+    def test_fork(self):
+        self._test_parallelism_mode('fork')
 
-        def SpawnProcessForDataPipeGraph(ctx, dp):
-            req_queue = ctx.Queue()
-            res_queue = ctx.Queue()
-            process = ctx.Process(target=dataloader.eventloop.DataPipeToQueuesLoop, args=(
-                dp, req_queue, res_queue))
-            return process, req_queue, res_queue
+    @timeout_decorator.timeout(10)
+    def test_spawn(self):
+        self._test_parallelism_mode('spawn')
 
+    @timeout_decorator.timeout(10)
+    def test_threading(self):
+        self._test_parallelism_mode('threading')
+
+    def _test_parallelism_mode(self, mode):
         num_workers = 6
         all_pipes = []
         cleanup_fn_args = []
-        ctx = multiprocessing.get_context('fork')
 
-        def clean_me(req_queue, res_queue, process, pid):
+        if mode in ('fork', 'spawn'):
+            ctx = multiprocessing.get_context(mode)
+
+        def clean_me(req_queue, res_queue, process):
             req_queue.put(datapipes.nonblocking.TerminateRequest())
             _ = res_queue.get()
             process.join()
@@ -194,13 +208,19 @@ class TestClass(unittest.TestCase):
             numbers_dp = NumbersDataset(size=50)
             shard_dp = datapipes.iter.SimpleSharding(numbers_dp)
             shard_dp.sharding_settings(num_workers, i)
-            (process, req_queue, res_queue) = SpawnProcessForDataPipeGraph(ctx, shard_dp)
+            if mode == 'threading':
+                (process, req_queue, res_queue) = dataloader.eventloop.SpawnThreadForDataPipeline(
+                    shard_dp)
+            else:
+                (process, req_queue, res_queue) = dataloader.eventloop.SpawnProcessForDataPipeline(
+                    ctx, shard_dp)
+
             process.start()
             local_datapipe = datapipes.iter.QueueWrapper(
                 datapipes.protocol.IterDataPipeQueueProtocolClient(req_queue, res_queue))
             all_pipes.append(local_datapipe)
 
-            cleanup_fn_args.append((req_queue, res_queue, process, i))
+            cleanup_fn_args.append((req_queue, res_queue, process))
 
         joined_dp = datapipes.iter.GreedyJoin(*all_pipes)
 

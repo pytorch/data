@@ -1,4 +1,5 @@
 import copy
+import threading
 
 import torch
 
@@ -14,16 +15,34 @@ class EventLoop:
     Threading and multi-processing will require own versions of EventLoop,
     this POC version doesn't support it.
     '''
-    enabled = True
     handlers = []
     loop_generators = None
     uid = 0
     stack = []
     depth = 0
-
+    thread_local = None
+    
+    @classmethod
+    def init(cls):
+        cls.thread_local = threading.local()
+        cls.thread_local.enabled = True
+        cls.handlers = []
+        cls.loop_generators = None
+        cls.uid = 0
+        cls.stack = []
+        cls.depth = 0
+            
+    @classmethod 
+    def is_enabled(cls):
+        return cls.thread_local.enabled
+    
+    @classmethod
+    def disable(cls):
+        cls.thread_local.enabled = False
+        
     @classmethod
     def iteration(cls):
-        if not cls.enabled or not len(cls.handlers):
+        if not cls.is_enabled() or not len(cls.handlers):
             return
         if cls.loop_generators is None:
             cls.loop_generators = [iter(cls._loop_iterator())]
@@ -92,7 +111,7 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue):
 
     torch.set_num_threads(1)
     # Stop EventLoop for MultiProcessing case
-    EventLoop.enabled = False
+    EventLoop.disable()
     for _ in pipe_type.DataPipeBehindQueues(source_datapipe, protocol_type(req_queue, res_queue), blocking_request_get=True):
         pass
 
@@ -140,6 +159,15 @@ def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe):
     return process, req_queue, res_queue
 
 
+def SpawnThreadForDataPipeline(datapipe):
+    req_queue = dataloader.queue.ThreadingQueue()
+    res_queue = dataloader.queue.ThreadingQueue()
+    
+    process = threading.Thread(target=DataPipeToQueuesLoop, args=(
+        datapipe, req_queue, res_queue))
+    return process, req_queue, res_queue
+
+EventLoop.init()
 datapipes.iter.NonBlocking.register_not_available_hook(
     lambda: EventLoop.iteration())
 datapipes.map.NonBlocking.register_not_available_hook(
