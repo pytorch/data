@@ -1,0 +1,176 @@
+import datapipes
+
+
+class Protocol(object):
+    
+    all_instances = []
+    
+    def __init__(self, request_queue, response_queue):
+        self.request_queue = request_queue
+        self.response_queue = response_queue
+        Protocol.all_instances.append(self)
+        
+    @classmethod
+    def report(cls):
+        print('- protocols report -')
+        for q in cls.all_instances:
+            q.report()
+
+
+class ProtocolClient(Protocol):
+    _req_sent = None
+
+    def __init__(self, request_queue, response_queue):
+        self.request_queue = request_queue
+        self.response_queue = response_queue
+        self._req_sent = None
+        Protocol.all_instances.append(self)
+
+    def can_take_request(self):
+        return self._req_sent is None
+
+    def waiting_for_response(self):
+        return self._req_sent is not None
+
+    def request_sent(self, request=True):
+        if not self.can_take_request():
+            raise Exception('Protocol only supports one request in the Queue')
+        self._req_sent = request
+
+    def request_served(self, result=None):
+        if not self.waiting_for_response():
+            raise Exception(
+                'Expected no peding requests, but something got served', result)
+        self._req_sent = None
+        
+    def report(self):
+        print(id(self),"client protocol of", self.request_queue.name,'and', self.response_queue.name,'request',self._req_sent )
+
+
+class ProtocolServer(Protocol):
+    _req_received = None
+
+    def __init__(self, request_queue, response_queue):
+        self.request_queue = request_queue
+        self.response_queue = response_queue
+        self._req_received = None
+        Protocol.all_instances.append(self)
+        
+    def report(self):
+        print(id(self),"server protocol of", self.request_queue.name,'and', self.response_queue.name,'request',self._req_received)
+
+    def have_pending_request(self):
+        return self._req_received is not None
+
+    def get_new_request(self, block=False):
+        if self.have_pending_request():
+            raise Exception('Trying to get next request, while having one unserved')
+        try:
+            response = self.request_queue.get(block=block)
+        except Exception as e:  # TODO: Catch only timeout exceptions
+            # print(type(e), e)
+            raise EmptyQueue('queue is empty')
+        self._req_received = response
+        return response
+
+        # TODO: Validate supported requests
+
+    def response_reset(self):
+        if not self.have_pending_request():
+            raise Exception("Attempting to reply with pending request")
+        if not isinstance(self._req_received, datapipes.nonblocking.ResetIteratorRequest):
+            raise Exception("Replaying with reset status to other type of message")
+        self.response_queue.put(datapipes.nonblocking.ResetIteratorResponse())
+        self._req_received = None
+
+    def response_next(self, value):
+        if not self.have_pending_request():
+            raise Exception("Attempting to reply with pending request")
+        self.response_queue.put(datapipes.nonblocking.GetNextResponse(value))
+        self._req_received = None
+
+    def response_stop(self):
+        if not self.have_pending_request():
+            raise Exception("Attempting to reply with pending request")
+        self.response_queue.put(datapipes.nonblocking.StopIterationResponse())
+        self._req_received = None
+    
+    def response_invalid(self):
+        if not self.have_pending_request():
+            raise Exception("Attempting to reply with pending request")
+        self.response_queue.put(datapipes.nonblocking.InvalidStateResponse())
+        self._req_received = None
+        print("response_invalid completed")
+
+    def response_terminate(self):
+        if not self.have_pending_request():
+            raise Exception("Attempting to reply with pending request")
+        if not isinstance(self._req_received, datapipes.nonblocking.TerminateRequest):
+            raise Exception("Replaying with terminate status to other type of message")
+        self.response_queue.put(datapipes.nonblocking.TerminateResponse())
+        self._req_received = None
+
+
+class MapDataPipeQueueProtocolClient(ProtocolClient):
+    pass
+
+class MapDataPipeQueueProtocolServer(ProtocolServer):
+    pass
+
+class EmptyQueue(Exception):
+    pass
+
+
+class IterDataPipeQueueProtocolServer(ProtocolServer):
+    pass
+
+
+class IterDataPipeQueueProtocolClient(ProtocolClient):
+    def request_reset(self):
+        if not self.can_take_request():
+            raise Exception(
+                'Can not reset while we are still waiting response for previous request')
+        request = datapipes.nonblocking.ResetIteratorRequest()
+        self.request_queue.put(request)
+        self.request_sent(request)
+
+    def request_next(self):
+        if not self.can_take_request():
+            raise Exception(
+                'Can not request next item while we are still waiting response for previous request')
+        request = datapipes.nonblocking.GetNextRequest()
+        self.request_queue.put(request)
+        self.request_sent(request)
+
+    def get_response_reset(self, block=False):
+        try:
+            response = self.response_queue.get(block=block)
+        except Exception as e:  # TODO: Catch only timeout exceptions
+            raise EmptyQueue('queue is empty')
+        self.request_served(response)
+
+        if not isinstance(response, datapipes.nonblocking.ResetIteratorResponse):
+            raise Exception('Invalid response received')
+
+    def get_response_next(self, block=False, timeout=None):
+        if not self.waiting_for_response():
+            raise Exception(
+                'Can not expect any response without submitted request')
+        try:
+            response = self.response_queue.get(block=block, timeout=timeout)
+        except Exception as e:  # TODO: Catch only timeout exceptions
+            raise EmptyQueue('queue is empty')
+        self.request_served(response)
+
+        # TODO(VitalyFedyunin): Add possible response types validation here
+        return response
+
+        # if not isinstance(response, datapipes.nonblocking.ResetIteratorResponse):
+        #     raise Exception('Invalid response received')
+
+    # def get_reset(self):
+    #     try:
+    #         response = self._res_q.get(block=False)
+    #     except:
+    #         raise Exception('Response not available')
+    #     self.request_served()

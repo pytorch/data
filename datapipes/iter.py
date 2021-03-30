@@ -6,6 +6,7 @@ from torch.utils.data import IterDataPipe, IterableDataset, functional_datapipe,
 import datapipes
 import datapipes.nonblocking as nonblocking
 
+
 DEFAULT_NON_BLOCKING_SLEEP = 0.001
 
 
@@ -233,7 +234,10 @@ class _Router():
     def nonblocking_next_mult(self, pipe_id):
         # If ANY of my pipes requested reset that means all pipes should request reset
         if len(self._reset_calls.keys()) > 0:
-            raise nonblocking.NotAvailable
+            print("Invalid state observed")
+            raise StopIteration
+            # raise nonblocking.NotAvailable
+            # raise nonblocking.InvalidStateResetRequired
 
         if self._next_item is None:
             # if one of the pipes got StopIteration other pipes should get it too
@@ -268,6 +272,7 @@ class _Router():
             self._stop_iteration = False
             self._next_item = None
             self._get_guards = {}
+            print('Completed reset of ROUTER!!!!!!!!!!!!!')
 
 
 class Router():
@@ -283,167 +288,188 @@ class Router():
 # Creates iter.DataPipe which reads data from the DataLoader.Queue
 class QueueWrapper(NonBlocking):
     def __init__(self, protocol, response_wait_time=0.00001):
-        self._req_q = protocol.request_queue
-        self._res_q = protocol.response_queue
-        self._req_sent = False
+        if not isinstance(protocol, datapipes.protocol.IterDataPipeQueueProtocolClient):
+            raise Exception('Got', protocol)
+
+        self.protocol = protocol
         self.counter = 0
         self._stop_iteration = False
         self._response_wait_time = response_wait_time
 
     def reset_iterator(self):
-        if self._req_sent:
-            raise Exception(
-                'Can not reset QueueWrapper while it is still waiting for response for', self._req_q.name)
         self._stop_iteration = False
         self.counter = 0
-        self._req_q.put(datapipes.nonblocking.ResetIteratorRequest())
+        self.protocol.request_reset()
         while True:
             try:
-                value = self._res_q.get(block=False)
+                self.protocol.get_response_reset()
                 break
-            except:
+            except datapipes.protocol.EmptyQueue:
                 if NonBlocking.not_available_hook is not None:
                     NonBlocking.not_available_hook()
-
-        if not isinstance(value, datapipes.nonblocking.ResetIteratorResponse):
-            raise Exception('Invalid response received')
 
     def nonblocking_next(self):
         if self._stop_iteration:
             raise Exception(
                 '`next` or `nonblocking_next` called after receiving StopIteration')
-        if not self._req_sent:
-            self._req_q.put(self.counter)
-            self.counter += 1
-            self._req_sent = True
-
-            # return control to eventloop to fill results if possible
-            # eventloop.EventLoop.iteration()
-            # return control as previous solution ends with infinite loop
-            # can be only used in case of event loop
-            # raise datapipes.nonblocking.NotAvailable
-
+        if self.protocol.can_take_request():
+            self.protocol.request_next()
         try:
-            value = self._res_q.get(
-                block=True, timeout=self._response_wait_time)
-        except:  # TODO: Catch only timeout exceptions
+            response = self.protocol.get_response_next(block=True, timeout=self._response_wait_time)
+        except datapipes.protocol.EmptyQueue:
             raise nonblocking.NotAvailable
-        self._req_sent = False
-        if isinstance(value, StopIteration):
+        if isinstance(response, datapipes.nonblocking.StopIterationResponse):
             self._stop_iteration = True
             raise StopIteration
-        return value
+        if isinstance(response, datapipes.nonblocking.InvalidStateResponse):
+            raise nonblocking.NotAvailable
+        return response.value
 
 # Indefinitely iterates over req_queue and passing values from source_datapipe to res_queue
 # If raise_stop is true, raises exception when StopIteration received from the source_datapipe
-def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, nonblocking_next_function_name='nonblocking_next', blocking_request_get=False):
-    req_queue = protocol.request_queue
-    res_queue = protocol.response_queue
+
+
+def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_request_get=False):
+    if not isinstance(protocol, datapipes.protocol.IterDataPipeQueueProtocolServer):
+        raise Exception('Got', protocol)
     source_datapipe = datapipes.iter.EnsureNonBlockingDataPipe(
         source_datapipe)
     forever = True
     while forever:
+
         try:
             # Non-blocking call is Extremely slow here for python.mp, need to figureout good workaround
-            request = req_queue.get(block=blocking_request_get)
-        except:
+            request = protocol.get_new_request(block=blocking_request_get)
+        except datapipes.protocol.EmptyQueue:
             yield True
             continue
 
         if isinstance(request, datapipes.nonblocking.ResetIteratorRequest):
             source_datapipe.reset_iterator()
-            res_queue.put(datapipes.nonblocking.ResetIteratorResponse())
-            continue
+            protocol.response_reset()
 
-        if isinstance(request, datapipes.nonblocking.StopIteratorRequest):
+        elif isinstance(request, datapipes.nonblocking.TerminateRequest):
             forever = False
-            res_queue.put(datapipes.nonblocking.StopIteratorResponse())
+            protocol.response_terminate()
             continue
 
-        while forever:
-            try:
-                function = getattr(
-                    source_datapipe, nonblocking_next_function_name)
-                value = function()
-            except datapipes.nonblocking.NotAvailable:
-                yield True
-                continue
-            except StopIteration:
-                res_queue.put(StopIteration())
-                if full_stop:
-                    forever = False
-                else:
+        elif isinstance(request, datapipes.nonblocking.GetNextRequest):
+            while forever:
+                try:
+                    value = source_datapipe.nonblocking_next()
+                except datapipes.nonblocking.NotAvailable:
                     yield True
+                    continue
+                except StopIteration:
+                    protocol.response_stop()
+                    if full_stop:
+                        forever = False
+                    else:
+                        yield True
+                    break
+                except datapipes.nonblocking.InvalidStateResetRequired:
+                    print('Invalid state forwarded')
+                    protocol.response_invalid()
+                    if full_stop:
+                        forever = False
+                    else:
+                        yield True
+                    break
+                protocol.response_next(value)
+                yield True  # Returns control
                 break
-            res_queue.put(value, block=True)
-            yield True  # Returns control
-            break
+        else:
+            raise Exception('Unrecognized type of request received', request)
 
-def PrefetcherDataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_request_get=False, prefetch_items = 100):
-    req_queue = protocol.request_queue
-    res_queue = protocol.response_queue
-    source_datapipe = datapipes.iter.EnsureNonBlockingDataPipe(
-        source_datapipe)
+
+def PrefetcherDataPipeBehindQueues(source_datapipe, server_protocol, full_stop=False, blocking_request_get=False, prefetch_items=100):
+    if not isinstance(source_datapipe, datapipes.iter.QueueWrapper):
+        raise Exception('Only works with QueueWrapper, but got', source_datapipe)
+    client_protocol = source_datapipe.protocol
+
     forever = True
     prefetched = []
     source_depleted = False
-    prefetch_unlocked = False
-    request = None
     print('init pipe with source', source_datapipe)
     while forever:
 
-        if request is None:
+        if not server_protocol.have_pending_request():
             try:
-                print('getting request for ', source_datapipe, req_queue.name)
-                # Non-blocking call is Extremely slow here for python.mp, need to figureout good workaround
-                request = req_queue.get(block=blocking_request_get)
-                prefetch_unlocked = True
-                print('got request for ', source_datapipe, request)
-            except:
-                print('no request for ', source_datapipe, 'returning control')
+                request = server_protocol.get_new_request(block=blocking_request_get)
+            except datapipes.protocol.EmptyQueue:
                 yield True
 
-        if request is not None and isinstance(request, datapipes.nonblocking.ResetIteratorRequest):
-            source_datapipe.reset_iterator()
-            prefetched = []
-            source_depleted = False
-            res_queue.put(datapipes.nonblocking.ResetIteratorResponse())
-            request = None
-            prefetch_unlocked = False
-            continue
+        # if request is None:
+        #     try:
+        #         print('getting request for ', source_datapipe, req_queue.name)
+        #         # Non-blocking call is Extremely slow here for python.mp, need to figureout good workaround
+        #         request = req_queue.get(block=blocking_request_get)
+        #         prefetch_unlocked = True
+        #         print('got request for ', source_datapipe, request)
+        #     except:
+        #         print('no request for ', source_datapipe, 'returning control')
+        #         yield True
 
-        if request is not None and isinstance(request, datapipes.nonblocking.StopIteratorRequest):
-            forever = False
-            res_queue.put(datapipes.nonblocking.StopIteratorResponse())
-            continue
+        if server_protocol.have_pending_request():
+            request = server_protocol._req_received
 
-        # Prefetch up to `prefetch_items` items, one at a time
-        if (True or prefetch_unlocked) and not source_depleted and len(prefetched) < prefetch_items:
-            print('prefetching from ', source_datapipe, len(prefetched))
-            try:
-                item = source_datapipe.nonblocking_next()
-                prefetched.append(item)
-            except StopIteration:
-                source_depleted = True
-            except datapipes.nonblocking.NotAvailable:
-                pass
-            print('prefetching for  ', source_datapipe, ' completed with ', len(prefetched))
-            yield True
+            if isinstance(request, datapipes.nonblocking.ResetIteratorRequest):
+                if client_protocol.can_take_request():
+                    client_protocol.request_reset()
+                    while True:
+                        try:
+                            client_protocol.get_response_reset()
+                            break
+                        except datapipes.protocol.EmptyQueue:
+                            yield True
+                    prefetched = []
+                    source_depleted = False
+                    request = None
+                    prefetch_unlocked = False
+                    server_protocol.response_reset()
 
-        if request is not None:
-            if len(prefetched) > 0:
-                request = None
-                value = prefetched.pop()
-                res_queue.put(value, block=True)
-            elif source_depleted:
-                request = None
-                res_queue.put(StopIteration())
+            elif isinstance(request, datapipes.nonblocking.TerminateRequest):
+                forever = False
+                protocol.response_terminate()
+                continue
+
+            elif isinstance(request, datapipes.nonblocking.GetNextRequest):
+                # Return something here
+                if len(prefetched) > 0:
+                    value = prefetched.pop()
+                    server_protocol.response_next(value)
+                    # res_queue.put(value, block=True)
+                elif source_depleted:
+                    # request = None
+                    server_protocol.response_stop()
+                    # res_queue.put(StopIteration())
+                else:
+                    # Need prefetch more items meanwhile do nothing
+                    pass
+                yield True
             else:
-                # Need prefetch more items meanwhile do nothing
+                raise Exception('Unrecognized type of request received', request)
+
+        if client_protocol.waiting_for_response():
+            try:
+                response = client_protocol.get_response_next()
+            except datapipes.protocol.EmptyQueue:
+                response = None
+            if isinstance(response, datapipes.nonblocking.StopIterationResponse):
+                source_depleted = True
+            if isinstance(response, datapipes.nonblocking.InvalidStateResponse):
                 pass
-            yield True
+            elif isinstance(response, datapipes.nonblocking.GetNextResponse):
+                prefetched.append(response.value)
+        else:
+            if not source_depleted and len(prefetched) < prefetch_items:
+                client_protocol.request_next()
+                
+        yield True
 
 # Must sit on top of non-shardable deterministic datapipe to skip some items
+
+
 class SimpleSharding(IterDataPipe):
     def __init__(self, source_datapipe):
         self.source_datapipe = source_datapipe

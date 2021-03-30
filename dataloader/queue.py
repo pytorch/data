@@ -1,25 +1,24 @@
-class Protocol(object):
-    def __init__(self, request_queue, response_queue):
-        self.request_queue = request_queue
-        self.response_queue = response_queue
 
-class MapDataPipeQueueProtocol(Protocol):
-    pass
-
-class IterDataPipeQueueProtocol(Protocol):
-    pass
 
 class LocalQueue():
     ops = 0
     stored = 0
     uid = 0
     empty = 0
+    allq = []
+
+    @classmethod
+    def report(cls):
+        print('-')
+        for q in cls.allq:
+            print('queue', q.name, q.items)
 
     def __init__(self, name='unnamed'):
         self.items = []
         self.name = name
         self.uid = LocalQueue.uid
         LocalQueue.uid += 1
+        LocalQueue.allq.append(self)
 
     def put(self, item, block=True):
         LocalQueue.ops += 1
@@ -31,6 +30,6 @@ class LocalQueue():
         LocalQueue.ops += 1
         if not len(self.items):
             LocalQueue.empty += 1
-            raise Exception('not available')
+            raise Exception('LocalQueue is empty')
         LocalQueue.stored -= 1
         return self.items.pop()
