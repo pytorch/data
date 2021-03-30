@@ -120,7 +120,7 @@ class QueueWrapper(NonBlocking):
     def nonblocking_get(self, key):
         if self._stop_iteration:
             raise Exception(
-                '`__hetitem__` or `nonblocking_get` called after receiving StopIteration')
+                '`__getitem__` or `nonblocking_get` called after receiving StopIteration')
         if not self._req_sent:
             self._req_q.put(datapipes.nonblocking.GetItemRequest(key))
             self._req_sent = True
