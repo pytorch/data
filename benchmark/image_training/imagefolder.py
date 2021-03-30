@@ -28,27 +28,28 @@ class ImageFolder:
     def __init__(self, root: Union[str, List[str]] = '.', recursive: bool = False):
         from os.path import abspath as absp
         from os.path import normpath as normp
-        self.root_list : List[str] = [absp(normp(root))] if isinstance (root, str) else [absp(normp(x)) for x in root]
+        self.root_list: List[str] = [absp(normp(root))] if isinstance(root, str) else [absp(normp(x)) for x in root]
 
+        self.classes = set()
         if recursive:
             n = len(self.root_list)
             for i in range(0, n):
                 for rt, dirs, _ in os.walk(self.root_list[i]):
                     if len(dirs) > 0:
                         for subdir in dirs:
+                            self.classes.add(subdir)
                             self.root_list.append(os.path.join(rt, subdir))
         # This is slow, but simple, ok for preprocessing
         self.root_list = list(set(self.root_list))
+        self.class_to_idx = {c: i for i, c in enumerate(sorted(self.classes))}
 
 
-
-    def to_tar(
-        self,
-        tar_pathname: Union[str, List[str]],
-        *,
-        create_label: bool = True,
-        num_of_tar : int = 0,
-        with_log : bool = True):
+    def to_tar(self,
+               tar_pathname: Union[str, List[str]],
+               *,
+               create_label: bool = True,
+               num_of_tar : int = 0,
+               with_log : bool = True):
 
         assert tar_pathname
 
@@ -126,9 +127,11 @@ class ImageFolder:
 
                     if create_label:
                         root_path = src_files_pathnames[source_file_count][1]
-                        category_id = os.path.basename(os.path.normpath(root_path))
+                        category = os.path.basename(os.path.normpath(root_path))
+                        category_id = self.class_to_idx[category]
                         bio = io.BytesIO()
-                        bio.write(str.encode('{{"category_id": "{}"}}'.format(category_id)))
+                        bio.write(str.encode('{{"category": "{c}", "category_id": {id}}}'
+                                             .format(c=category, id=category_id)))
                         path_info = Path(pathname)
                         tinfo = tarfile.TarInfo(basename + ".json")
                         tinfo.size = bio.tell()
@@ -149,5 +152,3 @@ class ImageFolder:
 
         if with_log:
             print("Created a total of {} tar file(s) with a total of {} images".format(num_target_files, source_file_count))
-
-

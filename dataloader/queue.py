@@ -1,6 +1,16 @@
 import threading
 import time
 
+class Protocol(object):
+    def __init__(self, request_queue, response_queue):
+        self.request_queue = request_queue
+        self.response_queue = response_queue
+
+class MapDataPipeQueueProtocol(Protocol):
+    pass
+
+class IterDataPipeQueueProtocol(Protocol):
+    pass
 
 class LocalQueue():
     ops = 0

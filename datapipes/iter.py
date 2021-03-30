@@ -1,7 +1,7 @@
 import time
 import types
 
-from torch.utils.data import IterDataPipe, IterableDataset
+from torch.utils.data import IterDataPipe, IterableDataset, functional_datapipe, non_deterministic
 
 import datapipes
 import datapipes.nonblocking as nonblocking
@@ -54,7 +54,7 @@ class IterDatasetWrapper(IterDataPipe):
             yield i
 
 
-def EnsureNonBlockingNextDataPipe(validated_datapipe):
+def EnsureNonBlockingDataPipe(validated_datapipe):
     if not isinstance(validated_datapipe, IterDataPipe):
         raise Exception('Not Iterable DataPipe ' +
                         str(validated_datapipe.__class__))
@@ -79,10 +79,12 @@ def EnsureNonBlockingNextDataPipe(validated_datapipe):
     return validated_datapipe
 
 
+@functional_datapipe('join')
+@non_deterministic(lambda *args: len(args) > 1)
 class GreedyJoin(NonBlocking):
     def __init__(self, *datapipes):
         self.datapipes = [
-            EnsureNonBlockingNextDataPipe(dp) for dp in datapipes]
+            EnsureNonBlockingDataPipe(dp) for dp in datapipes]
         self.exclude_datapipes = []
 
     def reset_iterator(self):
@@ -111,7 +113,7 @@ class GreedyJoin(NonBlocking):
 # Not real prefetcher, used only as reference, need to be replaced with the queues implementation
 class Prefetcher(NonBlocking):
     def __init__(self, source_dp, buffer_size=10):
-        self._source_dp = EnsureNonBlockingNextDataPipe(source_dp)
+        self._source_dp = EnsureNonBlockingDataPipe(source_dp)
         self._buffer_size = buffer_size
         self._buffer = []
         self._source_depleted = False
@@ -196,7 +198,7 @@ class _Multiply():
 
 class Multiply():
     def __new__(cls, source_dp, instances):
-        source_dp = EnsureNonBlockingNextDataPipe(source_dp)
+        source_dp = EnsureNonBlockingDataPipe(source_dp)
         connector = _Multiply(source_dp, instances)
         return [MultipliedIterDataPipe(connector, i) for i in range(instances)]
 
@@ -216,6 +218,8 @@ class RoutedIterDataPipe(NonBlocking):
         self._router.reset_iterator(self._id)
 
 # Implementation with one element buffer
+
+
 class _Router():
     def __init__(self, source_dp, priority_fns):
         self._source_dp = source_dp
@@ -245,7 +249,7 @@ class _Router():
             self._next_item = value
             self._get_guards = {}
         value = self._next_item
-        
+
         if self._priority_fns[pipe_id](value):
             self._next_item = None
             return value
@@ -268,7 +272,7 @@ class _Router():
 
 class Router():
     def __new__(cls, source_dp, priority_fns):
-        source_dp = EnsureNonBlockingNextDataPipe(source_dp)
+        source_dp = EnsureNonBlockingDataPipe(source_dp)
         connector = _Router(source_dp, priority_fns)
         return [RoutedIterDataPipe(connector, i) for i in range(len(priority_fns))]
 
@@ -278,9 +282,9 @@ class Router():
 
 # Creates iter.DataPipe which reads data from the DataLoader.Queue
 class QueueWrapper(NonBlocking):
-    def __init__(self, request_queue, response_queue, response_wait_time=0.00001):
-        self._req_q = request_queue
-        self._res_q = response_queue
+    def __init__(self, protocol, response_wait_time=0.00001):
+        self._req_q = protocol.request_queue
+        self._res_q = protocol.response_queue
         self._req_sent = False
         self.counter = 0
         self._stop_iteration = False
@@ -329,6 +333,52 @@ class QueueWrapper(NonBlocking):
             self._stop_iteration = True
             raise StopIteration
         return value
+
+# Indefinitely iterates over req_queue and passing values from source_datapipe to res_queue
+# If raise_stop is true, raises exception when StopIteration received from the source_datapipe
+def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, nonblocking_next_function_name='nonblocking_next', blocking_request_get=False):
+    req_queue = protocol.request_queue
+    res_queue = protocol.response_queue
+    source_datapipe = datapipes.iter.EnsureNonBlockingDataPipe(
+        source_datapipe)
+    forever = True
+    while forever:
+        try:
+            # Non-blocking call is Extremely slow here for python.mp, need to figureout good workaround
+            request = req_queue.get(block=blocking_request_get)
+        except:
+            yield True
+            continue
+
+        if isinstance(request, datapipes.nonblocking.ResetIteratorRequest):
+            source_datapipe.reset_iterator()
+            res_queue.put(datapipes.nonblocking.ResetIteratorResponse())
+            continue
+
+        if isinstance(request, datapipes.nonblocking.StopIteratorRequest):
+            forever = False
+            res_queue.put(datapipes.nonblocking.StopIteratorResponse())
+            continue
+
+        while forever:
+            try:
+                function = getattr(
+                    source_datapipe, nonblocking_next_function_name)
+                value = function()
+            except datapipes.nonblocking.NotAvailable:
+                yield True
+                continue
+            except StopIteration:
+                res_queue.put(StopIteration())
+                if full_stop:
+                    forever = False
+                else:
+                    yield True
+                break
+            res_queue.put(value, block=True)
+            yield True  # Returns control
+            break
+
 
 
 # Must sit on top of non-shardable deterministic datapipe to skip some items

@@ -1,0 +1,3 @@
+[submodule "deps/f4d"]
+	path = deps/f4d
+	url = https://github.com/sadboy/f4d.git
