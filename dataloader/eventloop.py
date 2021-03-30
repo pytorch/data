@@ -133,7 +133,7 @@ def SpawnThreadForDataPipeline(datapipe):
     req_queue = dataloader.queue.ThreadingQueue()
     res_queue = dataloader.queue.ThreadingQueue()
     
-    process = threading.Thread(target=IterDataPipeToQueuesLoop, args=(
+    process = threading.Thread(target=DataPipeToQueuesLoop, args=(
         datapipe, req_queue, res_queue))
     return process, req_queue, res_queue
 
