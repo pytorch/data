@@ -16,3 +16,8 @@ benchmark/image_training/images_dataset_tar
 # Compiled python
 *.pyc
 *.pyd
+
+images_dataset_ds
+images_dataset_tar
+benchmark/image_training/images_dataset_ds
+benchmark/image_training/images_dataset_tar
