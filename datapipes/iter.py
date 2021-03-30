@@ -219,8 +219,6 @@ class RoutedIterDataPipe(NonBlocking):
         self._router.reset_iterator(self._id)
 
 # Implementation with one element buffer
-
-
 class _Router():
     def __init__(self, source_dp, priority_fns):
         self._source_dp = source_dp
@@ -234,10 +232,8 @@ class _Router():
     def nonblocking_next_mult(self, pipe_id):
         # If ANY of my pipes requested reset that means all pipes should request reset
         if len(self._reset_calls.keys()) > 0:
-            print("Invalid state observed")
-            raise StopIteration
-            # raise nonblocking.NotAvailable
-            # raise nonblocking.InvalidStateResetRequired
+            raise nonblocking.NotAvailable
+
 
         if self._next_item is None:
             # if one of the pipes got StopIteration other pipes should get it too
@@ -272,7 +268,6 @@ class _Router():
             self._stop_iteration = False
             self._next_item = None
             self._get_guards = {}
-            print('Completed reset of ROUTER!!!!!!!!!!!!!')
 
 
 class Router():
@@ -368,7 +363,6 @@ def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_re
                         yield True
                     break
                 except datapipes.nonblocking.InvalidStateResetRequired:
-                    print('Invalid state forwarded')
                     protocol.response_invalid()
                     if full_stop:
                         forever = False
@@ -382,94 +376,7 @@ def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_re
             raise Exception('Unrecognized type of request received', request)
 
 
-def PrefetcherDataPipeBehindQueues(source_datapipe, server_protocol, full_stop=False, blocking_request_get=False, prefetch_items=100):
-    if not isinstance(source_datapipe, datapipes.iter.QueueWrapper):
-        raise Exception('Only works with QueueWrapper, but got', source_datapipe)
-    client_protocol = source_datapipe.protocol
-
-    forever = True
-    prefetched = []
-    source_depleted = False
-    print('init pipe with source', source_datapipe)
-    while forever:
-
-        if not server_protocol.have_pending_request():
-            try:
-                request = server_protocol.get_new_request(block=blocking_request_get)
-            except datapipes.protocol.EmptyQueue:
-                yield True
-
-        # if request is None:
-        #     try:
-        #         print('getting request for ', source_datapipe, req_queue.name)
-        #         # Non-blocking call is Extremely slow here for python.mp, need to figureout good workaround
-        #         request = req_queue.get(block=blocking_request_get)
-        #         prefetch_unlocked = True
-        #         print('got request for ', source_datapipe, request)
-        #     except:
-        #         print('no request for ', source_datapipe, 'returning control')
-        #         yield True
-
-        if server_protocol.have_pending_request():
-            request = server_protocol._req_received
-
-            if isinstance(request, datapipes.nonblocking.ResetIteratorRequest):
-                if client_protocol.can_take_request():
-                    client_protocol.request_reset()
-                    while True:
-                        try:
-                            client_protocol.get_response_reset()
-                            break
-                        except datapipes.protocol.EmptyQueue:
-                            yield True
-                    prefetched = []
-                    source_depleted = False
-                    request = None
-                    prefetch_unlocked = False
-                    server_protocol.response_reset()
-
-            elif isinstance(request, datapipes.nonblocking.TerminateRequest):
-                forever = False
-                protocol.response_terminate()
-                continue
-
-            elif isinstance(request, datapipes.nonblocking.GetNextRequest):
-                # Return something here
-                if len(prefetched) > 0:
-                    value = prefetched.pop()
-                    server_protocol.response_next(value)
-                    # res_queue.put(value, block=True)
-                elif source_depleted:
-                    # request = None
-                    server_protocol.response_stop()
-                    # res_queue.put(StopIteration())
-                else:
-                    # Need prefetch more items meanwhile do nothing
-                    pass
-                yield True
-            else:
-                raise Exception('Unrecognized type of request received', request)
-
-        if client_protocol.waiting_for_response():
-            try:
-                response = client_protocol.get_response_next()
-            except datapipes.protocol.EmptyQueue:
-                response = None
-            if isinstance(response, datapipes.nonblocking.StopIterationResponse):
-                source_depleted = True
-            if isinstance(response, datapipes.nonblocking.InvalidStateResponse):
-                pass
-            elif isinstance(response, datapipes.nonblocking.GetNextResponse):
-                prefetched.append(response.value)
-        else:
-            if not source_depleted and len(prefetched) < prefetch_items:
-                client_protocol.request_next()
-                
-        yield True
-
 # Must sit on top of non-shardable deterministic datapipe to skip some items
-
-
 class SimpleSharding(IterDataPipe):
     def __init__(self, source_datapipe):
         self.source_datapipe = source_datapipe

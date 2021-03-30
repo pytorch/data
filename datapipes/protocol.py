@@ -2,19 +2,9 @@ import datapipes
 
 
 class Protocol(object):
-    
-    all_instances = []
-    
     def __init__(self, request_queue, response_queue):
         self.request_queue = request_queue
         self.response_queue = response_queue
-        Protocol.all_instances.append(self)
-        
-    @classmethod
-    def report(cls):
-        print('- protocols report -')
-        for q in cls.all_instances:
-            q.report()
 
 
 class ProtocolClient(Protocol):
@@ -24,7 +14,6 @@ class ProtocolClient(Protocol):
         self.request_queue = request_queue
         self.response_queue = response_queue
         self._req_sent = None
-        Protocol.all_instances.append(self)
 
     def can_take_request(self):
         return self._req_sent is None
@@ -42,9 +31,6 @@ class ProtocolClient(Protocol):
             raise Exception(
                 'Expected no peding requests, but something got served', result)
         self._req_sent = None
-        
-    def report(self):
-        print(id(self),"client protocol of", self.request_queue.name,'and', self.response_queue.name,'request',self._req_sent )
 
 
 class ProtocolServer(Protocol):
@@ -54,21 +40,17 @@ class ProtocolServer(Protocol):
         self.request_queue = request_queue
         self.response_queue = response_queue
         self._req_received = None
-        Protocol.all_instances.append(self)
-        
-    def report(self):
-        print(id(self),"server protocol of", self.request_queue.name,'and', self.response_queue.name,'request',self._req_received)
 
     def have_pending_request(self):
         return self._req_received is not None
 
     def get_new_request(self, block=False):
         if self.have_pending_request():
-            raise Exception('Trying to get next request, while having one unserved')
+            raise Exception(
+                'Trying to get next request, while having one unserved')
         try:
             response = self.request_queue.get(block=block)
         except Exception as e:  # TODO: Catch only timeout exceptions
-            # print(type(e), e)
             raise EmptyQueue('queue is empty')
         self._req_received = response
         return response
@@ -79,7 +61,8 @@ class ProtocolServer(Protocol):
         if not self.have_pending_request():
             raise Exception("Attempting to reply with pending request")
         if not isinstance(self._req_received, datapipes.nonblocking.ResetIteratorRequest):
-            raise Exception("Replaying with reset status to other type of message")
+            raise Exception(
+                "Replaying with reset status to other type of message")
         self.response_queue.put(datapipes.nonblocking.ResetIteratorResponse())
         self._req_received = None
 
@@ -94,19 +77,19 @@ class ProtocolServer(Protocol):
             raise Exception("Attempting to reply with pending request")
         self.response_queue.put(datapipes.nonblocking.StopIterationResponse())
         self._req_received = None
-    
+
     def response_invalid(self):
         if not self.have_pending_request():
             raise Exception("Attempting to reply with pending request")
         self.response_queue.put(datapipes.nonblocking.InvalidStateResponse())
         self._req_received = None
-        print("response_invalid completed")
 
     def response_terminate(self):
         if not self.have_pending_request():
             raise Exception("Attempting to reply with pending request")
         if not isinstance(self._req_received, datapipes.nonblocking.TerminateRequest):
-            raise Exception("Replaying with terminate status to other type of message")
+            raise Exception(
+                "Replaying with terminate status to other type of message")
         self.response_queue.put(datapipes.nonblocking.TerminateResponse())
         self._req_received = None
 
@@ -114,8 +97,10 @@ class ProtocolServer(Protocol):
 class MapDataPipeQueueProtocolClient(ProtocolClient):
     pass
 
+
 class MapDataPipeQueueProtocolServer(ProtocolServer):
     pass
+
 
 class EmptyQueue(Exception):
     pass
@@ -164,13 +149,3 @@ class IterDataPipeQueueProtocolClient(ProtocolClient):
 
         # TODO(VitalyFedyunin): Add possible response types validation here
         return response
-
-        # if not isinstance(response, datapipes.nonblocking.ResetIteratorResponse):
-        #     raise Exception('Invalid response received')
-
-    # def get_reset(self):
-    #     try:
-    #         response = self._res_q.get(block=False)
-    #     except:
-    #         raise Exception('Response not available')
-    #     self.request_served()

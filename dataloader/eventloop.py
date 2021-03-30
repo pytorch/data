@@ -21,7 +21,7 @@ class EventLoop:
     stack = []
     depth = 0
     thread_local = None
-    
+
     @classmethod
     def init(cls):
         cls.thread_local = threading.local()
@@ -31,15 +31,15 @@ class EventLoop:
         cls.uid = 0
         cls.stack = []
         cls.depth = 0
-            
-    @classmethod 
+
+    @classmethod
     def is_enabled(cls):
         return cls.thread_local.enabled
-    
+
     @classmethod
     def disable(cls):
         cls.thread_local.enabled = False
-        
+
     @classmethod
     def iteration(cls):
         if not cls.is_enabled() or not len(cls.handlers):
@@ -59,22 +59,12 @@ class EventLoop:
     @classmethod
     def _loop_iterator(cls):
         while True:
-            loop_name = ''
-            for handle, _handle_name, uid in cls.handlers:
-                loop_name += ' ' + _handle_name + '_' + str(uid)
-            print('running loop for', loop_name, cls.stack)
-            print('---- evenloop iteration started report ---')
-            dataloader.queue.LocalQueue.report()
-            datapipes.protocol.Protocol.report()
-            print('---- evenloop iteration started ---')
             for handle, _handle_name, uid in cls.handlers:
                 try:
                     if uid not in cls.stack:
                         stack_len = len(cls.stack)
                         cls.stack.append(uid)
-                        print('entering',_handle_name)
                         value = next(handle)
-                        print('leaving',_handle_name)
                         stack_copy = copy.deepcopy(cls.stack)
                         cls.stack.clear()
                         if stack_len:
@@ -86,12 +76,6 @@ class EventLoop:
                 except Exception as e:
                     print(e)
                     raise
-            print('---- evenloop iteration finished report ---')
-            dataloader.queue.LocalQueue.report()
-            datapipes.protocol.Protocol.report()            
-            print('---- evenloop iteration finished ---')
-            import time
-            time.sleep(1)
 
     @classmethod
     def add_handler(cls, handler, handle_name='unnamed'):
@@ -99,8 +83,6 @@ class EventLoop:
         cls.handlers.append((handler, handle_name, cls.uid))
 
 # Turns IterDataPipe into two mp.Queues, terminates when getting StopIteration
-
-
 def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue):
     if isinstance(source_datapipe, IterDataPipe):
         pipe_type = datapipes.iter
@@ -116,8 +98,6 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue):
         pass
 
 # Puts datapipe behind two (request, response) queues, adds Iterator to the EventLoop to process messages
-
-
 def WrapDatasetToEventHandler(source_datapipe, dp_name='unnamed dataset', prefetch=False):
     if isinstance(source_datapipe, IterDataPipe):
         pipe_type = datapipes.iter
@@ -136,9 +116,9 @@ def WrapDatasetToEventHandler(source_datapipe, dp_name='unnamed dataset', prefet
     request_queue = dataloader.queue.LocalQueue(name=dp_name + ' request')
     response_queue = dataloader.queue.LocalQueue(name=dp_name + ' response')
     server_protocol = protocol_type_server(request_queue,
-                             response_queue)
+                                           response_queue)
     client_protocol = protocol_type_client(request_queue,
-                             response_queue)    
+                                           response_queue)
     if prefetch and is_iter:
         loop_generator = pipe_type.PrefetcherDataPipeBehindQueues
     else:
@@ -162,10 +142,11 @@ def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe):
 def SpawnThreadForDataPipeline(datapipe):
     req_queue = dataloader.queue.ThreadingQueue()
     res_queue = dataloader.queue.ThreadingQueue()
-    
+
     process = threading.Thread(target=DataPipeToQueuesLoop, args=(
         datapipe, req_queue, res_queue))
     return process, req_queue, res_queue
+
 
 EventLoop.init()
 datapipes.iter.NonBlocking.register_not_available_hook(

@@ -6,20 +6,12 @@ class LocalQueue():
     stored = 0
     uid = 0
     empty = 0
-    allq = []
-
-    @classmethod
-    def report(cls):
-        print('-')
-        for q in cls.allq:
-            print('queue', q.name, q.items)
 
     def __init__(self, name='unnamed'):
         self.items = []
         self.name = name
         self.uid = LocalQueue.uid
         LocalQueue.uid += 1
-        LocalQueue.allq.append(self)
 
     def put(self, item, block=True):
         LocalQueue.ops += 1
