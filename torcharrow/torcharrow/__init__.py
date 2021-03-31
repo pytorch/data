@@ -1,12 +1,14 @@
 # For relative imports to work in Python 3.6
 from .dtypes import *
+from .expression import *
+from .trace import *
 from .column import *
 from .numerical_column import *
 from .string_column import *
 from .map_column import *
 from .list_column import *
 from .dataframe import *
-from .expression import *
+
 from .interop import *
 
 

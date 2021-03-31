@@ -43,10 +43,15 @@ from .dtypes import (
     string,
 )
 
+from .expression import expression
+from .trace import trace, traceproperty
+
 # ------------------------------------------------------------------------------
 # Column - the factory method for specialized columns.
 
 
+@trace
+@expression
 def Column(
     data: Union[Iterable, DType, Literal[None]] = None, dtype: Optional[DType] = None
 ):
@@ -147,21 +152,33 @@ def _column_constructor(dtype, kwargs=None):
 class AbstractColumn(ABC, Sized, Iterable):
     """AbstractColumn are one dimenensionalcolumns or two dimensional dataframes"""
 
+    _ct = 0  # global counter for all columns/dataframes ever created...
+
     def __init__(self, dtype: Optional[DType]):
+        # id handling, used for tracing...
+        self.id = f"c{AbstractColumn._ct}"
+        AbstractColumn._ct += 1
+        # normal constructor code
         self._dtype = dtype
         self._offset = 0
         self._length = 0
         self._null_count = 0
         self._validity = ar.array("b")
 
+    @classmethod
+    def reset(cls):
+        cls._ct = 0
+
     # simple meta data getters -----------------------------------------------
 
     @property
+    @traceproperty
     def dtype(self):
         """dtype of the colum/frame"""
         return self._dtype
 
     @property
+    @traceproperty
     def isnullable(self):
         """A boolean indicating whether column/frame can have nulls"""
         return self.dtype.nullable
@@ -171,24 +188,32 @@ class AbstractColumn(ABC, Sized, Iterable):
         """Can this column/frame be extended without side effecting """
         pass
 
+    @trace
+    @expression
     def count(self):
         """Return number of non-NA/null observations pgf the column/frame"""
         return self._length - self._null_count
 
+    @trace
+    @expression
     def null_count(self):
         """Number of null values"""
         return self._null_count
 
+    @trace
+    @expression
     def __len__(self):
         """Return number of rows including null values"""
         return self._length
 
     @property
+    @traceproperty
     def ndim(self):
         """Column ndim is always 1, Frame ndim is always 2"""
         return 1
 
     @property
+    @traceproperty
     def size(self):
         """Number of rows * number of columns."""
         return len(self)
@@ -202,6 +227,7 @@ class AbstractColumn(ABC, Sized, Iterable):
         return self._validity[self._offset + i]
 
     # builders and iterators---------------------------------------------------
+    @trace
     def append(self, value):
         """Append value to the end of the column/frame"""
         if not self.is_appendable:
@@ -226,6 +252,7 @@ class AbstractColumn(ABC, Sized, Iterable):
         for o in others:
             self.extend(o)
 
+    @trace
     def copy(self, deep=True):
         """Make a copy of this object’s description and if deep also its data."""
         return self._copy(deep, self._offset, self._length)
@@ -245,6 +272,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         """Return the iterator object itself."""
         pass
 
+    @trace
+    @expression
     def __getitem__(self, arg):
         """
         If *arg* is a ``str`` type, return the column named *arg*
@@ -290,17 +319,25 @@ class AbstractColumn(ABC, Sized, Iterable):
             raise TypeError(
                 f"__getitem__ on type {type(arg)} is not supported")
 
+    @trace
+    @expression
     def slice(self, start=None, stop=None, step=1):
         return self._slice_rows(slice(start, stop, step))
 
+    @trace
+    @expression
     def head(self, n=5):
         """Return the first `n` rows."""
         return self[:n]
 
+    @trace
+    @expression
     def tail(self, n=5):
         """Return the last `n` rows."""
         return self[-n:]
 
+    @trace
+    @expression
     def reverse(self):
         res = _column_constructor(self.dtype)
         for i in range(len(self)):
@@ -373,6 +410,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         #     raise TypeError(f"'cannot cast from 'self.dtype' to '{dtype}'")
 
     # functools map/filter/reduce ---------------------------------------------
+    @trace
+    @expression
     def map(
         self,
         arg: Union[Dict, Callable],
@@ -389,6 +428,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:
             return self._map(arg, na_action, dtype)
 
+    @trace
+    @expression
     def flatmap(
         self,
         arg: Union[Dict, Callable],
@@ -403,8 +444,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         def func(x):
             return arg.get(x, None) if isinstance(arg, dict) else arg(x)
 
-        dtype = dtype if dtype is not None else self._dtype
-        res = _column_constructor(dtype)
+        dtype1 = dtype if dtype is not None else self._dtype
+        res = _column_constructor(dtype1)
         for i in range(self._length):
             if self._valid(i) or na_action == "ignore":
                 res.extend(func(self[i]))
@@ -412,6 +453,8 @@ class AbstractColumn(ABC, Sized, Iterable):
                 res._append(None)
         return res
 
+    @trace
+    @expression
     def filter(self, predicate: Union[Callable, Iterable]):
         """
         Select rows where predicate is True.
@@ -434,6 +477,8 @@ class AbstractColumn(ABC, Sized, Iterable):
             pass
         return res
 
+    @trace
+    @expression
     def reduce(self, fun, initializer=None):
         """
         Apply binary function cumulatively to the rows[0:],
@@ -473,36 +518,38 @@ class AbstractColumn(ABC, Sized, Iterable):
 
     # ifthenelse -----------------------------------------------------------------
 
-    def where(self, condition, other):
-        """Equivalent to ternary expression: if condition then self else other"""
-        if not isinstance(condition, Iterable):
-            raise TypeError("condition must be an iterable of booleans")
+    # def where(self, condition, other):
+    #     """Equivalent to ternary expression: if condition then self else other"""
+    #     if not isinstance(condition, Iterable):
+    #         raise TypeError("condition must be an iterable of booleans")
 
-        res = _column_constructor(self._dtype)
-        # check for length?
-        if isinstance(other, ScalarTypeValues):
-            for s, m in zip(self, condition):
-                if m:
-                    res._append(s)
-                else:
-                    res._append(other)
-            return res
-        elif isinstance(other, Iterable):
-            for s, m, o in zip(self, condition, other):
-                if m:
-                    res._append(s)
-                else:
-                    res._append(o)
-            return res
-        else:
-            raise TypeError(f"where on type {type(other)} is not supported")
+    #     res = _column_constructor(self._dtype)
+    #     # check for length?
+    #     if isinstance(other, ScalarTypeValues):
+    #         for s, m in zip(self, condition):
+    #             if m:
+    #                 res._append(s)
+    #             else:
+    #                 res._append(other)
+    #         return res
+    #     elif isinstance(other, Iterable):
+    #         for s, m, o in zip(self, condition, other):
+    #             if m:
+    #                 res._append(s)
+    #             else:
+    #                 res._append(o)
+    #         return res
+    #     else:
+    #         raise TypeError(f"where on type {type(other)} is not supported")
 
-    def mask(self, condition, other):
-        """Equivalent to ternary expression: if ~condition then self else other."""
-        return self.where(~condition, other)
+    # def mask(self, condition, other):
+    #     """Equivalent to ternary expression: if ~condition then self else other."""
+    #     return self.where(~condition, other)
 
     # sorting -----------------------------------------------------------------
 
+    @trace
+    @expression
     def sort_values(
         self,
         by: Union[str, List[str], Literal[None]] = None,
@@ -523,6 +570,8 @@ class AbstractColumn(ABC, Sized, Iterable):
             res.extend([None] * self._null_count)
         return res
 
+    @trace
+    @expression
     def nlargest(
         self,
         n=5,
@@ -540,6 +589,8 @@ class AbstractColumn(ABC, Sized, Iterable):
             )
         return self.sort_values(ascending=False).head(n)
 
+    @trace
+    @expression
     def nsmallest(
         self, n=5, columns: Union[str, List[str], Literal[None]] = None, keep="first"
     ):
@@ -554,6 +605,8 @@ class AbstractColumn(ABC, Sized, Iterable):
 
         return self.sort_values(ascending=True).head(n)
 
+    @trace
+    @expression
     def nunique(self, dropna=True):
         """Returns the number of unique values of the Column"""
         if not dropna:
@@ -565,56 +618,73 @@ class AbstractColumn(ABC, Sized, Iterable):
 
     # arithmetic
 
+    @expression
     def add(self, other, fill_value=None):
         return self._binary_operator("add", other, fill_value=fill_value)
 
+    @expression
     def radd(self, other, fill_value=None):
         return self._binary_operator("add", other, fill_value=fill_value, reflect=True)
 
+    @expression
     def __add__(self, other):
         return self._binary_operator("add", other)
 
+    @expression
     def __radd__(self, other):
         return self._binary_operator("add", other, reflect=True)
 
+    @expression
     def sub(self, other, fill_value=None):
         return self._binary_operator("sub", other, fill_value=fill_value)
 
+    @expression
     def rsub(self, other, fill_value=None):
         return self._binary_operator("sub", other, fill_value=fill_value, reflect=True)
 
+    @expression
     def __sub__(self, other):
         return self._binary_operator("sub", other)
 
+    @expression
     def __rsub__(self, other):
         return self._binary_operator("sub", other, reflect=True)
 
+    @expression
     def mul(self, other, fill_value=None):
         return self._binary_operator("mul", other, fill_value=fill_value)
 
+    @expression
     def rmul(self, other, fill_value=None):
         return self._binary_operator("mul", other, fill_value=fill_value, reflect=True)
 
+    @expression
     def __mul__(self, other):
         return self._binary_operator("mul", other)
 
+    @expression
     def __rmul__(self, other):
         return self._binary_operator("mul", other, reflect=True)
 
+    @expression
     def floordiv(self, other, fill_value=None):
         return self._binary_operator("floordiv", other, fill_value=fill_value)
 
+    @expression
     def rfloordiv(self, other, fill_value=None):
         return self._binary_operator(
             "floordiv", other, fill_value=fill_value, reflect=True
         )
 
+    @expression
     def __floordiv__(self, other):
         return self._binary_operator("floordiv", other)
 
+    @expression
     def __rfloordiv__(self, other):
         return self._binary_operator("floordiv", other, reflect=True)
 
+    @expression
     def truediv(self, other, fill_value=None):
         return self._binary_operator(
             "truediv",
@@ -622,29 +692,37 @@ class AbstractColumn(ABC, Sized, Iterable):
             fill_value=fill_value,
         )
 
+    @expression
     def rtruediv(self, other, fill_value=None):
         return self._binary_operator(
             "truediv", other, fill_value=fill_value, reflect=True
         )
 
+    @expression
     def __truediv__(self, other):
         return self._binary_operator("truediv", other)
 
+    @expression
     def __rtruediv__(self, other):
         return self._binary_operator("truediv", other, reflect=True)
 
+    @expression
     def mod(self, other, fill_value=None):
         return self._binary_operator("mod", other, fill_value=fill_value)
 
+    @expression
     def rmod(self, other, fill_value=None):
         return self._binary_operator("mod", other, fill_value=fill_value, reflect=True)
 
+    @expression
     def __mod__(self, other):
         return self._binary_operator("mod", other)
 
+    @expression
     def __rmod__(self, other):
         return self._binary_operator("mod", other, reflect=True)
 
+    @expression
     def pow(self, other, fill_value=None):
         return self._binary_operator(
             "pow",
@@ -652,93 +730,119 @@ class AbstractColumn(ABC, Sized, Iterable):
             fill_value=fill_value,
         )
 
+    @expression
     def rpow(self, other, fill_value=None):
         return self._binary_operator("pow", other, fill_value=fill_value, reflect=True)
 
+    @expression
     def __pow__(self, other):
         return self._binary_operator("pow", other)
 
+    @expression
     def __rpow__(self, other):
         return self._binary_operator("pow", other, reflect=True)
 
     # comparison
 
+    @expression
     def eq(self, other, fill_value=None):
         return self._binary_operator("eq", other, fill_value=fill_value)
 
+    @expression
     def __eq__(self, other):
         return self._binary_operator("eq", other)
 
+    @expression
     def ne(self, other, fill_value=None):
         return self._binary_operator("ne", other, fill_value=fill_value)
 
+    @expression
     def __ne__(self, other):
         return self._binary_operator("ne", other)
 
+    @expression
     def lt(self, other, fill_value=None):
         return self._binary_operator("lt", other, fill_value=fill_value)
 
+    @expression
     def __lt__(self, other):
         return self._binary_operator("lt", other)
 
+    @expression
     def gt(self, other, fill_value=None):
         return self._binary_operator("gt", other, fill_value=fill_value)
 
+    @expression
     def __gt__(self, other):
         return self._binary_operator("gt", other)
 
+    @expression
     def le(self, other, fill_value=None):
         return self._binary_operator("le", other, fill_value=fill_value)
 
+    @expression
     def __le__(self, other):
         return self._binary_operator("le", other)
 
+    @expression
     def ge(self, other, fill_value=None):
         return self._binary_operator("ge", other, fill_value=fill_value)
 
+    @expression
     def __ge__(self, other):
         return self._binary_operator("ge", other)
 
     # bitwise or (|), used for logical or
+    @expression
     def __or__(self, other):
         return self._binary_operator("or", other)
 
+    @expression
     def __ror__(self, other):
         return self._binary_operator("or", other, reflect=True)
 
     # bitwise and (&), used for logical and
+    @expression
     def __and__(self, other):
         return self._binary_operator("and", other)
 
+    @expression
     def __rand__(self, other):
         return self._binary_operator("and", other, reflect=True)
 
     # bitwise complement (~), used for logical not
 
+    @expression
     def __invert__(self):
         return self._unary_operator(operator.__not__, self.dtype)
 
     # unary arithmetic
+    @expression
     def __neg__(self):
         return self._unary_operator(operator.neg, self.dtype)
 
+    @expression
     def __pos__(self):
         return self._unary_operator(operator.pos, self.dtype)
 
     # unary math related
 
+    @expression
     def abs(self):
         """Absolute value of each element of the series."""
         return self._unary_operator(abs, self.dtype)
 
+    @expression
     def ceil(self):
         """Rounds each value upward to the smallest integral"""
         return self._unary_operator(math.ceil, Int64(self.dtype.nullable))
 
+    @expression
     def floor(self):
         """Rounds each value downward to the largest integral value"""
         return self._unary_operator(math.floor, Int64(self.dtype.nullable))
 
+    @expression
     def round(self, decimals: Optional[int] = None):
         """Round each value in a data to the given number of decimals."""
         if decimals is None:
@@ -750,13 +854,14 @@ class AbstractColumn(ABC, Sized, Iterable):
 
             return self._unary_operator(round_, Float64(self.dtype.nullable))
 
+    @expression
     def hash_values(self):
         """Compute the hash of values in this column."""
         return self._unary_operator(hash, Int64(self.dtype.nullable))
 
+    @trace
     def _broadcast(self, operator, const, fill_value, dtype, reflect):
         assert is_primitive(self._dtype) and is_primitive(dtype)
-        # print('Column._broadcast', self, operator, const, fill_value, dtype, reflect)
         res = _column_constructor(dtype)
         # TODO: introduce fast paths...
         for i in range(self._length):
@@ -774,6 +879,7 @@ class AbstractColumn(ABC, Sized, Iterable):
                 res._append(None)
         return res
 
+    @trace
     def _pointwise(self, operator, other, fill_value, dtype, reflect):
         assert is_primitive(self._dtype) and is_primitive(dtype)
         # print('Column._pointwise', self, operator, other, fill_value, dtype, reflect)
@@ -798,6 +904,7 @@ class AbstractColumn(ABC, Sized, Iterable):
                 res._append(None)
         return res
 
+    @trace
     def _unary_operator(self, operator, dtype):
         res = _column_constructor(dtype)
         for i in range(self._length):
@@ -807,6 +914,7 @@ class AbstractColumn(ABC, Sized, Iterable):
                 res._append(None)
         return res
 
+    @trace
     def _binary_operator(self, operator, other, fill_value=None, reflect=False):
         if isinstance(other, (int, float, list, set, type(None))):
             return self._broadcast(
@@ -830,6 +938,8 @@ class AbstractColumn(ABC, Sized, Iterable):
             )
 
     # isin --------------------------------------------------------------------
+    @trace
+    @expression
     def isin(self, values: Union[list, dict, AbstractColumn]):
         """Check whether list values are contained in data, or column/dataframe (row/column specific)."""
         if isinstance(values, list):
@@ -844,6 +954,8 @@ class AbstractColumn(ABC, Sized, Iterable):
 
     # data cleaning -----------------------------------------------------------
 
+    @trace
+    @expression
     def fillna(
         self, fill_value: Union[ScalarTypes, Dict, AbstractColumn, Literal[None]]
     ):
@@ -871,6 +983,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:  # Dict and Dataframe only self is dataframe
             raise TypeError(f"fillna with {type(fill_value)} is not supported")
 
+    @trace
+    @expression
     def dropna(self, how: Literal["any", "all"] = "any"):
         """Return a column/frame with rows removed where a row has any or all nulls."""
         # TODO only flat columns supported...
@@ -882,6 +996,8 @@ class AbstractColumn(ABC, Sized, Iterable):
                 res._append(self[i])
         return res
 
+    @trace
+    @expression
     def drop_duplicates(
         self,
         subset: Union[str, List[str], Literal[None]] = None,
@@ -898,6 +1014,8 @@ class AbstractColumn(ABC, Sized, Iterable):
 
     # universal  ---------------------------------------------------------------
 
+    @trace
+    @expression
     def min(self, numeric_only=None):
         """Return the minimum of the nonnull values of the Column."""
         # skipna == True
@@ -907,6 +1025,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:
             raise ValueError(f"min undefined for {type(self).__name__}.")
 
+    @trace
+    @expression
     def max(self, numeric_only=None):
         """Return the maximum of the nonnull values of the column."""
         # skipna == True
@@ -915,6 +1035,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:
             raise ValueError(f"max undefined for {type(self).__name__}.")
 
+    @trace
+    @expression
     def all(self, boolean_only=None):
         """Return whether all nonull elements are True in Column"""
         # skipna == True
@@ -923,6 +1045,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:
             raise ValueError(f"all undefined for {type(self).__name__}.")
 
+    @trace
+    @expression
     def any(self, skipna=True, boolean_only=None):
         """Return whether any nonull element is True in Column"""
         # skipna == True
@@ -931,6 +1055,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:
             raise ValueError(f"all undefined for {type(self).__name__}.")
 
+    @trace
+    @expression
     def sum(self):
         """Return sum of all nonull elements in Column"""
         # skipna == True
@@ -940,6 +1066,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:
             raise ValueError(f"max undefined for {type(self).__name__}.")
 
+    @trace
+    @expression
     def prod(self):
         """Return produce of the values in the data"""
         # skipna == True
@@ -949,6 +1077,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:
             raise ValueError(f"prod undefined for {type(self).__name__}.")
 
+    @trace
+    @expression
     def cummin(self, skipna=True):
         """Return cumulative minimum of the data."""
         # skipna == True
@@ -957,6 +1087,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:
             raise ValueError(f"cumin undefined for {type(self).__name__}.")
 
+    @trace
+    @expression
     def cummax(self, skipna=True):
         """Return cumulative maximum of the data."""
         if is_numerical(self.dtype):
@@ -964,6 +1096,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:
             raise ValueError(f"cummax undefined for {type(self).__name__}.")
 
+    @trace
+    @expression
     def cumsum(self, skipna=True):
         """Return cumulative sum of the data."""
         if is_numerical(self.dtype):
@@ -971,6 +1105,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:
             raise ValueError(f"cumsum undefined for {type(self).__name__}.")
 
+    @trace
+    @expression
     def cumprod(self, skipna=True):
         """Return cumulative product of the data."""
         if is_numerical(self.dtype):
@@ -978,6 +1114,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:
             raise ValueError(f"cumprod undefined for {type(self).__name__}.")
 
+    @trace
+    @expression
     def mean(self):
         """Return the mean of the values in the series."""
         if is_numerical(self.dtype):
@@ -985,6 +1123,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:
             raise ValueError(f"mean undefined for {type(self).__name__}.")
 
+    @trace
+    @expression
     def median(self):
         """Return the median of the values in the data."""
         if is_numerical(self.dtype):
@@ -992,6 +1132,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:
             raise ValueError(f"median undefined for {type(self).__name__}.")
 
+    @trace
+    @expression
     def mode(self):
         """Return the mode(s) of the data."""
         if is_numerical(self.dtype):
@@ -999,6 +1141,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:
             raise ValueError(f"mode undefined for {type(self).__name__}.")
 
+    @trace
+    @expression
     def std(self):
         """Return the stddev(s) of the data."""
         if is_numerical(self.dtype):
@@ -1006,28 +1150,13 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:
             raise ValueError(f"std undefined for {type(self).__name__}.")
 
+    @trace
     def _iter(self, skipna):
         for i in self:
             if not (i is None and skipna):
                 yield i
 
-    def _percentiles(self, percentiles):
-        if len(self) == 0 or len(percentiles) == 0:
-            return []
-        out = []
-        s = sorted(self)
-        for percent in percentiles:
-            k = (len(self) - 1) * (percent / 100)
-            f = math.floor(k)
-            c = math.ceil(k)
-            if f == c:
-                out.append(s[int(k)])
-                continue
-            d0 = s[int(f)] * (c - k)
-            d1 = s[int(c)] * (k - f)
-            out.append(d0 + d1)
-        return out
-
+    @trace
     def _accumulate_column(self, func, *, skipna=True, initial=None):
         it = iter(self)
         res = _column_constructor(self.dtype)
@@ -1058,6 +1187,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         return res
 
     # describe ----------------------------------------------------------------
+    @trace
+    @expression
     def describe(
         self,
         percentiles=None,
@@ -1095,17 +1226,40 @@ class AbstractColumn(ABC, Sized, Iterable):
         else:
             raise ValueError(f"median undefined for {type(self).__name__}.")
 
+    def _percentiles(self, percentiles):
+        if len(self) == 0 or len(percentiles) == 0:
+            return []
+        out = []
+        s = sorted(self)
+        for percent in percentiles:
+            k = (len(self) - 1) * (percent / 100)
+            f = math.floor(k)
+            c = math.ceil(k)
+            if f == c:
+                out.append(s[int(k)])
+                continue
+            d0 = s[int(f)] * (c - k)
+            d1 = s[int(c)] * (k - f)
+            out.append(d0 + d1)
+        return out
+
     # Flat column specfic ops ----------------------------------------------------------
+    @trace
+    @expression
     def is_unique(self):
         """Return boolean if data values are unique."""
         seen = set()
         return not any(i in seen or seen.add(i) for i in self)
 
     # only on flat column
+    @trace
+    @expression
     def is_monotonic_increasing(self):
         """Return boolean if values in the object are monotonic increasing"""
         return self._compare(operator.lt, initial=True)
 
+    @trace
+    @expression
     def is_monotonic_decreasing(self):
         """Return boolean if values in the object are monotonic decreasing"""
         return self._compare(operator.gt, initial=True)
@@ -1130,6 +1284,7 @@ class AbstractColumn(ABC, Sized, Iterable):
 
     # interop ----------------------------------------------------------------
 
+    @trace
     def to_pandas(self):
         """Convert selef to pandas dataframe"""
         # TODO Add type translation
@@ -1138,6 +1293,7 @@ class AbstractColumn(ABC, Sized, Iterable):
 
         return pd.Series(self)
 
+    @trace
     def to_arrow(self):
         """Convert selef to pandas dataframe"""
         # TODO Add type translation
@@ -1159,56 +1315,3 @@ class AbstractColumn(ABC, Sized, Iterable):
 #             axis=axis,
 #             win_type=win_type,
 #         )
-
-# functools ---------------------------------------------------------------
-
-# def map(self, fun, dtype:Optional[DType]=None):
-#     #dtype must be given, if result is different from argument column
-#     if dtype is None:
-#         dtype = self._dtype
-#     res = _create_column(dtype)
-#     for i in range(self._length):
-#         if self._validity[i]:
-#             res._append(fun(self[i]))
-#         else:
-#             res._append(None)
-#     return res
-
-# def filter(self, pred):
-#     res = _create_column(self._dtype)
-#     for i in range(self._length):
-#         if self._validity[i]:
-#             if pred(self[i]):
-#                 res._append(self[i])
-#                 continue
-#         else:
-#             res._append(None)
-#     return res
-
-# def reduce(self, fun, initializer=None):
-#     if self._length==0:
-#         if initializer is not None:
-#             return initializer
-#         else:
-#             raise TypeError("reduce of empty sequence with no initial value")
-#     start = 0
-#     if initializer is None:
-#         value = self[0]
-#         start = 1
-#     else:
-#         value = initializer
-#     for i in range(start,self._length):
-#         value = fun(value, self[i])
-#     return value
-
-# def flatmap(self, fun, dtype:Optional[DType]=None):
-#     #dtype must be given, if result is different from argument column
-#     if dtype is None:
-#         dtype = self._dtype
-#     res = _create_column(dtype)
-#     for i in range(self._length):
-#         if self._validity[i]:
-#             res.extend(fun(self[i]))
-#         else:
-#             res._append(None)
-#     return res

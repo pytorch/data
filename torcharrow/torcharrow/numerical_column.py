@@ -38,8 +38,8 @@ class NumericalColumn(AbstractColumn):
         if deep:
             res = NumericalColumn(self.dtype)
             res._length = length
-            res._data = self._data[offset : offset + length]
-            res._validity = self._validity[offset : offset + length]
+            res._data = self._data[offset: offset + length]
+            res._validity = self._validity[offset: offset + length]
             res._null_count = sum(res._validity)
             return res
         else:
@@ -83,7 +83,7 @@ class NumericalColumn(AbstractColumn):
 
     # printing ----------------------------------------------------------------
     def __str__(self):
-        return f"Column([{', '.join(str(i) for i in self)}])"
+        return f"Column([{', '.join(str(i) for i in self)}], id = {self.id})"
 
     def __repr__(self):
         tab = tabulate(

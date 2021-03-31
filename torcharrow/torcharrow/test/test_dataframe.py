@@ -3,28 +3,21 @@ import statistics
 import unittest
 
 from torcharrow import (
-    Boolean,
     Column,
     DataFrame,
-    Field,
-    Float64,
-    Int64,
-    String,
     Struct,
-    boolean,
-    float64,
+    Field,
+    Int64,
+    Float64,
     int32,
     int64,
-    is_numerical,
-    string,
-    Symbol,
-    eval_symbolic
+    me
 )
 
 # run python3 -m unittest outside this directory to run all tests
 
 
-class TestNumericalColumn(unittest.TestCase):
+class TestDataFrame(unittest.TestCase):
     def test_imternals_empty(self):
         empty = DataFrame()
 
@@ -506,12 +499,19 @@ class TestNumericalColumn(unittest.TestCase):
 
         self.assertEqual(list(df+13), list(df.pipe(g, 13)))
 
-    def test_syemexpr(self):
+    def test_me_on_str(self):
         df = DataFrame()
         df['a'] = [1, 2, 3]
         df['b'] = [11, 22, 33]
+        df['c'] = ["a", "b", "C"]
 
-        me = Symbol('me')
+        self.assertEqual(
+            list(df.where(me['c'].str.capitalize() == me['c'])),  [(3, 33, 'C')])
+
+    def test_locals_and_me_equivalance(self):
+        df = DataFrame()
+        df['a'] = [1, 2, 3]
+        df['b'] = [11, 22, 33]
 
         self.assertEqual(
             list(df.where((me['a'] > 1) & (me['b'] == 33))),
@@ -523,7 +523,7 @@ class TestNumericalColumn(unittest.TestCase):
         self.assertEqual(list(df.select('*', '-a')), list(df.drop(['a'])))
 
         gf = DataFrame({'a': df['a'], 'b': df['b'], 'c': df['a'] + df['b']})
-        self.assertEqual(list(df.select('*', c=me['a'] + me['b'])), list(gf))
+        self.assertEqual(list(df.select('*', d=me['a'] + me['b'])), list(gf))
 
     def test_groupby_size_pipe(self):
         df = DataFrame(
