@@ -6,8 +6,11 @@
 
 # This assumes that you have virtualenv, so you probably want to run
 #   source f4d-deps/python-env/bin/activate
+#
+# if you're using system python on CentOS you might need to do:
+#   sudo dnf install -y python36-devel
 
-set -e # better be safe than sorry
+set -xe # better be safe than sorry
 
 function with-proxy() {
   (
@@ -37,5 +40,5 @@ pushd arrow/python
 with-proxy pip install wheel
 export PYARROW_WITH_PARQUET=1
 with-proxy python setup.py build_ext --bundle-arrow-cpp bdist_wheel
-pip install dist/pyarrow-3.0.0-cp36-cp36m-linux_x86_64.whl
+pip install dist/pyarrow-3.0.0-*.whl
 popd
