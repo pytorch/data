@@ -20,15 +20,21 @@ python3 -m unittest
 All documentation is available via Notebooks:
 * [TorchArrow in 10 minutes (a tutorial)](https://github.com/facebookexternal/torchdata/blob/main/torcharrow/torcharrow10min.ipynb)
 * [TorchArrow mutability](https://github.com/facebookexternal/torchdata/blob/main/torcharrow/torcharrow_mutability.ipynb)
-* TorchArrow tracing and rerunning (TBD) 
+* [TorchArrow data pipes](https://github.com/facebookexternal/torchdata/blob/main/torcharrow/torcharrow_data_pipes.ipynb)
+* [TorchArrow tracing and analysis](https://github.com/facebookexternal/torchdata/blob/main/torcharrow/torcharrow_traces.ipynb)
+* TorchArrow multitargeting - TBD
+* TorchArrow, Pandas, UPM and SQL: What's the difference - TBD
+* TorchArrow, Design rationale - TBD
 
 ## Status
 This directory supports rapid development. So expect frequent changes.
 
 Still to be done:
-* Arrow and Panda interoperability
-* Relational operators and fluent style programming
-* Columns implemented by Velox and not in Python proper
 * Add tabular.py as package in setup and not as code
-* Implement tracing and rerunning
+* How to do Multitargetting
+* An example program analysis (types/PPF?)
+* Add example UDFs
+* Add Tensors as example UDTs
+* Using Numba for Jitting
+
 
