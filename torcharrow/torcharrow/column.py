@@ -291,6 +291,8 @@ class AbstractColumn(ABC, Sized, Iterable):
         """
         # print('slice', arg, str(type(arg)))
         if isinstance(arg, int):
+            if arg < 0:
+                arg = arg + len(self)
             return self._get_row(arg)
         elif isinstance(arg, str):
             return self._get_column(arg)
@@ -417,16 +419,28 @@ class AbstractColumn(ABC, Sized, Iterable):
         arg: Union[Dict, Callable],
         na_action: Literal["ignore", None] = None,
         dtype: Optional[DType] = None,
+        columns: Optional[List[str]] = None
     ):
         """
-        Map rows according to input correspondence.
+        Maps rows according to input correspondence.
         dtype required if result type != item type.
         """
-        if isinstance(arg, Dict):
-            # type: ignore
-            return self._map(lambda x: arg.get(x, None), na_action, dtype)
-        else:
-            return self._map(arg, na_action, dtype)
+        if columns is not None:
+            raise TypeError(
+                f"columns parameter for flat columns not supported")
+
+        def func(x):
+            return arg.get(x, None) if isinstance(arg, dict) else arg(x)
+
+        dtype = dtype if dtype is not None else self._dtype
+
+        res = _column_constructor(dtype)
+        for i in range(self._length):
+            if self._valid(i) or na_action == "ignore":
+                res._append(func(self[i]))
+            else:
+                res._append(None)
+        return res
 
     @trace
     @expression
@@ -435,11 +449,15 @@ class AbstractColumn(ABC, Sized, Iterable):
         arg: Union[Dict, Callable],
         na_action: Literal["ignore", None] = None,
         dtype: Optional[DType] = None,
+        columns: Optional[List[str]] = None
     ):
         """
-        Map rows to list of rows according to input correspondance
+        Maps rows to list of rows according to input correspondance
         dtype required if result type != item type.
         """
+        if columns is not None:
+            raise TypeError(
+                f"columns parameter for flat columns not supported")
 
         def func(x):
             return arg.get(x, None) if isinstance(arg, dict) else arg(x)
@@ -455,11 +473,15 @@ class AbstractColumn(ABC, Sized, Iterable):
 
     @trace
     @expression
-    def filter(self, predicate: Union[Callable, Iterable]):
+    def filter(self, predicate: Union[Callable, Iterable], columns: Optional[List[str]] = None):
         """
         Select rows where predicate is True.
         Different from Pandas. Use keep for Pandas filter.
         """
+        if columns is not None:
+            raise TypeError(
+                f"columns parameter for flat columns not supported")
+
         if not isinstance(predicate, Iterable) and not callable(predicate):
             raise TypeError(
                 "predicate must be a unary boolean predicate or iterable of booleans"
@@ -499,22 +521,6 @@ class AbstractColumn(ABC, Sized, Iterable):
         for i in range(start, self._length):
             value = fun(value, self[i])
         return value
-
-    def _map(
-        self,
-        func: Callable,
-        na_action: Literal["ignore", None] = None,
-        dtype: Optional[DType] = None,
-    ):
-        dtype = dtype if dtype is not None else self._dtype
-
-        res = _column_constructor(dtype)
-        for i in range(self._length):
-            if self._valid(i) or na_action == "ignore":
-                res._append(func(self[i]))
-            else:
-                res._append(None)
-        return res
 
     # ifthenelse -----------------------------------------------------------------
 
@@ -608,7 +614,7 @@ class AbstractColumn(ABC, Sized, Iterable):
     @trace
     @expression
     def nunique(self, dropna=True):
-        """Returns the number of unique values of the Column"""
+        """Returns the number of unique values of the column"""
         if not dropna:
             return len(set(self))
         else:

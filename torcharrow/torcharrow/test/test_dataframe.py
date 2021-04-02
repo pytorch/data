@@ -186,32 +186,35 @@ class TestDataFrame(unittest.TestCase):
 
         self.assertEqual(list(df), [(1, (2, 22)), (2, (3, 33)), (4, (5, 55))])
 
+    @staticmethod
+    def _add(a, b):
+        return a + b
+
     def test_map_where_filter(self):
         # TODO have to decide on whether to follow Pandas, map, filter or our own.
         # These were Panda tests, -- so we cacel them for now -- right now we follow our own...
-        pass
-        # df= DataFrame(Struct([Field('a',Int64(nullable=True))]))
-        # df.extend([(None,)]*3)
-        # df.extend([(3,),(4,),(5,)])
 
-        # # keep None
-        # self.assertEqual(list(df.map({3:33})), [(i,) for i in [None,None,None,33,None,None]])
+        df = DataFrame()
+        df['a'] = [1, 2, 3]
+        df['b'] = [11, 22, 33]
+        df['c'] = ["a", "b", "C"]
+        df['d'] = [100, 200, None]
 
-        # # maps None
-        # self.assertEqual(list(df.map({None:1,3:33}, na_action='ignore')),[(i,) for i in  [1,1,1,33,None,None]])
+        # keep None
+        self.assertEqual(
+            list(df.map({100: 1000}, columns=['d'], dtype=Int64(nullable=True))), [1000, None, None])
 
-        # # keep None
-        # self.assertEqual(list(df.map({None:1,3:33}, na_action=None)), [(i,) for i in [None,None,None,33,None,None]])
+        # maps None
+        self.assertEqual(list(df.map(
+            {None: 1, 100: 1000}, columns=['d'], dtype=Int64(nullable=True))), [1000, None, 1])
 
-        # # maps as function
-        # self.assertEqual(list(df.map(lambda x: 1 if x is None else 33 if x == 3 else x, na_action='ignore')), [(i,) for i in [1,1,1,33,4,5]])
+        # maps as function
+        self.assertEqual(
+            list(df.map(TestDataFrame._add, columns=['a', 'a'], dtype=int64)), [2, 4, 6])
 
-        # other = DataFrame({'a': [i*i for i in range(6)]})
-        # # where
-        # self.assertEqual(list(df.where([True,False]*3, other)),[(i,) for i in  [None, 1, None, 9, 4, 25]])
-
-        # # filter
-        # self.assertEqual(list(df.filter([True,False]*3)), [(i,) for i in [None,None,4]])
+        # filter
+        self.assertEqual(list(df.filter(str.islower, columns=['c'])),  [
+                         (1, 11, 'a', 100), (2, 22, 'b', 200)])
 
     def test_sort_stuff(self):
         df = DataFrame({"a": [1, 2, 3], "b": [1.0, None, 3]})

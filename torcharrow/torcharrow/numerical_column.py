@@ -62,6 +62,7 @@ class NumericalColumn(AbstractColumn):
 
     def get(self, i, fill_value):
         """Get item from column/frame for given integer index"""
+
         if self._null_count == 0:
             return self._data[self._offset + i]
         elif not self._validity[self._offset + i]:

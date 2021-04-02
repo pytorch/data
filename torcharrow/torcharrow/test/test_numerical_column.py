@@ -24,6 +24,14 @@ from torcharrow import (
 # run python3 -m unittest outside this directory to run all tests
 
 
+def _accusum(col, val):
+    if len(col) == 0:
+        col.append(val)
+    else:
+        col.append(col[-1] + val)
+    return col
+
+
 class TestNumericalColumn(unittest.TestCase):
     def test_imternals_empty(self):
         empty_i64_column = Column(int64)
@@ -230,6 +238,10 @@ class TestNumericalColumn(unittest.TestCase):
 
         # filter
         self.assertEqual(list(col.filter([True, False] * 3)), [None, None, 4])
+
+    def test_reduce(self):
+        c = Column([1, 2, 3])
+        self.assertEqual(list(c.reduce(_accusum, Column(int64))), [1, 3, 6])
 
     def test_sort_stuff(self):
         col = Column([1, 2, 3])
