@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='torcharrow',
-    version='0.2.0',    
+    version='0.2.1',
     description='Panda inspired, Arrow compatble, Velox supported Dataframes for PyTorch',
     url='https://github.com/facebookexternal/torchdata',
     author='Facebook',
@@ -18,8 +18,8 @@ setup(
     classifiers=[
         'Development Status :: 1 - Planning',
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: BSD License',  
-        'Operating System :: POSIX :: Linux',        
+        'License :: OSI Approved :: BSD License',
+        'Operating System :: POSIX :: Linux',
         'Programming Language :: Python :: 3.5',
     ],
 )
