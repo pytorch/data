@@ -278,6 +278,21 @@ class DataFrame(AbstractColumn):
             fields.append(Field(name, d._dtype))
             self._dtype = Struct(fields)
 
+    def to_python(self):
+        tup_type = self._dtype.py_type
+        # TODO: we probably don't need subscript here with offset after df[1:3]["A"] slicing is fixed
+        return [
+            tup_type(*v)
+            for v in zip(
+                *(
+                    self._field_data[f.name][
+                        self._offset : self._offset + self._length
+                    ].to_python()
+                    for f in self._dtype.fields
+                )
+            )
+        ]
+
     # printing ----------------------------------------------------------------
     def __str__(self):
         def quote(n):

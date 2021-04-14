@@ -1299,6 +1299,11 @@ class AbstractColumn(ABC, Sized, Iterable):
 
         return pa.array(self)
 
+    @trace
+    def to_python(self):
+        """Convert to plain Python container (list of scalars or containers)"""
+        raise NotImplementedError()
+
 
 # windows ---------------------------------------------------------------
 

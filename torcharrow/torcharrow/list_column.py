@@ -106,6 +106,17 @@ class ListColumn(AbstractColumn):
             else:
                 yield None
 
+    def to_python(self):
+        vals = self._data.to_python()
+        return [
+            (
+                vals[self._offsets[i] : self._offsets[i + 1]]
+                if self._validity[i]
+                else None
+            )
+            for i in range(self._offset, self._offset + self._length)
+        ]
+
     # printing ----------------------------------------------------------------
     def __str__(self):
         return f"Column([{', '.join('None' if i is None else str(i) for i in self)}])"

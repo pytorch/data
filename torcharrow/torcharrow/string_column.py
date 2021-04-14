@@ -110,6 +110,9 @@ class StringColumn(AbstractColumn):
         else:
             return copy.copy(self)
 
+    def to_python(self):
+        return [self.get(i, None) for i in range(self._length)]
+
     # printing ----------------------------------------------------------------
     def __str__(self):
         def quote(x):

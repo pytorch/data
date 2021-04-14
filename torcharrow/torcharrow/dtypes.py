@@ -1,7 +1,18 @@
 import operator
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import ClassVar, Dict, List, Optional, Union, Tuple, Callable
+import re
+from typing import (
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Union,
+    NamedTuple,
+    Tuple,
+    Type,
+    Callable,
+)
 
 # -----------------------------------------------------------------------------
 # Aux
@@ -46,6 +57,10 @@ class DType(ABC):
     @property
     def size(self):
         return -1  # means unknown
+
+    @property
+    def py_type(self):
+        return type(self.default)
 
     def __str__(self):
         if self.nullable:
@@ -271,6 +286,10 @@ class Map(DType):
     typecode: ClassVar[str] = "+m"
     arraycode: ClassVar[str] = ""
 
+    @property
+    def py_type(self):
+        return Dict[self.key_dtype.py_type, self.item_dtype.py_type]
+
     def constructor(self, nullable):
         return Map(self.key_dtype, self.item_dtype, nullable)
 
@@ -296,6 +315,10 @@ class List_(DType):
             return "+l"
 
     arraycode: ClassVar[str] = ""
+
+    @property
+    def py_type(self):
+        return List[self.item_dtype.py_type]
 
     def constructor(self, nullable):
         return List_(self.item_dtype, nullable)
@@ -325,6 +348,27 @@ class Struct(DType):
                     raise TypeError(
                         f"nullable structs require each field (like {f.name}) to be nullable as well."
                     )
+        # cache the type instance, __setattr__ hack is needed due to the frozen dataclass
+        # the _py_type is not listed above to avoid participation in equality check
+
+        def fix_name(name):
+            # TODO: this might cause name duplicates, do disambiguation
+            name = re.sub("[^a-zA-Z0-9_]", "_", name)
+            if name == "" or name[0].isdigit() or name[0] == "_":
+                name = "f_" + name
+            return name
+
+        object.__setattr__(
+            self,
+            "_py_type",
+            NamedTuple(
+                self.name, [(fix_name(f.name), f.dtype.py_type) for f in self.fields]
+            ),
+        )
+
+    @property
+    def py_type(self):
+        return self._py_type
 
     def constructor(self, nullable):
         return Struct(self.fields, nullable)
@@ -359,6 +403,10 @@ class Tuple_(DType):
     name: ClassVar[str] = "Tuple"
     typecode: ClassVar[str] = "+t"
     arraycode: ClassVar[str] = ""
+
+    @property
+    def py_type(self):
+        return tuple
 
     def constructor(self, nullable):
         return Tuple_(self.fields, nullable)
@@ -630,14 +678,18 @@ def _lub_dtype(l, r):
             if m is None:
                 return None
             res.append(m)
-        return Tuple_(res)
+        return Tuple_(res).with_null(l.nullable or r.nullable)
     if is_map(l) and is_map(r):
         k = _lub_dtype(l.key_dtype, r.key_dtype)
         i = _lub_dtype(l.item_dtype, r.item_dtype)
-        return Map(k, i) if k is not None and i is not None else None
+        return (
+            Map(k, i).with_null(l.nullable or r.nullable)
+            if k is not None and i is not None
+            else None
+        )
     if is_list(l) and is_list(r):
         k = _lub_dtype(l.item_dtype, r.item_dtype)
-        return List_(k) if k is not None else None
+        return List_(k).with_null(l.nullable or r.nullable) if k is not None else None
     if l.with_null() == r.with_null():
         return l if l.nullable else r
     return None

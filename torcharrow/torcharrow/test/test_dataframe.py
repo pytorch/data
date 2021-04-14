@@ -14,6 +14,8 @@ from torcharrow import (
     me,
 )
 
+from collections import namedtuple
+
 # run python3 -m unittest outside this directory to run all tests
 
 

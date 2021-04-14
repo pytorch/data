@@ -1,6 +1,7 @@
 import array as ar
 import copy
 from dataclasses import dataclass
+from collections import OrderedDict
 from typing import (
     Any,
     Callable,
@@ -26,8 +27,13 @@ class MapColumn(AbstractColumn):
     def __init__(self, dtype, kwargs):
         assert is_map(dtype)
         super().__init__(dtype)
-        self._key_data = _column_constructor(List_(dtype.key_dtype))
-        self._item_data = _column_constructor(List_(dtype.item_dtype))
+        # TODO: we should store raw items, not lists here. Or at least store the list of pairs
+        self._key_data = _column_constructor(
+            List_(dtype.key_dtype).with_null(dtype.nullable)
+        )
+        self._item_data = _column_constructor(
+            List_(dtype.item_dtype).with_null(dtype.nullable)
+        )
         self.map = MapMethods(self)
 
     def _invariant(self):
@@ -78,11 +84,12 @@ class MapColumn(AbstractColumn):
 
     def _append(self, value):
         if value is None:
-            if self._dtype.nullable:
-                self._null_count += 1
-                self._validity.append(False)
-            else:
+            if not self._dtype.nullable:
                 raise TypeError("a map/dict is required (got type NoneType)")
+            self._null_count += 1
+            self._validity.append(False)
+            self._key_data._append(None)
+            self._item_data._append(None)
         else:
             self._validity.append(True)
             self._key_data._append(list(value.keys()))
@@ -124,6 +131,14 @@ class MapColumn(AbstractColumn):
 
     def _raw_lengths(self):
         return self._key_data._raw_lengths() + self._item_data._raw_lengths()
+
+    def to_python(self):
+        keys = self._key_data.to_python()
+        vals = self._item_data.to_python()
+        return [
+            (OrderedDict(zip(keys[i], vals[i])) if self._validity[i] else None)
+            for i in range(self._offset, self._offset + self._length)
+        ]
 
     # printing ----------------------------------------------------------------
     def __str__(self):

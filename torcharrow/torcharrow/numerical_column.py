@@ -82,6 +82,9 @@ class NumericalColumn(AbstractColumn):
                 else:
                     yield None
 
+    def to_python(self):
+        return [self.get(i, None) for i in range(self._length)]
+
     # printing ----------------------------------------------------------------
     def __str__(self):
         return f"Column([{', '.join(str(i) for i in self)}], id = {self.id})"

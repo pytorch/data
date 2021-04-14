@@ -231,6 +231,23 @@ class TestInterop(unittest.TestCase):
             ),
         )
 
+    def test_to_python(self):
+        df = DataFrame(
+            {
+                "A": ["a", "b", "c", "d"],
+                "B": [[1, 2], [3, None], [4, 5], [6]],
+                "C": [{1: 11}, {2: 22, 3: 33}, None, {5: 55}],
+            }
+        )
+        p = df[1:3].to_python()
+        self.assertEqual(len(p), 2)
+        self.assertEqual(p[0].A, "b")
+        self.assertEqual(p[1].A, "c")
+        self.assertEqual(p[0].B, [3, None])
+        self.assertEqual(p[1].B, [4, 5])
+        self.assertEqual(p[0].C, {2: 22, 3: 33})
+        self.assertEqual(p[1].C, None)
+
 
 if __name__ == "__main__":
     unittest.main()
