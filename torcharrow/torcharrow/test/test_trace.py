@@ -1,15 +1,25 @@
 import operator
 import unittest
 
-from torcharrow import (AbstractColumn, Column, DataFrame, Field,
-                        GroupedDataFrame, Int64, Struct, Trace, int64, me,
-                        trace)
+from torcharrow import (
+    AbstractColumn,
+    Column,
+    DataFrame,
+    Field,
+    GroupedDataFrame,
+    Int64,
+    Struct,
+    Trace,
+    int64,
+    me,
+    trace,
+)
 
 # -----------------------------------------------------------------------------
 # testdata
 
 
-class DF():
+class DF:
     ct = 1
 
     @staticmethod
@@ -17,7 +27,7 @@ class DF():
         DF.ct = 1
 
     def __str__(self):
-        return f'DF({self.id})'
+        return f"DF({self.id})"
 
     @staticmethod
     @trace
@@ -34,14 +44,14 @@ class DF():
     def f(self, other):
         assert not isinstance(other, DF)
         res = DF()
-        res.value = self.value*10
+        res.value = self.value * 10
         return res
 
     @trace
     def g(self, other):
         assert isinstance(other, DF)
         res = DF()
-        res.value = self.value*100 + other.value*1000
+        res.value = self.value * 100 + other.value * 1000
         return res
 
 
@@ -55,7 +65,6 @@ def statements(t):
 
 
 class TestDFTrace(unittest.TestCase):
-
     def setUp(self):
         DF.reset()
         Trace.reset()
@@ -78,8 +87,12 @@ class TestDFTrace(unittest.TestCase):
 
         self.assertTrue(len(Trace._trace) > 0)
 
-        verdict = ['c1 = DF.make()', 'c2 = DF()',
-                   'c3 = DF.f(c1, 13)', 'c4 = DF.g(c3, c2)']
+        verdict = [
+            "c1 = DF.make()",
+            "c2 = DF()",
+            "c3 = DF.f(c1, 13)",
+            "c4 = DF.g(c3, c2)",
+        ]
 
         self.assertEqual(Trace.statements(), verdict)
 
@@ -97,7 +110,7 @@ class TestDFTrace(unittest.TestCase):
         self.setUp()
 
         Trace.turn(on=False)
-        exec(';'.join(stms))
+        exec(";".join(stms))
         self.assertEqual(df4.value, eval(result).value)
 
     def test_trace_stable(self):
@@ -114,7 +127,7 @@ class TestDFTrace(unittest.TestCase):
         self.setUp()
         Trace.turn(on=True, types=(DF,))
 
-        exec(';'.join(original_stms))
+        exec(";".join(original_stms))
 
         traced_stms = Trace.statements()
         self.assertEqual(original_stms, traced_stms)
@@ -124,7 +137,8 @@ class TestDFTrace(unittest.TestCase):
 # test data
 
 
-def h(x): return 133 if x == 13 else x
+def h(x):
+    return 133 if x == 13 else x
 
 
 class TestColumnTrace(unittest.TestCase):
@@ -164,7 +178,7 @@ class TestColumnTrace(unittest.TestCase):
         c4 = c1[b]
         c5 = c1.head(17)
         c6 = c3.tail(-12)
-        c7 = c1.map({13: 133}, **{'dtype': Int64(True)})
+        c7 = c1.map({13: 133}, **{"dtype": Int64(True)})
 
         # # NOTE can't be traced...
         # c8 = c1.map(lambda x: 133 if x == 13 else x)
@@ -205,11 +219,14 @@ class TestColumnTrace(unittest.TestCase):
 
         self.assertEqual(Trace.statements(), statements(verdict))
 
+
 # -----------------------------------------------------------------------------
 # testdata
 
 
-def add(tup): a, b, c = tup; return a+b
+def add(tup):
+    a, b, c = tup
+    return a + b
 
 
 class TestDataframeTrace(unittest.TestCase):
@@ -226,15 +243,15 @@ class TestDataframeTrace(unittest.TestCase):
         df["c"] = [111, 222, 333]
 
         c1 = df["a"]
-        df['d'] = c1
+        df["d"] = c1
 
-        d1 = df.drop(['a'])
-        d2 = df.keep(['a', 'c'])
+        d1 = df.drop(["a"])
+        d2 = df.keep(["a", "c"])
         with self.assertRaises(AttributeError):
             # AttributeError: cannot override existing column d
-            d3 = df.rename({'c': 'd'})
+            d3 = df.rename({"c": "d"})
         # TODO clarify why you can't extend a trace
-        d3 = df.rename({'c': 'e'})
+        d3 = df.rename({"c": "e"})
         self.assertTrue(True)
 
     def test_simple_df_ops_suceed(self):
@@ -246,16 +263,16 @@ class TestDataframeTrace(unittest.TestCase):
         df["c"] = [111, 222, 333]
 
         c1 = df["a"]
-        df['d'] = c1
+        df["d"] = c1
 
-        d1 = df.drop(['a'])
-        d2 = df.keep(['a', 'c'])
-        d3 = d2.rename({'c': 'e'})
+        d1 = df.drop(["a"])
+        d2 = df.keep(["a", "c"])
+        d3 = d2.rename({"c": "e"})
 
         d4 = d3.min()
 
         verdict = [
-            'c0 = DataFrame()',
+            "c0 = DataFrame()",
             "_ = DataFrame.__setitem__(c0, 'a', [1, 2, 3])",
             "_ = DataFrame.__setitem__(c0, 'b', [11, 22, 33])",
             "_ = DataFrame.__setitem__(c0, 'c', [111, 222, 333])",
@@ -264,7 +281,8 @@ class TestDataframeTrace(unittest.TestCase):
             "c4 = DataFrame.drop(c0, ['a'])",
             "c5 = DataFrame.keep(c0, ['a', 'c'])",
             "c6 = DataFrame.rename(c5, {'c': 'e'})",
-            'c7 = DataFrame.min(c6)']
+            "c7 = DataFrame.min(c6)",
+        ]
 
         self.assertEqual(Trace.statements(), verdict)
 
@@ -272,23 +290,27 @@ class TestDataframeTrace(unittest.TestCase):
         Trace.turn(on=True, types=(AbstractColumn, GroupedDataFrame))
 
         df = DataFrame()
-        self.assertEqual(Trace.statements(),
-                         ['c0 = DataFrame()'])
+        self.assertEqual(Trace.statements(), ["c0 = DataFrame()"])
 
         df["a"] = [1, 2, 3]
-        self.assertEqual(Trace.statements(),
-                         ['c0 = DataFrame()',
-                          "_ = DataFrame.__setitem__(c0, 'a', [1, 2, 3])"])
+        self.assertEqual(
+            Trace.statements(),
+            ["c0 = DataFrame()", "_ = DataFrame.__setitem__(c0, 'a', [1, 2, 3])"],
+        )
 
         df["b"] = [11, 22, 33]
         df["c"] = [111, 222, 333]
-        d11 = df.where((me['a'] > 1))
-        self.assertEqual(Trace.statements(),
-                         ['c0 = DataFrame()',
-                          "_ = DataFrame.__setitem__(c0, 'a', [1, 2, 3])",
-                          "_ = DataFrame.__setitem__(c0, 'b', [11, 22, 33])",
-                          "_ = DataFrame.__setitem__(c0, 'c', [111, 222, 333])",
-                          "c5 = DataFrame.where(c0, me.__getitem__('a').__gt__(1))"])
+        d11 = df.where((me["a"] > 1))
+        self.assertEqual(
+            Trace.statements(),
+            [
+                "c0 = DataFrame()",
+                "_ = DataFrame.__setitem__(c0, 'a', [1, 2, 3])",
+                "_ = DataFrame.__setitem__(c0, 'b', [11, 22, 33])",
+                "_ = DataFrame.__setitem__(c0, 'c', [111, 222, 333])",
+                "c5 = DataFrame.where(c0, me.__getitem__('a').__gt__(1))",
+            ],
+        )
 
         # capture trace
         stms = Trace.statements()
@@ -297,19 +319,19 @@ class TestDataframeTrace(unittest.TestCase):
         self.setUp()
         Trace.turn(on=False)
         # run trace
-        exec(';'.join(stms))
+        exec(";".join(stms))
         # check for equivalence
+
     #     self.assertEqual(list(d11), list(eval(result)))
 
     def test_df_trace_locals_and_me_equivalence(self):
         Trace.turn(on=True, types=(AbstractColumn, GroupedDataFrame))
-        d0 = DataFrame(
-            {'a': [1, 2, 3], 'b':  [11, 22, 33], 'c': [111, 222, 333]})
+        d0 = DataFrame({"a": [1, 2, 3], "b": [11, 22, 33], "c": [111, 222, 333]})
 
-        d1 = d0.where((d0['a'] > 1))
+        d1 = d0.where((d0["a"] > 1))
         d1_result = Trace.result()
 
-        d2 = d0.where((me['a'] > 1))
+        d2 = d0.where((me["a"] > 1))
         d2_result = Trace.result()
 
         stms = Trace.statements()
@@ -319,15 +341,14 @@ class TestDataframeTrace(unittest.TestCase):
         self.setUp()
         Trace.turn(on=False)
         # run trace
-        exec(';'.join(stms))
+        exec(";".join(stms))
         # check for equivalence
         self.assertEqual(list(eval(d1_result)), list(eval(d2_result)))
 
     def test_df_trace_select_with_map(self):
         Trace.turn(on=True, types=(AbstractColumn, GroupedDataFrame))
 
-        d0 = DataFrame(
-            {'a': [1, 2, 3], 'b':  [11, 22, 33], 'c': [111, 222, 333]})
+        d0 = DataFrame({"a": [1, 2, 3], "b": [11, 22, 33], "c": [111, 222, 333]})
         d2 = d0.select(f=me.map(add, dtype=int64))
 
         d2_result = Trace.result()
@@ -335,18 +356,17 @@ class TestDataframeTrace(unittest.TestCase):
         self.setUp()
         Trace.turn(on=False)
 
-        exec(';'.join(stms))
+        exec(";".join(stms))
         self.assertEqual(list(d2), list(eval(d2_result)))
 
     def test_df_trace_select_map_equivalence(self):
         Trace.turn(on=True, types=(AbstractColumn, GroupedDataFrame))
-        d0 = DataFrame(
-            {'a': [1, 2, 3], 'b':  [11, 22, 33], 'c': [111, 222, 333]})
+        d0 = DataFrame({"a": [1, 2, 3], "b": [11, 22, 33], "c": [111, 222, 333]})
 
-        d1 = d0.select('*', e=me['a'] + me['b'])
+        d1 = d0.select("*", e=me["a"] + me["b"])
         d1_result = Trace.result()
 
-        d2 = d0.select('*', e=me.map(add, dtype=int64))
+        d2 = d0.select("*", e=me.map(add, dtype=int64))
         d2_result = Trace.result()
 
         stms = Trace.statements()
@@ -354,18 +374,17 @@ class TestDataframeTrace(unittest.TestCase):
         self.setUp()
         Trace.turn(on=False)
 
-        exec(';'.join(stms))
+        exec(";".join(stms))
         self.assertEqual(list(eval(d1_result)), list(eval(d2_result)))
 
     def test_df_without_input(self):
         Trace.turn(on=True, types=(AbstractColumn, GroupedDataFrame))
-        d0 = DataFrame(dtype=Struct([Field(i, int64)
-                       for i in ['a', 'b', 'c']]))
+        d0 = DataFrame(dtype=Struct([Field(i, int64) for i in ["a", "b", "c"]]))
 
-        d1 = d0.select('*', e=me['a'] + me['b'])
+        d1 = d0.select("*", e=me["a"] + me["b"])
         d1_result = Trace.result()
 
-        d2 = d0.select('*', e=me.map(add, dtype=int64))
+        d2 = d0.select("*", e=me.map(add, dtype=int64))
         d2_result = Trace.result()
 
         stms = Trace.statements()
@@ -373,7 +392,7 @@ class TestDataframeTrace(unittest.TestCase):
         self.setUp()
         Trace.turn(on=False)
 
-        exec(';'.join(stms))
+        exec(";".join(stms))
         self.assertEqual(list(eval(d1_result)), list(eval(d2_result)))
 
 

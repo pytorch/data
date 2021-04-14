@@ -39,7 +39,7 @@ from .dtypes import (
     is_tuple,
     string,
     Tuple_,
-    get_agg_op
+    get_agg_op,
 )
 from .tabulate import tabulate
 
@@ -101,8 +101,7 @@ class DataFrame(AbstractColumn):
                     return
                 elif isinstance(data, Mapping):
                     for n, c in data.items():
-                        self[n] = c if isinstance(
-                            c, AbstractColumn) else Column(c)
+                        self[n] = c if isinstance(c, AbstractColumn) else Column(c)
                     return
                 else:
                     raise TypeError(
@@ -119,13 +118,11 @@ class DataFrame(AbstractColumn):
                         break
                 dtype = infer_dtype_from_prefix(prefix)
                 if dtype is None or not is_tuple(dtype):
-                    raise TypeError(
-                        "Dataframe cannot infer struct type from data")
+                    raise TypeError("Dataframe cannot infer struct type from data")
                 dtype = cast(Tuple_, dtype)
                 columns = [] if columns is None else columns
                 if len(dtype.fields) != len(columns):
-                    raise TypeError(
-                        "Dataframe column length must equal row length")
+                    raise TypeError("Dataframe column length must equal row length")
                 self._dtype = Struct(
                     [Field(n, t) for n, t in zip(columns, dtype.fields)]
                 )
@@ -181,8 +178,7 @@ class DataFrame(AbstractColumn):
         """Append value to the end of the column/frame"""
         if tup is None:
             if not self.dtype.nullable:
-                raise TypeError(
-                    f"a tuple of type {self.dtype} is required, got None")
+                raise TypeError(f"a tuple of type {self.dtype} is required, got None")
             self._null_count += 1
             self._validity.append(False)
             for f in self._dtype.fields:
@@ -227,7 +223,7 @@ class DataFrame(AbstractColumn):
             res._field_data = {
                 n: c._copy(deep, offset, length) for n, c in self._field_data.items()
             }
-            res._validity = self._validity[offset: offset + length]
+            res._validity = self._validity[offset : offset + length]
             res._null_count = sum(res._validity)
             return res
         else:
@@ -319,7 +315,8 @@ class DataFrame(AbstractColumn):
             return int(arg)
         except:
             raise TypeError(
-                'column slice indices must be column names or strings that can be converted to integers or None')
+                "column slice indices must be column names or strings that can be converted to integers or None"
+            )
 
     def _slice_columns(self, arg):
         columns = self.columns
@@ -332,10 +329,10 @@ class DataFrame(AbstractColumn):
                 step_ = int(arg.step)
             except:
                 raise TypeError(
-                    'column step argument must a string that can be converted to an integer or None')
+                    "column step argument must a string that can be converted to an integer or None"
+                )
 
-        start, stop, step = slice(
-            start_, stop_, step_).indices(len(columns))
+        start, stop, step = slice(start_, stop_, step_).indices(len(columns))
 
         res = DataFrame()
         for i in range(start, stop, step):
@@ -348,7 +345,7 @@ class DataFrame(AbstractColumn):
             res[i] = self._field_data[i]
         return res
 
-# functools map/filter/reduce ---------------------------------------------
+    # functools map/filter/reduce ---------------------------------------------
     @trace
     @expression
     def map(
@@ -357,7 +354,7 @@ class DataFrame(AbstractColumn):
         /,
         na_action: Literal["ignore", None] = None,
         dtype: Optional[DType] = None,
-        columns: Optional[List[str]] = None
+        columns: Optional[List[str]] = None,
     ):
         """
         Maps rows according to input correspondence.
@@ -367,7 +364,7 @@ class DataFrame(AbstractColumn):
             return super().map(arg, na_action, dtype)
         for i in columns:
             if i not in self.columns:
-                raise KeyError('column {i} not in dataframe')
+                raise KeyError("column {i} not in dataframe")
         if len(columns) == 1:
             return self._map_unary(arg, na_action, dtype, columns[0])
         else:
@@ -378,7 +375,7 @@ class DataFrame(AbstractColumn):
         arg: Union[Dict, Callable],
         na_action: Literal["ignore", None],
         dtype: DType,
-        column: str
+        column: str,
     ):
         def func(x):
             return arg.get(x, None) if isinstance(arg, dict) else arg(x)
@@ -398,7 +395,7 @@ class DataFrame(AbstractColumn):
         arg: Union[Dict, Callable],
         na_action: Literal["ignore", None],
         dtype: DType,
-        columns: List[str]
+        columns: List[str],
     ):
         def func(*x):
             return arg.get(tuple(*x), None) if isinstance(arg, dict) else arg(*x)
@@ -413,14 +410,14 @@ class DataFrame(AbstractColumn):
                 res._append(None)
         return res
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def flatmap(
         self,
         arg: Union[Dict, Callable],
         na_action: Literal["ignore", None] = None,
         dtype: Optional[DType] = None,
-        columns: Optional[List[str]] = None
+        columns: Optional[List[str]] = None,
     ):
         """
         Maps rows to list of rows according to input correspondance
@@ -430,7 +427,7 @@ class DataFrame(AbstractColumn):
             return super().flatmap(arg, na_action, dtype)
         for i in columns:
             if i not in self.columns:
-                raise KeyError('column {i} not in dataframe')
+                raise KeyError("column {i} not in dataframe")
         if len(columns) == 1:
             return self._map_unary(arg, na_action, dtype, columns[0])
         else:
@@ -441,7 +438,7 @@ class DataFrame(AbstractColumn):
         arg: Union[Dict, Callable],
         na_action: Literal["ignore", None],
         dtype: DType,
-        column: str = None
+        column: str = None,
     ):
         def func(x):
             return arg.get(x, None) if isinstance(arg, dict) else arg(x)
@@ -460,7 +457,7 @@ class DataFrame(AbstractColumn):
         arg: Union[Dict, Callable],
         na_action: Literal["ignore", None],
         dtype: DType,
-        columns: List[str] = None
+        columns: List[str] = None,
     ):
         def func(x):
             return arg.get(x, None) if isinstance(arg, dict) else arg(x)
@@ -476,7 +473,9 @@ class DataFrame(AbstractColumn):
 
     @trace
     @expression
-    def filter(self, predicate: Union[Callable, Iterable], columns: Optional[List[str]] = None):
+    def filter(
+        self, predicate: Union[Callable, Iterable], columns: Optional[List[str]] = None
+    ):
         """
         Select rows where predicate is True.
         Different from Pandas. Use keep for Pandas filter.
@@ -485,7 +484,7 @@ class DataFrame(AbstractColumn):
             return super().filter(predicate)
         for i in columns:
             if i not in self.columns:
-                raise KeyError('column {i} not in dataframe')
+                raise KeyError("column {i} not in dataframe")
 
         if not isinstance(predicate, Iterable) and not callable(predicate):
             raise TypeError(
@@ -525,8 +524,8 @@ class DataFrame(AbstractColumn):
 
     # sorting ----------------------------------------------------------------
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def sort_values(
         self,
         by: Union[str, List[str], Literal[None]] = None,
@@ -544,8 +543,7 @@ class DataFrame(AbstractColumn):
             for i in by:
                 _ = self._field_data[i]  # throws key error
                 xs.append(self.columns.index(i))
-            reorder = xs + \
-                [j for j in range(len(self._field_data)) if j not in xs]
+            reorder = xs + [j for j in range(len(self._field_data)) if j not in xs]
 
             def func(tup):
                 return tuple(tup[i] for i in reorder)
@@ -554,37 +552,37 @@ class DataFrame(AbstractColumn):
         if na_position == "first":
             res.extend([None] * self._null_count)
         res.extend(
-            sorted((i for i in self if i is not None),
-                   reverse=not ascending, key=func)
+            sorted((i for i in self if i is not None), reverse=not ascending, key=func)
         )
         if na_position == "last":
             res.extend([None] * self._null_count)
         return res
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def sort(
         self,
         by: Union[str, List[str], Literal[None]] = None,
         ascending=True,
-        na_position: Literal['last', 'first'] = "last",
-
+        na_position: Literal["last", "first"] = "last",
     ):
         """Sort a column/a dataframe in ascending or descending order (aka sort_values)"""
         return self.sort_values(by, ascending, na_position)
 
-    @ trace
-    @ expression
-    def nlargest(self,
-                 n=5,
-                 columns: Union[str, List[str], Literal[None]] = None,
-                 keep: Literal['last', 'first'] = "first"):
+    @trace
+    @expression
+    def nlargest(
+        self,
+        n=5,
+        columns: Union[str, List[str], Literal[None]] = None,
+        keep: Literal["last", "first"] = "first",
+    ):
         """Returns a new dataframe of the *n* largest elements."""
         # Todo add keep arg
         return self.sort_values(by=columns, ascending=False).head(n)
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def nsmallest(
         self,
         n=5,
@@ -600,55 +598,55 @@ class DataFrame(AbstractColumn):
 
     # arithmetic
 
-    @ expression
+    @expression
     def add(self, other, fill_value=None):
         return self._binary_operator("add", other, fill_value=fill_value)
 
-    @ expression
+    @expression
     def radd(self, other, fill_value=None):
         return self._binary_operator("add", other, fill_value=fill_value, reflect=True)
 
-    @ expression
+    @expression
     def __add__(self, other):
         return self._binary_operator("add", other)
 
-    @ expression
+    @expression
     def __radd__(self, other):
         return self._binary_operator("add", other, reflect=True)
 
-    @ expression
+    @expression
     def sub(self, other, fill_value=None):
         return self._binary_operator("sub", other, fill_value=fill_value)
 
-    @ expression
+    @expression
     def rsub(self, other, fill_value=None):
         return self._binary_operator("sub", other, fill_value=fill_value, reflect=True)
 
-    @ expression
+    @expression
     def __sub__(self, other):
         return self._binary_operator("sub", other)
 
-    @ expression
+    @expression
     def __rsub__(self, other):
         return self._binary_operator("sub", other, reflect=True)
 
-    @ expression
+    @expression
     def mul(self, other, fill_value=None):
         return self._binary_operator("mul", other, fill_value=fill_value)
 
-    @ expression
+    @expression
     def rmul(self, other, fill_value=None):
         return self._binary_operator("mul", other, fill_value=fill_value, reflect=True)
 
-    @ expression
+    @expression
     def __mul__(self, other):
         return self._binary_operator("mul", other)
 
-    @ expression
+    @expression
     def __rmul__(self, other):
         return self._binary_operator("mul", other, reflect=True)
 
-    @ expression
+    @expression
     def floordiv(self, other, fill_value=None):
         return self._binary_operator(
             "floordiv",
@@ -656,21 +654,21 @@ class DataFrame(AbstractColumn):
             fill_value=fill_value,
         )
 
-    @ expression
+    @expression
     def rfloordiv(self, other, fill_value=None):
         return self._binary_operator(
             "floordiv", other, fill_value=fill_value, reflect=True
         )
 
-    @ expression
+    @expression
     def __floordiv__(self, other):
         return self._binary_operator("floordiv", other)
 
-    @ expression
+    @expression
     def __rfloordiv__(self, other):
         return self._binary_operator("floordiv", other, reflect=True)
 
-    @ expression
+    @expression
     def truediv(self, other, fill_value=None):
         return self._binary_operator(
             "truediv",
@@ -678,37 +676,37 @@ class DataFrame(AbstractColumn):
             fill_value=fill_value,
         )
 
-    @ expression
+    @expression
     def rtruediv(self, other, fill_value=None):
         return self._binary_operator(
             "truediv", other, fill_value=fill_value, reflect=True
         )
 
-    @ expression
+    @expression
     def __truediv__(self, other):
         return self._binary_operator("truediv", other)
 
-    @ expression
+    @expression
     def __rtruediv__(self, other):
         return self._binary_operator("truediv", other, reflect=True)
 
-    @ expression
+    @expression
     def mod(self, other, fill_value=None):
         return self._binary_operator("mod", other, fill_value=fill_value)
 
-    @ expression
+    @expression
     def rmod(self, other, fill_value=None):
         return self._binary_operator("mod", other, fill_value=fill_value, reflect=True)
 
-    @ expression
+    @expression
     def __mod__(self, other):
         return self._binary_operator("mod", other)
 
-    @ expression
+    @expression
     def __rmod__(self, other):
         return self._binary_operator("mod", other, reflect=True)
 
-    @ expression
+    @expression
     def pow(self, other, fill_value=None):
         return self._binary_operator(
             "pow",
@@ -716,49 +714,49 @@ class DataFrame(AbstractColumn):
             fill_value=fill_value,
         )
 
-    @ expression
+    @expression
     def rpow(self, other, fill_value=None):
         return self._binary_operator("pow", other, fill_value=fill_value, reflect=True)
 
-    @ expression
+    @expression
     def __pow__(self, other):
         return self._binary_operator("pow", other)
 
-    @ expression
+    @expression
     def __rpow__(self, other):
         return self._binary_operator("pow", other, reflect=True)
 
     # comparison
 
-    @ expression
+    @expression
     def eq(self, other, fill_value=None):
         return self._binary_operator("eq", other, fill_value=fill_value)
 
-    @ expression
+    @expression
     def __eq__(self, other):
         return self._binary_operator("eq", other)
 
-    @ expression
+    @expression
     def ne(self, other, fill_value=None):
         return self._binary_operator("ne", other, fill_value=fill_value)
 
-    @ expression
+    @expression
     def __ne__(self, other):
         return self._binary_operator("ne", other)
 
-    @ expression
+    @expression
     def lt(self, other, fill_value=None):
         return self._binary_operator("lt", other, fill_value=fill_value)
 
-    @ expression
+    @expression
     def __lt__(self, other):
         return self._binary_operator("lt", other)
 
-    @ expression
+    @expression
     def gt(self, other, fill_value=None):
         return self._binary_operator("gt", other, fill_value=fill_value)
 
-    @ expression
+    @expression
     def __gt__(self, other):
         return self._binary_operator("gt", other)
 
@@ -801,7 +799,7 @@ class DataFrame(AbstractColumn):
     def __pos__(self):
         return self._unary_operator(operator.pos)
 
-    @ trace
+    @trace
     def _lift(self, func, /, kwargs):
         res = DataFrame()
         if self._null_count == 0:
@@ -818,7 +816,7 @@ class DataFrame(AbstractColumn):
             return res
         raise NotImplementedError("Dataframe row is not allowed to have nulls")
 
-    @ trace
+    @trace
     def _unary_operator(self, operator):
         res = DataFrame()
         if self._null_count == 0:
@@ -827,7 +825,7 @@ class DataFrame(AbstractColumn):
             return res
         raise NotImplementedError("Dataframe row is not allowed to have nulls")
 
-    @ trace
+    @trace
     def _binary_operator(self, operator, other, fill_value=None, reflect=False):
 
         if isinstance(other, ScalarTypeValues):
@@ -864,8 +862,8 @@ class DataFrame(AbstractColumn):
 
     # isin ---------------------------------------------------------------
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def isin(self, values: Union[list, dict, AbstractColumn]):
         """Check whether values are contained in data."""
         res = DataFrame()
@@ -892,8 +890,8 @@ class DataFrame(AbstractColumn):
 
     # data cleaning -----------------------------------------------------------
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def fillna(
         self, fill_value: Union[ScalarTypes, Dict, AbstractColumn, Literal[None]]
     ):
@@ -925,8 +923,8 @@ class DataFrame(AbstractColumn):
         else:
             raise TypeError(f"fillna with {type(fill_value)} is not supported")
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def dropna(self, how: Literal["any", "all"] = "any"):
         """Return a dataframe with rows removed where the row has any or all nulls."""
         # TODO only flat columns supported...
@@ -942,8 +940,8 @@ class DataFrame(AbstractColumn):
                     res._append(i)
         return res
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def drop_duplicates(
         self,
         subset: Union[str, List[str], Literal[None]] = None,
@@ -973,7 +971,7 @@ class DataFrame(AbstractColumn):
                         res._append(tup)
         return res
 
-    @ staticmethod
+    @staticmethod
     def _has_any_null(tup) -> bool:
         for t in tup:
             if t is None:
@@ -982,7 +980,7 @@ class DataFrame(AbstractColumn):
                 return True
         return False
 
-    @ staticmethod
+    @staticmethod
     def _has_all_null(tup) -> bool:
         for t in tup:
             if t is not None:
@@ -999,14 +997,14 @@ class DataFrame(AbstractColumn):
     #   - global functions if they have no state
     #   - dataclasses with an apply function if they have state
 
-    @ staticmethod
+    @staticmethod
     def _cmin(c):
         return c.min
 
     # with static function
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def min(self, numeric_only=None):
         """Return the minimum of the nonnull values of the Column."""
         return self._summarize(DataFrame._cmin, {"numeric_only": numeric_only})
@@ -1023,91 +1021,90 @@ class DataFrame(AbstractColumn):
     #     """Return the minimum of the nonnull values of the Column."""
     #     return self._summarize(lambda c: c.min, {"numeric_only": numeric_only})
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def max(self, numeric_only=None):
         """Return the maximum of the nonnull values of the column."""
         # skipna == True
         return self._summarize(lambda c: c.max, {"numeric_only": numeric_only})
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def all(self, boolean_only=None):
         """Return whether all nonull elements are True in Column"""
         return self._summarize(lambda c: c.all, {"boolean_only": boolean_only})
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def any(self, skipna=True, boolean_only=None):
         """Return whether any nonull element is True in Column"""
         return self._summarize(lambda c: c.any, {"boolean_only": boolean_only})
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def sum(self):
         """Return sum of all nonull elements in Column"""
         return self._summarize(lambda c: c.sum, {})
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def prod(self):
         """Return produce of the values in the data"""
         return self._summarize(lambda c: c.prod, {})
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def cummin(self, skipna=True):
         """Return cumulative minimum of the data."""
         return self._lift(lambda c: c.cummin, {"skipna": skipna})
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def cummax(self, skipna=True):
         """Return cumulative maximum of the data."""
         return self._lift(lambda c: c.cummax, {"skipna": skipna})
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def cumsum(self, skipna=True):
         """Return cumulative sum of the data."""
         return self._lift(lambda c: c.cumsum, {"skipna": skipna})
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def cumprod(self, skipna=True):
         """Return cumulative product of the data."""
         return self._lift(lambda c: c.cumprod, {"skipna": skipna})
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def mean(self):
         """Return the mean of the values in the series."""
         return self._summarize(lambda c: c.mean, {})
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def median(self):
         """Return the median of the values in the data."""
         return self._summarize(lambda c: c.median, {})
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def mode(self):
         """Return the mode(s) of the data."""
         return self._summarize(lambda c: c.mode, {})
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def std(self):
         """Return the stddev(s) of the data."""
         return self._summarize(lambda c: c.std, {})
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def nunique(self, dropna=True):
         """Returns the number of unique values per column"""
-        res = DataFrame(
-            Struct([Field("column", string), Field("nunique", int64)]))
+        res = DataFrame(Struct([Field("column", string), Field("nunique", int64)]))
         for n, c in self._field_data.items():
             res._append((n, c.nunique(dropna)))
         return res
@@ -1122,8 +1119,8 @@ class DataFrame(AbstractColumn):
 
     # describe ----------------------------------------------------------------
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def describe(
         self,
         percentiles=None,
@@ -1134,8 +1131,7 @@ class DataFrame(AbstractColumn):
         # Not supported: datetime_is_numeric=False,
         includes = []
         if include_columns is None:
-            includes = [n for n, c in self._field_data.items()
-                        if is_numerical(c.dtype)]
+            includes = [n for n, c in self._field_data.items() if is_numerical(c.dtype)]
         elif isinstance(include_columns, list):
             includes = [
                 n for n, c in self._field_data.items() if c.dtype in include_columns
@@ -1167,8 +1163,7 @@ class DataFrame(AbstractColumn):
 
         res = DataFrame()
         res["metric"] = (
-            ["count", "mean", "std", "min"] +
-            [f"{p}%" for p in percentiles] + ["max"]
+            ["count", "mean", "std", "min"] + [f"{p}%" for p in percentiles] + ["max"]
         )
         for s in selected:
             c = self._field_data[s]
@@ -1181,8 +1176,8 @@ class DataFrame(AbstractColumn):
 
     # Dataframe specific ops --------------------------------------------------    #
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def drop(self, columns: List[str]):
         """
         Returns DataFrame without the removed columns.
@@ -1200,8 +1195,8 @@ class DataFrame(AbstractColumn):
                 f"drop with column parameter of type {type(columns).__name__} is not supported"
             )
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def keep(self, columns: List[str]):
         """
         Returns DataFrame with the kept columns only.
@@ -1219,8 +1214,8 @@ class DataFrame(AbstractColumn):
                 f"keep with column parameter of type {type(columns).__name__} is not supported"
             )
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def rename(self, column_mapper: Dict[str, str]):
         if isinstance(column_mapper, dict):
             for n in column_mapper:
@@ -1237,8 +1232,8 @@ class DataFrame(AbstractColumn):
                 f"rename with column_mapper parameter of type {type(column_mapper).__name__} is not supported"
             )
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def reorder(self, columns: List[str]):
         if isinstance(columns, list):
             for n in columns:
@@ -1274,8 +1269,8 @@ class DataFrame(AbstractColumn):
     # fluent with symbolic expressions ----------------------------------------
 
     # TODO decide on whether we nat to have arbitrarily nested wheres...
-    @ trace
-    @ expression
+    @trace
+    @expression
     def where(self, *conditions):
         """
         Analogous to SQL's where (NOT Pandas where)
@@ -1287,14 +1282,16 @@ class DataFrame(AbstractColumn):
         if not conditions:
             return self
 
-        evalled_conditions = [eval_expression(condition, {'me': self})
-                              for condition in conditions]
+        evalled_conditions = [
+            eval_expression(condition, {"me": self}) for condition in conditions
+        ]
         anded_evalled_conditions = functools.reduce(
-            lambda x, y: x & y, evalled_conditions)
+            lambda x, y: x & y, evalled_conditions
+        )
         return self[anded_evalled_conditions]
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def select(self, *args, **kwargs):
         """
         Analogous to SQL's ``SELECT`.
@@ -1310,62 +1307,64 @@ class DataFrame(AbstractColumn):
         exclude_columns = []
         for arg in args:
             if not isinstance(arg, str):
-                raise TypeError('args must be column names')
-            if arg == '*':
+                raise TypeError("args must be column names")
+            if arg == "*":
                 if has_star:
-                    raise ValueError('select received repeated stars')
+                    raise ValueError("select received repeated stars")
                 has_star = True
             elif arg in input_columns:
                 if arg in include_columns:
                     raise ValueError(
-                        f'select received a repeated column-include ({arg})')
+                        f"select received a repeated column-include ({arg})"
+                    )
                 include_columns.append(arg)
-            elif arg[0] == '-' and arg[1:] in input_columns:
+            elif arg[0] == "-" and arg[1:] in input_columns:
                 if arg in exclude_columns:
                     raise ValueError(
-                        f'select received a repeated column-exclude ({arg[1:]})')
+                        f"select received a repeated column-exclude ({arg[1:]})"
+                    )
                 exclude_columns.append(arg[1:])
             else:
-                raise ValueError(
-                    f'argument ({arg}) does not denote an existing column')
+                raise ValueError(f"argument ({arg}) does not denote an existing column")
         if exclude_columns and not has_star:
-            raise ValueError(
-                'select received column-exclude without a star')
+            raise ValueError("select received column-exclude without a star")
         if has_star and include_columns:
-            raise ValueError(
-                'select received both a star and column-includes')
+            raise ValueError("select received both a star and column-includes")
         if set(include_columns) & set(exclude_columns):
             raise ValueError(
-                'select received overlapping column-includes and ' +
-                'column-excludes')
+                "select received overlapping column-includes and " + "column-excludes"
+            )
 
         include_columns_inc_star = self.columns if has_star else include_columns
 
-        output_columns = [col for col in include_columns_inc_star
-                          if col not in exclude_columns]
+        output_columns = [
+            col for col in include_columns_inc_star if col not in exclude_columns
+        ]
 
         res = DataFrame()
         for n, c in self._field_data.items():
             if n in output_columns:
                 res[n] = c
         for n, c in kwargs.items():
-            res[n] = eval_expression(c, {'me': self})
+            res[n] = eval_expression(c, {"me": self})
         return res
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def pipe(self, func, *args, **kwargs):
         """
         Apply func(self, \*args, \*\*kwargs).
         """
         return func(self, *args, **kwargs)
 
-    @ trace
-    @ expression
-    def groupby(self, by: List[str],
-                sort=False,
-                dropna=True,
-                ):
+    @trace
+    @expression
+    def groupby(
+        self,
+        by: List[str],
+        sort=False,
+        dropna=True,
+    ):
         # TODO implement
         assert not sort
         assert dropna
@@ -1375,8 +1374,7 @@ class DataFrame(AbstractColumn):
         item_fields = []
         for k in key_columns:
             if k not in self._field_data.keys():
-                raise ValueError(
-                    f'groupby received a non existent column ({k})')
+                raise ValueError(f"groupby received a non existent column ({k})")
             key_fields.append(Field(k, self.dtype.get(k)))
         for f in self.dtype.fields:
             if f.name not in key_columns:
@@ -1388,7 +1386,7 @@ class DataFrame(AbstractColumn):
             if self._validity[j]:
                 key = tuple(self._field_data[f.name][j] for f in key_fields)
                 if key not in groups:
-                    groups[key] = ar.array('I')
+                    groups[key] = ar.array("I")
                 df = groups[key]
                 df.append(j)
             else:
@@ -1396,20 +1394,20 @@ class DataFrame(AbstractColumn):
         return GroupedDataFrame(key_fields, item_fields, groups, self)
 
 
-@ dataclass
+@dataclass
 class GroupedDataFrame:
     _key_fields: List[Field]
     _item_fields: List[Field]
     _groups: Dict[Tuple, Sequence]
     _parent: DataFrame
 
-    @ property
-    @ traceproperty
+    @property
+    @traceproperty
     def size(self):
         """
         Return the size of each group (including nulls).
         """
-        res = DataFrame(Struct(self._key_fields+[Field('size', int64)]))
+        res = DataFrame(Struct(self._key_fields + [Field("size", int64)]))
         for k, c in self._groups.items():
             row = k + (len(c),)
             res._append(row)
@@ -1423,10 +1421,13 @@ class GroupedDataFrame:
             df = DataFrame(Struct(self._item_fields))
             for x in xs:
                 df.append(
-                    tuple(self._parent._field_data[f.name][x] for f in self._item_fields))
+                    tuple(
+                        self._parent._field_data[f.name][x] for f in self._item_fields
+                    )
+                )
             yield g, df
 
-    @ trace
+    @trace
     def _lift(self, op: str) -> AbstractColumn:
         if len(self._key_fields) > 0:
             # it is a dataframe operation:
@@ -1436,8 +1437,7 @@ class GroupedDataFrame:
         raise AssertionError("unexpected case")
 
     def _combine(self, op: str) -> DataFrame:
-        agg_fields = [Field(f"{f.name}.{op}", f.dtype)
-                      for f in self._item_fields]
+        agg_fields = [Field(f"{f.name}.{op}", f.dtype) for f in self._item_fields]
         res = DataFrame()
         for f, c in zip(self._key_fields, self._unzip_group_keys()):
             res[f.name] = c
@@ -1558,9 +1558,10 @@ class GroupedDataFrame:
     def count(self):
         """Return the stddev(s) of the data."""
         return self._lift("count")
+
     # TODO should add reduce here as well...
 
-    @ trace
+    @trace
     def agg(self, arg):
         """
         Apply aggregation(s) to the groups.
@@ -1588,7 +1589,7 @@ class GroupedDataFrame:
         """
         return self.agg(arg)
 
-    @ trace
+    @trace
     def select(self, **kwargs):
         """
         Like select for dataframes, except for groups
@@ -1598,7 +1599,7 @@ class GroupedDataFrame:
         for f, c in zip(self._key_fields, self._unzip_group_keys()):
             res[f.name] = c
         for n, c in kwargs.items():
-            res[n] = eval_expression(c, {'me': self})
+            res[n] = eval_expression(c, {"me": self})
         return res
 
     def _normalize_agg_arg(self, arg):
@@ -1635,7 +1636,7 @@ class GroupedDataFrame:
         #     df.groupby('A').pipe({'B': lambda x: x.max() - x.min()}
 
 
-@ dataclass
+@dataclass
 class _Repr:
     parent: DataFrame
 
@@ -1658,7 +1659,7 @@ class DataFrameVar(Var, DataFrame):
 
 
 # The super variable...
-me = DataFrameVar('me')
+me = DataFrameVar("me")
 
 
 # ------------------------------------------------------------------------------

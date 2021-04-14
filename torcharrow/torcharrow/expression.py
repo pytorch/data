@@ -9,7 +9,7 @@ from typing import Any, Callable, Mapping, Optional, Sequence
 
 
 class Expression(ABC):
-    """ 
+    """
     Abstract class representing Python's parsed expressions trees but without if expressions
     """
 
@@ -21,6 +21,7 @@ class Expression(ABC):
         """Construct a symbolic representation of `self(*args, **kwargs)`."""
         return Call(self, args, kwargs)
 
+
 # function decorator ----------------------------------------------------------
 
 
@@ -29,10 +30,14 @@ def expression(fn):
     # TODO should we hijack this (or have yet another doc decorator)
     # to also print a summary of all functions? Yes:-)
     # print('function', fn.__name__)
-    setattr(Expression, fn.__name__, lambda self, *args, **
-            kwargs: Call(GetAttr(self, fn.__name__), args, kwargs))
+    setattr(
+        Expression,
+        fn.__name__,
+        lambda self, *args, **kwargs: Call(GetAttr(self, fn.__name__), args, kwargs),
+    )
 
     return fn
+
 
 # subtypes --------------------------------------------------------------------
 
@@ -50,7 +55,6 @@ class Var(Expression):
 
 
 class GetAttr(Expression):
-
     def __init__(self, obj: Any, name: str):
         self._obj = obj
         self._name = name
@@ -69,8 +73,12 @@ def _dummy_function():
 
 
 class Call(Expression):
-
-    def __init__(self,  _func: Callable, _args: Optional[Sequence] = None, _kwargs: Optional[Mapping] = None):
+    def __init__(
+        self,
+        _func: Callable,
+        _args: Optional[Sequence] = None,
+        _kwargs: Optional[Mapping] = None,
+    ):
         self._func = _func
         self._args = _args
         self._kwargs = _kwargs
@@ -84,8 +92,9 @@ class Call(Expression):
             evaled_args = [eval_expression(v, env) for v in self._args]
         evaled_kwargs = {}
         if self._kwargs is not None:
-            evaled_kwargs = {k: eval_expression(v, env)
-                             for k, v in self._kwargs.items()}
+            evaled_kwargs = {
+                k: eval_expression(v, env) for k, v in self._kwargs.items()
+            }
         return evaled_func(*evaled_args, **evaled_kwargs)
 
     def _str(v):
@@ -94,11 +103,15 @@ class Call(Expression):
         if isinstance(v, str):
             return "'" + v + "'"
         if isinstance(v, tuple):
-            return "(" + ', '.join(Call._str(w) for w in v) + ',)'
+            return "(" + ", ".join(Call._str(w) for w in v) + ",)"
         if isinstance(v, Sequence):
-            return "[" + ', '.join(Call._str(w) for w in v) + ']'
+            return "[" + ", ".join(Call._str(w) for w in v) + "]"
         if isinstance(v, Mapping):
-            return "{" + ', '.join(Call._str(k) + ': ' + Call._str(w) for k, w in v.items()) + '}'
+            return (
+                "{"
+                + ", ".join(Call._str(k) + ": " + Call._str(w) for k, w in v.items())
+                + "}"
+            )
         if isinstance(v, type(_dummy_function)):
             return v.__qualname__
         if isinstance(v, type(operator.add)):
@@ -112,26 +125,35 @@ class Call(Expression):
             args = [Call._str(v) for v in self._args]
         if self._kwargs is not None:
             if all(k.isidentifier() and not iskeyword(k) for k in self._kwargs.keys()):
-                args += [f'{str(k)}={Call._str(v)}' for k,
-                         v in self._kwargs.items()]
+                args += [f"{str(k)}={Call._str(v)}" for k, v in self._kwargs.items()]
             else:
-                args += "**{" + ', '.join(f'{k} : {Call._str(v)}' for k,
-                                          v in self._kwargs.items()) + "}"
-        if isinstance(self._func, type(_dummy_function)) and self._func.__name__ == "__init__":
+                args += (
+                    "**{"
+                    + ", ".join(
+                        f"{k} : {Call._str(v)}" for k, v in self._kwargs.items()
+                    )
+                    + "}"
+                )
+        if (
+            isinstance(self._func, type(_dummy_function))
+            and self._func.__name__ == "__init__"
+        ):
             # from T.__init(self,....) to T(...)
             qname = self._func.__qualname__
             return f"{qname[:qname.rindex('.')]}({', '.join(args[1:])})"
-        if isinstance(self._func, type(_dummy_function)) and hasattr(self._func, "_is_property"):
-            return f'{args[0]}.{self._func.__name__}'
+        if isinstance(self._func, type(_dummy_function)) and hasattr(
+            self._func, "_is_property"
+        ):
+            return f"{args[0]}.{self._func.__name__}"
         if isinstance(self._func, type(_dummy_function)):
             return f"{self._func.__qualname__}({', '.join(args)})"
         if isinstance(self._func, GetAttr):
             return f"{self._func}({', '.join(args)})"
-        raise AssertionError(
-            f'unexpected case {type(self._func)} {self._func}')
+        raise AssertionError(f"unexpected case {type(self._func)} {self._func}")
 
 
 # subtypes --------------------------------------------------------------------
 
+
 def eval_expression(obj, env):
-    return obj.eval_expression(env) if hasattr(obj, 'eval_expression') else obj
+    return obj.eval_expression(env) if hasattr(obj, "eval_expression") else obj

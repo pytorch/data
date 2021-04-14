@@ -12,7 +12,8 @@ from torcharrow import Call, Expression, GetAttr, Var, eval_expression
 
 # All kinds of callig conventions
 
-@ dataclass
+
+@dataclass
 class Cell:
     val: int
 
@@ -21,41 +22,43 @@ class Cell:
 
     # positional args
     def get2(self, x):
-        return self.val+x
+        return self.val + x
 
     # varargs
     def get3(self, *xs):
-        return self.val+sum(xs)
+        return self.val + sum(xs)
 
     # pos + varargs
     def get4(self, x, *xs):
-        return self.val+5*x+sum(xs)
+        return self.val + 5 * x + sum(xs)
 
     # default
     def get5(self, n=100):
-        return self.val+n
+        return self.val + n
 
     # kwargs
     def get6(self, /, n, m):
-        return self.val+n + m
+        return self.val + n + m
 
     # pos or kwargs
     def get6(self, n=100, m=200):
-        return self.val+n + m
+        return self.val + n + m
 
-    @ staticmethod
+    @staticmethod
     def get7():
         return 77
 
-    @ classmethod
+    @classmethod
     def get8(cls, x):
-        return x*8
+        return x * 8
 
     def map(self, fun):
         return fun(self.val)
 
 
-def succ(x): return x+1
+def succ(x):
+    return x + 1
+
 
 # Global dunder nethods (like len):
 
@@ -68,26 +71,25 @@ def len(x):
 
 
 class TestSymbolicExpression(unittest.TestCase):
-
     def test_builtins(self):
-        me = Var('me')
-        ME = Var('ME')
+        me = Var("me")
+        ME = Var("ME")
 
-        self.assertEqual(str(me), 'me')
-        self.assertEqual(str(me+1), "me.__add__(1)")
-        self.assertEqual(str(1+me), "me.__radd__(1)")
-        self.assertEqual(str(1+me*me), "me.__mul__(me).__radd__(1)")
+        self.assertEqual(str(me), "me")
+        self.assertEqual(str(me + 1), "me.__add__(1)")
+        self.assertEqual(str(1 + me), "me.__radd__(1)")
+        self.assertEqual(str(1 + me * me), "me.__mul__(me).__radd__(1)")
         self.assertEqual(str(me.abs()), "me.abs()")
 
-        env = {'me': 1}
-        self.assertEqual(eval_expression(1, {'me': 1}), 1)
-        self.assertEqual(eval_expression(me + 1, {'me': 1}), 2)
-        self.assertEqual(eval_expression(1 + me, {'me': 1}), 2)
-        self.assertEqual(eval_expression(1 + me, {'me': 1}), 2)
+        env = {"me": 1}
+        self.assertEqual(eval_expression(1, {"me": 1}), 1)
+        self.assertEqual(eval_expression(me + 1, {"me": 1}), 2)
+        self.assertEqual(eval_expression(1 + me, {"me": 1}), 2)
+        self.assertEqual(eval_expression(1 + me, {"me": 1}), 2)
         self.assertEqual(eval_expression([1, 2, 3], {}), [1, 2, 3])
         self.assertEqual(eval_expression(len([1, 2, 3]), {}), 3)
 
-        self.assertEqual(str(len(me)),  "me.__len__()")
+        self.assertEqual(str(len(me)), "me.__len__()")
 
         self.assertEqual(str(me.get1()), "me.get1()")
         self.assertEqual(str(me.get2(2)), "me.get2(2)")
@@ -100,7 +102,7 @@ class TestSymbolicExpression(unittest.TestCase):
         self.assertEqual(str(ME.get7(m=2)), "ME.get7(m=2)")
         self.assertEqual(str(ME.get8(1000)), "ME.get8(1000)")
 
-        env = {'me': Cell(12), 'ME': Cell}
+        env = {"me": Cell(12), "ME": Cell}
         self.assertEqual(eval_expression(me.get1(), env), 12)
         self.assertEqual(eval_expression(me.get2(2), env), 14)
         self.assertEqual(eval_expression(me.get3(2, 2, 3, 4), env), 23)
@@ -115,5 +117,5 @@ class TestSymbolicExpression(unittest.TestCase):
         self.assertEqual(eval_expression(me.map(succ), env), 13)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

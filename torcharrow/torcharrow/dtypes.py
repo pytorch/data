@@ -303,8 +303,7 @@ class List_(DType):
     def __str__(self):
         nullable = ", nullable=" + str(self.nullable) if self.nullable else ""
         fixed_size = (
-            ", fixed_size=" +
-            str(self.fixed_size) if self.fixed_size >= 0 else ""
+            ", fixed_size=" + str(self.fixed_size) if self.fixed_size >= 0 else ""
         )
         return f"List_({self.item_dtype}{nullable}{fixed_size})"
 
@@ -589,8 +588,7 @@ def _infer_dtype_from_value(value):
         return List_(dtype)
     if isinstance(value, dict):
         key_dtype = infer_dtype_from_prefix(list(value.keys())[:PREFIX_LENGTH])
-        items_dtype = infer_dtype_from_prefix(
-            list(value.values())[:PREFIX_LENGTH])
+        items_dtype = infer_dtype_from_prefix(list(value.values())[:PREFIX_LENGTH])
         return Map(key_dtype, items_dtype)
     if isinstance(value, tuple):
         dtypes = []
@@ -714,20 +712,20 @@ def get_agg_op(op: str, dtype: DType) -> Tuple[Callable, DType]:
         return (_agg_ops[op], Float64(dtype.nullable))
     if op in ["count"]:
         return (_agg_ops[op], Int64(dtype.nullable))
-    raise AssertionError('unexpected case')
+    raise AssertionError("unexpected case")
 
 
 _agg_ops = {
-    'min': lambda c: c.min(),
-    'max': lambda c: c.max(),
-    'all': lambda c: c.all(),
-    'any': lambda c: c.any(),
-    'sum': lambda c: c.sum(),
-    'prod': lambda c: c.prod(),
-    'mean': lambda c: c.mean(),
-    'median': lambda c: c.median(),
-    'mode': lambda c: c.mode(),
-    'count': lambda c: c.count(),
+    "min": lambda c: c.min(),
+    "max": lambda c: c.max(),
+    "all": lambda c: c.all(),
+    "any": lambda c: c.any(),
+    "sum": lambda c: c.sum(),
+    "prod": lambda c: c.prod(),
+    "mean": lambda c: c.mean(),
+    "median": lambda c: c.median(),
+    "mode": lambda c: c.mode(),
+    "count": lambda c: c.count(),
 }
 
 # -----------------------------------------------------------------------------

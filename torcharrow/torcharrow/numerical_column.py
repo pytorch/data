@@ -38,8 +38,8 @@ class NumericalColumn(AbstractColumn):
         if deep:
             res = NumericalColumn(self.dtype)
             res._length = length
-            res._data = self._data[offset: offset + length]
-            res._validity = self._validity[offset: offset + length]
+            res._data = self._data[offset : offset + length]
+            res._validity = self._validity[offset : offset + length]
             res._null_count = sum(res._validity)
             return res
         else:

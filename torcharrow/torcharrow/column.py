@@ -286,7 +286,7 @@ class AbstractColumn(ABC, Sized, Iterable):
         DataFrame with the corresponding columns.
         If *arg* is an ``list`` containing row numbers, return a new
         Column/DataFrame with the corresponding rows.
-        If *arg* is a ``BooleanColumn``, return a new Column or DataFrame 
+        If *arg* is a ``BooleanColumn``, return a new Column or DataFrame
         with rows which have been  marked True
         """
         # print('slice', arg, str(type(arg)))
@@ -318,8 +318,7 @@ class AbstractColumn(ABC, Sized, Iterable):
         elif isinstance(arg, AbstractColumn) and is_boolean(arg.dtype):
             return self.filter(arg)
         else:
-            raise TypeError(
-                f"__getitem__ on type {type(arg)} is not supported")
+            raise TypeError(f"__getitem__ on type {type(arg)} is not supported")
 
     @trace
     @expression
@@ -419,15 +418,14 @@ class AbstractColumn(ABC, Sized, Iterable):
         arg: Union[Dict, Callable],
         na_action: Literal["ignore", None] = None,
         dtype: Optional[DType] = None,
-        columns: Optional[List[str]] = None
+        columns: Optional[List[str]] = None,
     ):
         """
         Maps rows according to input correspondence.
         dtype required if result type != item type.
         """
         if columns is not None:
-            raise TypeError(
-                f"columns parameter for flat columns not supported")
+            raise TypeError(f"columns parameter for flat columns not supported")
 
         def func(x):
             return arg.get(x, None) if isinstance(arg, dict) else arg(x)
@@ -449,15 +447,14 @@ class AbstractColumn(ABC, Sized, Iterable):
         arg: Union[Dict, Callable],
         na_action: Literal["ignore", None] = None,
         dtype: Optional[DType] = None,
-        columns: Optional[List[str]] = None
+        columns: Optional[List[str]] = None,
     ):
         """
         Maps rows to list of rows according to input correspondance
         dtype required if result type != item type.
         """
         if columns is not None:
-            raise TypeError(
-                f"columns parameter for flat columns not supported")
+            raise TypeError(f"columns parameter for flat columns not supported")
 
         def func(x):
             return arg.get(x, None) if isinstance(arg, dict) else arg(x)
@@ -473,14 +470,15 @@ class AbstractColumn(ABC, Sized, Iterable):
 
     @trace
     @expression
-    def filter(self, predicate: Union[Callable, Iterable], columns: Optional[List[str]] = None):
+    def filter(
+        self, predicate: Union[Callable, Iterable], columns: Optional[List[str]] = None
+    ):
         """
         Select rows where predicate is True.
         Different from Pandas. Use keep for Pandas filter.
         """
         if columns is not None:
-            raise TypeError(
-                f"columns parameter for flat columns not supported")
+            raise TypeError(f"columns parameter for flat columns not supported")
 
         if not isinstance(predicate, Iterable) and not callable(predicate):
             raise TypeError(
@@ -510,8 +508,7 @@ class AbstractColumn(ABC, Sized, Iterable):
             if initializer is not None:
                 return initializer
             else:
-                raise TypeError(
-                    "reduce of empty sequence with no initial value")
+                raise TypeError("reduce of empty sequence with no initial value")
         start = 0
         if initializer is None:
             value = self[0]
@@ -565,13 +562,11 @@ class AbstractColumn(ABC, Sized, Iterable):
         """Sort a column/a dataframe in ascending or descending order"""
         # key:Callable, optional missing
         if by is not None:
-            raise TypeError(
-                "sorting a non-structured column can't have 'by' parameter")
+            raise TypeError("sorting a non-structured column can't have 'by' parameter")
         res = _column_constructor(self.dtype)
         if na_position == "first":
             res.extend([None] * self._null_count)
-        res.extend(
-            sorted((i for i in self if i is not None), reverse=not ascending))
+        res.extend(sorted((i for i in self if i is not None), reverse=not ascending))
         if na_position == "last":
             res.extend([None] * self._null_count)
         return res
@@ -894,11 +889,9 @@ class AbstractColumn(ABC, Sized, Iterable):
         for i in range(self._length):
             if self._valid(i) and other._valid(i):
                 if reflect:
-                    res._append(
-                        operator(other.get(i, None), self.get(i, None)))
+                    res._append(operator(other.get(i, None), self.get(i, None)))
                 else:
-                    res._append(
-                        operator(self.get(i, None), other.get(i, None)))
+                    res._append(operator(self.get(i, None), other.get(i, None)))
             elif fill_value is not None:
                 l = self.get(i, None) if self._valid(i) else fill_value
                 r = other.get(i, None) if other._valid(i) else fill_value
@@ -1174,8 +1167,7 @@ class AbstractColumn(ABC, Sized, Iterable):
             except StopIteration:
                 raise ValueError(f"cum[min/max] undefined for empty column.")
         if total is None:
-            raise ValueError(
-                f"cum[min/max] undefined for columns with row 0 as null.")
+            raise ValueError(f"cum[min/max] undefined for columns with row 0 as null.")
         res._append(total)
         for element in it:
             if rest_is_null:

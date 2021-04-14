@@ -70,7 +70,7 @@ class Trace:
 
     @classmethod
     def result(cls):
-        for i in range(len(cls._trace)-1, -1, -1):
+        for i in range(len(cls._trace) - 1, -1, -1):
             id, expr = cls._trace[i]
             if id != "_":
                 return id
@@ -84,7 +84,7 @@ class Trace:
 def trace(fn):
     """Trace all basic torcharrow functions operating on given types."""
 
-    @ functools.wraps(fn)
+    @functools.wraps(fn)
     def wrapped(*args, **kwargs):
         # print("TRACE-IN", fn, "args", args, "kwargs", kwargs)
 
@@ -112,8 +112,7 @@ def trace(fn):
             if isinstance(res, Trace._types):
                 out = res.id
             # print("TRACE-END", fn, "args", args_, "kwargs", kwargs_)
-            Trace.append(
-                (out, Call(fn, args_, kwargs_)))
+            Trace.append((out, Call(fn, args_, kwargs_)))
 
         return res
 
@@ -123,7 +122,7 @@ def trace(fn):
 def traceproperty(fn):
     """Trace all basic torcharrow functions operating on given types."""
 
-    @ functools.wraps(fn)
+    @functools.wraps(fn)
     def wrapped(*args, **kwargs):
         # same code as above, except for this line...
         fn._is_property = True
@@ -152,8 +151,7 @@ def traceproperty(fn):
             out = "_"
             if isinstance(res, Trace._types):
                 out = res.id
-            Trace.append(
-                (out, Call(fn, tuple(args_), kwargs_)))
+            Trace.append((out, Call(fn, tuple(args_), kwargs_)))
 
         return res
 

@@ -57,8 +57,8 @@ class TestNumericalColumn(unittest.TestCase):
         self.assertEqual(len(col._data), 4)
         self.assertEqual(len(col._validity), 4)
         self.assertEqual(list(col), list(range(4)))
-        m = col[0: len(col)]
-        self.assertEqual(list(col[0: len(col)]), list(range(4)))
+        m = col[0 : len(col)]
+        self.assertEqual(list(col[0 : len(col)]), list(range(4)))
         with self.assertRaises(TypeError):
             # TypeError: an integer is required (got type NoneType)
             col.append(None)
@@ -108,7 +108,7 @@ class TestNumericalColumn(unittest.TestCase):
         # slice
 
         # continuous slice creates a view
-        c = col[3: len(col)]
+        c = col[3 : len(col)]
         self.assertEqual(len(col), 6)
         self.assertEqual(len(c), 3)
         self.assertEqual(id(col._data), id(c._data))
@@ -203,8 +203,7 @@ class TestNumericalColumn(unittest.TestCase):
         col.extend([3, 4, 5])
 
         # keep None
-        self.assertEqual(list(col.map({3: 33})), [
-                         None, None, None, 33, None, None])
+        self.assertEqual(list(col.map({3: 33})), [None, None, None, 33, None, None])
 
         # maps None
         self.assertEqual(
@@ -247,8 +246,7 @@ class TestNumericalColumn(unittest.TestCase):
         col = Column([1, 2, 3])
         self.assertEqual(list(col.sort_values()), [1, 2, 3])
         self.assertEqual(list(col.sort_values(ascending=False)), [3, 2, 1])
-        self.assertEqual(
-            list(Column([None, 1, 5, 2]).sort_values()), [1, 2, 5, None])
+        self.assertEqual(list(Column([None, 1, 5, 2]).sort_values()), [1, 2, 5, None])
         self.assertEqual(
             list(Column([None, 1, 5, 2]).sort_values(na_position="first")),
             [None, 1, 2, 5],
@@ -260,8 +258,7 @@ class TestNumericalColumn(unittest.TestCase):
         self.assertEqual(
             list(Column([None, 1, 5, 2]).nsmallest(n=2, keep="last")), [1, 2]
         )
-        self.assertEqual(
-            list(Column([None, 1, 5, 2]).reverse()), [2, 5, 1, None])
+        self.assertEqual(list(Column([None, 1, 5, 2]).reverse()), [2, 5, 1, None])
 
     def test_operators(self):
         # without None
@@ -381,21 +378,17 @@ class TestNumericalColumn(unittest.TestCase):
         self.assertEqual(C.median(), statistics.median(c))
 
         self.assertEqual(
-            list(C.cummin()), [min(c[:i])
-                               for i in range(1, len(c) + 1)] + [None]
+            list(C.cummin()), [min(c[:i]) for i in range(1, len(c) + 1)] + [None]
         )
         self.assertEqual(
-            list(C.cummax()), [max(c[:i])
-                               for i in range(1, len(c) + 1)] + [None]
+            list(C.cummax()), [max(c[:i]) for i in range(1, len(c) + 1)] + [None]
         )
         self.assertEqual(
-            list(C.cumsum()), [sum(c[:i])
-                               for i in range(1, len(c) + 1)] + [None]
+            list(C.cumsum()), [sum(c[:i]) for i in range(1, len(c) + 1)] + [None]
         )
         self.assertEqual(
             list(C.cumprod()),
-            [functools.reduce(operator.mul, c[:i], 1)
-             for i in range(1, len(c) + 1)]
+            [functools.reduce(operator.mul, c[:i], 1) for i in range(1, len(c) + 1)]
             + [None],
         )
         self.assertEqual((C % 2 == 0)[:-1].all(), all(i % 2 == 0 for i in c))
@@ -404,8 +397,7 @@ class TestNumericalColumn(unittest.TestCase):
     def test_in_nunique(self):
         c = [1, 4, 2, 7]
         C = Column(c + [None])
-        self.assertEqual(list(C.isin([1, 2, 3])), [
-                         True, False, True, False, False])
+        self.assertEqual(list(C.isin([1, 2, 3])), [True, False, True, False, False])
         C.extend(c)
         d = set(c)
         d.add(None)
