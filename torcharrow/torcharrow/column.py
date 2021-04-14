@@ -171,13 +171,13 @@ class AbstractColumn(ABC, Sized, Iterable):
 
     # simple meta data getters -----------------------------------------------
 
-    @property
+    @property  # type: ignore
     @traceproperty
     def dtype(self):
         """dtype of the colum/frame"""
         return self._dtype
 
-    @property
+    @property  # type: ignore
     @traceproperty
     def isnullable(self):
         """A boolean indicating whether column/frame can have nulls"""
@@ -206,13 +206,13 @@ class AbstractColumn(ABC, Sized, Iterable):
         """Return number of rows including null values"""
         return self._length
 
-    @property
+    @property  # type: ignore
     @traceproperty
     def ndim(self):
         """Column ndim is always 1, Frame ndim is always 2"""
         return 1
 
-    @property
+    @property  # type: ignore
     @traceproperty
     def size(self):
         """Number of rows * number of columns."""

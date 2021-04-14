@@ -143,7 +143,7 @@ class DataFrame(AbstractColumn):
 
     # implementing abstract methods ----------------------------------------------
 
-    @property
+    @property  # type: ignore
     @traceproperty
     def is_appendable(self):
         """Can this column/frame be extended"""
@@ -162,13 +162,13 @@ class DataFrame(AbstractColumn):
         else:
             return len(self._validity) * vsize + fusage
 
-    @property
+    @property  # type: ignore
     @traceproperty
     def ndim(self):
         """Column ndim is always 1, Frame ndim is always 2"""
         return 2
 
-    @property
+    @property  # type: ignore
     @traceproperty
     def size(self):
         """ Number of rows if column; number of rows * number of columns if Frame. """
@@ -236,7 +236,7 @@ class DataFrame(AbstractColumn):
 
     # implementing abstract methods ----------------------------------------------
 
-    @property
+    @property  # type: ignore
     @traceproperty
     def columns(self):
         """The column labels of the DataFrame."""
@@ -389,7 +389,7 @@ class DataFrame(AbstractColumn):
         self,
         arg: Union[Dict, Callable],
         na_action: Literal["ignore", None],
-        dtype: DType,
+        dtype: Optional[DType],
         column: str,
     ):
         def func(x):
@@ -409,7 +409,7 @@ class DataFrame(AbstractColumn):
         self,
         arg: Union[Dict, Callable],
         na_action: Literal["ignore", None],
-        dtype: DType,
+        dtype: Optional[DType],
         columns: List[str],
     ):
         def func(*x):
@@ -444,16 +444,16 @@ class DataFrame(AbstractColumn):
             if i not in self.columns:
                 raise KeyError("column {i} not in dataframe")
         if len(columns) == 1:
-            return self._map_unary(arg, na_action, dtype, columns[0])
+            return self._unary_flatmap(arg, na_action, dtype, columns[0])
         else:
-            return self._map_nary(arg, na_action, dtype, columns)
+            return self._nary_flatmap(arg, na_action, dtype, columns)
 
     def _unary_flatmap(
         self,
         arg: Union[Dict, Callable],
         na_action: Literal["ignore", None],
-        dtype: DType,
-        column: str = None,
+        dtype: Optional[DType],
+        column: str,
     ):
         def func(x):
             return arg.get(x, None) if isinstance(arg, dict) else arg(x)
@@ -471,8 +471,8 @@ class DataFrame(AbstractColumn):
         self,
         arg: Union[Dict, Callable],
         na_action: Literal["ignore", None],
-        dtype: DType,
-        columns: List[str] = None,
+        dtype: Optional[DType],
+        columns: List[str],
     ):
         def func(x):
             return arg.get(x, None) if isinstance(arg, dict) else arg(x)
@@ -497,9 +497,9 @@ class DataFrame(AbstractColumn):
         """
         if columns is None:
             return super().filter(predicate)
-        for i in columns:
-            if i not in self.columns:
-                raise KeyError("column {i} not in dataframe")
+        for c in columns:
+            if c not in self.columns:
+                raise KeyError("column {c} not in dataframe")
 
         if not isinstance(predicate, Iterable) and not callable(predicate):
             raise TypeError(
@@ -1368,7 +1368,7 @@ class DataFrame(AbstractColumn):
     @expression
     def pipe(self, func, *args, **kwargs):
         """
-        Apply func(self, \*args, \*\*kwargs).
+        Apply func(self, *args, **kwargs).
         """
         return func(self, *args, **kwargs)
 
@@ -1395,7 +1395,7 @@ class DataFrame(AbstractColumn):
             if f.name not in key_columns:
                 item_fields.append(f)
 
-        groups: Dict[Tuple, Sequence[int]] = {}
+        groups: Dict[Tuple, ar.array] = {}
         for i in range(self._length):
             j = self._offset + i
             if self._validity[j]:
@@ -1413,10 +1413,10 @@ class DataFrame(AbstractColumn):
 class GroupedDataFrame:
     _key_fields: List[Field]
     _item_fields: List[Field]
-    _groups: Dict[Tuple, Sequence]
+    _groups: Mapping[Tuple, Sequence]
     _parent: DataFrame
 
-    @property
+    @property  # type: ignore
     @traceproperty
     def size(self):
         """

@@ -54,6 +54,12 @@ class Field:
 
 @dataclass(frozen=True)  # type: ignore
 class DType(ABC):
+    # overwritten as a field in descendants, but keeping here for type checking
+    @property
+    @abstractmethod
+    def nullable(self):
+        return False
+
     @property
     def size(self):
         return -1  # means unknown

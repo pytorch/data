@@ -13,14 +13,14 @@ from .expression import Expression, Call, Var, GetAttr
 class Trace:
 
     # class fields
-    _trace: List[Tuple[id, Expression]] = []
+    _trace: List[Tuple[str, Expression]] = []
     _nesting_level = 0
     _is_on = False
-    _types = ()
+    _types: Tuple[Type, ...] = ()
 
     @classmethod
     def reset(cls):
-        cls._trace: List[Tuple[id, Expression]] = []
+        cls._trace: List[Tuple[str, Expression]] = []
         cls._nesting_level = 0
         cls._is_on = False
         cls._types = ()
@@ -42,7 +42,7 @@ class Trace:
         return cls._is_on
 
     @classmethod
-    def append(cls, call: Expression):
+    def append(cls, call: Tuple[str, Expression]):
         cls._trace.append(call)
 
     @classmethod
