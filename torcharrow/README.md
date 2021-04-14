@@ -10,12 +10,31 @@ TorchArrow supports [PyTorch](https://github.com/pytorch/pytorch)'s Tensors as f
 
 ## Install torcharrow
 ```
-pip3 install .
+pip install .
 ```
 ## Test torcharrow
 ```
-python3 -m unittest
+python -m unittest
+# or
+pip install pytest
+pytest torcharrow
 ```
+
+## Type checking
+```
+pip install mypy
+mypy torcharrow
+```
+
+## Code formatting
+
+The code is auto-formatted with Black:
+
+```
+pip install black
+black torcharrow
+```
+
 ## Documentation
 All documentation is available via Notebooks:
 * [TorchArrow in 10 minutes (a tutorial)](https://github.com/facebookexternal/torchdata/blob/main/torcharrow/torcharrow10min.ipynb)
