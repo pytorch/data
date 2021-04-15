@@ -113,6 +113,10 @@ class StringColumn(AbstractColumn):
     def to_python(self):
         return [self.get(i, None) for i in range(self._length)]
 
+    def to_torch(self):
+        # there are no string tensors, so we're using regular python conversion
+        return self.to_python()
+
     # printing ----------------------------------------------------------------
     def __str__(self):
         def quote(x):

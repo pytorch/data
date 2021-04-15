@@ -18,6 +18,7 @@ from .column import AbstractColumn, Column, _column_constructor, _set_column_con
 from .dtypes import NL, DType, List_, is_map
 from .list_column import ListColumn
 from .tabulate import tabulate
+from . import pytorch
 
 # -----------------------------------------------------------------------------
 # MapColumn
@@ -139,6 +140,28 @@ class MapColumn(AbstractColumn):
             (OrderedDict(zip(keys[i], vals[i])) if self._validity[i] else None)
             for i in range(self._offset, self._offset + self._length)
         ]
+
+    def to_torch(self):
+        pytorch.ensure_available()
+        import torch
+
+        # TODO: the slicing might need to be removed if we propagate slicing to columns proactively
+        subset = slice(self._offset, self._offset + self._length)
+        keys = self._key_data[subset].to_torch(_propagate_py_list=False)
+        vals = self._item_data[subset].to_torch(_propagate_py_list=False)
+        # TODO: should we propagate python list if both keys and vals are lists of strings?
+        assert isinstance(keys, pytorch.PackedList)
+        assert isinstance(vals, pytorch.PackedList)
+        assert torch.all(keys.offsets == vals.offsets)
+        res = pytorch.PackedMap(
+            keys=keys.values, values=vals.values, offsets=keys.offsets
+        )
+        if not self._dtype.nullable:
+            return res
+        presence = torch.tensor(
+            self._validity[self._offset : self._offset + self._length], dtype=torch.bool
+        )
+        return pytorch.WithPresence(values=res, presence=presence)
 
     # printing ----------------------------------------------------------------
     def __str__(self):

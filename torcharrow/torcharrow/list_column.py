@@ -8,6 +8,7 @@ from typing import List, Optional
 from .column import AbstractColumn, Column, _column_constructor, _set_column_constructor
 from .dtypes import NL, Boolean, DType, Int64, List_, String, Uint32, is_list, is_string
 from .tabulate import tabulate
+from . import pytorch
 
 # -----------------------------------------------------------------------------
 # ListColumn
@@ -116,6 +117,42 @@ class ListColumn(AbstractColumn):
             )
             for i in range(self._offset, self._offset + self._length)
         ]
+
+    def to_torch(self, _propagate_py_list=True):
+        pytorch.ensure_available()
+        import torch
+
+        # TODO: the slicing might need to be removed if we propagate slicing to columns proactively
+        elems = self._data[
+            self._offsets[self._offset] : self._offsets[self._offset + self._length]
+        ].to_torch()
+        # special case: if the nested type is List (which happens for List[str] that can't be represented as tensor) then we fallback to string types
+        if isinstance(elems, list) and _propagate_py_list:
+            return [
+                (
+                    elems[
+                        self._offsets[i]
+                        - self._offsets[self._offset] : self._offsets[i + 1]
+                        - self._offsets[self._offset]
+                    ]
+                    if self._validity[i]
+                    else None
+                )
+                for i in range(self._offset, self._offset + self._length)
+            ]
+        # TODO: clarify int32 vs int64
+        offsets = torch.tensor(
+            self._offsets[self._offset : self._offset + self._length + 1],
+            dtype=torch.int32,
+        )
+        offsets -= offsets[0].item()  # normalize indices
+        res = pytorch.PackedList(values=elems, offsets=offsets)
+        if not self._dtype.nullable:
+            return res
+        presence = torch.tensor(
+            self._validity[self._offset : self._offset + self._length], dtype=torch.bool
+        )
+        return pytorch.WithPresence(values=res, presence=presence)
 
     # printing ----------------------------------------------------------------
     def __str__(self):

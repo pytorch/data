@@ -46,6 +46,7 @@ from .tabulate import tabulate
 from .expression import Var, expression, eval_expression
 
 from .trace import trace, traceproperty
+from . import pytorch
 
 # assumes that these have been importd already:
 # from .numerical_column import NumericalColumn
@@ -292,6 +293,22 @@ class DataFrame(AbstractColumn):
                 )
             )
         ]
+
+    def to_torch(self):
+        pytorch.ensure_available()
+        import torch
+
+        # TODO: this actually puts the type annotations on the tuple wrong. We might need to address it eventually, but because it's python it doesn't matter
+        tup_type = self._dtype.py_type
+        # TODO: we probably don't need subscript here with offset after df[1:3]["A"] slicing is fixed
+        return tup_type(
+            *(
+                self._field_data[f.name][
+                    self._offset : self._offset + self._length
+                ].to_torch()
+                for f in self._dtype.fields
+            )
+        )
 
     # printing ----------------------------------------------------------------
     def __str__(self):
