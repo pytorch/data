@@ -83,6 +83,8 @@ class EventLoop:
         cls.handlers.append((handler, handle_name, cls.uid))
 
 # Turns IterDataPipe into two mp.Queues, terminates when getting StopIteration
+
+
 def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue):
     if isinstance(source_datapipe, IterDataPipe):
         pipe_type = datapipes.iter
@@ -98,7 +100,9 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue):
         pass
 
 # Puts datapipe behind two (request, response) queues, adds Iterator to the EventLoop to process messages
-def WrapDatasetToEventHandler(source_datapipe, dp_name='unnamed dataset', prefetch=False):
+
+
+def WrapDatasetToEventHandler(source_datapipe, dp_name='unnamed dataset'):
     if isinstance(source_datapipe, IterDataPipe):
         pipe_type = datapipes.iter
         protocol_type_server = datapipes.protocol.IterDataPipeQueueProtocolServer
@@ -119,10 +123,8 @@ def WrapDatasetToEventHandler(source_datapipe, dp_name='unnamed dataset', prefet
                                            response_queue)
     client_protocol = protocol_type_client(request_queue,
                                            response_queue)
-    if prefetch and is_iter:
-        loop_generator = pipe_type.PrefetcherDataPipeBehindQueues
-    else:
-        loop_generator = pipe_type.DataPipeBehindQueues
+
+    loop_generator = pipe_type.DataPipeBehindQueues
 
     handler = iter(loop_generator(source_datapipe, server_protocol))
     EventLoop.add_handler(handler, dp_name)

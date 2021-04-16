@@ -8,6 +8,9 @@ class Protocol(object):
 
 
 class ProtocolClient(Protocol):
+    """
+        ProtocolClient takes charge of putting requests into req_queue and returning results from res_queue.
+    """
     _req_sent = None
 
     def __init__(self, request_queue, response_queue):
@@ -34,6 +37,9 @@ class ProtocolClient(Protocol):
 
 
 class ProtocolServer(Protocol):
+    """
+        ProtocolServer takes charge of getting requests from req_queue and fetching data from source datapipe.
+    """
     _req_received = None
 
     def __init__(self, request_queue, response_queue):

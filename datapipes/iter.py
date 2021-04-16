@@ -346,7 +346,6 @@ def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_re
         elif isinstance(request, datapipes.nonblocking.TerminateRequest):
             forever = False
             protocol.response_terminate()
-            continue
 
         elif isinstance(request, datapipes.nonblocking.GetNextRequest):
             while forever:
