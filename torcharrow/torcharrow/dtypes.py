@@ -418,6 +418,28 @@ class Tuple_(DType):
         return Tuple_(self.fields, nullable)
 
 
+@dataclass(frozen=True)
+class Any_(DType):
+    nullable: bool = True
+    typecode: ClassVar[str] = "?"
+    arraycode: ClassVar[str] = "?"
+    name: ClassVar[str] = "any"
+    default: ClassVar[Optional[bool]] = None
+
+    @property
+    def size(self):
+        # currently 1 byte per bit
+        raise ValueError("Shouldn't be called")
+
+    @property
+    def py_type(self):
+        raise ValueError("Shouldn't be called")
+
+    def constructor(self, nullable=True):
+        assert nullable == True
+        return Any_()
+
+
 # Schema is just a struct that is maked as standing for a dataframe
 
 
@@ -622,6 +644,10 @@ def is_tuple(t):
     return t.typecode.startswith("+t")
 
 
+def is_any(t):
+    return t.typecode == "?"
+
+
 # Infer types from values -----------------------------------------------------
 PREFIX_LENGTH = 5
 
@@ -653,7 +679,7 @@ def _infer_dtype_from_value(value):
 
 def infer_dtype_from_prefix(prefix):
     if len(prefix) == 0:
-        raise ValueError(f"Cannot infer type of f{prefix}")
+        return Any_()
     dtype = _infer_dtype_from_value(prefix[0])
     for p in prefix:
         next_dtype = _infer_dtype_from_value(p)
@@ -673,6 +699,10 @@ def _lub_dtype(l, r):
         return r.with_null()
     if is_void(r):
         return l.with_null()
+    if is_any(l):
+        return r
+    if is_any(r):
+        return l
     if is_integer(l) and is_floating(r):
         return r.with_null(l.nullable or r.nullable)
     if is_integer(r) and is_floating(l):

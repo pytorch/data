@@ -35,6 +35,7 @@ from .dtypes import (
     derive_operator,
     float64,
     infer_dtype_from_prefix,
+    is_any,
     is_boolean,
     is_numerical,
     is_primitive,
@@ -98,8 +99,8 @@ def Column(
                 if i > 5:
                     break
             dtype = infer_dtype_from_prefix(prefix)
-            if dtype is None:
-                raise TypeError("Column cannot infer type from data")
+            if dtype is None or is_any(dtype):
+                raise ValueError("Column cannot infer type from data")
             if is_tuple(dtype):
                 raise TypeError(
                     "Column cannot be used to created structs, use Dataframe constructor instead"
@@ -142,6 +143,8 @@ def _column_constructor(dtype, kwargs=None):
     for test, constructor in _factory:
         if test(dtype):
             return constructor(dtype, kwargs)
+    if is_any(dtype):
+        raise TypeError("Column cannot infer type from data")
     raise KeyError(f"no matching test found for {dtype}")
 
 
