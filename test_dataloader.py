@@ -114,11 +114,13 @@ class TestClass(unittest.TestCase):
         actual = [i for i in numbers_dp]
         self.assertEqual(actual, [10, 30, 50, 70, 90])
 
+    @timeout_decorator.timeout(500)
     def test_router_datapipe(self):
         numbers_dp = NumbersDataset(size=10)
         (even_dp, odd_dp) = datapipes.iter.Router(
             numbers_dp, [is_even, is_odd])
         odd_dp = dataloader.eventloop.WrapDatasetToEventHandler(odd_dp, 'Odd')
+        even_dp = dataloader.eventloop.WrapDatasetToEventHandler(even_dp, 'Even')
         updated_even_dp = Map(even_dp, fn=mult_100)
         updated_even_dp = dataloader.eventloop.WrapDatasetToEventHandler(
             updated_even_dp, 'MultipliedEven')
@@ -155,7 +157,7 @@ class TestClass(unittest.TestCase):
             _ = list(joined_dp)
 
     @timeout_decorator.timeout(5)
-    def _test_router_datapipe_iterate_multiple_times(self):
+    def test_router_datapipe_iterate_multiple_times(self):
         numbers_dp = NumbersDataset(size=10)
         (even_dp, odd_dp) = datapipes.iter.Router(
             numbers_dp, [is_even, is_odd])
@@ -192,7 +194,7 @@ class TestClass(unittest.TestCase):
             ctx = multiprocessing.get_context(mode)
 
         def clean_me(req_queue, res_queue, process):
-            req_queue.put(datapipes.nonblocking.StopIteratorRequest())
+            req_queue.put(datapipes.nonblocking.TerminateRequest())
             _ = res_queue.get()
             process.join()
 
@@ -209,7 +211,7 @@ class TestClass(unittest.TestCase):
 
             process.start()
             local_datapipe = datapipes.iter.QueueWrapper(
-                dataloader.queue.IterDataPipeQueueProtocol(req_queue, res_queue))
+                datapipes.protocol.IterDataPipeQueueProtocolClient(req_queue, res_queue))
             all_pipes.append(local_datapipe)
 
             cleanup_fn_args.append((req_queue, res_queue, process))
@@ -235,7 +237,7 @@ class TestClass(unittest.TestCase):
         ctx = multiprocessing.get_context('fork')
 
         def clean_me(req_queue, res_queue, process, pid):
-            req_queue.put(datapipes.nonblocking.StopIteratorRequest())
+            req_queue.put(datapipes.nonblocking.TerminateRequest())
             _ = res_queue.get()
             process.join()
 
@@ -244,7 +246,8 @@ class TestClass(unittest.TestCase):
             (process, req_queue, res_queue) = dataloader.eventloop.SpawnProcessForDataPipeline(ctx, numbers_dp)
             process.start()
             # TODO(VitalyFedyunin): This is prone to error, do IterProtocol and MapProtocol to join Queue couples
-            local_datapipe = datapipes.map.QueueWrapper(dataloader.queue.MapDataPipeQueueProtocol(req_queue, res_queue))
+            local_datapipe = datapipes.map.QueueWrapper(
+                datapipes.protocol.MapDataPipeQueueProtocolClient(req_queue, res_queue))
             all_pipes.append(local_datapipe)
             cleanup_fn_args.append((req_queue, res_queue, process, i))
 

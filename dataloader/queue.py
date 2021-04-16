@@ -1,17 +1,6 @@
 import threading
 import time
 
-class Protocol(object):
-    def __init__(self, request_queue, response_queue):
-        self.request_queue = request_queue
-        self.response_queue = response_queue
-
-class MapDataPipeQueueProtocol(Protocol):
-    pass
-
-class IterDataPipeQueueProtocol(Protocol):
-    pass
-
 class LocalQueue():
     ops = 0
     stored = 0
@@ -34,7 +23,7 @@ class LocalQueue():
         LocalQueue.ops += 1
         if not len(self.items):
             LocalQueue.empty += 1
-            raise Exception('not available')
+            raise Exception('LocalQueue is empty')
         LocalQueue.stored -= 1
         return self.items.pop()
 

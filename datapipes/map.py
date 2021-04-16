@@ -197,9 +197,9 @@ def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_re
             source_datapipe.reset_iterator()
             res_queue.put(datapipes.nonblocking.ResetIteratorResponse())
 
-        elif isinstance(request, datapipes.nonblocking.StopIteratorRequest):
+        elif isinstance(request, datapipes.nonblocking.TerminateRequest):
             forever = False
-            res_queue.put(datapipes.nonblocking.StopIteratorResponse())
+            res_queue.put(datapipes.nonblocking.TerminateResponse())
 
         elif isinstance(request, datapipes.nonblocking.LenRequest):
             while forever:

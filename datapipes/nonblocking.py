@@ -22,11 +22,11 @@ class ResetIteratorResponse(Response):
     pass
 
 
-class StopIteratorRequest(Request):
+class TerminateRequest(Request):
     pass
 
 
-class StopIteratorResponse(Response):
+class TerminateResponse(Response):
     pass
 
 
@@ -57,3 +57,16 @@ class GetNextRequest(Request):
 class GetNextResponse(Response):
     def __init__(self, value):
         self.value = value
+
+
+class StopIterationResponse(Response):
+    pass
+
+
+class InvalidStateResetRequired(Exception):
+    'Returned by DataPipe when it is expecting to get reset request, for example RouterDataPipe expecting all workers to request reset'
+    pass
+
+class InvalidStateResponse(Response):
+    'Returned by DataPipe when it is expecting to get reset request, for example RouterDataPipe expecting all workers to request reset'
+    pass

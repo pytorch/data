@@ -4,6 +4,7 @@ import threading
 import torch
 
 import datapipes
+import datapipes.protocol
 import dataloader.queue
 
 from torch.utils.data import IterDataPipe, IterableDataset, functional_datapipe, non_deterministic
@@ -20,7 +21,7 @@ class EventLoop:
     stack = []
     depth = 0
     thread_local = None
-    
+
     @classmethod
     def init(cls):
         cls.thread_local = threading.local()
@@ -30,15 +31,15 @@ class EventLoop:
         cls.uid = 0
         cls.stack = []
         cls.depth = 0
-            
-    @classmethod 
+
+    @classmethod
     def is_enabled(cls):
         return cls.thread_local.enabled
-    
+
     @classmethod
     def disable(cls):
         cls.thread_local.enabled = False
-        
+
     @classmethod
     def iteration(cls):
         if not cls.is_enabled() or not len(cls.handlers):
@@ -87,10 +88,10 @@ class EventLoop:
 def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue):
     if isinstance(source_datapipe, IterDataPipe):
         pipe_type = datapipes.iter
-        protocol_type = dataloader.queue.IterDataPipeQueueProtocol
+        protocol_type = datapipes.protocol.IterDataPipeQueueProtocolServer
     else:
         pipe_type = datapipes.map
-        protocol_type = dataloader.queue.MapDataPipeQueueProtocol
+        protocol_type = datapipes.protocol.MapDataPipeQueueProtocolServer
 
     torch.set_num_threads(1)
     # Stop EventLoop for MultiProcessing case
@@ -99,24 +100,35 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue):
         pass
 
 # Puts datapipe behind two (request, response) queues, adds Iterator to the EventLoop to process messages
+
+
 def WrapDatasetToEventHandler(source_datapipe, dp_name='unnamed dataset'):
     if isinstance(source_datapipe, IterDataPipe):
         pipe_type = datapipes.iter
-        protocol_type = dataloader.queue.IterDataPipeQueueProtocol
+        protocol_type_server = datapipes.protocol.IterDataPipeQueueProtocolServer
+        protocol_type_client = datapipes.protocol.IterDataPipeQueueProtocolClient
+        is_iter = True
     else:
         pipe_type = datapipes.map
-        protocol_type = dataloader.queue.MapDataPipeQueueProtocol
+        protocol_type_server = datapipes.protocol.MapDataPipeQueueProtocolServer
+        protocol_type_client = datapipes.protocol.MapDataPipeQueueProtocolClient
+        is_iter = False
 
     source_datapipe = pipe_type.EnsureNonBlockingDataPipe(
         source_datapipe)
 
     request_queue = dataloader.queue.LocalQueue(name=dp_name + ' request')
     response_queue = dataloader.queue.LocalQueue(name=dp_name + ' response')
-    protocol = protocol_type(request_queue,
-                             response_queue)
-    handler = iter(pipe_type.DataPipeBehindQueues(source_datapipe, protocol))
+    server_protocol = protocol_type_server(request_queue,
+                                           response_queue)
+    client_protocol = protocol_type_client(request_queue,
+                                           response_queue)
+
+    loop_generator = pipe_type.DataPipeBehindQueues
+
+    handler = iter(loop_generator(source_datapipe, server_protocol))
     EventLoop.add_handler(handler, dp_name)
-    datapipe = pipe_type.QueueWrapper(protocol)
+    datapipe = pipe_type.QueueWrapper(client_protocol)
     datapipe._wrapped_source_datapipe = source_datapipe
     return datapipe
 
@@ -132,10 +144,11 @@ def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe):
 def SpawnThreadForDataPipeline(datapipe):
     req_queue = dataloader.queue.ThreadingQueue()
     res_queue = dataloader.queue.ThreadingQueue()
-    
+
     process = threading.Thread(target=DataPipeToQueuesLoop, args=(
         datapipe, req_queue, res_queue))
     return process, req_queue, res_queue
+
 
 EventLoop.init()
 datapipes.iter.NonBlocking.register_not_available_hook(
