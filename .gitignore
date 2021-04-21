@@ -21,3 +21,6 @@ images_dataset_ds
 images_dataset_tar
 benchmark/image_training/images_dataset_ds
 benchmark/image_training/images_dataset_tar
+
+# setup script artifacts for Velox
+f4d-deps
