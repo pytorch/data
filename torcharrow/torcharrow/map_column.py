@@ -150,8 +150,12 @@ class MapColumn(AbstractColumn):
         keys = self._key_data[subset].to_torch(_propagate_py_list=False)
         vals = self._item_data[subset].to_torch(_propagate_py_list=False)
         # TODO: should we propagate python list if both keys and vals are lists of strings?
-        assert isinstance(keys, pytorch.PackedList)
-        assert isinstance(vals, pytorch.PackedList)
+        if isinstance(keys, pytorch.WithPresence):
+            keys = keys.values
+        if isinstance(vals, pytorch.WithPresence):
+            vals = vals.values
+        assert isinstance(keys, pytorch.PackedList), keys
+        assert isinstance(vals, pytorch.PackedList), vals
         assert torch.all(keys.offsets == vals.offsets)
         res = pytorch.PackedMap(
             keys=keys.values, values=vals.values, offsets=keys.offsets

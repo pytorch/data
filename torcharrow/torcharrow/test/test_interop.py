@@ -332,6 +332,12 @@ class TestInterop(unittest.TestCase):
         self.assertEqual(p.values.f.values.dtype, torch.float32)
         np.testing.assert_almost_equal(p.values.f.values.numpy(), [2.2, 3.3, 4.4, 0.0])
 
+        # Reverse conversion
+        p = df.to_torch()
+        df2 = tap.from_torch(p, dtype=df.dtype)
+        self.assertEqual(df.dtype, df2.dtype)
+        self.assertEqual(list(df), list(df2))
+
 
 if __name__ == "__main__":
     unittest.main()
