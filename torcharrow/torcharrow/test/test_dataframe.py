@@ -114,6 +114,28 @@ class TestDataFrame(unittest.TestCase):
         self.assertEqual(df["b":].columns, ["b", "c"])
         self.assertEqual(df["a":"c"].columns, ["a", "b"])
 
+    def test_construction(self):
+        data = {"a": list(range(10)), "b": list(range(10, 20))}
+        dtype = Struct([Field("a", Int64()), Field("b", Int64())])
+
+        # only data
+        df1 = DataFrame(data)
+
+        # both data and dtype
+        df2 = DataFrame(data, dtype)
+
+        # just dtype
+        df3 = DataFrame(dtype)
+        df3.extend(list(zip(*data.values())))
+
+        expected = list(zip(*data.values()))
+        self.assertEqual(list(df1), expected)
+        self.assertEqual(list(df2), expected)
+        self.assertEqual(list(df3), expected)
+        self.assertEqual(df1.dtype, dtype)
+        self.assertEqual(df2.dtype, dtype)
+        self.assertEqual(df3.dtype, dtype)
+
     def test_metastuff(self):
         df = DataFrame(
             Struct([Field("a", Int64(True)), Field("b", Int64(True))], nullable=True)

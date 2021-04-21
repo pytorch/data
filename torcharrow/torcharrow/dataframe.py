@@ -101,8 +101,28 @@ class DataFrame(AbstractColumn):
                         self.append(i)
                     return
                 elif isinstance(data, Mapping):
+                    # start forom scratch
+                    self._field_data = {}
+                    self._dtype = Struct([])
+                    dtype_fields = {f.name: f.dtype for f in dtype.fields}
                     for n, c in data.items():
-                        self[n] = c if isinstance(c, AbstractColumn) else Column(c)
+                        if n not in dtype_fields:
+                            raise AttributeError(
+                                f"Column {n} is present in the data but absent in explicitly provided dtype"
+                            )
+                        if isinstance(c, AbstractColumn):
+                            if c.dtype != dtype_fields[n]:
+                                raise TypeError(
+                                    f"Wrong type for column {n}: dtype specifies {dtype_fields[n]} while column of {c.dtype} is provided"
+                                )
+                        else:
+                            c = Column(c, dtype_fields[n])
+                        self[n] = c
+                        del dtype_fields[n]
+                    if len(dtype_fields) > 0:
+                        raise TypeError(
+                            f"Columns {dtype_fields.keys()} are present in dtype but not provided"
+                        )
                     return
                 else:
                     raise TypeError(
@@ -301,6 +321,10 @@ class DataFrame(AbstractColumn):
         # TODO: this actually puts the type annotations on the tuple wrong. We might need to address it eventually, but because it's python it doesn't matter
         tup_type = self._dtype.py_type
         # TODO: we probably don't need subscript here with offset after df[1:3]["A"] slicing is fixed
+        for f in self._dtype.fields:
+            self._field_data[f.name][
+                self._offset : self._offset + self._length
+            ].to_torch()
         return tup_type(
             *(
                 self._field_data[f.name][
