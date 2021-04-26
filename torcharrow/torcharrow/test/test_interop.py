@@ -334,7 +334,7 @@ class TestInterop(unittest.TestCase):
 
         # Reverse conversion
         p = df.to_torch()
-        df2 = tap.from_torch(p, dtype=df.dtype)
+        df2 = tap.from_torch(p)
         self.assertEqual(df.dtype, df2.dtype)
         self.assertEqual(list(df), list(df2))
 

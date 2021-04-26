@@ -1,7 +1,7 @@
 import torch
 from dataclasses import dataclass
 from collections import OrderedDict
-from typing import TypeVar, Generic, Union, List, Any, Optional
+from typing import TypeVar, Generic, Union, List, Any, Optional, Tuple
 from .dtypes import DType, is_numerical, is_struct, is_list, is_map, is_string
 from .column import Column
 from .dataframe import DataFrame
@@ -34,11 +34,70 @@ class PackedMap(Generic[KT, T]):
     values: Union[List[T], torch.Tensor, Any]
 
 
-def infer_dtype_from_torch(data):
-    raise NotImplementedError()
+def infer_dtype_from_torch(
+    data: Union[PackedMap, PackedList, List, torch.Tensor, Tuple]
+):
+    if isinstance(data, WithPresence):
+        t = infer_dtype_from_torch(data.values)
+        if t.nullable:
+            raise TypeError("WithPresence structs can't be nested")
+        return t.with_null()
+
+    if isinstance(data, torch.Tensor):
+        torcharrow_dtype_name = str(data.dtype)
+        assert torcharrow_dtype_name.startswith("torch.")
+        torcharrow_dtype_name = torcharrow_dtype_name[len("torch.") :]
+        if torcharrow_dtype_name == "bool":
+            torcharrow_dtype_name = "boolean"
+        if not hasattr(dtypes, torcharrow_dtype_name):
+            raise TypeError(f"Unexpected dtype for the tensor: {data.dtype}")
+        return getattr(dtypes, torcharrow_dtype_name)
+
+    if isinstance(data, PackedList):
+        if not isinstance(data.offsets, torch.Tensor) or data.offsets.dtype not in [
+            torch.int16,
+            torch.int32,
+            torch.int64,
+        ]:
+            raise TypeError(
+                "PackedList.offsets is expected to be an integer-valued tensor"
+            )
+        return dtypes.List_(infer_dtype_from_torch(data.values))
+
+    if isinstance(data, PackedMap):
+        if not isinstance(data.offsets, torch.Tensor) or data.offsets.dtype not in [
+            torch.int16,
+            torch.int32,
+            torch.int64,
+        ]:
+            raise TypeError(
+                "PackedMap.offsets is expected to be an integer-valued tensor"
+            )
+        return dtypes.Map(
+            infer_dtype_from_torch(data.keys), infer_dtype_from_torch(data.values)
+        )
+
+    if isinstance(data, tuple):
+        types = [infer_dtype_from_torch(x) for x in data]
+        fields = getattr(data, "_fields", None)
+        if fields is not None:
+            assert len(fields) == len(types)
+            return dtypes.Struct([dtypes.Field(n, t) for n, t in zip(fields, types)])
+        else:
+            return dtypes.Tuple_(types)
+
+    if isinstance(data, list):
+        return dtypes.infer_dtype_from_prefix(data)
+
+    raise TypeError(
+        f"Can't infer datatype based on torch structure of type {type(data)}"
+    )
 
 
-def from_torch(data: Any, dtype: Optional[DType] = None):
+def from_torch(
+    data: Union[PackedMap, PackedList, List, torch.Tensor, Tuple],
+    dtype: Optional[DType] = None,
+):
     if dtype is None:
         dtype = infer_dtype_from_torch(data)
     assert isinstance(dtype, DType)
