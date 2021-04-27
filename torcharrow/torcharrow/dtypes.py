@@ -752,6 +752,25 @@ def from_type_hint(ann: Type) -> DType:
     raise TypeError(f"Can't infer dtype from {ann}")
 
 
+def from_batch_type_hint(ann: Type) -> DType:
+    """
+    Like from_type_hint but representing type hint for the set of rows. Can be a Column or a python List of nested types
+    """
+    from torch import _jit_internal as ji
+    from .column import AbstractColumn
+
+    if ann is None:
+        raise TypeError("Can't infer type from missing annotation")
+    # TODO: we need a type annotation for Columns with statically accessible dtype
+    # if inspect.isclass(ann) and issubclass(ann, AbstractColumn):
+    # return None
+    if not ji.is_list(ann):
+        raise TypeError("The outer type annotation must be a list or a Column")
+    args = typing.get_args(ann)
+    assert len(args) == 1
+    return from_type_hint(args[0])
+
+
 # lub of two types for inference ----------------------------------------------
 
 

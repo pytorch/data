@@ -23,15 +23,15 @@ class PackedList(Generic[T]):
     # 1-D int32 tensor
     offsets: torch.Tensor
     # Type hints don't really work because of recursive type remapping
-    values: Union[List[T], torch.Tensor, Any]
+    values: Union[T]
 
 
 @dataclass
 class PackedMap(Generic[KT, T]):
     # 1-D int32 tensor
     offsets: torch.Tensor
-    keys: Union[List[KT], torch.Tensor, Any]
-    values: Union[List[T], torch.Tensor, Any]
+    keys: Union[KT]
+    values: Union[T]
 
 
 def infer_dtype_from_torch(

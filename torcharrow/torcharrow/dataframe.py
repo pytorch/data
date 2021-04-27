@@ -20,6 +20,7 @@ from typing import (
     Union,
     cast,
     Tuple,
+    get_type_hints,
 )
 
 from .column import AbstractColumn, Column, _column_constructor, _set_column_constructor
@@ -33,6 +34,7 @@ from .dtypes import (
     ScalarTypeValues,
     Struct,
     infer_dtype_from_prefix,
+    from_batch_type_hint,
     int64,
     is_numerical,
     is_struct,
@@ -464,6 +466,52 @@ class DataFrame(AbstractColumn):
             else:
                 res._append(None)
         return res
+
+    @trace
+    @expression
+    def transform(
+        self,
+        func: Callable,
+        /,
+        dtype: Optional[DType] = None,
+        format: str = "auto",
+        columns: Optional[List[str]] = None,
+    ):
+        """
+        Like map() but invokes the callable on mini-batches of rows at a time.
+        The column is passed to the callable as TorchArrow column by default.
+        If `format='python'` the input is converted to python types instead.
+        If `format='torch'` the input is converted to PyTorch types
+        dtype required if result type != item type and the type hint is missing on the callable.
+        """
+        if columns is None:
+            return super().map(func, dtype=dtype, format=format)
+
+        for i in columns:
+            if i not in self.columns:
+                raise KeyError("column {i} not in dataframe")
+
+        if dtype is None:
+            signature = get_type_hints(func)
+            if "return" in signature:
+                dtype = from_batch_type_hint(signature["return"])
+            else:
+                assert self._dtype is not None
+                dtype = self._dtype
+            # TODO: check type annotations of inputs too in order to infer the input format
+
+        if len(columns) == 1:
+            raw_res = func(
+                self._format_transform_column(self._field_data[columns[0]], format)
+            )
+        else:
+            raw_res = func(
+                *(
+                    self._format_transform_column(self._field_data[c], format)
+                    for c in columns
+                )
+            )
+        return self._format_transform_result(raw_res, format, dtype, self._length)
 
     @trace
     @expression

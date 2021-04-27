@@ -9,6 +9,7 @@ import statistics
 from abc import ABC, abstractmethod, abstractproperty
 from collections import OrderedDict
 from typing import (
+    Any,
     Callable,
     Dict,
     Iterable,
@@ -37,6 +38,7 @@ from .dtypes import (
     float64,
     infer_dtype_from_prefix,
     from_type_hint,
+    from_batch_type_hint,
     is_any,
     is_boolean,
     is_numerical,
@@ -178,8 +180,9 @@ class AbstractColumn(ABC, Sized, Iterable):
 
     @property  # type: ignore
     @traceproperty
-    def dtype(self):
+    def dtype(self) -> DType:
         """dtype of the colum/frame"""
+        assert self._dtype is not None
         return self._dtype
 
     @property  # type: ignore
@@ -459,6 +462,64 @@ class AbstractColumn(ABC, Sized, Iterable):
             else:
                 res._append(None)
         return res
+
+    @staticmethod
+    def _format_transform_column(c: AbstractColumn, format: str):
+        if format == "auto" or format == "column":
+            return c
+        if format == "python":
+            return c.to_python()
+        if format == "torch":
+            return c.to_torch()
+        raise ValueError(f"Invalid value for `format` argument: {format}")
+
+    @staticmethod
+    def _format_transform_result(raw: Any, format: str, dtype: DType, length: int):
+        if format == "torch":
+            from . import pytorch
+
+            pytorch.ensure_available()
+            ret = pytorch.from_torch(raw, dtype=dtype)
+        else:
+            ret = Column(raw, dtype=dtype)
+        if len(ret) != length:
+            raise ValueError(
+                f"Output of transform must return the same number of rows: got {len(ret)} instead of {length}"
+            )
+        return ret
+
+    @trace
+    @expression
+    def transform(
+        self,
+        func: Callable,
+        /,
+        dtype: Optional[DType] = None,
+        format: str = "auto",
+        columns: Optional[List[str]] = None,
+    ):
+        """
+        Like map() but invokes the callable on mini-batches of rows at a time.
+        The column is passed to the callable as TorchArrow column by default.
+        If `format='python'` the input is converted to python types instead.
+        If `format='torch'` the input is converted to PyTorch types
+        dtype required if result type != item type and the type hint is missing on the callable.
+        """
+        if columns is not None:
+            raise TypeError(f"columns parameter for flat columns not supported")
+
+        if dtype is None:
+            signature = get_type_hints(func)
+            if "return" in signature:
+                dtype = from_batch_type_hint(signature["return"])
+            else:
+                # assume it's an identity mapping
+                assert self._dtype is not None
+                dtype = self._dtype
+            # TODO: check type annotations of inputs too in order to infer the input format
+
+        raw_res = func(self._format_transform_column(self, format))
+        return self._format_transform_result(raw_res, format, dtype, self._length)
 
     @trace
     @expression
@@ -1322,6 +1383,11 @@ class AbstractColumn(ABC, Sized, Iterable):
     @trace
     def to_python(self):
         """Convert to plain Python container (list of scalars or containers)"""
+        raise NotImplementedError()
+
+    @trace
+    def to_torch(self):
+        """Convert to PyTorch containers (Tensor, PackedList, PackedMap, etc)"""
         raise NotImplementedError()
 
 

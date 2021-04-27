@@ -27,6 +27,7 @@ from torcharrow import (
     NumericalColumn,
     String,
     int64,
+    float32,
     string,
     is_floating,
     is_struct,
@@ -337,6 +338,63 @@ class TestInterop(unittest.TestCase):
         df2 = tap.from_torch(p)
         self.assertEqual(df.dtype, df2.dtype)
         self.assertEqual(list(df), list(df2))
+
+    @unittest.skipUnless(tap.available, "Requires PyTorch")
+    def test_pytorch_transform(self):
+        import torch
+
+        df = DataFrame(
+            {
+                "lst_null": [[1, 2], [3, None], [4, 5], [6]],
+                "ids": [[1, 2], [3], [1, 4], [5]],
+                "a": [1, 2, 3, 4],
+                "b": [10, 20, 30, 40],
+            }
+        )
+
+        from torcharrow.pytorch import WithPresence, PackedList, PackedMap
+
+        def list_plus_one(x: PackedList[WithPresence[torch.Tensor]]):
+            return PackedList(
+                offsets=x.offsets,
+                values=WithPresence(
+                    presence=x.values.presence,
+                    values=(x.values.values + 1) * x.values.presence,
+                ),
+            )
+
+        self.assertEqual(
+            list(df["lst_null"].transform(list_plus_one, format="torch")),
+            [[2, 3], [4, None], [5, 6], [7]],
+        )
+
+        # we don't support tensor columns yet, so let's do it a 1d embedding :)
+        emb = torch.nn.EmbeddingBag(10, 1, mode="sum", include_last_offset=True)
+        emb.weight.data[:] = torch.arange(1, 11).unsqueeze(1)
+
+        def embed(x: PackedList[torch.Tensor]):
+            return emb(x.values, x.offsets.to(torch.int64)).squeeze(1)
+
+        self.assertEqual(
+            list(df["ids"].transform(embed, dtype=float32, format="torch")),
+            [2.0 + 3.0, 4.0, 2.0 + 5.0, 6.0],
+        )
+
+        def plus_div(x: torch.Tensor, y: torch.Tensor):
+            return torch.add(x, y), torch.div(y, x)
+
+        # TODO: pytorch output type inference
+        self.assertEqual(
+            list(
+                df.transform(
+                    plus_div,
+                    columns=["a", "b"],
+                    dtype=Struct([Field("sum", int64), Field("ratio", float32)]),
+                    format="torch",
+                )
+            ),
+            [(11, 10.0), (22, 10.0), (33, 10.0), (44, 10.0)],
+        )
 
 
 if __name__ == "__main__":

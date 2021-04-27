@@ -2,7 +2,7 @@ import functools
 import statistics
 import unittest
 
-from typing import Optional, NamedTuple
+from typing import Optional, NamedTuple, List
 from torcharrow import (
     Column,
     DataFrame,
@@ -12,6 +12,7 @@ from torcharrow import (
     Float64,
     int32,
     int64,
+    string,
     me,
 )
 
@@ -275,6 +276,61 @@ class TestDataFrame(unittest.TestCase):
         r = df.map(mymultiret, columns=["a", "b"])
         self.assertEqual(r.dtype, Struct([Field("plus", int64), Field("minus", int64)]))
         self.assertEqual(list(r), [(12, -10), (24, -20), (36, -30)])
+
+    def test_transform(self):
+        df = DataFrame()
+        df["a"] = [1, 2, 3]
+        df["b"] = [11, 22, 33]
+
+        # column level without type hints
+        self.assertEqual(
+            list(df["a"].transform(lambda l: [x + 1 for x in l])), [2, 3, 4]
+        )
+
+        with self.assertRaises(ValueError):
+            # wrong number of rows
+            df["a"].transform(lambda l: [-1] + [x + 1 for x in l])
+
+        def batch_str(a):
+            return list(map(str, a))
+
+        with self.assertRaises(TypeError):
+            # forgot the output type annotation
+            df["a"].transform(batch_str)
+
+        self.assertEqual(
+            list(df["a"].transform(batch_str, dtype=string)), ["1", "2", "3"]
+        )
+
+        # columns level with type hints
+        def batch_str_ann(a) -> List[List[str]]:
+            assert isinstance(a, list)  # verify the python format
+            return [[str(x)] * x for x in a]
+
+        self.assertEqual(
+            list(df["a"].transform(batch_str_ann, format="python")),
+            [["1"], ["2", "2"], ["3", "3", "3"]],
+        )
+
+        with self.assertRaises(AssertionError):
+            # forgot the format arg, column instead of list is passed
+            df["a"].transform(batch_str_ann)
+
+        # df-level without type hints
+        def myadd(a, b):
+            return [x + y for x, y in zip(a, b)]
+
+        self.assertEqual(
+            list(df.transform(myadd, columns=["a", "b"], dtype=int64)), [12, 24, 36]
+        )
+
+        # df-level with type hints
+        def myadd_hint(a, b) -> List[int]:
+            return [x + y for x, y in zip(a, b)]
+
+        self.assertEqual(
+            list(df.transform(myadd_hint, columns=["a", "b"])), [12, 24, 36]
+        )
 
     def test_sort_stuff(self):
         df = DataFrame({"a": [1, 2, 3], "b": [1.0, None, 3]})
