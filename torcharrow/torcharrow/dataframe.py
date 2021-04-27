@@ -433,10 +433,7 @@ class DataFrame(AbstractColumn):
         dtype: Optional[DType],
         column: str,
     ):
-        def func(x):
-            return arg.get(x, None) if isinstance(arg, dict) else arg(x)
-
-        dtype = dtype if dtype is not None else self._dtype
+        func, dtype = self._normalize_map_arg(arg, dtype)
 
         res = _column_constructor(dtype)
         for i in range(self._length):
@@ -453,10 +450,12 @@ class DataFrame(AbstractColumn):
         dtype: Optional[DType],
         columns: List[str],
     ):
-        def func(*x):
-            return arg.get(tuple(*x), None) if isinstance(arg, dict) else arg(*x)
+        if isinstance(arg, dict):
+            # the rule for nary map is different!
+            new_arg = lambda *x: arg.get(tuple(*x), None)
+            arg = new_arg
 
-        dtype = dtype if dtype is not None else self._dtype
+        func, dtype = self._normalize_map_arg(arg, dtype)
 
         res = _column_constructor(dtype)
         for i in range(self._length):

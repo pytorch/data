@@ -20,6 +20,7 @@ from typing import (
     Tuple,
     Union,
     Iterable,
+    get_type_hints,
 )
 
 from .dtypes import (
@@ -35,6 +36,7 @@ from .dtypes import (
     derive_operator,
     float64,
     infer_dtype_from_prefix,
+    from_type_hint,
     is_any,
     is_boolean,
     is_numerical,
@@ -414,6 +416,24 @@ class AbstractColumn(ABC, Sized, Iterable):
         #     raise TypeError(f"'cannot cast from 'self.dtype' to '{dtype}'")
 
     # functools map/filter/reduce ---------------------------------------------
+    def _normalize_map_arg(
+        self, arg: Union[Dict, Callable], dtype: Optional[DType]
+    ) -> Tuple[Callable, DType]:
+        if isinstance(arg, dict):
+            func = lambda x: arg.get(x, None)
+        else:
+            func = arg
+
+        if dtype is None:
+            signature = get_type_hints(func)
+            if "return" in signature:
+                dtype = from_type_hint(signature["return"])
+            else:
+                # assume it's an identity mapping
+                assert self._dtype is not None
+                dtype = self._dtype
+        return func, dtype
+
     @trace
     @expression
     def map(
@@ -430,10 +450,7 @@ class AbstractColumn(ABC, Sized, Iterable):
         if columns is not None:
             raise TypeError(f"columns parameter for flat columns not supported")
 
-        def func(x):
-            return arg.get(x, None) if isinstance(arg, dict) else arg(x)
-
-        dtype = dtype if dtype is not None else self._dtype
+        func, dtype = self._normalize_map_arg(arg, dtype)
 
         res = _column_constructor(dtype)
         for i in range(self._length):

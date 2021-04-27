@@ -2,6 +2,8 @@ import operator
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import re
+import inspect
+import typing
 from typing import (
     ClassVar,
     Dict,
@@ -80,6 +82,12 @@ class DType(ABC):
 
     def with_null(self, nullable=True):
         return self.constructor(nullable)
+
+    def __call__(self, *args, **kwargs):
+        # Python magic: if types is a callable, then typecheckers allow to put it in annotations
+        raise TypeError(
+            f"DTypes can't be used for type construction, but can appear in type annotations"
+        )
 
 
 # for now: no float16, and all date and time stuff, categoricals, (and Null is called Void)
@@ -660,6 +668,7 @@ def _infer_dtype_from_value(value):
     if isinstance(value, int):
         return int64
     if isinstance(value, float):
+        # TODO: should we default to float32?
         return float64
     if isinstance(value, str):
         return string
@@ -689,6 +698,58 @@ def infer_dtype_from_prefix(prefix):
         if dtype is None:
             raise ValueError(f"Cannot infer type of f{prefix}")
     return dtype
+
+
+# Adopted from PyTorch
+# TODO: rewrite cleanly
+def from_type_hint(ann: Type) -> DType:
+    from torch import _jit_internal as ji
+
+    if ann is None:
+        raise TypeError("Can't infer type from missing annotation")
+    if isinstance(ann, DType):
+        return ann
+    if ji.is_tuple(ann):
+        return Tuple_([from_type_hint(a) for a in typing.get_args(ann)])
+    # TODO: add dataclasses too
+    if inspect.isclass(ann) and issubclass(ann, tuple) and hasattr(ann, "_fields"):
+        fields = getattr(ann, "_fields")
+        field_types = getattr(ann, "_field_types", None)
+        if field_types is None or any(n not in field_types for n in fields):
+            raise TypeError(
+                f"Can't infer type from named tuple without type hints: {ann}"
+            )
+        return Struct([Field(n, from_type_hint(field_types[n])) for n in fields])
+    if ji.is_list(ann):
+        args = typing.get_args(ann)
+        assert len(args) == 1
+        elem_type = from_type_hint(args[0])
+        return List_(elem_type)
+    if ji.is_dict(ann):
+        args = typing.get_args(ann)
+        assert len(args) == 2
+        key = from_type_hint(args[0])
+        value = from_type_hint(args[1])
+        return Map(key, value)
+    if ji.is_optional(ann):
+        args = typing.get_args(ann)
+        assert len(args) == 2
+        if issubclass(args[1], type(None)):
+            contained = args[0]
+        else:
+            contained = args[1]
+        return from_type_hint(contained).with_null()
+    # same inference rules as for values above
+    if ann is float:
+        # TODO: should we default to float32?
+        return float64
+    if ann is int:
+        return int64
+    if ann is str:
+        return string
+    if ann is bool:
+        return boolean
+    raise TypeError(f"Can't infer dtype from {ann}")
 
 
 # lub of two types for inference ----------------------------------------------

@@ -97,7 +97,9 @@ class TestListColumn(unittest.TestCase):
         c = Column([fst, snd])
         self.assertEqual(list(c.flatmap(lambda xs: [xs, xs])), [fst, fst, snd, snd])
 
-        Column([1, 2, 3, 4]).map(str, dtype=string)
+        self.assertEqual(
+            list(Column([1, 2, 3, 4]).map(str, dtype=string)), ["1", "2", "3", "4"]
+        )
 
 
 if __name__ == "__main__":

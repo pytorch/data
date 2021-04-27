@@ -2,6 +2,7 @@ import functools
 import statistics
 import unittest
 
+from typing import Optional, NamedTuple
 from torcharrow import (
     Column,
     DataFrame,
@@ -13,8 +14,6 @@ from torcharrow import (
     int64,
     me,
 )
-
-from collections import namedtuple
 
 # run python3 -m unittest outside this directory to run all tests
 
@@ -245,6 +244,37 @@ class TestDataFrame(unittest.TestCase):
             list(df.filter(str.islower, columns=["c"])),
             [(1, 11, "a", 100), (2, 22, "b", 200)],
         )
+
+    def test_map_type_inference(self):
+        df = DataFrame()
+        df["a"] = [1, 2, 3]
+        df["b"] = [11, 22, 33]
+
+        def myfunc(a: int, b: int) -> str:
+            return f"{a}_{b}"
+
+        self.assertEqual(
+            list(df.map(myfunc, columns=["a", "b"])), ["1_11", "2_22", "3_33"]
+        )
+
+        def mycast(a: int) -> Optional[int32]:
+            return a if a % 2 == 1 else None
+
+        r = df["a"].map(mycast)
+        self.assertEqual(df["a"].dtype, int64)
+        self.assertEqual(r.dtype, int32.with_null())
+        self.assertEqual(list(r), [1, None, 3])
+
+        class Ret(NamedTuple):
+            plus: int
+            minus: int
+
+        def mymultiret(a: int, b: int) -> Ret:
+            return Ret(a + b, a - b)
+
+        r = df.map(mymultiret, columns=["a", "b"])
+        self.assertEqual(r.dtype, Struct([Field("plus", int64), Field("minus", int64)]))
+        self.assertEqual(list(r), [(12, -10), (24, -20), (36, -30)])
 
     def test_sort_stuff(self):
         df = DataFrame({"a": [1, 2, 3], "b": [1.0, None, 3]})
