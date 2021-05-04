@@ -38,9 +38,8 @@ black torcharrow
 ## Documentation
 All documentation is available via Notebooks:
 * [TorchArrow in 10 minutes (a tutorial)](https://github.com/facebookexternal/torchdata/blob/main/torcharrow/torcharrow10min.ipynb)
-* [TorchArrow mutability](https://github.com/facebookexternal/torchdata/blob/main/torcharrow/torcharrow_mutability.ipynb)
 * [TorchArrow data pipes](https://github.com/facebookexternal/torchdata/blob/main/torcharrow/torcharrow_data_pipes.ipynb)
-* [TorchArrow tracing and analysis](https://github.com/facebookexternal/torchdata/blob/main/torcharrow/torcharrow_traces.ipynb)
+* [TorchArrow state handling](https://github.com/facebookexternal/torchdata/blob/main/torcharrow/torcharrow_state.ipynb)
 * TorchArrow multitargeting - TBD
 * TorchArrow, Pandas, UPM and SQL: What's the difference - TBD
 * TorchArrow, Design rationale - TBD
@@ -50,10 +49,10 @@ This directory supports rapid development. So expect frequent changes.
 
 Still to be done:
 * Add tabular.py as package in setup and not as code
-* How to do Multitargetting
+* [DONE] How to do Multi-device targeting (See TorchArrow state handling notebook
 * An example program analysis (types/PPF?)
 * Add example UDFs
 * Add Tensors as example UDTs
-* Using Numba for Jitting
+* [WORKS, example to be wriutten] Using Numba for Jitting
 
 

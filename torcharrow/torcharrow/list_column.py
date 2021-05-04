@@ -1,11 +1,15 @@
 import array as ar
+import numpy as np
+import numpy.ma as ma
+
 import builtins
 import copy
 import functools
 from dataclasses import dataclass
 from typing import List, Optional
 
-from .column import AbstractColumn, Column, _column_constructor, _set_column_constructor
+from .session import ColumnFactory
+from .column import AbstractColumn
 from .dtypes import NL, Boolean, DType, Int64, List_, String, Uint32, is_list, is_string
 from .tabulate import tabulate
 
@@ -14,110 +18,91 @@ from .tabulate import tabulate
 
 
 class ListColumn(AbstractColumn):
-    def __init__(self, dtype: List_, kwargs=None):
+
+    # private constructor
+    def __init__(self, session, to, dtype, data, offsets, mask):
         assert is_list(dtype)
-        super().__init__(dtype)
-        self._data = _column_constructor(dtype.item_dtype)
-        self._offsets = ar.array("I", [0])  # Uint32
+        super().__init__(session, to, dtype)
+
+        self._data = data
+        self._offsets = offsets
+        self._mask = mask
+
         self.list = ListMethods(self)
 
-    def _invariant(self):
-        assert len(self._data) == len(self._validity)
-        assert len(self._data) == len(self._offsets) - 1
-        assert self._offsets[-1] == len(self._data)
-        assert all(
-            self._offsets[i] <= self._offsets[i + 1]
-            for i in range(0, len(self._offsets) + 1)
-        )
-        assert 0 <= self._offset and self._offset <= len(self._data)
-        assert 0 <= self._length and self._offset + self._length <= len(self._data)
-        rng = range(self._offset, self._offset + self._length)
-        assert self.null_length == sum(self._validity[self._offset + i] for i in rng)
+    # Any _empty must be followed by a _finalize; no other ops are allowed during this time
+    @staticmethod
+    def _empty(session, to, dtype, mask=None):
+        _mask = mask if mask is not None else ar.array("b")
+        return ListColumn(session, to, dtype, session._Empty(dtype.item_dtype, to), ar.array("I", [0]), _mask)
 
-    # implementing abstract methods ----------------------------------------------
+    def _append_null(self):
+        self._mask.append(True)
+        self._offsets.append(self._offsets[-1])
+        self._data._extend([])
 
-    def _raw_lengths(self):
-        return self._data._raw_lengths()
+    def _append_value(self, value):
+        self._mask.append(False)
+        self._offsets.append(self._offsets[-1] + len(value))
+        self._data._extend(value)
 
-    @property
-    def is_appendable(self):
-        """Can this column/frame be extended without side effecting """
-        return (
-            self._data.is_appendable
-            and len(self._data) == self._offsets[self._offset + self._length]
-        )
+    def _append_data(self, data):
+        self._offsets.append(self._offsets[-1] + len(data))
+        self._data._extend(data)
 
-    def memory_usage(self, deep=False):
-        """Return the memory usage of the column/frame (if deep then include buffer sizes)."""
-        osize = self._offsets.itemsize
-        vsize = self._validity.itemsize
-        dusage = self._data.memory_usage(deep)
-        if not deep:
-            nchars = (
-                self._offsets[self._offset + self.length] - self._offsets[self._offset]
-            )
-            return self._length * vsize + self._length * osize + dusage
-        else:
-            return (
-                len(self._validity) * vsize + len(self.self._offsets) * osize + dusage
-            )
+    def _finalize(self):
+        self._data = self._data._finalize()
+        self._offsets = np.array(self._offsets, dtype=np.int32, copy=False)
+        if not isinstance(self._mask, np.ndarray):
+            self._mask = np.array(self._mask, dtype=np.bool_, copy=False)
+        return self
 
-    def _copy(self, deep, offset, length):
-        if deep:
-            res = ListColumn(self.dtype)
-            res._length = length
-            res._data = self._data[
-                self._offsets[self._offset] : self._offsets[offset + length]
-            ]
-            res._validity = self._validity[offset : offset + length]
-            res._offsets = self._offsets[offset : offset + length + 1]
-            res._null_count = sum(res._validity)
-            return res
-        else:
-            return copy.copy(self)
+    def __len__(self):
+        return len(self._offsets)-1
 
-    def _append(self, values):
-        if values is None:
-            if self._dtype.nullable:
-                self._null_count += 1
-                self._validity.append(False)
-                self._offsets.append(self._offsets[-1])
-            else:
-                raise TypeError("a list is required (got type NoneType)")
-        else:
-            self._validity.append(True)
-            self._data.extend(values)
-            self._offsets.append(self._offsets[-1] + len(values))
-        self._length += 1
+    def null_count(self):
+        return self._mask.sum()
 
-    def get(self, i, fill_value):
-        """Get ith row from column/frame"""
-        j = self._offset + i
-        if not self._validity[j]:
-            return fill_value
-        else:
-            return list(self._data[self._offsets[j] : self._offsets[j + 1]])
+    def getmask(self, i):
+        return self._mask[i]
 
-    def __iter__(self):
-        for i in range(self._length):
-            j = self._offset + i
-            if self._validity[j]:
-                yield list(self._data[self._offsets[j] : self._offsets[j + 1]])
-            else:
-                yield None
+    def getdata(self, i):
+        return list(self._data[self._offsets[i]: self._offsets[i + 1]])
 
-    def to_python(self):
-        vals = self._data.to_python()
-        return [
-            (
-                vals[self._offsets[i] : self._offsets[i + 1]]
-                if self._validity[i]
-                else None
-            )
-            for i in range(self._offset, self._offset + self._length)
-        ]
+    def append(self, values):
+        """Returns column/dataframe with values appended."""
+        # tmp = self.session.Column(values, dtype=self.dtype, to = self.to)
+        # res= ListColumn(*self._meta(),
+        #     np.append(self._data,tmp._data),
+        #     np.append(self._offsets,tmp._offsets[1:] + self._offsets[-1]),
+        #     np.append(self._mask,tmp._mask))
+
+        # TODO replace this with vectorized code like the one above, except that is buggy
+        res = self.session._Empty(self.dtype)
+        for v in self:
+            res._append(v)
+        for v in values:
+            res._append(v)
+        return res._finalize()
+
+    def concat(self, values):
+        """Returns column/dataframe with values appended."""
+        # tmp = self.session.Column(values, dtype=self.dtype, to = self.to)
+        # res= ListColumn(*self._meta(),
+        #     np.append(self._data,tmp._data),
+        #     np.append(self._offsets,tmp._offsets[1:] + self._offsets[-1]),
+        #     np.append(self._mask,tmp._mask))
+
+        # TODO replace this with vectorized code like the one above, except that is buggy
+        res = self.session._Empty(self.dtype)
+        for v in self:
+            res._append(v)
+        for v in values:
+            res._append(v)
+        return res._finalize()
 
     # printing ----------------------------------------------------------------
+
     def __str__(self):
         return f"Column([{', '.join('None' if i is None else str(i) for i in self)}])"
 
@@ -127,33 +112,13 @@ class ListColumn(AbstractColumn):
             tablefmt="plain",
             showindex=True,
         )
-        typ = f"dtype: {self._dtype}, length: {self._length}, null_count: {self._null_count}"
+        typ = f"dtype: {self._dtype}, length: {self.length()}, null_count: {self.null_count()}"
         return tab + NL + typ
-
-    def show_details(self):
-        return _Repr(self)
-
-
-@dataclass
-class _Repr:
-    parent: ListColumn
-
-    def __repr__(self):
-        raise NotImplementedError()
-        # #TODO
-        # me = self.parent
-        # tab = tabulate([[l if l is not None else 'None', v] for (l,o, v) in zip(me._data, me._offsets, me._validity)],['data', 'offsets', 'validity'])
-        # typ = f"dtype: {me._dtype}, count: {me._length}, null_count: {me._null_count}, offset: {me._offset}"
-        # return tab+NL+typ
 
 
 # ------------------------------------------------------------------------------
 # registering the factory
-_set_column_constructor(is_list, ListColumn)
-
-
-def __map(fun, xs):
-    return builtins.map(fun, xs)
+ColumnFactory.register((List_.typecode+"_empty", 'test'), ListColumn._empty)
 
 
 # -----------------------------------------------------------------------------
@@ -166,19 +131,6 @@ class ListMethods:
 
     _parent: ListColumn
 
-    def _map_map(self, fun, dtype: Optional[DType] = None):
-        func = fun
-        me = self._parent
-        assert dtype is not None
-        res = _column_constructor(dtype)
-        for i in range(me._length):
-            j = me._offset + i
-            if me._validity[j]:
-                res.append(fun(me[j]))
-            else:
-                res.append(None)
-        return res
-
     def join(self, sep):
         """Join lists contained as elements with passed delimiter."""
         me = self._parent
@@ -187,7 +139,7 @@ class ListMethods:
         def fun(i):
             return sep.join(i)
 
-        return self._map_map(
+        return me._vectorize(
             fun, String(me.dtype.item_dtype.nullable or me.dtype.nullable)
         )
 
@@ -197,7 +149,7 @@ class ListMethods:
         def fun(xs):
             return xs[i]
 
-        return self._map_map(fun, me.dtype.item_dtype)
+        return me._vectorize(fun, me.dtype.item_dtype.with_null(me.dtype.nullable))
 
     def count(self, elem, flags=0):
         me = self._parent
@@ -205,7 +157,7 @@ class ListMethods:
         def fun(i):
             return i.count(elem)
 
-        return self._map_map(fun, Int64(me.dtype.nullable))
+        return me._vectorize(fun, Int64(me.dtype.nullable))
 
     def map(self, fun, dtype: Optional[DType] = None):
         me = self._parent
@@ -215,7 +167,7 @@ class ListMethods:
 
         if dtype is None:
             dtype = me.dtype
-        return self._map_map(func, dtype)
+        return me._vectorize(func, dtype)
 
     def filter(self, pred):
         me = self._parent
@@ -223,7 +175,7 @@ class ListMethods:
         def func(xs):
             return list(builtins.filter(pred, xs))
 
-        return self._map_map(func, me.dtype)
+        return me._vectorize(func, me.dtype)
 
     def reduce(self, fun, initializer=None, dtype: Optional[DType] = None):
         me = self._parent
@@ -232,7 +184,7 @@ class ListMethods:
             return functools.reduce(fun, xs, initializer)
 
         dtype = me.dtype.item_dtype if dtype is None else dtype
-        return self._map_map(func, dtype)
+        return me._vectorize(func, dtype)
 
     def flatmap(self, fun, dtype: Optional[DType] = None):
         # dtype must be given, if result is different from argument column
@@ -241,10 +193,10 @@ class ListMethods:
         def func(xs):
             ys = []
             for x in xs:
-                ys.extend(fun(x))
+                ys._extend(fun(x))
             return ys
 
-        return self._map_map(func, me.dtype)
+        return me._vectorize(func, me.dtype)
 
 
 # ops on list  --------------------------------------------------------------

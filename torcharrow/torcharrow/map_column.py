@@ -1,5 +1,6 @@
 import array as ar
 import copy
+import numpy as np
 from dataclasses import dataclass
 from collections import OrderedDict
 from typing import (
@@ -14,8 +15,9 @@ from typing import (
     Union,
 )
 
-from .column import AbstractColumn, Column, _column_constructor, _set_column_constructor
-from .dtypes import NL, DType, List_, is_map
+from .session import ColumnFactory
+from .column import AbstractColumn
+from .dtypes import NL, DType, List_, is_map, Map
 from .list_column import ListColumn
 from .tabulate import tabulate
 
@@ -24,121 +26,68 @@ from .tabulate import tabulate
 
 
 class MapColumn(AbstractColumn):
-    def __init__(self, dtype, kwargs):
+
+    def __init__(self, session, to, dtype, key_data, item_data, mask):
         assert is_map(dtype)
-        super().__init__(dtype)
-        # TODO: we should store raw items, not lists here. Or at least store the list of pairs
-        self._key_data = _column_constructor(
-            List_(dtype.key_dtype).with_null(dtype.nullable)
-        )
-        self._item_data = _column_constructor(
-            List_(dtype.item_dtype).with_null(dtype.nullable)
-        )
+        super().__init__(session, to, dtype)
+
+        self._key_data = key_data
+        self._item_data = item_data
+        self._mask = mask
+
         self.map = MapMethods(self)
 
-    def _invariant(self):
-        assert len(self._key_data) == len(self._item_data)
-        assert len(self._item_data) == len(self._validity)
-        assert 0 <= self._offset and self._offset <= len(self._item_data)
-        assert 0 <= self._length and self._offset + self._length <= len(self._item_data)
-        rng = range(self._offset, self._offset + self._length)
-        assert self.null_count == sum(self._validity[i] for i in rng)
+    # Lifecycle: _empty -> _append* -> _finalize; no other ops are allowed during this time
 
-    # implementing abstract methods ----------------------------------------------
+    @staticmethod
+    def _empty(session, to, dtype, mask=None):
+        key_data = session._Empty(
+            List_(dtype.key_dtype).with_null(dtype.nullable))
+        item_data = session._Empty(
+            List_(dtype.item_dtype).with_null(dtype.nullable))
+        _mask = mask if mask is not None else ar.array("b")
+        return MapColumn(session, to, dtype, key_data, item_data, _mask)
 
-    @property
-    def is_appendable(self):
-        """Can this column/frame be extended without side effecting """
-        return all(
-            c.is_appendable and len(c) == self._offset + self._length
-            for c in [self._key_data, self._item_data]
-        )
+    def _append_null(self):
+        self._mask.append(True)
+        self._key_data._append_null()
+        self._item_data._append_null()
 
-    #    rlengths = self._raw_lengths()
-    #     print('_is_appendable', self._key_data, self._item_data, rlengths,
-    #           len(set(rlengths)), rlengths[0] == self._offset+self._length)
-    #     if len(set(rlengths)) == 1:
+    def _append_value(self, value):
+        self._mask.append(False)
+        self._key_data._append_value(list(value.keys()))
+        self._item_data._append_value(list(value.values()))
 
-    #         return rlengths[0] == self._offset+self._length
-    #     else:
-    #         return False
+    def _append_data(self, value):
+        self._key_data._append_value(list(value.keys()))
+        self._item_data._append_value(list(value.values()))
 
-    def memory_usage(self, deep=False):
-        """Return the memory usage of the Frame (if deep then buffer sizes)."""
-        osize = self._offsets.itemsize
-        vsize = self._validity.itemsize
-        kusage = self._key_data.memory_usage(deep)
-        iusage = self._item_data.memory_usage(deep)
-        if not deep:
-            nchars = (
-                self._offsets[self._offset + self.length] - self._offsets[self._offset]
-            )
-            return self._length * vsize + self._length * osize + kusage + iusage
-        else:
-            return (
-                len(self._validity) * vsize
-                + len(self.self._offsets) * osize
-                + kusage
-                + iusage
-            )
+    def _finalize(self, mask=None):
+        self._key_data = self._key_data._finalize()
+        self._item_data = self._item_data._finalize()
+        if not isinstance(self._mask, np.ndarray):
+            self._mask = np.array(self._mask, dtype=np.bool_, copy=False)
+        return self
 
-    def _append(self, value):
-        if value is None:
-            if not self._dtype.nullable:
-                raise TypeError("a map/dict is required (got type NoneType)")
-            self._null_count += 1
-            self._validity.append(False)
-            self._key_data._append(None)
-            self._item_data._append(None)
-        else:
-            self._validity.append(True)
-            self._key_data._append(list(value.keys()))
-            self._item_data._append(list(value.values()))
-        self._length += 1
+    def __len__(self):
+        return len(self._key_data)
 
-    def get(self, i, fill_value):
-        """Get ith row from column/frame"""
-        j = self._offset + i
-        if not self._validity[j]:
-            return fill_value
-        else:
-            keys = self._key_data[j]
-            items = self._item_data[j]
-            return {k: i for k, i in zip(keys, items)}
+    def null_count(self):
+        return self._mask.sum()
 
-    def __iter__(self):
-        """Return the iterator object itself."""
-        for i in range(self._length):
-            j = self._offset + i
-            if self._validity[j]:
-                keys = self._key_data[j]
-                items = self._item_data[j]
-                yield {k: i for k, i in zip(keys, items)}
-            else:
-                yield None
+    def getmask(self, i):
+        return self._mask[i]
 
-    def _copy(self, deep, offset, length):
-        if deep:
-            res = ListColumn(self.dtype)
-            res._length = length
-            res._key_data = self._key_data._copy(deep, offset, length)
-            res._item_data = self._item_data._copy(deep, offset, length)
-            res._validity = self._validity[offset : offset + length]
-            res._null_count = sum(res._validity)
-            return res
-        else:
-            return copy.copy(self)
+    def getdata(self, i):
+        return {k: v for k, v in zip(self._key_data[i], self._item_data[i])}
 
-    def _raw_lengths(self):
-        return self._key_data._raw_lengths() + self._item_data._raw_lengths()
-
-    def to_python(self):
-        keys = self._key_data.to_python()
-        vals = self._item_data.to_python()
-        return [
-            (OrderedDict(zip(keys[i], vals[i])) if self._validity[i] else None)
-            for i in range(self._offset, self._offset + self._length)
-        ]
+    def append(self, values):
+        """Returns column/dataframe with values appended."""
+        tmp = self.session.Column(values, dtype=self.dtype, to=self.to)
+        return MapColumn(*self._meta(),
+                         self._key_data.append(tmp._key_data),
+                         self._item_data.append(tmp._item_data),
+                         np.append(self._mask, tmp._mask))
 
     # printing ----------------------------------------------------------------
     def __str__(self):
@@ -150,25 +99,13 @@ class MapColumn(AbstractColumn):
             tablefmt="plain",
             showindex=True,
         )
-        typ = f"dtype: {self._dtype}, length: {self._length}, null_count: {self._null_count}"
+        typ = f"dtype: {self._dtype}, length: {self.length()}, null_count: {self.null_count()}"
         return tab + NL + typ
-
-
-def show_details(self):
-    return _Repr(self)
-
-
-@dataclass
-class _Repr:
-    parent: ListColumn
-
-    def __repr__(self):
-        raise NotImplementedError()
 
 
 # ------------------------------------------------------------------------------
 # registering the factory
-_set_column_constructor(is_map, MapColumn)
+ColumnFactory.register((Map.typecode+"_empty", 'test'), MapColumn._empty)
 
 # -----------------------------------------------------------------------------
 # MapMethods
@@ -188,43 +125,14 @@ class MapMethods:
         me = self._parent
         return me._item_data
 
-    def _map_map(self, fun, dtype: Optional[DType] = None):
-        me = self._parent
-        if dtype is None:
-            dtype = me._dtype
-        res = _column_constructor(dtype)
-        for i in range(me._length):
-            j = me._offset + i
-            if me._validity[j]:
-                res._append(fun(me[j]))
-            else:
-                res._append(None)
-        return res
-
     def get(self, i, fill_value):
         me = self._parent
 
         def fun(xs):
+            # TODO improve perf by looking at lists instead of first building a map
             return xs.get(i, fill_value)
 
-        return self._map_map(fun, me.dtype.item_dtype)
-
-    # def _map_map(self, fun, dtype:Optional[DType]=None):
-    #     me = self._parent
-    #     if dtype is None:
-    #         dtype = me._dtype
-    #     res = _column_constructor(dtype)
-    #     for i in range(me._length):
-    #         j = me._offset+i
-    #         if me._validity[j]:
-    #             res._append(fun(me[j]))
-    #         else:
-    #             res._append(None)
-    #     return res
-
-    # def map_values(self, fun, dtype:Optional[DType]=None):
-    #     func = lambda xs: map(fun,xs)
-    #     return self._map_map(func, dtype)
+        return me._vectorize(fun, me.dtype.item_dtype)
 
 
 # ops on maps --------------------------------------------------------------

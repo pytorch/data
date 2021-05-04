@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-
+import numpy as np
+from collections import defaultdict
 import array as ar
 import functools
 import math
@@ -45,131 +46,50 @@ from .dtypes import (
 
 from .expression import expression
 from .trace import trace, traceproperty
+from .session import Session
+
 
 # ------------------------------------------------------------------------------
-# Column - the factory method for specialized columns.
+# Column Factory with default session and device
 
-
-@trace
-@expression
 def Column(
-    data: Union[Iterable, DType, Literal[None]] = None, dtype: Optional[DType] = None
+    data: Union[Iterable, DType, Literal[None]] = None,
+    dtype: Optional[DType] = None,
+    session: Optional[Session] = None,
+    to: Device = ''
 ):
     """
-    Column factory method; returned column type has elements of homogenous dtype.
+    Column Factory method
     """
-
-    # handling cyclic references...
-    from .list_column import ListColumn
-    from .map_column import MapColumn
-    from .numerical_column import NumericalColumn
-    from .string_column import StringColumn
-
-    if data is None and dtype is None:
-        raise TypeError("Column requires data and/or dtype parameter")
-
-    if data is not None and isinstance(data, DType):
-        if dtype is not None and isinstance(dtype, DType):
-            raise TypeError("Column can only have one dtype parameter")
-        dtype = data
-        data = None
-
-    # dtype given, optional data
-    if dtype is not None:
-        if isinstance(dtype, DType):
-            col = _column_constructor(dtype)
-            if data is not None:
-                for i in data:
-                    col.append(i)
-            return col
-        else:
-            raise TypeError(
-                f"dtype parameter of DType expected (got {type(dtype).__name__})"
-            )
-
-    # data given, optional column
-    if data is not None:
-        if isinstance(data, Sequence):
-            data = iter(data)
-        if isinstance(data, Iterable):
-            prefix = []
-            for i, v in enumerate(data):
-                prefix.append(v)
-                if i > 5:
-                    break
-            dtype = infer_dtype_from_prefix(prefix)
-            if dtype is None:
-                raise TypeError("Column cannot infer type from data")
-            if is_tuple(dtype):
-                raise TypeError(
-                    "Column cannot be used to created structs, use Dataframe constructor instead"
-                )
-            col = _column_constructor(dtype)
-            # add prefix and ...
-            col.extend(prefix)
-            # ... continue enumerate the data
-            for _, v in enumerate(data):
-                col.append(v)
-            return col
-        else:
-            raise TypeError(
-                f"data parameter of Sequence type expected (got {type(dtype).__name__})"
-            )
-    else:
-        raise AssertionError("unexpected case")
-
-
-def arange(
-    start: int,
-    stop: int,
-    step: int = 1,
-    dtype: Optional[DType] = None,
-) -> AbstractColumn:
-    return Column(list(range(start, stop, step)), dtype)
-
-
-# - underlying factory ---------------------------------------------------------
-_factory: List[Tuple[Callable, Callable]] = []
-
-# called once by each concrete Column to add this to the factory...
-
-
-def _set_column_constructor(test, constructor):
-    _factory.append((test, constructor))
-
-
-def _column_constructor(dtype, kwargs=None):
-    for test, constructor in _factory:
-        if test(dtype):
-            return constructor(dtype, kwargs)
-    raise KeyError(f"no matching test found for {dtype}")
-
+    session = session or Session.default
+    to = to or session.to
+    return session.Column(data, dtype=dtype, to=to)
 
 # ------------------------------------------------------------------------------
 # AbstractColumn
 
 
-class AbstractColumn(ABC, Sized, Iterable):
-    """AbstractColumn are one dimenensionalcolumns or two dimensional dataframes"""
+class AbstractColumn(Sized, Iterable):
+    """AbstractColumn are n vectors (n>=1) of columns"""
 
-    _ct = 0  # global counter for all columns/dataframes ever created...
+    def __init__(self, session, to, dtype):
 
-    def __init__(self, dtype: Optional[DType]):
-        # id handling, used for tracing...
-        self.id = f"c{AbstractColumn._ct}"
-        AbstractColumn._ct += 1
-        # normal constructor code
+        self._session = session
+        self._to = to
         self._dtype = dtype
-        self._offset = 0
-        self._length = 0
-        self._null_count = 0
-        self._validity = ar.array("b")
 
-    @classmethod
-    def reset(cls):
-        cls._ct = 0
+        # id handling, used for tracing...
+        self.id = f"c{session.ct.next()}"
 
-    # simple meta data getters -----------------------------------------------
+    # getters ---------------------------------------------------------------
+
+    @property
+    def session(self):
+        return self._session
+
+    @property
+    def to(self):
+        return self._to
 
     @property  # type: ignore
     @traceproperty
@@ -183,94 +103,110 @@ class AbstractColumn(ABC, Sized, Iterable):
         """A boolean indicating whether column/frame can have nulls"""
         return self.dtype.nullable
 
-    @abstractproperty
-    def is_appendable(self):
-        """Can this column/frame be extended without side effecting """
-        pass
+    def _meta(self):
+        return (self.session, self.to, self.dtype, )
+
+    def _context(self):
+        return (self.session, self.to,)
+
+    # private builders -------------------------------------------------------
+
+    def _Empty(self, dtype, mask=None):
+        return self.session._Empty(dtype, self.to, mask)
+
+    def _Full(self, data, dtype=None, mask=None):
+        return self.session._Full(data, dtype, self.to, mask)
+
+    @trace
+    def _append_null(self):
+        raise self._not_supported('_append_null')
+
+    @trace
+    def _append_value(self, value):
+        raise self._not_supported('_append_value')
+
+    @trace
+    def _append(self, value):
+        if value is None:
+            self._append_null()
+        else:
+            self._append_value(value)
+
+    def _extend(self, values):
+        for value in values:
+            self._append(value)
+
+    # public builders -------------------------------------------------------
+
+    @trace
+    def append(self, values):
+        """Returns column/dataframe with values appended."""
+        # TODO use _column_copy, but for now this works...
+        res = self._Empty(self.dtype)
+        for (m, d) in self.items():
+            if m:
+                res._append_null()
+            else:
+                res._append_value(d)
+        for i in values:
+            res._append(i)
+        return res._finalize()
+
+    def concat(self, others: List["AbstractColumn"]):
+        raise self._not_supported('concat')
+
+    # public simple observers -------------------------------------------------
 
     @trace
     @expression
     def count(self):
         """Return number of non-NA/null observations pgf the column/frame"""
-        return self._length - self._null_count
+        return len(self) - self.null_count()
 
     @trace
     @expression
     def null_count(self):
         """Number of null values"""
-        return self._null_count
+        raise self._not_supported('getmask')
 
     @trace
     @expression
+    # @abstractmethod
     def __len__(self):
         """Return number of rows including null values"""
-        return self._length
+        raise self._not_supported('__len__')
 
-    @property  # type: ignore
-    @traceproperty
-    def ndim(self):
-        """Column ndim is always 1, Frame ndim is always 2"""
-        return 1
-
-    @property  # type: ignore
-    @traceproperty
-    def size(self):
-        """Number of rows * number of columns."""
+    @trace
+    @expression
+    # @abstractmethod
+    def length(self):
+        """Return number of rows including null values"""
         return len(self)
 
-    @abstractmethod
-    def _raw_lengths(self) -> List[int]:
-        "Lengths of underlying buffers"
-        pass
+    # private helpers ---------------------------------------------------------
 
-    def _valid(self, i):
-        return self._validity[self._offset + i]
+    def _not_supported(self, name):
+        raise TypeError(
+            f"{name} for type {type(self).__name__} is not supported")
 
-    # builders and iterators---------------------------------------------------
-    @trace
-    def append(self, value):
-        """Append value to the end of the column/frame"""
-        if not self.is_appendable:
-            raise AttributeError("column is not appendable")
+    # selectors ---------------------------------------------------------------
+    # @abstractmethod
+
+    def getmask(self, i):
+        raise self._not_supported('getmask')
+
+    def getdata(self, i):
+        raise self._not_supported('getdata')
+
+    def valid(self, index):
+        return not self.getmask(index)
+
+    def get(self, index, fill_value=None):
+
+        if self.getmask(index):
+            return fill_value
         else:
-            return self._append(value)
-
-    @abstractmethod
-    def _append(self, value):
-        pass
-
-    def extend(self, iterable: Iterable):
-        """Append items from iterable to the end of the column/frame"""
-        if not self.is_appendable:
-            raise AttributeError("column is not appendable")
-        for i in iterable:
-            self._append(i)
-
-    def concat(self, others: List["AbstractColumn"]):
-        """Concatenate columns/frames."""
-        # instead of pandas.concat
-        for o in others:
-            self.extend(o)
-
-    @trace
-    def copy(self, deep=True):
-        """Make a copy of this object’s description and if deep also its data."""
-        return self._copy(deep, self._offset, self._length)
-
-    @abstractmethod
-    def _copy(self, deep, offset, length):
-        pass
-
-    # selectors -----------------------------------------------------------
-    @abstractmethod
-    def get(self, arg, fill_value):
-        """Get ith row from column/frame"""
-        pass
-
-    @abstractmethod
-    def __iter__(self):
-        """Return the iterator object itself."""
-        pass
+            return self.getdata(index)
 
     @trace
     @expression
@@ -289,41 +225,74 @@ class AbstractColumn(ABC, Sized, Iterable):
         If *arg* is a ``BooleanColumn``, return a new Column or DataFrame
         with rows which have been  marked True
         """
-        # print('slice', arg, str(type(arg)))
+
         if isinstance(arg, int):
-            if arg < 0:
-                arg = arg + len(self)
-            return self._get_row(arg)
+            return self.get(arg)
         elif isinstance(arg, str):
-            return self._get_column(arg)
+            return self.get_column(arg)
         elif isinstance(arg, slice):
-            args = [arg.start, arg.stop, arg.step]
-            if all(a is None or isinstance(a, str) for a in args):
-                return self._slice_columns(arg)
-            elif all(a is None or isinstance(a, int) for a in args):
-                return self._slice_rows(arg)
+            args = []
+            for i in [arg.start, arg.stop, arg.step]:
+                if isinstance(i, np.integer):
+                    args.append(int(i))
+                else:
+                    args.append(i)
+            if all(a is None or isinstance(a, int) for a in args):
+                return self.slice(*args)
+            elif all(a is None or isinstance(a, str) for a in args):
+                if arg.step is not None:
+                    raise TypeError(
+                        f"column slice can't have step argument {arg.step}")
+                return self.slice_columns(arg.start, arg.stop)
             else:
-                TypeError("slice arguments should be ints or strings")
-        if isinstance(arg, (tuple, list)):
+                raise TypeError(
+                    f"slice arguments {[type(a) for a in args]} should be ints or strings")
+        elif isinstance(arg, (tuple, list)):
             if len(arg) == 0:
-                return self._empty()
-            elif isinstance(arg[0], str) and all(isinstance(a, str) for a in arg):
-                return self._pick_columns(arg)
-            elif isinstance(arg[0], int) and all(isinstance(a, int) for a in arg):
-                return self._pick_rows(arg)
+                return self
+            if all(isinstance(a, int) for a in arg):
+                return self.gets(arg)
+            if all(isinstance(a, str) for a in arg):
+                return self.get_columns(arg)
+            if all(isinstance(a, bool) for a in arg):
+                return self.filter(arg)
             else:
                 raise TypeError("index should be list of int or list of str")
-            return self._get_columns_by_label(arg, downcast=True)
-
         elif isinstance(arg, AbstractColumn) and is_boolean(arg.dtype):
             return self.filter(arg)
         else:
-            raise TypeError(f"__getitem__ on type {type(arg)} is not supported")
+            raise self._not_supported("__getitem__")
 
-    @trace
-    @expression
-    def slice(self, start=None, stop=None, step=1):
-        return self._slice_rows(slice(start, stop, step))
+    def gets(self, indices):
+        # default implementation; optimized ones in subclasses
+        res = self._Empty(self.dtype)
+        for i in indices:
+            (m, d) = (self.getmask(i), self.getdata(i))
+            if m:
+                res._append_null()
+            else:
+                res._append_value(d)
+        return res._finalize()
+
+    def slice(self, start, stop, step):
+        # default implementation; optimized ones in subclasses
+        res = self._Empty(self.dtype)
+        for i in list(range(len(self)))[start:stop:step]:
+            (m, d) = (self.getmask(i), self.getdata(i))
+            if m:
+                res._append_null()
+            else:
+                res._append_value(d)
+        return res._finalize()
+
+    def get_column(self, column):
+        raise self._not_supported('get_column')
+
+    def get_columns(self, columns):
+        raise self._not_supported('get_columns')
+
+    def slice_columns(self, start, stop):
+        raise self._not_supported('slice_columns')
 
     @trace
     @expression
@@ -340,79 +309,42 @@ class AbstractColumn(ABC, Sized, Iterable):
     @trace
     @expression
     def reverse(self):
-        res = _column_constructor(self.dtype)
+        return self[::-1]
+
+    # iterators  -------------------------------------------------------------
+
+    def __iter__(self):
+        """Return the iterator object itself."""
         for i in range(len(self)):
-            res._append(self[(len(self) - 1) - i])
-        return res
+            yield self.get(i)
 
-    def _pick_columns(self, arg):
-        raise AttributeError(f"{type(self)} has no columns to select from")
+    def items(self):
+        for i in range(len(self)):
+            yield (self.getmask(i), self.getdata(i))
 
-    def _get_row(self, arg, default=None):
-        return self.get(arg, default)
-
-    def _pick_rows(self, arg):
-        res = _column_constructor(self.dtype)
-        for i in arg:
-            res._append(self[i])
-        return res
-
-    def _slice_rows(self, arg):
-        # TODO This is Python Slice! (Pandas last is inclusive, Python it is exclusive)
-
-        start, stop, step = arg.indices(len(self))
-
-        if start <= stop and step == 1:
-            # create a view
-            res = self.copy(deep=False)
-            res._offset = res._offset + start
-            res._length = stop - start
-            # update null_count
-            res._nullcount = sum(self._valid(i) for i in range(len(self)))
-            return res
-        else:
-            # usual slice
-            res = _column_constructor(self.dtype)
-            for i in range(start, stop, step):
-                res._append(self.get(i, None))
-            return res
-
-    def _get_column(self, arg, default=None):
-        raise AttributeError(f"{type(self)} has no column to get")
-
-    def _slice_columns(self, slice):
-        raise AttributeError(f"{type(self)} has no column to slice")
+    def _vectorize(self, fun, dtype):
+        # note: vectorize preserves mask!
+        default = dtype.default_value()
+        res = self.session._Empty(dtype, mask=self._mask)
+        for m, i in self.items():
+            if m:
+                res._append_data(default)
+            else:
+                res._append_data(fun(i))
+        return res._finalize()
 
     # conversions -------------------------------------------------------------
-    # TODO
-    def to_frame(self, name: Optional[str]):
-        """Convert data into a DataFrame"""
-        raise NotImplementedError()
 
-    #     if name is not None:
-    #         col = name
-    #     elif self.name is None:
-    #         col = 'f0'
-    #     else:
-    #         col = self.name
-    #     return DataFrame({col: self})
-
-    # def to_array(self, fillna=None):
-    #     """Get a dense numpy array for the data."""
+    # @abstractmethod
 
     def astype(self, dtype):
         """Cast the Column to the given dtype"""
-        raise NotImplementedError()
-        # if dtype.isconvertable_from(self.dtype):
-        #     # TODO
-        #     # create new stuff
-        #     pass
-        # else:
-        #     raise TypeError(f"'cannot cast from 'self.dtype' to '{dtype}'")
+        raise self._not_supported('astype')
 
     # functools map/filter/reduce ---------------------------------------------
-    @trace
-    @expression
+
+    @ trace
+    @ expression
     def map(
         self,
         arg: Union[Dict, Callable],
@@ -424,24 +356,45 @@ class AbstractColumn(ABC, Sized, Iterable):
         Maps rows according to input correspondence.
         dtype required if result type != item type.
         """
+        # to avoid applying the function to missing values, use
+        #   na_action == 'ignore'
         if columns is not None:
-            raise TypeError(f"columns parameter for flat columns not supported")
-
-        def func(x):
-            return arg.get(x, None) if isinstance(arg, dict) else arg(x)
-
+            raise TypeError(
+                f"columns parameter for flat columns not supported")
         dtype = dtype if dtype is not None else self._dtype
+        res = self._Empty(dtype)
+        if isinstance(arg, defaultdict):
+            for masked, i in self.items():
+                if not masked:
+                    res._append(arg[i])
+                elif na_action is None:
+                    res._append(arg[None])
+                else:
+                    res._append_null()
+        elif isinstance(arg, dict):
+            for masked, i in self.items():
+                if not masked:
+                    if i in arg:
+                        res._append(arg[i])
+                    else:
+                        res._append_null()
+                elif None in arg and na_action is None:
+                    res._append(arg[None])
+                else:
+                    res._append_null()
+            return res._finalize()
+        else:  # arg must be a function
+            for masked, i in self.items():
+                if not masked:
+                    res._append(arg(i))
+                elif na_action is None:
+                    res._append(arg(None))
+                else:  # na_action == 'ignore'
+                    res._append_null()
+        return res._finalize()
 
-        res = _column_constructor(dtype)
-        for i in range(self._length):
-            if self._valid(i) or na_action == "ignore":
-                res._append(func(self[i]))
-            else:
-                res._append(None)
-        return res
-
-    @trace
-    @expression
+    @ trace
+    @ expression
     def flatmap(
         self,
         arg: Union[Dict, Callable],
@@ -454,22 +407,25 @@ class AbstractColumn(ABC, Sized, Iterable):
         dtype required if result type != item type.
         """
         if columns is not None:
-            raise TypeError(f"columns parameter for flat columns not supported")
+            raise TypeError(
+                f"columns parameter for flat columns not supported")
 
         def func(x):
             return arg.get(x, None) if isinstance(arg, dict) else arg(x)
 
-        dtype1 = dtype if dtype is not None else self._dtype
-        res = _column_constructor(dtype1)
-        for i in range(self._length):
-            if self._valid(i) or na_action == "ignore":
-                res.extend(func(self[i]))
+        dtype_ = dtype if dtype is not None else self._dtype
+        res = self._Empty(dtype_)
+        for masked, i in self.items():
+            if not masked:
+                res._extend(func(i))
+            elif na_action is None:
+                res._extend(func(None))
             else:
-                res._append(None)
-        return res
+                res._append_null()
+        return res._finalize()
 
-    @trace
-    @expression
+    @ trace
+    @ expression
     def filter(
         self, predicate: Union[Callable, Iterable], columns: Optional[List[str]] = None
     ):
@@ -478,13 +434,14 @@ class AbstractColumn(ABC, Sized, Iterable):
         Different from Pandas. Use keep for Pandas filter.
         """
         if columns is not None:
-            raise TypeError(f"columns parameter for flat columns not supported")
+            raise TypeError(
+                f"columns parameter for flat columns not supported")
 
         if not isinstance(predicate, Iterable) and not callable(predicate):
             raise TypeError(
                 "predicate must be a unary boolean predicate or iterable of booleans"
             )
-        res = _column_constructor(self._dtype)
+        res = self._Empty(self._dtype)
         if callable(predicate):
             for x in self:
                 if predicate(x):
@@ -495,38 +452,45 @@ class AbstractColumn(ABC, Sized, Iterable):
                     res._append(x)
         else:
             pass
-        return res
+        return res._finalize()
 
     @trace
     @expression
-    def reduce(self, fun, initializer=None):
+    def reduce(self, fun, initializer=None, finalizer=None):
         """
         Apply binary function cumulatively to the rows[0:],
         so as to reduce the column/dataframe to a single value
         """
-        if self._length == 0:
+        if len(self) == 0:
             if initializer is not None:
                 return initializer
             else:
-                raise TypeError("reduce of empty sequence with no initial value")
+                raise TypeError(
+                    "reduce of empty sequence with no initial value")
         start = 0
         if initializer is None:
             value = self[0]
             start = 1
         else:
             value = initializer
-        for i in range(start, self._length):
+        for i in range(start, len(self)):
             value = fun(value, self[i])
-        return value
+        if finalizer is not None:
+            return finalizer(value)
+        else:
+            return value
 
     # ifthenelse -----------------------------------------------------------------
 
+    def iif(self, then_, else_):
+        """Equivalent to ternary expression: if self then then_ else else_"""
+        raise self._not_supported('astype')
     # def where(self, condition, other):
     #     """Equivalent to ternary expression: if condition then self else other"""
     #     if not isinstance(condition, Iterable):
     #         raise TypeError("condition must be an iterable of booleans")
 
-    #     res = _column_constructor(self._dtype)
+    #     res = self._empty(self._dtype)
     #     # check for length?
     #     if isinstance(other, ScalarTypeValues):
     #         for s, m in zip(self, condition):
@@ -549,760 +513,366 @@ class AbstractColumn(ABC, Sized, Iterable):
     #     """Equivalent to ternary expression: if ~condition then self else other."""
     #     return self.where(~condition, other)
 
-    # sorting -----------------------------------------------------------------
+    # sorting and top-k -------------------------------------------------------
 
     @trace
     @expression
-    def sort_values(
+    def sort(
         self,
-        by: Union[str, List[str], Literal[None]] = None,
+        by: Optional[List[str]] = None,
         ascending=True,
         na_position: Literal["last", "first"] = "last",
     ):
         """Sort a column/a dataframe in ascending or descending order"""
-        # key:Callable, optional missing
-        if by is not None:
-            raise TypeError("sorting a non-structured column can't have 'by' parameter")
-        res = _column_constructor(self.dtype)
-        if na_position == "first":
-            res.extend([None] * self._null_count)
-        res.extend(sorted((i for i in self if i is not None), reverse=not ascending))
-        if na_position == "last":
-            res.extend([None] * self._null_count)
-        return res
+        raise self._not_supported('astype')
 
     @trace
     @expression
     def nlargest(
         self,
         n=5,
-        columns: Union[str, List[str], Literal[None]] = None,
+        columns: Optional[List[str]] = None,
         keep: Literal["last", "first"] = "first",
     ):
         """Returns a new data of the *n* largest element."""
         # keep="all" not supported
-        # pass columns for comparison , nlargest(by=['country', ..]..)
-        # first/last matters only for dataframes with columns
-        # Todo add keep arg
         if columns is not None:
             raise TypeError(
                 "computing n-largest on non-structured column can't have 'columns' parameter"
             )
-        return self.sort_values(ascending=False).head(n)
+        return self.sort(ascending=False).head(n)
 
     @trace
     @expression
     def nsmallest(
-        self, n=5, columns: Union[str, List[str], Literal[None]] = None, keep="first"
+        self, n=5, columns: Optional[List[str]] = None, keep="first"
     ):
         """Returns a new data of the *n* smallest element. """
         # keep="all" not supported
-        # first/last matters only for dataframes with columns
-        # Todo add keep arg
         if columns is not None:
             raise TypeError(
                 "computing n-smallest on non-structured column can't have 'columns' parameter"
             )
 
-        return self.sort_values(ascending=True).head(n)
+        return self.sort(ascending=True).head(n)
 
     @trace
     @expression
     def nunique(self, dropna=True):
         """Returns the number of unique values of the column"""
-        if not dropna:
-            return len(set(self))
-        else:
-            return len(set(i for i in self if i is not None))
+        raise self._not_supported('astype')
 
     # operators ---------------------------------------------------------------
 
-    # arithmetic
-
-    @expression
-    def add(self, other, fill_value=None):
-        return self._binary_operator("add", other, fill_value=fill_value)
-
-    @expression
-    def radd(self, other, fill_value=None):
-        return self._binary_operator("add", other, fill_value=fill_value, reflect=True)
-
-    @expression
-    def __add__(self, other):
-        return self._binary_operator("add", other)
-
-    @expression
-    def __radd__(self, other):
-        return self._binary_operator("add", other, reflect=True)
-
-    @expression
-    def sub(self, other, fill_value=None):
-        return self._binary_operator("sub", other, fill_value=fill_value)
-
-    @expression
-    def rsub(self, other, fill_value=None):
-        return self._binary_operator("sub", other, fill_value=fill_value, reflect=True)
-
-    @expression
-    def __sub__(self, other):
-        return self._binary_operator("sub", other)
-
-    @expression
-    def __rsub__(self, other):
-        return self._binary_operator("sub", other, reflect=True)
-
-    @expression
-    def mul(self, other, fill_value=None):
-        return self._binary_operator("mul", other, fill_value=fill_value)
-
-    @expression
-    def rmul(self, other, fill_value=None):
-        return self._binary_operator("mul", other, fill_value=fill_value, reflect=True)
-
-    @expression
-    def __mul__(self, other):
-        return self._binary_operator("mul", other)
-
-    @expression
-    def __rmul__(self, other):
-        return self._binary_operator("mul", other, reflect=True)
-
-    @expression
-    def floordiv(self, other, fill_value=None):
-        return self._binary_operator("floordiv", other, fill_value=fill_value)
-
-    @expression
-    def rfloordiv(self, other, fill_value=None):
-        return self._binary_operator(
-            "floordiv", other, fill_value=fill_value, reflect=True
-        )
-
-    @expression
-    def __floordiv__(self, other):
-        return self._binary_operator("floordiv", other)
-
-    @expression
-    def __rfloordiv__(self, other):
-        return self._binary_operator("floordiv", other, reflect=True)
-
-    @expression
-    def truediv(self, other, fill_value=None):
-        return self._binary_operator(
-            "truediv",
-            other,
-            fill_value=fill_value,
-        )
-
-    @expression
-    def rtruediv(self, other, fill_value=None):
-        return self._binary_operator(
-            "truediv", other, fill_value=fill_value, reflect=True
-        )
-
-    @expression
-    def __truediv__(self, other):
-        return self._binary_operator("truediv", other)
-
-    @expression
-    def __rtruediv__(self, other):
-        return self._binary_operator("truediv", other, reflect=True)
-
-    @expression
-    def mod(self, other, fill_value=None):
-        return self._binary_operator("mod", other, fill_value=fill_value)
-
-    @expression
-    def rmod(self, other, fill_value=None):
-        return self._binary_operator("mod", other, fill_value=fill_value, reflect=True)
-
-    @expression
-    def __mod__(self, other):
-        return self._binary_operator("mod", other)
-
-    @expression
-    def __rmod__(self, other):
-        return self._binary_operator("mod", other, reflect=True)
-
-    @expression
-    def pow(self, other, fill_value=None):
-        return self._binary_operator(
-            "pow",
-            other,
-            fill_value=fill_value,
-        )
-
-    @expression
-    def rpow(self, other, fill_value=None):
-        return self._binary_operator("pow", other, fill_value=fill_value, reflect=True)
-
-    @expression
-    def __pow__(self, other):
-        return self._binary_operator("pow", other)
-
-    @expression
-    def __rpow__(self, other):
-        return self._binary_operator("pow", other, reflect=True)
-
-    # comparison
-
-    @expression
-    def eq(self, other, fill_value=None):
-        return self._binary_operator("eq", other, fill_value=fill_value)
-
-    @expression
-    def __eq__(self, other):
-        return self._binary_operator("eq", other)
-
-    @expression
-    def ne(self, other, fill_value=None):
-        return self._binary_operator("ne", other, fill_value=fill_value)
-
-    @expression
-    def __ne__(self, other):
-        return self._binary_operator("ne", other)
-
-    @expression
-    def lt(self, other, fill_value=None):
-        return self._binary_operator("lt", other, fill_value=fill_value)
-
-    @expression
-    def __lt__(self, other):
-        return self._binary_operator("lt", other)
-
-    @expression
-    def gt(self, other, fill_value=None):
-        return self._binary_operator("gt", other, fill_value=fill_value)
-
-    @expression
-    def __gt__(self, other):
-        return self._binary_operator("gt", other)
-
-    @expression
-    def le(self, other, fill_value=None):
-        return self._binary_operator("le", other, fill_value=fill_value)
-
-    @expression
-    def __le__(self, other):
-        return self._binary_operator("le", other)
-
-    @expression
-    def ge(self, other, fill_value=None):
-        return self._binary_operator("ge", other, fill_value=fill_value)
-
-    @expression
-    def __ge__(self, other):
-        return self._binary_operator("ge", other)
-
-    # bitwise or (|), used for logical or
-    @expression
-    def __or__(self, other):
-        return self._binary_operator("or", other)
-
-    @expression
-    def __ror__(self, other):
-        return self._binary_operator("or", other, reflect=True)
-
-    # bitwise and (&), used for logical and
-    @expression
-    def __and__(self, other):
-        return self._binary_operator("and", other)
-
-    @expression
-    def __rand__(self, other):
-        return self._binary_operator("and", other, reflect=True)
-
-    # bitwise complement (~), used for logical not
-
-    @expression
-    def __invert__(self):
-        return self._unary_operator(operator.__not__, self.dtype)
-
-    # unary arithmetic
-    @expression
-    def __neg__(self):
-        return self._unary_operator(operator.neg, self.dtype)
-
-    @expression
-    def __pos__(self):
-        return self._unary_operator(operator.pos, self.dtype)
-
-    # unary math related
-
-    @expression
-    def abs(self):
-        """Absolute value of each element of the series."""
-        return self._unary_operator(abs, self.dtype)
-
-    @expression
-    def ceil(self):
-        """Rounds each value upward to the smallest integral"""
-        return self._unary_operator(math.ceil, Int64(self.dtype.nullable))
-
-    @expression
-    def floor(self):
-        """Rounds each value downward to the largest integral value"""
-        return self._unary_operator(math.floor, Int64(self.dtype.nullable))
-
-    @expression
-    def round(self, decimals: Optional[int] = None):
-        """Round each value in a data to the given number of decimals."""
-        if decimals is None:
-            return self._unary_operator(round, Int64(self.dtype.nullable))
-        else:
-
-            def round_(x):
-                return round(x, decimals)
-
-            return self._unary_operator(round_, Float64(self.dtype.nullable))
-
-    @expression
-    def hash_values(self):
-        """Compute the hash of values in this column."""
-        return self._unary_operator(hash, Int64(self.dtype.nullable))
-
-    @trace
-    def _broadcast(self, operator, const, fill_value, dtype, reflect):
-        assert is_primitive(self._dtype) and is_primitive(dtype)
-        res = _column_constructor(dtype)
-        # TODO: introduce fast paths...
-        for i in range(self._length):
-            if self._valid(i):
-                if reflect:
-                    res._append(operator(const, self.get(i, None)))
-                else:
-                    res._append(operator(self.get(i, None), const))
-            elif fill_value is not None:
-                if reflect:
-                    res._append(operator(const, fill_value))
-                else:
-                    res._append(operator(fill_value, const))
-            else:
-                res._append(None)
-        return res
-
-    @trace
-    def _pointwise(self, operator, other, fill_value, dtype, reflect):
-        assert is_primitive(self._dtype) and is_primitive(dtype)
-        # print('Column._pointwise', self, operator, other, fill_value, dtype, reflect)
-        res = _column_constructor(dtype)
-        #  # TODO: introduce fast paths...
-        for i in range(self._length):
-            if self._valid(i) and other._valid(i):
-                if reflect:
-                    res._append(operator(other.get(i, None), self.get(i, None)))
-                else:
-                    res._append(operator(self.get(i, None), other.get(i, None)))
-            elif fill_value is not None:
-                l = self.get(i, None) if self._valid(i) else fill_value
-                r = other.get(i, None) if other._valid(i) else fill_value
-                if reflect:
-                    res._append(operator(r, l))
-                else:
-                    res._append(operator(l, r))
-            else:
-                res._append(None)
-        return res
-
-    @trace
-    def _unary_operator(self, operator, dtype):
-        res = _column_constructor(dtype)
-        for i in range(self._length):
-            if self._valid(i):
-                res._append(operator(self[i]))
-            else:
-                res._append(None)
-        return res
-
-    @trace
-    def _binary_operator(self, operator, other, fill_value=None, reflect=False):
-        if isinstance(other, (int, float, list, set, type(None))):
-            return self._broadcast(
-                derive_operator(operator),
-                other,
-                fill_value,
-                derive_dtype(self._dtype, operator),
-                reflect,
-            )
-        elif is_struct(other.dtype):
-            raise TypeError(
-                f"cannot apply '{operator}' on {type(self).__name__} and {type(other).__name__}"
-            )
-        else:
-            return self._pointwise(
-                derive_operator(operator),
-                other,
-                fill_value,
-                derive_dtype(self._dtype, operator),
-                reflect,
-            )
-
-    # isin --------------------------------------------------------------------
-    @trace
-    @expression
-    def isin(self, values: Union[list, dict, AbstractColumn]):
-        """Check whether list values are contained in data, or column/dataframe (row/column specific)."""
-        if isinstance(values, list):
-            res = _column_constructor(boolean)
-            for i in self:
-                res._append(i in values)
-            return res
-        else:
-            raise ValueError(
-                f"isin undefined for values of type {type(self).__name__}."
-            )
-
-    # data cleaning -----------------------------------------------------------
-
-    @trace
-    @expression
-    def fillna(
-        self, fill_value: Union[ScalarTypes, Dict, AbstractColumn, Literal[None]]
-    ):
-        """Fill NA/NaN values with scalar (like 0) or column/dataframe (row/column specific)"""
-        if fill_value is None:
-            return self
-        assert self._dtype is not None
-        res = _column_constructor(self._dtype.constructor(nullable=False))
-        if isinstance(fill_value, ScalarTypeValues):
-            for value in self:
-                if value is not None:
-                    res._append(value)
-                else:
-                    res._append(fill_value)
-            return res
-        elif isinstance(
-            fill_value, AbstractColumn
-        ):  # TODO flat Column   --> needs a test
-            for value, fill in zip(self, fill_value):
-                if value is not None:
-                    res._append(value)
-                else:
-                    res._append(fill)
-            return res
-        else:  # Dict and Dataframe only self is dataframe
-            raise TypeError(f"fillna with {type(fill_value)} is not supported")
-
-    @trace
-    @expression
-    def dropna(self, how: Literal["any", "all"] = "any"):
-        """Return a column/frame with rows removed where a row has any or all nulls."""
-        # TODO only flat columns supported...
-        # notet hat any and all play nor role for flat columns,,,
-        assert self._dtype is not None
-        res = _column_constructor(self._dtype.constructor(nullable=False))
-        for i in range(self._offset, self._offset + self._length):
-            if self._validity[i]:
-                res._append(self[i])
-        return res
-
-    @trace
-    @expression
-    def drop_duplicates(
-        self,
-        subset: Union[str, List[str], Literal[None]] = None,
-        keep: Literal["first", "last", False] = "first",
-    ):
-        """ Remove duplicate values from row/frame but keep the first, last, none"""
-        # Todo Add functionality
-        assert keep == "first"
-        if subset is not None:
-            raise TypeError(f"subset parameter for flat columns not supported")
-        res = _column_constructor(self._dtype)
-        res.extend(list(OrderedDict.fromkeys(self)))
-        return res
-
-    # universal  ---------------------------------------------------------------
-
-    @trace
-    @expression
-    def min(self, numeric_only=None):
-        """Return the minimum of the nonnull values of the Column."""
-        # skipna == True
-        # default implmentation:
-        if numeric_only is None or (numeric_only and is_numerical(self.dtype)):
-            return min(self._iter(skipna=True))
-        else:
-            raise ValueError(f"min undefined for {type(self).__name__}.")
-
-    @trace
-    @expression
-    def max(self, numeric_only=None):
-        """Return the maximum of the nonnull values of the column."""
-        # skipna == True
-        if numeric_only is None or (numeric_only and is_numerical(self.dtype)):
-            return max(self._iter(skipna=True))
-        else:
-            raise ValueError(f"max undefined for {type(self).__name__}.")
-
-    @trace
-    @expression
-    def all(self, boolean_only=None):
-        """Return whether all nonull elements are True in Column"""
-        # skipna == True
-        if boolean_only is None or (boolean_only and is_boolean(self.dtype)):
-            return all(self._iter(skipna=True))
-        else:
-            raise ValueError(f"all undefined for {type(self).__name__}.")
-
-    @trace
-    @expression
-    def any(self, skipna=True, boolean_only=None):
-        """Return whether any nonull element is True in Column"""
-        # skipna == True
-        if boolean_only is None or (boolean_only and is_boolean(self.dtype)):
-            return any(self._iter(skipna=True))
-        else:
-            raise ValueError(f"all undefined for {type(self).__name__}.")
-
-    @trace
-    @expression
-    def sum(self):
-        """Return sum of all nonull elements in Column"""
-        # skipna == True
-        # only_numerical == True
-        if is_numerical(self.dtype):
-            return sum(self._iter(skipna=True))
-        else:
-            raise ValueError(f"max undefined for {type(self).__name__}.")
-
-    @trace
-    @expression
-    def prod(self):
-        """Return produce of the values in the data"""
-        # skipna == True
-        # only_numerical == True
-        if is_numerical(self.dtype):
-            return functools.reduce(operator.mul, self._iter(skipna=True), 1)
-        else:
-            raise ValueError(f"prod undefined for {type(self).__name__}.")
-
-    @trace
-    @expression
-    def cummin(self, skipna=True):
-        """Return cumulative minimum of the data."""
-        # skipna == True
-        if is_numerical(self.dtype):
-            return self._accumulate_column(min, skipna=skipna, initial=None)
-        else:
-            raise ValueError(f"cumin undefined for {type(self).__name__}.")
-
-    @trace
-    @expression
-    def cummax(self, skipna=True):
-        """Return cumulative maximum of the data."""
-        if is_numerical(self.dtype):
-            return self._accumulate_column(max, skipna=skipna, initial=None)
-        else:
-            raise ValueError(f"cummax undefined for {type(self).__name__}.")
-
-    @trace
-    @expression
-    def cumsum(self, skipna=True):
-        """Return cumulative sum of the data."""
-        if is_numerical(self.dtype):
-            return self._accumulate_column(operator.add, skipna=skipna, initial=None)
-        else:
-            raise ValueError(f"cumsum undefined for {type(self).__name__}.")
-
-    @trace
-    @expression
-    def cumprod(self, skipna=True):
-        """Return cumulative product of the data."""
-        if is_numerical(self.dtype):
-            return self._accumulate_column(operator.mul, skipna=skipna, initial=None)
-        else:
-            raise ValueError(f"cumprod undefined for {type(self).__name__}.")
-
-    @trace
-    @expression
-    def mean(self):
-        """Return the mean of the values in the series."""
-        if is_numerical(self.dtype):
-            return statistics.mean(self._iter(skipna=True))
-        else:
-            raise ValueError(f"mean undefined for {type(self).__name__}.")
-
-    @trace
-    @expression
-    def median(self):
-        """Return the median of the values in the data."""
-        if is_numerical(self.dtype):
-            return statistics.median(self._iter(skipna=True))
-        else:
-            raise ValueError(f"median undefined for {type(self).__name__}.")
-
-    @trace
-    @expression
-    def mode(self):
-        """Return the mode(s) of the data."""
-        if is_numerical(self.dtype):
-            return statistics.mode(self._iter(skipna=True))
-        else:
-            raise ValueError(f"mode undefined for {type(self).__name__}.")
-
-    @trace
-    @expression
-    def std(self):
-        """Return the stddev(s) of the data."""
-        if is_numerical(self.dtype):
-            return statistics.stdev(self._iter(skipna=True))
-        else:
-            raise ValueError(f"std undefined for {type(self).__name__}.")
-
-    @trace
-    def _iter(self, skipna):
-        for i in self:
-            if not (i is None and skipna):
-                yield i
-
-    @trace
-    def _accumulate_column(self, func, *, skipna=True, initial=None):
-        it = iter(self)
-        res = _column_constructor(self.dtype)
-        total = initial
-        rest_is_null = False
-        if initial is None:
-            try:
-                total = next(it)
-            except StopIteration:
-                raise ValueError(f"cum[min/max] undefined for empty column.")
-        if total is None:
-            raise ValueError(f"cum[min/max] undefined for columns with row 0 as null.")
-        res._append(total)
-        for element in it:
-            if rest_is_null:
-                res._append(None)
-                continue
-            if element is None:
-                if skipna:
-                    res._append(None)
-                else:
-                    res._append(None)
-                    rest_is_null = True
-            else:
-                total = func(total, element)
-                res._append(total)
-        return res
-
-    # describe ----------------------------------------------------------------
-    @trace
-    @expression
-    def describe(
-        self,
-        percentiles=None,
-        include_columns: Union[List[DType], Literal[None]] = None,
-        exclude_columns: Union[List[DType], Literal[None]] = None,
-    ):
-        """Generate descriptive statistics."""
-        from .dataframe import DataFrame
-
-        # Not supported: datetime_is_numeric=False,
-        if include_columns is not None or exclude_columns is not None:
-            raise TypeError(
-                f"'include/exclude columns' parameter for '{type(self).__name__}' not supported "
-            )
-        if percentiles is None:
-            percentiles = [25, 50, 75]
-        percentiles = sorted(set(percentiles))
-        if len(percentiles) > 0:
-            if percentiles[0] < 0 or percentiles[-1] > 100:
-                raise ValueError("percentiles must be betwen 0 and 100")
-
-        if is_numerical(self.dtype):
-            res = DataFrame(
-                Struct([Field("statistic", string), Field("value", float64)])
-            )
-            res._append(("count", self.count()))
-            res._append(("mean", self.mean()))
-            res._append(("std", self.std()))
-            res._append(("min", self.min()))
-            values = self._percentiles(percentiles)
-            for p, v in zip(percentiles, values):
-                res._append((f"{p}%", v))
-            res._append(("max", self.max()))
-            return res
-        else:
-            raise ValueError(f"median undefined for {type(self).__name__}.")
-
-    def _percentiles(self, percentiles):
-        if len(self) == 0 or len(percentiles) == 0:
-            return []
-        out = []
-        s = sorted(self)
-        for percent in percentiles:
-            k = (len(self) - 1) * (percent / 100)
-            f = math.floor(k)
-            c = math.ceil(k)
-            if f == c:
-                out.append(s[int(k)])
-                continue
-            d0 = s[int(f)] * (c - k)
-            d1 = s[int(c)] * (k - f)
-            out.append(d0 + d1)
-        return out
-
-    # Flat column specfic ops ----------------------------------------------------------
-    @trace
-    @expression
-    def is_unique(self):
-        """Return boolean if data values are unique."""
-        seen = set()
-        return not any(i in seen or seen.add(i) for i in self)
-
-    # only on flat column
-    @trace
-    @expression
-    def is_monotonic_increasing(self):
-        """Return boolean if values in the object are monotonic increasing"""
-        return self._compare(operator.lt, initial=True)
-
-    @trace
-    @expression
-    def is_monotonic_decreasing(self):
-        """Return boolean if values in the object are monotonic decreasing"""
-        return self._compare(operator.gt, initial=True)
-
-    def _compare(self, op, initial):
-        assert initial in [True, False]
-        if self._length == 0:
-            return initial
-        it = iter(self)
-        start = next(it)
-        for step in it:
-            if op(start, step):
-                start = step
-                continue
-            else:
-                return False
-        return True
-
-    @staticmethod
-    def _flatten(a):
-        return functools.reduce(operator.iconcat, a, [])
-
-    # interop ----------------------------------------------------------------
-
-    @trace
-    def to_pandas(self):
-        """Convert selef to pandas dataframe"""
-        # TODO Add type translation
-        # Skipping analyzing 'pandas': found module but no type hints or library stubs
-        import pandas as pd  # type: ignore
-
-        return pd.Series(self)
-
-    @trace
-    def to_arrow(self):
-        """Convert selef to pandas dataframe"""
-        # TODO Add type translation
-        import pyarrow as pa  # type: ignore
-
-        return pa.array(self)
-
-    @trace
-    def to_python(self):
-        """Convert to plain Python container (list of scalars or containers)"""
-        raise NotImplementedError()
+    # # isin --------------------------------------------------------------------
+    # @trace
+    # @expression
+    # def isin(self, values: Union[list, dict, AbstractColumn]):
+    #     """Check whether list values are contained in data, or column/dataframe (row/column specific)."""
+    #     if isinstance(values, list):
+    #         res = self._empty(boolean)
+    #         for i in self:
+    #             res._append(i in values)
+    #         return res
+    #     else:
+    #         raise ValueError(
+    #             f"isin undefined for values of type {type(self).__name__}."
+    #         )
+
+    # # data cleaning -----------------------------------------------------------
+
+    # # universal  ---------------------------------------------------------------
+
+    # @trace
+    # @expression
+    # def min(self, numeric_only=None):
+    #     """Return the minimum of the nonnull values of the Column."""
+    #     # skipna == True
+    #     # default implmentation:
+    #     if numeric_only is None or (numeric_only and is_numerical(self.dtype)):
+    #         return min(self._iter(skipna=True))
+    #     else:
+    #         raise ValueError(f"min undefined for {type(self).__name__}.")
+
+    # @trace
+    # @expression
+    # def max(self, numeric_only=None):
+    #     """Return the maximum of the nonnull values of the column."""
+    #     # skipna == True
+    #     if numeric_only is None or (numeric_only and is_numerical(self.dtype)):
+    #         return max(self._iter(skipna=True))
+    #     else:
+    #         raise ValueError(f"max undefined for {type(self).__name__}.")
+
+    # @trace
+    # @expression
+    # def all(self, boolean_only=None):
+    #     """Return whether all nonull elements are True in Column"""
+    #     # skipna == True
+    #     if boolean_only is None or (boolean_only and is_boolean(self.dtype)):
+    #         return all(self._iter(skipna=True))
+    #     else:
+    #         raise ValueError(f"all undefined for {type(self).__name__}.")
+
+    # @trace
+    # @expression
+    # def any(self, skipna=True, boolean_only=None):
+    #     """Return whether any nonull element is True in Column"""
+    #     # skipna == True
+    #     if boolean_only is None or (boolean_only and is_boolean(self.dtype)):
+    #         return any(self._iter(skipna=True))
+    #     else:
+    #         raise ValueError(f"all undefined for {type(self).__name__}.")
+
+    # @trace
+    # @expression
+    # def sum(self):
+    #     """Return sum of all nonull elements in Column"""
+    #     # skipna == True
+    #     # only_numerical == True
+    #     if is_numerical(self.dtype):
+    #         return sum(self._iter(skipna=True))
+    #     else:
+    #         raise ValueError(f"max undefined for {type(self).__name__}.")
+
+    # @trace
+    # @expression
+    # def prod(self):
+    #     """Return produce of the values in the data"""
+    #     # skipna == True
+    #     # only_numerical == True
+    #     if is_numerical(self.dtype):
+    #         return functools.reduce(operator.mul, self._iter(skipna=True), 1)
+    #     else:
+    #         raise ValueError(f"prod undefined for {type(self).__name__}.")
+
+    # @trace
+    # @expression
+    # def cummin(self, skipna=True):
+    #     """Return cumulative minimum of the data."""
+    #     # skipna == True
+    #     if is_numerical(self.dtype):
+    #         return self._accumulate_column(min, skipna=skipna, initial=None)
+    #     else:
+    #         raise ValueError(f"cumin undefined for {type(self).__name__}.")
+
+    # @trace
+    # @expression
+    # def cummax(self, skipna=True):
+    #     """Return cumulative maximum of the data."""
+    #     if is_numerical(self.dtype):
+    #         return self._accumulate_column(max, skipna=skipna, initial=None)
+    #     else:
+    #         raise ValueError(f"cummax undefined for {type(self).__name__}.")
+
+    # @trace
+    # @expression
+    # def cumsum(self, skipna=True):
+    #     """Return cumulative sum of the data."""
+    #     if is_numerical(self.dtype):
+    #         return self._accumulate_column(operator.add, skipna=skipna, initial=None)
+    #     else:
+    #         raise ValueError(f"cumsum undefined for {type(self).__name__}.")
+
+    # @trace
+    # @expression
+    # def cumprod(self, skipna=True):
+    #     """Return cumulative product of the data."""
+    #     if is_numerical(self.dtype):
+    #         return self._accumulate_column(operator.mul, skipna=skipna, initial=None)
+    #     else:
+    #         raise ValueError(f"cumprod undefined for {type(self).__name__}.")
+
+    # @trace
+    # @expression
+    # def mean(self):
+    #     """Return the mean of the values in the series."""
+    #     if is_numerical(self.dtype):
+    #         return statistics.mean(self._iter(skipna=True))
+    #     else:
+    #         raise ValueError(f"mean undefined for {type(self).__name__}.")
+
+    # @trace
+    # @expression
+    # def median(self):
+    #     """Return the median of the values in the data."""
+    #     if is_numerical(self.dtype):
+    #         return statistics.median(self._iter(skipna=True))
+    #     else:
+    #         raise ValueError(f"median undefined for {type(self).__name__}.")
+
+    # @trace
+    # @expression
+    # def mode(self):
+    #     """Return the mode(s) of the data."""
+    #     if is_numerical(self.dtype):
+    #         return statistics.mode(self._iter(skipna=True))
+    #     else:
+    #         raise ValueError(f"mode undefined for {type(self).__name__}.")
+
+    # @trace
+    # @expression
+    # def std(self):
+    #     """Return the stddev(s) of the data."""
+    #     if is_numerical(self.dtype):
+    #         return statistics.stdev(self._iter(skipna=True))
+    #     else:
+    #         raise ValueError(f"std undefined for {type(self).__name__}.")
+
+    # @trace
+    # def _iter(self, skipna):
+    #     for i in self:
+    #         if not (i is None and skipna):
+    #             yield i
+
+    # @trace
+    # def _accumulate_column(self, func, *, skipna=True, initial=None):
+    #     it = iter(self)
+    #     res = self._empty(self.dtype)
+    #     total = initial
+    #     rest_is_null = False
+    #     if initial is None:
+    #         try:
+    #             total = next(it)
+    #         except StopIteration:
+    #             raise ValueError(f"cum[min/max] undefined for empty column.")
+    #     if total is None:
+    #         raise ValueError(f"cum[min/max] undefined for columns with row 0 as null.")
+    #     res._append(total)
+    #     for element in it:
+    #         if rest_is_null:
+    #             res._append(None)
+    #             continue
+    #         if element is None:
+    #             if skipna:
+    #                 res._append(None)
+    #             else:
+    #                 res._append(None)
+    #                 rest_is_null = True
+    #         else:
+    #             total = func(total, element)
+    #             res._append(total)
+    #     return res
+
+    # # describe ----------------------------------------------------------------
+    # @trace
+    # @expression
+    # def describe(
+    #     self,
+    #     percentiles=None,
+    #     include_columns: Union[List[DType], Literal[None]] = None,
+    #     exclude_columns: Union[List[DType], Literal[None]] = None,
+    # ):
+    #     """Generate descriptive statistics."""
+    #     from .dataframe import DataFrame
+
+    #     # Not supported: datetime_is_numeric=False,
+    #     if include_columns is not None or exclude_columns is not None:
+    #         raise TypeError(
+    #             f"'include/exclude columns' parameter for '{type(self).__name__}' not supported "
+    #         )
+    #     if percentiles is None:
+    #         percentiles = [25, 50, 75]
+    #     percentiles = sorted(set(percentiles))
+    #     if len(percentiles) > 0:
+    #         if percentiles[0] < 0 or percentiles[-1] > 100:
+    #             raise ValueError("percentiles must be betwen 0 and 100")
+
+    #     if is_numerical(self.dtype):
+    #         res = DataFrame(
+    #             Struct([Field("statistic", string), Field("value", float64)])
+    #         )
+    #         res._append(("count", self.count()))
+    #         res._append(("mean", self.mean()))
+    #         res._append(("std", self.std()))
+    #         res._append(("min", self.min()))
+    #         values = self._percentiles(percentiles)
+    #         for p, v in zip(percentiles, values):
+    #             res._append((f"{p}%", v))
+    #         res._append(("max", self.max()))
+    #         return res
+    #     else:
+    #         raise ValueError(f"median undefined for {type(self).__name__}.")
+
+    # def _percentiles(self, percentiles):
+    #     if len(self) == 0 or len(percentiles) == 0:
+    #         return []
+    #     out = []
+    #     s = sorted(self)
+    #     for percent in percentiles:
+    #         k = (len(self) - 1) * (percent / 100)
+    #         f = math.floor(k)
+    #         c = math.ceil(k)
+    #         if f == c:
+    #             out.append(s[int(k)])
+    #             continue
+    #         d0 = s[int(f)] * (c - k)
+    #         d1 = s[int(c)] * (k - f)
+    #         out.append(d0 + d1)
+    #     return out
+
+    # # Flat column specfic ops ----------------------------------------------------------
+    # @trace
+    # @expression
+    # def is_unique(self):
+    #     """Return boolean if data values are unique."""
+    #     seen = set()
+    #     return not any(i in seen or seen.add(i) for i in self)
+
+    # # only on flat column
+    # @trace
+    # @expression
+    # def is_monotonic_increasing(self):
+    #     """Return boolean if values in the object are monotonic increasing"""
+    #     return self._compare(operator.lt, initial=True)
+
+    # @trace
+    # @expression
+    # def is_monotonic_decreasing(self):
+    #     """Return boolean if values in the object are monotonic decreasing"""
+    #     return self._compare(operator.gt, initial=True)
+
+    # def _compare(self, op, initial):
+    #     assert initial in [True, False]
+    #     if self._length == 0:
+    #         return initial
+    #     it = iter(self)
+    #     start = next(it)
+    #     for step in it:
+    #         if op(start, step):
+    #             start = step
+    #             continue
+    #         else:
+    #             return False
+    #     return True
+
+    # @staticmethod
+    # def _flatten(a):
+    #     return functools.reduce(operator.iconcat, a, [])
+
+    # # interop ----------------------------------------------------------------
+
+    # @trace
+    # def to_pandas(self):
+    #     """Convert selef to pandas dataframe"""
+    #     # TODO Add type translation
+    #     # Skipping analyzing 'pandas': found module but no type hints or library stubs
+    #     import pandas as pd  # type: ignore
+
+    #     return pd.Series(self)
+
+    # @trace
+    # def to_arrow(self):
+    #     """Convert selef to pandas dataframe"""
+    #     # TODO Add type translation
+    #     import pyarrow as pa  # type: ignore
+
+    #     return pa.array(self)
+
+    # @trace
+    # def to_python(self):
+    #     """Convert to plain Python container (list of scalars or containers)"""
+    #     raise NotImplementedError()
 
 
 # windows ---------------------------------------------------------------
@@ -1318,3 +888,11 @@ class AbstractColumn(ABC, Sized, Iterable):
 #             axis=axis,
 #             win_type=win_type,
 #         )
+
+    @ expression
+    def __eq__(self, other):
+        raise self._not_supported('==')
+
+    # windows ---------------------------------------------------------------
+    def _valid_mask(len):
+        return np.full((len,), False, dtype=np.bool_)
