@@ -1,34 +1,37 @@
 import array as ar
 import copy
 from dataclasses import dataclass
-from typing import Dict, List, Literal, Optional, Union, Iterable
+from typing import Dict, Iterable, List, Literal, Optional, Union
 
 import numpy as np
 import numpy.ma as ma
 from numpy.lib.function_base import append
-
-from .dtypes import ScalarTypes, DType,  NL, is_boolean, is_numerical, is_boolean_or_numerical
-from .dtypes import Int8, Int16, Int32, Int64, Float32, Float64, Boolean, Struct, Field, string, float64
-from .dtypes import typeof_np_dtype, np_typeof_dtype
-
-from .tabulate import tabulate
-from .trace import trace
-from .expression import expression
-from .session import ColumnFactory
-from .column import AbstractColumn
+from torcharrow.column import AbstractColumn
+from torcharrow.dtypes import (NL, Boolean, DType, Field, Float32, Float64,
+                               Int8, Int16, Int32, Int64, ScalarTypes, Struct,
+                               float64, is_boolean, is_boolean_or_numerical,
+                               is_numerical, np_typeof_dtype, string,
+                               typeof_np_dtype)
+from torcharrow.expression import expression
+from torcharrow.numerical_column import NumericalColumn
+from torcharrow.session import ColumnFactory
+from torcharrow.tabulate import tabulate
+from torcharrow.trace import trace
 
 # ------------------------------------------------------------------------------
 
 
-class NumericalColumn(AbstractColumn):
+class NumericalColumnTest(NumericalColumn):
     """A Numerical Column"""
 
     # private
-    def __init__(self, session, to, dtype):  # , data, mask):
+    def __init__(self, session, to, dtype, data, mask):
         assert is_boolean_or_numerical(dtype)
         super().__init__(session, to, dtype)
-        # self._data = data  # Union[ar.array.np.ndarray]
-        # self._mask = mask   # Union[ar.array.np.ndarray]
+        self._data = data  # Union[ar.array.np.ndarray]
+        self._mask = mask   # Union[ar.array.np.ndarray]
+
+    # factory constructor -----------------------------------------------------
 
     @staticmethod
     def _full(session, to, data, dtype=None, mask=None):
@@ -49,14 +52,16 @@ class NumericalColumn(AbstractColumn):
             raise ValueError(
                 f'data length {len(data)} must be the same as mask length {len(mask)}')
         # TODO check that all non-masked items are legal numbers (i.e not nan)
-        return NumericalColumn(session, to, dtype, data, mask)
+        return NumericalColumnTest(session, to, dtype, data, mask)
+
+    # factory builder ---------------------------------------------------------
 
     # Any _empty must be followed by a _finalize; no other ops are allowed during this time
 
     @staticmethod
     def _empty(session, to, dtype, mask=None):
         _mask = mask if mask is not None else ar.array("b")
-        return NumericalColumn(session, to, dtype, ar.array(dtype.arraycode), _mask)
+        return NumericalColumnTest(session, to, dtype, ar.array(dtype.arraycode), _mask)
 
     def _append_null(self):
         self._mask.append(True)
@@ -81,44 +86,14 @@ class NumericalColumn(AbstractColumn):
             assert isinstance(self._mask, np.ndarray)
         return self
 
-    def move_to(self, device):
-        if self.to == device:
-            return self
-        else:
-            return self.session._Full(self._data, self.dtype, device, self._mask)
+    # observers and getters ---------------------------------------------------
 
-    @staticmethod
-    def _np(session, to, dtype, npdata):
-        data = None
-        mask = None
-        # TODO make this safe!
-        if isinstance(data, ma.array):
-            data = npdata.data
-            if isinstance(data.mask, (bool, np.bool_)):
-                # TODO make sure that there is no nan
-                mask = np.full((len(self._data),), self._mask, dtype=np.bool_)
-            elif isinstance(data.mask, np.array):
-                mask = data.mask
-            else:
-                raise AssertionError('unexpected case')
-        elif isinstance(data, np.ndarray) and data.ndim == 1:
-            data = npdata
-            mask = np.isnan(data)
-        else:
-            raise AssertionError('unexpected case')
-        return NumericalColumn(session, to, dtype, data, mask)
-
-    @trace
     def __len__(self):
         return len(self._data)
 
-    @trace
     def null_count(self):
         """Return number of null items"""
         return sum(self._mask) if self.isnullable else 0
-
-    def copy(self):
-        return NumericalColumn(*self._meta(), self._data.copy(), self.mask.copy())
 
     def getdata(self, i):
         return self._data[i]
@@ -128,20 +103,25 @@ class NumericalColumn(AbstractColumn):
 
     @trace
     def gets(self, indices):
-        return NumericalColumn(*self._meta(), self._data[indices], self._mask[indices])
+        return NumericalColumnTest(*self._meta(), self._data[indices], self._mask[indices])
 
     @trace
     def slice(self, start, stop, step):
         range = slice(start, stop, step)
-        return NumericalColumn(*self._meta(), self._data[range], self._mask[range])
+        return NumericalColumnTest(*self._meta(), self._data[range], self._mask[range])
 
     # append ----------------------------------------------------------------
+
     @trace
     def append(self, values):
         tmp = self.session.Column(values, dtype=self.dtype, to=self.to)
-        return NumericalColumn(*self._meta(),
-                               np.append(self._data, tmp._data),
-                               np.append(self._mask, tmp._mask))
+        return NumericalColumnTest(*self._meta(),
+                                   np.append(self._data, tmp._data),
+                                   np.append(self._mask, tmp._mask))
+
+    @trace
+    def copy(self):
+        return NumericalColumnTest(*self._meta(), self._data.copy(), self.mask.copy())
 
     # printing ----------------------------------------------------------------
 
@@ -149,17 +129,12 @@ class NumericalColumn(AbstractColumn):
         return f"Column([{', '.join(str(i) for i in self)}], id = {self.id})"
 
     def __repr__(self):
-        tab = tabulate(
-            [[l if l is not None else "None"] for l in self],
-            tablefmt="plain",
-            showindex=True,
-        )
+        rows = [[l if l is not None else "None"] for l in self]
+        tab = tabulate(rows, tablefmt="plain", showindex=True,)
         typ = f"dtype: {self._dtype}, length: {len(self)}, null_count: {self.null_count()}"
         return tab + NL + typ
 
-
-# sorting -----------------------------------------------------------------
-
+    # sorting, top-k, unique---------------------------------------------------
 
     @ trace
     @ expression
@@ -180,10 +155,10 @@ class NumericalColumn(AbstractColumn):
         else:
             res.sort()
         if ascending:
-            return NumericalColumn(*self._meta(), res.data, res.mask)
+            return NumericalColumnTest(*self._meta(), res.data, res.mask)
         else:
             res = np.flip(res)
-            return NumericalColumn(*self._meta(), res.data, res.mask)
+            return NumericalColumnTest(*self._meta(), res.data, res.mask)
 
     @ trace
     @ expression
@@ -232,12 +207,14 @@ class NumericalColumn(AbstractColumn):
             masked_array.dtype, ma.is_masked(masked_array))
         mask = masked_array.mask if not isinstance(
             masked_array.mask, np.bool_) else np.full((len(masked_array),), masked_array.mask)
-        return NumericalColumn(self.session, self, dtype, masked_array.data, mask)
+        return NumericalColumnTest(self.session, self.to, dtype, masked_array.data, mask)
 
     @trace
     @ expression
     def __add__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(self._ma()+other._ma())
         else:
             return self._from_ma(self._ma()+other)
@@ -246,6 +223,9 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __radd__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
+            self.session.check_is_same(other.session)
             return self._from_ma(other._ma()+self._ma())
         else:
             return self._from_ma(other + self._ma())
@@ -254,6 +234,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __sub__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(self._ma()-other._ma())
         else:
             return self._from_ma(self._ma()-other)
@@ -262,6 +244,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __rsub__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(other._ma()-self._ma())
         else:
             return self._from_ma(other - self._ma())
@@ -270,6 +254,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __mul__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(self._ma()*other._ma())
         else:
             return self._from_ma(self._ma()*other)
@@ -278,6 +264,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __rmul__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(other._ma()*self._ma())
         else:
             return self._from_ma(other * self._ma())
@@ -286,6 +274,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __floordiv__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(self._ma()//other._ma())
         else:
             return self._from_ma(self._ma()//other)
@@ -294,6 +284,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __rfloordiv__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(other._ma()//self._ma())
         else:
             return self._from_ma(other // self._ma())
@@ -301,9 +293,11 @@ class NumericalColumn(AbstractColumn):
     @trace
     @ expression
     def __truediv__(self, other):
+        if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
         # forces FloatingPointError: divide by zero encountered in true_divide
         np.seterr(divide='raise')
-        if isinstance(other, NumericalColumn):
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(self._ma()/other._ma())
         else:
             return self._from_ma(self._ma()/other)
@@ -311,9 +305,11 @@ class NumericalColumn(AbstractColumn):
     @trace
     @ expression
     def __rtruediv__(self, other):
+        if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
         # forces FloatingPointError: divide by zero encountered in true_divide
         np.seterr(divide='raise')
-        if isinstance(other, NumericalColumn):
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(other._ma()/self._ma())
         else:
             return self._from_ma(other / self._ma())
@@ -322,6 +318,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __mod__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(self._ma() % other._ma())
         else:
             return self._from_ma(self._ma() % other)
@@ -330,6 +328,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __rmod__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(other._ma()+self._ma())
         else:
             return self._from_ma(other + self._ma())
@@ -338,6 +338,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __pow__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(self._ma()**other._ma())
         else:
             return self._from_ma(self._ma()**other)
@@ -346,6 +348,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __rpow__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(other._ma()**self._ma())
         else:
             return self._from_ma(other ** self._ma())
@@ -354,6 +358,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __eq__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(self._ma() == other._ma())
         else:
             return self._from_ma(self._ma() == other)
@@ -362,6 +368,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __ne__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(self._ma() != other._ma())
         else:
             return self._from_ma(self._ma() != other)
@@ -370,6 +378,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __lt__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(self._ma() < other._ma())
         else:
             return self._from_ma(self._ma() < other)
@@ -378,6 +388,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __gt__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(self._ma() > other._ma())
         else:
             return self._from_ma(self._ma() > other)
@@ -386,6 +398,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __le__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(self._ma() <= other._ma())
         else:
             return self._from_ma(self._ma() <= other)
@@ -394,6 +408,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __ge__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(self._ma() > other._ma())
         else:
             return self._from_ma(self._ma() > other)
@@ -403,6 +419,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __or__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(self._ma() | other._ma())
         else:
             return self._from_ma(self._ma() | other)
@@ -411,6 +429,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __ror__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(other._ma() | self._ma())
         else:
             return self._from_ma(other | self._ma())
@@ -421,6 +441,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __and__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(self._ma() & other._ma())
         else:
             return self._from_ma(self._ma() & other)
@@ -429,6 +451,8 @@ class NumericalColumn(AbstractColumn):
     @ expression
     def __rand__(self, other):
         if isinstance(other, NumericalColumn):
+            self.session.check_is_same(other.session)
+        if isinstance(other, NumericalColumnTest):
             return self._from_ma(other._ma() & self._ma())
         else:
             return self._from_ma(other & self._ma())
@@ -554,28 +578,28 @@ class NumericalColumn(AbstractColumn):
     def min(self, numeric_only=None, fill_value=None):
         """Return the minimum of the non-null values of the Column."""
         m = np.ma.min(self._ma(), fill_value)
-        return m if m is not ma.masked else NumericalColumn.raise_(ValueError(f'min returns {m}'))
+        return m if m is not ma.masked else NumericalColumnTest.raise_(ValueError(f'min returns {m}'))
 
     @ trace
     @ expression
     def max(self, numeric_only=None, fill_value=None):
         """Return the maximum of the non-null values of the column."""
         m = np.ma.max(self._ma(), fill_value)
-        return m if m is not ma.masked else NumericalColumn.raise_(ValueError(f'max returns {m}'))
+        return m if m is not ma.masked else NumericalColumnTest.raise_(ValueError(f'max returns {m}'))
 
     @ trace
     @ expression
     def all(self, boolean_only=None):
         """Return whether all non-null elements are True in Column"""
         m = np.ma.all(self._ma())
-        return bool(m) if m is not ma.masked else NumericalColumn.raise_(ValueError(f'all returns {m}'))
+        return bool(m) if m is not ma.masked else NumericalColumnTest.raise_(ValueError(f'all returns {m}'))
 
     @ trace
     @ expression
     def any(self, skipna=True, boolean_only=None):
         """Return whether any non-null element is True in Column"""
         m = np.ma.any(self._ma())
-        return bool(m) if m is not ma.masked else NumericalColumn.raise_(ValueError(f'any returns {m}'))
+        return bool(m) if m is not ma.masked else NumericalColumnTest.raise_(ValueError(f'any returns {m}'))
 
     @ trace
     @ expression
@@ -583,14 +607,14 @@ class NumericalColumn(AbstractColumn):
         # TODO Should be def sum(self, initial=None) but didn't get to work
         """Return sum of all non-null elements in Column (starting with initial)"""
         m = np.ma.sum(self._ma())
-        return m if m is not ma.masked else NumericalColumn.raise_(ValueError(f'sum returns {m}'))
+        return m if m is not ma.masked else NumericalColumnTest.raise_(ValueError(f'sum returns {m}'))
 
     @ trace
     @ expression
     def prod(self):
         """Return produce of the values in the data"""
         m = np.ma.prod(self._ma())
-        return m if m is not ma.masked else NumericalColumn.raise_(ValueError(f'prod returns {m}'))
+        return m if m is not ma.masked else NumericalColumnTest.raise_(ValueError(f'prod returns {m}'))
 
     @ trace
     @ expression
@@ -748,14 +772,14 @@ class NumericalColumn(AbstractColumn):
 
 # ------------------------------------------------------------------------------
 # registering all numeric and boolean types for the factory...
-# for dtype in {Int8, Int16, Int32, Int64, Float32, Float64, Boolean}:
-#     ColumnFactory.register(
-#         (dtype.typecode+"_empty", 'test'), NumericalColumn._empty)
+for dtype in {Int8, Int16, Int32, Int64, Float32, Float64, Boolean}:
+    ColumnFactory.register(
+        (dtype.typecode+"_empty", 'test'), NumericalColumnTest._empty)
 
-# # registering all numeric and boolean types for the factory...
-# for dtype in {Int8, Int16, Int32, Int64, Float32, Float64, Boolean}:
-#     ColumnFactory.register(
-#         (dtype.typecode+"_full", 'test'), NumericalColumn._full)
+# registering all numeric and boolean types for the factory...
+for dtype in {Int8, Int16, Int32, Int64, Float32, Float64, Boolean}:
+    ColumnFactory.register(
+        (dtype.typecode+"_full", 'test'), NumericalColumnTest._full)
 
 
 def _numpytype_to_dtype(t, nullable):

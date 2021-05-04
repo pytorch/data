@@ -48,6 +48,7 @@ class Var(Expression):
         # print("VAR", self)
 
     def eval_expression(self, env):
+        # print("VAR", self)
         return env[self._id]
 
     def __str__(self):
@@ -62,6 +63,7 @@ class GetAttr(Expression):
 
     def eval_expression(self, env):
         evaled_obj = eval_expression(self._obj, env)
+        # print(f'GEATTR: ({self})')
         return getattr(evaled_obj, self._name)
 
     def __str__(self):
@@ -86,6 +88,7 @@ class Call(Expression):
         #     f'CALL: fun= {self._func}, args= {self._args}, kwargs= {self._kwargs}')
 
     def eval_expression(self, env):
+        # print(f'CALL-TO-DO ({self})')
         evaled_func = eval_expression(self._func, env)
         evaled_args = []
         if self._args is not None:
@@ -95,8 +98,22 @@ class Call(Expression):
             evaled_kwargs = {
                 k: eval_expression(v, env) for k, v in self._kwargs.items()
             }
-        return evaled_func(*evaled_args, **evaled_kwargs)
+        # print(f'CALL _ARGS_DONE ({evaled_args}, {evaled_kwargs})')
+        res= evaled_func(*evaled_args, **evaled_kwargs)
+        return res
 
+    @staticmethod
+    def __str(v):
+        # Hack to get rid of <class ' ... '> string in output
+        res = Call._str(v)
+        res = res.replace("<class '","")
+        res = res.replace('<class "',"")
+        res = res.replace('">',"")
+        res = res.replace("'>","")
+        res = res.replace("__main__.","")
+        return res
+    
+    @staticmethod
     def _str(v):
         if isinstance(v, (int, float, bool)):
             return str(v)
@@ -122,15 +139,15 @@ class Call(Expression):
         args = []
         # print("STR", self._func, 'args=', self._args, 'kwargs=', self._kwargs)
         if self._args is not None:
-            args = [Call._str(v) for v in self._args]
+            args = [Call.__str(v) for v in self._args]
         if self._kwargs is not None:
             if all(k.isidentifier() and not iskeyword(k) for k in self._kwargs.keys()):
-                args += [f"{str(k)}={Call._str(v)}" for k, v in self._kwargs.items()]
+                args += [f"{str(k)}={Call.__str(v)}" for k, v in self._kwargs.items()]
             else:
                 args += (
                     "**{"
                     + ", ".join(
-                        f"{k} : {Call._str(v)}" for k, v in self._kwargs.items()
+                        f"{k} : {Call.__str(v)}" for k, v in self._kwargs.items()
                     )
                     + "}"
                 )

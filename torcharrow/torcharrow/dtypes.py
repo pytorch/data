@@ -14,6 +14,7 @@ from typing import (
     Callable,
 )
 
+import numpy as np
 # -----------------------------------------------------------------------------
 # Aux
 
@@ -66,7 +67,7 @@ class DType(ABC):
 
     @property
     def py_type(self):
-        return type(self.default)
+        return type(self.Default())
 
     def __str__(self):
         if self.nullable:
@@ -80,6 +81,11 @@ class DType(ABC):
 
     def with_null(self, nullable=True):
         return self.constructor(nullable)
+
+
+    def default_value(self):
+        # must be overridden by all non primitive types!
+        return type(self).default
 
 
 # for now: no float16, and all date and time stuff, categoricals, (and Null is called Void)
@@ -303,6 +309,9 @@ class Map(DType):
         nullable = ", nullable=" + str(self.nullable) if self.nullable else ""
         return f"Map({self.key_dtype}, {self.item_dtype}{nullable})"
 
+    def default_value(self):
+        return {}
+
 
 @dataclass(frozen=True)
 class List_(DType):
@@ -332,10 +341,13 @@ class List_(DType):
     def __str__(self):
         nullable = ", nullable=" + str(self.nullable) if self.nullable else ""
         fixed_size = (
-            ", fixed_size=" + str(self.fixed_size) if self.fixed_size >= 0 else ""
+            ", fixed_size=" +
+            str(self.fixed_size) if self.fixed_size >= 0 else ""
         )
         return f"List_({self.item_dtype}{nullable}{fixed_size})"
 
+    def default_value(self):
+        return []
 
 @dataclass(frozen=True)
 class Struct(DType):
@@ -364,15 +376,16 @@ class Struct(DType):
                 name = "f_" + name
             return name
 
-        object.__setattr__(
-            self,
-            "_py_type",
-            NamedTuple(
-                self.name, [(fix_name(f.name), f.dtype.py_type) for f in self.fields]
-            ),
-        )
+        # object.__setattr__(
+        #     self,
+        #     "_py_type",
+        #     NamedTuple(
+        #         self.name, [(fix_name(f.name), f.dtype.py_type)
+        #                     for f in self.fields]
+        #     ),
+        # )
 
-    @property
+    @ property
     def py_type(self):
         return self._py_type
 
@@ -397,10 +410,12 @@ class Struct(DType):
             return f"Struct({flds}{nullable}{meta})"
 
 
+    def default_value(self):
+        return tuple(f.dtype.default_value() for f in self.fields)
 # only used internally for type inference
 
 
-@dataclass(frozen=True)
+@ dataclass(frozen=True)
 class Tuple_(DType):
     fields: List[DType]
     nullable: bool = False
@@ -410,12 +425,15 @@ class Tuple_(DType):
     typecode: ClassVar[str] = "+t"
     arraycode: ClassVar[str] = ""
 
-    @property
+    @ property
     def py_type(self):
         return tuple
 
     def constructor(self, nullable):
         return Tuple_(self.fields, nullable)
+
+    def default_value(self):
+        return tuple(f.dtype.default_value() for f in self.fields)
 
 
 # Schema is just a struct that is maked as standing for a dataframe
@@ -425,6 +443,8 @@ def Schema(
     fields: Optional[List[Field]] = None,
     nullable: bool = False,
     metadata: Optional[MetaData] = None,
+
+
 ):
     if fields is None:
         fields = []
@@ -434,7 +454,7 @@ def Schema(
 # TorchArrow does not yet support these types
 
 # abstract
-@dataclass(frozen=True)  # type: ignore
+@ dataclass(frozen=True)  # type: ignore
 class Union_(DType):
     pass
 
@@ -442,7 +462,7 @@ class Union_(DType):
 Tag = str
 
 
-@dataclass(frozen=True)  # type: ignore
+@ dataclass(frozen=True)  # type: ignore
 class DenseUnion(DType):
     tags: List[Tag]
     name: ClassVar[str] = "DenseUnion"
@@ -450,7 +470,7 @@ class DenseUnion(DType):
     arraycode: ClassVar[str] = ""
 
 
-@dataclass(frozen=True)  # type: ignore
+@ dataclass(frozen=True)  # type: ignore
 class SparseUnion(DType):
     tags: List[Tag]
     name: ClassVar[str] = "SparseUnion"
@@ -494,6 +514,10 @@ def is_boolean(t):
     """
     # print('is_boolean', t.typecode)
     return t.typecode == "b"
+
+
+def is_boolean_or_numerical(t):
+    return is_boolean(t) or is_numerical(t)
 
 
 def is_numerical(t):
@@ -629,26 +653,28 @@ PREFIX_LENGTH = 5
 def _infer_dtype_from_value(value):
     if value is None:
         return Void()
-    if isinstance(value, bool):
+    if isinstance(value, (bool, np.bool_)):
         return boolean
-    if isinstance(value, int):
+    if isinstance(value, (int, np.integer)):
         return int64
-    if isinstance(value, float):
+    if isinstance(value, (float, np.float32, np.float64)):
         return float64
-    if isinstance(value, str):
+    if isinstance(value, (str, np.str_)):
         return string
     if isinstance(value, list):
         dtype = infer_dtype_from_prefix(value[:PREFIX_LENGTH])
         return List_(dtype)
     if isinstance(value, dict):
         key_dtype = infer_dtype_from_prefix(list(value.keys())[:PREFIX_LENGTH])
-        items_dtype = infer_dtype_from_prefix(list(value.values())[:PREFIX_LENGTH])
+        items_dtype = infer_dtype_from_prefix(
+            list(value.values())[:PREFIX_LENGTH])
         return Map(key_dtype, items_dtype)
     if isinstance(value, tuple):
         dtypes = []
         for t in value:
             dtypes.append(_infer_dtype_from_value(t))
         return Tuple_(dtypes)
+    raise AssertionError(f'unexpected case {value} of type {type(value)}')
 
 
 def infer_dtype_from_prefix(prefix):
@@ -659,7 +685,6 @@ def infer_dtype_from_prefix(prefix):
         next_dtype = _infer_dtype_from_value(p)
         rtype = dtype
         dtype = _lub_dtype(dtype, next_dtype)
-        # print('LUB', rtype, next_dtype, '->', dtype)
         if dtype is None:
             raise ValueError(f"Cannot infer type of f{prefix}")
     return dtype
@@ -785,6 +810,84 @@ _agg_ops = {
     "mode": lambda c: c.mode(),
     "count": lambda c: c.count(),
 }
+
+
+def np_typeof_dtype(t: DType) -> np.dtype:
+    if is_boolean(t):
+        return np.bool_
+    if is_int8(t):
+        return np.int8
+    if is_int16(t):
+        return np.int16
+    if is_int32(t):
+        return np.int32
+    if is_int64(t):
+        return np.int64
+    if is_float32(t):
+        return np.float32
+    if is_float64(t):
+        return np.float64
+    if is_string(t):  
+        # we translate strings not into np.str_ but into object
+        return object
+  
+    raise AssertionError(
+        f"translation of dtype {type(t).__name__} to numpy type unsupported"
+    )
+# t is array
+
+
+
+def typeof_np_ndarray(t:np.ndarray) -> DType:
+    if t.dtype == np.bool_:
+        return boolean
+    if t.dtype == np.int8:
+        return int8
+    if t.dtype == np.int16:
+        return int16
+    if t.dtype == np.int32:
+        return it32
+    if t.dtype == np.int64:
+        return int64
+    if t.dtype == np.float32:
+        return float32
+    if t.dtype == np.float64:
+        return float64
+    if t.dtype == np.str_:
+         return string
+    if t.dtype ==object:
+         return Void
+
+    raise AssertionError(
+        f"translation of ndarray type {np.unicode(t)}{type(t).__name__} to dtype unsupported"
+    )
+
+
+def typeof_np_dtype(t:np.dtype) -> DType:
+    if t == np.bool_:
+        return boolean
+    if t == np.int8:
+        return int8
+    if t == np.int16:
+        return int16
+    if t == np.int32:
+        return int32
+    if t == np.int64:
+        return int64
+    if t == np.float32:
+        return float32
+    if t == np.float64:
+        return float64
+    # can't test nicely for strings so this should do...
+    if t.kind == 'U': #unicode like
+        return string
+    if t == object:
+        return None
+        
+    raise AssertionError(
+        f"translation of numpy type {np.is_string(t)} {type(t).__name__} to dtype unsupported"
+    )
+    
 
 # -----------------------------------------------------------------------------
 # Appendix
