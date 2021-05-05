@@ -2,8 +2,6 @@ import operator
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import re
-import inspect
-import typing
 from typing import (
     ClassVar,
     Dict,
@@ -82,12 +80,6 @@ class DType(ABC):
 
     def with_null(self, nullable=True):
         return self.constructor(nullable)
-
-    def __call__(self, *args, **kwargs):
-        # Python magic: if types is a callable, then typecheckers allow to put it in annotations
-        raise TypeError(
-            f"DTypes can't be used for type construction, but can appear in type annotations"
-        )
 
 
 # for now: no float16, and all date and time stuff, categoricals, (and Null is called Void)
@@ -426,28 +418,6 @@ class Tuple_(DType):
         return Tuple_(self.fields, nullable)
 
 
-@dataclass(frozen=True)
-class Any_(DType):
-    nullable: bool = True
-    typecode: ClassVar[str] = "?"
-    arraycode: ClassVar[str] = "?"
-    name: ClassVar[str] = "any"
-    default: ClassVar[Optional[bool]] = None
-
-    @property
-    def size(self):
-        # currently 1 byte per bit
-        raise ValueError("Shouldn't be called")
-
-    @property
-    def py_type(self):
-        raise ValueError("Shouldn't be called")
-
-    def constructor(self, nullable=True):
-        assert nullable == True
-        return Any_()
-
-
 # Schema is just a struct that is maked as standing for a dataframe
 
 
@@ -652,10 +622,6 @@ def is_tuple(t):
     return t.typecode.startswith("+t")
 
 
-def is_any(t):
-    return t.typecode == "?"
-
-
 # Infer types from values -----------------------------------------------------
 PREFIX_LENGTH = 5
 
@@ -668,7 +634,6 @@ def _infer_dtype_from_value(value):
     if isinstance(value, int):
         return int64
     if isinstance(value, float):
-        # TODO: should we default to float32?
         return float64
     if isinstance(value, str):
         return string
@@ -688,7 +653,7 @@ def _infer_dtype_from_value(value):
 
 def infer_dtype_from_prefix(prefix):
     if len(prefix) == 0:
-        return Any_()
+        raise ValueError(f"Cannot infer type of f{prefix}")
     dtype = _infer_dtype_from_value(prefix[0])
     for p in prefix:
         next_dtype = _infer_dtype_from_value(p)
@@ -700,77 +665,6 @@ def infer_dtype_from_prefix(prefix):
     return dtype
 
 
-# Adopted from PyTorch
-# TODO: rewrite cleanly
-def from_type_hint(ann: Type) -> DType:
-    from torch import _jit_internal as ji
-
-    if ann is None:
-        raise TypeError("Can't infer type from missing annotation")
-    if isinstance(ann, DType):
-        return ann
-    if ji.is_tuple(ann):
-        return Tuple_([from_type_hint(a) for a in typing.get_args(ann)])
-    # TODO: add dataclasses too
-    if inspect.isclass(ann) and issubclass(ann, tuple) and hasattr(ann, "_fields"):
-        fields = getattr(ann, "_fields")
-        field_types = getattr(ann, "_field_types", None)
-        if field_types is None or any(n not in field_types for n in fields):
-            raise TypeError(
-                f"Can't infer type from named tuple without type hints: {ann}"
-            )
-        return Struct([Field(n, from_type_hint(field_types[n])) for n in fields])
-    if ji.is_list(ann):
-        args = typing.get_args(ann)
-        assert len(args) == 1
-        elem_type = from_type_hint(args[0])
-        return List_(elem_type)
-    if ji.is_dict(ann):
-        args = typing.get_args(ann)
-        assert len(args) == 2
-        key = from_type_hint(args[0])
-        value = from_type_hint(args[1])
-        return Map(key, value)
-    if ji.is_optional(ann):
-        args = typing.get_args(ann)
-        assert len(args) == 2
-        if issubclass(args[1], type(None)):
-            contained = args[0]
-        else:
-            contained = args[1]
-        return from_type_hint(contained).with_null()
-    # same inference rules as for values above
-    if ann is float:
-        # TODO: should we default to float32?
-        return float64
-    if ann is int:
-        return int64
-    if ann is str:
-        return string
-    if ann is bool:
-        return boolean
-    raise TypeError(f"Can't infer dtype from {ann}")
-
-
-def from_batch_type_hint(ann: Type) -> DType:
-    """
-    Like from_type_hint but representing type hint for the set of rows. Can be a Column or a python List of nested types
-    """
-    from torch import _jit_internal as ji
-    from .column import AbstractColumn
-
-    if ann is None:
-        raise TypeError("Can't infer type from missing annotation")
-    # TODO: we need a type annotation for Columns with statically accessible dtype
-    # if inspect.isclass(ann) and issubclass(ann, AbstractColumn):
-    # return None
-    if not ji.is_list(ann):
-        raise TypeError("The outer type annotation must be a list or a Column")
-    args = typing.get_args(ann)
-    assert len(args) == 1
-    return from_type_hint(args[0])
-
-
 # lub of two types for inference ----------------------------------------------
 
 
@@ -779,10 +673,6 @@ def _lub_dtype(l, r):
         return r.with_null()
     if is_void(r):
         return l.with_null()
-    if is_any(l):
-        return r
-    if is_any(r):
-        return l
     if is_integer(l) and is_floating(r):
         return r.with_null(l.nullable or r.nullable)
     if is_integer(r) and is_floating(l):

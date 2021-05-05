@@ -20,7 +20,6 @@ from typing import (
     Union,
     cast,
     Tuple,
-    get_type_hints,
 )
 
 from .column import AbstractColumn, Column, _column_constructor, _set_column_constructor
@@ -34,7 +33,6 @@ from .dtypes import (
     ScalarTypeValues,
     Struct,
     infer_dtype_from_prefix,
-    from_batch_type_hint,
     int64,
     is_numerical,
     is_struct,
@@ -48,7 +46,6 @@ from .tabulate import tabulate
 from .expression import Var, expression, eval_expression
 
 from .trace import trace, traceproperty
-from . import pytorch
 
 # assumes that these have been importd already:
 # from .numerical_column import NumericalColumn
@@ -103,28 +100,8 @@ class DataFrame(AbstractColumn):
                         self.append(i)
                     return
                 elif isinstance(data, Mapping):
-                    # start forom scratch
-                    self._field_data = {}
-                    self._dtype = Struct([])
-                    dtype_fields = {f.name: f.dtype for f in dtype.fields}
                     for n, c in data.items():
-                        if n not in dtype_fields:
-                            raise AttributeError(
-                                f"Column {n} is present in the data but absent in explicitly provided dtype"
-                            )
-                        if isinstance(c, AbstractColumn):
-                            if c.dtype != dtype_fields[n]:
-                                raise TypeError(
-                                    f"Wrong type for column {n}: dtype specifies {dtype_fields[n]} while column of {c.dtype} is provided"
-                                )
-                        else:
-                            c = Column(c, dtype_fields[n])
-                        self[n] = c
-                        del dtype_fields[n]
-                    if len(dtype_fields) > 0:
-                        raise TypeError(
-                            f"Columns {dtype_fields.keys()} are present in dtype but not provided"
-                        )
+                        self[n] = c if isinstance(c, AbstractColumn) else Column(c)
                     return
                 else:
                     raise TypeError(
@@ -316,26 +293,6 @@ class DataFrame(AbstractColumn):
             )
         ]
 
-    def to_torch(self):
-        pytorch.ensure_available()
-        import torch
-
-        # TODO: this actually puts the type annotations on the tuple wrong. We might need to address it eventually, but because it's python it doesn't matter
-        tup_type = self._dtype.py_type
-        # TODO: we probably don't need subscript here with offset after df[1:3]["A"] slicing is fixed
-        for f in self._dtype.fields:
-            self._field_data[f.name][
-                self._offset : self._offset + self._length
-            ].to_torch()
-        return tup_type(
-            *(
-                self._field_data[f.name][
-                    self._offset : self._offset + self._length
-                ].to_torch()
-                for f in self._dtype.fields
-            )
-        )
-
     # printing ----------------------------------------------------------------
     def __str__(self):
         def quote(n):
@@ -435,7 +392,10 @@ class DataFrame(AbstractColumn):
         dtype: Optional[DType],
         column: str,
     ):
-        func, dtype = self._normalize_map_arg(arg, dtype)
+        def func(x):
+            return arg.get(x, None) if isinstance(arg, dict) else arg(x)
+
+        dtype = dtype if dtype is not None else self._dtype
 
         res = _column_constructor(dtype)
         for i in range(self._length):
@@ -452,12 +412,10 @@ class DataFrame(AbstractColumn):
         dtype: Optional[DType],
         columns: List[str],
     ):
-        if isinstance(arg, dict):
-            # the rule for nary map is different!
-            new_arg = lambda *x: arg.get(tuple(*x), None)
-            arg = new_arg
+        def func(*x):
+            return arg.get(tuple(*x), None) if isinstance(arg, dict) else arg(*x)
 
-        func, dtype = self._normalize_map_arg(arg, dtype)
+        dtype = dtype if dtype is not None else self._dtype
 
         res = _column_constructor(dtype)
         for i in range(self._length):
@@ -466,52 +424,6 @@ class DataFrame(AbstractColumn):
             else:
                 res._append(None)
         return res
-
-    @trace
-    @expression
-    def transform(
-        self,
-        func: Callable,
-        /,
-        dtype: Optional[DType] = None,
-        format: str = "auto",
-        columns: Optional[List[str]] = None,
-    ):
-        """
-        Like map() but invokes the callable on mini-batches of rows at a time.
-        The column is passed to the callable as TorchArrow column by default.
-        If `format='python'` the input is converted to python types instead.
-        If `format='torch'` the input is converted to PyTorch types
-        dtype required if result type != item type and the type hint is missing on the callable.
-        """
-        if columns is None:
-            return super().map(func, dtype=dtype, format=format)
-
-        for i in columns:
-            if i not in self.columns:
-                raise KeyError("column {i} not in dataframe")
-
-        if dtype is None:
-            signature = get_type_hints(func)
-            if "return" in signature:
-                dtype = from_batch_type_hint(signature["return"])
-            else:
-                assert self._dtype is not None
-                dtype = self._dtype
-            # TODO: check type annotations of inputs too in order to infer the input format
-
-        if len(columns) == 1:
-            raw_res = func(
-                self._format_transform_column(self._field_data[columns[0]], format)
-            )
-        else:
-            raw_res = func(
-                *(
-                    self._format_transform_column(self._field_data[c], format)
-                    for c in columns
-                )
-            )
-        return self._format_transform_result(raw_res, format, dtype, self._length)
 
     @trace
     @expression

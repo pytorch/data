@@ -32,19 +32,17 @@ class TestMapColumn(unittest.TestCase):
         c = Column(
             [
                 {"helsinki": [-1.3, 21.5], "moskow": [-4.0, 24.3]},
-                {},
-                {"nowhere": [], "algiers": [11.2, 25, 2], "kinshasa": [22.2, 26.8]},
+                {"algiers": [11.2, 25, 2], "kinshasa": [22.2, 26.8]},
             ]
         )
         self.assertIsInstance(c, MapColumn)
-        self.assertEqual(len(c), 3)
+        self.assertEqual(len(c), 2)
 
         self.assertEqual(
             list(c),
             [
                 {"helsinki": [-1.3, 21.5], "moskow": [-4.0, 24.3]},
-                {},
-                {"nowhere": [], "algiers": [11.2, 25, 2], "kinshasa": [22.2, 26.8]},
+                {"algiers": [11.2, 25, 2], "kinshasa": [22.2, 26.8]},
             ],
         )
 

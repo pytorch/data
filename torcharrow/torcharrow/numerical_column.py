@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from .column import AbstractColumn, _set_column_constructor
 from .dtypes import NL, is_boolean, is_numerical
 from .tabulate import tabulate
-from . import pytorch
 
 # ------------------------------------------------------------------------------
 # NumericalColumn
@@ -85,26 +84,6 @@ class NumericalColumn(AbstractColumn):
 
     def to_python(self):
         return [self.get(i, None) for i in range(self._length)]
-
-    def to_torch(self):
-        pytorch.ensure_available()
-        import torch
-
-        # our names of types conveniently almost match
-        torch_dtype_name = "bool" if self._dtype.name == "boolean" else self._dtype.name
-        if not hasattr(torch, torch_dtype_name):
-            raise ValueError(f"Can't convert {self._dtype} to PyTorch")
-        torch_dtype = getattr(torch, torch_dtype_name)
-        # TODO: figure out zero copy for python array
-        res = torch.tensor(
-            self._data[self._offset : self._offset + self._length], dtype=torch_dtype
-        )
-        if not self._dtype.nullable:
-            return res
-        presence = torch.tensor(
-            self._validity[self._offset : self._offset + self._length], dtype=torch.bool
-        )
-        return pytorch.WithPresence(values=res, presence=presence)
 
     # printing ----------------------------------------------------------------
     def __str__(self):
