@@ -1,25 +1,29 @@
 # For relative imports to work in Python 3.6
-from .config import *  # deps: None
-from .column_factory import *  # deps: None
-from .dtypes import *  # deps: None
+from .column_factory import *  # dependencies: None
+from .expression import *  # dependencies: None
+from .trace import *  # dependencies: expression
 
-from .expression import *  # deps: None
-from .trace import *  # deps: expression
+# don't include
+# from .dtypes import *
+# since dtypes define Tuple and List which confuse mypy
 
-from .session import *  # deps: config, column_factory, dtypes
+from .scope import *  # dependencies: column_factory, dtypes
 
-# following needs session*, trace*
-from .column import *  # deps: cyclic dependency to every other column
-from .numerical_column import *
-from .velox_rt.numerical_column_cpu import *
-from .test_rt.numerical_column_test import *
-from .string_column import *
-from .list_column import *
-from .map_column import *
-from .dataframe import *
+# following needs scope*
+from .icolumn import *  # dependencies: cyclic dependency to every other column
+from .inumerical_column import *
+from .istring_column import *
+from .ilist_column import *
+from .imap_column import *
+from .idataframe import *
+
+
+from .velox_rt import *
+from .numpy_rt import *
 
 from .interop import *
 
+from .test import *
 
 # 0.1.0
 # Arrow types and columns

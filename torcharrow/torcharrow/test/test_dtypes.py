@@ -1,53 +1,38 @@
 import unittest
 
-# schemas and dtypes
-from torcharrow import (
-    Boolean,
+from torcharrow.dtypes import (
     Field,
-    Float64,
     Int64,
-    List_,
+    List,
     Map,
-    Schema,
     String,
     Struct,
-    boolean,
-    float64,
     int64,
     is_numerical,
     string,
 )
 
-# run python3 -m unittest outside this directory to run all tests
-
 
 class TestTypes(unittest.TestCase):
-    def test_numericals(self):
-        # plain type
+    def test_int64(self):
         self.assertEqual(str(int64), "int64")
-        self.assertEqual(int64.size, 8)
         self.assertEqual(int64.name, "int64")
         self.assertEqual(int64.typecode, "l")
         self.assertEqual(int64.arraycode, "l")
         self.assertTrue(is_numerical(int64))
 
     def test_string(self):
-        # plain type
         self.assertEqual(str(string), "string")
         self.assertEqual(string.typecode, "u")
         self.assertEqual(string.nullable, False)
         self.assertEqual(String(nullable=True).nullable, True)
-        self.assertEqual(string.size, -1)
 
     def test_list(self):
+        self.assertEqual(str(List(Int64(nullable=True))), "List(Int64(nullable=True))")
         self.assertEqual(
-            str(List_(Int64(nullable=True))), "List_(Int64(nullable=True))"
+            str(List(Int64(nullable=True)).item_dtype), "Int64(nullable=True)"
         )
-        self.assertEqual(
-            str(List_(Int64(nullable=True)).item_dtype), "Int64(nullable=True)"
-        )
-        self.assertEqual(List_(Int64(nullable=True)).typecode, "+l")
-        self.assertEqual(List_(int).size, -1)
+        self.assertEqual(List(Int64(nullable=True)).typecode, "+l")
 
     def test_map(self):
         self.assertEqual(str(Map(int64, string)), "Map(int64, string)")

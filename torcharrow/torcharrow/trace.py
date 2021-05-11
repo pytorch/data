@@ -4,10 +4,11 @@ from typing import List, Tuple, Type, Optional
 from .expression import Expression, Call, Var, GetAttr
 
 # -----------------------------------------------------------------------------
-# Trace state (part of a session object)
+# Trace state (part of a scope object)
+
 
 class Trace:
-    # singleton, only instantiated in 
+    # singleton, only instantiated in
 
     def __init__(self, is_on, types_to_trace):
         self._trace: List[Tuple[str, Expression]] = []
@@ -48,7 +49,11 @@ class Trace:
             # if hasattr(exp._func, "_is_property"):
             #     res.append(f"{id}={exp._args[0]}.{exp._func.__name__}")
             # __nel
-            if isinstance(exp, Call) and exp._func.__name__ == "__init__" and not id.startswith("s"):
+            if (
+                isinstance(exp, Call)
+                and exp._func.__name__ == "__init__"
+                and not id.startswith("s")
+            ):
                 # str(exp) deletes first arg for constructors..
                 id = exp._args[0]
                 # delete __init__
@@ -69,17 +74,19 @@ class Trace:
 # -----------------------------------------------------------------------------
 # function decorator
 
+
 def get_trace(*args, **kwargs):
-    from .session import Session
+    from .scope import Scope
+
     for arg in args:
-        if isinstance(arg, Session):
+        if isinstance(arg, Scope):
             return arg.trace
-        if hasattr(arg,'_session') and isinstance(arg._session, Session):
-            return arg._session.trace
-        elif 'session' in kwargs and isinstance(kwargs['session'], Session):
-            return kwargs['session'].trace
+        if hasattr(arg, "_scope") and isinstance(arg._scope, Scope):
+            return arg._scope.trace
+        elif "scope" in kwargs and isinstance(kwargs["scope"], Scope):
+            return kwargs["scope"].trace
     return None
-         
+
 
 def trace(fn):
     """Trace all basic torcharrow functions operating on given types."""
@@ -88,8 +95,8 @@ def trace(fn):
     def wrapped(*args, **kwargs):
         trace = get_trace(*args, **kwargs)
         # if trace is None:
-        #     raise TypeError('function to trace must have a session argument')
-    
+        #     raise TypeError('function to trace must have a scope argument')
+
         # # print("TRACE-IN", fn, "args", args, "kwargs", kwargs)
 
         # # existing functions
@@ -130,11 +137,11 @@ def traceproperty(fn):
     def wrapped(*args, **kwargs):
         # # same code as above, except for this line...
         # fn._is_property = True
-        # #find the session::
-        # # at least one positional argument must be an AbstractColumn
+        # #find the scope::
+        # # at least one positional argument must be an IColumn
         # for arg in args:
-        #     if isinstance(arg,AbstractColumn):
-        #         session = arg.session
+        #     if isinstance(arg,IColumn):
+        #         scope = arg.scope
 
         # # existing functions
         # trace._nesting_level += 1
