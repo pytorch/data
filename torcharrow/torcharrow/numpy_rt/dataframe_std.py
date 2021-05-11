@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
+from abc import abstractmethod
 
 import array as ar
-import numpy as np
-
-import copy
-import operator
 import functools
-from collections import OrderedDict
 from dataclasses import dataclass
 from typing import (
     Any,
@@ -19,89 +15,60 @@ from typing import (
     Mapping,
     Optional,
     Sequence,
+    Tuple,
     Union,
     cast,
-    Tuple,
 )
 
-from numpy.lib.shape_base import column_stack
+import numpy as np
 
-from .session import Session, ColumnFactory
+import torcharrow.dtypes as dt
 
-from .column import AbstractColumn
-from .dtypes import (
-    CLOSE,
-    NL,
-    OPEN,
-    DType,
-    Field,
-    ScalarTypes,
-    ScalarTypeValues,
-    Struct,
-    infer_dtype_from_prefix,
-    int64,
-    is_numerical,
-    is_struct,
-    is_tuple,
-    string,
-    Tuple_,
-    get_agg_op,
-)
-from .tabulate import tabulate
-
-from .expression import Var, expression, eval_expression
-
-from .trace import trace, traceproperty
-
+from torcharrow.column_factory import ColumnFactory, Device
+from torcharrow.icolumn import IColumn
+from torcharrow.idataframe import IDataFrame
+from torcharrow.expression import eval_expression, expression
+from torcharrow.scope import Scope
+from torcharrow.tabulate import tabulate
+from torcharrow.trace import trace, traceproperty
 
 # assumes that these have been imported already:
-# from .numerical_column import NumericalColumn
-# from .string_column import StringColumn
-# from .map_column import MapColumn
-# from .list_column import MapColumn
+# from .inumerical_column import INumericalColumn
+# from .istring_column import IStringColumn
+# from .imap_column import IMapColumn
+# from .ilist_column import IListColumn
 
 # ------------------------------------------------------------------------------
-# DataFrame Factory with default session and device
-
-def Frame(
-    data: Union[Iterable, DType, Literal[None]] = None,
-    dtype: Optional[DType] = None,
-    session: Optional[Session] = None,
-    to: Device = ''
-):
-    session = session or Session.default
-    to = to or session.to
-    return session.Frame(data, dtype=dtype, to=to)
+# DataFrame Factory with default scope and device
 
 
 # -----------------------------------------------------------------------------
 # DataFrames aka (StructColumns, can be nested as StructColumns:-)
 
-DataOrDTypeOrNone = Union[Mapping, Sequence, DType, Literal[None]]
+DataOrDTypeOrNone = Union[Mapping, Sequence, dt.DType, Literal[None]]
 
 
-class DataFrame(AbstractColumn):
-    """ Dataframe, ordered dict of typed columns of the same length  """
+class DataFrameStd(IDataFrame):
+    """Dataframe, ordered dict of typed columns of the same length"""
 
-    def __init__(self, session, to, dtype, field_data, mask):
-        assert is_struct(dtype)
-        super().__init__(session, to, dtype)
+    def __init__(self, scope, to, dtype, field_data, mask):
+        assert dt.is_struct(dtype)
+        super().__init__(scope, to, dtype)
 
         self._field_data = field_data
         self._mask = mask
 
     # Any _full requires no further type changes..
     @staticmethod
-    def _full(session, to, data, dtype=None, mask=None):
+    def _full(scope, to, data, dtype=None, mask=None):
         cols = data.values()
-        assert all(isinstance(c, AbstractColumn) for c in data.values())
+        assert all(isinstance(c, IColumn) for c in data.values())
         ct = 0
         if len(data) > 0:
             ct = len(list(cols)[0])
             if not all(len(c) == ct for c in cols):
-                ValueError(
-                    f'length of all columns must be the same (e.g {ct})')
-        inferred_dtype = Struct([(n, c.dtype) for n, c in data.items()])
+                ValueError(f"length of all columns must be the same (e.g {ct})")
+        inferred_dtype = dt.Struct([(n, c.dtype) for n, c in data.items()])
         if dtype is None:
             dtype = inferred_dtype
         else:
@@ -110,20 +77,18 @@ class DataFrame(AbstractColumn):
                 pass
                 # raise TypeError(f'type of data {inferred_dtype} and given type {dtype} must be the same')
         if mask is None:
-            mask = AbstractColumn._valid_mask(ct)
+            mask = DataFrameStd._valid_mask(ct)
         elif len(data) != len(mask):
-            raise ValueError(
-                f'data length {len(data)} must be mask length {len(mask)}')
-        return DataFrame(session, to, dtype, data, mask)
+            raise ValueError(f"data length {len(data)} must be mask length {len(mask)}")
+        return DataFrameStd(scope, to, dtype, data, mask)
 
     # Any _empty must be followed by a _finalize; no other ops are allowed during this time
 
     @staticmethod
-    def _empty(session, to, dtype, mask=None):
-        field_data = {f.name: session._Empty(
-            f.dtype, to) for f in dtype.fields}
+    def _empty(scope, to, dtype, mask=None):
+        field_data = {f.name: scope._EmptyColumn(f.dtype, to) for f in dtype.fields}
         _mask = mask if mask is not None else ar.array("b")
-        return DataFrame(session, to, dtype, field_data, _mask)
+        return DataFrameStd(scope, to, dtype, field_data, _mask)
 
     def _append_null(self):
         self._mask.append(True)
@@ -135,7 +100,7 @@ class DataFrame(AbstractColumn):
         for c, v in zip(self._field_data.values(), value):
             c._append(v)
 
-    def _append_data(self):
+    def _append_data(self, value):
         for c, v in zip(self._field_data.values(), value):
             c._append_data(v)
 
@@ -144,24 +109,24 @@ class DataFrame(AbstractColumn):
         for c in self._field_data.values():
             _ = c._finalize()
             ln = len(c)
-        if isinstance(self._mask, (bool, np.bool_)):
-            self._mask = np.full((ln,), self._mask, dtype=np.bool_)
+        if isinstance(self._mask, (bool, np.bool8)):
+            self._mask = np.full((ln,), self._mask, dtype=np.bool8)
         elif isinstance(self._mask, ar.array):
-            self._mask = np.array(self._mask, dtype=np.bool_, copy=False)
+            self._mask = np.array(self._mask, dtype=np.bool8, copy=False)
         else:
             assert isinstance(self._mask, np.ndarray)
         return self
 
     def _fromdata(self, field_data, mask=False):
-        dtype = Struct([Field(n, c.dtype) for n, c in field_data.items()])
+        dtype = dt.Struct([dt.Field(n, c.dtype) for n, c in field_data.items()])
         _mask = mask
-        if isinstance(mask, (bool, np.bool_)):
+        if isinstance(mask, (bool, np.bool8)):
             if len(field_data) == 0:
-                _mask = np.full((0,), bool(mask),  dtype=np.bool_)
+                _mask = np.full((0,), bool(mask), dtype=np.bool8)
             else:
                 n, c = next(iter(field_data.items()))
-                _mask = np.full((len(c),), bool(mask),  dtype=np.bool_)
-        return DataFrame(self.session, self.to, dtype, field_data, _mask)
+                _mask = np.full((len(c),), bool(mask), dtype=np.bool8)
+        return DataFrameStd(self.scope, self.to, dtype, field_data, _mask)
 
     def __len__(self):
         if len(self._field_data) == 0:
@@ -179,9 +144,13 @@ class DataFrame(AbstractColumn):
     def getdata(self, i):
         return tuple([self._field_data[n].get(i) for n in self.columns])
 
+    @staticmethod
+    def _valid_mask(ct):
+        return np.full((ct,), False, dtype=np.bool8)
+
     def append(self, values):
         """Returns column/dataframe with values appended."""
-        tmp = self.session.DataFrame(values, dtype=self.dtype, to=self.to)
+        tmp = self.scope.DataFrame(values, dtype=self.dtype, to=self.to)
         field_data = {n: c.append(tmp[n]) for n, c in self._field_data.items()}
         mask = np.append(self._mask, tmp._mask)
         return self._fromdata(field_data, mask)
@@ -189,30 +158,29 @@ class DataFrame(AbstractColumn):
     def _check_columns(self, columns):
         for n in columns:
             if n not in self._field_data:
-                raise TypeError(
-                    f"column {c} not among existing dataframe columns")
+                raise TypeError(f"column {n} not among existing dataframe columns")
 
     # implementing abstract methods ----------------------------------------------
 
-    @ property  # type: ignore
-    @ traceproperty
+    @property  # type: ignore
+    @traceproperty
     def columns(self):
         """The column labels of the DataFrame."""
         return [f.name for f in self.dtype.fields]
 
-    @ trace
+    @trace
     def __setitem__(self, name: str, value: Any) -> None:
         d = None
-        if isinstance(value, AbstractColumn):
+        if isinstance(value, IColumn):
             d = value
         elif isinstance(value, Iterable):
-            d = self.session.Column(value)
+            d = self.scope.Column(value)
         else:
             raise TypeError("data must be a column or list")
 
         assert d is not None
         if all(len(c) == 0 for c in self._field_data.values()):
-            self._mask = np.full((len(d),), False, dtype=np.bool_)
+            self._mask = np.full((len(d),), False, dtype=np.bool8)
 
         elif len(d) != len(self):
             raise TypeError("all columns/lists must have equal length")
@@ -221,19 +189,19 @@ class DataFrame(AbstractColumn):
             raise AttributeError(f"cannot override existing column {name}")
         elif (
             self._dtype is not None
-            and isinstance(self._dtype, Struct)
+            and isinstance(self._dtype, dt.Struct)
             and len(self.dtype.fields) < len(self._field_data)
         ):
             raise AttributeError("cannot append column to view")
         else:
-            assert self._dtype is not None and isinstance(self._dtype, Struct)
+            assert self._dtype is not None and isinstance(self._dtype, dt.Struct)
             # side effect on field_data
             self._field_data[name] = d
             # no side effect on dtype
             fields = list(self._dtype.fields)
             assert d._dtype is not None
-            fields.append(Field(name, d._dtype))
-            self._dtype = Struct(fields)
+            fields.append(dt.Field(name, d._dtype))
+            self._dtype = dt.Struct(fields)
 
     # printing ----------------------------------------------------------------
 
@@ -241,7 +209,7 @@ class DataFrame(AbstractColumn):
         def quote(n):
             return f"'{n}'"
 
-        return f"self._fromdata({OPEN}{', '.join(f'{quote(n)}:{str(c)}' for n,c in self._field_data.items())}, id = {self.id}{CLOSE})"
+        return f"self._fromdata({dt.OPEN}{', '.join(f'{quote(n)}:{str(c)}' for n,c in self._field_data.items())}, id = {self.id}{dt.CLOSE})"
 
     def __repr__(self):
         data = []
@@ -255,7 +223,7 @@ class DataFrame(AbstractColumn):
             data, headers=["index"] + self.columns, tablefmt="simple", showindex=True
         )
         typ = f"dtype: {self._dtype}, count: {self.length()}, null_count: {self.null_count()}"
-        return tab + NL + typ
+        return tab + dt.NL + typ
 
     # selectors -----------------------------------------------------------
 
@@ -269,15 +237,21 @@ class DataFrame(AbstractColumn):
                 if 0 <= i and i <= len(columns):
                     return i
                 raise TypeError(
-                    f"index {i} must be within 0 and less than {len(columns)}")
+                    f"index {i} must be within 0 and less than {len(columns)}"
+                )
             except ValueError:
                 raise TypeError(f"{arg} must be a column name or column index")
 
     def gets(self, indices):
-        return self._fromdata({n: c[indices]for n, c in self._field_data.items()}, self._mask[indices])
+        return self._fromdata(
+            {n: c[indices] for n, c in self._field_data.items()}, self._mask[indices]
+        )
 
-    def slice(self,  start, stop, step):
-        return self._fromdata({n: c[start:stop:step]for n, c in self._field_data.items()}, self._mask[start:stop:step])
+    def slice(self, start, stop, step):
+        return self._fromdata(
+            {n: c[start:stop:step] for n, c in self._field_data.items()},
+            self._mask[start:stop:step],
+        )
 
     def get_column(self, column):
         i = self._column_index(column)
@@ -303,14 +277,14 @@ class DataFrame(AbstractColumn):
 
     # functools map/filter/reduce ---------------------------------------------
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def map(
         self,
         arg: Union[Dict, Callable],
         /,
         na_action: Literal["ignore", None] = None,
-        dtype: Optional[DType] = None,
+        dtype: Optional[dt.DType] = None,
         columns: Optional[List[str]] = None,
     ):
         """
@@ -331,7 +305,7 @@ class DataFrame(AbstractColumn):
             dtype = dtype if dtype is not None else self._dtype
 
             cols = [self._field_data[n] for n in columns]
-            res = self._Empty(dtype)
+            res = self._EmptyColumn(dtype)
             for i in range(len(self)):
                 if self.valid(i):
                     res._append(func(*[col[i] for col in cols]))
@@ -341,13 +315,13 @@ class DataFrame(AbstractColumn):
                     res._append(None)
             return res._finalize()
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def flatmap(
         self,
         arg: Union[Dict, Callable],
         na_action: Literal["ignore", None] = None,
-        dtype: Optional[DType] = None,
+        dtype: Optional[dt.DType] = None,
         columns: Optional[List[str]] = None,
     ):
         """
@@ -359,25 +333,30 @@ class DataFrame(AbstractColumn):
         self._check_columns(columns)
 
         if len(columns) == 1:
-            return self._field_data[columns[0]].flatmap(arg, na_action, dtype, )
+            return self._field_data[columns[0]].flatmap(
+                arg,
+                na_action,
+                dtype,
+            )
         else:
+
             def func(x):
                 return arg.get(x, None) if isinstance(arg, dict) else arg(x)
 
             dtype_ = dtype if dtype is not None else self._dtype
             cols = [self._field_data[n] for n in columns]
-            res = _self._Empty(dtype_)
+            res = self._EmptyColumn(dtype_)
             for i in range(len(self)):
-                if self._valid(i):
+                if self.valid(i):
                     res._extend(func(*[col[i] for col in cols]))
                 elif na_action is None:
                     res._extend(func(None))
                 else:
-                    res._extend(None)
+                    res._append([])
             return res._finalize()
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def filter(
         self, predicate: Union[Callable, Iterable], columns: Optional[List[str]] = None
     ):
@@ -395,7 +374,7 @@ class DataFrame(AbstractColumn):
                 "predicate must be a unary boolean predicate or iterable of booleans"
             )
 
-        res = self._Empty(self._dtype)
+        res = self._EmptyColumn(self._dtype)
         cols = [self._field_data[n] for n in columns]
         if callable(predicate):
             for i in range(len(self)):
@@ -411,8 +390,8 @@ class DataFrame(AbstractColumn):
 
     # sorting ----------------------------------------------------------------
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def sort(
         self,
         by: Optional[List[str]] = None,
@@ -428,25 +407,23 @@ class DataFrame(AbstractColumn):
             for i in by:
                 _ = self._field_data[i]  # throws key error
                 xs.append(self.columns.index(i))
-            reorder = xs + \
-                [j for j in range(len(self._field_data)) if j not in xs]
+            reorder = xs + [j for j in range(len(self._field_data)) if j not in xs]
 
             def func(tup):
                 return tuple(tup[i] for i in reorder)
 
-        res = self._Empty(self.dtype)
+        res = self._EmptyColumn(self.dtype)
         if na_position == "first":
             res._extend([None] * self.null_count())
         res._extend(
-            sorted((i for i in self if i is not None),
-                   reverse=not ascending, key=func)
+            sorted((i for i in self if i is not None), reverse=not ascending, key=func)
         )
         if na_position == "last":
             res._extend([None] * self.null_count())
         return res._finalize()
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def nlargest(
         self,
         n=5,
@@ -457,178 +434,242 @@ class DataFrame(AbstractColumn):
         # Todo add keep arg
         return self.sort(by=columns, ascending=False).head(n)
 
-    @ trace
-    @ expression
+    @trace
+    @expression
     def nsmallest(
         self,
         n=5,
         columns: Optional[List[str]] = None,
         keep: Literal["last", "first"] = "first",
     ):
-        """Returns a new dataframe of the *n* smallest elements. """
+        """Returns a new dataframe of the *n* smallest elements."""
         return self.sort(by=columns, ascending=True).head(n)
 
     # operators --------------------------------------------------------------
 
-    @ expression
+    @expression
     def __add__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: c + other[n] for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: c + other[n] for (n, c) in self._field_data.items()}
+            )
         else:
             return self._fromdata({n: c + other for (n, c) in self._field_data.items()})
 
-    @ expression
+    @expression
     def __radd__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: other[n]+c for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: other[n] + c for (n, c) in self._field_data.items()}
+            )
         else:
-            return self._fromdata({n: other+c for (n, c) in self._field_data.items()})
+            return self._fromdata({n: other + c for (n, c) in self._field_data.items()})
 
-    @ expression
+    @expression
     def __sub__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: c - other[n] for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: c - other[n] for (n, c) in self._field_data.items()}
+            )
         else:
             return self._fromdata({n: c - other for (n, c) in self._field_data.items()})
 
-    @ expression
+    @expression
     def __rsub__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: other[n]-c for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: other[n] - c for (n, c) in self._field_data.items()}
+            )
         else:
-            return self._fromdata({n: other-c for (n, c) in self._field_data.items()})
+            return self._fromdata({n: other - c for (n, c) in self._field_data.items()})
 
-    @ expression
+    @expression
     def __mul__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: c * other[n] for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: c * other[n] for (n, c) in self._field_data.items()}
+            )
         else:
             return self._fromdata({n: c * other for (n, c) in self._field_data.items()})
 
-    @ expression
+    @expression
     def __rmul__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: other[n]*c for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: other[n] * c for (n, c) in self._field_data.items()}
+            )
         else:
-            return self._fromdata({n: other*c for (n, c) in self._field_data.items()})
+            return self._fromdata({n: other * c for (n, c) in self._field_data.items()})
 
-    @ expression
+    @expression
     def __floordiv__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: c // other[n] for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: c // other[n] for (n, c) in self._field_data.items()}
+            )
         else:
-            return self._fromdata({n: c // other for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {n: c // other for (n, c) in self._field_data.items()}
+            )
 
-    @ expression
+    @expression
     def __rfloordiv__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: other[n]//c for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: other[n] // c for (n, c) in self._field_data.items()}
+            )
         else:
-            return self._fromdata({n: other//c for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {n: other // c for (n, c) in self._field_data.items()}
+            )
 
-    @ expression
+    @expression
     def __truediv__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: c / other[n] for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: c / other[n] for (n, c) in self._field_data.items()}
+            )
         else:
             return self._fromdata({n: c / other for (n, c) in self._field_data.items()})
 
-    @ expression
+    @expression
     def __rtruediv__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: other[n]/c for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: other[n] / c for (n, c) in self._field_data.items()}
+            )
         else:
-            return self._fromdata({n: other/c for (n, c) in self._field_data.items()})
+            return self._fromdata({n: other / c for (n, c) in self._field_data.items()})
 
-    @ expression
+    @expression
     def __mod__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: c % other[n] for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: c % other[n] for (n, c) in self._field_data.items()}
+            )
         else:
             return self._fromdata({n: c % other for (n, c) in self._field_data.items()})
 
-    @ expression
+    @expression
     def __rmod__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: other[n] % c for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: other[n] % c for (n, c) in self._field_data.items()}
+            )
         else:
             return self._fromdata({n: other % c for (n, c) in self._field_data.items()})
 
-    @ expression
+    @expression
     def __pow__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: c ** other[n] for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: c ** other[n] for (n, c) in self._field_data.items()}
+            )
         else:
-            return self._fromdata({n: c ** other for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {n: c ** other for (n, c) in self._field_data.items()}
+            )
 
-    @ expression
+    @expression
     def __rpow__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: other[n]**c for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: other[n] ** c for (n, c) in self._field_data.items()}
+            )
         else:
-            return self._fromdata({n: other**c for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {n: other ** c for (n, c) in self._field_data.items()}
+            )
 
-    @ expression
+    @expression
     def __eq__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: c == other[n] for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: c == other[n] for (n, c) in self._field_data.items()}
+            )
         else:
-            return self._fromdata({n: c == other for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {n: c == other for (n, c) in self._field_data.items()}
+            )
 
-    @ expression
+    @expression
     def __ne__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: c == other[n] for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: c == other[n] for (n, c) in self._field_data.items()}
+            )
         else:
-            return self._fromdata({n: c == other for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {n: c == other for (n, c) in self._field_data.items()}
+            )
 
-    @ expression
+    @expression
     def __lt__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: c < other[n] for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: c < other[n] for (n, c) in self._field_data.items()}
+            )
         else:
             return self._fromdata({n: c < other for (n, c) in self._field_data.items()})
 
-    @ expression
+    @expression
     def __gt__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: c > other[n] for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: c > other[n] for (n, c) in self._field_data.items()}
+            )
         else:
             return self._fromdata({n: c > other for (n, c) in self._field_data.items()})
 
     def __le__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: c <= other[n] for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: c <= other[n] for (n, c) in self._field_data.items()}
+            )
         else:
-            return self._fromdata({n: c <= other for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {n: c <= other for (n, c) in self._field_data.items()}
+            )
 
     def __ge__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: c >= other[n] for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: c >= other[n] for (n, c) in self._field_data.items()}
+            )
         else:
-            return self._fromdata({n: c >= other for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {n: c >= other for (n, c) in self._field_data.items()}
+            )
 
     def __or__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: c | other[n] for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: c | other[n] for (n, c) in self._field_data.items()}
+            )
         else:
             return self._fromdata({n: c | other for (n, c) in self._field_data.items()})
 
     def __ror__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: other[n] | c for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: other[n] | c for (n, c) in self._field_data.items()}
+            )
         else:
             return self._fromdata({n: other | c for (n, c) in self._field_data.items()})
 
     def __and__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: c & other[n] for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: c & other[n] for (n, c) in self._field_data.items()}
+            )
         else:
             return self._fromdata({n: c & other for (n, c) in self._field_data.items()})
 
     def __rand__(self, other):
-        if isinstance(other, DataFrame):
-            return self._fromdata({n: other[n] & c for (n, c) in self._field_data.items()})
+        if isinstance(other, DataFrameStd):
+            return self._fromdata(
+                {n: other[n] & c for (n, c) in self._field_data.items()}
+            )
         else:
             return self._fromdata({n: other & c for (n, c) in self._field_data.items()})
 
@@ -645,16 +686,22 @@ class DataFrame(AbstractColumn):
 
     @trace
     @expression
-    def isin(self, values: Union[list, dict, AbstractColumn]):
+    def isin(self, values: Union[list, dict, IColumn]):
         """Check whether values are contained in data."""
         if isinstance(values, list):
-            return self._fromdata({n: c.isin(values) for n, c in self._field_data.items()})
+            return self._fromdata(
+                {n: c.isin(values) for n, c in self._field_data.items()}
+            )
         if isinstance(values, dict):
-            self.check_columns(values.keys())
-            return self._fromdata({n:  c.isin(values[n]) for n, c in self._field_data.items()})
-        if isinstance(values, DataFrame):
-            self.check_columns(values.columns)
-            return self._fromdata({n: c.isin(values=list(values[n])) for n, c in self._field_data.items()})
+            self._check_columns(values.keys())
+            return self._fromdata(
+                {n: c.isin(values[n]) for n, c in self._field_data.items()}
+            )
+        if isinstance(values, IDataFrame):
+            self._check_columns(values.columns)
+            return self._fromdata(
+                {n: c.isin(values=list(values[n])) for n, c in self._field_data.items()}
+            )
         else:
             raise ValueError(
                 f"isin undefined for values of type {type(self).__name__}."
@@ -664,15 +711,20 @@ class DataFrame(AbstractColumn):
 
     @trace
     @expression
-    def fillna(
-        self, fill_value: Union[ScalarTypes, Dict, Literal[None]]
-    ):
+    def fillna(self, fill_value: Union[dt.ScalarTypes, Dict, Literal[None]]):
         if fill_value is None:
             return self
-        if isinstance(fill_value, ScalarTypeValues):
-            return self._fromdata({n: c.fillna(fill_value) for n, c in self._field_data.items()})
+        if isinstance(fill_value, IColumn.scalar_types):
+            return self._fromdata(
+                {n: c.fillna(fill_value) for n, c in self._field_data.items()}
+            )
         elif isinstance(fill_value, dict):
-            return self._fromdata({n: c.fillna(fill_value[n]) if n in dict else c for n, c in self._field_data.items()})
+            return self._fromdata(
+                {
+                    n: c.fillna(fill_value[n]) if n in fill_value else c
+                    for n, c in self._field_data.items()
+                }
+            )
         else:
             raise TypeError(f"fillna with {type(fill_value)} is not supported")
 
@@ -682,14 +734,14 @@ class DataFrame(AbstractColumn):
         """Return a dataframe with rows removed where the row has any or all nulls."""
         # TODO only flat columns supported...
         assert self._dtype is not None
-        res = self._Empty(self._dtype.constructor(nullable=False))
+        res = self._EmptyColumn(self._dtype.constructor(nullable=False))
         if how == "any":
             for i in self:
-                if not DataFrame._has_any_null(i):
+                if not self._has_any_null(i):
                     res._append(i)
         elif how == "all":
             for i in self:
-                if not DataFrame._has_all_null(i):
+                if not self._has_all_null(i):
                     res._append(i)
         return res._finalize()
 
@@ -697,10 +749,10 @@ class DataFrame(AbstractColumn):
     @expression
     def drop_duplicates(
         self,
-        subset: OptionalList[str] = None,
+        subset: Optional[List[str]] = None,
         keep: Literal["first", "last", False] = "first",
     ):
-        """ Remove duplicate values from data but keep the first, last, none (keep=False)"""
+        """Remove duplicate values from data but keep the first, last, none (keep=False)"""
         columns = subset if subset is not None else self.columns
         self._check_columns(columns)
 
@@ -708,11 +760,11 @@ class DataFrame(AbstractColumn):
         # i.e do unique per column and delete when all agree
         # shortcut once no match is found.
 
-        res = self._Empty(self.dtype)
-        idxs = [self.columns.index(s) for s in columns]
+        res = self._EmptyColumn(self.dtype)
+        indices = [self.columns.index(s) for s in columns]
         seen = set()
         for tup in self:
-            row = tuple(tup[i] for i in idxs)
+            row = tuple(tup[i] for i in indices)
             if row in seen:
                 continue
             else:
@@ -720,21 +772,21 @@ class DataFrame(AbstractColumn):
                 res._append(tup)
         return res._finalize()
 
-    @staticmethod
-    def _has_any_null(tup) -> bool:
+    # @staticmethod
+    def _has_any_null(self, tup) -> bool:
         for t in tup:
             if t is None:
                 return True
-            if isinstance(t, tuple) and DataFrame._has_any_null(t):
+            if isinstance(t, tuple) and self._has_any_null(t):
                 return True
         return False
 
-    @staticmethod
-    def _has_all_null(tup) -> bool:
+    # @staticmethod
+    def _has_all_null(self, tup) -> bool:
         for t in tup:
             if t is not None:
                 return False
-            if isinstance(t, tuple) and not DataFrame._has_all_null(t):
+            if isinstance(t, tuple) and not self._has_all_null(t):
                 return False
         return True
 
@@ -754,52 +806,52 @@ class DataFrame(AbstractColumn):
 
     @trace
     @expression
-    def min(self, numeric_only=None):
-        """Return the minimum of the nonnull values of the Column."""
-        return self._summarize(DataFrame._cmin, {"numeric_only": numeric_only})
+    def min(self):
+        """Return the minimum of the non-null values of the Column."""
+        return self._summarize(DataFrameStd._cmin)
 
     # with dataclass function
     # @expression
     # def min(self, numeric_only=None):
-    #     """Return the minimum of the nonnull values of the Column."""
+    #     """Return the minimum of the non-null values of the Column."""
     #     return self._summarize(_Min(), {"numeric_only": numeric_only})
 
     # with lambda
     # @expression
     # def min(self, numeric_only=None):
-    #     """Return the minimum of the nonnull values of the Column."""
+    #     """Return the minimum of the non-null values of the Column."""
     #     return self._summarize(lambda c: c.min, {"numeric_only": numeric_only})
 
     @trace
     @expression
-    def max(self, numeric_only=None):
-        """Return the maximum of the nonnull values of the column."""
+    def max(self):
+        """Return the maximum of the non-null values of the column."""
         # skipna == True
-        return self._summarize(lambda c: c.max, {"numeric_only": numeric_only})
+        return self._summarize(lambda c: c.max)
 
     @trace
     @expression
-    def all(self, boolean_only=None):
-        """Return whether all nonull elements are True in Column"""
-        return self._summarize(lambda c: c.all, {"boolean_only": boolean_only})
+    def all(self):
+        """Return whether all non-null elements are True in Column"""
+        return self._summarize(lambda c: c.all)
 
     @trace
     @expression
-    def any(self, skipna=True, boolean_only=None):
-        """Return whether any nonull element is True in Column"""
-        return self._summarize(lambda c: c.any, {"boolean_only": boolean_only})
+    def any(self):
+        """Return whether any non-null element is True in Column"""
+        return self._summarize(lambda c: c.any)
 
     @trace
     @expression
     def sum(self):
-        """Return sum of all nonull elements in Column"""
-        return self._summarize(lambda c: c.sum, {})
+        """Return sum of all non-null elements in Column"""
+        return self._summarize(lambda c: c.sum)
 
     @trace
     @expression
     def prod(self):
         """Return produce of the values in the data"""
-        return self._summarize(lambda c: c.prod, {})
+        return self._summarize(lambda c: c.prod)
 
     @trace
     @expression
@@ -829,60 +881,49 @@ class DataFrame(AbstractColumn):
     @expression
     def mean(self):
         """Return the mean of the values in the series."""
-        return self._summarize(lambda c: c.mean, {})
+        return self._summarize(lambda c: c.mean)
 
     @trace
     @expression
     def median(self):
         """Return the median of the values in the data."""
-        return self._summarize(lambda c: c.median, {})
+        return self._summarize(lambda c: c.median)
 
     @trace
     @expression
     def mode(self):
         """Return the mode(s) of the data."""
-        return self._summarize(lambda c: c.mode, {})
+        return self._summarize(lambda c: c.mode)
 
     @trace
     @expression
     def std(self):
         """Return the stddev(s) of the data."""
-        return self._summarize(lambda c: c.std, {})
+        return self._summarize(lambda c: c.std)
 
     @trace
     @expression
     def nunique(self, dropna=True):
         """Returns the number of unique values per column"""
-        res = self._Empty(
-            Struct([Field("column", string), Field("nunique", int64)]))
+        res = self._EmptyColumn(
+            dt.Struct([dt.Field("column", dt.string), dt.Field("nunique", dt.int64)])
+        )
         for n, c in self._field_data.items():
             res._append((n, c.nunique(dropna)))
         return res._finalize()
 
-    def _summarize(self, func, /, kwargs):
+    def _summarize(self, func):
         res = {}
-        # if self._null_count == 0:
         for n, c in self._field_data.items():
-            res[n] = self.session.Column([func(c)(**kwargs)])
+            res[n] = self.scope.Column([func(c)()])
         return self._fromdata(res, False)
-        # raise NotImplementedError('Dataframe row is not allowed to have nulls')
 
     @trace
     def _lift(self, func):
         res = {}
-        # if self._null_count == 0:
         for n, c in self._field_data.items():
             res[n] = func(c)()
         return self._fromdata(res, False)
-        # raise NotImplementedError("Dataframe row is not allowed to have nulls")
-
-    # def _lift_pairs(self, func, other, /, kwargs):
-    #     res = DataFrame()
-    #     if self._null_count == 0:
-    #         for n, c in self._field_data.items():
-    #             res[n] = func(c)(**{"other": other[n], **kwargs})
-    #         return res
-    #     raise NotImplementedError("Dataframe row is not allowed to have nulls")
 
     # describe ----------------------------------------------------------------
 
@@ -898,8 +939,9 @@ class DataFrame(AbstractColumn):
         # Not supported: datetime_is_numeric=False,
         includes = []
         if include_columns is None:
-            includes = [n for n, c in self._field_data.items()
-                        if is_numerical(c.dtype)]
+            includes = [
+                n for n, c in self._field_data.items() if dt.is_numerical(c.dtype)
+            ]
         elif isinstance(include_columns, list):
             includes = [
                 n for n, c in self._field_data.items() if c.dtype in include_columns
@@ -930,13 +972,12 @@ class DataFrame(AbstractColumn):
                 raise ValueError("percentiles must be betwen 0 and 100")
 
         res = {}
-        res["metric"] = self.session.Column(
-            ["count", "mean", "std", "min"] +
-            [f"{p}%" for p in percentiles] + ["max"]
+        res["metric"] = self.scope.Column(
+            ["count", "mean", "std", "min"] + [f"{p}%" for p in percentiles] + ["max"]
         )
         for s in selected:
             c = self._field_data[s]
-            res[s] = self.session.Column(
+            res[s] = self.scope.Column(
                 [c.count(), c.mean(), c.std(), c.min()]
                 + c.percentiles(percentiles, "midpoint")
                 + [c.max()]
@@ -952,7 +993,9 @@ class DataFrame(AbstractColumn):
         Returns DataFrame without the removed columns.
         """
         self._check_columns(columns)
-        return self._fromdata({n: c for n, c in self._field_data.items() if n not in columns})
+        return self._fromdata(
+            {n: c for n, c in self._field_data.items() if n not in columns}
+        )
 
     @trace
     @expression
@@ -961,13 +1004,20 @@ class DataFrame(AbstractColumn):
         Returns DataFrame with the kept columns only.
         """
         self._check_columns(columns)
-        return self._fromdata({n: c for n, c in self._field_data.items() if n in columns})
+        return self._fromdata(
+            {n: c for n, c in self._field_data.items() if n in columns}
+        )
 
     @trace
     @expression
     def rename(self, column_mapper: Dict[str, str]):
         self._check_columns(column_mapper.keys())
-        return self._fromdata({column_mapper[n] if n in column_mapper else n: c for n, c in self._field_data.items()})
+        return self._fromdata(
+            {
+                column_mapper[n] if n in column_mapper else n: c
+                for n, c in self._field_data.items()
+            }
+        )
 
     @trace
     @expression
@@ -1060,8 +1110,7 @@ class DataFrame(AbstractColumn):
                     )
                 exclude_columns.append(arg[1:])
             else:
-                raise ValueError(
-                    f"argument ({arg}) does not denote an existing column")
+                raise ValueError(f"argument ({arg}) does not denote an existing column")
         if exclude_columns and not has_star:
             raise ValueError("select received column-exclude without a star")
         if has_star and include_columns:
@@ -1110,7 +1159,7 @@ class DataFrame(AbstractColumn):
         key_fields = []
         item_fields = []
         for k in key_columns:
-            key_fields.append(Field(k, self.dtype.get(k)))
+            key_fields.append(dt.Field(k, self.dtype.get(k)))
         for f in self.dtype.fields:
             if f.name not in key_columns:
                 item_fields.append(f)
@@ -1130,14 +1179,14 @@ class DataFrame(AbstractColumn):
 
 @dataclass
 class GroupedDataFrame:
-    _key_fields: List[Field]
-    _item_fields: List[Field]
+    _key_fields: List[dt.Field]
+    _item_fields: List[dt.Field]
     _groups: Mapping[Tuple, Sequence]
-    _parent: DataFrame
+    _parent: DataFrameStd
 
     @property
-    def _session(self):
-        return self._parent._session
+    def _scope(self):
+        return self._parent._scope
 
     @property  # type: ignore
     @traceproperty
@@ -1145,8 +1194,9 @@ class GroupedDataFrame:
         """
         Return the size of each group (including nulls).
         """
-        res = self._parent._Empty(
-            Struct(self._key_fields + [Field("size", int64)]))
+        res = self._parent._EmptyColumn(
+            dt.Struct(self._key_fields + [dt.Field("size", dt.int64)])
+        )
         for k, c in self._groups.items():
             row = k + (len(c),)
             res._append(row)
@@ -1157,7 +1207,7 @@ class GroupedDataFrame:
         Yield pairs of grouped tuple and the grouped dataframe
         """
         for g, xs in self._groups.items():
-            df = self._parent._Empty(Struct(self._item_fields))
+            df = self._parent._EmptyColumn(dt.Struct(self._item_fields))
             for x in xs:
                 df._append(
                     tuple(
@@ -1167,7 +1217,7 @@ class GroupedDataFrame:
             yield g, df._finalize()
 
     @trace
-    def _lift(self, op: str) -> AbstractColumn:
+    def _lift(self, op: str) -> IColumn:
         if len(self._key_fields) > 0:
             # it is a dataframe operation:
             return self._combine(op)
@@ -1175,9 +1225,8 @@ class GroupedDataFrame:
             return self._apply1(self._item_fields[0], op)
         raise AssertionError("unexpected case")
 
-    def _combine(self, op: str) -> DataFrame:
-        agg_fields = [Field(f"{f.name}.{op}", f.dtype)
-                      for f in self._item_fields]
+    def _combine(self, op: str):
+        agg_fields = [dt.Field(f"{f.name}.{op}", f.dtype) for f in self._item_fields]
         res = {}
         for f, c in zip(self._key_fields, self._unzip_group_keys()):
             res[f.name] = c
@@ -1185,28 +1234,27 @@ class GroupedDataFrame:
             res[f.name] = c
         return self._parent._fromdata(res)
 
-    def _apply(self, op: str) -> List[AbstractColumn]:
+    def _apply(self, op: str) -> List[IColumn]:
         cols = []
         for f in self._item_fields:
             cols.append(self._apply1(f, op))
         return cols
 
-    def _apply1(self, f: Field, op: str) -> AbstractColumn:
+    def _apply1(self, f: dt.Field, op: str) -> IColumn:
         src_t = f.dtype
-        dest_f, dest_t = get_agg_op(op, src_t)
-        res = self._parent._Empty(dest_t)
+        dest_f, dest_t = dt.get_agg_op(op, src_t)
+        res = self._parent._EmptyColumn(dest_t)
         src_c = self._parent._field_data[f.name]
         for g, xs in self._groups.items():
             dest_data = [src_c[x] for x in xs]
-            dest_c = dest_f(self._parent.session.Column(
-                dest_data, dtype=dest_t))
+            dest_c = dest_f(self._parent.scope.Column(dest_data, dtype=dest_t))
             res._append(dest_c)
         return res._finalize()
 
-    def _unzip_group_keys(self) -> List[AbstractColumn]:
+    def _unzip_group_keys(self) -> List[IColumn]:
         cols = []
         for f in self._key_fields:
-            cols.append(self._parent._Empty(f.dtype))
+            cols.append(self._parent._EmptyColumn(f.dtype))
         for tup in self._groups.keys():
             for i, t in enumerate(tup):
                 cols[i]._append(t)
@@ -1224,7 +1272,7 @@ class GroupedDataFrame:
                     return GroupedDataFrame([], [f], self._groups, self._parent)
             for i, f in enumerate(self._key_fields):
                 if f.name == arg:
-                    res = self._parent._Empty(f.dtype)
+                    res = self._parent._EmptyColumn(f.dtype)
                     for tup in self._groups.keys():
                         res._append(tup[i])
                     return res._finalize()
@@ -1232,27 +1280,27 @@ class GroupedDataFrame:
         raise TypeError(f"unexpected type for arg ({type(arg).__name})")
 
     def min(self, numeric_only=None):
-        """Return the minimum of the nonnull values of the Column."""
+        """Return the minimum of the non-null values of the Column."""
         assert numeric_only == None
         return self._lift("min")
 
     def max(self, numeric_only=None):
-        """Return the minimum of the nonnull values of the Column."""
+        """Return the minimum of the non-null values of the Column."""
         assert numeric_only == None
         return self._lift("min")
 
     def all(self, boolean_only=None):
-        """Return whether all nonull elements are True in Column"""
+        """Return whether all non-null elements are True in Column"""
         # skipna == True
         return self._lift("all")
 
     def any(self, skipna=True, boolean_only=None):
-        """Return whether any nonull element is True in Column"""
+        """Return whether any non-null element is True in Column"""
         # skipna == True
         return self._lift("any")
 
     def sum(self):
-        """Return sum of all nonull elements in Column"""
+        """Return sum of all non-null elements in Column"""
         # skipna == True
         # only_numerical == True
         # skipna == True
@@ -1354,20 +1402,16 @@ class GroupedDataFrame:
 
 # ------------------------------------------------------------------------------
 # registering the factory
-ColumnFactory.register((Struct.typecode+"_empty", 'test'), DataFrame._empty)
-ColumnFactory.register((Struct.typecode+"_full", 'test'), DataFrame._full)
+ColumnFactory.register((dt.Struct.typecode + "_empty", "std"), DataFrameStd._empty)
+ColumnFactory.register((dt.Struct.typecode + "_full", "std"), DataFrameStd._full)
+
+# for now we also just use the same code for the CPU...
+ColumnFactory.register((dt.Struct.typecode + "_empty", "cpu"), DataFrameStd._empty)
+ColumnFactory.register((dt.Struct.typecode + "_full", "cpu"), DataFrameStd._full)
+
 
 # ------------------------------------------------------------------------------
-# DataFrame var (is here and not in Expression) to break cyclic import depedency
-
-
-class DataFrameVar(Var, DataFrame):
-    def __init__(self, name: str):
-        super().__init__(name)
-
-
-# The super variable...
-me = DataFrameVar("me")
+# DataFrame var (is here and not in Expression) to break cyclic import dependency
 
 
 # ------------------------------------------------------------------------------
@@ -1399,16 +1443,5 @@ me = DataFrameVar("me")
 #             win_type=win_type,
 #         )
 
-#     def apply_rows(
-#         self,
-#         func,
-#         incols,
-#         outcols,
-#         kwargs,
-#         pessimistic_nulls=True,
-#         cache_key=None,
-#     ):
-#         """
-#         Apply a row-wise user defined function.
 #
 #       all set operations: union, uniondistinct, except, etc.

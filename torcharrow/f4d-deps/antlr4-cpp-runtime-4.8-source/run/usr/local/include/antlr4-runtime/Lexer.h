@@ -39,7 +39,7 @@ namespace antlr4 {
     ///  create a single token.  nextToken will return this object after
     ///  matching lexer rule(s).  If you subclass to allow multiple token
     ///  emissions, then set this to the last token to be matched or
-    ///  something nonnull so that the auto token emit mechanism will not
+    ///  something non-null so that the auto token emit mechanism will not
     ///  emit another token.
 
     // Life cycle of a token is this:

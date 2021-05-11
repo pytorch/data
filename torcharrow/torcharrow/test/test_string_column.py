@@ -1,18 +1,17 @@
 import unittest
 
-from torcharrow import Session, StringColumn, string
-
-# run python3 -m unittest outside this directory to run all tests
+from torcharrow import Scope, IStringColumn
+import torcharrow.dtypes as dt
 
 
 class TestStringColumn(unittest.TestCase):
     def setUp(self):
-        self.ts = Session()
+        self.ts = Scope()
 
     def test_empty(self):
-        empty = self.ts.Column(string)
-        self.assertTrue(isinstance(empty, StringColumn))
-        self.assertEqual(empty.dtype, string)
+        empty = self.ts.Column(dt.string)
+        self.assertTrue(isinstance(empty, IStringColumn))
+        self.assertEqual(empty.dtype, dt.string)
         self.assertEqual(empty.length(), 0)
         self.assertEqual(empty.null_count(), 0)
         self.assertEqual(len(empty._data), 0)
@@ -20,13 +19,13 @@ class TestStringColumn(unittest.TestCase):
         # self.assertEqual(empty._offsets[0], 0)
 
     def test_append_offsets(self):
-        c = self.ts.Column(string)
+        c = self.ts.Column(dt.string)
         c = c.append(["abc", "de", "", "f"])
         # self.assertEqual(list(c._offsets), [0, 3, 5, 5, 6])
         self.assertEqual(list(c), ["abc", "de", "", "f"])
-        #TODO : check that error is thrown!
+        # TODO : check that error is thrown!
         # with self.assertRaises(TypeError):
-        #     # TypeError: a string is required (got type NoneType)
+        #     # TypeError: a dt.string is required (got type NoneType)
         #     c.append(None)
 
         c = self.ts.Column(["abc", "de", "", "f", None])
@@ -35,7 +34,7 @@ class TestStringColumn(unittest.TestCase):
 
     # TODO add once dataframe is done..
     def test_string_split_methods(self):
-        c = self.ts.Column(string)
+        c = self.ts.Column(dt.string)
         s = ["hello.this", "is.interesting.", "this.is_24", "paradise"]
         c = c.append(s)
         self.assertEqual(
@@ -49,24 +48,24 @@ class TestStringColumn(unittest.TestCase):
         )
 
     def test_string_lifted_methods(self):
-        c = self.ts.Column(string)
+        c = self.ts.Column(dt.string)
         s = ["abc", "de", "", "f"]
         c = c.append(s)
-        self.assertEqual(list(c.str.len()), [len(i) for i in s])
+        self.assertEqual(list(c.str.length()), [len(i) for i in s])
         # cat
         self.assertEqual(list(c.str.slice(0, 2)), [i[0:2] for i in s])
         # slice from
 
         # self.assertEqual(list(c.str.replace(0,2)), [i[0:2] for i in s])
 
-        c = self.ts.Column(string)
+        c = self.ts.Column(dt.string)
         s = ["hello.this", "is.interesting.", "this.is_24", "paradise"]
         c = c.append(s)
 
-    #     # TODO needs ListColumn -- add back once List is implemented
-    #     # self.assertEqual(list(c.str.split('.', 2, expand=False)), [])
-    #     # expand = True needs Dataframes
-    #     # -- add back once recursive imports are solved
+        #     # TODO needs IListColumn -- add back once List is implemented
+        #     # self.assertEqual(list(c.str.split('.', 2, expand=False)), [])
+        #     # expand = True needs Dataframes
+        #     # -- add back once recursive imports are solved
 
         self.assertEqual(
             list(self.ts.Column(["1", "", "+3.0", "-4"]).str.isinteger()),
@@ -87,7 +86,8 @@ class TestStringColumn(unittest.TestCase):
         )
         self.assertEqual(list(self.ts.Column([".abc"]).str.islower()), [True])
         self.assertEqual(
-            list(self.ts.Column(["+3.e12", "abc", "0"]).str.isnumeric()), [False, False, True]
+            list(self.ts.Column(["+3.e12", "abc", "0"]).str.isnumeric()),
+            [False, False, True],
         )
         self.assertEqual(
             list(self.ts.Column(["+3.e12", "abc"]).str.isprintable()), [True, True]
@@ -97,12 +97,16 @@ class TestStringColumn(unittest.TestCase):
             [True, True, True, False, False],
         )
         self.assertEqual(
-            list(self.ts.Column(["A B C", "abc", " "]).str.istitle()), [True, False, False]
+            list(self.ts.Column(["A B C", "abc", " "]).str.istitle()),
+            [True, False, False],
         )
-        self.assertEqual(list(self.ts.Column(["UPPER", "lower"]).str.isupper()), [True, False])
+        self.assertEqual(
+            list(self.ts.Column(["UPPER", "lower"]).str.isupper()), [True, False]
+        )
 
         self.assertEqual(
-            list(self.ts.Column(["UPPER", "lower"]).str.capitalize()), ["Upper", "Lower"]
+            list(self.ts.Column(["UPPER", "lower"]).str.capitalize()),
+            ["Upper", "Lower"],
         )
         self.assertEqual(
             list(self.ts.Column(["UPPER", "lower"]).str.swapcase()), ["upper", "LOWER"]
@@ -117,8 +121,8 @@ class TestStringColumn(unittest.TestCase):
             list(self.ts.Column(["UPPER", "lower", "midWife"]).str.casefold()),
             ["upper", "lower", "midwife"],
         )
-    #     # Todo
-    #     # self.assertEqual(list(self.ts.Column(['1', '22', '33']).str.repeat(2)), [])
+        #     # Todo
+        #     # self.assertEqual(list(self.ts.Column(['1', '22', '33']).str.repeat(2)), [])
         self.assertEqual(
             list(
                 self.ts.Column(["UPPER", "lower", "midWife"]).str.pad(
