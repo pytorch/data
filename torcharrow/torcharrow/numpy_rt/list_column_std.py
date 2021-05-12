@@ -1,12 +1,12 @@
 import array as ar
+from tabulate import tabulate
 
 import numpy as np
 
 import torcharrow.dtypes as dt
-
 from torcharrow.ilist_column import IListColumn, IListMethods
 from torcharrow.scope import ColumnFactory
-from torcharrow.tabulate import tabulate
+
 
 # -----------------------------------------------------------------------------
 # IListColumn

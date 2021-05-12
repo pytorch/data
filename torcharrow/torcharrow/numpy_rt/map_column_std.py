@@ -2,15 +2,15 @@ import array as ar
 import copy
 from collections import OrderedDict
 from dataclasses import dataclass
-
+from tabulate import tabulate
 
 import numpy as np
 import torcharrow.dtypes as dt
 
+from torcharrow.column_factory import ColumnFactory
 from torcharrow.icolumn import IColumn
 from torcharrow.imap_column import IMapColumn, IMapMethods
-from torcharrow.scope import ColumnFactory
-from torcharrow.tabulate import tabulate
+
 
 # -----------------------------------------------------------------------------
 # IMapColumn
@@ -129,7 +129,7 @@ class MapColumnStd(IMapColumn):
             tablefmt="plain",
             showindex=True,
         )
-        typ = f"dtype: {self._dtype}, length: {self.length()}, null_count: {self.null_count()}"
+        typ = f"dtype: {self.dtype}, length: {self.length()}, null_count: {self.null_count()}"
         return tab + dt.NL + typ
 
 

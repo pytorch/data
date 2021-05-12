@@ -11,7 +11,6 @@ import torcharrow.dtypes as dt
 
 from .icolumn import IColumn
 from .scope import ColumnFactory
-from .tabulate import tabulate
 
 # -----------------------------------------------------------------------------
 # IListColumn
