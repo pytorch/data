@@ -9,7 +9,6 @@ import torcharrow.dtypes as dt
 from .icolumn import IColumn
 from .expression import expression
 from .scope import ColumnFactory
-from .tabulate import tabulate
 
 # ------------------------------------------------------------------------------
 # IStringColumn

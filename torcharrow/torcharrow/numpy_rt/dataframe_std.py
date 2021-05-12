@@ -22,6 +22,8 @@ from typing import (
 
 import numpy as np
 
+from tabulate import tabulate
+
 import torcharrow.dtypes as dt
 
 from torcharrow.column_factory import ColumnFactory, Device
@@ -29,7 +31,7 @@ from torcharrow.icolumn import IColumn
 from torcharrow.idataframe import IDataFrame
 from torcharrow.expression import eval_expression, expression
 from torcharrow.scope import Scope
-from torcharrow.tabulate import tabulate
+
 from torcharrow.trace import trace, traceproperty
 
 # assumes that these have been imported already:

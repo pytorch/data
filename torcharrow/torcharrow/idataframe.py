@@ -28,7 +28,6 @@ from .column_factory import ColumnFactory, Device
 from .icolumn import IColumn
 from .expression import Var, eval_expression, expression
 from .scope import Scope
-from .tabulate import tabulate
 from .trace import trace, traceproperty
 
 # assumes that these have been imported already:

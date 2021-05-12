@@ -198,7 +198,7 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
         return f"Column([{', '.join(str(i) for i in self)}], id = {self.id})"
 
     def __repr__(self):
-        rows = [[l if l is not None else "None"] for l in self]
+        rows = [[str(l) if l is not None else "None"] for l in self]
         tab = tabulate(
             rows,
             tablefmt="plain",
