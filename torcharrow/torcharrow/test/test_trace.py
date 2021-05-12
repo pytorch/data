@@ -146,11 +146,7 @@ def cmds(stms):
 class TestColumnTrace(unittest.TestCase):
     def setUp(self):
         self.ts = Scope(
-            {
-                "device": "std",
-                "tracing": True,
-                "types_to_trace": [Scope, IColumn],
-            }
+            {"device": "std", "tracing": True, "types_to_trace": [Scope, IColumn],}
         )
 
     def test_columns(self):
