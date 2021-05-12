@@ -52,6 +52,9 @@ class TestNumericalColumnCpu(T.TestNumericalColumn):
     def test_describe(self):
         return self.base_test_describe()
 
+    def test_batch_collate(self):
+        return self.base_test_batch_collate()
+
 
 if __name__ == "__main__":
     unittest.main()
