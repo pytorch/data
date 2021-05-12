@@ -4,8 +4,7 @@ import unittest
 from math import ceil, floor
 
 import torcharrow.dtypes as dt
-
-from torcharrow import INumericalColumn
+from torcharrow import IColumn, INumericalColumn
 
 
 class TestNumericalColumn(unittest.TestCase):
@@ -420,6 +419,18 @@ class TestNumericalColumn(unittest.TestCase):
                 ("max", 3.0),
             ],
         )
+
+    def base_test_batch_collate(self):
+        c = self.ts.Column([1, 2, 3, 4, 5, 6, 7])
+        # test iter
+        it = c.batch(2)
+        res = []
+        for i in it:
+            res.append(list(i))
+        self.assertEqual(res, [[1, 2], [3, 4], [5, 6], [7]])
+        # test collate
+        it = c.batch(2)
+        self.assertEqual(list(IColumn.collate(it)), [1, 2, 3, 4, 5, 6, 7])
 
 
 if __name__ == "__main__":

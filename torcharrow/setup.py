@@ -17,6 +17,7 @@ setup(
         "numpy",
         "pandas",
         "typing",
+        "tabulate"
     ],
     classifiers=[
         "Development Status :: 1 - Planning",

@@ -11,9 +11,8 @@ import typing as ty
 from collections import OrderedDict, defaultdict
 
 import numpy as np
-from tabulate import tabulate
-
 import torcharrow.dtypes as dt
+from tabulate import tabulate
 
 from .column_factory import Device
 from .expression import expression
@@ -163,6 +162,19 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
             else:
                 raise TypeError('f"{astype}({dtype}) is not supported")')
         raise TypeError('f"{astype} for {type(self).__name__} is not supported")')
+
+    @trace
+    def concat(self, others: List[IColumn]):
+        """Returns column/dataframe with all other columns appended."""
+        # Subclasses can do this faster
+        res = self._EmptyColumn(self.dtype)
+        for me in [self] + others:
+            for (m, d) in me.items():
+                if m:
+                    res._append_null()
+                else:
+                    res._append_value(d)
+        return res._finalize()
 
     # public simple observers -------------------------------------------------
 
@@ -374,6 +386,51 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
             else:
                 res._append_data(fun(i))
         return res._finalize()
+
+    def batch(self, batch_size: int):
+        """Iterator returning each time (upo to) batch_size rows"""
+        if batch_size <= 0:
+            raise TypeError(
+                "{type(self).__name__}.batch must receive positive batch size, got {batch_size}"
+            )
+        i = 0
+        while i < len(self):
+            h = i
+            i += batch_size
+            yield self[h:i]
+
+    @staticmethod
+    def collate(
+        iter: Iterable[IColumn],
+        dtype: Optional[Dtype] = None,
+        scope: Optional[Scope] = None,
+        to: Device = "",
+    ):
+        res = []
+        for i in iter:
+            res.append(i)
+        if len(res) == 0:
+            if dtype is None:
+                raise TypeError(
+                    "{type(self).__name__}.collate requires dtype for empty iterable"
+                )
+            if scope is None:
+                raise TypeError(
+                    "{type(self).__name__}.collate requires a scope for empty iterable"
+                )
+
+            return scope.Column(dtype=dtype, to=to)
+        elif dtype is not None:
+            dtype = dt.common_dtype(res[0].dtype, dtype)
+            if dtype is None:
+                raise TypeError(
+                    "{type(self).__name__}.collate inferred dtype and given dtype must be compatible"
+                )
+        else:  # dtype is None
+            dtype = res[0].dtype
+        scope = scope or res[0].scope
+        to = to or res[0].to
+        return scope.Column(dtype=dtype, to=to).concat(res)
 
     # functools map/filter/reduce ---------------------------------------------
 

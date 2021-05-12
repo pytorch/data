@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import abc
 
+import abc
 import array as ar
 import functools
 from dataclasses import dataclass
@@ -21,12 +21,11 @@ from typing import (
 )
 
 import numpy as np
-
 import torcharrow.dtypes as dt
 
 from .column_factory import ColumnFactory, Device
-from .icolumn import IColumn
 from .expression import Var, eval_expression, expression
+from .icolumn import IColumn
 from .scope import Scope
 from .trace import trace, traceproperty
 

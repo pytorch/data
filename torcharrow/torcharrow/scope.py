@@ -80,10 +80,10 @@ class Scope:
 
     @staticmethod
     def _require_column_constructors_to_be_registered():
-        # pass
-        # requires that all columns have registered their factory methods...
-        # handles cyclic references...
-        from .velox_rt import NumericalColumnCpu
+        from .idataframe import DataFrame
+        from .ilist_column import IListColumn
+        from .imap_column import IMapColumn
+        from .istring_column import IStringColumn
         from .numpy_rt import (
             NumericalColumnStd,
             StringColumnStd,
@@ -91,10 +91,11 @@ class Scope:
             ListColumnStd,
             DataFrameStd,
         )
-        from .istring_column import IStringColumn
-        from .ilist_column import IListColumn
-        from .imap_column import IMapColumn
-        from .idataframe import DataFrame
+
+        # pass
+        # requires that all columns have registered their factory methods...
+        # handles cyclic references...
+        from .velox_rt import NumericalColumnCpu
 
     # private column/dataframe constructors -----------------------------------
     def _EmptyColumn(self, dtype, to="", mask=None):
@@ -143,8 +144,10 @@ class Scope:
 
         to = self.to if to is None else to
 
-        if data is None and dtype is None:
-            raise TypeError("Column requires data and/or dtype parameter")
+        if (data is None) and (dtype is None):
+            raise TypeError(
+                f"Column requires data and/or dtype parameter {data} {dtype}"
+            )
 
         if isinstance(data, dt.DType) and isinstance(dtype, dt.DType):
             raise TypeError("Column can only have one dtype parameter")
