@@ -158,8 +158,7 @@ class TestNumericalColumn(unittest.TestCase):
 
         # maps None
         self.assertEqual(
-            list(col.map({None: 1, 3: 33})),
-            [1, 1, 1, 33, None, None],
+            list(col.map({None: 1, 3: 33})), [1, 1, 1, 33, None, None],
         )
 
         # propagates None
@@ -170,11 +169,7 @@ class TestNumericalColumn(unittest.TestCase):
 
         # maps as function
         self.assertEqual(
-            list(
-                col.map(
-                    lambda x: 1 if x is None else 33 if x == 3 else x,
-                )
-            ),
+            list(col.map(lambda x: 1 if x is None else 33 if x == 3 else x,)),
             [1, 1, 1, 33, 4, 5],
         )
 

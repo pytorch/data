@@ -164,7 +164,7 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
         raise TypeError('f"{astype} for {type(self).__name__} is not supported")')
 
     @trace
-    def concat(self, others: List[IColumn]):
+    def concat(self, others: ty.List[IColumn]):
         """Returns column/dataframe with all other columns appended."""
         # Subclasses can do this faster
         res = self._EmptyColumn(self.dtype)
@@ -401,9 +401,9 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
 
     @staticmethod
     def collate(
-        iter: Iterable[IColumn],
-        dtype: Optional[Dtype] = None,
-        scope: Optional[Scope] = None,
+        iter: ty.Iterable[IColumn],
+        dtype: ty.Optional[dt.DType] = None,
+        scope: ty.Optional[Scope] = None,
         to: Device = "",
     ):
         res = []

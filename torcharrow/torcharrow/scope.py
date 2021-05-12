@@ -133,10 +133,7 @@ class Scope:
 
     @trace
     def Column(
-        self,
-        data=None,
-        dtype: ty.Optional[dt.DType] = None,
-        to: Device = "",
+        self, data=None, dtype: ty.Optional[dt.DType] = None, to: Device = "",
     ):
         """
         Column factory method
