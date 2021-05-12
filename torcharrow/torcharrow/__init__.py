@@ -1,16 +1,29 @@
 # For relative imports to work in Python 3.6
-from .dtypes import *
-from .expression import *
-from .trace import *
-from .column import *
-from .numerical_column import *
-from .string_column import *
-from .map_column import *
-from .list_column import *
-from .dataframe import *
+from .column_factory import *  # dependencies: None
+from .expression import *  # dependencies: None
+from .trace import *  # dependencies: expression
+
+# don't include
+# from .dtypes import *
+# since dtypes define Tuple and List which confuse mypy
+
+from .scope import *  # dependencies: column_factory, dtypes
+
+# following needs scope*
+from .icolumn import *  # dependencies: cyclic dependency to every other column
+from .inumerical_column import *
+from .istring_column import *
+from .ilist_column import *
+from .imap_column import *
+from .idataframe import *
+
+
+from .velox_rt import *
+from .numpy_rt import *
 
 from .interop import *
 
+from .test import *
 
 # 0.1.0
 # Arrow types and columns
@@ -18,6 +31,9 @@ from .interop import *
 # 0.2.0
 # Pandas -- the Good parts --
 
-__version__ = "0.2.0"
+# 0.3.0
+# Multi-targetting, Numpy repr & ops, zero copy
+
+__version__ = "0.3.0"
 __author__ = "Facebook"
-__credits__ = "Pandas, CuDF, Arrow"
+__credits__ = "Pandas, CuDF, Numpy, Arrow"

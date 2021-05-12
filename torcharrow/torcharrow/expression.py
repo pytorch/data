@@ -43,22 +43,21 @@ def expression(fn):
 
 
 class Var(Expression):
-    def __init__(self, id: str):
-        self._id = id
-        # print("VAR", self)
+    def __init__(self, name: str, qualname: str = ""):
+        self._name = name
+        self._qualname = qualname or self._name
 
     def eval_expression(self, env):
-        return env[self._id]
+        return env[self._name]
 
     def __str__(self):
-        return f"{self._id}"
+        return f"{self._qualname}"
 
 
 class GetAttr(Expression):
     def __init__(self, obj: Any, name: str):
         self._obj = obj
         self._name = name
-        # print(f'GEATTR: {self}')
 
     def eval_expression(self, env):
         evaled_obj = eval_expression(self._obj, env)
@@ -82,8 +81,6 @@ class Call(Expression):
         self._func = _func
         self._args = _args
         self._kwargs = _kwargs
-        # print(
-        #     f'CALL: fun= {self._func}, args= {self._args}, kwargs= {self._kwargs}')
 
     def eval_expression(self, env):
         evaled_func = eval_expression(self._func, env)
@@ -95,8 +92,21 @@ class Call(Expression):
             evaled_kwargs = {
                 k: eval_expression(v, env) for k, v in self._kwargs.items()
             }
-        return evaled_func(*evaled_args, **evaled_kwargs)
+        res = evaled_func(*evaled_args, **evaled_kwargs)
+        return res
 
+    @staticmethod
+    def __str(v):
+        # Hack to get rid of <class ' ... '> string in output
+        res = Call._str(v)
+        res = res.replace("<class '", "")
+        res = res.replace('<class "', "")
+        res = res.replace('">', "")
+        res = res.replace("'>", "")
+        res = res.replace("__main__.", "")
+        return res
+
+    @staticmethod
     def _str(v):
         if isinstance(v, (int, float, bool)):
             return str(v)
@@ -120,17 +130,16 @@ class Call(Expression):
 
     def __str__(self):
         args = []
-        # print("STR", self._func, 'args=', self._args, 'kwargs=', self._kwargs)
         if self._args is not None:
-            args = [Call._str(v) for v in self._args]
+            args = [Call.__str(v) for v in self._args]
         if self._kwargs is not None:
             if all(k.isidentifier() and not iskeyword(k) for k in self._kwargs.keys()):
-                args += [f"{str(k)}={Call._str(v)}" for k, v in self._kwargs.items()]
+                args += [f"{str(k)}={Call.__str(v)}" for k, v in self._kwargs.items()]
             else:
                 args += (
                     "**{"
                     + ", ".join(
-                        f"{k} : {Call._str(v)}" for k, v in self._kwargs.items()
+                        f"{k} : {Call.__str(v)}" for k, v in self._kwargs.items()
                     )
                     + "}"
                 )
@@ -139,16 +148,21 @@ class Call(Expression):
             and self._func.__name__ == "__init__"
         ):
             # from T.__init(self,....) to T(...)
-            qname = self._func.__qualname__
-            return f"{qname[:qname.rindex('.')]}({', '.join(args[1:])})"
+            qualname = self._func.__qualname__
+            return f"{qualname[:qualname.rindex('.')]}({', '.join(args[1:])})"
         if isinstance(self._func, type(_dummy_function)) and hasattr(
             self._func, "_is_property"
         ):
-            return f"{args[0]}.{self._func.__name__}"
+            return f"!!{args[0]}.{self._func.__name__}"
         if isinstance(self._func, type(_dummy_function)):
-            return f"{self._func.__qualname__}({', '.join(args)})"
+            module = (
+                ""
+                if self._func.__module__ == "__main__"
+                else self._func.__module__ + "."
+            )
+            return f"{module}{self._func.__qualname__}({', '.join(args)})"
         if isinstance(self._func, GetAttr):
-            return f"{self._func}({', '.join(args)})"
+            return f"{Call.__str(self._func)}({', '.join(args)})"
         raise AssertionError(f"unexpected case {type(self._func)} {self._func}")
 
 
