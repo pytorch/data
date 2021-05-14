@@ -379,12 +379,12 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
     def _vectorize(self, fun, dtype):
         # note: vectorize preserves mask!
         default = dtype.default_value()
-        res = self._EmptyColumn(dtype, mask=self._mask)
+        res = self._EmptyColumn(dtype)
         for m, i in self.items():
             if m:
-                res._append_data(default)
+                res._append_null()
             else:
-                res._append_data(fun(i))
+                res._append_value(fun(i))
         return res._finalize()
 
     def batch(self, batch_size: int):
@@ -838,12 +838,12 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
     def isin(self, values: ty.Union[list, IColumn, dict]):
         """Check whether values are contained in column."""
         # note mask is True
-        res = self._EmptyColumn(dt.boolean, mask=False)
+        res = self._EmptyColumn(dt.boolean, mask=None)
         for m, i in self.items():
             if m:
-                res._append_data(False)
+                res._append_value(False)
             else:
-                res._append_data(i in values)
+                res._append_value(i in values)
         return res._finalize()
 
     @trace
@@ -934,12 +934,12 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
         if not isinstance(fill_value, IColumn.scalar_types):
             raise TypeError(f"fillna with {type(fill_value)} is not supported")
         if isinstance(fill_value, IColumn.scalar_types):
-            res = self._EmptyColumn(self.dtype.constructor(nullable=False), mask=False)
+            res = self._EmptyColumn(self.dtype.constructor(nullable=False), mask=None)
             for m, i in self.items():
                 if not m:
-                    res._append_data(i)
+                    res._append_value(i)
                 else:
-                    res._append_data(fill_value)
+                    res._append_value(fill_value)
             return res._finalize()
         else:
             raise TypeError(f"fillna with {type(fill_value)} is not supported")
@@ -950,10 +950,10 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
         """Return a column/frame with rows removed where a row has any or all
         nulls."""
         if dt.is_primitive(self.dtype):
-            res = self._EmptyColumn(self.dtype.constructor(nullable=False), mask=False)
+            res = self._EmptyColumn(self.dtype.constructor(nullable=False), mask=None)
             for m, i in self.items():
                 if not m:
-                    res._append_data(i)
+                    res._append_value(i)
             return res._finalize()
         else:
             raise TypeError(f"dropna for type {self.dtype} is not supported")

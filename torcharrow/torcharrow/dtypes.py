@@ -1,9 +1,8 @@
-from operator import is_
 import re
 import typing as ty
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-
+from dataclasses import dataclass, replace
+from operator import is_
 
 import numpy as np
 
@@ -830,3 +829,11 @@ def cast_as(dtype):
     if is_floating(dtype):
         return float
     raise AssertionError(f"cast to {dtype} unsupported")
+
+
+def get_underlying_dtype(dtype: DType) -> DType:
+    return replace(dtype, nullable=False)
+
+
+def get_nullable_dtype(dtype: DType) -> DType:
+    return replace(dtype, nullable=True)
