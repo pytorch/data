@@ -9,8 +9,9 @@ from torcharrow.inumerical_column import INumericalColumn
 from torcharrow.scope import ColumnFactory
 from torcharrow.trace import trace
 
+import _torcharrow as velox
+from .typing import get_velox_type
 # ------------------------------------------------------------------------------
-
 
 class NumericalColumnCpu(INumericalColumn):
     """A Numerical Column"""
@@ -30,12 +31,20 @@ class NumericalColumnCpu(INumericalColumn):
     # - the signature of the internal builders must stay the same, e.g
     # _full, _empty, _append_null, _append_value, _append_data, _finalize
 
+    _data : velox.BaseColumn
+    _finialized: bool
     # private
     def __init__(self, scope, to, dtype, data, mask):
         assert dt.is_boolean_or_numerical(dtype)
         super().__init__(scope, to, dtype)
-        self._data = data  # Union[ar.array.np.ndarray]
-        self._mask = mask  # Union[ar.array.np.ndarray]
+        self._data = velox.Column(get_velox_type(dtype))
+        for m, d in zip(mask.tolist(), data.tolist()):
+            if m:
+                self._data.append_null()
+            else:
+                self._data.append(d)
+        self._finialized = False
+
 
     @staticmethod
     def _full(scope, to, data, dtype=None, mask=None):
@@ -66,11 +75,13 @@ class NumericalColumnCpu(INumericalColumn):
         return NumericalColumnCpu(scope, to, dtype, ar.array(dtype.arraycode), _mask)
 
     def _append_null(self):
-        self._mask.append(True)
-        self._data.append(self.dtype.default)
+        if self._finialized:
+            raise AttributeError("It is already finialized.")
+        self._data.append_null()
 
     def _append_value(self, value):
-        self._mask.append(False)
+        if self._finialized:
+            raise AttributeError("It is already finialized.")
         if isinstance(value, np.bool_):
             # TODO Get rid of case. Currently required due to Numpy 's
             # DeprecationWarning: In future, it will be an error for 'np.bool_' scalars to be interpreted as an index
@@ -79,18 +90,12 @@ class NumericalColumnCpu(INumericalColumn):
             self._data.append(value)
 
     def _append_data(self, value):
+        if self._finialized:
+            raise AttributeError("It is already finialized.")
         self._data.append(value)
 
     def _finalize(self):
-        self._data = np.array(
-            self._data, dtype=dt.np_typeof_dtype(self.dtype), copy=False
-        )
-        if isinstance(self._mask, (bool, np.bool8)):
-            self._mask = np.full((len(self._data),), self._mask, dtype=np.bool8)
-        elif isinstance(self._mask, ar.array):
-            self._mask = np.array(self._mask, dtype=np.bool8, copy=False)
-        else:
-            assert isinstance(self._mask, np.ndarray)
+        self._finialized = True
         return self
 
     def _valid_mask(self, ct):
@@ -101,17 +106,24 @@ class NumericalColumnCpu(INumericalColumn):
 
     def null_count(self):
         """Return number of null items"""
-        return sum(self._mask) if self.isnullable else 0
+        return self._data.get_null_count()
 
     @trace
     def copy(self):
         return self.scope._FullColumn(self._data.copy(), self.mask.copy())
 
     def getdata(self, i):
-        return self._data[i]
+        if i < 0:
+            i += len(self._data)
+        if self._data.is_null_at(i):
+            return self.dtype.default
+        else:
+            return self._data[i]
 
     def getmask(self, i):
-        return self._mask[i]
+        if i < 0:
+            i += len(self._data)
+        return self._data.is_null_at(i)
 
 
 # ------------------------------------------------------------------------------
