@@ -1,11 +1,11 @@
 import unittest
 
-import torcharrow as T
+from torcharrow import Scope
+from .test_numerical_column import TestNumericalColumn
 
-
-class TestNumericalColumnCpu(T.TestNumericalColumn):
+class TestNumericalColumnCpu(TestNumericalColumn):
     def setUp(self):
-        self.ts = T.Scope({"device": "cpu"})
+        self.ts = Scope({"device": "cpu"})
 
     def test_internals_empty(self):
         self.assertEqual(self.base_test_internals_empty(), "cpu")
