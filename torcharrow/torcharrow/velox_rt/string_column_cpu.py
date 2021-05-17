@@ -1,22 +1,24 @@
 import array as ar
 from dataclasses import dataclass
 from typing import cast
-from tabulate import tabulate
 
+import _torcharrow as velox
 import numpy as np
 import numpy.ma as ma
-
 import torcharrow.dtypes as dt
-from torcharrow.istring_column import IStringColumn, IStringMethods
+from tabulate import tabulate
 from torcharrow.expression import expression
+from torcharrow.istring_column import IStringColumn, IStringMethods
 from torcharrow.scope import ColumnFactory
 
+from .column import ColumnFromVelox
+from .typing import get_velox_type
 
 # ------------------------------------------------------------------------------
-# StringColumnStd
+# StringColumnCpu
 
 
-class StringColumnStd(IStringColumn):
+class StringColumnCpu(IStringColumn, ColumnFromVelox):
 
     # Remark: Choosing a representation:
     #
@@ -36,9 +38,15 @@ class StringColumnStd(IStringColumn):
         assert dt.is_string(dtype)
         super().__init__(scope, to, dtype)
 
-        self._data = data
-        self._mask = mask
-        self.str = StringMethodsStd(self)
+        self._data = velox.Column(get_velox_type(dtype))
+        for m, d in zip(mask.tolist(), data):
+            if m:
+                self._data.append_null()
+            else:
+                self._data.append(d)
+        self._finialized = False
+
+        self.str = StringMethodsCpu(self)
         # REP: self._offsets = offsets
 
     # Any _empty must be followed by a _finalize; no other ops are allowed during this time
@@ -47,7 +55,7 @@ class StringColumnStd(IStringColumn):
     def _empty(scope, to, dtype, mask=None):
         _mask = mask if mask is not None else ar.array("b")
         # REP  ar.array("I", [0])
-        return StringColumnStd(scope, to, dtype, [], _mask)
+        return StringColumnCpu(scope, to, dtype, [], _mask)
 
     @staticmethod
     def _full(scope, to, data, dtype=None, mask=None):
@@ -70,43 +78,46 @@ class StringColumnStd(IStringColumn):
         elif len(data) != len(mask):
             raise ValueError(f"data length {len(data)} must be mask length {len(mask)}")
         # TODO check that all non-masked items are strings
-        return StringColumnStd(scope, to, dtype, data, mask)
+        return StringColumnCpu(scope, to, dtype, data, mask)
 
     def _append_null(self):
-        self._mask.append(True)
-        self._data.append(dt.String.default)
-        # REP: offsets.append(offsets[-1])
+        if self._finialized:
+            raise AttributeError("It is already finialized.")
+        self._data.append_null()
 
     def _append_value(self, value):
-        self._mask.append(False)
-        self._data.append(value)
-        # REP: offsets.append(offsets[-1] + len(i))
+        if self._finialized:
+            raise AttributeError("It is already finialized.")
+        else:
+            self._data.append(value)
 
     def _append_data(self, value):
+        if self._finialized:
+            raise AttributeError("It is already finialized.")
         self._data.append(value)
 
     def _finalize(self):
-        self._data = np.array(self._data, dtype=object)
-        if isinstance(self._mask, (bool, np.bool8)):
-            self._mask = StringColumnStd._valid_mask(len(self._data))
-        elif isinstance(self._mask, ar.array):
-            self._mask = np.array(self._mask, dtype=np.bool8, copy=False)
-        else:
-            assert isinstance(self._mask, np.ndarray)
+        self._finialized = True
         return self
 
     def __len__(self):
         return len(self._data)
 
     def null_count(self):
-        return self._mask.sum()
+        return self._data.get_null_count()
 
     def getmask(self, i):
-        return self._mask[i]
+        if i < 0:
+            i += len(self._data)
+        return self._data.is_null_at(i)
 
     def getdata(self, i):
-        return self._data[i]
-        # REP: return self._data[self._offsets[i]: self._offsets[i + 1]]
+        if i < 0:
+            i += len(self._data)
+        if self._data.is_null_at(i):
+            return self.dtype.default
+        else:
+            return self._data[i]
 
     @staticmethod
     def _valid_mask(ct):
@@ -125,18 +136,14 @@ class StringColumnStd(IStringColumn):
 
     def append(self, values):
         """Returns column/dataframe with values appended."""
-        tmp = self.scope.Column(values, dtype=self.dtype, to=self.to)
-        return self.scope._FullColumn(
-            np.append(self._data, tmp._data),
-            self.dtype,
-            self.to,
-            np.append(self._mask, tmp._mask),
-        )
+        for value in values:
+            self._data.append(value)
+        return self
 
     # operators ---------------------------------------------------------------
     @expression
     def __eq__(self, other):
-        if isinstance(other, StringColumnStd):
+        if isinstance(other, StringColumnCpu):
             res = self._EmptyColumn(
                 dt.Boolean(self.dtype.nullable or other.dtype.nullable),
                 self._mask | other._mask,
@@ -175,20 +182,20 @@ class StringColumnStd(IStringColumn):
 
 
 # ------------------------------------------------------------------------------
-# StringMethodsStd
+# StringMethodsCpu
 
 
-class StringMethodsStd(IStringMethods):
+class StringMethodsCpu(IStringMethods):
     """Vectorized string functions for IStringColumn"""
 
-    def __init__(self, parent: StringColumnStd):
+    def __init__(self, parent: StringColumnCpu):
         super().__init__(parent)
 
     def cat(self, others=None, sep: str = "", fill_value: str = None) -> IStringColumn:
         """
         Concatenate strings with given separator and n/a substitition.
         """
-        me = cast(StringColumnStd, self._parent)
+        me = cast(StringColumnCpu, self._parent)
         assert all(me.to == other.to for other in others)
 
         _all = [me] + others
@@ -221,8 +228,8 @@ class StringMethodsStd(IStringMethods):
 
 # ------------------------------------------------------------------------------
 # registering the factory
-ColumnFactory.register((dt.String.typecode + "_empty", "std"), StringColumnStd._empty)
-ColumnFactory.register((dt.String.typecode + "_full", "std"), StringColumnStd._full)
+ColumnFactory.register((dt.String.typecode + "_empty", "cpu"), StringColumnCpu._empty)
+ColumnFactory.register((dt.String.typecode + "_full", "cpu"), StringColumnCpu._full)
 
 
 def _is_not_str(s):
