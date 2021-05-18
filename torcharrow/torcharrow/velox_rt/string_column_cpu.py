@@ -13,6 +13,7 @@ from torcharrow.scope import ColumnFactory
 
 from .column import ColumnFromVelox
 from .typing import get_velox_type
+from .column import ColumnFromVelox
 
 # ------------------------------------------------------------------------------
 # StringColumnCpu
