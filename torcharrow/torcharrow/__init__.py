@@ -21,7 +21,7 @@ from .idataframe import *
 from .velox_rt import *
 from .numpy_rt import *
 
-from .interop import *
+# from .interop import *
 
 
 # 0.1.0
