@@ -1,19 +1,21 @@
 import array as ar
 from typing import Dict, List, Literal, Optional, Union, cast
 
+import _torcharrow as velox
 import numpy as np
-
 import torcharrow.dtypes as dt
 from torcharrow.icolumn import IColumn
 from torcharrow.inumerical_column import INumericalColumn
 from torcharrow.scope import ColumnFactory
 from torcharrow.trace import trace
 
-import _torcharrow as velox
+from .column import ColumnFromVelox
 from .typing import get_velox_type
+
 # ------------------------------------------------------------------------------
 
-class NumericalColumnCpu(INumericalColumn):
+
+class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
     """A Numerical Column"""
 
     # NumericalColumnCpu is currently exactly the same code as
@@ -31,8 +33,6 @@ class NumericalColumnCpu(INumericalColumn):
     # - the signature of the internal builders must stay the same, e.g
     # _full, _empty, _append_null, _append_value, _append_data, _finalize
 
-    _data : velox.BaseColumn
-    _finialized: bool
     # private
     def __init__(self, scope, to, dtype, data, mask):
         assert dt.is_boolean_or_numerical(dtype)
@@ -44,7 +44,6 @@ class NumericalColumnCpu(INumericalColumn):
             else:
                 self._data.append(d)
         self._finialized = False
-
 
     @staticmethod
     def _full(scope, to, data, dtype=None, mask=None):
