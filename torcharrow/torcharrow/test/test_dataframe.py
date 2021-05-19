@@ -12,7 +12,7 @@ class TestDataFrame(unittest.TestCase):
     def setUp(self):
         self.ts = Scope()
 
-    def test_internals_empty(self):
+    def base_test_internals_empty(self):
         empty = self.ts.DataFrame()
 
         # testing internals...
@@ -24,7 +24,7 @@ class TestDataFrame(unittest.TestCase):
         self.assertEqual(len(empty._mask), 0)
         self.assertEqual(empty.columns, [])
 
-    def test_internals_full(self):
+    def base_test_internals_full(self):
         df = self.ts.DataFrame(dt.Struct([dt.Field("a", dt.int64)]))
         for i in range(4):
             df = df.append([(i,)])
@@ -46,7 +46,7 @@ class TestDataFrame(unittest.TestCase):
         #     self.assertEqual(df.length(), 5)
         #     self.assertEqual(df.null_count(), 1)
 
-    def test_internals_full_nullable(self):
+    def base_test_internals_full_nullable(self):
         with self.assertRaises(TypeError):
             #  TypeError: nullable structs require each field (like a) to be nullable as well.
             df = self.ts.DataFrame(
@@ -90,7 +90,7 @@ class TestDataFrame(unittest.TestCase):
         # len
         self.assertEqual(len(df), 6)
 
-    def test_internals_column_indexing(self):
+    def base_test_internals_column_indexing(self):
         df = self.ts.DataFrame()
         df["a"] = self.ts.Column([None] * 3, dtype=dt.Int64(nullable=True))
         df["b"] = self.ts.Column([1, 2, 3])
@@ -110,7 +110,7 @@ class TestDataFrame(unittest.TestCase):
         self.assertEqual(df["b":].columns, ["b", "c"])
         self.assertEqual(df["a":"c"].columns, ["a", "b"])
 
-    def test_infer(self):
+    def base_test_infer(self):
         df = self.ts.DataFrame({"a": [1, 2, 3], "b": [1.0, None, 3]})
         self.assertEqual(df.columns, ["a", "b"])
         self.assertEqual(
@@ -146,7 +146,7 @@ class TestDataFrame(unittest.TestCase):
     def _add(a, b):
         return a + b
 
-    def test_map_where_filter(self):
+    def base_test_map_where_filter(self):
         # TODO have to decide on whether to follow Pandas, map, filter or our own.
 
         df = self.ts.DataFrame()
@@ -183,7 +183,7 @@ class TestDataFrame(unittest.TestCase):
             [(1, 11, "a", 100), (2, 22, "b", 200)],
         )
 
-    def test_sort_stuff(self):
+    def base_test_sort_stuff(self):
         df = self.ts.DataFrame({"a": [1, 2, 3], "b": [1.0, None, 3]})
         self.assertEqual(
             list(df.sort(by="a", ascending=False)),
@@ -214,7 +214,7 @@ class TestDataFrame(unittest.TestCase):
         )
         self.assertEqual(list(df.reverse()), [(3, 3.0, 1), (2, None, 4), (1, 1.0, 4)])
 
-    def test_operators(self):
+    def base_test_operators(self):
         # without None
         c = self.ts.DataFrame({"a": [0, 1, 3]})
 
@@ -325,7 +325,7 @@ class TestDataFrame(unittest.TestCase):
         except:
             self.assertTrue(False)
 
-    def test_na_handling(self):
+    def base_test_na_handling(self):
         c = self.ts.DataFrame({"a": [None, 2, 17.0]})
 
         self.assertEqual(list(c.fillna(99.0)), [(i,) for i in [99.0, 2, 17.0]])
@@ -352,7 +352,7 @@ class TestDataFrame(unittest.TestCase):
             [(None, 1.0), (2.0, 2.0), (17.0, 17.0), (7.0, 2.0), (2.0, 1.0)],
         )
 
-    def test_agg_handling(self):
+    def base_test_agg_handling(self):
         import functools
         import operator
 
@@ -395,18 +395,18 @@ class TestDataFrame(unittest.TestCase):
         self.assertEqual((C % 2 == 0)[:-1].all(), all(i % 2 == 0 for i in c))
         self.assertEqual((C % 2 == 0)[:-1].any(), any(i % 2 == 0 for i in c))
 
-    def test_isin(self):
+    def base_test_isin(self):
         c = [1, 4, 2, 7]
         C = self.ts.DataFrame({"a": c + [None]})
         self.assertEqual(
             list(C.isin([1, 2, 3])), [(i,) for i in [True, False, True, False, False]]
         )
 
-    def test_isin2(self):
+    def base_test_isin2(self):
         df = self.ts.DataFrame({"A": [1, 2, 3], "B": [1, 1, 1]})
         self.assertEqual(list(df.nunique()), [("A", 3), ("B", 1)])
 
-    def test_describe_dataframe(self):
+    def base_test_describe_dataframe(self):
         # TODO introduces cyclic dependency between Column and Dataframe, need diff design...
         c = self.ts.DataFrame({"a": self.ts.Column([1, 2, 3])})
         self.assertEqual(
@@ -423,7 +423,7 @@ class TestDataFrame(unittest.TestCase):
             ],
         )
 
-    def test_drop_keep_rename_reorder_pipe(self):
+    def base_test_drop_keep_rename_reorder_pipe(self):
         df = self.ts.DataFrame()
         df["a"] = [1, 2, 3]
         df["b"] = [11, 22, 33]
@@ -453,7 +453,7 @@ class TestDataFrame(unittest.TestCase):
 
         self.assertEqual(list(df + 13), list(df.pipe(g, 13)))
 
-    def test_me_on_str(self):
+    def base_test_me_on_str(self):
         df = self.ts.DataFrame()
         df["a"] = [1, 2, 3]
         df["b"] = [11, 22, 33]
@@ -463,7 +463,7 @@ class TestDataFrame(unittest.TestCase):
             list(df.where(me["c"].str.capitalize() == me["c"])), [(3, 33, "C")]
         )
 
-    def test_locals_and_me_equivalence(self):
+    def base_test_locals_and_me_equivalence(self):
         df = self.ts.DataFrame()
         df["a"] = [1, 2, 3]
         df["b"] = [11, 22, 33]
@@ -481,7 +481,7 @@ class TestDataFrame(unittest.TestCase):
         gf = self.ts.DataFrame({"a": df["a"], "b": df["b"], "c": df["a"] + df["b"]})
         self.assertEqual(list(df.select("*", d=me["a"] + me["b"])), list(gf))
 
-    def test_groupby_size_pipe(self):
+    def base_test_groupby_size_pipe(self):
         df = self.ts.DataFrame({"a": [1, 1, 2], "b": [1, 2, 3], "c": [2, 2, 1]})
         self.assertEqual(list(df.groupby("a").size), [(1, 2), (2, 1)])
 
@@ -494,7 +494,7 @@ class TestDataFrame(unittest.TestCase):
         # self.assertEqual(list(df.groupby('A').select(B=me['B'].max() - me['B'].min())),
         #                  [('a',  2), ('b', 2)])
 
-    def test_groupby_agg(self):
+    def base_test_groupby_agg(self):
         df = self.ts.DataFrame({"A": ["a", "b", "a", "b"], "B": [1, 2, 3, 4]})
 
         self.assertEqual(list(df.groupby("A").agg("sum")), [("a", 4), ("b", 6)])
@@ -513,7 +513,7 @@ class TestDataFrame(unittest.TestCase):
             [(1, 2, 1, 1.5), (2, 1, 3, 3.0)],
         )
 
-    def test_groupby_iter_get_item_ops(self):
+    def base_test_groupby_iter_get_item_ops(self):
         df = self.ts.DataFrame({"A": ["a", "b", "a", "b"], "B": [1, 2, 3, 4]})
         for g, gf in df.groupby("A"):
             if g == ("a",):
