@@ -595,7 +595,8 @@ class NumericalColumnStd(INumericalColumn):
     @trace
     @expression
     def drop_duplicates(
-        self, subset: Optional[List[str]] = None,
+        self,
+        subset: Optional[List[str]] = None,
     ):
         """Remove duplicate values from row/frame"""
         if subset is not None:

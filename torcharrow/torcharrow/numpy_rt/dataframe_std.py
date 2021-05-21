@@ -335,7 +335,11 @@ class DataFrameStd(IDataFrame):
         self._check_columns(columns)
 
         if len(columns) == 1:
-            return self._field_data[columns[0]].flatmap(arg, na_action, dtype,)
+            return self._field_data[columns[0]].flatmap(
+                arg,
+                na_action,
+                dtype,
+            )
         else:
 
             def func(x):
@@ -928,7 +932,10 @@ class DataFrameStd(IDataFrame):
     @trace
     @expression
     def describe(
-        self, percentiles=None, include_columns=None, exclude_columns=None,
+        self,
+        percentiles=None,
+        include_columns=None,
+        exclude_columns=None,
     ):
         """Generate descriptive statistics."""
         # Not supported: datetime_is_numeric=False,
@@ -1140,7 +1147,10 @@ class DataFrameStd(IDataFrame):
     @trace
     @expression
     def groupby(
-        self, by: List[str], sort=False, dropna=True,
+        self,
+        by: List[str],
+        sort=False,
+        dropna=True,
     ):
         # TODO implement
         assert not sort

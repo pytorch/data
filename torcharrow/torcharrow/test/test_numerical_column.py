@@ -1,4 +1,3 @@
-import functools
 import statistics
 import unittest
 from math import ceil, floor
@@ -15,7 +14,10 @@ class TestNumericalColumn(unittest.TestCase):
     # def setUp(self):
     #     self.ts = Scope({"device": "cpu"})
 
-    def base_test_internals_empty(self):
+    # Note all tests have to be against public API
+    # test internals in implementation specific tests
+
+    def base_test_empty(self):
         empty_i64_column = self.ts.Column(dtype=dt.int64)
 
         # testing internals...
@@ -24,53 +26,43 @@ class TestNumericalColumn(unittest.TestCase):
         self.assertEqual(len(empty_i64_column), 0)
         self.assertEqual(empty_i64_column.null_count(), 0)
         self.assertEqual(len(empty_i64_column), 0)
-        self.assertEqual(len(empty_i64_column._mask), 0)
-        return empty_i64_column.to
+        return empty_i64_column
 
-    def base_test_internals_full(self):
+    def base_test_full(self):
         col = self.ts.Column([i for i in range(4)], dtype=dt.int64)
 
         # self.assertEqual(col._offset, 0)
         self.assertEqual(len(col), 4)
         self.assertEqual(col.null_count(), 0)
-        self.assertEqual(len(col._data), 4)
-        self.assertEqual(len(col._mask), 4)
         self.assertEqual(list(col), list(range(4)))
         m = col[0 : len(col)]
         self.assertEqual(list(m), list(range(4)))
+        return col
+
+    def base_test_is_immutable(self):
+        col = self.ts.Column([i for i in range(4)], dtype=dt.int64)
         with self.assertRaises(AttributeError):
             # AssertionError: can't append a finalized list
             col._append(None)
 
-    def base_test_internals_full_nullable(self):
+    def base_test_full_nullable(self):
         col = self.ts.Column(dtype=dt.Int64(nullable=True))
 
         col = col.append([None, None, None])
-        self.assertEqual(col._data[-1], dt.Int64(nullable=True).default)
-        self.assertEqual(col._mask[-1], True)
+        self.assertEqual(col[-1], None)
 
         col = col.append([3])
-        self.assertEqual(col._data[-1], 3)
-        self.assertEqual(col._mask[-1], False)
+        self.assertEqual(col[-1], 3)
 
         self.assertEqual(col.length(), 4)
         self.assertEqual(col.null_count(), 3)
-        self.assertEqual(len(col._data), 4)
-        self.assertEqual(len(col._mask), 4)
 
         self.assertEqual(col[0], None)
         self.assertEqual(col[3], 3)
 
         self.assertEqual(list(col), [None, None, None, 3])
 
-        # # extend
-        # col = col.append([4, 5])
-        # self.assertEqual(list(col), [None, None, None, 3, 4, 5])
-
-        # # len
-        # self.assertEqual(len(col), 6)
-
-    def base_test_internals_indexing(self):
+    def base_test_indexing(self):
         col = self.ts.Column([None] * 3 + [3, 4, 5], dtype=dt.Int64(nullable=True))
 
         # index
@@ -121,21 +113,22 @@ class TestNumericalColumn(unittest.TestCase):
 
         # int
         c = self.ts.Column([1])
-        self.assertEqual(c._dtype, dt.int64)
+        self.assertEqual(c.dtype, dt.int64)
         self.assertEqual(list(c), [1])
 
         # bool
         c = self.ts.Column([True, None])
-        self.assertEqual(c._dtype, dt.Boolean(nullable=True))
+        self.assertEqual(c.dtype, dt.Boolean(nullable=True))
         self.assertEqual(list(c), [True, None])
 
-        # inconsistent info
-        with self.assertRaises(ValueError):
-            self.ts.Column([True, 1])
+        # note implicit promotion of bool to int
+        c = self.ts.Column([True, 1])
+        self.assertEqual(c.dtype, dt.int64)
+        self.assertEqual(list(c), [1, 1])
 
         # float
         c = self.ts.Column([1, 2.0])
-        self.assertEqual(c._dtype, dt.float64)
+        self.assertEqual(c.dtype, dt.float64)
         self.assertEqual(list(c), [1.0, 2.0])
 
         # dt.string:: to do in a different tests
@@ -158,7 +151,8 @@ class TestNumericalColumn(unittest.TestCase):
 
         # maps None
         self.assertEqual(
-            list(col.map({None: 1, 3: 33})), [1, 1, 1, 33, None, None],
+            list(col.map({None: 1, 3: 33})),
+            [1, 1, 1, 33, None, None],
         )
 
         # propagates None
@@ -169,7 +163,11 @@ class TestNumericalColumn(unittest.TestCase):
 
         # maps as function
         self.assertEqual(
-            list(col.map(lambda x: 1 if x is None else 33 if x == 3 else x,)),
+            list(
+                col.map(
+                    lambda x: 1 if x is None else 33 if x == 3 else x,
+                )
+            ),
             [1, 1, 1, 33, 4, 5],
         )
 
