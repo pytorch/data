@@ -35,6 +35,10 @@ class IListMethods(abc.ABC):
     def __init__(self, parent):
         self._parent: IListColumn = parent
 
+    def length(self):
+        me = self._parent
+        return me._vectorize(len, dt.Int64(me.dtype.nullable))
+
     def join(self, sep):
         """Join lists contained as elements with passed delimiter."""
         me = self._parent
@@ -74,6 +78,7 @@ class IListMethods(abc.ABC):
         return me._vectorize(func, dtype)
 
     def filter(self, pred):
+        print()
         me = self._parent
 
         def func(xs):

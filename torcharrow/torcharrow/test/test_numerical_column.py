@@ -413,6 +413,7 @@ class TestNumericalColumn(unittest.TestCase):
             ],
         )
 
+    # experimental
     def base_test_batch_collate(self):
         c = self.ts.Column([1, 2, 3, 4, 5, 6, 7])
         # test iter
@@ -423,7 +424,7 @@ class TestNumericalColumn(unittest.TestCase):
         self.assertEqual(res, [[1, 2], [3, 4], [5, 6], [7]])
         # test collate
         it = c.batch(2)
-        self.assertEqual(list(IColumn.collate(it)), [1, 2, 3, 4, 5, 6, 7])
+        self.assertEqual(list(IColumn.unbatch(it)), [1, 2, 3, 4, 5, 6, 7])
 
 
 if __name__ == "__main__":

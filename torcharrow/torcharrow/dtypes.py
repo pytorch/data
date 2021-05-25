@@ -577,35 +577,40 @@ def is_tuple(t):
 PREFIX_LENGTH = 5
 
 
+def prt(value, type):
+    # print("<", value, ":", type, ">")
+    return type
+
+
 def infer_dtype_from_value(value):
     if value is None:
         return Void()
     if isinstance(value, (bool, np.bool8)):
-        return boolean
+        return prt(value, boolean)
     if isinstance(value, (int, np.integer)):
-        return int64
+        return prt(value, int64)
     if isinstance(value, (float, np.float32, np.float64)):
-        return float64
+        return prt(value, float64)
     if isinstance(value, (str, np.str_)):
-        return string
+        return prt(value, string)
     if isinstance(value, list):
         dtype = infer_dtype_from_prefix(value[:PREFIX_LENGTH])
-        return List(dtype)
+        return prt(value, List(dtype))
     if isinstance(value, dict):
         key_dtype = infer_dtype_from_prefix(list(value.keys())[:PREFIX_LENGTH])
         items_dtype = infer_dtype_from_prefix(list(value.values())[:PREFIX_LENGTH])
-        return Map(key_dtype, items_dtype)
+        return prt(value, Map(key_dtype, items_dtype))
     if isinstance(value, tuple):
         dtypes = []
         for t in value:
             dtypes.append(infer_dtype_from_value(t))
-        return Tuple(dtypes)
+        return prt(value, Tuple(dtypes))
     raise AssertionError(f"unexpected case {value} of type {type(value)}")
 
 
 def infer_dtype_from_prefix(prefix):
     if len(prefix) == 0:
-        raise ValueError(f"Cannot infer type of f{prefix}")
+        raise ValueError(f"Cannot infer type of {prefix}")
     dtype = infer_dtype_from_value(prefix[0])
     for p in prefix[1:]:
         old_dtype = dtype

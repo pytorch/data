@@ -1,10 +1,10 @@
-import torch
+import torch  # type: ignore
 from dataclasses import dataclass
 from collections import OrderedDict
 from typing import TypeVar, Generic, Union, List, Any, Optional, Tuple
 from .dtypes import DType, is_numerical, is_struct, is_list, is_map, is_string
-from .column import Column
-from .dataframe import DataFrame
+from .icolumn import Column
+from .idataframe import DataFrame
 from . import dtypes
 
 T = TypeVar("T")
@@ -62,7 +62,7 @@ def infer_dtype_from_torch(
             raise TypeError(
                 "PackedList.offsets is expected to be an integer-valued tensor"
             )
-        return dtypes.List_(infer_dtype_from_torch(data.values))
+        return dtypes.List(infer_dtype_from_torch(data.values))
 
     if isinstance(data, PackedMap):
         if not isinstance(data.offsets, torch.Tensor) or data.offsets.dtype not in [
@@ -84,7 +84,7 @@ def infer_dtype_from_torch(
             assert len(fields) == len(types)
             return dtypes.Struct([dtypes.Field(n, t) for n, t in zip(fields, types)])
         else:
-            return dtypes.Tuple_(types)
+            return dtypes.Tuple(types)
 
     if isinstance(data, list):
         return dtypes.infer_dtype_from_prefix(data)
@@ -129,7 +129,7 @@ def from_torch(
             raise ValueError(
                 f"Expected list type when the value is pytorch.PackedList: {dtype}"
             )
-        assert isinstance(dtype, dtypes.List_)  # make mypy happy
+        assert isinstance(dtype, dtypes.List)  # make mypy happy
         nested = list(from_torch(data.values, dtype=dtype.item_dtype))
         if not isinstance(data.offsets, torch.Tensor) or data.offsets.dtype not in [
             torch.int16,
