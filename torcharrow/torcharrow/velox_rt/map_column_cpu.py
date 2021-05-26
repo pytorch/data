@@ -26,8 +26,6 @@ class MapColumnCpu(IMapColumn, ColumnFromVelox):
         self._data = velox.Column(
             velox.MAP(get_velox_type(dtype.key_dtype), get_velox_type(dtype.item_dtype))
         )
-        # key_col = velox.Column(get_velox_type(dtype.key_dtype))
-        # value_col = velox.Column(get_velox_type(dtype.item_dtype))
 
         self._finialized = False
 
@@ -127,19 +125,6 @@ class MapColumnCpu(IMapColumn, ColumnFromVelox):
     @staticmethod
     def _valid_mask(ct):
         raise np.full((ct,), False, dtype=np.bool8)
-
-    def append(self, values):
-        """Returns column/dataframe with values appended."""
-        for value in values:
-            if value is None:
-                raise NotImplementedError()
-            else:
-                new_key = self.scope.Column(self._dtype.key_dtype)
-                new_value = self.scope.Column(self._dtype.item_dtype)
-                new_key = new_key.append(value.keys())
-                new_value = new_value.append(value.values())
-                self._data.append(new_key._data, new_value._data)
-        return self
 
     # printing ----------------------------------------------------------------
     def __str__(self):

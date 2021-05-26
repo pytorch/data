@@ -6,11 +6,15 @@ from torcharrow import Scope, IStringColumn
 from .test_string_column import TestStringColumn
 
 
-class TestStringColumnCpu(TestStringColumn):
+class TestStringColumnStd(TestStringColumn):
     def setUp(self):
-        self.ts = Scope({"device": "cpu"})
+        self.ts = Scope({"device": "std"})
 
     def test_empty(self):
+        empty = self.ts.Column(dt.string)
+        self.assertEqual(len(empty._data), 0)
+        self.assertEqual(len(empty._mask), 0)
+
         self.base_test_empty()
 
     def test_append_offsets(self):

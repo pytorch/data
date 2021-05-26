@@ -7,11 +7,20 @@ from torcharrow import IListColumn, INumericalColumn, Scope
 from .test_list_column import TestListColumn
 
 
-class TestListColumnCpu(TestListColumn):
+class TestListColumnStd(TestListColumn):
     def setUp(self):
-        self.ts = Scope({"device": "cpu"})
+        self.ts = Scope({"device": "std"})
 
     def test_empty(self):
+        c = self.ts.Column(dt.List(dt.int64))
+
+        self.assertTrue(isinstance(c._data, INumericalColumn))
+        self.assertEqual(c._data.dtype, dt.int64)
+
+        self.assertEqual(len(c._offsets), 1)
+        self.assertEqual(c._offsets[0], 0)
+        self.assertEqual(len(c._mask), 0)
+
         self.base_test_empty()
 
     def test_nonempty(self):

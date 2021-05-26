@@ -135,33 +135,26 @@ class StringColumnCpu(IStringColumn, ColumnFromVelox):
             self._data[range], self.dtype, self.to, self._mask[range]
         )
 
-    def append(self, values):
-        """Returns column/dataframe with values appended."""
-        for value in values:
-            self._data.append(value)
-        return self
-
     # operators ---------------------------------------------------------------
     @expression
     def __eq__(self, other):
         if isinstance(other, StringColumnCpu):
             res = self._EmptyColumn(
                 dt.Boolean(self.dtype.nullable or other.dtype.nullable),
-                self._mask | other._mask,
             )
             for (m, i), (n, j) in zip(self.items(), other.items()):
                 if m or n:
-                    res._append_data(dt.Boolean.default)
+                    res._data.append_null()
                 else:
-                    res._append_data(i == j)
+                    res._data.append(i == j)
             return res._finalize()
         else:
-            res = self._EmptyColumn(dt.Boolean(self.dtype.nullable), self._mask)
+            res = self._EmptyColumn(dt.Boolean(self.dtype.nullable))
             for (m, i) in self.items():
                 if m:
-                    res._append_data(dt.Boolean.default)
+                    res._data.append_null()
                 else:
-                    res._append_data(i == other)
+                    res._data.append(i == other)
             return res._finalize()
 
     # printing ----------------------------------------------------------------

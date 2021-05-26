@@ -7,9 +7,9 @@ from torcharrow import Scope, IMapColumn
 from .test_map_column import TestMapColumn
 
 
-class TestMapColumnCpu(TestMapColumn):
+class TestMapColumnStd(TestMapColumn):
     def setUp(self):
-        self.ts = Scope({"device": "cpu"})
+        self.ts = Scope({"device": "std"})
 
     def test_map(self):
         self.base_test_map()

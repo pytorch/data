@@ -86,17 +86,6 @@ class ListColumnCpu(IListColumn, ColumnFromVelox):
                 )
             )
 
-    def append(self, values):
-        """Returns column/dataframe with values appended."""
-        for value in values:
-            if value is None:
-                self._data.append_null()
-            else:
-                new_element_column = self._scope.Column(self._dtype.item_dtype)
-                new_element_column = new_element_column.append(value)
-                self._data.append(new_element_column._data)
-        return self
-
     def concat(self, values):
         """Returns column/dataframe with values appended."""
         # tmp = self.scope.Column(values, dtype=self.dtype, to = self.to)

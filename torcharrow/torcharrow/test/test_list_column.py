@@ -6,26 +6,17 @@ from torcharrow import IListColumn, INumericalColumn, Scope
 
 
 class TestListColumn(unittest.TestCase):
-    def setUp(self):
-        self.ts = Scope()
-
-    def test_empty(self):
+    def base_test_empty(self):
         c = self.ts.Column(dt.List(dt.int64))
 
         self.assertTrue(isinstance(c, IListColumn))
         self.assertEqual(c.dtype, dt.List(dt.int64))
 
-        self.assertTrue(isinstance(c._data, INumericalColumn))
-        self.assertEqual(c._data.dtype, dt.int64)
-
         self.assertEqual(c.length(), 0)
         self.assertEqual(c.null_count(), 0)
 
-        self.assertEqual(len(c._offsets), 1)
-        self.assertEqual(c._offsets[0], 0)
-        self.assertEqual(len(c._mask), 0)
 
-    def test_nonempty(self):
+    def base_test_nonempty(self):
         c = self.ts.Column(dt.List(dt.int64))
         for i in range(4):
             c = c.append([list(range(i))])
@@ -34,7 +25,7 @@ class TestListColumn(unittest.TestCase):
         for i, lst in zip(range(4), verdict):
             self.assertEqual(c[i], lst)
 
-    def test_nested_numerical_twice(self):
+    def base_test_nested_numerical_twice(self):
         c = self.ts.Column(
             dt.List(dt.List(dt.Int64(nullable=False), nullable=True), nullable=False)
         )
@@ -49,14 +40,14 @@ class TestListColumn(unittest.TestCase):
             d = d.append([val])
         self.assertEqual(vals, list(d))
 
-    def test_nested_string_once(self):
+    def base_test_nested_string_once(self):
         c = self.ts.Column(dt.List(dt.string))
         c = c.append([[]])
         c = c.append([["a"]])
         c = c.append([["b", "c"]])
         self.assertEqual(list([[], ["a"], ["b", "c"]]), list(c))
 
-    def test_nested_string_twice(self):
+    def base_test_nested_string_twice(self):
         c = self.ts.Column(dt.List(dt.List(dt.string)))
         c = c.append([[]])
         c = c.append([[[]]])
@@ -64,7 +55,7 @@ class TestListColumn(unittest.TestCase):
         c = c.append([[["b", "c"], ["d", "e", "f"]]])
         self.assertEqual([[], [[]], [["a"]], [["b", "c"], ["d", "e", "f"]]], list(c))
 
-    def test_get_count_join(self):
+    def base_test_get_count_join(self):
         c = self.ts.Column(dt.List(dt.string))
         c = c.append([["The", "fox"], ["jumps"], ["over", "the", "river"]])
 
@@ -72,7 +63,7 @@ class TestListColumn(unittest.TestCase):
         self.assertEqual(list(c.list.count("The")), [1, 0, 0])
         self.assertEqual(list(c.list.join(" ")), ["The fox", "jumps", "over the river"])
 
-    def test_map_reduce_etc(self):
+    def base_test_map_reduce_etc(self):
         c = self.ts.Column(dt.List(dt.string))
         c = c.append([["The", "fox"], ["jumps"], ["over", "the", "river"]])
         self.assertEqual(

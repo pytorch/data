@@ -6,10 +6,7 @@ import torcharrow.dtypes as dt
 
 
 class TestMapColumn(unittest.TestCase):
-    def setUp(self):
-        self.ts = Scope()
-
-    def test_map(self):
+    def base_test_map(self):
         c = self.ts.Column(dt.Map(dt.string, dt.int64))
         self.assertIsInstance(c, IMapColumn)
 
@@ -19,7 +16,7 @@ class TestMapColumn(unittest.TestCase):
         c = c.append([{"de": 45, "fg": 67}])
         self.assertDictEqual(c[1], {"de": 45, "fg": 67})
 
-    def test_infer(self):
+    def base_test_infer(self):
         c = self.ts.Column(
             [
                 {"helsinki": [-1.3, 21.5], "moscow": [-4.0, 24.3]},
@@ -37,7 +34,7 @@ class TestMapColumn(unittest.TestCase):
             ],
         )
 
-    def test_keys_values_get(self):
+    def base_test_keys_values_get(self):
         c = self.ts.Column([{"abc": 123}, {"de": 45, "fg": 67}])
 
         self.assertEqual(list(c.map.keys()), [["abc"], ["de", "fg"]])
