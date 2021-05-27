@@ -1,10 +1,14 @@
 import array as ar
 from dataclasses import dataclass
 import abc
+import typing as ty
+import re2 as re  # type: ignore
+
 import numpy as np
 import numpy.ma as ma
 
 import torcharrow.dtypes as dt
+from torcharrow.expression import Call
 
 from .icolumn import IColumn
 from .expression import expression
@@ -69,67 +73,55 @@ class IStringMethods(abc.ABC):
 
     def split(self, sep=None, maxsplit=-1, expand=False):
         """Split strings around given separator/delimiter."""
-        if not expand:
-            return self.split_to_list(sep, maxsplit, direction="left")
-        else:
-            return self.split_to_column(sep, maxsplit, direction="left")
-
-    def split_to_list(self, sep, maxsplit, direction):
-        # cyclic import
-        from .ilist_column import IListColumn
-
-        assert direction in {"left", "right"}
-
         me = self._parent
-        fun = None
-        if direction == "left":
+
+        if not expand:
 
             def fun(i):
                 return i.split(sep, maxsplit)
 
-        elif direction == "right":
+            return self._vectorize_list_string(fun)
+        else:
+            if maxsplit < 1:
+                raise ValueError("maxsplit must be >0")
+
+            def fun(i):
+                ws = i.split(sep, maxsplit)
+                return tuple(ws + ([None] * (maxsplit + 1 - len(ws))))
+
+            dtype = dt.Struct(
+                [dt.Field(str(i), dt.String(nullable=True)) for i in range(maxsplit)],
+                nullable=me.dtype.nullable,
+            )
+
+            return me._vectorize(fun, dtype=dtype)
+
+    def rsplit(self, sep=None, maxsplit=-1, expand=False):
+        """Split strings around given separator/delimiter."""
+        me = self._parent
+
+        if not expand:
 
             def fun(i):
                 return i.rsplit(sep, maxsplit)
 
-        res = me._EmptyColumn(dt.List(me.dtype), me._mask)
-        for m, i in me.items():
-            if m:
-                res._append_data(dt.List.default)
-            else:
-                res._append_data(fun(i))
-        return res._finalize()
+            return self._vectorize_list_string(fun)
+        else:
+            if maxsplit < 1:
+                raise ValueError("maxsplit must be >0")
 
-    def split_to_column(self, sep, maxsplit, direction):
-        # cyclic import
-        from .idataframe import DataFrame
+            def fun(i):
+                ws = i.rsplit(sep, maxsplit)
+                return tuple(
+                    ([None] * (maxsplit + 1 - len(ws))) + i.rsplit(sep, maxsplit)
+                )
 
-        assert direction in {"left", "right"}
-        assert maxsplit >= 0
-
-        me = self._parent
-        res = me._EmptyColumn(
-            dt.Struct(
-                [
-                    dt.Field(str(i), dt.String(nullable=True))
-                    for i in range(maxsplit + 1)
-                ]
+            dtype = dt.Struct(
+                [dt.Field(str(i), dt.String(nullable=True)) for i in range(maxsplit)],
+                nullable=me.dtype.nullable,
             )
-        )
-        for m, i in me.items():
-            if m:
-                res._append(tuple([None] * maxsplit))
-            else:
-                if direction == "left":
-                    ws = i.split(sep, maxsplit)
-                    ws = ws + ([None] * (maxsplit + 1 - len(ws)))
-                elif direction == "right":
-                    ws = i.rsplit(sep, maxsplit)
-                    ws = ([None] * (maxsplit + 1 - len(ws))) + ws
-                else:
-                    raise AssertionError("direction must be in {'left', 'right'}")
-                res._append(tuple(ws))
-        return res._finalize()
+
+            return me._vectorize(fun, dtype=dtype)
 
     @staticmethod
     def _isinteger(s: str):
@@ -318,11 +310,144 @@ class IStringMethods(abc.ABC):
 
         return self._vectorize_int64(fun)
 
+    # helper -----------------------------------------------------
+
     def _vectorize_boolean(self, pred):
         return self._parent._vectorize(pred, dt.Boolean(self._parent.dtype.nullable))
 
     def _vectorize_string(self, func):
         return self._parent._vectorize(func, dt.String(self._parent.dtype.nullable))
 
+    def _vectorize_list_string(self, func):
+        return self._parent._vectorize(
+            func, dt.List(dt.string, self._parent.dtype.nullable)
+        )
+
     def _vectorize_int64(self, func):
         return self._parent._vectorize(func, dt.Int64(self._parent.dtype.nullable))
+
+    # Regular expressions -----------------------------------------------------
+
+    def count_re(
+        self,
+        pattern: ty.Union[str, re.Pattern]
+        # flags: int = 0, not supported
+    ):
+        """Count occurrences of pattern in each string"""
+        if isinstance(pattern, str):
+            pattern = re.compile(pattern)
+
+        def func(text):
+            return len(re.findall(pattern, text))
+
+        return self._vectorize_int64(func)
+
+    def match_re(self, pattern: ty.Union[str, re.Pattern]):
+        """Determine if each string matches a regular expression (see re.match())"""
+        if isinstance(pattern, str):
+            pattern = re.compile(pattern)
+
+        def func(text):
+            return True if pattern.match(text) else False
+
+        return self._vectorize_string(func)
+
+    def replace_re(
+        self,
+        pattern: ty.Union[str, re.Pattern],
+        repl: ty.Union[str, ty.Callable],
+        count=0,
+        # flags = 0
+    ):
+        """Replace for each item the search string or pattern with the given value"""
+
+        if isinstance(pattern, str):
+            pattern = re.compile(pattern)
+
+        def func(text):
+            return re.sub(pattern, repl, text, count)
+
+        return self._vectorize_string(func)
+
+    def contains_re(
+        self,
+        pattern: ty.Union[str, re.Pattern],
+    ):
+        """Test for each item if pattern is contained within a string; returns a boolean"""
+
+        if isinstance(pattern, str):
+            pattern = re.compile(pattern)
+
+        def func(text):
+            return pattern.search(text) is not None
+
+        return self._vectorize_boolean(func)
+
+    def findall_re(self, pattern: ty.Union[str, re.Pattern]):
+        """
+        Find for each item all occurrences of pattern (see re.findall())
+        """
+        if isinstance(pattern, str):
+            pattern = re.compile(pattern)
+
+        def func(text):
+            return pattern.findall(text)
+
+        return self._vectorize_list_string(func)
+
+    def extract_re(self, pattern: ty.Union[str, re.Pattern]):
+        """Return capture groups in the regex as columns of a dataframe"""
+        # generalizes Pandas extract ad extractall;
+        # always Pandas' expand = True
+        if isinstance(pattern, str):
+            pattern = re.compile(pattern)
+        num_groups = pattern.groups
+        if num_groups == 0:
+            raise ValueError("pattern contains no capture groups")
+        group_names = pattern.groupindex
+        inverted_group_names = {v - 1: k for k, v in group_names.items()}
+        columns = []
+        for i in range(num_groups):
+            if i in inverted_group_names:
+                columns.append(inverted_group_names[i])
+            else:
+                columns.append(str(i))
+        dtype = dt.Struct([dt.Field(c, dt.String(nullable=True)) for c in columns])
+
+        def func(text):
+            gps = pattern.search(text)
+            if gps is None:
+                # TODO decide: return all groups as none or have just one none
+                return tuple([None] * num_groups)
+            return gps.groups()
+
+        return self._parent._vectorize(func, dtype)
+
+    def split_re(self, pattern: ty.Union[str, re.Pattern], maxsplit=-1, expand=False):
+        """Split each string from the beginning (see re.split)
+        returning them as a list or dataframe (expand=True)"""
+        me = self._parent
+
+        if isinstance(pattern, str):
+            pattern = re.compile(pattern)
+
+        if not expand:
+
+            def fun(text):
+                return pattern.split(text, maxsplit)
+
+            return self._vectorize_list_string(fun)
+        else:
+            if maxsplit < 1:
+                raise ValueError("maxsplit must be >0")
+
+            def fun(text):
+                ws = pattern.split(text, maxsplit)
+                return tuple(ws + ([None] * (maxsplit + 1 - len(ws))))
+
+            dtype = dt.Struct(
+                [dt.Field(str(i), dt.String(nullable=True)) for i in range(maxsplit)],
+                nullable=me.dtype.nullable,
+            )
+
+            return self._parent._vectorize(fun, dtype=dtype)

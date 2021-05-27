@@ -10,43 +10,31 @@ class TestNumericalColumnCpu(TestNumericalColumn):
     def setUp(self):
         self.ts = Scope({"device": "std"})
 
-    def test_internals_empty(self):
-        empty_i64_column = self.ts.Column(dtype=dt.int64)
-        self.assertEqual(len(empty_i64_column._mask), 0)
-
-        self.assertEqual(self.base_test_internals_empty(), "std")
+    def test_internal_empty(self):
+        c = self.base_test_empty()
+        self.assertEqual(c.to, "std")
+        self.assertEqual(len(c._mask), 0)
 
     def test_internals_full(self):
-        col = self.ts.Column([i for i in range(4)], dtype=dt.int64)
-        self.assertEqual(len(col._data), 4)
-        self.assertEqual(len(col._mask), 4)
-
-        return self.base_test_internals_full()
+        c = self.base_test_full()
+        self.assertEqual(len(c._data), len(c))
+        self.assertEqual(len(c._mask), len(c))
 
     def test_internals_full_nullable(self):
-        col = self.ts.Column(dtype=dt.Int64(nullable=True))
+        return self.base_test_full_nullable()
 
-        col = col.append([None, None, None])
-        self.assertEqual(col._data[-1], dt.Int64(nullable=True).default)
-        self.assertEqual(col._mask[-1], True)
+    def test_is_immutable(self):
+        return self.base_test_is_immutable()
 
-        col = col.append([3])
-        self.assertEqual(col._data[-1], 3)
-        self.assertEqual(col._mask[-1], False)
-
-        self.assertEqual(len(col._data), 4)
-        self.assertEqual(len(col._mask), 4)
-
-        return self.base_test_internals_full_nullable()
 
     def test_internals_indexing(self):
-        return self.base_test_internals_indexing()
+        return self.base_test_indexing()
 
     def test_boolean_column(self):
         return self.base_test_boolean_column()
 
     def test_infer(self):
-        return self.base_test_internals_indexing()
+        return self.base_test_infer()
 
     def test_map_where_filter(self):
         return self.base_test_map_where_filter()

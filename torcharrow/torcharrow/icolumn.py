@@ -11,8 +11,9 @@ import typing as ty
 from collections import OrderedDict, defaultdict
 
 import numpy as np
-import torcharrow.dtypes as dt
 from tabulate import tabulate
+
+import torcharrow.dtypes as dt
 
 from .column_factory import Device
 from .expression import expression
@@ -143,6 +144,19 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
         return res._finalize()
 
     @trace
+    def concat(self, columns):
+        """Returns concatenated columns."""
+        # TODO use _column_copy, but for now this works...
+        res = self._EmptyColumn(self.dtype)
+        for each in [self] + columns:
+            for (m, d) in each.items():
+                if m:
+                    res._append_null()
+                else:
+                    res._append_value(d)
+        return res._finalize()
+
+    @trace
     def copy(self):
         # TODO implement this generically over columns using _FullColumn
         raise self._not_supported("copy")
@@ -162,19 +176,6 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
             else:
                 raise TypeError('f"{astype}({dtype}) is not supported")')
         raise TypeError('f"{astype} for {type(self).__name__} is not supported")')
-
-    @trace
-    def concat(self, others: ty.List[IColumn]):
-        """Returns column/dataframe with all other columns appended."""
-        # Subclasses can do this faster
-        res = self._EmptyColumn(self.dtype)
-        for me in [self] + others:
-            for (m, d) in me.items():
-                if m:
-                    res._append_null()
-                else:
-                    res._append_value(d)
-        return res._finalize()
 
     # public simple observers -------------------------------------------------
 
@@ -210,7 +211,7 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
         return f"Column([{', '.join(str(i) for i in self)}], id = {self.id})"
 
     def __repr__(self):
-        rows = [[str(l) if l is not None else "None"] for l in self]
+        rows = [[l if l is not None else "None"] for l in self]
         tab = tabulate(
             rows,
             tablefmt="plain",
@@ -387,51 +388,6 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
                 res._append_value(fun(i))
         return res._finalize()
 
-    def batch(self, batch_size: int):
-        """Iterator returning each time (upo to) batch_size rows"""
-        if batch_size <= 0:
-            raise TypeError(
-                "{type(self).__name__}.batch must receive positive batch size, got {batch_size}"
-            )
-        i = 0
-        while i < len(self):
-            h = i
-            i += batch_size
-            yield self[h:i]
-
-    @staticmethod
-    def collate(
-        iter: ty.Iterable[IColumn],
-        dtype: ty.Optional[dt.DType] = None,
-        scope: ty.Optional[Scope] = None,
-        to: Device = "",
-    ):
-        res = []
-        for i in iter:
-            res.append(i)
-        if len(res) == 0:
-            if dtype is None:
-                raise TypeError(
-                    "{type(self).__name__}.collate requires dtype for empty iterable"
-                )
-            if scope is None:
-                raise TypeError(
-                    "{type(self).__name__}.collate requires a scope for empty iterable"
-                )
-
-            return scope.Column(dtype=dtype, to=to)
-        elif dtype is not None:
-            dtype = dt.common_dtype(res[0].dtype, dtype)
-            if dtype is None:
-                raise TypeError(
-                    "{type(self).__name__}.collate inferred dtype and given dtype must be compatible"
-                )
-        else:  # dtype is None
-            dtype = res[0].dtype
-        scope = scope or res[0].scope
-        to = to or res[0].to
-        return scope.Column(dtype=dtype, to=to).concat(res)
-
     # functools map/filter/reduce ---------------------------------------------
 
     @trace
@@ -496,14 +452,15 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
         Maps rows to list of rows according to input correspondence
         dtype required if result type != item type.
         """
+
         if columns is not None:
             raise TypeError(f"columns parameter for flat columns not supported")
 
         def func(x):
             return arg.get(x, None) if isinstance(arg, dict) else arg(x)
 
-        dtype_ = dtype if dtype is not None else self._dtype
-        res = self._EmptyColumn(dtype_)
+        dtype = dtype or self.dtype
+        res = self._EmptyColumn(dtype)
         for masked, i in self.items():
             if not masked:
                 res._extend(func(i))
@@ -1208,3 +1165,22 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
 
         # default implementation, normally this should be zero copy...
         return pa.array(self)
+
+    # batching/unbatching -----------------------------------------------------
+    # NOTE experimental
+    def batch(self, n):
+        assert n > 0
+        i = 0
+        while i < len(self):
+            h = i
+            i = i + n
+            yield self[h:i]
+
+    @staticmethod
+    def unbatch(iter: ty.Iterable[IColumn]):
+        res = []
+        for i in iter:
+            res.append(i)
+        if len(res) == 0:
+            raise ValueError("can't determine column type")
+        return res[0].concat(res[1:])

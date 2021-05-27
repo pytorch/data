@@ -11,23 +11,30 @@ class TestNumericalColumnCpu(TestNumericalColumn):
     def setUp(self):
         self.ts = Scope({"device": "cpu"})
 
-    def test_internals_empty(self):
-        self.assertEqual(self.base_test_internals_empty(), "cpu")
+    def test_internal_empty(self):
+        c = self.base_test_empty()
+        self.assertEqual(c.to, "cpu")
+        # internals...self.assertEqual(len(c._mask), 0)
 
     def test_internals_full(self):
-        return self.base_test_internals_full()
+        c = self.base_test_full()
+        #  internals... self.assertEqual(len(c._data), len(c))
+        #  internals... self.assertEqual(len(c._mask), len(c))
 
     def test_internals_full_nullable(self):
-        return self.base_test_internals_full_nullable()
+        return self.base_test_full_nullable()
+
+    def test_is_immutable(self):
+        return self.base_test_is_immutable()
 
     def test_internals_indexing(self):
-        return self.base_test_internals_indexing()
+        return self.base_test_indexing()
 
     def test_boolean_column(self):
         return self.base_test_boolean_column()
 
     def test_infer(self):
-        return self.base_test_internals_indexing()
+        return self.base_test_infer()
 
     def test_map_where_filter(self):
         return self.base_test_map_where_filter()
