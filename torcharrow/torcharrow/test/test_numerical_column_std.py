@@ -1,6 +1,8 @@
 import unittest
 
+import torcharrow.dtypes as dt
 from torcharrow import Scope
+
 from .test_numerical_column import TestNumericalColumn
 
 
@@ -23,6 +25,7 @@ class TestNumericalColumnCpu(TestNumericalColumn):
 
     def test_is_immutable(self):
         return self.base_test_is_immutable()
+
 
     def test_internals_indexing(self):
         return self.base_test_indexing()

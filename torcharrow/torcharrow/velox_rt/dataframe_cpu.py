@@ -18,8 +18,11 @@ from typing import (
     Tuple,
     Union,
     cast,
+    Iterable,
+    Iterator,
 )
 
+import _torcharrow as velox
 import numpy as np
 import torcharrow.dtypes as dt
 from tabulate import tabulate
@@ -29,6 +32,9 @@ from torcharrow.icolumn import IColumn
 from torcharrow.idataframe import IDataFrame
 from torcharrow.scope import Scope
 from torcharrow.trace import trace, traceproperty
+
+from .column import ColumnFromVelox
+from .typing import get_velox_type
 
 # assumes that these have been imported already:
 # from .inumerical_column import INumericalColumn
@@ -46,15 +52,29 @@ from torcharrow.trace import trace, traceproperty
 DataOrDTypeOrNone = Union[Mapping, Sequence, dt.DType, Literal[None]]
 
 
-class DataFrameStd(IDataFrame):
+class DataFrameCpu(IDataFrame, ColumnFromVelox):
     """Dataframe, ordered dict of typed columns of the same length"""
 
-    def __init__(self, scope, to, dtype, field_data, mask):
+    def __init__(self, scope, to, dtype, data, mask):
         assert dt.is_struct(dtype)
         super().__init__(scope, to, dtype)
 
-        self._field_data = field_data
-        self._mask = mask
+        self._data = velox.Column(get_velox_type(dtype))
+        assert isinstance(data, dict)
+        first = True
+        for key, values in data.items():
+            assert first or len(values) == len(self._data)
+            first = False
+            (field_dtype,) = (f.dtype for f in self.dtype.fields if f.name == key)
+            col = scope.Column(field_dtype, values)
+            idx = self._data.type().get_child_idx(key)
+            self._data.set_child(idx, col._data)
+            self._data.set_length(len(col))
+        self._finialized = False
+
+    @property
+    def _mask(self) -> List[bool]:
+        return [self.getmask(i) for i in range(len(self))]
 
     # Any _full requires no further type changes..
     @staticmethod
@@ -75,10 +95,10 @@ class DataFrameStd(IDataFrame):
                 pass
                 # raise TypeError(f'type of data {inferred_dtype} and given type {dtype} must be the same')
         if mask is None:
-            mask = DataFrameStd._valid_mask(ct)
+            mask = DataFrameCpu._valid_mask(ct)
         elif len(data) != len(mask):
             raise ValueError(f"data length {len(data)} must be mask length {len(mask)}")
-        return DataFrameStd(scope, to, dtype, data, mask)
+        return DataFrameCpu(scope, to, dtype, data, mask)
 
     # Any _empty must be followed by a _finalize; no other ops are allowed during this time
 
@@ -86,76 +106,118 @@ class DataFrameStd(IDataFrame):
     def _empty(scope, to, dtype, mask=None):
         field_data = {f.name: scope._EmptyColumn(f.dtype, to) for f in dtype.fields}
         _mask = mask if mask is not None else ar.array("b")
-        return DataFrameStd(scope, to, dtype, field_data, _mask)
+        return DataFrameCpu(scope, to, dtype, field_data, _mask)
 
     def _append_null(self):
-        self._mask.append(True)
-        for c in self._field_data.values():
-            c._append_null()
+        if self._finialized:
+            raise AttributeError("It is already finialized.")
+        raise NotImplementedError()
 
     def _append_value(self, value):
-        self._mask.append(False)
-        for c, v in zip(self._field_data.values(), value):
-            c._append(v)
+        if self._finialized:
+            raise AttributeError("It is already finialized.")
+        df = self.append([value])
+        self._data = df._data
 
     def _append_data(self, value):
-        for c, v in zip(self._field_data.values(), value):
-            c._append_data(v)
+        self._append_value(data)
 
     def _finalize(self):
-        ln = 0
-        for c in self._field_data.values():
-            _ = c._finalize()
-            ln = len(c)
-        if isinstance(self._mask, (bool, np.bool8)):
-            self._mask = np.full((ln,), self._mask, dtype=np.bool8)
-        elif isinstance(self._mask, ar.array):
-            self._mask = np.array(self._mask, dtype=np.bool8, copy=False)
-        else:
-            assert isinstance(self._mask, np.ndarray)
+        self._finialized = True
         return self
 
-    def _fromdata(self, field_data, mask=False):
-        dtype = dt.Struct([dt.Field(n, c.dtype) for n, c in field_data.items()])
-        _mask = mask
-        if isinstance(mask, (bool, np.bool8)):
-            if len(field_data) == 0:
-                _mask = np.full((0,), bool(mask), dtype=np.bool8)
-            else:
-                n, c = next(iter(field_data.items()))
-                _mask = np.full((len(c),), bool(mask), dtype=np.bool8)
-        return DataFrameStd(self.scope, self.to, dtype, field_data, _mask)
+    def _fromdata(
+        self, field_data: OrderedDict[str, IColumn], mask: Optional[Iterable[bool]]
+    ):
+        dtype = dt.Struct(
+            [dt.Field(n, c.dtype) for n, c in field_data.items()],
+            nullable=self.dtype.nullable,
+        )
+        col = velox.Column(get_velox_type(dtype))
+        for n, c in field_data.items():
+            col.set_child(col.type().get_child_idx(n), c._data)
+            col.set_length(len(c._data))
+        if mask is not None:
+            mask_list = list(mask)
+            assert len(field_data) == 0 or len(mask_list) == len(col)
+            for i in range(len(col)):
+                if mask_list[i]:
+                    col.set_null_at(i)
+
+        return ColumnFromVelox.from_velox(self.scope, dtype, col, True)
 
     def __len__(self):
-        if len(self._field_data) == 0:
-            return 0
-        else:
-            n = self.dtype.fields[0].name
-            return len(self._field_data[n])
+        return len(self._data)
 
     def null_count(self):
-        return self._mask.sum()
+        return self._data.get_null_count()
 
     def getmask(self, i):
-        return self._mask[i]
+        if i < 0:
+            i += len(self._data)
+        return self._data.is_null_at(i)
 
     def getdata(self, i):
-        return tuple([self._field_data[n].get(i) for n in self.columns])
+        if i < 0:
+            i += len(self._data)
+        if not self.getmask(i):
+            return tuple(
+                ColumnFromVelox.from_velox(
+                    self.scope, self.dtype.fields[j].dtype, self._data.child_at(j), True
+                ).get(i, None)
+                for j in range(self._data.children_size())
+            )
+        else:
+            return None
 
     @staticmethod
     def _valid_mask(ct):
         return np.full((ct,), False, dtype=np.bool8)
 
-    def append(self, values):
+    def append(self, values: Iterable[Union[None, dict, tuple]]):
         """Returns column/dataframe with values appended."""
-        tmp = self.scope.DataFrame(values, dtype=self.dtype, to=self.to)
-        field_data = {n: c.append(tmp[n]) for n, c in self._field_data.items()}
-        mask = np.append(self._mask, tmp._mask)
-        return self._fromdata(field_data, mask)
+        it = iter(values)
 
-    def _check_columns(self, columns):
+        try:
+            value = next(it)
+            if value is None:
+                if not self.dtype.nullable:
+                    raise TypeError(
+                        f"a tuple of type {self.dtype} is required, got None"
+                    )
+                else:
+                    df = self.append([{f.name: None for f in self.dtype.fields}])
+                    df._data.set_null_at(len(df) - 1)
+                    return df
+
+            elif isinstance(value, dict):
+                assert self._data.children_size() == len(value)
+                res = {}
+                for k, v in value.items():
+                    idx = self._data.type().get_child_idx(k)
+                    child = self._data.child_at(idx)
+                    dtype = self.dtype.fields[idx].dtype
+                    child_col = ColumnFromVelox.from_velox(
+                        self.scope, dtype, child, True
+                    )
+                    child_col = child_col.append([v])
+                    res[k] = child_col
+                new_data = self._fromdata(res, self._mask + [False])
+
+                return new_data.append(it)
+
+            elif isinstance(value, tuple):
+                assert self._data.children_size() == len(value)
+                return self.append(
+                    [{f.name: v for f, v in zip(self.dtype.fields, value)}]
+                ).append(it)
+        except StopIteration:
+            return self
+
+    def _check_columns(self, columns: Iterable[str]):
+        valid_names = {f.name for f in self.dtype.fields}
         for n in columns:
-            if n not in self._field_data:
+            if n not in valid_names:
                 raise TypeError(f"column {n} not among existing dataframe columns")
 
     # implementing abstract methods ----------------------------------------------
@@ -176,30 +238,31 @@ class DataFrameStd(IDataFrame):
         else:
             raise TypeError("data must be a column or list")
 
-        assert d is not None
-        if all(len(c) == 0 for c in self._field_data.values()):
-            self._mask = np.full((len(d),), False, dtype=np.bool8)
-
+        if all(
+            len(self._data.child_at(i)) == 0 for i in range(self._data.children_size())
+        ):
+            pass
         elif len(d) != len(self):
             raise TypeError("all columns/lists must have equal length")
 
-        if name in self._field_data.keys():
+        if self._data.type().contains_child(name):
             raise AttributeError(f"cannot override existing column {name}")
         elif (
             self._dtype is not None
             and isinstance(self._dtype, dt.Struct)
-            and len(self.dtype.fields) < len(self._field_data)
+            and len(self.dtype.fields) < self._data.children_size()
         ):
             raise AttributeError("cannot append column to view")
         else:
             assert self._dtype is not None and isinstance(self._dtype, dt.Struct)
-            # side effect on field_data
-            self._field_data[name] = d
-            # no side effect on dtype
-            fields = list(self._dtype.fields)
-            assert d._dtype is not None
-            fields.append(dt.Field(name, d._dtype))
-            self._dtype = dt.Struct(fields)
+            new_dtype = dt.Struct(fields=self.dtype.fields + [dt.Field(name, d.dtype)])
+            new_delegate = velox.Column(get_velox_type(new_dtype))
+            for idx in range(self._data.children_size()):
+                new_delegate.set_child(idx, self._data.child_at(idx))
+            new_delegate.set_child(self._data.children_size(), d._data)
+            new_delegate.set_length(len(d._data))
+            self._dtype = new_dtype
+            self._data = new_delegate
 
     # printing ----------------------------------------------------------------
 
@@ -226,19 +289,7 @@ class DataFrameStd(IDataFrame):
     # selectors -----------------------------------------------------------
 
     def _column_index(self, arg):
-        columns = self.columns
-        try:
-            return columns.index(arg)
-        except ValueError:
-            try:
-                i = int(arg)
-                if 0 <= i and i <= len(columns):
-                    return i
-                raise TypeError(
-                    f"index {i} must be within 0 and less than {len(columns)}"
-                )
-            except ValueError:
-                raise TypeError(f"{arg} must be a column name or column index")
+        return self._data.type().get_child_idx(arg)
 
     def gets(self, indices):
         return self._fromdata(
@@ -246,22 +297,34 @@ class DataFrameStd(IDataFrame):
         )
 
     def slice(self, start, stop, step):
+        mask = [self._mask[i] for i in list(range(len(self)))[start:stop:step]]
         return self._fromdata(
-            {n: c[start:stop:step] for n, c in self._field_data.items()},
-            self._mask[start:stop:step],
+            {
+                self.dtype.fields[i]
+                .name: ColumnFromVelox.from_velox(
+                    self.scope,
+                    self.dtype.fields[i].dtype,
+                    self._data.child_at(i),
+                    True,
+                )
+                .slice(start, stop, step)
+                for i in range(self._data.children_size())
+            },
+            mask,
         )
 
     def get_column(self, column):
-        i = self._column_index(column)
-        return self._field_data[self.columns[i]]
+        idx = self._data.type().get_child_idx(column)
+        return ColumnFromVelox.from_velox(
+            self.scope, self.dtype.fields[idx].dtype, self._data.child_at(idx), True
+        )
 
     def get_columns(self, columns):
         # TODO: decide on nulls, here we assume all defined (mask = False) for new parent...
         res = {}
         for n in columns:
-            m = self.columns[self._column_index(n)]
-            res[m] = self._field_data[m]
-        return self._fromdata(res, False)
+            res[n] = self.get_column(n)
+        return self._fromdata(res, self._mask)
 
     def slice_columns(self, start, stop):
         # TODO: decide on nulls, here we assume all defined (mask = False) for new parent...
@@ -270,8 +333,10 @@ class DataFrameStd(IDataFrame):
         res = {}
         for i in range(_start, _stop):
             m = self.columns[i]
-            res[m] = self._field_data[m]
-        return self._fromdata(res, False)
+            res[m] = ColumnFromVelox.from_velox(
+                self.scope, self.dtype.fields[i].dtype, self._data.child_at(i), True
+            )
+        return self._fromdata(res, self._mask)
 
     # functools map/filter/reduce ---------------------------------------------
 
@@ -294,7 +359,10 @@ class DataFrameStd(IDataFrame):
         self._check_columns(columns)
 
         if len(columns) == 1:
-            return self._field_data[columns[0]].map(arg, na_action, dtype)
+            idx = self._data.type().get_child_idx(columns[0])
+            return ColumnFromVelox.from_velox(
+                self.scope, self.dtype.fields[idx].dtype, self._data.child_at(idx), True
+            ).map(arg, na_action, dtype)
         else:
 
             def func(*x):
@@ -302,7 +370,18 @@ class DataFrameStd(IDataFrame):
 
             dtype = dtype if dtype is not None else self._dtype
 
-            cols = [self._field_data[n] for n in columns]
+            cols = []
+            for n in columns:
+                idx = self._data.type().get_child_idx(n)
+                cols.append(
+                    ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[idx].dtype,
+                        self._data.child_at(idx),
+                        True,
+                    )
+                )
+
             res = self._EmptyColumn(dtype)
             for i in range(len(self)):
                 if self.valid(i):
@@ -373,7 +452,17 @@ class DataFrameStd(IDataFrame):
             )
 
         res = self._EmptyColumn(self._dtype)
-        cols = [self._field_data[n] for n in columns]
+        cols = []
+        for n in columns:
+            idx = self._data.type().get_child_idx(n)
+            cols.append(
+                ColumnFromVelox.from_velox(
+                    self.scope,
+                    self.dtype.fields[idx].dtype,
+                    self._data.child_at(idx),
+                    True,
+                )
+            )
         if callable(predicate):
             for i in range(len(self)):
                 if predicate(*[col[i] for col in cols]):
@@ -403,9 +492,9 @@ class DataFrameStd(IDataFrame):
         if isinstance(by, list):
             xs = []
             for i in by:
-                _ = self._field_data[i]  # throws key error
+                _ = self._data.type().get_child_idx(i)  # throws key error
                 xs.append(self.columns.index(i))
-            reorder = xs + [j for j in range(len(self._field_data)) if j not in xs]
+            reorder = xs + [j for j in range(len(self.dtype.fields)) if j not in xs]
 
             def func(tup):
                 return tuple(tup[i] for i in reorder)
@@ -447,92 +536,324 @@ class DataFrameStd(IDataFrame):
 
     @expression
     def __add__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
+            assert len(self) == len(other)
             return self._fromdata(
-                {n: c + other[n] for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    + ColumnFromVelox.from_velox(
+                        other.scope,
+                        other.dtype.fields[i].dtype,
+                        other._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         else:
-            return self._fromdata({n: c + other for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    + other
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
+            )
 
     @expression
     def __radd__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
             return self._fromdata(
                 {n: other[n] + c for (n, c) in self._field_data.items()}
             )
         else:
-            return self._fromdata({n: other + c for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {
+                    self.dtype.fields[i].name: other
+                    + ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
+            )
 
     @expression
     def __sub__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
+            assert len(self) == len(other)
             return self._fromdata(
-                {n: c - other[n] for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    - ColumnFromVelox.from_velox(
+                        other.scope,
+                        other.dtype.fields[i].dtype,
+                        other._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         else:
-            return self._fromdata({n: c - other for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    - other
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
+            )
 
     @expression
     def __rsub__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
+            assert len(self) == len(other)
             return self._fromdata(
-                {n: other[n] - c for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        other.scope,
+                        other.dtype.fields[i].dtype,
+                        other._data.child_at(i),
+                        True,
+                    )
+                    - ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         else:
-            return self._fromdata({n: other - c for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {
+                    self.dtype.fields[i].name: other
+                    - ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
+            )
 
     @expression
     def __mul__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
+            assert len(self) == len(other)
             return self._fromdata(
-                {n: c * other[n] for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    * ColumnFromVelox.from_velox(
+                        other.scope,
+                        other.dtype.fields[i].dtype,
+                        other._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         else:
-            return self._fromdata({n: c * other for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    * other
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
+            )
 
     @expression
     def __rmul__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
+            assert len(self) == len(other)
             return self._fromdata(
-                {n: other[n] * c for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        other.scope,
+                        other.dtype.fields[i].dtype,
+                        other._data.child_at(i),
+                        True,
+                    )
+                    * ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         else:
-            return self._fromdata({n: other * c for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {
+                    self.dtype.fields[i].name: other
+                    * ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
+            )
 
     @expression
     def __floordiv__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
+            assert len(self) == len(other)
             return self._fromdata(
-                {n: c // other[n] for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    // ColumnFromVelox.from_velox(
+                        other.scope,
+                        other.dtype.fields[i].dtype,
+                        other._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         else:
             return self._fromdata(
-                {n: c // other for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    // other
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
 
     @expression
     def __rfloordiv__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
+            assert len(self) == len(other)
             return self._fromdata(
-                {n: other[n] // c for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        other.scope,
+                        other.dtype.fields[i].dtype,
+                        other._data.child_at(i),
+                        True,
+                    )
+                    // ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         else:
             return self._fromdata(
-                {n: other // c for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: other
+                    // ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
 
     @expression
     def __truediv__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
+            assert len(self) == len(other)
             return self._fromdata(
-                {n: c / other[n] for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    / ColumnFromVelox.from_velox(
+                        other.scope,
+                        other.dtype.fields[i].dtype,
+                        other._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         else:
-            return self._fromdata({n: c / other for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    / other
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
+            )
 
     @expression
     def __rtruediv__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
             return self._fromdata(
                 {n: other[n] / c for (n, c) in self._field_data.items()}
             )
@@ -541,16 +862,28 @@ class DataFrameStd(IDataFrame):
 
     @expression
     def __mod__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
             return self._fromdata(
                 {n: c % other[n] for (n, c) in self._field_data.items()}
             )
         else:
-            return self._fromdata({n: c % other for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    % other
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
+            )
 
     @expression
     def __rmod__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
             return self._fromdata(
                 {n: other[n] % c for (n, c) in self._field_data.items()}
             )
@@ -559,40 +892,118 @@ class DataFrameStd(IDataFrame):
 
     @expression
     def __pow__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
+            assert len(self) == len(other)
             return self._fromdata(
-                {n: c ** other[n] for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    ** ColumnFromVelox.from_velox(
+                        other.scope,
+                        other.dtype.fields[i].dtype,
+                        other._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         else:
             return self._fromdata(
-                {n: c ** other for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    ** other
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
 
     @expression
     def __rpow__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
+            assert len(self) == len(other)
             return self._fromdata(
-                {n: other[n] ** c for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        other.scope,
+                        other.dtype.fields[i].dtype,
+                        other._data.child_at(i),
+                        True,
+                    )
+                    ** ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         else:
             return self._fromdata(
-                {n: other ** c for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: other
+                    ** ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
 
     @expression
     def __eq__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
+            assert len(self) == len(other)
             return self._fromdata(
-                {n: c == other[n] for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    == ColumnFromVelox.from_velox(
+                        other.scope,
+                        other.dtype.fields[i].dtype,
+                        other._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         else:
             return self._fromdata(
-                {n: c == other for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    == other
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
 
     @expression
     def __ne__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
             return self._fromdata(
                 {n: c == other[n] for (n, c) in self._field_data.items()}
             )
@@ -603,36 +1014,118 @@ class DataFrameStd(IDataFrame):
 
     @expression
     def __lt__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
+            assert len(self) == len(other)
             return self._fromdata(
-                {n: c < other[n] for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    < ColumnFromVelox.from_velox(
+                        other.scope,
+                        other.dtype.fields[i].dtype,
+                        other._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         else:
-            return self._fromdata({n: c < other for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    < other
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
+            )
 
     @expression
     def __gt__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
+            assert len(self) == len(other)
             return self._fromdata(
-                {n: c > other[n] for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    > ColumnFromVelox.from_velox(
+                        other.scope,
+                        other.dtype.fields[i].dtype,
+                        other._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         else:
-            return self._fromdata({n: c > other for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    > other
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
+            )
 
     def __le__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
             return self._fromdata(
                 {n: c <= other[n] for (n, c) in self._field_data.items()}
             )
         else:
             return self._fromdata(
-                {n: c <= other for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    <= other
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
 
     def __ge__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
+            assert len(self) == len(other)
             return self._fromdata(
-                {n: c >= other[n] for (n, c) in self._field_data.items()}
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    >= ColumnFromVelox.from_velox(
+                        other.scope,
+                        other.dtype.fields[i].dtype,
+                        other._data.child_at(i),
+                        True,
+                    )
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         else:
             return self._fromdata(
@@ -640,15 +1133,27 @@ class DataFrameStd(IDataFrame):
             )
 
     def __or__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
             return self._fromdata(
                 {n: c | other[n] for (n, c) in self._field_data.items()}
             )
         else:
-            return self._fromdata({n: c | other for (n, c) in self._field_data.items()})
+            return self._fromdata(
+                {
+                    self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    | other
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
+            )
 
     def __ror__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
             return self._fromdata(
                 {n: other[n] | c for (n, c) in self._field_data.items()}
             )
@@ -656,7 +1161,7 @@ class DataFrameStd(IDataFrame):
             return self._fromdata({n: other | c for (n, c) in self._field_data.items()})
 
     def __and__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
             return self._fromdata(
                 {n: c & other[n] for (n, c) in self._field_data.items()}
             )
@@ -664,7 +1169,7 @@ class DataFrameStd(IDataFrame):
             return self._fromdata({n: c & other for (n, c) in self._field_data.items()})
 
     def __rand__(self, other):
-        if isinstance(other, DataFrameStd):
+        if isinstance(other, DataFrameCpu):
             return self._fromdata(
                 {n: other[n] & c for (n, c) in self._field_data.items()}
             )
@@ -675,10 +1180,32 @@ class DataFrameStd(IDataFrame):
         return self._fromdata({n: ~c for (n, c) in self._field_data.items()})
 
     def __neg__(self):
-        return self._fromdata({n: -c for (n, c) in self._field_data.items()})
+        return self._fromdata(
+            {
+                self.dtype.fields[i].name: -ColumnFromVelox.from_velox(
+                    self.scope,
+                    self.dtype.fields[i].dtype,
+                    self._data.child_at(i),
+                    True,
+                )
+                for i in range(self._data.children_size())
+            },
+            self._mask,
+        )
 
     def __pos__(self):
-        return self._fromdata({n: +c for (n, c) in self._field_data.items()})
+        return self._fromdata(
+            {
+                self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                    self.scope,
+                    self.dtype.fields[i].dtype,
+                    self._data.child_at(i),
+                    True,
+                )
+                for i in range(self._data.children_size())
+            },
+            self._mask,
+        )
 
     # isin ---------------------------------------------------------------
 
@@ -688,7 +1215,18 @@ class DataFrameStd(IDataFrame):
         """Check whether values are contained in data."""
         if isinstance(values, list):
             return self._fromdata(
-                {n: c.isin(values) for n, c in self._field_data.items()}
+                {
+                    self.dtype.fields[i]
+                    .name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    .isin(values)
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         if isinstance(values, dict):
             self._check_columns(values.keys())
@@ -714,14 +1252,33 @@ class DataFrameStd(IDataFrame):
             return self
         if isinstance(fill_value, IColumn.scalar_types):
             return self._fromdata(
-                {n: c.fillna(fill_value) for n, c in self._field_data.items()}
+                {
+                    self.dtype.fields[i]
+                    .name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    .fillna(fill_value)
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         elif isinstance(fill_value, dict):
             return self._fromdata(
                 {
-                    n: c.fillna(fill_value[n]) if n in fill_value else c
-                    for n, c in self._field_data.items()
-                }
+                    self.dtype.fields[i]
+                    .name: ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                    .fillna(fill_value[n])
+                    for i in range(self._data.children_size())
+                },
+                self._mask,
             )
         else:
             raise TypeError(f"fillna with {type(fill_value)} is not supported")
@@ -806,7 +1363,7 @@ class DataFrameStd(IDataFrame):
     @expression
     def min(self):
         """Return the minimum of the non-null values of the Column."""
-        return self._summarize(DataFrameStd._cmin)
+        return self._summarize(DataFrameCpu._cmin)
 
     # with dataclass function
     # @expression
@@ -903,25 +1460,61 @@ class DataFrameStd(IDataFrame):
     @expression
     def nunique(self, dropna=True):
         """Returns the number of unique values per column"""
-        res = self._EmptyColumn(
-            dt.Struct([dt.Field("column", dt.string), dt.Field("nunique", dt.int64)])
+        res = {}
+        res["column"] = self.scope.Column(
+            [f.name for f in self.dtype.fields], dt.string
         )
-        for n, c in self._field_data.items():
-            res._append((n, c.nunique(dropna)))
-        return res._finalize()
+        res["unique"] = self.scope.Column(
+            [
+                ColumnFromVelox.from_velox(
+                    self.scope,
+                    f.dtype,
+                    self._data.child_at(self._data.type().get_child_idx(f.name)),
+                    True,
+                ).nunique(dropna)
+                for f in self.dtype.fields
+            ],
+            dt.int64,
+        )
+        return self._fromdata(res, None)
 
     def _summarize(self, func):
-        res = {}
-        for n, c in self._field_data.items():
-            res[n] = self.scope.Column([func(c)()])
-        return self._fromdata(res, False)
+        res = self.scope.Column(self.dtype)
+
+        for i in range(self._data.children_size()):
+            result = func(
+                ColumnFromVelox.from_velox(
+                    self.scope, self.dtype.fields[i].dtype, self._data.child_at(i), True
+                )
+            )()
+            if result is None:
+                res._data.child_at(i).append_null()
+            else:
+                res._data.child_at(i).append(result)
+        res._data.set_length(1)
+        return res
 
     @trace
     def _lift(self, func):
-        res = {}
-        for n, c in self._field_data.items():
-            res[n] = func(c)()
-        return self._fromdata(res, False)
+        if self.null_count() == 0:
+            res = velox.Column(get_velox_type(self.dtype))
+
+            for i in range(self._data.children_size()):
+                child = func(
+                    ColumnFromVelox.from_velox(
+                        self.scope,
+                        self.dtype.fields[i].dtype,
+                        self._data.child_at(i),
+                        True,
+                    )
+                )()
+                res.set_child(
+                    i,
+                    child._data,
+                )
+            res.set_length(len(self._data))
+            return ColumnFromVelox.from_velox(self.scope, self.dtype, res, True)
+        raise NotImplementedError("Dataframe row is not allowed to have nulls")
 
     # describe ----------------------------------------------------------------
 
@@ -937,13 +1530,9 @@ class DataFrameStd(IDataFrame):
         # Not supported: datetime_is_numeric=False,
         includes = []
         if include_columns is None:
-            includes = [
-                n for n, c in self._field_data.items() if dt.is_numerical(c.dtype)
-            ]
+            includes = [f.name for f in self.dtype.fields if dt.is_numerical(f.dtype)]
         elif isinstance(include_columns, list):
-            includes = [
-                n for n, c in self._field_data.items() if c.dtype in include_columns
-            ]
+            includes = [f.name for f in self.dtype.fields if f.dtype in include_columns]
         else:
             raise TypeError(
                 f"describe with include_columns of type {type(include_columns).__name__} is not supported"
@@ -953,9 +1542,7 @@ class DataFrameStd(IDataFrame):
         if exclude_columns is None:
             excludes = []
         elif isinstance(exclude_columns, list):
-            excludes = [
-                n for n, c in self._field_data.items() if c.dtype in exclude_columns
-            ]
+            excludes = [f.name for f in self.dtype.fields if f.dtype in exclude_columns]
         else:
             raise TypeError(
                 f"describe with exclude_columns of type {type(exclude_columns).__name__} is not supported"
@@ -974,13 +1561,16 @@ class DataFrameStd(IDataFrame):
             ["count", "mean", "std", "min"] + [f"{p}%" for p in percentiles] + ["max"]
         )
         for s in selected:
-            c = self._field_data[s]
+            idx = self._data.type().get_child_idx(s)
+            c = ColumnFromVelox.from_velox(
+                self.scope, self.dtype.fields[idx].dtype, self._data.child_at(idx), True
+            )
             res[s] = self.scope.Column(
                 [c.count(), c.mean(), c.std(), c.min()]
                 + c.percentiles(percentiles, "midpoint")
                 + [c.max()]
             )
-        return self._fromdata(res)
+        return self._fromdata(res, [False] * len(res["metric"]))
 
     # Dataframe specific ops --------------------------------------------------    #
 
@@ -992,7 +1582,17 @@ class DataFrameStd(IDataFrame):
         """
         self._check_columns(columns)
         return self._fromdata(
-            {n: c for n, c in self._field_data.items() if n not in columns}
+            {
+                self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                    self.scope,
+                    self.dtype.fields[i].dtype,
+                    self._data.child_at(i),
+                    True,
+                )
+                for i in range(self._data.children_size())
+                if self.dtype.fields[i].name not in columns
+            },
+            self._mask,
         )
 
     @trace
@@ -1003,7 +1603,17 @@ class DataFrameStd(IDataFrame):
         """
         self._check_columns(columns)
         return self._fromdata(
-            {n: c for n, c in self._field_data.items() if n in columns}
+            {
+                self.dtype.fields[i].name: ColumnFromVelox.from_velox(
+                    self.scope,
+                    self.dtype.fields[i].dtype,
+                    self._data.child_at(i),
+                    True,
+                )
+                for i in range(self._data.children_size())
+                if self.dtype.fields[i].name in columns
+            },
+            self._mask,
         )
 
     @trace
@@ -1012,9 +1622,17 @@ class DataFrameStd(IDataFrame):
         self._check_columns(column_mapper.keys())
         return self._fromdata(
             {
-                column_mapper[n] if n in column_mapper else n: c
-                for n, c in self._field_data.items()
-            }
+                column_mapper.get(
+                    self.dtype.fields[i].name, self.dtype.fields[i].name
+                ): ColumnFromVelox.from_velox(
+                    self.scope,
+                    self.dtype.fields[i].dtype,
+                    self._data.child_at(i),
+                    True,
+                )
+                for i in range(self._data.children_size())
+            },
+            self._mask,
         )
 
     @trace
@@ -1024,7 +1642,18 @@ class DataFrameStd(IDataFrame):
         Returns DataFrame with the columns in the prescribed order.
         """
         self._check_columns(columns)
-        return self._fromdata({n: self._field_data[n] for n in columns})
+        return self._fromdata(
+            {
+                col: ColumnFromVelox.from_velox(
+                    self.scope,
+                    self.dtype.fields[self._data.type().get_child_idx(col)].dtype,
+                    self._data.child_at(self._data.type().get_child_idx(col)),
+                    True,
+                )
+                for col in columns
+            },
+            self._mask,
+        )
 
     # interop ----------------------------------------------------------------
 
@@ -1125,12 +1754,18 @@ class DataFrameStd(IDataFrame):
         ]
 
         res = {}
-        for n, c in self._field_data.items():
+        for i in range(self._data.children_size()):
+            n = self.dtype.fields[i].name
             if n in output_columns:
-                res[n] = c
+                res[n] = ColumnFromVelox.from_velox(
+                    self.scope,
+                    self.dtype.fields[i].dtype,
+                    self._data.child_at(i),
+                    True,
+                )
         for n, c in kwargs.items():
             res[n] = eval_expression(c, {"me": self})
-        return self._fromdata(res)
+        return self._fromdata(res, self._mask)
 
     @trace
     @expression
@@ -1165,7 +1800,10 @@ class DataFrameStd(IDataFrame):
         groups: Dict[Tuple, ar.array] = {}
         for i in range(len(self)):
             if self.valid(i):
-                key = tuple(self._field_data[f.name][i] for f in key_fields)
+                key = tuple(
+                    self._data.child_at(self._data.type().get_child_idx(f.name))[i]
+                    for f in key_fields
+                )
                 if key not in groups:
                     groups[key] = ar.array("I")
                 df = groups[key]
@@ -1180,7 +1818,7 @@ class GroupedDataFrame:
     _key_fields: List[dt.Field]
     _item_fields: List[dt.Field]
     _groups: Mapping[Tuple, Sequence]
-    _parent: DataFrameStd
+    _parent: DataFrameCpu
 
     @property
     def _scope(self):
@@ -1192,27 +1830,38 @@ class GroupedDataFrame:
         """
         Return the size of each group (including nulls).
         """
-        res = self._parent._EmptyColumn(
-            dt.Struct(self._key_fields + [dt.Field("size", dt.int64)])
+        res = {
+            f.name: self._parent.scope.Column(
+                [v[idx] for v, _ in self._groups.items()], f.dtype
+            )
+            for idx, f in enumerate(self._key_fields)
+        }
+
+        res["size"] = self._parent.scope.Column(
+            [len(c) for _, c in self._groups.items()], dt.int64
         )
-        for k, c in self._groups.items():
-            row = k + (len(c),)
-            res._append(row)
-        return res._finalize()
+
+        return self._parent._fromdata(res, None)
 
     def __iter__(self):
         """
         Yield pairs of grouped tuple and the grouped dataframe
         """
         for g, xs in self._groups.items():
-            df = self._parent._EmptyColumn(dt.Struct(self._item_fields))
-            for x in xs:
-                df._append(
+            dtype = dt.Struct(self._item_fields)
+            df = self._parent.scope.Column(dtype).append(
+                tuple(
                     tuple(
-                        self._parent._field_data[f.name][x] for f in self._item_fields
+                        self._parent._data.child_at(
+                            self._parent._data.type().get_child_idx(f.name)
+                        )[x]
+                        for f in self._item_fields
                     )
+                    for x in xs
                 )
-            yield g, df._finalize()
+            )
+
+            yield g, df
 
     @trace
     def _lift(self, op: str) -> IColumn:
@@ -1230,7 +1879,7 @@ class GroupedDataFrame:
             res[f.name] = c
         for f, c in zip(agg_fields, self._apply(op)):
             res[f.name] = c
-        return self._parent._fromdata(res)
+        return self._parent._fromdata(res, None)
 
     def _apply(self, op: str) -> List[IColumn]:
         cols = []
@@ -1242,7 +1891,9 @@ class GroupedDataFrame:
         src_t = f.dtype
         dest_f, dest_t = dt.get_agg_op(op, src_t)
         res = self._parent._EmptyColumn(dest_t)
-        src_c = self._parent._field_data[f.name]
+        src_c = self._parent._data.child_at(
+            self._parent._data.type().get_child_idx(f.name)
+        )
         for g, xs in self._groups.items():
             dest_data = [src_c[x] for x in xs]
             dest_c = dest_f(self._parent.scope.Column(dest_data, dtype=dest_t))
@@ -1352,7 +2003,7 @@ class GroupedDataFrame:
             res[f.name] = c
         for agg_name, field, op in self._normalize_agg_arg(arg):
             res[agg_name] = self._apply1(field, op)
-        return self._parent._fromdata(res)
+        return self._parent._fromdata(res, None)
 
     def aggregate(self, arg):
         """
@@ -1400,8 +2051,9 @@ class GroupedDataFrame:
 
 # ------------------------------------------------------------------------------
 # registering the factory
-ColumnFactory.register((dt.Struct.typecode + "_empty", "std"), DataFrameStd._empty)
-ColumnFactory.register((dt.Struct.typecode + "_full", "std"), DataFrameStd._full)
+
+ColumnFactory.register((dt.Struct.typecode + "_empty", "cpu"), DataFrameCpu._empty)
+ColumnFactory.register((dt.Struct.typecode + "_full", "cpu"), DataFrameCpu._full)
 
 
 # ------------------------------------------------------------------------------

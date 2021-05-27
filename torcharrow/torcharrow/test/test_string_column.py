@@ -5,20 +5,15 @@ import torcharrow.dtypes as dt
 
 
 class TestStringColumn(unittest.TestCase):
-    def setUp(self):
-        self.ts = Scope()
-
-    def test_empty(self):
+    def base_test_empty(self):
         empty = self.ts.Column(dt.string)
         self.assertTrue(isinstance(empty, IStringColumn))
         self.assertEqual(empty.dtype, dt.string)
         self.assertEqual(empty.length(), 0)
         self.assertEqual(empty.null_count(), 0)
-        self.assertEqual(len(empty._data), 0)
-        self.assertEqual(len(empty._mask), 0)
         # self.assertEqual(empty._offsets[0], 0)
 
-    def test_append_offsets(self):
+    def base_test_append_offsets(self):
         c = self.ts.Column(dt.string)
         c = c.append(["abc", "de", "", "f"])
         # self.assertEqual(list(c._offsets), [0, 3, 5, 5, 6])
@@ -33,7 +28,7 @@ class TestStringColumn(unittest.TestCase):
         self.assertEqual(list(c), ["abc", "de", "", "f", None])
 
     # TODO add once dataframe is done..
-    def test_string_split_methods(self):
+    def base_test_string_split_methods(self):
         c = self.ts.Column(dt.string)
         s = ["hello.this", "is.interesting.", "this.is_24", "paradise"]
         c = c.append(s)
@@ -47,7 +42,7 @@ class TestStringColumn(unittest.TestCase):
             ],
         )
 
-    def test_string_lifted_methods(self):
+    def base_test_string_lifted_methods(self):
         c = self.ts.Column(dt.string)
         s = ["abc", "de", "", "f"]
         c = c.append(s)

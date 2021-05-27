@@ -1,6 +1,9 @@
 import unittest
 
+import torcharrow.dtypes as dt
+from torcharrow import INumericalColumn
 from torcharrow import Scope
+
 from .test_numerical_column import TestNumericalColumn
 
 
