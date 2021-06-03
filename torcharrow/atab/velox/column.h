@@ -16,6 +16,7 @@
 
 #include "f4d/type/Type.h"
 #include "f4d/vector/BaseVector.h"
+#include "f4d/vector/FlatVector.h"
 #include "f4d/vector/ComplexVector.h"
 #include "vector.h"
 
@@ -125,10 +126,10 @@ class SimpleColumn : public BaseColumn {
     if (!isAppendable()) {
       throw NotAppendableException();
     }
-    auto builder = SimpleVectorBuilder<T>();
-    builder.appendValue(value);
-    auto new_data = std::move(builder.build(VectorEncoding::Simple::FLAT));
-    _delegate.get()->append(new_data.get());
+    auto index = _delegate.get()->size();
+    auto flatVector = _delegate->asFlatVector<T>();
+    flatVector->resize(index + 1);
+    flatVector->set(index, value);
     bumpLength();
   }
 
@@ -136,10 +137,9 @@ class SimpleColumn : public BaseColumn {
     if (!isAppendable()) {
       throw NotAppendableException();
     }
-    auto builder = SimpleVectorBuilder<T>();
-    builder.appendNull();
-    auto new_data = std::move(builder.build(VectorEncoding::Simple::FLAT));
-    _delegate.get()->append(new_data.get());
+    auto index = _delegate.get()->size();
+    _delegate->resize(index + 1);
+    _delegate->setNull(index, true);
     _nullCount++;
     bumpLength();
   }
