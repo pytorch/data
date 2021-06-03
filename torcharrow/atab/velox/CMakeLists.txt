@@ -62,7 +62,7 @@ pybind11_add_module(
 set_target_properties(_torcharrow PROPERTIES CXX_VISIBILITY_PRESET default)
 
 # Link with Velox:
-target_link_libraries(_torcharrow PRIVATE f4d_vector f4d_builder f4d_memory)
+target_link_libraries(_torcharrow PRIVATE f4d_vector f4d_memory)
 
 target_compile_definitions(_torcharrow PRIVATE VERSION_INFO=0.0.1)
 

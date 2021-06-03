@@ -12,11 +12,10 @@
  * limitations under the License.
  */
 #include "vector.h"
-#include <common/base/VectorOperations.h>
-#include <common/memory/Memory.h>
-#include <type/Type.h>
-#include <vector/BaseVector.h>
-#include <vector/ComplexVector.h>
+#include <f4d/common/memory/Memory.h>
+#include <f4d/type/Type.h>
+#include <f4d/vector/BaseVector.h>
+#include <f4d/vector/ComplexVector.h>
 #include <iostream>
 
 using namespace facebook::f4d;
