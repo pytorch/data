@@ -9,6 +9,7 @@ benchmark/image_training/images_dataset_tar
 *.swp
 *.swm
 *~
+.vscode
 
 # macOS dir files
 .DS_Store
