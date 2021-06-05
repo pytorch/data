@@ -33,7 +33,7 @@ class TestStringColumn(unittest.TestCase):
         s = ["hello.this", "is.interesting.", "this.is_24", "paradise"]
         c = c.append(s)
         self.assertEqual(
-            list(c.str.split(".", 3, expand=True)),
+            list(c.str.split(".", 2, expand=True)),
             [
                 ("hello", "this", None),
                 ("is", "interesting", ""),
@@ -146,7 +146,7 @@ class TestStringColumn(unittest.TestCase):
             self.assertEqual(list(self.ts.Column(s).str.index("this")), [6, -1, 0, -1])
         self.assertEqual(list(self.ts.Column(s).str.rindex("i")), [8, 11, 5, 5])
 
-    def test_regular_expressions(self):
+    def base_test_regular_expressions(self):
         S = self.ts.Column(
             [
                 "Finland",
@@ -209,7 +209,7 @@ class TestStringColumn(unittest.TestCase):
         )
         self.assertEqual(
             list(S.str.split_re(";|,", maxsplit=2, expand=True)),
-            [("a", "b"), None],
+            [("a", "b", "c;d,"), None],
         )
 
 

@@ -78,6 +78,7 @@ class StringColumnStd(IStringColumn):
         # REP: offsets.append(offsets[-1])
 
     def _append_value(self, value):
+        assert isinstance(value, str)
         self._mask.append(False)
         self._data.append(value)
         # REP: offsets.append(offsets[-1] + len(i))

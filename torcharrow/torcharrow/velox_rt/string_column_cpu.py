@@ -171,7 +171,7 @@ class StringColumnCpu(IStringColumn, ColumnFromVelox):
             tablefmt="plain",
             showindex=True,
         )
-        typ = f"dtype: {self.dtype}, length: {self.length()}, null_count: {self.null_count()}"
+        typ = f"dtype: {self.dtype}, length: {self.length()}, null_count: {self.null_count()}, device: cpu"
         return tab + dt.NL + typ
 
 

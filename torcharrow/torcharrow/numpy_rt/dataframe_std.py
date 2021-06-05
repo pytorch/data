@@ -95,6 +95,7 @@ class DataFrameStd(IDataFrame):
 
     def _append_value(self, value):
         self._mask.append(False)
+        assert len(self._field_data.values()) == len(value)
         for c, v in zip(self._field_data.values(), value):
             c._append(v)
 

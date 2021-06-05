@@ -90,7 +90,7 @@ class IStringMethods(abc.ABC):
                 return tuple(ws + ([None] * (maxsplit + 1 - len(ws))))
 
             dtype = dt.Struct(
-                [dt.Field(str(i), dt.String(nullable=True)) for i in range(maxsplit)],
+                [dt.Field(str(i), dt.String(nullable=True)) for i in range(maxsplit + 1)],
                 nullable=me.dtype.nullable,
             )
 
@@ -117,7 +117,7 @@ class IStringMethods(abc.ABC):
                 )
 
             dtype = dt.Struct(
-                [dt.Field(str(i), dt.String(nullable=True)) for i in range(maxsplit)],
+                [dt.Field(str(i), dt.String(nullable=True)) for i in range(maxsplit + 1)],
                 nullable=me.dtype.nullable,
             )
 
@@ -350,7 +350,7 @@ class IStringMethods(abc.ABC):
         def func(text):
             return True if pattern.match(text) else False
 
-        return self._vectorize_string(func)
+        return self._vectorize_boolean(func)
 
     def replace_re(
         self,
@@ -446,7 +446,7 @@ class IStringMethods(abc.ABC):
                 return tuple(ws + ([None] * (maxsplit + 1 - len(ws))))
 
             dtype = dt.Struct(
-                [dt.Field(str(i), dt.String(nullable=True)) for i in range(maxsplit)],
+                [dt.Field(str(i), dt.String(nullable=True)) for i in range(maxsplit + 1)],
                 nullable=me.dtype.nullable,
             )
 

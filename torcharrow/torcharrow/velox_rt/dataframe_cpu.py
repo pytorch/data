@@ -111,7 +111,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
     def _append_null(self):
         if self._finialized:
             raise AttributeError("It is already finialized.")
-        raise NotImplementedError()
+        df = self.append([None])
+        self._data = df._data
 
     def _append_value(self, value):
         if self._finialized:

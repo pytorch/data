@@ -26,6 +26,9 @@ class TestStringColumnStd(TestStringColumn):
     def test_string_lifted_methods(self):
         self.base_test_string_lifted_methods()
 
+    def test_regular_expressions(self):
+        self.base_test_regular_expressions()
+
 
 if __name__ == "__main__":
     unittest.main()
