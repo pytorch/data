@@ -20,6 +20,7 @@ function with-proxy() {
   )
 }
 
+rm -rf arrow
 git clone -b apache-arrow-3.0.0 https://github.com/apache/arrow/
 
 # adopted from https://arrow.apache.org/docs/developers/python.html#building-on-linux-and-macos

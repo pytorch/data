@@ -99,7 +99,7 @@ source /opt/rh/gcc-toolset-9/enable
 
 ( git clone https://github.com/facebook/folly.git &&
   cd folly &&
-  cmake -DCMAKE_CXX_FLAGS="$COMPILER_FLAGS" -DBUILD_SHARED_LIBS=ON . &&
+  cmake -DCMAKE_CXX_FLAGS="$COMPILER_FLAGS" -DCMAKE_POSITION_INDEPENDENT_CODE=ON . &&
   sudo make install -j 20
 )
 
