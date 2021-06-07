@@ -2,7 +2,10 @@ import array as ar
 from dataclasses import dataclass
 import abc
 import typing as ty
-import re2 as re  # type: ignore
+
+# TODO: use re2
+import re
+#import re2 as re  # type: ignore
 
 import numpy as np
 import numpy.ma as ma
@@ -427,6 +430,9 @@ class IStringMethods(abc.ABC):
         """Split each string from the beginning (see re.split)
         returning them as a list or dataframe (expand=True)"""
         me = self._parent
+
+        # Python's re module will not split the string if maxsplit<0
+        maxsplit = max(maxsplit, 0)
 
         if isinstance(pattern, str):
             pattern = re.compile(pattern)
