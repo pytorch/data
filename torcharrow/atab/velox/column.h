@@ -119,7 +119,7 @@ class SimpleColumn : public BaseColumn {
       : BaseColumn(other, offset, length) {}
 
   T valueAt(int i) {
-    return _delegate.get()->as<SimpleVector<T>>()->valueAt(_offset + i);
+    return _delegate.get()->template as<SimpleVector<T>>()->valueAt(_offset + i);
   }
 
   void append(const T& value) {

@@ -18,7 +18,7 @@ from .imap_column import *
 from .idataframe import *
 
 
-from .velox_rt import *
+#from .velox_rt import *
 from .numpy_rt import *
 
 from .interop import *
