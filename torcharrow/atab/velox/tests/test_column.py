@@ -14,8 +14,9 @@ from __future__ import annotations
 
 import unittest
 from dataclasses import dataclass
-from typing import Union
+from typing import Union, List
 
+# @manual=//pytorch/torchdata/torcharrow/atab/velox:_torcharrow
 import _torcharrow as ta
 
 
@@ -130,19 +131,9 @@ class Unresolved:
     def union(self, other: Unresolved) -> Unresolved:
         return other
 
-
 @dataclass(frozen=True)
 class UnresolvedArray(Unresolved):
     element_type: Unresolved
-
-    def union(self, other: Unresolved) -> UnresolvedArray:
-        if isinstance(other, Unresolved):
-            return self
-        if isinstance(other, UnresolvedArray):
-            return UnresolvedArray(element_type.union(other.element_type))
-
-        raise ValueError("Unable to union unresolved array")
-
 
 def infer_column(data) -> ta.BaseColumn:
     inferred_column = _infer_column(data)
