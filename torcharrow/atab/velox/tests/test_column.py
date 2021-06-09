@@ -112,8 +112,8 @@ class TestSimpleColumns(unittest.TestCase):
 
 
 def is_same_type(a, b) -> bool:
-    if isinstance(a, ta.INTEGER):
-        return isinstance(b, ta.INTEGER)
+    if isinstance(a, ta.BIGINT):
+        return isinstance(b, ta.BIGINT)
     if isinstance(a, ta.VARCHAR):
         return isinstance(b, ta.VARCHAR)
     if isinstance(a, ta.BOOLEAN):
@@ -150,7 +150,7 @@ def resolve_column_with_arbitrary_type(unresolved: Unresolved) -> ta.BaseColumn:
         col.append(element)
         return col
     else:
-        return ta.Column(ta.INTEGER())
+        return ta.Column(ta.BIGINT())
 
 
 def get_union_type(inferred_columns: List[Union[ta.BaseColumn, Unresolved, None]]):
@@ -256,7 +256,7 @@ def _infer_column(data) -> Union[ta.BaseColumn, Unresolved, None]:
                 raise NotImplementedError()
 
         else:
-            type_ = {int: ta.INTEGER(), str: ta.VARCHAR(), bool: ta.BOOLEAN()}.get(
+            type_ = {int: ta.BIGINT(), str: ta.VARCHAR(), bool: ta.BOOLEAN()}.get(
                 type(non_null_item)
             )
             if type_ is None:
@@ -290,42 +290,42 @@ class TestInferColumn(unittest.TestCase):
     def test_infer_simple(self):
         data = [1, 2, 3]
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.INTEGER()))
+        self.assertTrue(is_same_type(type_, ta.BIGINT()))
 
     def test_infer_array(self):
         data = [[1], [2], [3]]
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.ARRAY(ta.INTEGER())))
+        self.assertTrue(is_same_type(type_, ta.ARRAY(ta.BIGINT())))
 
     def test_infer_nested_array(self):
         data = [[[1]], [[2], [5]], [[3, 4]]]
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.ARRAY(ta.ARRAY(ta.INTEGER()))))
+        self.assertTrue(is_same_type(type_, ta.ARRAY(ta.ARRAY(ta.BIGINT()))))
 
     def test_unresolved(self):
         data = []
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.INTEGER()))
+        self.assertTrue(is_same_type(type_, ta.BIGINT()))
 
     def test_nested_unresolved1(self):
         data = [[]]
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.ARRAY(ta.INTEGER())))
+        self.assertTrue(is_same_type(type_, ta.ARRAY(ta.BIGINT())))
 
     def test_nested_unresolved2(self):
         data = [None]
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.INTEGER()))
+        self.assertTrue(is_same_type(type_, ta.BIGINT()))
 
     def test_nested_unresolved3(self):
         data = [[None]]
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.ARRAY(ta.INTEGER())))
+        self.assertTrue(is_same_type(type_, ta.ARRAY(ta.BIGINT())))
 
     def test_propagate_unresolved(self):
         data = [None, [], [1], [1, None, 2], None]
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.ARRAY(ta.INTEGER())))
+        self.assertTrue(is_same_type(type_, ta.ARRAY(ta.BIGINT())))
 
 
 class TestArrayColumns(unittest.TestCase):
