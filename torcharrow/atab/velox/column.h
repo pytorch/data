@@ -14,10 +14,16 @@
 
 #pragma once
 
+#include <f4d/common/memory/Memory.h>
+#include <f4d/core/QueryCtx.h>
+#include <memory>
+#include "f4d/core/QueryCtx.h"
+#include "f4d/common/base/Exceptions.h"
 #include "f4d/type/Type.h"
 #include "f4d/vector/BaseVector.h"
-#include "f4d/vector/FlatVector.h"
+#include "f4d/exec/Expr.h"
 #include "f4d/vector/ComplexVector.h"
+#include "f4d/vector/FlatVector.h"
 #include "vector.h"
 
 namespace facebook {
@@ -30,6 +36,20 @@ class NotAppendableException : public std::exception {
  public:
   virtual const char* what() const throw() {
     return "Cannot append in a view";
+  }
+};
+
+struct TorchArrowGlobalStatic {
+  static core::QueryCtx& queryContext() {
+    static core::QueryCtx queryContext;
+    return queryContext;
+  }
+
+  static core::ExecCtx& execContext() {
+    static core::ExecCtx execContext(
+        memory::getDefaultScopedMemoryPool(),
+        &TorchArrowGlobalStatic::queryContext());
+    return execContext;
   }
 };
 
@@ -51,6 +71,19 @@ class BaseColumn {
 
   bool isAppendable() {
     return _offset + _length == _delegate.get()->size();
+  }
+
+  // TODO: move this method as static...
+  RowVectorPtr wrapRowVector(
+      const std::vector<VectorPtr>& children,
+      std::shared_ptr<const RowType> rowType) {
+    return std::make_shared<RowVector>(
+        pool_,
+        rowType,
+        BufferPtr(nullptr),
+        children[0]->size(),
+        children,
+        folly::none);
   }
 
  private:
@@ -100,6 +133,20 @@ class BaseColumn {
   vector_size_t getNullCount() const {
     return _nullCount;
   }
+
+  VectorPtr getUnderlyingVeloxVector() {
+    return _delegate;
+  }
+
+  // TODO: add output type
+  static std::shared_ptr<exec::ExprSet> genUnaryExprSet(
+      std::shared_ptr<const facebook::f4d::RowType> inputRowType,
+      const std::string& name);
+
+  // TODO: get rid of inputRowType (should be contained in `exprSet`)
+  std::unique_ptr<BaseColumn> applyUnaryExprSet(
+      std::shared_ptr<const facebook::f4d::RowType> inputRowType,
+      std::shared_ptr<exec::ExprSet> exprSet);
 };
 
 std::unique_ptr<BaseColumn> createColumn(VectorPtr vec);

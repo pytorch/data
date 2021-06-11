@@ -16,6 +16,13 @@
 #include <f4d/type/Type.h>
 #include <f4d/vector/BaseVector.h>
 #include <f4d/vector/ComplexVector.h>
+#include <chrono>
+#include <memory>
+#include <ratio>
+#include "f4d/core/ITypedExpr.h"
+#include "f4d/exec/Expr.h"
+#include "f4d/functions/common/CoreFunctions.h"
+#include "f4d/parse/Expressions.h"
 
 namespace facebook {
 
@@ -80,6 +87,41 @@ std::unique_ptr<BaseColumn> MapColumn::valueAt(vector_size_t i) {
   return createColumn(slicedResult);
 }
 
-} // namespace torcharrow
+std::shared_ptr<exec::ExprSet> BaseColumn::genUnaryExprSet(
+    std::shared_ptr<const facebook::f4d::RowType> inputRowType,
+    const std::string& name) {
+  // Construct Typed Expression
+  using InputExprList = std::vector<std::shared_ptr<const core::ITypedExpr>>;
+  InputExprList inputTypedExprs{
+      std::make_shared<core::InputTypedExpr>(inputRowType)};
 
+  InputExprList fieldAccessTypedExprs{
+      std::make_shared<core::FieldAccessTypedExpr>(
+          inputRowType->childAt(0), std::move(inputTypedExprs), "c0")};
+
+  InputExprList callTypedExprs{std::make_shared<core::CallTypedExpr>(
+      inputRowType->childAt(0),  // TODO: this assume output has the same type
+      std::move(fieldAccessTypedExprs), name)};
+
+  // Container for expressions that get evaluated together. Common
+  // subexpression elimination and other cross-expression
+  // optimizations take place within this set of expressions.
+  return std::make_shared<exec::ExprSet>(
+      std::move(callTypedExprs), &TorchArrowGlobalStatic::execContext());
+}
+
+std::unique_ptr<BaseColumn> BaseColumn::applyUnaryExprSet(
+    std::shared_ptr<const facebook::f4d::RowType> inputRowType,
+    std::shared_ptr<exec::ExprSet> exprSet) {
+  auto inputRows = wrapRowVector({_delegate}, inputRowType);
+  exec::EvalCtx evalCtx(
+      &TorchArrowGlobalStatic::execContext(), exprSet.get(), inputRows.get());
+  SelectivityVector select(_delegate->size());
+  std::vector<VectorPtr> outputRows(1);
+  exprSet->eval(0, 1, true, select, &evalCtx, &outputRows);
+
+  return createColumn(outputRows[0]);
+}
+
+} // namespace torcharrow
 } // namespace facebook

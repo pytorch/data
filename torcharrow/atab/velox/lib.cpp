@@ -12,12 +12,13 @@
  * limitations under the License.
  */
 #include <f4d/common/memory/Memory.h>
+#include <f4d/type/Type.h>
+#include <f4d/vector/TypeAliases.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
-#include <f4d/type/Type.h>
-#include <f4d/vector/TypeAliases.h>
 #include <iostream>
+#include "f4d/functions/common/CoreFunctions.h"
 #include "column.h"
 
 #define STRINGIFY(x) #x
@@ -143,11 +144,18 @@ PYBIND11_MODULE(_torcharrow, m) {
 
   py::class_<Type, std::shared_ptr<Type>>(m, "Type");
 
-  declareSimpleType<TypeKind::BIGINT>(m, [](auto val) {
-    return py::cast(val);
-  }).def("append", [](SimpleColumn<int64_t>& self, py::int_ value) {
-    self.append(py::cast<int64_t>(value));
-  });
+  declareSimpleType<TypeKind::BIGINT>(m, [](auto val) { return py::cast(val); })
+      .def(
+          "append",
+          [](SimpleColumn<int64_t>& self, py::int_ value) {
+            self.append(py::cast<int64_t>(value));
+          })
+      .def("neg", [](SimpleColumn<int64_t>& self) {
+        static auto inputRowType = ROW({"c0"}, {BIGINT()});
+        static auto exprSet = BaseColumn::genUnaryExprSet(inputRowType, "negate");
+        auto result = self.applyUnaryExprSet(inputRowType, exprSet);
+        return result;
+      });
 
   declareSimpleType<TypeKind::INTEGER>(m, [](auto val) {
     return py::cast(val);
@@ -206,9 +214,13 @@ PYBIND11_MODULE(_torcharrow, m) {
 
   py::register_exception<NotAppendableException>(m, "NotAppendableException");
 
+  // Register Velox UDFs
+  // TODO: we may only need to register UDFs that TorchArrow required?
+  functions::registerFunctions();
+
 #ifdef VERSION_INFO
-  m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
+      m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
 #else
-  m.attr("__version__") = "dev";
+      m.attr("__version__") = "dev";
 #endif
 }

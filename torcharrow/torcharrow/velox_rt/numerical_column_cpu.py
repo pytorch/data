@@ -770,13 +770,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
     @expression
     def __neg__(self):
         """Vectorized: - a."""
-        col = velox.Column(get_velox_type(self.dtype))
-        for i in range(len(self)):
-            if self.getmask(i):
-                col.append_null()
-            else:
-                col.append(-self.getdata(i))
-        return ColumnFromVelox.from_velox(self.scope, self.dtype, col, True)
+        return ColumnFromVelox.from_velox(self.scope, self.dtype, self._data.neg(), True)
 
     @trace
     @expression
