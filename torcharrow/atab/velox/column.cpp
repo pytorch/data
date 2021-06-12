@@ -89,7 +89,7 @@ std::unique_ptr<BaseColumn> MapColumn::valueAt(vector_size_t i) {
 
 std::shared_ptr<exec::ExprSet> BaseColumn::genUnaryExprSet(
     std::shared_ptr<const facebook::f4d::RowType> inputRowType,
-    const std::string& name) {
+    const std::string& functionName) {
   // Construct Typed Expression
   using InputExprList = std::vector<std::shared_ptr<const core::ITypedExpr>>;
   InputExprList inputTypedExprs{
@@ -100,8 +100,9 @@ std::shared_ptr<exec::ExprSet> BaseColumn::genUnaryExprSet(
           inputRowType->childAt(0), std::move(inputTypedExprs), "c0")};
 
   InputExprList callTypedExprs{std::make_shared<core::CallTypedExpr>(
-      inputRowType->childAt(0),  // TODO: this assume output has the same type
-      std::move(fieldAccessTypedExprs), name)};
+      inputRowType->childAt(0), // TODO: this assume output has the same type
+      std::move(fieldAccessTypedExprs),
+      functionName)};
 
   // Container for expressions that get evaluated together. Common
   // subexpression elimination and other cross-expression
@@ -120,7 +121,22 @@ std::unique_ptr<BaseColumn> BaseColumn::applyUnaryExprSet(
   std::vector<VectorPtr> outputRows(1);
   exprSet->eval(0, 1, true, select, &evalCtx, &outputRows);
 
+  // TODO: This causes an extra type-based dispatch.
+  // We can optimize it by specializing applyUnaryExprSet method for
+  // SimpleColumn.
   return createColumn(outputRows[0]);
+}
+
+core::QueryCtx& TorchArrowGlobalStatic::queryContext() {
+  static core::QueryCtx queryContext;
+  return queryContext;
+}
+
+core::ExecCtx& TorchArrowGlobalStatic::execContext() {
+  static core::ExecCtx execContext(
+      memory::getDefaultScopedMemoryPool(),
+      &TorchArrowGlobalStatic::queryContext());
+  return execContext;
 }
 
 } // namespace torcharrow

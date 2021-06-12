@@ -17,11 +17,10 @@
 #include <f4d/common/memory/Memory.h>
 #include <f4d/core/QueryCtx.h>
 #include <memory>
-#include "f4d/core/QueryCtx.h"
 #include "f4d/common/base/Exceptions.h"
+#include "f4d/exec/Expr.h"
 #include "f4d/type/Type.h"
 #include "f4d/vector/BaseVector.h"
-#include "f4d/exec/Expr.h"
 #include "f4d/vector/ComplexVector.h"
 #include "f4d/vector/FlatVector.h"
 #include "vector.h"
@@ -40,17 +39,8 @@ class NotAppendableException : public std::exception {
 };
 
 struct TorchArrowGlobalStatic {
-  static core::QueryCtx& queryContext() {
-    static core::QueryCtx queryContext;
-    return queryContext;
-  }
-
-  static core::ExecCtx& execContext() {
-    static core::ExecCtx execContext(
-        memory::getDefaultScopedMemoryPool(),
-        &TorchArrowGlobalStatic::queryContext());
-    return execContext;
-  }
+  static core::QueryCtx& queryContext();
+  static core::ExecCtx& execContext();
 };
 
 class BaseColumn {
@@ -141,7 +131,7 @@ class BaseColumn {
   // TODO: add output type
   static std::shared_ptr<exec::ExprSet> genUnaryExprSet(
       std::shared_ptr<const facebook::f4d::RowType> inputRowType,
-      const std::string& name);
+      const std::string& functionName);
 
   // TODO: get rid of inputRowType (should be contained in `exprSet`)
   std::unique_ptr<BaseColumn> applyUnaryExprSet(
@@ -166,7 +156,8 @@ class SimpleColumn : public BaseColumn {
       : BaseColumn(other, offset, length) {}
 
   T valueAt(int i) {
-    return _delegate.get()->template as<SimpleVector<T>>()->valueAt(_offset + i);
+    return _delegate.get()->template as<SimpleVector<T>>()->valueAt(
+        _offset + i);
   }
 
   void append(const T& value) {
