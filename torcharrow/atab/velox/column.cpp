@@ -97,7 +97,9 @@ std::shared_ptr<exec::ExprSet> BaseColumn::genUnaryExprSet(
 
   InputExprList fieldAccessTypedExprs{
       std::make_shared<core::FieldAccessTypedExpr>(
-          inputRowType->childAt(0), std::move(inputTypedExprs), "c0")};
+          inputRowType->childAt(0),
+          std::move(inputTypedExprs),
+          inputRowType->nameOf(0))};
 
   InputExprList callTypedExprs{std::make_shared<core::CallTypedExpr>(
       inputRowType->childAt(0), // TODO: this assume output has the same type

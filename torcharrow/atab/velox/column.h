@@ -130,11 +130,14 @@ class BaseColumn {
 
   // TODO: add output type
   static std::shared_ptr<exec::ExprSet> genUnaryExprSet(
+      // input row type is required even for unary op since the input vector
+      // needs to be wrapped into a RowVector before evaluation.
       std::shared_ptr<const facebook::f4d::RowType> inputRowType,
       const std::string& functionName);
 
-  // TODO: get rid of inputRowType (should be contained in `exprSet`)
   std::unique_ptr<BaseColumn> applyUnaryExprSet(
+      // input row type is required even for unary op since the input vector
+      // needs to be wrapped into a RowVector before evaluation.
       std::shared_ptr<const facebook::f4d::RowType> inputRowType,
       std::shared_ptr<exec::ExprSet> exprSet);
 };
@@ -186,6 +189,17 @@ class SimpleColumn : public BaseColumn {
       vector_size_t offset,
       vector_size_t length) {
     return std::make_unique<SimpleColumn<T>>(*this, offset, length);
+  }
+
+  //
+  // unary numeric column ops
+  //
+
+  // TODO: return SimpleColumn<T> instead?
+  std::unique_ptr<BaseColumn> neg() {
+    static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    static auto exprSet = BaseColumn::genUnaryExprSet(inputRowType, "negate");
+    return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 };
 

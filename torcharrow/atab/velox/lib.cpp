@@ -150,12 +150,7 @@ PYBIND11_MODULE(_torcharrow, m) {
           [](SimpleColumn<int64_t>& self, py::int_ value) {
             self.append(py::cast<int64_t>(value));
           })
-      .def("neg", [](SimpleColumn<int64_t>& self) {
-        static auto inputRowType = ROW({"c0"}, {BIGINT()});
-        static auto exprSet = BaseColumn::genUnaryExprSet(inputRowType, "negate");
-        auto result = self.applyUnaryExprSet(inputRowType, exprSet);
-        return result;
-      });
+      .def("neg", &SimpleColumn<int64_t>::neg);
 
   declareSimpleType<TypeKind::INTEGER>(m, [](auto val) {
     return py::cast(val);
@@ -186,15 +181,31 @@ PYBIND11_MODULE(_torcharrow, m) {
         self.append(py::cast<bool>(value));
       });
 
+  declareSimpleType<TypeKind::REAL>(m, [](auto val) { return py::cast(val); })
+      .def(
+          "append",
+          [](SimpleColumn<float>& self, py::float_ value) {
+            self.append(py::cast<float>(value));
+          })
+      .def(
+          "append",
+          [](SimpleColumn<float>& self, py::int_ value) {
+            self.append(py::cast<float>(value));
+          })
+      .def("neg", &SimpleColumn<float>::neg);
+
   declareSimpleType<TypeKind::DOUBLE>(m, [](auto val) { return py::cast(val); })
       .def(
           "append",
           [](SimpleColumn<double>& self, py::float_ value) {
             self.append(py::cast<double>(value));
           })
-      .def("append", [](SimpleColumn<double>& self, py::int_ value) {
-        self.append(py::cast<double>(value));
-      });
+      .def(
+          "append",
+          [](SimpleColumn<double>& self, py::int_ value) {
+            self.append(py::cast<double>(value));
+          })
+      .def("neg", &SimpleColumn<double>::neg);
 
   declareSimpleType<TypeKind::VARCHAR>(
       m,
