@@ -72,6 +72,24 @@ class TestSimpleColumns(unittest.TestCase):
         self.assertEqual(col.is_null_at(5), True)
         self.assertEqual(col.get_null_count(), 2)
 
+    def test_SimpleColumnFloat32_neg(self):
+        data = [1., 2., None, 3., 4., None]
+        col = infer_column(data)
+        neg_col = col.neg()
+
+        self.assertEqual(neg_col[0], -1.)
+        self.assertEqual(neg_col[1], -2.)
+        self.assertEqual(neg_col[3], -3.)
+        self.assertEqual(neg_col[4], -4.)
+
+        self.assertEqual(col.is_null_at(0), False)
+        self.assertEqual(col.is_null_at(1), False)
+        self.assertEqual(col.is_null_at(2), True)
+        self.assertEqual(col.is_null_at(3), False)
+        self.assertEqual(col.is_null_at(4), False)
+        self.assertEqual(col.is_null_at(5), True)
+        self.assertEqual(col.get_null_count(), 2)
+
     def test_SimpleColumnBoolean(self):
         data = [True, True, True, True]
         col = infer_column(data)
@@ -274,7 +292,7 @@ def _infer_column(data) -> Union[ta.BaseColumn, Unresolved, None]:
                 raise NotImplementedError()
 
         else:
-            type_ = {int: ta.BIGINT(), str: ta.VARCHAR(), bool: ta.BOOLEAN()}.get(
+            type_ = {int: ta.BIGINT(), float: ta.REAL(), str: ta.VARCHAR(), bool: ta.BOOLEAN()}.get(
                 type(non_null_item)
             )
             if type_ is None:
