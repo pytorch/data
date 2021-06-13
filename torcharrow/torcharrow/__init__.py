@@ -17,8 +17,10 @@ from .ilist_column import *
 from .imap_column import *
 from .idataframe import *
 
-
+# velox_rt imports _torcharrow which binds Velox RowType,
+# which conflicts with koski_rt
 #from .velox_rt import *
+
 from .numpy_rt import *
 
 from .interop import *
