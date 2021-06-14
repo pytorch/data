@@ -758,13 +758,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
     @expression
     def __invert__(self):
         """Vectorized boolean not: ~ a."""
-        col = velox.Column(get_velox_type(self.dtype))
-        for i in range(len(self)):
-            if self.getmask(i):
-                col.append_null()
-            else:
-                col.append(not self.getdata(i))
-        return ColumnFromVelox.from_velox(self.scope, self.dtype, col, True)
+        return ColumnFromVelox.from_velox(self.scope, self.dtype, self._data.invert(), True)
 
     @trace
     @expression
@@ -803,42 +797,27 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
     @expression
     def abs(self):
         """Absolute value of each element of the series."""
-        col = velox.Column(get_velox_type(self.dtype))
-        for i in range(len(self)):
-            if self.getmask(i):
-                col.append_null()
-            else:
-                col.append(abs(self.getdata(i)))
-        return ColumnFromVelox.from_velox(self.scope, self.dtype, col, True)
+        return ColumnFromVelox.from_velox(self.scope, self.dtype, self._data.abs(), True)
 
     @trace
     @expression
     def ceil(self):
         """Rounds each value upward to the smallest integral"""
-        col = velox.Column(get_velox_type(self.dtype))
-        for i in range(len(self)):
-            if self.getmask(i):
-                col.append_null()
-            else:
-                col.append(math.ceil(self.getdata(i)))
-        return ColumnFromVelox.from_velox(self.scope, self.dtype, col, True)
+        return ColumnFromVelox.from_velox(self.scope, self.dtype, self._data.ceil(), True)
 
     @trace
     @expression
     def floor(self):
         """Rounds each value downward to the largest integral value"""
-        col = velox.Column(get_velox_type(self.dtype))
-        for i in range(len(self)):
-            if self.getmask(i):
-                col.append_null()
-            else:
-                col.append(math.floor(self.getdata(i)))
-        return ColumnFromVelox.from_velox(self.scope, self.dtype, col, True)
+        return ColumnFromVelox.from_velox(self.scope, self.dtype, self._data.floor(), True)
 
     @trace
     @expression
     def round(self, decimals=0):
         """Round each value in a data to the given number of decimals."""
+        # TODO: round(-2.5) returns -2.0 in Numpy/PyTorch but returns -3.0 in Velox
+        # return ColumnFromVelox.from_velox(self.scope, self.dtype, self._data.round(), True)
+
         col = velox.Column(get_velox_type(self.dtype))
         for i in range(len(self)):
             if self.getmask(i):
