@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import unittest
 from dataclasses import dataclass
-from typing import Union, List
+from typing import Union, List, Any
 
 # @manual=//pytorch/torchdata/torcharrow/atab/velox:_torcharrow
 import _torcharrow as ta
@@ -54,41 +54,39 @@ class TestSimpleColumns(unittest.TestCase):
         self.assertEqual(sliced_col[2], 3)
         self.assertEqual(sliced_col.get_null_count(), 1)
 
-    def test_SimpleColumnInt64_neg(self):
-        data = [1, 2, None, 3, 4, None]
+    def assert_SimpleColumn(self, col: ta.BaseColumn, val: List[Any]):
+        self.assertEqual(len(col), len(val))
+        for i in range(len(val)):
+            if val[i] is None:
+                self.assertTrue(col.is_null_at(i))
+            else:
+                self.assertFalse(col.is_null_at(i))
+                if isinstance(val[i], float):
+                    self.assertAlmostEqual(col[i], val[i], places=6)
+                else:
+                    self.assertEqual(col[i], val[i])
+
+    def test_SimpleColumnInt64_unary(self):
+        data = [1, -2, None, 3, -4, None]
+        col = infer_column(data)
+
+        neg_col = col.neg()
+        self.assert_SimpleColumn(neg_col, [-1, 2, None, -3, 4, None])
+
+        abs_col = col.abs()
+        self.assert_SimpleColumn(abs_col, [1, 2, None, 3, 4, None])
+
+    def test_SimpleColumnFloat32_unary(self):
+        data = [1.2, -2.3, None, 3.4, -4.6, None]
         col = infer_column(data)
         neg_col = col.neg()
+        self.assert_SimpleColumn(neg_col, [-1.2, 2.3, None, -3.4, 4.6, None])
 
-        self.assertEqual(neg_col[0], -1)
-        self.assertEqual(neg_col[1], -2)
-        self.assertEqual(neg_col[3], -3)
-        self.assertEqual(neg_col[4], -4)
+        abs_col = col.abs()
+        self.assert_SimpleColumn(abs_col, [1.2, 2.3, None, 3.4, 4.6, None])
 
-        self.assertEqual(col.is_null_at(0), False)
-        self.assertEqual(col.is_null_at(1), False)
-        self.assertEqual(col.is_null_at(2), True)
-        self.assertEqual(col.is_null_at(3), False)
-        self.assertEqual(col.is_null_at(4), False)
-        self.assertEqual(col.is_null_at(5), True)
-        self.assertEqual(col.get_null_count(), 2)
-
-    def test_SimpleColumnFloat32_neg(self):
-        data = [1., 2., None, 3., 4., None]
-        col = infer_column(data)
-        neg_col = col.neg()
-
-        self.assertEqual(neg_col[0], -1.)
-        self.assertEqual(neg_col[1], -2.)
-        self.assertEqual(neg_col[3], -3.)
-        self.assertEqual(neg_col[4], -4.)
-
-        self.assertEqual(col.is_null_at(0), False)
-        self.assertEqual(col.is_null_at(1), False)
-        self.assertEqual(col.is_null_at(2), True)
-        self.assertEqual(col.is_null_at(3), False)
-        self.assertEqual(col.is_null_at(4), False)
-        self.assertEqual(col.is_null_at(5), True)
-        self.assertEqual(col.get_null_count(), 2)
+        round_col = col.round()
+        self.assert_SimpleColumn(round_col, [1., -2., None, 3., -5., None])
 
     def test_SimpleColumnBoolean(self):
         data = [True, True, True, True]
@@ -113,6 +111,13 @@ class TestSimpleColumns(unittest.TestCase):
         self.assertEqual(col.is_null_at(2), False)
         self.assertEqual(col.is_null_at(3), False)
         self.assertEqual(col.is_null_at(4), True)
+
+    def test_SimpleColumnBoolean_unary(self):
+        data = [True, False, None, True, False, None]
+        col = infer_column(data)
+
+        inv_col = col.invert()
+        self.assert_SimpleColumn(inv_col, [False, True, None, False, True, None])
 
     def test_SimpleColumnString(self):
         data = ["0", "1", "2", "3"]

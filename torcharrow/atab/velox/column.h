@@ -196,9 +196,43 @@ class SimpleColumn : public BaseColumn {
   //
 
   // TODO: return SimpleColumn<T> instead?
+  std::unique_ptr<BaseColumn> invert() {
+    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto exprSet = BaseColumn::genUnaryExprSet(inputRowType, "not");
+    return this->applyUnaryExprSet(inputRowType, exprSet);
+  }
+
   std::unique_ptr<BaseColumn> neg() {
-    static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
-    static auto exprSet = BaseColumn::genUnaryExprSet(inputRowType, "negate");
+    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto exprSet =
+        BaseColumn::genUnaryExprSet(inputRowType, "negate");
+    return this->applyUnaryExprSet(inputRowType, exprSet);
+  }
+
+  std::unique_ptr<BaseColumn> abs() {
+    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto exprSet = BaseColumn::genUnaryExprSet(inputRowType, "abs");
+    return this->applyUnaryExprSet(inputRowType, exprSet);
+  }
+
+  std::unique_ptr<BaseColumn> ceil() {
+    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto exprSet =
+        BaseColumn::genUnaryExprSet(inputRowType, "ceil");
+    return this->applyUnaryExprSet(inputRowType, exprSet);
+  }
+
+  std::unique_ptr<BaseColumn> floor() {
+    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto exprSet =
+        BaseColumn::genUnaryExprSet(inputRowType, "floor");
+    return this->applyUnaryExprSet(inputRowType, exprSet);
+  }
+
+  std::unique_ptr<BaseColumn> round() {
+    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto exprSet =
+        BaseColumn::genUnaryExprSet(inputRowType, "round");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 };
