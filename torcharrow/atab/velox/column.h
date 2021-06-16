@@ -17,6 +17,7 @@
 #include <f4d/common/memory/Memory.h>
 #include <f4d/core/QueryCtx.h>
 #include <memory>
+#include "f4d/type/Type.h"
 #include "f4d/common/base/Exceptions.h"
 #include "f4d/exec/Expr.h"
 #include "f4d/type/Type.h"
@@ -41,12 +42,46 @@ class NotAppendableException : public std::exception {
 struct TorchArrowGlobalStatic {
   static core::QueryCtx& queryContext();
   static core::ExecCtx& execContext();
+
+  static f4d::memory::MemoryPool* rootMemoryPool() {
+     static f4d::memory::MemoryPool* const pool =
+        &memory::getProcessDefaultMemoryManager().getRoot();
+    return pool;
+  }
+};
+
+class BaseColumn;
+
+struct OperatorHandle {
+  RowTypePtr inputRowType_;
+  std::shared_ptr<exec::ExprSet> exprSet_;
+
+  OperatorHandle(
+      RowTypePtr inputRowType,
+      std::shared_ptr<exec::ExprSet> exprSet)
+      : inputRowType_(inputRowType),
+        exprSet_(exprSet){}
+
+  static RowVectorPtr wrapRowVector(
+      const std::vector<VectorPtr>& children,
+      std::shared_ptr<const RowType> rowType) {
+    return std::make_shared<RowVector>(
+        TorchArrowGlobalStatic::rootMemoryPool(),
+        rowType,
+        BufferPtr(nullptr),
+        children[0]->size(),
+        children,
+        folly::none);
+  }
+
+  std::unique_ptr<BaseColumn> call(const BaseColumn& a, const BaseColumn& b);
 };
 
 class BaseColumn {
   friend class ArrayColumn;
   friend class MapColumn;
   friend class RowColumn;
+  friend struct OperatorHandle;
 
  protected:
   VectorPtr _delegate;
@@ -104,12 +139,12 @@ class BaseColumn {
 
   virtual ~BaseColumn() = default;
 
-  TypePtr type() {
-    return _delegate.get()->type();
+  TypePtr type() const {
+    return _delegate->type();
   }
 
   bool isNullAt(vector_size_t idx) const {
-    return _delegate.get()->isNullAt(_offset + idx);
+    return _delegate->isNullAt(_offset + idx);
   }
 
   vector_size_t getOffset() const {
@@ -124,7 +159,7 @@ class BaseColumn {
     return _nullCount;
   }
 
-  VectorPtr getUnderlyingVeloxVector() {
+  VectorPtr getUnderlyingVeloxVector() const {
     return _delegate;
   }
 
@@ -140,6 +175,52 @@ class BaseColumn {
       // needs to be wrapped into a RowVector before evaluation.
       std::shared_ptr<const facebook::f4d::RowType> inputRowType,
       std::shared_ptr<exec::ExprSet> exprSet);
+
+  static std::shared_ptr<exec::ExprSet> genBinaryExprSet(
+      std::shared_ptr<const facebook::f4d::RowType> inputRowType,
+      std::shared_ptr<const facebook::f4d::Type> commonType,
+      const std::string& functionName);
+
+  // From f4d/type/Variant.h
+  // TODO: refactor into some type utility class
+  template <TypeKind Kind>
+  static const std::shared_ptr<const Type> kind2type() {
+    return TypeFactory<Kind>::create();
+  }
+
+  static TypeKind promoteNumericTypeKind(TypeKind a, TypeKind b) {
+    constexpr auto b1 = TypeKind::BOOLEAN;
+    constexpr auto i1 = TypeKind::TINYINT;
+    constexpr auto i2 = TypeKind::SMALLINT;
+    constexpr auto i4 = TypeKind::INTEGER;
+    constexpr auto i8 = TypeKind::BIGINT;
+    constexpr auto f4 = TypeKind::REAL;
+    constexpr auto f8 = TypeKind::DOUBLE;
+    constexpr auto num_numeric_types = static_cast<int>(TypeKind::DOUBLE) + 1;
+
+    VELOX_CHECK(
+        static_cast<int>(a) < num_numeric_types &&
+        static_cast<int>(b) < num_numeric_types);
+
+    if (a == b) {
+      return a;
+    }
+
+    // Sliced from
+    // https://github.com/pytorch/pytorch/blob/1c502d1f8ec861c31a08d580ae7b73b7fbebebed/c10/core/ScalarType.h#L402-L421
+    static constexpr TypeKind
+        _promoteTypesLookup[num_numeric_types][num_numeric_types] = {
+            /*        b1  i1  i2  i4  i8  f4  f8*/
+            /* b1 */ {b1, i1, i2, i4, i8, f4, f8},
+            /* i1 */ {i1, i1, i2, i4, i8, f4, f8},
+            /* i2 */ {i2, i2, i2, i4, i8, f4, f8},
+            /* i4 */ {i4, i4, i4, i4, i8, f4, f8},
+            /* i8 */ {i8, i8, i8, i8, i8, f4, f8},
+            /* f4 */ {f4, f4, f4, f4, f4, f4, f8},
+            /* f8 */ {f8, f8, f8, f8, f8, f8, f8},
+        };
+    return _promoteTypesLookup[static_cast<int>(a)][static_cast<int>(b)];
+  }
 };
 
 std::unique_ptr<BaseColumn> createColumn(VectorPtr vec);
@@ -198,7 +279,8 @@ class SimpleColumn : public BaseColumn {
   // TODO: return SimpleColumn<T> instead?
   std::unique_ptr<BaseColumn> invert() {
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
-    const static auto exprSet = BaseColumn::genUnaryExprSet(inputRowType, "not");
+    const static auto exprSet =
+        BaseColumn::genUnaryExprSet(inputRowType, "not");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
@@ -211,7 +293,8 @@ class SimpleColumn : public BaseColumn {
 
   std::unique_ptr<BaseColumn> abs() {
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
-    const static auto exprSet = BaseColumn::genUnaryExprSet(inputRowType, "abs");
+    const static auto exprSet =
+        BaseColumn::genUnaryExprSet(inputRowType, "abs");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
@@ -234,6 +317,41 @@ class SimpleColumn : public BaseColumn {
     const static auto exprSet =
         BaseColumn::genUnaryExprSet(inputRowType, "round");
     return this->applyUnaryExprSet(inputRowType, exprSet);
+  }
+
+  //
+  // binary numeric column ops
+  //
+
+  // TODO: Model binary functions as UDF.
+  std::unique_ptr<OperatorHandle> createBinaryOpHandle(
+      const BaseColumn& other,
+      const std::string& functionName) {
+    auto inputRowType = ROW({"c0", "c1"}, {this->type(), other.type()});
+    TypeKind commonTypeKind =
+        promoteNumericTypeKind(this->type()->kind(), other.type()->kind());
+    auto commonType =
+        F4D_DYNAMIC_SCALAR_TYPE_DISPATCH(kind2type, commonTypeKind);
+    auto exprSet =
+        BaseColumn::genBinaryExprSet(inputRowType, commonType, functionName);
+
+    return std::make_unique<OperatorHandle>(inputRowType, exprSet);
+  }
+
+  std::unique_ptr<BaseColumn> add(const BaseColumn& other) {
+    constexpr auto num_numeric_types = static_cast<int>(TypeKind::DOUBLE) + 1;
+    static std::array<
+        std::unique_ptr<OperatorHandle>,
+        num_numeric_types> /* library-local */ ops;
+
+    int dispatch_id = static_cast<int>(other.type()->kind());
+    if (ops[dispatch_id] == nullptr) {
+      ops[dispatch_id] = createBinaryOpHandle(other, "plus");
+    }
+
+    auto result = ops[dispatch_id]->call(*this, other);
+
+    return result;
   }
 };
 

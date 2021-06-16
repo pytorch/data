@@ -241,16 +241,13 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
         """Vectorized a + b."""
         if isinstance(other, INumericalColumn):
             self.scope.check_is_same(other.scope)
+
         if isinstance(other, NumericalColumnCpu):
-            col = velox.Column(get_velox_type(self.dtype))
-            assert len(self) == len(other)
-            for i in range(len(self)):
-                if self.getmask(i) or other.getmask(i):
-                    col.append_null()
-                else:
-                    col.append(self.getdata(i) + other.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.dtype, col, True)
+            result_col = self._data.add(other._data)
+            result_dtype = dt.velox_scalar_type_kind_to_dtype(result_col.type().kind_name()).with_null(self.dtype.nullable or other.dtype.nullable)
+            return ColumnFromVelox.from_velox(self.scope, result_dtype, result_col, True)
         else:
+            # other is scalar
             col = velox.Column(get_velox_type(self.dtype))
             for i in range(len(self)):
                 if self.getmask(i):
@@ -770,13 +767,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
     @expression
     def __pos__(self):
         """Vectorized: + a."""
-        col = velox.Column(get_velox_type(self.dtype))
-        for i in range(len(self)):
-            if self.getmask(i):
-                col.append_null()
-            else:
-                col.append(self.getdata(i))
-        return ColumnFromVelox.from_velox(self.scope, self.dtype, col, True)
+        return self
 
     @trace
     @expression

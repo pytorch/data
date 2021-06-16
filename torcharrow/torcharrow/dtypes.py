@@ -823,6 +823,27 @@ def typeof_np_dtype(t: np.dtype) -> DType:
         f"translation of numpy type {type(t).__name__} to dtype unsupported"
     )
 
+# Only for scalar types
+# TODO: use enum for typekind
+def velox_scalar_type_kind_to_dtype(typekind: str) -> DType:
+    if typekind == 'TINYINT':
+        return int8
+    if typekind == 'SMALLINT':
+        return int16
+    if typekind == 'INTEGER':
+        return int32
+    if typekind == 'BIGINT':
+        return int64
+    if typekind == 'REAL':
+        return float32
+    if typekind == 'DOUBLE':
+        return float64
+    if typekind == 'VARHCAR':
+        return string
+
+    raise AssertionError(
+        f"translation of Velox typekind {typekind} to dtype unsupported"
+    )
 
 def cast_as(dtype):
     if is_string(dtype):

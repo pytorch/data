@@ -19,6 +19,7 @@
 #include <chrono>
 #include <memory>
 #include <ratio>
+#include "f4d/core/Expressions.h"
 #include "f4d/core/ITypedExpr.h"
 #include "f4d/exec/Expr.h"
 #include "f4d/functions/common/CoreFunctions.h"
@@ -126,6 +127,64 @@ std::unique_ptr<BaseColumn> BaseColumn::applyUnaryExprSet(
   // TODO: This causes an extra type-based dispatch.
   // We can optimize it by specializing applyUnaryExprSet method for
   // SimpleColumn.
+  return createColumn(outputRows[0]);
+}
+
+std::shared_ptr<exec::ExprSet> BaseColumn::genBinaryExprSet(
+    std::shared_ptr<const facebook::f4d::RowType> inputRowType,
+    std::shared_ptr<const facebook::f4d::Type> commonType,
+    const std::string& functionName) {
+  // Construct Typed Expression
+  using InputExprList = std::vector<std::shared_ptr<const core::ITypedExpr>>;
+  InputExprList inputTypedExprs{
+      std::make_shared<core::InputTypedExpr>(inputRowType)};
+
+  InputExprList castedFieldAccessTypedExprs;
+  for (int i = 0; i < 2; i++) {
+    auto fieldAccessTypedExpr = std::make_shared<core::FieldAccessTypedExpr>(
+        inputRowType->childAt(i),
+        InputExprList(inputTypedExprs),
+        inputRowType->nameOf(i));
+
+    if (*inputRowType->childAt(i) == *commonType) {
+      // no need to cast
+      castedFieldAccessTypedExprs.push_back(fieldAccessTypedExpr);
+    }
+    else {
+      // type promotion
+      InputExprList fieldAccessTypedExprs{fieldAccessTypedExpr};
+      castedFieldAccessTypedExprs.push_back(
+          std::make_shared<core::CastTypedExpr>(
+              commonType,
+              fieldAccessTypedExprs,
+              false /* nullOnFailure */));
+    }
+  }
+
+  InputExprList callTypedExprs{std::make_shared<core::CallTypedExpr>(
+      commonType,
+      std::move(castedFieldAccessTypedExprs),
+      functionName)};
+
+  // Container for expressions that get evaluated together. Common
+  // subexpression elimination and other cross-expression
+  // optimizations take place within this set of expressions.
+  return std::make_shared<exec::ExprSet>(
+      std::move(callTypedExprs), &TorchArrowGlobalStatic::execContext());
+}
+
+std::unique_ptr<BaseColumn> OperatorHandle::call(const BaseColumn& a, const BaseColumn& b) {
+  auto inputRows = wrapRowVector(
+      {a.getUnderlyingVeloxVector(), b.getUnderlyingVeloxVector()},
+      inputRowType_);
+  exec::EvalCtx evalCtx(
+      &TorchArrowGlobalStatic::execContext(), exprSet_.get(), inputRows.get());
+  SelectivityVector select(a.getUnderlyingVeloxVector()->size());
+  std::vector<VectorPtr> outputRows(1);
+  exprSet_->eval(0, 1, true, select, &evalCtx, &outputRows);
+
+  // TODO: This causes an extra type-based dispatch.
+  // We can optimize it by template OperatorHandle by return type
   return createColumn(outputRows[0]);
 }
 

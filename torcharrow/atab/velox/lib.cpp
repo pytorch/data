@@ -142,7 +142,8 @@ PYBIND11_MODULE(_torcharrow, m) {
       .def_property_readonly("length", &BaseColumn::getLength)
       .def("__len__", &BaseColumn::getLength);
 
-  py::class_<Type, std::shared_ptr<Type>>(m, "Type");
+  py::class_<Type, std::shared_ptr<Type>>(m, "Type")
+      .def("kind_name", &Type::kindName);
 
   declareSimpleType<TypeKind::BIGINT>(m, [](auto val) { return py::cast(val); })
       .def(
@@ -151,7 +152,8 @@ PYBIND11_MODULE(_torcharrow, m) {
             self.append(py::cast<int64_t>(value));
           })
       .def("neg", &SimpleColumn<int64_t>::neg)
-      .def("abs", &SimpleColumn<int64_t>::abs);
+      .def("abs", &SimpleColumn<int64_t>::abs)
+      .def("add", &SimpleColumn<int64_t>::add);
 
   declareSimpleType<TypeKind::INTEGER>(m, [](auto val) {
     return py::cast(val);
@@ -200,7 +202,8 @@ PYBIND11_MODULE(_torcharrow, m) {
       .def("abs", &SimpleColumn<float>::abs)
       .def("ceil", &SimpleColumn<float>::ceil)
       .def("floor", &SimpleColumn<float>::floor)
-      .def("round", &SimpleColumn<float>::round);
+      .def("round", &SimpleColumn<float>::round)
+      .def("add", &SimpleColumn<float>::add);
 
   declareSimpleType<TypeKind::DOUBLE>(m, [](auto val) { return py::cast(val); })
       .def(
@@ -217,7 +220,8 @@ PYBIND11_MODULE(_torcharrow, m) {
       .def("abs", &SimpleColumn<double>::abs)
       .def("ceil", &SimpleColumn<double>::ceil)
       .def("floor", &SimpleColumn<double>::floor)
-      .def("round", &SimpleColumn<double>::round);
+      .def("round", &SimpleColumn<double>::round)
+      .def("add", &SimpleColumn<double>::add);
 
   declareSimpleType<TypeKind::VARCHAR>(
       m,

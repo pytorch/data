@@ -45,11 +45,11 @@ def Column(
 class IColumn(ty.Sized, ty.Iterable, abc.ABC):
     """Interface for Column are n vectors (n>=1) of columns"""
 
-    def __init__(self, scope, to, dtype):
+    def __init__(self, scope, to, dtype: dt.DType):
 
         self._scope = scope
         self._to = to
-        self._dtype = dtype
+        self._dtype: dt.DType = dtype
 
         # id handling, used for tracing...
         self.id = f"c{scope.ct.next()}"
@@ -66,7 +66,7 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
 
     @property  # type: ignore
     @traceproperty
-    def dtype(self):
+    def dtype(self) -> dt.DType:
         """dtype of the colum/frame"""
         return self._dtype
 

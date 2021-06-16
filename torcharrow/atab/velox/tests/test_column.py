@@ -69,24 +69,63 @@ class TestSimpleColumns(unittest.TestCase):
     def test_SimpleColumnInt64_unary(self):
         data = [1, -2, None, 3, -4, None]
         col = infer_column(data)
+        self.assertEqual(col.type().kind_name(), 'BIGINT')
 
         neg_col = col.neg()
         self.assert_SimpleColumn(neg_col, [-1, 2, None, -3, 4, None])
+        self.assertEqual(neg_col.type().kind_name(), 'BIGINT')
+
+        neg_col2 = neg_col.neg()
+        self.assert_SimpleColumn(neg_col2, [1, -2, None, 3, -4, None])
+        self.assertEqual(neg_col2.type().kind_name(), 'BIGINT')
+
+        neg_col3 = neg_col2.neg()
+        self.assert_SimpleColumn(neg_col3, [-1, 2, None, -3, 4, None])
+        self.assertEqual(neg_col3.type().kind_name(), 'BIGINT')
 
         abs_col = col.abs()
         self.assert_SimpleColumn(abs_col, [1, 2, None, 3, 4, None])
+        self.assertEqual(abs_col.type().kind_name(), 'BIGINT')
+
+    def test_SimpleColumnInt64_binary(self):
+        data1= [1, -2, None, 3, -4, None]
+        col1 = infer_column(data1)
+        data2= [None, 1, 2, 3, 4, 5]
+        col2 = infer_column(data2)
+
+        sum_col = col1.add(col2)
+        self.assert_SimpleColumn(sum_col, [None, -1, None, 6, 0, None])
+        self.assertEqual(sum_col.type().kind_name(), 'BIGINT')
+
+        # type promotion
+        data3= [None, 1., 2., 3., 4., 5.]
+        col3 = infer_column(data3)
+        self.assertEqual(col3.type().kind_name(), 'REAL')
+
+        sum_col = col1.add(col3)
+        self.assertEqual(sum_col.type().kind_name(), 'REAL')
+        self.assert_SimpleColumn(sum_col, [None, -1., None, 6., 0., None])
+
+        sum_col2 = col3.add(col1)
+        self.assertEqual(sum_col2.type().kind_name(), 'REAL')
+        self.assert_SimpleColumn(sum_col2, [None, -1., None, 6., 0., None])
 
     def test_SimpleColumnFloat32_unary(self):
         data = [1.2, -2.3, None, 3.4, -4.6, None]
         col = infer_column(data)
+        self.assertEqual(col.type().kind_name(), 'REAL')
+
         neg_col = col.neg()
         self.assert_SimpleColumn(neg_col, [-1.2, 2.3, None, -3.4, 4.6, None])
+        self.assertEqual(neg_col.type().kind_name(), 'REAL')
 
         abs_col = col.abs()
         self.assert_SimpleColumn(abs_col, [1.2, 2.3, None, 3.4, 4.6, None])
+        self.assertEqual(abs_col.type().kind_name(), 'REAL')
 
         round_col = col.round()
         self.assert_SimpleColumn(round_col, [1., -2., None, 3., -5., None])
+        self.assertEqual(round_col.type().kind_name(), 'REAL')
 
     def test_SimpleColumnBoolean(self):
         data = [True, True, True, True]
@@ -115,8 +154,10 @@ class TestSimpleColumns(unittest.TestCase):
     def test_SimpleColumnBoolean_unary(self):
         data = [True, False, None, True, False, None]
         col = infer_column(data)
+        self.assertEqual(col.type().kind_name(), 'BOOLEAN')
 
         inv_col = col.invert()
+        self.assertEqual(inv_col.type().kind_name(), 'BOOLEAN')
         self.assert_SimpleColumn(inv_col, [False, True, None, False, True, None])
 
     def test_SimpleColumnString(self):
