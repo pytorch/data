@@ -244,7 +244,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
 
         if isinstance(other, NumericalColumnCpu):
             result_col = self._data.add(other._data)
-            result_dtype = dt.velox_scalar_type_kind_to_dtype(result_col.type().kind_name()).with_null(self.dtype.nullable or other.dtype.nullable)
+            result_dtype = result_col.dtype().with_null(self.dtype.nullable or other.dtype.nullable)
             return ColumnFromVelox.from_velox(self.scope, result_dtype, result_col, True)
         else:
             # other is scalar
