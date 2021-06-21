@@ -353,6 +353,31 @@ class SimpleColumn : public BaseColumn {
 
     return result;
   }
+
+  //
+  // string column ops
+  //
+  std::unique_ptr<BaseColumn> lower() {
+    static_assert(
+        std::is_same<StringView, T>(),
+        "lower should only be called over VARCHAR column");
+
+    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto exprSet =
+        BaseColumn::genUnaryExprSet(inputRowType, "lower");
+    return this->applyUnaryExprSet(inputRowType, exprSet);
+  }
+
+  std::unique_ptr<BaseColumn> upper() {
+    static_assert(
+        std::is_same<StringView, T>(),
+        "upper should only be called over VARCHAR column");
+
+    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto exprSet =
+        BaseColumn::genUnaryExprSet(inputRowType, "upper");
+    return this->applyUnaryExprSet(inputRowType, exprSet);
+  }
 };
 
 template <typename T>

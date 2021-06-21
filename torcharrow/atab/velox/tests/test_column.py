@@ -184,6 +184,23 @@ class TestSimpleColumns(unittest.TestCase):
         self.assertEqual(col.is_null_at(3), False)
         self.assertEqual(col.is_null_at(4), True)
 
+    def test_SimpleColumnString_unary(self):
+        data = ["abc", "ABC", "XYZ123", None, "xYZ"]
+        col = infer_column(data)
+
+        lcol = col.lower()
+        self.assert_SimpleColumn(lcol, ["abc", "abc", "xyz123", None, "xyz"])
+
+        ucol = col.upper()
+        self.assert_SimpleColumn(ucol, ["ABC", "ABC", "XYZ123", None, "XYZ"])
+
+        lcol2 = ucol.lower()
+        self.assert_SimpleColumn(lcol2, ["abc", "abc", "xyz123", None, "xyz"])
+
+        ucol2 = lcol.upper()
+        self.assert_SimpleColumn(ucol2, ["ABC", "ABC", "XYZ123", None, "XYZ"])
+
+
     def test_SimpleColumnUTF(self):
         s = ["hello.this", "is.interesting.", "this.is_24", "paradise"]
         col = infer_column(s)

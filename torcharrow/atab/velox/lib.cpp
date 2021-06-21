@@ -18,8 +18,9 @@
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
 #include <iostream>
-#include "f4d/functions/common/CoreFunctions.h"
 #include "column.h"
+#include "f4d/functions/common/CoreFunctions.h"
+#include "f4d/functions/common/VectorFunctions.h"
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
@@ -233,7 +234,9 @@ PYBIND11_MODULE(_torcharrow, m) {
           "append",
           [](SimpleColumn<StringView>& self, const std::string& value) {
             self.append(StringView(value));
-          });
+          })
+      .def("lower", &SimpleColumn<StringView>::lower)
+      .def("upper", &SimpleColumn<StringView>::upper);
 
   declareArrayType(m);
   declareMapType(m);
@@ -244,6 +247,7 @@ PYBIND11_MODULE(_torcharrow, m) {
   // Register Velox UDFs
   // TODO: we may only need to register UDFs that TorchArrow required?
   functions::registerFunctions();
+  functions::registerVectorFunctions();
 
 #ifdef VERSION_INFO
       m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);

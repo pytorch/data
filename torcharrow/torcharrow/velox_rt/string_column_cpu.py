@@ -219,6 +219,12 @@ class StringMethodsCpu(IStringMethods):
             res._append_value(sep.join(ws))
         return res._finalize()
 
+    def lower(self) -> IStringColumn:
+        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.dtype, self._parent._data.lower(), True)
+
+    def upper(self) -> IStringColumn:
+        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.dtype, self._parent._data.upper(), True)
+
 
 # ------------------------------------------------------------------------------
 # registering the factory
