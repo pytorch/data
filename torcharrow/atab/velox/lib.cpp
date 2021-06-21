@@ -154,7 +154,10 @@ PYBIND11_MODULE(_torcharrow, m) {
           })
       .def("neg", &SimpleColumn<int64_t>::neg)
       .def("abs", &SimpleColumn<int64_t>::abs)
-      .def("add", &SimpleColumn<int64_t>::add);
+      .def("add", &SimpleColumn<int64_t>::add)
+      .def("add", [](SimpleColumn<int64_t>& self, py::int_ value) {
+        return self.addScalar(py::cast<int64_t>(value));
+      });
 
   declareSimpleType<TypeKind::INTEGER>(m, [](auto val) {
     return py::cast(val);

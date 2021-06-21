@@ -110,6 +110,12 @@ class TestSimpleColumns(unittest.TestCase):
         self.assertEqual(sum_col2.type().kind_name(), 'REAL')
         self.assert_SimpleColumn(sum_col2, [None, -1., None, 6., 0., None])
 
+        # add scalar
+        add1 = col1.add(1)
+        self.assertEqual(add1.type().kind_name(), 'BIGINT')
+        self.assert_SimpleColumn(add1, [2, -1, None, 4, -3, None])
+
+
     def test_SimpleColumnFloat32_unary(self):
         data = [1.2, -2.3, None, 3.4, -4.6, None]
         col = infer_column(data)

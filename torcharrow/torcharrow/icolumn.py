@@ -47,7 +47,7 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
 
     def __init__(self, scope, to, dtype: dt.DType):
 
-        self._scope = scope
+        self._scope: Scope = scope
         self._to = to
         self._dtype: dt.DType = dtype
 
@@ -57,7 +57,7 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
     # getters ---------------------------------------------------------------
 
     @property
-    def scope(self):
+    def scope(self) -> Scope:
         return self._scope
 
     @property

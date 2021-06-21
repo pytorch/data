@@ -173,13 +173,11 @@ std::shared_ptr<exec::ExprSet> BaseColumn::genBinaryExprSet(
       std::move(callTypedExprs), &TorchArrowGlobalStatic::execContext());
 }
 
-std::unique_ptr<BaseColumn> OperatorHandle::call(const BaseColumn& a, const BaseColumn& b) {
-  auto inputRows = wrapRowVector(
-      {a.getUnderlyingVeloxVector(), b.getUnderlyingVeloxVector()},
-      inputRowType_);
+std::unique_ptr<BaseColumn> OperatorHandle::call(VectorPtr a, VectorPtr b) {
+  auto inputRows = wrapRowVector({a, b}, inputRowType_);
   exec::EvalCtx evalCtx(
       &TorchArrowGlobalStatic::execContext(), exprSet_.get(), inputRows.get());
-  SelectivityVector select(a.getUnderlyingVeloxVector()->size());
+  SelectivityVector select(a->size());
   std::vector<VectorPtr> outputRows(1);
   exprSet_->eval(0, 1, true, select, &evalCtx, &outputRows);
 

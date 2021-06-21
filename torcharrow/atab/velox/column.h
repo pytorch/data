@@ -74,7 +74,7 @@ struct OperatorHandle {
         folly::none);
   }
 
-  std::unique_ptr<BaseColumn> call(const BaseColumn& a, const BaseColumn& b);
+  std::unique_ptr<BaseColumn> call(VectorPtr a, VectorPtr b);
 };
 
 class BaseColumn {
@@ -324,12 +324,12 @@ class SimpleColumn : public BaseColumn {
   //
 
   // TODO: Model binary functions as UDF.
-  std::unique_ptr<OperatorHandle> createBinaryOpHandle(
-      const BaseColumn& other,
+  std::unique_ptr<OperatorHandle> createBinaryOperatorHandle(
+      TypePtr otherType,
       const std::string& functionName) {
-    auto inputRowType = ROW({"c0", "c1"}, {this->type(), other.type()});
+    auto inputRowType = ROW({"c0", "c1"}, {this->type(), otherType});
     TypeKind commonTypeKind =
-        promoteNumericTypeKind(this->type()->kind(), other.type()->kind());
+        promoteNumericTypeKind(this->type()->kind(), otherType->kind());
     auto commonType =
         F4D_DYNAMIC_SCALAR_TYPE_DISPATCH(kind2type, commonTypeKind);
     auto exprSet =
@@ -346,11 +346,31 @@ class SimpleColumn : public BaseColumn {
 
     int dispatch_id = static_cast<int>(other.type()->kind());
     if (ops[dispatch_id] == nullptr) {
-      ops[dispatch_id] = createBinaryOpHandle(other, "plus");
+      ops[dispatch_id] = createBinaryOperatorHandle(other.type(), "plus");
     }
 
-    auto result = ops[dispatch_id]->call(*this, other);
+    auto result = ops[dispatch_id]->call(_delegate, other.getUnderlyingVeloxVector());
 
+    return result;
+  }
+
+  template <typename ScalarCppType>
+  std::unique_ptr<BaseColumn> addScalar(ScalarCppType val) {
+    const static auto scalarType = CppToType<ScalarCppType>::create();
+    // TODO: this is incorrect, since tensor-scalar type promotion rule is
+    // different from tensor-tensor type promotion rule
+    const static auto operatorHandle =
+        createBinaryOperatorHandle(scalarType, "plus");
+
+    auto constantVectorPtr = std::make_shared<ConstantVector<ScalarCppType>>(
+        TorchArrowGlobalStatic::rootMemoryPool(),
+        _delegate->size(),
+        false /* isNull */,
+        std::move(val),
+        cdvi::EMPTY_METADATA,
+        folly::none /* representedBytes */);
+
+    auto result = operatorHandle->call(_delegate, constantVectorPtr);
     return result;
   }
 

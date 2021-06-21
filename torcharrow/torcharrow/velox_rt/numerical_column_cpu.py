@@ -248,14 +248,9 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
             return ColumnFromVelox.from_velox(self.scope, result_dtype, result_col, True)
         else:
             # other is scalar
-            col = velox.Column(get_velox_type(self.dtype))
-            for i in range(len(self)):
-                if self.getmask(i):
-                    col.append_null()
-                else:
-                    col.append(self.getdata(i) + other)
-            return ColumnFromVelox.from_velox(self.scope, self.dtype, col, True)
-
+            result_col = self._data.add(other)
+            result_dtype = result_col.dtype().with_null(self.dtype.nullable)
+            return ColumnFromVelox.from_velox(self.scope, result_dtype, result_col, True)
 
     @trace
     @expression
@@ -263,23 +258,15 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
         """Vectorized b + a."""
         if isinstance(other, INumericalColumn):
             self.scope.check_is_same(other.scope)
-        if isinstance(other, NumericalColumnCpu):
-            col = velox.Column(get_velox_type(self.dtype))
-            assert len(self) == len(other)
-            for i in range(len(self)):
-                if self.getmask(i) or other.getmask(i):
-                    col.append_null()
-                else:
-                    col.append(other.getdata(i) + self.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.dtype, col, True)
-        else:
-            col = velox.Column(get_velox_type(self.dtype))
-            for i in range(len(self)):
-                if self.getmask(i):
-                    col.append_null()
-                else:
-                    col.append(other + self.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.dtype, col, True)
+
+        # other.__add__(self) will be called if other is NumericalColumnCpu
+        assert not isinstance(other, NumericalColumnCpu)
+
+        # other is scalar
+        result_col = self._data.add(other)
+        result_dtype = result_col.dtype().with_null(self.dtype.nullable)
+        return ColumnFromVelox.from_velox(self.scope, result_dtype, result_col, True)
+
 
     @trace
     @expression
