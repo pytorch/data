@@ -330,25 +330,25 @@ class IStringMethods(abc.ABC):
         return self._parent._vectorize(func, dt.Int64(self._parent.dtype.nullable))
 
     # Regular expressions -----------------------------------------------------
+    #
+    # Only allow string type for pattern input so it can be dispatch to other runtime (Velox, cuDF, etc)
 
     def count_re(
         self,
-        pattern: ty.Union[str, re.Pattern]
+        pattern: str
         # flags: int = 0, not supported
     ):
         """Count occurrences of pattern in each string"""
-        if isinstance(pattern, str):
-            pattern = re.compile(pattern)
+        pattern = re.compile(pattern)
 
         def func(text):
             return len(re.findall(pattern, text))
 
         return self._vectorize_int64(func)
 
-    def match_re(self, pattern: ty.Union[str, re.Pattern]):
+    def match_re(self, pattern: str):
         """Determine if each string matches a regular expression (see re.match())"""
-        if isinstance(pattern, str):
-            pattern = re.compile(pattern)
+        pattern = re.compile(pattern)
 
         def func(text):
             return True if pattern.match(text) else False
@@ -357,15 +357,14 @@ class IStringMethods(abc.ABC):
 
     def replace_re(
         self,
-        pattern: ty.Union[str, re.Pattern],
-        repl: ty.Union[str, ty.Callable],
+        pattern: str,
+        repl: str,
         count=0,
         # flags = 0
     ):
         """Replace for each item the search string or pattern with the given value"""
 
-        if isinstance(pattern, str):
-            pattern = re.compile(pattern)
+        pattern = re.compile(pattern)
 
         def func(text):
             return re.sub(pattern, repl, text, count)
@@ -374,36 +373,34 @@ class IStringMethods(abc.ABC):
 
     def contains_re(
         self,
-        pattern: ty.Union[str, re.Pattern],
+        pattern: str,
     ):
         """Test for each item if pattern is contained within a string; returns a boolean"""
 
-        if isinstance(pattern, str):
-            pattern = re.compile(pattern)
+        pattern = re.compile(pattern)
 
         def func(text):
             return pattern.search(text) is not None
 
         return self._vectorize_boolean(func)
 
-    def findall_re(self, pattern: ty.Union[str, re.Pattern]):
+    def findall_re(self, pattern: str):
         """
         Find for each item all occurrences of pattern (see re.findall())
         """
-        if isinstance(pattern, str):
-            pattern = re.compile(pattern)
+        pattern = re.compile(pattern)
 
         def func(text):
             return pattern.findall(text)
 
         return self._vectorize_list_string(func)
 
-    def extract_re(self, pattern: ty.Union[str, re.Pattern]):
+    def extract_re(self, pattern: str):
         """Return capture groups in the regex as columns of a dataframe"""
         # generalizes Pandas extract ad extractall;
         # always Pandas' expand = True
-        if isinstance(pattern, str):
-            pattern = re.compile(pattern)
+        pattern = re.compile(pattern)
+
         num_groups = pattern.groups
         if num_groups == 0:
             raise ValueError("pattern contains no capture groups")
@@ -426,7 +423,7 @@ class IStringMethods(abc.ABC):
 
         return self._parent._vectorize(func, dtype)
 
-    def split_re(self, pattern: ty.Union[str, re.Pattern], maxsplit=-1, expand=False):
+    def split_re(self, pattern: str, maxsplit=-1, expand=False):
         """Split each string from the beginning (see re.split)
         returning them as a list or dataframe (expand=True)"""
         me = self._parent
@@ -434,8 +431,7 @@ class IStringMethods(abc.ABC):
         # Python's re module will not split the string if maxsplit<0
         maxsplit = max(maxsplit, 0)
 
-        if isinstance(pattern, str):
-            pattern = re.compile(pattern)
+        pattern = re.compile(pattern)
 
         if not expand:
 
