@@ -24,6 +24,7 @@
 #include "f4d/exec/Expr.h"
 #include "f4d/functions/common/CoreFunctions.h"
 #include "f4d/parse/Expressions.h"
+#include "f4d/parse/ExpressionsParser.h"
 
 namespace facebook {
 
@@ -90,6 +91,7 @@ std::unique_ptr<BaseColumn> MapColumn::valueAt(vector_size_t i) {
 
 std::shared_ptr<exec::ExprSet> BaseColumn::genUnaryExprSet(
     std::shared_ptr<const facebook::f4d::RowType> inputRowType,
+    TypePtr outputType,
     const std::string& functionName) {
   // Construct Typed Expression
   using InputExprList = std::vector<std::shared_ptr<const core::ITypedExpr>>;
@@ -103,7 +105,7 @@ std::shared_ptr<exec::ExprSet> BaseColumn::genUnaryExprSet(
           inputRowType->nameOf(0))};
 
   InputExprList callTypedExprs{std::make_shared<core::CallTypedExpr>(
-      inputRowType->childAt(0), // TODO: this assume output has the same type
+      outputType,
       std::move(fieldAccessTypedExprs),
       functionName)};
 
@@ -173,11 +175,40 @@ std::shared_ptr<exec::ExprSet> BaseColumn::genBinaryExprSet(
       std::move(callTypedExprs), &TorchArrowGlobalStatic::execContext());
 }
 
+std::unique_ptr<OperatorHandle> OperatorHandle::fromExpression(
+    RowTypePtr inputRowType,
+    const std::string& expr) {
+  auto untypedExpr = parse::parseExpr(expr);
+  auto typedExpr = core::Expressions::inferTypes(
+      untypedExpr, inputRowType, TorchArrowGlobalStatic::execContext().pool());
+
+  using TypedExprList = std::vector<std::shared_ptr<const core::ITypedExpr>>;
+  TypedExprList typedExprs{typedExpr};
+  return std::make_unique<OperatorHandle>(
+      inputRowType,
+      std::make_shared<exec::ExprSet>(
+          std::move(typedExprs), &TorchArrowGlobalStatic::execContext()));
+}
+
 std::unique_ptr<BaseColumn> OperatorHandle::call(VectorPtr a, VectorPtr b) {
   auto inputRows = wrapRowVector({a, b}, inputRowType_);
   exec::EvalCtx evalCtx(
       &TorchArrowGlobalStatic::execContext(), exprSet_.get(), inputRows.get());
   SelectivityVector select(a->size());
+  std::vector<VectorPtr> outputRows(1);
+  exprSet_->eval(0, 1, true, select, &evalCtx, &outputRows);
+
+  // TODO: This causes an extra type-based dispatch.
+  // We can optimize it by template OperatorHandle by return type
+  return createColumn(outputRows[0]);
+}
+
+std::unique_ptr<BaseColumn> OperatorHandle::call(
+    const std::vector<VectorPtr>& args) {
+  auto inputRows = wrapRowVector(args, inputRowType_);
+  exec::EvalCtx evalCtx(
+      &TorchArrowGlobalStatic::execContext(), exprSet_.get(), inputRows.get());
+  SelectivityVector select(args[0]->size());
   std::vector<VectorPtr> outputRows(1);
   exprSet_->eval(0, 1, true, select, &evalCtx, &outputRows);
 

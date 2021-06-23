@@ -46,6 +46,7 @@ include_directories(${F4D_ROOT})
 
 add_subdirectory(f4d)
 add_subdirectory(pybind11)
+add_subdirectory(functions)
 
 # Define our Python module:
 pybind11_add_module(
@@ -67,6 +68,7 @@ target_link_libraries(_torcharrow PRIVATE
   f4d_memory
   f4d_core
   f4d_functions_common
-  f4d_parse_expression)
+  f4d_parse_expression
+  f4d_parse_parser)
 
 target_compile_definitions(_torcharrow PRIVATE VERSION_INFO=0.0.1)

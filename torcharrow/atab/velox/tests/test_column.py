@@ -191,20 +191,23 @@ class TestSimpleColumns(unittest.TestCase):
         self.assertEqual(col.is_null_at(4), True)
 
     def test_SimpleColumnString_unary(self):
-        data = ["abc", "ABC", "XYZ123", None, "xYZ"]
+        data = ["abc", "ABC", "XYZ123", None, "xYZ", "123", "äöå"]
         col = infer_column(data)
 
         lcol = col.lower()
-        self.assert_SimpleColumn(lcol, ["abc", "abc", "xyz123", None, "xyz"])
+        self.assert_SimpleColumn(lcol, ["abc", "abc", "xyz123", None, "xyz", "123", "äöå"])
 
         ucol = col.upper()
-        self.assert_SimpleColumn(ucol, ["ABC", "ABC", "XYZ123", None, "XYZ"])
+        self.assert_SimpleColumn(ucol, ["ABC", "ABC", "XYZ123", None, "XYZ", "123", "ÄÖÅ"])
 
         lcol2 = ucol.lower()
-        self.assert_SimpleColumn(lcol2, ["abc", "abc", "xyz123", None, "xyz"])
+        self.assert_SimpleColumn(lcol2, ["abc", "abc", "xyz123", None, "xyz", "123", "äöå"])
 
         ucol2 = lcol.upper()
-        self.assert_SimpleColumn(ucol2, ["ABC", "ABC", "XYZ123", None, "XYZ"])
+        self.assert_SimpleColumn(ucol2, ["ABC", "ABC", "XYZ123", None, "XYZ", "123", "ÄÖÅ"])
+
+        alpha = col.isalpha()
+        self.assert_SimpleColumn(alpha, [True, True, False, None, True, False, True])
 
 
     def test_SimpleColumnUTF(self):

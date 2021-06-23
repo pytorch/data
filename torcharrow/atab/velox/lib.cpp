@@ -21,6 +21,7 @@
 #include "column.h"
 #include "f4d/functions/common/CoreFunctions.h"
 #include "f4d/functions/common/VectorFunctions.h"
+#include "functions/functions.h" // @manual=//pytorch/torchdata/torcharrow/atab/velox/functions:torcharrow_functions
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
@@ -239,7 +240,8 @@ PYBIND11_MODULE(_torcharrow, m) {
             self.append(StringView(value));
           })
       .def("lower", &SimpleColumn<StringView>::lower)
-      .def("upper", &SimpleColumn<StringView>::upper);
+      .def("upper", &SimpleColumn<StringView>::upper)
+      .def("isalpha", &SimpleColumn<StringView>::isalpha);
 
   declareArrayType(m);
   declareMapType(m);
@@ -249,8 +251,11 @@ PYBIND11_MODULE(_torcharrow, m) {
 
   // Register Velox UDFs
   // TODO: we may only need to register UDFs that TorchArrow required?
-  functions::registerFunctions();
-  functions::registerVectorFunctions();
+  facebook::f4d::functions::registerFunctions();
+  facebook::f4d::functions::registerVectorFunctions();
+
+  facebook::torcharrow::functions::registerTorchArrowFunctions();
+  facebook::torcharrow::functions::initializeTorchArrowTypeResolver();
 
 #ifdef VERSION_INFO
       m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);

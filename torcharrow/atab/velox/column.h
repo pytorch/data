@@ -62,6 +62,8 @@ struct OperatorHandle {
       : inputRowType_(inputRowType),
         exprSet_(exprSet){}
 
+  static std::unique_ptr<OperatorHandle> fromExpression(RowTypePtr inputRowType, const std::string& expr);
+
   static RowVectorPtr wrapRowVector(
       const std::vector<VectorPtr>& children,
       std::shared_ptr<const RowType> rowType) {
@@ -74,7 +76,10 @@ struct OperatorHandle {
         folly::none);
   }
 
+  // Input type VectorPtr (instead of BaseColumn) since it might be a ConstantVector
   std::unique_ptr<BaseColumn> call(VectorPtr a, VectorPtr b);
+
+  std::unique_ptr<BaseColumn> call(const std::vector<VectorPtr>& args);
 };
 
 class BaseColumn {
@@ -168,6 +173,7 @@ class BaseColumn {
       // input row type is required even for unary op since the input vector
       // needs to be wrapped into a RowVector before evaluation.
       std::shared_ptr<const facebook::f4d::RowType> inputRowType,
+      TypePtr outputType,
       const std::string& functionName);
 
   std::unique_ptr<BaseColumn> applyUnaryExprSet(
@@ -280,42 +286,42 @@ class SimpleColumn : public BaseColumn {
   std::unique_ptr<BaseColumn> invert() {
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
     const static auto exprSet =
-        BaseColumn::genUnaryExprSet(inputRowType, "not");
+        BaseColumn::genUnaryExprSet(inputRowType, CppToType<T>::create(), "not");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> neg() {
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
     const static auto exprSet =
-        BaseColumn::genUnaryExprSet(inputRowType, "negate");
+        BaseColumn::genUnaryExprSet(inputRowType, CppToType<T>::create(), "negate");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> abs() {
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
     const static auto exprSet =
-        BaseColumn::genUnaryExprSet(inputRowType, "abs");
+        BaseColumn::genUnaryExprSet(inputRowType, CppToType<T>::create(), "abs");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> ceil() {
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
-    const static auto exprSet =
-        BaseColumn::genUnaryExprSet(inputRowType, "ceil");
+    const static auto exprSet = BaseColumn::genUnaryExprSet(
+        inputRowType, CppToType<T>::create(), "ceil");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> floor() {
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
-    const static auto exprSet =
-        BaseColumn::genUnaryExprSet(inputRowType, "floor");
+    const static auto exprSet = BaseColumn::genUnaryExprSet(
+        inputRowType, CppToType<T>::create(), "floor");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> round() {
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
-    const static auto exprSet =
-        BaseColumn::genUnaryExprSet(inputRowType, "round");
+    const static auto exprSet = BaseColumn::genUnaryExprSet(
+        inputRowType, CppToType<T>::create(), "round");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
@@ -383,9 +389,9 @@ class SimpleColumn : public BaseColumn {
         "lower should only be called over VARCHAR column");
 
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
-    const static auto exprSet =
-        BaseColumn::genUnaryExprSet(inputRowType, "lower");
-    return this->applyUnaryExprSet(inputRowType, exprSet);
+    const static auto op =
+        OperatorHandle::fromExpression(inputRowType, "lower(c0)");
+    return op->call({_delegate});
   }
 
   std::unique_ptr<BaseColumn> upper() {
@@ -394,9 +400,20 @@ class SimpleColumn : public BaseColumn {
         "upper should only be called over VARCHAR column");
 
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
-    const static auto exprSet =
-        BaseColumn::genUnaryExprSet(inputRowType, "upper");
-    return this->applyUnaryExprSet(inputRowType, exprSet);
+    const static auto op =
+        OperatorHandle::fromExpression(inputRowType, "upper(c0)");
+    return op->call({_delegate});
+  }
+
+  std::unique_ptr<BaseColumn> isalpha() {
+    static_assert(
+        std::is_same<StringView, T>(),
+        "isalpha should only be called over VARCHAR column");
+
+    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto op =
+        OperatorHandle::fromExpression(inputRowType, "torcharrow_isalpha(c0)");
+    return op->call({_delegate});
   }
 };
 

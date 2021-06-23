@@ -225,6 +225,9 @@ class StringMethodsCpu(IStringMethods):
     def upper(self) -> IStringColumn:
         return ColumnFromVelox.from_velox(self._parent.scope, self._parent.dtype, self._parent._data.upper(), True)
 
+    def isalpha(self) -> IStringColumn:
+        return ColumnFromVelox.from_velox(self._parent.scope, dt.Boolean(self._parent.dtype.nullable), self._parent._data.isalpha(), True)
+
 
 # ------------------------------------------------------------------------------
 # registering the factory

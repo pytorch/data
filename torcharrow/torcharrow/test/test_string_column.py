@@ -71,6 +71,10 @@ class TestStringColumn(unittest.TestCase):
             [True, False, True, True],
         )
 
+        self.assertEqual(
+            list(self.ts.Column(["", "abc", "XYZ", "123", "XYZ123", "äöå", None]).str.isalpha()),
+            [False, True, True, False, False, True, None]
+        )
         self.assertEqual(list(self.ts.Column(["abc123"]).str.isalnum()), [True])
         self.assertEqual(list(self.ts.Column(["abc"]).str.isalnum()), [True])
         self.assertEqual(list(self.ts.Column(["abc"]).str.isascii()), [True])
@@ -132,6 +136,7 @@ class TestStringColumn(unittest.TestCase):
             list(self.ts.Column(s).str.translate({ord("."): ord("_")})),
             ["hello_this", "is_interesting_", "this_is_24", "paradise"],
         )
+
 
         self.assertEqual(list(self.ts.Column(s).str.count(".")), [1, 2, 1, 0])
         self.assertEqual(
