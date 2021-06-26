@@ -82,7 +82,7 @@ class ListColumnCpu(IListColumn, ColumnFromVelox):
         else:
             return list(
                 ColumnFromVelox.from_velox(
-                    self.scope, self._dtype.item_dtype, self._data[i], False
+                    self.scope, self.to, self._dtype.item_dtype, self._data[i], False
                 )
             )
 

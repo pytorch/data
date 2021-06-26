@@ -220,13 +220,13 @@ class StringMethodsCpu(IStringMethods):
         return res._finalize()
 
     def lower(self) -> IStringColumn:
-        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.dtype, self._parent._data.lower(), True)
+        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.to, self._parent.dtype, self._parent._data.lower(), True)
 
     def upper(self) -> IStringColumn:
-        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.dtype, self._parent._data.upper(), True)
+        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.to, self._parent.dtype, self._parent._data.upper(), True)
 
     def isalpha(self) -> IStringColumn:
-        return ColumnFromVelox.from_velox(self._parent.scope, dt.Boolean(self._parent.dtype.nullable), self._parent._data.isalpha(), True)
+        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.to, dt.Boolean(self._parent.dtype.nullable), self._parent._data.isalpha(), True)
 
 
 # ------------------------------------------------------------------------------

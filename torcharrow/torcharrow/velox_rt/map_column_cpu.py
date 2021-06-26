@@ -111,10 +111,10 @@ class MapColumnCpu(IMapColumn, ColumnFromVelox):
             return self.dtype.default
         else:
             key_col = ColumnFromVelox.from_velox(
-                self.scope, self._dtype.key_dtype, self._data.keys()[i], True
+                self.scope, self.to, self._dtype.key_dtype, self._data.keys()[i], True
             )
             value_col = ColumnFromVelox.from_velox(
-                self.scope,
+                self.scope, self.to,
                 self._dtype.item_dtype,
                 self._data.values()[i],
                 True,
@@ -159,13 +159,13 @@ class MapMethodsCpu(IMapMethods):
     def keys(self):
         me = self._parent
         return ColumnFromVelox.from_velox(
-            me.scope, dt.List(me._dtype.key_dtype), me._data.keys(), True
+            me.scope, me.to, dt.List(me._dtype.key_dtype), me._data.keys(), True
         )
 
     def values(self):
         me = self._parent
         return ColumnFromVelox.from_velox(
-            me.scope, dt.List(me._dtype.item_dtype), me._data.values(), True
+            me.scope, me.to, dt.List(me._dtype.item_dtype), me._data.values(), True
         )
 
 
