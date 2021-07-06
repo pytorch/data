@@ -20,6 +20,7 @@ from typing import (
     cast,
     Iterable,
     Iterator,
+    OrderedDict,
 )
 
 import _torcharrow as velox
@@ -121,7 +122,7 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
         self._data = df._data
 
     def _append_data(self, value):
-        self._append_value(data)
+        raise self._not_supported("_append_data")
 
     def _finalize(self):
         self._finialized = True
@@ -1262,21 +1263,6 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
                         True,
                     )
                     .fillna(fill_value)
-                    for i in range(self._data.children_size())
-                },
-                self._mask,
-            )
-        elif isinstance(fill_value, dict):
-            return self._fromdata(
-                {
-                    self.dtype.fields[i]
-                    .name: ColumnFromVelox.from_velox(
-                        self.scope, self.to,
-                        self.dtype.fields[i].dtype,
-                        self._data.child_at(i),
-                        True,
-                    )
-                    .fillna(fill_value[n])
                     for i in range(self._data.children_size())
                 },
                 self._mask,

@@ -69,6 +69,7 @@ target_link_libraries(_torcharrow PRIVATE
   f4d_core
   f4d_functions_common
   f4d_parse_expression
-  f4d_parse_parser)
+  f4d_parse_parser
+  f4d_exec_test_util)
 
 target_compile_definitions(_torcharrow PRIVATE VERSION_INFO=0.0.1)

@@ -220,14 +220,14 @@ class TestSimpleColumns(unittest.TestCase):
 
 
 def is_same_type(a, b) -> bool:
-    if isinstance(a, ta.BIGINT):
-        return isinstance(b, ta.BIGINT)
-    if isinstance(a, ta.VARCHAR):
-        return isinstance(b, ta.VARCHAR)
-    if isinstance(a, ta.BOOLEAN):
-        return isinstance(b, ta.BOOLEAN)
-    if isinstance(a, ta.ARRAY):
-        return isinstance(b, ta.ARRAY) and is_same_type(
+    if isinstance(a, ta.VeloxType_BIGINT):
+        return isinstance(b, ta.VeloxType_BIGINT)
+    if isinstance(a, ta.VeloxType_VARCHAR):
+        return isinstance(b, ta.VeloxType_VARCHAR)
+    if isinstance(a, ta.VeloxType_BOOLEAN):
+        return isinstance(b, ta.VeloxType_BOOLEAN)
+    if isinstance(a, ta.VeloxArrayType):
+        return isinstance(b, ta.VeloxArrayType) and is_same_type(
             a.element_type(), b.element_type()
         )
     raise NotImplementedError()
@@ -254,11 +254,11 @@ def infer_column(data) -> ta.BaseColumn:
 def resolve_column_with_arbitrary_type(unresolved: Unresolved) -> ta.BaseColumn:
     if isinstance(unresolved, UnresolvedArray):
         element = resolve_column_with_arbitrary_type(unresolved.element_type)
-        col = ta.Column(ta.ARRAY(element.type()))
+        col = ta.Column(ta.VeloxArrayType(element.type()))
         col.append(element)
         return col
     else:
-        return ta.Column(ta.BIGINT())
+        return ta.Column(ta.VeloxType_BIGINT())
 
 
 def get_union_type(inferred_columns: List[Union[ta.BaseColumn, Unresolved, None]]):
@@ -305,7 +305,7 @@ def _infer_column(data) -> Union[ta.BaseColumn, Unresolved, None]:
                 return UnresolvedArray(union_type)
             else:
                 resolved_item_type = union_type
-                col = ta.Column(ta.ARRAY(resolved_item_type))
+                col = ta.Column(ta.VeloxArrayType(resolved_item_type))
                 for item_col, item in zip(inferred_columns, data):
                     if item is None:
                         resolved_item_col = None
@@ -338,11 +338,11 @@ def _infer_column(data) -> Union[ta.BaseColumn, Unresolved, None]:
             keys_array_type = inferred_keys_array_columns.type()
             values_array_type = inferred_values_array_columns.type()
 
-            if isinstance(keys_array_type, ta.ARRAY) and isinstance(
-                values_array_type, ta.ARRAY
+            if isinstance(keys_array_type, ta.VeloxArrayType) and isinstance(
+                values_array_type, ta.VeloxArrayType
             ):
                 col = ta.Column(
-                    ta.MAP(
+                    ta.VeloxMapType(
                         keys_array_type.element_type(), values_array_type.element_type()
                     )
                 )
@@ -364,7 +364,7 @@ def _infer_column(data) -> Union[ta.BaseColumn, Unresolved, None]:
                 raise NotImplementedError()
 
         else:
-            type_ = {int: ta.BIGINT(), float: ta.REAL(), str: ta.VARCHAR(), bool: ta.BOOLEAN()}.get(
+            type_ = {int: ta.VeloxType_BIGINT(), float: ta.VeloxType_REAL(), str: ta.VeloxType_VARCHAR(), bool: ta.VeloxType_BOOLEAN()}.get(
                 type(non_null_item)
             )
             if type_ is None:
@@ -385,9 +385,9 @@ def resolve_column(item, type_) -> ta.BaseColumn:
         if value is None:
             col.append_null()
         else:
-            if type(type_) in (ta.INTEGER, ta.VARCHAR, ta.BOOLEAN):
+            if type(type_) in (ta.VeloxType_INTEGER, ta.VeloxType_VARCHAR, ta.VeloxType_BOOLEAN):
                 col.append(value)
-            elif type(type_) == ta.ARRAY:
+            elif type(type_) == ta.VeloxArrayType:
                 col.append(resolve_column(value, type_.element_type()))
             else:
                 raise NotImplementedError(f"{type(type_)}")
@@ -398,42 +398,42 @@ class TestInferColumn(unittest.TestCase):
     def test_infer_simple(self):
         data = [1, 2, 3]
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.BIGINT()))
+        self.assertTrue(is_same_type(type_, ta.VeloxType_BIGINT()))
 
     def test_infer_array(self):
         data = [[1], [2], [3]]
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.ARRAY(ta.BIGINT())))
+        self.assertTrue(is_same_type(type_, ta.VeloxArrayType(ta.VeloxType_BIGINT())))
 
     def test_infer_nested_array(self):
         data = [[[1]], [[2], [5]], [[3, 4]]]
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.ARRAY(ta.ARRAY(ta.BIGINT()))))
+        self.assertTrue(is_same_type(type_, ta.VeloxArrayType(ta.VeloxArrayType(ta.VeloxType_BIGINT()))))
 
     def test_unresolved(self):
         data = []
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.BIGINT()))
+        self.assertTrue(is_same_type(type_, ta.VeloxType_BIGINT()))
 
     def test_nested_unresolved1(self):
         data = [[]]
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.ARRAY(ta.BIGINT())))
+        self.assertTrue(is_same_type(type_, ta.VeloxArrayType(ta.VeloxType_BIGINT())))
 
     def test_nested_unresolved2(self):
         data = [None]
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.BIGINT()))
+        self.assertTrue(is_same_type(type_, ta.VeloxType_BIGINT()))
 
     def test_nested_unresolved3(self):
         data = [[None]]
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.ARRAY(ta.BIGINT())))
+        self.assertTrue(is_same_type(type_, ta.VeloxArrayType(ta.VeloxType_BIGINT())))
 
     def test_propagate_unresolved(self):
         data = [None, [], [1], [1, None, 2], None]
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.ARRAY(ta.BIGINT())))
+        self.assertTrue(is_same_type(type_, ta.VeloxArrayType(ta.VeloxType_BIGINT())))
 
 
 class TestArrayColumns(unittest.TestCase):
@@ -564,7 +564,7 @@ class TestMapColumns(unittest.TestCase):
 
 class TestRowColumns(unittest.TestCase):
     def test_RowColumn1(self):
-        col = ta.Column(ta.ROW(["a", "b"], [ta.INTEGER(), ta.VARCHAR()]))
+        col = ta.Column(ta.VeloxRowType(["a", "b"], [ta.VeloxType_INTEGER(), ta.VeloxType_VARCHAR()]))
         col.child_at(0).append(1)
         col.child_at(1).append("x")
         col.set_length(1)
@@ -588,7 +588,7 @@ class TestRowColumns(unittest.TestCase):
         )
 
     def test_set_child(self):
-        col = ta.Column(ta.ROW(["a", "b"], [ta.INTEGER(), ta.VARCHAR()]))
+        col = ta.Column(ta.VeloxRowType(["a", "b"], [ta.VeloxType_INTEGER(), ta.VeloxType_VARCHAR()]))
         col.child_at(0).append(1)
         col.child_at(1).append("x")
         col.set_length(1)
@@ -608,9 +608,9 @@ class TestRowColumns(unittest.TestCase):
 
     def test_nested_row(self):
         col = ta.Column(
-            ta.ROW(
+            ta.VeloxRowType(
                 ["a", "b"],
-                [ta.INTEGER(), ta.ROW(["b1", "b2"], [ta.VARCHAR(), ta.INTEGER()])],
+                [ta.VeloxType_INTEGER(), ta.VeloxRowType(["b1", "b2"], [ta.VeloxType_VARCHAR(), ta.VeloxType_INTEGER()])],
             )
         )
         col.child_at(0).append(1)

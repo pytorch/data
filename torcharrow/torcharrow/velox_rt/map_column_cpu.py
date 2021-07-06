@@ -24,7 +24,7 @@ class MapColumnCpu(IMapColumn, ColumnFromVelox):
         super().__init__(scope, to, dtype)
 
         self._data = velox.Column(
-            velox.MAP(get_velox_type(dtype.key_dtype), get_velox_type(dtype.item_dtype))
+            velox.VeloxMapType(get_velox_type(dtype.key_dtype), get_velox_type(dtype.item_dtype))
         )
 
         self._finialized = False

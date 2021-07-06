@@ -15,29 +15,10 @@
 #pragma once
 
 #include "f4d/parse/Expressions.h"
+#include "f4d/exec/tests/utils/FunctionUtils.h"
 #include "string_functions.h"
 
 namespace facebook::torcharrow::functions {
-
-inline std::shared_ptr<const f4d::Type> torchArrowTypeResolver(
-    const std::vector<std::shared_ptr<const f4d::core::ITypedExpr>>& inputs,
-    const std::shared_ptr<const f4d::core::CallExpr>& expr) {
-  // Based on
-  // https://github.com/facebookexternal/f4d/blob/0706ac98733c0c6349c02a4a4f65d09b0c8209ed/f4d/exec/tests/utils/FunctionUtils.cpp#L67-L72
-
-  std::vector<TypePtr> inputTypes;
-  inputTypes.reserve(inputs.size());
-  for (auto& input : inputs) {
-    inputTypes.emplace_back(input->type());
-  }
-
-  auto func =
-      f4d::exec::getVectorFunction(expr->getFunctionName(), inputTypes, {});
-  if (func) {
-    return func->inferType(inputTypes);
-  }
-  return nullptr;
-}
 
 inline void registerTorchArrowFunctions() {
   registerFunction<
@@ -47,6 +28,6 @@ inline void registerTorchArrowFunctions() {
 }
 
 inline void initializeTorchArrowTypeResolver() {
-  f4d::core::Expressions::setTypeResolverHook(&torchArrowTypeResolver);
+  facebook::f4d::exec::test::registerTypeResolver(nullptr);
 }
 }

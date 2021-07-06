@@ -15,8 +15,8 @@
 #pragma once
 
 #include "f4d/functions/Udf.h"
-#include "f4d/functions/common/string/StringCore.h"
-#include "f4d/functions/common/string/StringImpl.h"
+#include "f4d/functions/lib/string/StringCore.h"
+#include "f4d/functions/lib/string/StringImpl.h"
 
 namespace facebook::torcharrow::functions {
 

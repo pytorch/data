@@ -55,7 +55,11 @@ py::class_<SimpleColumn<T>, BaseColumn> declareSimpleType(
       m, (std::string("FlatColumn") + TypeTraits<kind>::name).c_str());
 
   using I = typename TypeTraits<kind>::ImplType;
-  py::class_<I, Type, std::shared_ptr<I>>(m, TypeTraits<kind>::name)
+  py::class_<I, Type, std::shared_ptr<I>>(
+      m,
+      (std::string("VeloxType_") + TypeTraits<kind>::name).c_str(),
+      // TODO: Move the Koksi binding of Velox type to OSS
+      py::module_local())
       .def(py::init());
 
   m.def("Column", [](std::shared_ptr<I> type) {
@@ -72,7 +76,11 @@ void declareArrayType(py::module& m) {
       .def("slice", &ArrayColumn::slice);
 
   using I = typename TypeTraits<TypeKind::ARRAY>::ImplType;
-  py::class_<I, Type, std::shared_ptr<I>>(m, TypeTraits<TypeKind::ARRAY>::name)
+  py::class_<I, Type, std::shared_ptr<I>>(
+      m,
+      "VeloxArrayType",
+      // TODO: Move the Koksi binding of Velox type to OSS
+      py::module_local())
       .def(py::init<TypePtr>())
       .def("element_type", &ArrayType::elementType);
   m.def("Column", [](std::shared_ptr<I> type) {
@@ -92,7 +100,11 @@ void declareMapType(py::module& m) {
       .def("slice", &MapColumn::slice);
 
   using I = typename TypeTraits<TypeKind::MAP>::ImplType;
-  py::class_<I, Type, std::shared_ptr<I>>(m, TypeTraits<TypeKind::MAP>::name)
+  py::class_<I, Type, std::shared_ptr<I>>(
+      m,
+      "VeloxMapType",
+      // TODO: Move the Koksi binding of Velox type to OSS
+      py::module_local())
       .def(py::init<TypePtr, TypePtr>());
   m.def("Column", [](std::shared_ptr<I> type) {
     return std::make_unique<MapColumn>(type);
@@ -110,7 +122,11 @@ void declareRowType(py::module& m) {
       .def("copy", &RowColumn::copy);
 
   using I = typename TypeTraits<TypeKind::ROW>::ImplType;
-  py::class_<I, Type, std::shared_ptr<I>>(m, TypeTraits<TypeKind::ROW>::name)
+  py::class_<I, Type, std::shared_ptr<I>>(
+      m,
+      "VeloxRowType",
+      // TODO: Move the Koksi binding of Velox type to OSS
+      py::module_local())
       .def(py::init<
            std::vector<std::string>&&,
            std::vector<std::shared_ptr<const Type>>&&>())
@@ -144,7 +160,11 @@ PYBIND11_MODULE(_torcharrow, m) {
       .def_property_readonly("length", &BaseColumn::getLength)
       .def("__len__", &BaseColumn::getLength);
 
-  py::class_<Type, std::shared_ptr<Type>>(m, "Type")
+  py::class_<Type, std::shared_ptr<Type>>(
+      m,
+      "VeloxType",
+      // TODO: Move the Koksi binding of Velox type to OSS
+      py::module_local())
       .def("kind_name", &Type::kindName);
 
   declareSimpleType<TypeKind::BIGINT>(m, [](auto val) { return py::cast(val); })
