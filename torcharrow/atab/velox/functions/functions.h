@@ -25,9 +25,13 @@ inline void registerTorchArrowFunctions() {
       facebook::torcharrow::functions::udf_torcharrow_isalpha,
       bool,
       Varchar>();
+  registerFunction<
+      facebook::torcharrow::functions::udf_torcharrow_isalnum,
+      bool,
+      Varchar>();
 }
 
 inline void initializeTorchArrowTypeResolver() {
-  facebook::f4d::exec::test::registerTypeResolver(nullptr);
+  facebook::f4d::exec::test::registerTypeResolver();
 }
 }

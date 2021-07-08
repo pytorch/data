@@ -20,7 +20,25 @@
 
 namespace facebook::torcharrow::functions {
 
-using namespace f4d::functions;
+namespace internal {
+class Utf8CatUtils {
+ public:
+  static inline bool isAlpha(utf8proc_category_t category) {
+    return category == UTF8PROC_CATEGORY_LU /**< Letter, uppercase */ ||
+        category == UTF8PROC_CATEGORY_LL /**< Letter, lowercase */ ||
+        category == UTF8PROC_CATEGORY_LT /**< Letter, titlecase */ ||
+        category == UTF8PROC_CATEGORY_LM /**< Letter, modifier */ ||
+        category == UTF8PROC_CATEGORY_LO /**< Letter, other */;
+  }
+
+  static inline bool isNumber(utf8proc_category_t category) {
+    return category == UTF8PROC_CATEGORY_ND /**< Number, decimal digit */ ||
+        category == UTF8PROC_CATEGORY_NL /**< Number, letter */ ||
+        category == UTF8PROC_CATEGORY_NO /**< Number, other */;
+  }
+};
+
+} // namespace internal
 
 /**
  * torcharrow_isalpha(string) → bool
@@ -32,24 +50,62 @@ using namespace f4d::functions;
 VELOX_UDF_BEGIN(torcharrow_isalpha)
 FOLLY_ALWAYS_INLINE
 bool call(bool& result, const f4d::StringView& input) {
-  auto size = input.size();
+  using namespace f4d::functions;
+  using namespace internal;
+
+  size_t size = input.size();
   if (size == 0) {
     result = false;
     return true;
   }
 
-  auto index = 0;
+  size_t index = 0;
   while (index < size) {
     int codePointSize;
     utf8proc_int32_t codePoint =
         utf8proc_codepoint(input.data() + index, codePointSize);
 
-    auto category = utf8proc_get_property(codePoint)->category;
-    if (!(category == UTF8PROC_CATEGORY_LU /**< Letter, uppercase */ ||
-        category == UTF8PROC_CATEGORY_LL /**< Letter, lowercase */ ||
-        category == UTF8PROC_CATEGORY_LT /**< Letter, titlecase */ ||
-        category == UTF8PROC_CATEGORY_LM /**< Letter, modifier */ ||
-        category == UTF8PROC_CATEGORY_LO /**< Letter, other */)) {
+    utf8proc_category_t category =
+        static_cast<utf8proc_category_t>(utf8proc_category(codePoint));
+    if (!Utf8CatUtils::isAlpha(category)) {
+      result = false;
+      return true;
+    }
+
+    index += codePointSize;
+  }
+  result = true;
+  return true;
+}
+VELOX_UDF_END();
+
+/**
+ * torcharrow_isalnum(string) → bool
+ * Return True if all characters in the string are alphanumeric (either
+ *alphabets or numbers), False otherwise.
+ **/
+VELOX_UDF_BEGIN(torcharrow_isalnum)
+FOLLY_ALWAYS_INLINE
+bool call(bool& result, const f4d::StringView& input) {
+  using namespace f4d::functions;
+  using namespace internal;
+
+  size_t size = input.size();
+  if (size == 0) {
+    result = false;
+    return true;
+  }
+
+  size_t index = 0;
+  while (index < size) {
+    int codePointSize;
+    utf8proc_int32_t codePoint =
+        utf8proc_codepoint(input.data() + index, codePointSize);
+
+    utf8proc_category_t category =
+        static_cast<utf8proc_category_t>(utf8proc_category(codePoint));
+    if (!(Utf8CatUtils::isAlpha(category) ||
+          Utf8CatUtils::isNumber(category))) {
       result = false;
       return true;
     }

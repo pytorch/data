@@ -415,6 +415,17 @@ class SimpleColumn : public BaseColumn {
         OperatorHandle::fromExpression(inputRowType, "torcharrow_isalpha(c0)");
     return op->call({_delegate});
   }
+
+  std::unique_ptr<BaseColumn> isalnum() {
+    static_assert(
+        std::is_same<StringView, T>(),
+        "isalnum should only be called over VARCHAR column");
+
+    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto op =
+        OperatorHandle::fromExpression(inputRowType, "torcharrow_isalnum(c0)");
+    return op->call({_delegate});
+  }
 };
 
 template <typename T>

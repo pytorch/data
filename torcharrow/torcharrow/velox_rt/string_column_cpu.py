@@ -228,6 +228,9 @@ class StringMethodsCpu(IStringMethods):
     def isalpha(self) -> IStringColumn:
         return ColumnFromVelox.from_velox(self._parent.scope, self._parent.to, dt.Boolean(self._parent.dtype.nullable), self._parent._data.isalpha(), True)
 
+    def isalnum(self) -> IStringColumn:
+        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.to, dt.Boolean(self._parent.dtype.nullable), self._parent._data.isalnum(), True)
+
 
 # ------------------------------------------------------------------------------
 # registering the factory
