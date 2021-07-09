@@ -17,6 +17,7 @@
 #include <f4d/common/memory/Memory.h>
 #include <f4d/core/QueryCtx.h>
 #include <memory>
+#include <unordered_map>
 #include "f4d/type/Type.h"
 #include "f4d/common/base/Exceptions.h"
 #include "f4d/exec/Expr.h"
@@ -50,6 +51,21 @@ struct TorchArrowGlobalStatic {
   }
 };
 
+struct GenericUDFDispatchKey {
+  std::string udfName;
+  // TODO: use row type instead of string
+  std::string typeSignature;
+
+  GenericUDFDispatchKey(std::string udfName, std::string typeSignature)
+      : udfName(std::move(udfName)), typeSignature(std::move(typeSignature)) {}
+};
+
+inline bool operator==(
+    const GenericUDFDispatchKey& lhs,
+    const GenericUDFDispatchKey& rhs) {
+  return lhs.udfName == rhs.udfName && lhs.typeSignature == rhs.typeSignature;
+}
+
 class BaseColumn;
 
 struct OperatorHandle {
@@ -62,7 +78,13 @@ struct OperatorHandle {
       : inputRowType_(inputRowType),
         exprSet_(exprSet){}
 
-  static std::unique_ptr<OperatorHandle> fromExpression(RowTypePtr inputRowType, const std::string& expr);
+  static std::unique_ptr<OperatorHandle> fromGenericUDF(
+      RowTypePtr inputRowType,
+      const std::string& udfName);
+
+  static std::unique_ptr<OperatorHandle> fromExpression(
+      RowTypePtr inputRowType,
+      const std::string& expr);
 
   static RowVectorPtr wrapRowVector(
       const std::vector<VectorPtr>& children,
@@ -76,7 +98,9 @@ struct OperatorHandle {
         folly::none);
   }
 
+  // Specialized invoke methods for common arities
   // Input type VectorPtr (instead of BaseColumn) since it might be a ConstantVector
+  // TODO: Use Column once ConstantColumn is supported
   std::unique_ptr<BaseColumn> call(VectorPtr a, VectorPtr b);
 
   std::unique_ptr<BaseColumn> call(const std::vector<VectorPtr>& args);
@@ -227,6 +251,16 @@ class BaseColumn {
         };
     return _promoteTypesLookup[static_cast<int>(a)][static_cast<int>(b)];
   }
+
+  // generic UDF
+  static std::unique_ptr<BaseColumn> genericUnaryUDF(
+      const std::string& udfName,
+      const BaseColumn& col1);
+
+  static std::unique_ptr<BaseColumn> genericBinaryUDF(
+      const std::string& udfName,
+      const BaseColumn& col1,
+      const BaseColumn& col2);
 };
 
 std::unique_ptr<BaseColumn> createColumn(VectorPtr vec);
@@ -390,7 +424,7 @@ class SimpleColumn : public BaseColumn {
 
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
     const static auto op =
-        OperatorHandle::fromExpression(inputRowType, "lower(c0)");
+        OperatorHandle::fromGenericUDF(inputRowType, "lower");
     return op->call({_delegate});
   }
 
@@ -401,7 +435,7 @@ class SimpleColumn : public BaseColumn {
 
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
     const static auto op =
-        OperatorHandle::fromExpression(inputRowType, "upper(c0)");
+        OperatorHandle::fromGenericUDF(inputRowType, "upper");
     return op->call({_delegate});
   }
 
@@ -412,7 +446,7 @@ class SimpleColumn : public BaseColumn {
 
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
     const static auto op =
-        OperatorHandle::fromExpression(inputRowType, "torcharrow_isalpha(c0)");
+        OperatorHandle::fromGenericUDF(inputRowType, "torcharrow_isalpha");
     return op->call({_delegate});
   }
 
@@ -611,3 +645,14 @@ class RowColumn : public BaseColumn {
 
 } // namespace torcharrow
 } // namespace facebook
+
+namespace std {
+template <>
+struct hash<::facebook::torcharrow::GenericUDFDispatchKey> {
+  size_t operator()(
+      const ::facebook::torcharrow::GenericUDFDispatchKey& x) const {
+    return std::hash<std::string>()(x.udfName) ^
+        (~std::hash<std::string>()(x.typeSignature));
+  }
+};
+} // namespace std

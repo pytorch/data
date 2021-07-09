@@ -14,7 +14,6 @@
 #include "column.h"
 #include <f4d/common/memory/Memory.h>
 #include <f4d/type/Type.h>
-#include <f4d/vector/BaseVector.h>
 #include <f4d/vector/ComplexVector.h>
 #include <chrono>
 #include <memory>
@@ -25,6 +24,7 @@
 #include "f4d/functions/common/CoreFunctions.h"
 #include "f4d/parse/Expressions.h"
 #include "f4d/parse/ExpressionsParser.h"
+#include "f4d/vector/BaseVector.h"
 
 namespace facebook {
 
@@ -175,6 +175,67 @@ std::shared_ptr<exec::ExprSet> BaseColumn::genBinaryExprSet(
       std::move(callTypedExprs), &TorchArrowGlobalStatic::execContext());
 }
 
+std::unique_ptr<BaseColumn> BaseColumn::genericUnaryUDF(
+    const std::string& udfName,
+    const BaseColumn& col1) {
+  auto rowType = ROW({"c0"}, {col1.getUnderlyingVeloxVector()->type()});
+  GenericUDFDispatchKey key(udfName, rowType->toString());
+
+  static std::
+      unordered_map<GenericUDFDispatchKey, std::unique_ptr<OperatorHandle>>
+          dispatchTable;
+
+  auto iter = dispatchTable.find(key);
+  if (iter == dispatchTable.end()) {
+    iter = dispatchTable
+               .insert({key, OperatorHandle::fromGenericUDF(rowType, udfName)})
+               .first;
+  }
+  return iter->second->call({col1.getUnderlyingVeloxVector()});
+}
+
+std::unique_ptr<BaseColumn> BaseColumn::genericBinaryUDF(
+    const std::string& udfName,
+    const BaseColumn& col1,
+    const BaseColumn& col2) {
+  auto rowType =
+      ROW({"c0", "c1"},
+          {col1.getUnderlyingVeloxVector()->type(),
+           col2.getUnderlyingVeloxVector()->type()});
+  GenericUDFDispatchKey key(udfName, rowType->toString());
+
+  static std::
+      unordered_map<GenericUDFDispatchKey, std::unique_ptr<OperatorHandle>>
+          dispatchTable;
+
+  auto iter = dispatchTable.find(key);
+  if (iter == dispatchTable.end()) {
+    iter = dispatchTable
+               .insert({key, OperatorHandle::fromGenericUDF(rowType, udfName)})
+               .first;
+  }
+  return iter->second->call({col1.getUnderlyingVeloxVector(), col2.getUnderlyingVeloxVector()});
+}
+
+std::unique_ptr<OperatorHandle> OperatorHandle::fromGenericUDF(
+    RowTypePtr inputRowType,
+    const std::string& udfName) {
+    // Generate the expression
+    std::stringstream ss;
+    ss << udfName << "(";
+    bool first = true;
+    for (int i = 0; i < inputRowType->size(); i++) {
+      if (!first) {
+        ss << ",";
+      }
+      ss << inputRowType->nameOf(i);
+      first=false;
+    }
+    ss << ")";
+
+    return OperatorHandle::fromExpression(inputRowType, ss.str());
+}
+
 std::unique_ptr<OperatorHandle> OperatorHandle::fromExpression(
     RowTypePtr inputRowType,
     const std::string& expr) {
@@ -190,44 +251,48 @@ std::unique_ptr<OperatorHandle> OperatorHandle::fromExpression(
           std::move(typedExprs), &TorchArrowGlobalStatic::execContext()));
 }
 
-std::unique_ptr<BaseColumn> OperatorHandle::call(VectorPtr a, VectorPtr b) {
-  auto inputRows = wrapRowVector({a, b}, inputRowType_);
-  exec::EvalCtx evalCtx(
-      &TorchArrowGlobalStatic::execContext(), exprSet_.get(), inputRows.get());
-  SelectivityVector select(a->size());
-  std::vector<VectorPtr> outputRows(1);
-  exprSet_->eval(0, 1, true, select, &evalCtx, &outputRows);
+  std::unique_ptr<BaseColumn> OperatorHandle::call(VectorPtr a, VectorPtr b) {
+    auto inputRows = wrapRowVector({a, b}, inputRowType_);
+    exec::EvalCtx evalCtx(
+        &TorchArrowGlobalStatic::execContext(),
+        exprSet_.get(),
+        inputRows.get());
+    SelectivityVector select(a->size());
+    std::vector<VectorPtr> outputRows(1);
+    exprSet_->eval(0, 1, true, select, &evalCtx, &outputRows);
 
-  // TODO: This causes an extra type-based dispatch.
-  // We can optimize it by template OperatorHandle by return type
-  return createColumn(outputRows[0]);
-}
+    // TODO: This causes an extra type-based dispatch.
+    // We can optimize it by template OperatorHandle by return type
+    return createColumn(outputRows[0]);
+  }
 
-std::unique_ptr<BaseColumn> OperatorHandle::call(
-    const std::vector<VectorPtr>& args) {
-  auto inputRows = wrapRowVector(args, inputRowType_);
-  exec::EvalCtx evalCtx(
-      &TorchArrowGlobalStatic::execContext(), exprSet_.get(), inputRows.get());
-  SelectivityVector select(args[0]->size());
-  std::vector<VectorPtr> outputRows(1);
-  exprSet_->eval(0, 1, true, select, &evalCtx, &outputRows);
+  std::unique_ptr<BaseColumn> OperatorHandle::call(
+      const std::vector<VectorPtr>& args) {
+    auto inputRows = wrapRowVector(args, inputRowType_);
+    exec::EvalCtx evalCtx(
+        &TorchArrowGlobalStatic::execContext(),
+        exprSet_.get(),
+        inputRows.get());
+    SelectivityVector select(args[0]->size());
+    std::vector<VectorPtr> outputRows(1);
+    exprSet_->eval(0, 1, true, select, &evalCtx, &outputRows);
 
-  // TODO: This causes an extra type-based dispatch.
-  // We can optimize it by template OperatorHandle by return type
-  return createColumn(outputRows[0]);
-}
+    // TODO: This causes an extra type-based dispatch.
+    // We can optimize it by template OperatorHandle by return type
+    return createColumn(outputRows[0]);
+  }
 
-core::QueryCtx& TorchArrowGlobalStatic::queryContext() {
-  static core::QueryCtx queryContext;
-  return queryContext;
-}
+  core::QueryCtx& TorchArrowGlobalStatic::queryContext() {
+    static core::QueryCtx queryContext;
+    return queryContext;
+  }
 
-core::ExecCtx& TorchArrowGlobalStatic::execContext() {
-  static core::ExecCtx execContext(
-      memory::getDefaultScopedMemoryPool(),
-      &TorchArrowGlobalStatic::queryContext());
-  return execContext;
-}
+  core::ExecCtx& TorchArrowGlobalStatic::execContext() {
+    static core::ExecCtx execContext(
+        memory::getDefaultScopedMemoryPool(),
+        &TorchArrowGlobalStatic::queryContext());
+    return execContext;
+  }
 
 } // namespace torcharrow
 } // namespace facebook

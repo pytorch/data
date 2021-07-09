@@ -268,6 +268,8 @@ PYBIND11_MODULE(_torcharrow, m) {
   declareMapType(m);
   declareRowType(m);
 
+  m.def("generic_unary_udf_dispatch", &BaseColumn::genericUnaryUDF);
+
   py::register_exception<NotAppendableException>(m, "NotAppendableException");
 
   // Register Velox UDFs
