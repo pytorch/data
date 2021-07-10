@@ -649,6 +649,17 @@ def promote(l, r):
     raise AssertionError(f"promote: unexpected case {l} {r}")
 
 
+def can_promote(l, r) -> bool:
+    lt = l.typecode
+    rt = r.typecode
+    if is_boolean_or_numerical(l) and is_boolean_or_numerical(r):
+        for lts, rts, _ in _promotion_list:
+            if (lt in lts) and (rt in rts):
+                return True
+        return False
+    return lt == rt
+
+
 def common_dtype(l, r):
     if is_void(l):
         return r.with_null()

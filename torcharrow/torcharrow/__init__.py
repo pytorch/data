@@ -25,6 +25,7 @@ from .numpy_rt import *
 
 from .interop import *
 
+from .functional import *
 
 # 0.1.0
 # Arrow types and columns
