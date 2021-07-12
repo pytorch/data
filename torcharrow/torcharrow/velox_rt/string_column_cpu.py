@@ -9,7 +9,7 @@ import torcharrow.dtypes as dt
 from tabulate import tabulate
 from torcharrow.expression import expression
 from torcharrow.istring_column import IStringColumn, IStringMethods
-from torcharrow.scope import ColumnFactory
+from torcharrow.scope import ColumnFactory, Scope, Device
 
 from .column import ColumnFromVelox
 from .typing import get_velox_type
@@ -20,19 +20,6 @@ from .column import ColumnFromVelox
 
 
 class StringColumnCpu(IStringColumn, ColumnFromVelox):
-
-    # Remark: Choosing a representation:
-    #
-    # Perf: Append and slice via list of string:
-    #
-    # runtime: type, operations,...
-    # 573: array, append, slice, tounicode
-    # 874: ndarray(str_), append, memoryview,slice,tobytes, decode(utgf-32)
-    # 209: list, append, index
-    # 248: ndarray(object), append, index
-    # 365: string, concat, slice
-    #
-    # So we use np.ndarray(object) for now
 
     # private constructor
     def __init__(self, scope, to, dtype, data, mask):  # REP offsets

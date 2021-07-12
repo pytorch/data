@@ -21,6 +21,7 @@
 #include "column.h"
 #include "f4d/functions/common/CoreFunctions.h"
 #include "f4d/functions/common/VectorFunctions.h"
+#include "f4d/vector/TypeAliases.h"
 #include "functions/functions.h" // @manual=//pytorch/torchdata/torcharrow/atab/velox/functions:torcharrow_functions
 
 #define STRINGIFY(x) #x
@@ -53,6 +54,12 @@ py::class_<SimpleColumn<T>, BaseColumn> declareSimpleType(
 
   py::class_<FlatColumn<T>, SimpleColumn<T>>(
       m, (std::string("FlatColumn") + TypeTraits<kind>::name).c_str());
+
+  py::class_<ConstantColumn<T>, SimpleColumn<T>>(
+      m, (std::string("ConstantColumn") + TypeTraits<kind>::name).c_str())
+      .def("__getitem__", [&decoder](ConstantColumn<T>& self, int index) {
+        return decoder(self.valueAt(index));
+      });
 
   using I = typename TypeTraits<kind>::ImplType;
   py::class_<I, Type, std::shared_ptr<I>>(
@@ -268,6 +275,13 @@ PYBIND11_MODULE(_torcharrow, m) {
   declareMapType(m);
   declareRowType(m);
 
+  // constant columns
+  m.def("ConstantColumn", [](const py::handle& value, py::int_ size) {
+    return BaseColumn::createConstantColumn(
+        pyToVariant(value), py::cast<vector_size_t>(size));
+  });
+
+  // generic UDF dispatch
   m.def("generic_unary_udf_dispatch", &BaseColumn::genericUnaryUDF);
 
   py::register_exception<NotAppendableException>(m, "NotAppendableException");

@@ -221,6 +221,48 @@ class TestSimpleColumns(unittest.TestCase):
 
         self.assertEqual(len(col), 4)
 
+    def test_ConstantColumn(self):
+        ###########
+        #  BIGINT
+        col = ta.ConstantColumn(42, 6)
+        self.assertTrue(isinstance(col.type(), ta.VeloxType_BIGINT))
+        self.assert_SimpleColumn(col, [42] * 6)
+
+        # Test use constant column for normal add
+        data = [1, -2, None, 3, -4, None]
+        num_column = infer_column(data)
+        add_result = num_column.add(col)
+        self.assertTrue(isinstance(add_result.type(), ta.VeloxType_BIGINT))
+        self.assert_SimpleColumn(add_result, [43, 40, None, 45, 38, None])
+
+        add_result = col.add(num_column)
+        self.assertTrue(isinstance(add_result.type(), ta.VeloxType_BIGINT))
+        self.assert_SimpleColumn(add_result, [43, 40, None, 45, 38, None])
+
+
+        ###########
+        #  REAL
+        col = ta.ConstantColumn(4.2, 6)
+        self.assertTrue(isinstance(col.type(), ta.VeloxType_REAL))
+        self.assert_SimpleColumn(col, [4.2] * 6)
+
+        # Test use constant column for normal add
+        data = [1.2, -2.3, None, 3.4, -4.6, None]
+        num_column = infer_column(data)
+        add_result = num_column.add(col)
+        self.assertTrue(isinstance(add_result.type(), ta.VeloxType_REAL))
+        self.assert_SimpleColumn(add_result, [5.4, 1.9, None, 7.6, -0.4, None])
+
+        add_result = col.add(num_column)
+        self.assertTrue(isinstance(add_result.type(), ta.VeloxType_REAL))
+        self.assert_SimpleColumn(add_result, [5.4, 1.9, None, 7.6, -0.4, None])
+
+
+        ###########
+        #  VARCHAR
+        col = ta.ConstantColumn('abc', 6)
+        self.assertTrue(isinstance(col.type(), ta.VeloxType_VARCHAR))
+        self.assert_SimpleColumn(col, ['abc'] * 6)
 
 def is_same_type(a, b) -> bool:
     if isinstance(a, ta.VeloxType_BIGINT):

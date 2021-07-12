@@ -18,6 +18,7 @@
 #include <chrono>
 #include <memory>
 #include <ratio>
+#include "f4d/common/base/Exceptions.h"
 #include "f4d/core/Expressions.h"
 #include "f4d/core/ITypedExpr.h"
 #include "f4d/exec/Expr.h"
@@ -25,6 +26,8 @@
 #include "f4d/parse/Expressions.h"
 #include "f4d/parse/ExpressionsParser.h"
 #include "f4d/vector/BaseVector.h"
+
+namespace py = pybind11;
 
 namespace facebook {
 
@@ -61,6 +64,38 @@ createColumn(VectorPtr vec, vector_size_t offset, vector_size_t length) {
       return F4D_DYNAMIC_SCALAR_TYPE_DISPATCH(
           createSimpleColumn, kind, vec, offset, length);
   }
+}
+
+template <TypeKind kind>
+std::unique_ptr<BaseColumn> doCreateConstantColumn(
+    variant value,
+    vector_size_t size) {
+  using T = typename TypeTraits<kind>::NativeType;
+  return std::make_unique<ConstantColumn<T>>(value, size);
+}
+
+std::unique_ptr<BaseColumn> BaseColumn::createConstantColumn(
+    variant value,
+    vector_size_t size) {
+  // Note here we are doing the same type dispatch twice:
+  //   1. first happens when dispatching to doCreateSimpleColumn
+  //   2. second happens in constructor of ConstantColumn<T> when calling
+  //      BaseVector::createConstant
+  //
+  // The second dispatch is required because the method
+  // BaseVector::createConstant dispatch to (newConstant) is a not yet a public
+  // Velox API. Otherwise, we can create the ConstantVector and wrap it into the
+  // ConstantColumn in one dispatch.
+  //
+  // We can avoid the second dispatch either by making `newConstant` a public
+  // Velox API, or have template method to create ConstantVector (which
+  // essentially fork `newConstant` method).
+  //
+  // However, at some point we also want to revisit whether
+  // SimpleColumn/ConstantColumn needs to be templated and thus we could
+  // remove the first dispatch.
+  return F4D_DYNAMIC_SCALAR_TYPE_DISPATCH(
+      doCreateConstantColumn, value.kind(), value, size);
 }
 
 std::unique_ptr<BaseColumn> ArrayColumn::valueAt(vector_size_t i) {
@@ -292,6 +327,26 @@ std::unique_ptr<OperatorHandle> OperatorHandle::fromExpression(
         memory::getDefaultScopedMemoryPool(),
         &TorchArrowGlobalStatic::queryContext());
     return execContext;
+  }
+
+  // This method only supports a limited set Python object to variant conversion
+  // to minimize code duplication.
+  // TODO: Open source some part of utility codes in Koski (PyVelox?)
+  variant pyToVariant(const pybind11::handle& obj) {
+    if (py::isinstance<py::bool_>(obj)) {
+      return variant::create<TypeKind::BOOLEAN>(py::cast<bool>(obj));
+    } else if (py::isinstance<py::int_>(obj)) {
+      return variant::create<TypeKind::BIGINT>(py::cast<long>(obj));
+    } else if (py::isinstance<py::float_>(obj)) {
+      return variant::create<TypeKind::REAL>(py::cast<float>(obj));
+    } else if (py::isinstance<py::str>(obj)) {
+      return variant::create<TypeKind::VARCHAR>(py::cast<std::string>(obj));
+    } else if (obj.is_none()) {
+      return variant();
+    }
+    else {
+      VELOX_CHECK(false);
+    }
   }
 
 } // namespace torcharrow

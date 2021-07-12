@@ -16,9 +16,9 @@
 
 #include <f4d/common/memory/Memory.h>
 #include <f4d/core/QueryCtx.h>
+#include <pybind11/pybind11.h>
 #include <memory>
 #include <unordered_map>
-#include "f4d/type/Type.h"
 #include "f4d/common/base/Exceptions.h"
 #include "f4d/exec/Expr.h"
 #include "f4d/type/Type.h"
@@ -65,6 +65,8 @@ inline bool operator==(
     const GenericUDFDispatchKey& rhs) {
   return lhs.udfName == rhs.udfName && lhs.typeSignature == rhs.typeSignature;
 }
+
+variant pyToVariant(const pybind11::handle& obj);
 
 class BaseColumn;
 
@@ -261,6 +263,9 @@ class BaseColumn {
       const std::string& udfName,
       const BaseColumn& col1,
       const BaseColumn& col2);
+
+  // factory methods to create columns
+  static std::unique_ptr<BaseColumn> createConstantColumn(variant value, vector_size_t size);
 };
 
 std::unique_ptr<BaseColumn> createColumn(VectorPtr vec);
@@ -464,6 +469,16 @@ class SimpleColumn : public BaseColumn {
 
 template <typename T>
 class FlatColumn : public SimpleColumn<T> {};
+
+template<typename T>
+class ConstantColumn : public SimpleColumn<T> {
+  public:
+   ConstantColumn(variant value, vector_size_t size)
+       : SimpleColumn<T>(BaseVector::createConstant(
+             value,
+             size,
+             TorchArrowGlobalStatic::rootMemoryPool())) {}
+};
 
 class ArrayColumn : public BaseColumn {
  public:
