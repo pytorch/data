@@ -12,7 +12,7 @@ class TestNumericalColumnCpu(TestNumericalColumn):
 
     def test_internal_empty(self):
         c = self.base_test_empty()
-        self.assertEqual(c.to, "std")
+        self.assertEqual(c.device, "std")
         self.assertEqual(len(c._mask), 0)
 
     def test_internals_full(self):

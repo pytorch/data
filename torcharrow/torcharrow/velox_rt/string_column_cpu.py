@@ -22,9 +22,9 @@ from .column import ColumnFromVelox
 class StringColumnCpu(IStringColumn, ColumnFromVelox):
 
     # private constructor
-    def __init__(self, scope, to, dtype, data, mask):  # REP offsets
+    def __init__(self, scope, device, dtype, data, mask):  # REP offsets
         assert dt.is_string(dtype)
-        super().__init__(scope, to, dtype)
+        super().__init__(scope, device, dtype)
 
         self._data = velox.Column(get_velox_type(dtype))
         for m, d in zip(mask.tolist(), data):
@@ -40,13 +40,13 @@ class StringColumnCpu(IStringColumn, ColumnFromVelox):
     # Any _empty must be followed by a _finalize; no other ops are allowed during this time
 
     @staticmethod
-    def _empty(scope, to, dtype, mask=None):
+    def _empty(scope, device, dtype, mask=None):
         _mask = mask if mask is not None else ar.array("b")
         # REP  ar.array("I", [0])
-        return StringColumnCpu(scope, to, dtype, [], _mask)
+        return StringColumnCpu(scope, device, dtype, [], _mask)
 
     @staticmethod
-    def _full(scope, to, data, dtype=None, mask=None):
+    def _full(scope, device, data, dtype=None, mask=None):
         assert isinstance(data, np.ndarray) and data.ndim == 1
         if dtype is None:
             dtype = dt.typeof_np_ndarray(data.dtype)
@@ -66,7 +66,7 @@ class StringColumnCpu(IStringColumn, ColumnFromVelox):
         elif len(data) != len(mask):
             raise ValueError(f"data length {len(data)} must be mask length {len(mask)}")
         # TODO check that all non-masked items are strings
-        return StringColumnCpu(scope, to, dtype, data, mask)
+        return StringColumnCpu(scope, device, dtype, data, mask)
 
     def _append_null(self):
         if self._finialized:
@@ -114,12 +114,12 @@ class StringColumnCpu(IStringColumn, ColumnFromVelox):
     def gets(self, indices):
         data = self._data[indices]
         mask = self._mask[indices]
-        return self.scope._FullColumn(data, self.dtype, self.to, mask)
+        return self.scope._FullColumn(data, self.dtype, self.device, mask)
 
     def slice(self, start, stop, step):
         range = slice(start, stop, step)
         return self.scope._FullColumn(
-            self._data[range], self.dtype, self.to, self._mask[range]
+            self._data[range], self.dtype, self.device, self._mask[range]
         )
 
     # operators ---------------------------------------------------------------
@@ -177,7 +177,7 @@ class StringMethodsCpu(IStringMethods):
         Concatenate strings with given separator and n/a substitition.
         """
         me = cast(StringColumnCpu, self._parent)
-        assert all(me.to == other.to for other in others)
+        assert all(me.device == other.device for other in others)
 
         _all = [me] + others
 
@@ -207,16 +207,16 @@ class StringMethodsCpu(IStringMethods):
         return res._finalize()
 
     def lower(self) -> IStringColumn:
-        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.to, self._parent.dtype, self._parent._data.lower(), True)
+        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.device, self._parent.dtype, self._parent._data.lower(), True)
 
     def upper(self) -> IStringColumn:
-        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.to, self._parent.dtype, self._parent._data.upper(), True)
+        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.device, self._parent.dtype, self._parent._data.upper(), True)
 
     def isalpha(self) -> IStringColumn:
-        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.to, dt.Boolean(self._parent.dtype.nullable), self._parent._data.isalpha(), True)
+        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.device, dt.Boolean(self._parent.dtype.nullable), self._parent._data.isalpha(), True)
 
     def isalnum(self) -> IStringColumn:
-        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.to, dt.Boolean(self._parent.dtype.nullable), self._parent._data.isalnum(), True)
+        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.device, dt.Boolean(self._parent.dtype.nullable), self._parent._data.isalnum(), True)
 
 
 # ------------------------------------------------------------------------------

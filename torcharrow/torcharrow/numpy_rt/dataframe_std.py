@@ -49,16 +49,16 @@ DataOrDTypeOrNone = Union[Mapping, Sequence, dt.DType, Literal[None]]
 class DataFrameStd(IDataFrame):
     """Dataframe, ordered dict of typed columns of the same length"""
 
-    def __init__(self, scope, to, dtype, field_data, mask):
+    def __init__(self, scope, device, dtype, field_data, mask):
         assert dt.is_struct(dtype)
-        super().__init__(scope, to, dtype)
+        super().__init__(scope, device, dtype)
 
         self._field_data = field_data
         self._mask = mask
 
     # Any _full requires no further type changes..
     @staticmethod
-    def _full(scope, to, data, dtype=None, mask=None):
+    def _full(scope, device, data, dtype=None, mask=None):
         cols = data.values()
         assert all(isinstance(c, IColumn) for c in data.values())
         ct = 0
@@ -78,15 +78,15 @@ class DataFrameStd(IDataFrame):
             mask = DataFrameStd._valid_mask(ct)
         elif len(data) != len(mask):
             raise ValueError(f"data length {len(data)} must be mask length {len(mask)}")
-        return DataFrameStd(scope, to, dtype, data, mask)
+        return DataFrameStd(scope, device, dtype, data, mask)
 
     # Any _empty must be followed by a _finalize; no other ops are allowed during this time
 
     @staticmethod
-    def _empty(scope, to, dtype, mask=None):
-        field_data = {f.name: scope._EmptyColumn(f.dtype, to) for f in dtype.fields}
+    def _empty(scope, device, dtype, mask=None):
+        field_data = {f.name: scope._EmptyColumn(f.dtype, device) for f in dtype.fields}
         _mask = mask if mask is not None else ar.array("b")
-        return DataFrameStd(scope, to, dtype, field_data, _mask)
+        return DataFrameStd(scope, device, dtype, field_data, _mask)
 
     def _append_null(self):
         self._mask.append(True)
@@ -125,7 +125,7 @@ class DataFrameStd(IDataFrame):
             else:
                 n, c = next(iter(field_data.items()))
                 _mask = np.full((len(c),), bool(mask), dtype=np.bool8)
-        return DataFrameStd(self.scope, self.to, dtype, field_data, _mask)
+        return DataFrameStd(self.scope, self.device, dtype, field_data, _mask)
 
     def __len__(self):
         if len(self._field_data) == 0:
@@ -149,7 +149,7 @@ class DataFrameStd(IDataFrame):
 
     def append(self, values):
         """Returns column/dataframe with values appended."""
-        tmp = self.scope.DataFrame(values, dtype=self.dtype, to=self.to)
+        tmp = self.scope.DataFrame(values, dtype=self.dtype, device=self.device)
         field_data = {n: c.append(tmp[n]) for n, c in self._field_data.items()}
         mask = np.append(self._mask, tmp._mask)
         return self._fromdata(field_data, mask)

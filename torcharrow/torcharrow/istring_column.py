@@ -37,9 +37,9 @@ class IStringColumn(IColumn):
     # So we use np.ndarray(object) for now
 
     # private constructor
-    def __init__(self, scope, to, dtype):  # REP offsets
+    def __init__(self, scope, device, dtype):  # REP offsets
         assert dt.is_string(dtype)
-        super().__init__(scope, to, dtype)
+        super().__init__(scope, device, dtype)
         # must be set by subclass
         self.str: IStringMethods = None
 

@@ -28,14 +28,14 @@ def Column(
     data: ty.Union[ty.Iterable, dt.DType, ty.Literal[None]] = None,
     dtype: ty.Optional[dt.DType] = None,
     scope: ty.Optional[Scope] = None,
-    to: Device = "",
+    device: Device = "",
 ):
     """
-    Column Factory method; allocates memory on to (or Scope.default.to) device
+    Column Factory method; allocates memory on device (or Scope.default.device) device
     """
     scope = scope or Scope.default
-    to = to or scope.to
-    return scope.Column(data, dtype=dtype, to=to)
+    device = device or scope.device
+    return scope.Column(data, dtype=dtype, device=device)
 
 
 # ------------------------------------------------------------------------------
@@ -45,10 +45,10 @@ def Column(
 class IColumn(ty.Sized, ty.Iterable, abc.ABC):
     """Interface for Column are n vectors (n>=1) of columns"""
 
-    def __init__(self, scope, to, dtype: dt.DType):
+    def __init__(self, scope, device, dtype: dt.DType):
 
         self._scope: Scope = scope
-        self._to = to
+        self._device = device
         self._dtype: dt.DType = dtype
 
         # id handling, used for tracing...
@@ -61,8 +61,8 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
         return self._scope
 
     @property
-    def to(self):
-        return self._to
+    def device(self):
+        return self._device
 
     @property  # type: ignore
     @traceproperty
@@ -80,19 +80,19 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
 
     def _EmptyColumn(self, dtype, mask=None):
         """PRIVATE Column factory; must be follwed by _append... and _finalize"""
-        return self.scope._EmptyColumn(dtype, self.to, mask)
+        return self.scope._EmptyColumn(dtype, self.device, mask)
 
     def _FullColumn(self, data, dtype=None, mask=None):
         """PRIVATE Column factory; data must be in the expected representation"""
-        return self.scope._FullColumn(data, dtype, self.to, mask)
+        return self.scope._FullColumn(data, dtype, self.device, mask)
 
     def _Column(self, data=None, dtype: ty.Optional[dt.DType] = None):
         """PRIVATE Column factory; must be follwed by _append... and _finalize"""
-        return self.scope.Column(data, dtype, to=self.to)
+        return self.scope.Column(data, dtype, device=self.device)
 
     def _DataFrame(self, data, dtype=None, columns=None):
         """PRIVATE Column factory; data must be in the expected representation"""
-        return self.scope.DataFrame(data, dtype, columns, to=self.to)
+        return self.scope.DataFrame(data, dtype, columns, device=self.device)
 
     # private builders -------------------------------------------------------
 

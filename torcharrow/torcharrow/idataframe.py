@@ -43,11 +43,11 @@ def DataFrame(
     data: Union[Iterable, dt.DType, Literal[None]] = None,
     dtype: Optional[dt.DType] = None,
     scope: Optional[Scope] = None,
-    to: Device = "",
+    device: Device = "",
 ):
     scope = scope or Scope.default
-    to = to or scope.to
-    return scope.Frame(data, dtype=dtype, to=to)
+    device = device or scope.device
+    return scope.Frame(data, dtype=dtype, device=device)
 
 
 # -----------------------------------------------------------------------------
@@ -59,9 +59,9 @@ DataOrDTypeOrNone = Union[Mapping, Sequence, dt.DType, Literal[None]]
 class IDataFrame(IColumn):
     """Dataframe, ordered dict of typed columns of the same length"""
 
-    def __init__(self, scope, to, dtype):
+    def __init__(self, scope, device, dtype):
         assert dt.is_struct(dtype)
-        super().__init__(scope, to, dtype)
+        super().__init__(scope, device, dtype)
 
     @property  # type: ignore
     @abc.abstractmethod

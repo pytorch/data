@@ -55,7 +55,7 @@ class Scope:
     # device handling --------------------------------------------------------
 
     @property
-    def to(self):
+    def device(self):
         return self.config["device"]
 
     # tracing handling --------------------------------------------------------
@@ -69,11 +69,11 @@ class Scope:
         return id(self) == id(other)
 
     def check_is_same(self, other):
-        if id(self) != id(other) or self.to != other.to:
+        if id(self) != id(other) or self.device != other.device:
             raise TypeError("scope and device must be the same")
 
     def check_are_same(self, others):
-        if not all(self.is_same(other) and self.to == other.to for other in others):
+        if not all(self.is_same(other) and self.device == other.device for other in others):
             raise TypeError("scope and device must be the same")
 
     # column factory -----------------------------------------------------------
@@ -98,27 +98,27 @@ class Scope:
         from .velox_rt import NumericalColumnCpu
 
     # private column/dataframe constructors -----------------------------------
-    def _EmptyColumn(self, dtype, to="", mask=None):
+    def _EmptyColumn(self, dtype, device="", mask=None):
         """
         Column row builder method -- lifecycle:: _EmptyColumn; _append_row*; _finalize
         """
         Scope._require_column_constructors_to_be_registered()
 
-        to = to if to != "" else self.to
-        call = ColumnFactory.lookup((dtype.typecode + "_empty", to))
+        device = device if device != "" else self.device
+        call = ColumnFactory.lookup((dtype.typecode + "_empty", device))
 
-        return call(self, to, dtype, mask)
+        return call(self, device, dtype, mask)
 
-    def _FullColumn(self, data, dtype, to="", mask=None):
+    def _FullColumn(self, data, dtype, device="", mask=None):
         """
         Column vector builder method -- data is already in right form
         """
         Scope._require_column_constructors_to_be_registered()
 
-        to = to if to != "" else self.to
-        call = ColumnFactory.lookup((dtype.typecode + "_full", to))
+        device = device if device != "" else self.device
+        call = ColumnFactory.lookup((dtype.typecode + "_full", device))
 
-        return call(self, to, data, dtype, mask)
+        return call(self, device, data, dtype, mask)
 
     # public column (dataframe) constructors ----------------------------------
     def arrange(
@@ -127,22 +127,22 @@ class Scope:
         stop: int,
         step: int = 1,
         dtype: ty.Optional[dt.DType] = None,
-        to: ty.Optional[Device] = None,
+        device: ty.Optional[Device] = None,
     ):
-        return self.Column(list(range(start, stop, step)), dtype, to)
+        return self.Column(list(range(start, stop, step)), dtype, device)
 
     @trace
     def Column(
         self,
         data=None,
         dtype: ty.Optional[dt.DType] = None,
-        to: Device = "",
+        device: Device = "",
     ):
         """
         Column factory method
         """
 
-        to = self.to if to is None else to
+        device = self.device if device is None else device
 
         if (data is None) and (dtype is None):
             raise TypeError(
@@ -157,7 +157,7 @@ class Scope:
 
         # dtype given, optional data
         if isinstance(dtype, dt.DType):
-            col = self._EmptyColumn(dtype, to)
+            col = self._EmptyColumn(dtype, device)
             if data is not None:
                 for i in data:
                     col._append(i)
@@ -181,7 +181,7 @@ class Scope:
                     raise TypeError(
                         "Column cannot be used to created structs, use Dataframe constructor instead"
                     )
-                col = self._EmptyColumn(dtype, to=to)
+                col = self._EmptyColumn(dtype, device=device)
                 # add prefix and ...
                 for p in prefix:
                     col._append(p)
@@ -203,7 +203,7 @@ class Scope:
         data=None,  # : DataOrDTypeOrNone = None,
         dtype=None,  # : ty.Optional[dt.DType] = None,
         columns=None,  # : ty.Optional[List[str]] = None,
-        to="",
+        device="",
     ):
         """
         Dataframe factory method
@@ -211,7 +211,7 @@ class Scope:
 
         if data is None and dtype is None:
             assert columns is None
-            return self._EmptyColumn(dt.Struct([]), to=to)._finalize()
+            return self._EmptyColumn(dt.Struct([]), device=device)._finalize()
 
         if data is not None and isinstance(data, dt.DType):
             if dtype is not None and isinstance(dtype, dt.DType):
@@ -227,16 +227,16 @@ class Scope:
                 )
             dtype = ty.cast(dt.Struct, dtype)
             if data is None:
-                return self._EmptyColumn(dtype, to=to)._finalize()
+                return self._EmptyColumn(dtype, device=device)._finalize()
             else:
                 if isinstance(data, ty.Sequence):
-                    res = self._EmptyColumn(dtype, to=to)
+                    res = self._EmptyColumn(dtype, device=device)
                     for i in data:
                         res._append(i)
                     return res._finalize()
                 elif isinstance(data, ty.Mapping):
                     res = {
-                        n: c if Scope._is_column(c) else self.Column(c, to=to)
+                        n: c if Scope._is_column(c) else self.Column(c, device=device)
                         for n, c in data.items()
                     }
                     return self._FullColumn(res, dtype)
@@ -264,7 +264,7 @@ class Scope:
                 dtype = dt.Struct(
                     [dt.Field(n, t) for n, t in zip(columns, dtype.fields)]
                 )
-                res = self._EmptyColumn(dtype, to=to)
+                res = self._EmptyColumn(dtype, device=device)
                 for i in data:
                     res._append(i)
                 return res._finalize()
@@ -274,7 +274,7 @@ class Scope:
                     if Scope._is_column(c):
                         res[n] = c
                     elif isinstance(c, ty.Sequence):
-                        res[n] = self.Column(c, to=to)
+                        res[n] = self.Column(c, device=device)
                     else:
                         raise TypeError(
                             f"dataframe does not support constructor for column data of type {type(c).__name__}"
@@ -298,7 +298,7 @@ class Scope:
     def _is_column(c):
         # NOTE: should be isinstance(c, IColumn)
         # But can't do tha due to cyclic reference, so we use ...
-        return hasattr(c, "_dtype") and hasattr(c, "_scope") and hasattr(c, "_to")
+        return hasattr(c, "_dtype") and hasattr(c, "_scope") and hasattr(c, "_device")
 
     @staticmethod
     def _is_dataframe(c):
@@ -307,7 +307,7 @@ class Scope:
         return (
             hasattr(c, "_dtype")
             and hasattr(c, "_scope")
-            and hasattr(c, "_to")
+            and hasattr(c, "_device")
             and hasattr(c, "_field_data")
         )
 

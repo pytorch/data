@@ -21,18 +21,18 @@ class NumericalColumnStd(INumericalColumn):
     # unless the column operations is completely generic
     # and its perf can't be improved upon
 
-    def __init__(self, scope, to, dtype, data, mask):
+    def __init__(self, scope, device, dtype, data, mask):
         # private constructor
         #   DON'T CALL: NumericalColumnStd
         assert dt.is_boolean_or_numerical(dtype)
-        super().__init__(scope, to, dtype)
+        super().__init__(scope, device, dtype)
         self._data = data  # Union[ar.array.np.ndarray]
         self._mask = mask  # Union[ar.array.np.ndarray]
 
     # private factory and builders --------------------------------------------
 
     @staticmethod
-    def _full(scope, to, data, dtype=None, mask=None):
+    def _full(scope, device, data, dtype=None, mask=None):
         # DON'T CALL: _full USE _FullColumn instead
 
         assert isinstance(data, np.ndarray) and data.ndim == 1
@@ -52,14 +52,14 @@ class NumericalColumnStd(INumericalColumn):
                 f"data length {len(data)} must be the same as mask length {len(mask)}"
             )
         # TODO check that all non-masked items are legal numbers (i.e not nan)
-        return NumericalColumnStd(scope, to, dtype, data, mask)
+        return NumericalColumnStd(scope, device, dtype, data, mask)
 
     @staticmethod
-    def _empty(scope, to, dtype, mask=None):
+    def _empty(scope, device, dtype, mask=None):
         # DON'T CALL: _empty USE _EmptyColumn instead
         # Any _empty must be followed by a _finalize; no other ops are allowed during this time
         _mask = mask if mask is not None else ar.array("b")
-        return NumericalColumnStd(scope, to, dtype, ar.array(dtype.arraycode), _mask)
+        return NumericalColumnStd(scope, device, dtype, ar.array(dtype.arraycode), _mask)
 
     def _append_null(self):
         self._mask.append(True)
@@ -106,32 +106,32 @@ class NumericalColumnStd(INumericalColumn):
     @trace
     def gets(self, indices):
         return self.scope._FullColumn(
-            self._data[indices], self.dtype, self.to, self._mask[indices]
+            self._data[indices], self.dtype, self.device, self._mask[indices]
         )
 
     @trace
     def slice(self, start, stop, step):
         range = slice(start, stop, step)
         return self.scope._FullColumn(
-            self._data[range], self.dtype, self.to, self._mask[range]
+            self._data[range], self.dtype, self.device, self._mask[range]
         )
 
     # public append/copy/astype------------------------------------------------
 
     @trace
     def append(self, values):
-        tmp = self.scope.Column(values, dtype=self.dtype, to=self.to)
+        tmp = self.scope.Column(values, dtype=self.dtype, device=self.device)
         return self.scope._FullColumn(
             np.append(self._data, tmp._data),
             self.dtype,
-            self.to,
+            self.device,
             np.append(self._mask, tmp._mask),
         )
 
     @trace
     def copy(self):
         return self.scope._FullColumn(
-            self._data.copy(), self.dtype, self.to, self.mask.copy()
+            self._data.copy(), self.dtype, self.device, self.mask.copy()
         )
 
     def astype(self, dtype):
@@ -187,10 +187,10 @@ class NumericalColumnStd(INumericalColumn):
         else:
             res.sort()
         if ascending:
-            return self.scope._FullColumn(res.data, self.dtype, self.to, res.mask)
+            return self.scope._FullColumn(res.data, self.dtype, self.device, res.mask)
         else:
             res = np.flip(res)
-            return self.scope._FullColumn(res.data, self.dtype, self.to, res.mask)
+            return self.scope._FullColumn(res.data, self.dtype, self.device, res.mask)
 
     @trace
     @expression
@@ -241,7 +241,7 @@ class NumericalColumnStd(INumericalColumn):
             if not isinstance(masked_array.mask, np.bool8)
             else np.full((len(masked_array),), masked_array.mask)
         )
-        return NumericalColumnStd(self.scope, self.to, dtype, masked_array.data, mask)
+        return NumericalColumnStd(self.scope, self.device, dtype, masked_array.data, mask)
 
     @trace
     @expression

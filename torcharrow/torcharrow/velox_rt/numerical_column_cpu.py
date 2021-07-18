@@ -38,9 +38,9 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
     # _full, _empty, _append_null, _append_value, _append_data, _finalize
 
     # private
-    def __init__(self, scope, to, dtype, data, mask):
+    def __init__(self, scope, device, dtype, data, mask):
         assert dt.is_boolean_or_numerical(dtype)
-        super().__init__(scope, to, dtype)
+        super().__init__(scope, device, dtype)
         self._data = velox.Column(get_velox_type(dtype))
         for m, d in zip(mask.tolist(), data.tolist()):
             if m:
@@ -50,7 +50,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
         self._finialized = False
 
     @staticmethod
-    def _full(scope, to, data, dtype=None, mask=None):
+    def _full(scope, device, data, dtype=None, mask=None):
         assert isinstance(data, np.ndarray) and data.ndim == 1
         if dtype is None:
             dtype = dt.typeof_np_ndarray(data.dtype)
@@ -68,14 +68,14 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                 f"data length {len(data)} must be the same as mask length {len(mask)}"
             )
         # TODO check that all non-masked items are legal numbers (i.e not nan)
-        return NumericalColumnCpu(scope, to, dtype, data, mask)
+        return NumericalColumnCpu(scope, device, dtype, data, mask)
 
     # Any _empty must be followed by a _finalize; no other ops are allowed during this time
 
     @staticmethod
-    def _empty(scope, to, dtype, mask=None):
+    def _empty(scope, device, dtype, mask=None):
         _mask = mask if mask is not None else ar.array("b")
-        return NumericalColumnCpu(scope, to, dtype, ar.array(dtype.arraycode), _mask)
+        return NumericalColumnCpu(scope, device, dtype, ar.array(dtype.arraycode), _mask)
 
     def _append_null(self):
         if self._finialized:
@@ -153,7 +153,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(then_.getdata(i) if self.getdata(i) else else_.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, lub, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, lub, col, True)
 
         else:
             # refer back to default handling...
@@ -191,7 +191,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
             for i in range(none_count):
                 col.append_null()
 
-        return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+        return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
 
     @trace
     @expression
@@ -245,12 +245,12 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
         if isinstance(other, NumericalColumnCpu):
             result_col = self._data.add(other._data)
             result_dtype = result_col.dtype().with_null(self.dtype.nullable or other.dtype.nullable)
-            return ColumnFromVelox.from_velox(self.scope, self.to, result_dtype, result_col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, result_dtype, result_col, True)
         else:
             # other is scalar
             result_col = self._data.add(other)
             result_dtype = result_col.dtype().with_null(self.dtype.nullable)
-            return ColumnFromVelox.from_velox(self.scope, self.to, result_dtype, result_col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, result_dtype, result_col, True)
 
     @trace
     @expression
@@ -265,7 +265,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
         # other is scalar
         result_col = self._data.add(other)
         result_dtype = result_col.dtype().with_null(self.dtype.nullable)
-        return ColumnFromVelox.from_velox(self.scope, self.to, result_dtype, result_col, True)
+        return ColumnFromVelox.from_velox(self.scope, self.device, result_dtype, result_col, True)
 
 
     @trace
@@ -282,7 +282,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) - other.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
         else:
             col = velox.Column(get_velox_type(self.dtype))
             for i in range(len(self)):
@@ -290,7 +290,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) - other)
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
 
     @trace
     @expression
@@ -305,7 +305,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(other.getdata(i) - self.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
         else:
             col = velox.Column(get_velox_type(self.dtype))
             for i in range(len(self)):
@@ -313,7 +313,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(other - self.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
 
     @trace
     @expression
@@ -329,7 +329,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) * other.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
         else:
             col = velox.Column(get_velox_type(self.dtype))
             for i in range(len(self)):
@@ -337,7 +337,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) * other)
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
     @trace
     @expression
     def __rmul__(self, other):
@@ -352,7 +352,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(other.getdata(i) * self.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
         else:
             col = velox.Column(get_velox_type(self.dtype))
             for i in range(len(self)):
@@ -360,7 +360,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(other * self.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
 
     @trace
     @expression
@@ -376,7 +376,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) // other.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.float64, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.float64, col, True)
         else:
             col = velox.Column(get_velox_type(dt.float64))
             for i in range(len(self)):
@@ -384,7 +384,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) // other)
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.float64, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.float64, col, True)
     @trace
     @expression
     def __rfloordiv__(self, other):
@@ -399,7 +399,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(other.getdata(i) // self.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
         else:
             col = velox.Column(get_velox_type(self.dtype))
             for i in range(len(self)):
@@ -407,7 +407,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(other // self.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
 
     @trace
     @expression
@@ -423,7 +423,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) / other.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.float64, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.float64, col, True)
         else:
             col = velox.Column(get_velox_type(dt.float64))
             for i in range(len(self)):
@@ -431,7 +431,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) / other)
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.float64, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.float64, col, True)
     @trace
     @expression
     def __rtruediv__(self, other):
@@ -446,7 +446,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(other.getdata(i) / self.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.float64, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.float64, col, True)
         else:
             col = velox.Column(get_velox_type(dt.float64))
             for i in range(len(self)):
@@ -454,7 +454,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(other / self.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.float64, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.float64, col, True)
 
     @trace
     @expression
@@ -471,7 +471,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) % other)
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
 
     @trace
     @expression
@@ -498,7 +498,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) ** other.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
         else:
             col = velox.Column(get_velox_type(self.dtype))
             for i in range(len(self)):
@@ -506,7 +506,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) ** other)
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
 
     @trace
     @expression
@@ -522,7 +522,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(other.getdata(i) ** self.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
         else:
             col = velox.Column(get_velox_type(self.dtype))
             for i in range(len(self)):
@@ -530,7 +530,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(other ** self.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
     @trace
     @expression
     def __eq__(self, other):
@@ -543,7 +543,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) == other.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.boolean, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.boolean, col, True)
         else:
             col = velox.Column(get_velox_type(dt.boolean))
             for i in range(len(self)):
@@ -551,7 +551,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) == other)
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.boolean, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.boolean, col, True)
 
     @trace
     @expression
@@ -568,7 +568,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) != other)
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.boolean, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.boolean, col, True)
 
     @trace
     @expression
@@ -584,7 +584,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) < other.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.boolean, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.boolean, col, True)
         else:
             col = velox.Column(get_velox_type(dt.boolean))
             for i in range(len(self)):
@@ -592,7 +592,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) < other)
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.boolean, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.boolean, col, True)
 
     @trace
     @expression
@@ -608,7 +608,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) > other.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.boolean, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.boolean, col, True)
         else:
             col = velox.Column(get_velox_type(dt.boolean))
             for i in range(len(self)):
@@ -616,7 +616,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) > other)
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.boolean, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.boolean, col, True)
 
     @trace
     @expression
@@ -633,7 +633,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) <= other)
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.boolean, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.boolean, col, True)
 
     @trace
     @expression
@@ -648,7 +648,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) >= other.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.boolean, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.boolean, col, True)
         else:
             col = velox.Column(get_velox_type(dt.boolean))
             for i in range(len(self)):
@@ -656,7 +656,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) >= other)
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.boolean, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.boolean, col, True)
 
     @trace
     @expression
@@ -671,7 +671,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) | other.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.boolean, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.boolean, col, True)
         else:
             col = velox.Column(get_velox_type(dt.boolean))
             for i in range(len(self)):
@@ -679,7 +679,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) | other)
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.boolean, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.boolean, col, True)
 
     @trace
     @expression
@@ -696,7 +696,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(other | self.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.boolean, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.boolean, col, True)
 
     @trace
     @expression
@@ -711,7 +711,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) & other.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.boolean, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.boolean, col, True)
         else:
             col = velox.Column(get_velox_type(dt.boolean))
             for i in range(len(self)):
@@ -719,7 +719,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(self.getdata(i) & other)
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.boolean, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.boolean, col, True)
 
     @trace
     @expression
@@ -736,19 +736,19 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     col.append_null()
                 else:
                     col.append(other & self.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, dt.boolean, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, dt.boolean, col, True)
 
     @trace
     @expression
     def __invert__(self):
         """Vectorized boolean not: ~ a."""
-        return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, self._data.invert(), True)
+        return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, self._data.invert(), True)
 
     @trace
     @expression
     def __neg__(self):
         """Vectorized: - a."""
-        return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, self._data.neg(), True)
+        return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, self._data.neg(), True)
 
     @trace
     @expression
@@ -769,32 +769,32 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                 col.append(False)
             else:
                 col.append(self.getdata(i) in values)
-        return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+        return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
 
     @trace
     @expression
     def abs(self):
         """Absolute value of each element of the series."""
-        return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, self._data.abs(), True)
+        return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, self._data.abs(), True)
 
     @trace
     @expression
     def ceil(self):
         """Rounds each value upward to the smallest integral"""
-        return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, self._data.ceil(), True)
+        return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, self._data.ceil(), True)
 
     @trace
     @expression
     def floor(self):
         """Rounds each value downward to the largest integral value"""
-        return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, self._data.floor(), True)
+        return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, self._data.floor(), True)
 
     @trace
     @expression
     def round(self, decimals=0):
         """Round each value in a data to the given number of decimals."""
         # TODO: round(-2.5) returns -2.0 in Numpy/PyTorch but returns -3.0 in Velox
-        # return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, self._data.round(), True)
+        # return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, self._data.round(), True)
 
         col = velox.Column(get_velox_type(self.dtype))
         for i in range(len(self)):
@@ -802,7 +802,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                 col.append_null()
             else:
                 col.append(round(self.getdata(i), decimals))
-        return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+        return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
 
     # data cleaning -----------------------------------------------------------
 
@@ -824,7 +824,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                         col.append(fill_value)
                 else:
                     col.append(self.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
 
     @trace
     @expression
@@ -839,7 +839,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                     pass
                 else:
                     col.append(self.getdata(i))
-            return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
 
     @trace
     @expression
@@ -860,7 +860,7 @@ class NumericalColumnCpu(INumericalColumn, ColumnFromVelox):
                 if current not in seen:
                     col.append(current)
                     seen.add(current)
-        return ColumnFromVelox.from_velox(self.scope, self.to, self.dtype, col, True)
+        return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, col, True)
 
     # universal  ---------------------------------------------------------------
 

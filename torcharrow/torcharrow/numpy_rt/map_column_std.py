@@ -17,9 +17,9 @@ from torcharrow.imap_column import IMapColumn, IMapMethods
 
 
 class MapColumnStd(IMapColumn):
-    def __init__(self, scope, to, dtype, key_data, item_data, mask):
+    def __init__(self, scope, device, dtype, key_data, item_data, mask):
         assert dt.is_map(dtype)
-        super().__init__(scope, to, dtype)
+        super().__init__(scope, device, dtype)
 
         self._key_data = key_data
         self._item_data = item_data
@@ -30,7 +30,7 @@ class MapColumnStd(IMapColumn):
     # Lifecycle: _empty -> _append* -> _finalize; no other ops are allowed during this time
 
     @staticmethod
-    def _empty(scope, to, dtype, mask=None):
+    def _empty(scope, device, dtype, mask=None):
         key_data = scope._EmptyColumn(
             dt.List(dtype.key_dtype).with_null(dtype.nullable)
         )
@@ -38,10 +38,10 @@ class MapColumnStd(IMapColumn):
             dt.List(dtype.item_dtype).with_null(dtype.nullable)
         )
         _mask = mask if mask is not None else ar.array("b")
-        return MapColumnStd(scope, to, dtype, key_data, item_data, _mask)
+        return MapColumnStd(scope, device, dtype, key_data, item_data, _mask)
 
     @staticmethod
-    def _full(scope, to, data, dtype=None, mask=None):
+    def _full(scope, device, data, dtype=None, mask=None):
         assert isinstance(data, tuple) and len(data) == 2
         key_data, item_data = data
         assert isinstance(key_data, IColumn)
@@ -67,7 +67,7 @@ class MapColumnStd(IMapColumn):
                 f"data length {len(key_data)} must be the same as mask length {len(mask)}"
             )
         # TODO check that all non-masked items are legal numbers (i.e not nan)
-        return MapColumnStd(scope, to, dtype, key_data, item_data, mask)
+        return MapColumnStd(scope, device, dtype, key_data, item_data, mask)
 
     def _append_null(self):
         self._mask.append(True)
@@ -108,14 +108,14 @@ class MapColumnStd(IMapColumn):
 
     def append(self, values):
         """Returns column/dataframe with values appended."""
-        tmp = self.scope.Column(values, dtype=self.dtype, to=self.to)
+        tmp = self.scope.Column(values, dtype=self.dtype, device=self.device)
         return self.scope._FullColumn(
             (
                 self._key_data.append(tmp._key_data),
                 self._item_data.append(tmp._item_data),
             ),
             self.dtype,
-            self.to,
+            self.device,
             np.append(self._mask, tmp._mask),
         )
 

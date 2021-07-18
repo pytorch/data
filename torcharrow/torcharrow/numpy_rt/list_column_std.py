@@ -15,9 +15,9 @@ from torcharrow.scope import ColumnFactory
 class ListColumnStd(IListColumn):
 
     # private constructor
-    def __init__(self, scope, to, dtype, data, offsets, mask):
+    def __init__(self, scope, device, dtype, data, offsets, mask):
         assert dt.is_list(dtype)
-        super().__init__(scope, to, dtype)
+        super().__init__(scope, device, dtype)
 
         self._data = data
         self._offsets = offsets
@@ -26,13 +26,13 @@ class ListColumnStd(IListColumn):
 
     # Any _empty must be followed by a _finalize; no other ops are allowed during this time
     @staticmethod
-    def _empty(scope, to, dtype, mask=None):
+    def _empty(scope, device, dtype, mask=None):
         _mask = mask if mask is not None else ar.array("b")
         return ListColumnStd(
             scope,
-            to,
+            device,
             dtype,
-            scope._EmptyColumn(dtype.item_dtype, to),
+            scope._EmptyColumn(dtype.item_dtype, device),
             ar.array("I", [0]),
             _mask,
         )
@@ -72,7 +72,7 @@ class ListColumnStd(IListColumn):
 
     def append(self, values):
         """Returns column/dataframe with values appended."""
-        # tmp = self.scope.Column(values, dtype=self.dtype, to = self.to)
+        # tmp = self.scope.Column(values, dtype=self.dtype, device = self.device)
         # res= IListColumn(*self._meta(),
         #     np.append(self._data,tmp._data),
         #     np.append(self._offsets,tmp._offsets[1:] + self._offsets[-1]),
@@ -88,7 +88,7 @@ class ListColumnStd(IListColumn):
 
     def concat(self, values):
         """Returns column/dataframe with values appended."""
-        # tmp = self.scope.Column(values, dtype=self.dtype, to = self.to)
+        # tmp = self.scope.Column(values, dtype=self.dtype, device = self.device)
         # res= IListColumn(*self._meta(),
         #     np.append(self._data,tmp._data),
         #     np.append(self._offsets,tmp._offsets[1:] + self._offsets[-1]),

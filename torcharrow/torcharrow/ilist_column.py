@@ -19,9 +19,9 @@ from .scope import ColumnFactory
 class IListColumn(IColumn):
 
     # private constructor
-    def __init__(self, scope, to, dtype):
+    def __init__(self, scope, device, dtype):
         assert dt.is_list(dtype)
-        super().__init__(scope, to, dtype)
+        super().__init__(scope, device, dtype)
         self.list = IListMethods(self)
 
 

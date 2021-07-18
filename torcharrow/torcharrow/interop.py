@@ -18,13 +18,13 @@ def from_arrow_table(
     dtype: Optional[dt.DType] = None,
     columns: Optional[List[str]] = None,
     scope=None,
-    to="",
+    device="",
 ):
     """ "
     Convert arrow table to a torcharrow dataframe.
     """
     scope = scope or Scope.default
-    to = to or scope.to
+    device = device or scope.device
     assert isinstance(table, pa.Table)
     if dtype is not None:
         assert dt.is_struct(dtype)
@@ -34,7 +34,7 @@ def from_arrow_table(
             chunked_array = table.column(f.name)
             pydata = chunked_array.to_pylist()
             res[f.name] = scope.Column(pydata, f.dtype)
-        return scope.DataFrame(res, to=to)
+        return scope.DataFrame(res, device=device)
     else:
         res = {}
         table = table.select(columns) if columns is not None else table
@@ -47,7 +47,7 @@ def from_arrow_table(
                     table.schema.field(n).type, table.column(n).null_count > 0
                 ),
             )
-        return scope.DataFrame(res, to=to)
+        return scope.DataFrame(res, device=device)
 
 
 def from_pandas_dataframe(
@@ -55,13 +55,13 @@ def from_pandas_dataframe(
     dtype: Optional[dt.DType] = None,
     columns: Optional[List[str]] = None,
     scope=None,
-    to="",
+    device="",
 ):
     """ "
     Convert pandas dataframe to  torcharrow dataframe (drops indices).
     """
     scope = scope or Scope.default
-    to = to or scope.to
+    device = device or scope.device
 
     if dtype is not None:
         assert dt.is_struct(dtype)
@@ -70,53 +70,53 @@ def from_pandas_dataframe(
         for f in dtype.fields:
             # this shows that Column shoud also construct Dataframes!
             res[f.name] = from_pandas_series(pd.Series(df[f.name]))
-        return scope.Frame(res, dtype=dtype, to=to)
+        return scope.Frame(res, dtype=dtype, device=device)
     else:
         res = {}
         for n in df.columns:
             if columns is None or n in columns:
                 res[n] = from_pandas_series(pd.Series(df[n]))
-        return scope.Frame(res, to=to)
+        return scope.Frame(res, device=device)
 
 
-def from_arrow_array(array, dtype=None, scope=None, to=""):
+def from_arrow_array(array, dtype=None, scope=None, device=""):
     """ "
     Convert arrow array to a torcharrow column.
     """
     scope = scope or Scope.default
-    to = to or scope.to
+    device = device or scope.device
     assert isinstance(array, pa.Array)
     pydata = _arrow_scalar_to_py(array)
     if dtype is not None:
         assert not dt.is_struct(dtype)
-        return scope.Column(pydata, dtype, to=to)
+        return scope.Column(pydata, dtype, device=device)
     else:
         return scope.Column(
-            pydata, dtype=_arrowtype_to_dtype(array.type, array.null_count > 0), to=to
+            pydata, dtype=_arrowtype_to_dtype(array.type, array.null_count > 0), device=device
         )
 
 
-def from_pandas_series(series, dtype=None, scope=None, to=""):
+def from_pandas_series(series, dtype=None, scope=None, device=""):
     """ "
     Convert pandas series array to a torcharrow column (drops indices).
     """
     scope = scope or Scope.default
-    to = to or scope.to
+    device = device or scope.device
 
-    return from_numpy(series.to_numpy(), dtype, scope, to)
+    return from_numpy(series.to_numpy(), dtype, scope, device)
 
 
-def from_numpy(array, dtype, scope=None, to=""):
+def from_numpy(array, dtype, scope=None, device=""):
     """
     Convert 1dim numpy array to a torcharrow column (zero copy).
     """
     scope = scope or Scope.default
-    to = to or scope.to
+    device = device or scope.device
 
     if isinstance(array, ma.core.MaskedArray) and array.ndim == 1:
-        return _from_numpy_ma(array.data, array.mask, dtype, scope, to)
+        return _from_numpy_ma(array.data, array.mask, dtype, scope, device)
     elif isinstance(array, np.ndarray) and array.ndim == 1:
-        return _from_numpy_nd(array, dtype, scope, to)
+        return _from_numpy_nd(array, dtype, scope, device)
     else:
         raise TypeError(f"cannot convert numpy array of type {array.dtype}")
 
@@ -125,7 +125,7 @@ def _is_not_str(s):
     return not isinstance(s, str)
 
 
-def _from_numpy_ma(data, mask, dtype, scope=None, to=""):
+def _from_numpy_ma(data, mask, dtype, scope=None, device=""):
     # adopt types
     if dtype is None:
         dtype = dt.typeof_np_dtype(data.dtype).with_null()
@@ -149,7 +149,7 @@ def _from_numpy_ma(data, mask, dtype, scope=None, to=""):
         raise TypeError(f"cannot convert masked numpy array of type {data.dtype}")
 
 
-def _from_numpy_nd(data, dtype, scope=None, to=""):
+def _from_numpy_nd(data, dtype, scope=None, device=""):
     # adopt types
     if dtype is None:
         dtype = dt.typeof_np_dtype(data.dtype)

@@ -13,7 +13,7 @@ class ColumnFromVelox:
     def from_velox(
         scope: Scope, device: Device, dtype: DType, data: velox.BaseColumn, finialized: bool
     ) -> IColumn:
-        col = scope.Column(dtype=dtype, to=device)
+        col = scope.Column(dtype=dtype, device=device)
         col._data = data
         col._finialized = finialized
         return col

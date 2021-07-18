@@ -30,27 +30,41 @@ class GenericUDF:
     signatures: List[FunctionSignature]
 
 
-class _Functional(ModuleType):
+class _Namespace(ModuleType):
     """Exposes C++ UDFs from registry as a python module members."""
 
-    def __init__(self):
-        super().__init__("torcharrow.functional")
+    def __init__(self, name: str):
+        super().__init__("torcharrow.functional." + name)
         self._registered_functions: Dict[str, GenericUDF] = {}
 
     def register_function(self, udf_name: str, fn: Callable, signatures: List[FunctionSignature], alias: Optional[str] = None):
         alias = alias or udf_name
         assert alias not in ("find_overload_impl", "registered_functions")
-        #TODO: fn.__doc__ = ';'.join(signature.help_msg or "" for signature in signatures)
+        #TODO: fn.__doc__ = ';'.join(signature.help_msg for signature in signatures)
         function = FunctionHandle(udf_name, alias, fn)
         self._registered_functions[alias] = GenericUDF(function, signatures)
         setattr(self, alias, function)
 
     def __getattr__(self, key: str) -> FunctionHandle:
-        return self.__dict__[key]
+        if (fn := self.__dict__.get(key)) is None:
+            raise TypeError(f"'{key}' is not a registered UDF in '{self.__name__}'.")
+        return fn
 
     @property
     def registered_functions(self) -> Dict[str, GenericUDF]:
         return self._registered_functions
+
+
+class _Functional(ModuleType):
+    def __init__(self):
+        super().__init__('torcharrow.functional')
+        self._namespaces: Dict[str, _Namespace] = {}
+
+    def __getattr__(self, name: str) -> _Namespace:
+        if (namespace := self._namespaces.get(name)) is None:
+            namespace = _Namespace(name)
+            self._namespaces[name] = namespace
+        return namespace
 
 
 functional = _Functional()

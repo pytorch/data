@@ -10,9 +10,9 @@ from .icolumn import IColumn
 
 
 class IMapColumn(IColumn):
-    def __init__(self, scope, to, dtype):
+    def __init__(self, scope, device, dtype):
         assert dt.is_map(dtype)
-        super().__init__(scope, to, dtype)
+        super().__init__(scope, device, dtype)
         # must be set by subclasses
         self.map: IMapMethods = None
 
