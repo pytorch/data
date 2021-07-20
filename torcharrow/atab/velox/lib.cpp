@@ -182,10 +182,8 @@ PYBIND11_MODULE(_torcharrow, m) {
           })
       .def("neg", &SimpleColumn<int64_t>::neg)
       .def("abs", &SimpleColumn<int64_t>::abs)
-      .def("add", &SimpleColumn<int64_t>::add)
-      .def("add", [](SimpleColumn<int64_t>& self, py::int_ value) {
-        return self.addScalar(py::cast<int64_t>(value));
-      });
+      .def("add", &SimpleColumn<int64_t>::addColumn)
+      .def("add", &SimpleColumn<int64_t>::addScalar);
 
   declareSimpleType<TypeKind::INTEGER>(m, [](auto val) {
     return py::cast(val);
@@ -235,7 +233,8 @@ PYBIND11_MODULE(_torcharrow, m) {
       .def("ceil", &SimpleColumn<float>::ceil)
       .def("floor", &SimpleColumn<float>::floor)
       .def("round", &SimpleColumn<float>::round)
-      .def("add", &SimpleColumn<float>::add);
+      .def("add", &SimpleColumn<float>::addColumn)
+      .def("add", &SimpleColumn<float>::addScalar);
 
   declareSimpleType<TypeKind::DOUBLE>(m, [](auto val) { return py::cast(val); })
       .def(
@@ -253,7 +252,8 @@ PYBIND11_MODULE(_torcharrow, m) {
       .def("ceil", &SimpleColumn<double>::ceil)
       .def("floor", &SimpleColumn<double>::floor)
       .def("round", &SimpleColumn<double>::round)
-      .def("add", &SimpleColumn<double>::add);
+      .def("add", &SimpleColumn<double>::addColumn)
+      .def("add", &SimpleColumn<double>::addScalar);
 
   declareSimpleType<TypeKind::VARCHAR>(
       m,

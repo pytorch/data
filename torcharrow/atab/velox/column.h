@@ -383,7 +383,7 @@ class SimpleColumn : public BaseColumn {
     return std::make_unique<OperatorHandle>(inputRowType, exprSet);
   }
 
-  std::unique_ptr<BaseColumn> add(const BaseColumn& other) {
+  std::unique_ptr<BaseColumn> addColumn(const BaseColumn& other) {
     constexpr auto num_numeric_types = static_cast<int>(TypeKind::DOUBLE) + 1;
     static std::array<
         std::unique_ptr<OperatorHandle>,
@@ -399,23 +399,28 @@ class SimpleColumn : public BaseColumn {
     return result;
   }
 
-  template <typename ScalarCppType>
-  std::unique_ptr<BaseColumn> addScalar(ScalarCppType val) {
-    const static auto scalarType = CppToType<ScalarCppType>::create();
-    // TODO: this is incorrect, since tensor-scalar type promotion rule is
-    // different from tensor-tensor type promotion rule
-    const static auto operatorHandle =
-        createBinaryOperatorHandle(scalarType, "plus");
+  std::unique_ptr<BaseColumn> addScalar(const pybind11::handle& obj) {
+    auto val = pyToVariant(obj);
+    auto other = BaseVector::createConstant(
+        val, _delegate->size(), TorchArrowGlobalStatic::rootMemoryPool());
 
-    auto constantVectorPtr = std::make_shared<ConstantVector<ScalarCppType>>(
-        TorchArrowGlobalStatic::rootMemoryPool(),
-        _delegate->size(),
-        false /* isNull */,
-        std::move(val),
-        cdvi::EMPTY_METADATA,
-        folly::none /* representedBytes */);
+    constexpr auto num_numeric_types = static_cast<int>(TypeKind::DOUBLE) + 1;
+    static std::array<
+        std::unique_ptr<OperatorHandle>,
+        num_numeric_types> /* library-local */ ops;
 
-    auto result = operatorHandle->call(_delegate, constantVectorPtr);
+    int dispatch_id = static_cast<int>(other->typeKind());
+    if (ops[dispatch_id] == nullptr) {
+      // TODO: this is incorrect, since tensor-scalar type promotion rule is
+      // different from tensor-tensor type promotion rule
+      //
+      // That's why this part of code has its own cached dispatch stub table
+      // (and didn't refactor with addColumn)
+      ops[dispatch_id] = createBinaryOperatorHandle(other->type(), "plus");
+    }
+
+    auto result =
+        ops[dispatch_id]->call(_delegate, other);
     return result;
   }
 

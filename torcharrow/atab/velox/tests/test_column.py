@@ -111,9 +111,19 @@ class TestSimpleColumns(unittest.TestCase):
         self.assert_SimpleColumn(sum_col2, [None, -1., None, 6., 0., None])
 
         # add scalar
-        add1 = col1.add(1)
-        self.assertEqual(add1.type().kind_name(), 'BIGINT')
-        self.assert_SimpleColumn(add1, [2, -1, None, 4, -3, None])
+        add_scalar = col1.add(1)
+        self.assertEqual(add_scalar.type().kind_name(), 'BIGINT')
+        self.assert_SimpleColumn(add_scalar, [2, -1, None, 4, -3, None])
+
+        add_scalar = col1.add(0.1)
+        self.assertEqual(add_scalar.type().kind_name(), 'REAL')
+        self.assert_SimpleColumn(add_scalar, [1.1, -1.9, None, 3.1, -3.9, None])
+
+        # It's debatable whether this (add BIGINT with BOOLEAN) should be supported.
+        # But since PyTorch supports it for NumPy compatbility, TorchArrow also supports this.
+        add_scalar = col1.add(True)
+        self.assertEqual(add_scalar.type().kind_name(), 'BIGINT')
+        self.assert_SimpleColumn(add_scalar, [2, -1, None, 4, -3, None])
 
 
     def test_SimpleColumnFloat32_unary(self):
@@ -263,6 +273,7 @@ class TestSimpleColumns(unittest.TestCase):
         col = ta.ConstantColumn('abc', 6)
         self.assertTrue(isinstance(col.type(), ta.VeloxType_VARCHAR))
         self.assert_SimpleColumn(col, ['abc'] * 6)
+
 
 def is_same_type(a, b) -> bool:
     if isinstance(a, ta.VeloxType_BIGINT):
