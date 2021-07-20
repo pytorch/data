@@ -7,11 +7,11 @@ from dataclasses import dataclass
 # type of functions in functional. Having this class makes it easy to
 # to differentiate functions in functional from regular Callable objects (python functions for example)
 # and also make it easy to access udf_name and alias from function object
+@dataclass(frozen=True)
 class FunctionHandle:
-    def __init__(self, udf_name: str, alias: str, fn: Callable):
-        self.udf_name = udf_name
-        self.alias = alias
-        self.fn = fn
+    udf_name: str
+    alias: str
+    fn: Callable
 
     def __call__(self, *args):
         return self.fn(*args)
@@ -39,7 +39,7 @@ class _Namespace(ModuleType):
 
     def register_function(self, udf_name: str, fn: Callable, signatures: List[FunctionSignature], alias: Optional[str] = None):
         alias = alias or udf_name
-        assert alias not in ("find_overload_impl", "registered_functions")
+        assert alias not in ("register_function", "registered_functions")
         #TODO: fn.__doc__ = ';'.join(signature.help_msg for signature in signatures)
         function = FunctionHandle(udf_name, alias, fn)
         self._registered_functions[alias] = GenericUDF(function, signatures)
