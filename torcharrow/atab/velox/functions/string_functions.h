@@ -49,7 +49,7 @@ class Utf8CatUtils {
  **/
 VELOX_UDF_BEGIN(torcharrow_isalpha)
 FOLLY_ALWAYS_INLINE
-bool call(bool& result, const f4d::StringView& input) {
+bool call(bool& result, const arg_type<facebook::f4d::Varchar>& input) {
   using namespace f4d::functions;
   using namespace internal;
 
@@ -86,7 +86,7 @@ VELOX_UDF_END();
  **/
 VELOX_UDF_BEGIN(torcharrow_isalnum)
 FOLLY_ALWAYS_INLINE
-bool call(bool& result, const f4d::StringView& input) {
+bool call(bool& result, const arg_type<facebook::f4d::Varchar>& input) {
   using namespace f4d::functions;
   using namespace internal;
 

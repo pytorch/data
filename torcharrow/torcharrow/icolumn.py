@@ -856,6 +856,8 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
                 return res._finalize()
             else:
                 res_dtype = dt.promote(self.dtype, other_dtype)
+                if res_dtype is None:
+                    raise TypeError(f"{self.dtype} and {other_dtype} are incompatible")
                 res = self._EmptyColumn(res_dtype)
                 for (m, i), (n, j) in zip(self.items(), others):
                     if m or n:

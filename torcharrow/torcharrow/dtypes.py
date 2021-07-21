@@ -640,24 +640,15 @@ _promotion_list = [
 
 
 def promote(l, r):
-    assert is_boolean_or_numerical(l) and is_boolean_or_numerical(r)
     lt = l.typecode
     rt = r.typecode
-    for lts, rts, dtype in _promotion_list:
-        if (lt in lts) and (rt in rts):
-            return dtype.with_null(l.nullable or r.nullable)
-    raise AssertionError(f"promote: unexpected case {l} {r}")
-
-
-def can_promote(l, r) -> bool:
-    lt = l.typecode
-    rt = r.typecode
+    if lt == rt:
+        return l.with_null(l.nullable or r.nullable)
     if is_boolean_or_numerical(l) and is_boolean_or_numerical(r):
-        for lts, rts, _ in _promotion_list:
+        for lts, rts, dtype in _promotion_list:
             if (lt in lts) and (rt in rts):
-                return True
-        return False
-    return lt == rt
+                return dtype.with_null(l.nullable or r.nullable)
+    return None
 
 
 def common_dtype(l, r):

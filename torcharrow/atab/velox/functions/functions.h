@@ -21,14 +21,14 @@
 namespace facebook::torcharrow::functions {
 
 inline void registerTorchArrowFunctions() {
-  registerFunction<
+  facebook::f4d::registerFunction<
       facebook::torcharrow::functions::udf_torcharrow_isalpha,
       bool,
-      Varchar>();
-  registerFunction<
+      facebook::f4d::Varchar>();
+  facebook::f4d::registerFunction<
       facebook::torcharrow::functions::udf_torcharrow_isalnum,
       bool,
-      Varchar>();
+      facebook::f4d::Varchar>();
 }
 
 inline void initializeTorchArrowTypeResolver() {
