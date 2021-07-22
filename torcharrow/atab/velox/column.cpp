@@ -61,7 +61,7 @@ createColumn(VectorPtr vec, vector_size_t offset, vector_size_t length) {
       return std::make_unique<RowColumn>(vec, offset, length);
     }
     default:
-      return F4D_DYNAMIC_SCALAR_TYPE_DISPATCH(
+      return VELOX_DYNAMIC_SCALAR_TYPE_DISPATCH(
           createSimpleColumn, kind, vec, offset, length);
   }
 }
@@ -94,7 +94,7 @@ std::unique_ptr<BaseColumn> BaseColumn::createConstantColumn(
   // However, at some point we also want to revisit whether
   // SimpleColumn/ConstantColumn needs to be templated and thus we could
   // remove the first dispatch.
-  return F4D_DYNAMIC_SCALAR_TYPE_DISPATCH(
+  return VELOX_DYNAMIC_SCALAR_TYPE_DISPATCH(
       doCreateConstantColumn, value.kind(), value, size);
 }
 

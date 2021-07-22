@@ -46,7 +46,7 @@ class Field:
 # Immutable Types with structural equality...
 
 
-@dataclass(frozen=True)  # type: ignore
+@dataclass(frozen=True) # type: ignore
 class DType(ABC):
 
     typecode: ty.ClassVar[str] = "__TO_BE_DEFINED_IN_SUBCLASS__"
@@ -640,14 +640,16 @@ _promotion_list = [
 
 
 def promote(l, r):
+    assert is_boolean_or_numerical(l) and is_boolean_or_numerical(r)
+
     lt = l.typecode
     rt = r.typecode
     if lt == rt:
         return l.with_null(l.nullable or r.nullable)
-    if is_boolean_or_numerical(l) and is_boolean_or_numerical(r):
-        for lts, rts, dtype in _promotion_list:
-            if (lt in lts) and (rt in rts):
-                return dtype.with_null(l.nullable or r.nullable)
+
+    for lts, rts, dtype in _promotion_list:
+        if (lt in lts) and (rt in rts):
+            return dtype.with_null(l.nullable or r.nullable)
     return None
 
 

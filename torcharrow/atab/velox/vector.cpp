@@ -73,7 +73,7 @@ facebook::torcharrow::vectorSlice(const BaseVector& src, int start, int end) {
       throw "Not implemented yet.";
     }
     default:
-      return F4D_DYNAMIC_SCALAR_TYPE_DISPATCH(
+      return VELOX_DYNAMIC_SCALAR_TYPE_DISPATCH(
           simpleVectorSlice, kind, src, start, end);
   }
 }

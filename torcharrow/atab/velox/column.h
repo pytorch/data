@@ -376,7 +376,7 @@ class SimpleColumn : public BaseColumn {
     TypeKind commonTypeKind =
         promoteNumericTypeKind(this->type()->kind(), otherType->kind());
     auto commonType =
-        F4D_DYNAMIC_SCALAR_TYPE_DISPATCH(kind2type, commonTypeKind);
+        VELOX_DYNAMIC_SCALAR_TYPE_DISPATCH(kind2type, commonTypeKind);
     auto exprSet =
         BaseColumn::genBinaryExprSet(inputRowType, commonType, functionName);
 

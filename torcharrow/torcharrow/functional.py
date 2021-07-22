@@ -20,7 +20,7 @@ class FunctionHandle:
 @dataclass(frozen=True)
 class FunctionSignature:
     arg_types: List[dt.DType]
-    return_type: dt.DType
+    return_type: Optional[dt.DType]
     help_msg: str
 
 
@@ -39,7 +39,7 @@ class _Namespace(ModuleType):
 
     def register_function(self, udf_name: str, fn: Callable, signatures: List[FunctionSignature], alias: Optional[str] = None):
         alias = alias or udf_name
-        assert alias not in ("register_function", "registered_functions")
+        assert alias not in dir(self)
         #TODO: fn.__doc__ = ';'.join(signature.help_msg for signature in signatures)
         function = FunctionHandle(udf_name, alias, fn)
         self._registered_functions[alias] = GenericUDF(function, signatures)
