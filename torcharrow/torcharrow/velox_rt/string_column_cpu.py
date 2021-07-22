@@ -15,6 +15,8 @@ from .column import ColumnFromVelox
 from .typing import get_velox_type
 from .column import ColumnFromVelox
 
+from torcharrow.velox_rt.functional import functional
+
 # ------------------------------------------------------------------------------
 # StringColumnCpu
 
@@ -207,7 +209,8 @@ class StringMethodsCpu(IStringMethods):
         return res._finalize()
 
     def lower(self) -> IStringColumn:
-        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.device, self._parent.dtype, self._parent._data.lower(), True)
+        # return ColumnFromVelox.from_velox(self._parent.scope, self._parent.device, self._parent.dtype, self._parent._data.lower(), True)
+        return functional.lower(self._parent).with_null(self._parent.dtype.nullable)
 
     def upper(self) -> IStringColumn:
         return ColumnFromVelox.from_velox(self._parent.scope, self._parent.device, self._parent.dtype, self._parent._data.upper(), True)
@@ -216,7 +219,8 @@ class StringMethodsCpu(IStringMethods):
         return ColumnFromVelox.from_velox(self._parent.scope, self._parent.device, dt.Boolean(self._parent.dtype.nullable), self._parent._data.isalpha(), True)
 
     def isalnum(self) -> IStringColumn:
-        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.device, dt.Boolean(self._parent.dtype.nullable), self._parent._data.isalnum(), True)
+        # return ColumnFromVelox.from_velox(self._parent.scope, self._parent.device, dt.Boolean(self._parent.dtype.nullable), self._parent._data.isalnum(), True)
+        return functional.torcharrow_isalnum(self._parent).with_null(self._parent.dtype.nullable)
 
 
 # ------------------------------------------------------------------------------

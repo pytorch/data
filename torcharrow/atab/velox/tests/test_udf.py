@@ -45,30 +45,30 @@ class TestSimpleColumns(unittest.TestCase):
         data = ["abc", "ABC", "XYZ123", None, "xYZ", "123", "äöå"]
         col = self.construct_simple_column(ta.VeloxType_VARCHAR(), data)
 
-        lcol = ta.generic_unary_udf_dispatch("lower", col)
+        lcol = ta.generic_udf_dispatch("lower", col)
         self.assert_SimpleColumn(lcol, ["abc", "abc", "xyz123", None, "xyz", "123", "äöå"])
 
-        ucol = ta.generic_unary_udf_dispatch("upper", col)
+        ucol = ta.generic_udf_dispatch("upper", col)
         self.assert_SimpleColumn(ucol, ["ABC", "ABC", "XYZ123", None, "XYZ", "123", "ÄÖÅ"])
 
-        lcol2 = ta.generic_unary_udf_dispatch("lower", ucol)
+        lcol2 = ta.generic_udf_dispatch("lower", ucol)
         self.assert_SimpleColumn(lcol2, ["abc", "abc", "xyz123", None, "xyz", "123", "äöå"])
 
-        ucol2 = ta.generic_unary_udf_dispatch("upper", lcol)
+        ucol2 = ta.generic_udf_dispatch("upper", lcol)
         self.assert_SimpleColumn(ucol2, ["ABC", "ABC", "XYZ123", None, "XYZ", "123", "ÄÖÅ"])
 
-        alpha = ta.generic_unary_udf_dispatch("torcharrow_isalpha", col)
+        alpha = ta.generic_udf_dispatch("torcharrow_isalpha", col)
         self.assert_SimpleColumn(alpha, [True, True, False, None, True, False, True])
 
         data2 = [1, 2, 3, None, 5, None, -7]
         col2 = self.construct_simple_column(ta.VeloxType_BIGINT(), data2)
 
-        neg = ta.generic_unary_udf_dispatch("negate", col2)
+        neg = ta.generic_udf_dispatch("negate", col2)
         self.assert_SimpleColumn(neg, [-1, -2, -3, None, -5, None, 7])
 
 
     def test_lower(self):
         data = ["abc", "ABC", "XYZ123", None, "xYZ", "123", "äöå"]
         col = self.construct_simple_column(ta.VeloxType_VARCHAR(), data)
-        lcol = ta.generic_unary_udf_dispatch("lower", col)
+        lcol = ta.generic_udf_dispatch("lower", col)
         self.assert_SimpleColumn(lcol, ["abc", "abc", "xyz123", None, "xyz", "123", "äöå"])

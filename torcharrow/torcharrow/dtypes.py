@@ -843,8 +843,10 @@ def velox_scalar_type_kind_to_dtype(typekind: str) -> DType:
         return float32
     if typekind == 'DOUBLE':
         return float64
-    if typekind == 'VARHCAR':
+    if typekind == 'VARCHAR':
         return string
+    if typekind == 'BOOLEAN':
+        return boolean
 
     raise AssertionError(
         f"translation of Velox typekind {typekind} to dtype unsupported"

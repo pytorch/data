@@ -5,6 +5,8 @@ from torcharrow import Scope, IStringColumn
 
 from .test_string_column import TestStringColumn
 
+from torcharrow.velox_rt.functional import functional
+
 
 class TestStringColumnCpu(TestStringColumn):
     def setUp(self):
@@ -24,6 +26,20 @@ class TestStringColumnCpu(TestStringColumn):
 
     def test_regular_expressions(self):
         self.base_test_regular_expressions()
+
+    def test_functional(self):
+        str_col = self.ts.Column(["", "abc", "XYZ", "123", "xyz123", None])
+
+        self.assertEqual(
+            list(functional.torcharrow_isalpha(str_col)),
+            [False, True, True, False, False, None]
+        )
+
+        self.assertEqual(
+            list(functional.upper(str_col)),
+            ["", "ABC", "XYZ", "123", "XYZ123", None]
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
