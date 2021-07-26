@@ -64,12 +64,12 @@ set_target_properties(_torcharrow PROPERTIES CXX_VISIBILITY_PRESET default)
 
 # Link with Velox:
 target_link_libraries(_torcharrow PRIVATE
-  f4d_vector
-  f4d_memory
-  f4d_core
-  f4d_functions_common
-  f4d_parse_expression
-  f4d_parse_parser
-  f4d_exec_test_util)
+  velox_vector
+  velox_memory
+  velox_core
+  velox_functions_common
+  velox_parse_expression
+  velox_parse_parser
+  velox_exec_test_util)
 
 target_compile_definitions(_torcharrow PRIVATE VERSION_INFO=0.0.1)
