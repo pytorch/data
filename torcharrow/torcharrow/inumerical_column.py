@@ -14,7 +14,7 @@ class INumericalColumn(IColumn):
 
     # Note all numerical column implementations inherit from INumericalColumn
 
-    def move_to(self, device: Device):
+    def to(self, device: Device):
         from .numpy_rt import NumericalColumnStd
         from .velox_rt import NumericalColumnCpu
 

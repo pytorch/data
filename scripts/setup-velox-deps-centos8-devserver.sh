@@ -43,7 +43,7 @@ function with-proxy() {
 }
 
 # Python3 refers to fbcode's python and it has pip disabled, let's activate it
-python3.6 -m venv python-env
+python3.8 -m venv python-env
 source python-env/bin/activate
 with-proxy pip3 install cmake_format regex
 
