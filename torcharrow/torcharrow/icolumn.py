@@ -166,7 +166,7 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
         if dt.is_primitive(self.dtype):
             if dt.is_primitive(dtype):
                 fun = dt.cast_as(dtype)
-                res = self._emptyColumn(dtype)
+                res = self._EmptyColumn(dtype)
                 for m, i in self.item():
                     if m:
                         res._append_null()

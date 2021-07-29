@@ -30,19 +30,20 @@ class Scope:
 
     default: ty.ClassVar["Scope"]
 
+    default_config: ty.Dict = {
+        "device": "std",
+        "tracing": False,
+        "types_to_trace": [],
+    }
+
     def __init__(self, config: ty.Union[dict, str, None] = None):
-        default_config = {
-            "device": "std",
-            "tracing": False,
-            "types_to_trace": [],
-        }
         if config is None:
-            self.config = default_config
+            self.config = type(self).default_config
         elif isinstance(config, str):
             path = config
-            self.config = {**default_config, **json.load(open(path))}
+            self.config = {**type(self).default_config, **json.load(open(path))}
         elif isinstance(config, dict):
-            self.config = {**default_config, **config}
+            self.config = {**type(self).default_config, **config}
 
         self.ct = Counter()
         self.id = "s0"
@@ -73,7 +74,9 @@ class Scope:
             raise TypeError("scope and device must be the same")
 
     def check_are_same(self, others):
-        if not all(self.is_same(other) and self.device == other.device for other in others):
+        if not all(
+            self.is_same(other) and self.device == other.device for other in others
+        ):
             raise TypeError("scope and device must be the same")
 
     # column factory -----------------------------------------------------------
