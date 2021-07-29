@@ -19,7 +19,7 @@ from .idataframe import *
 
 # velox_rt imports _torcharrow which binds Velox RowType,
 # which conflicts with koski_rt
-#from .velox_rt import *
+# from .velox_rt import *
 
 from .numpy_rt import *
 

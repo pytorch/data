@@ -26,7 +26,6 @@ class TestNumericalColumnCpu(TestNumericalColumn):
     def test_is_immutable(self):
         return self.base_test_is_immutable()
 
-
     def test_internals_indexing(self):
         return self.base_test_indexing()
 

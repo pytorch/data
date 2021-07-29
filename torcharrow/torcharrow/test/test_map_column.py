@@ -1,8 +1,8 @@
 import operator
 import unittest
 
-from torcharrow import Scope, IMapColumn
 import torcharrow.dtypes as dt
+from torcharrow import Scope, IMapColumn
 
 
 class TestMapColumn(unittest.TestCase):

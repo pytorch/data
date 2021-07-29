@@ -269,7 +269,8 @@ PYBIND11_MODULE(_torcharrow, m) {
       .def("lower", &SimpleColumn<StringView>::lower)
       .def("upper", &SimpleColumn<StringView>::upper)
       .def("isalpha", &SimpleColumn<StringView>::isalpha)
-      .def("isalnum", &SimpleColumn<StringView>::isalnum);
+      .def("isalnum", &SimpleColumn<StringView>::isalnum)
+      .def("isinteger", &SimpleColumn<StringView>::isinteger);
 
   declareArrayType(m);
   declareMapType(m);

@@ -165,7 +165,11 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
         if not self.getmask(i):
             return tuple(
                 ColumnFromVelox.from_velox(
-                    self.scope, self.device, self.dtype.fields[j].dtype, self._data.child_at(j), True
+                    self.scope,
+                    self.device,
+                    self.dtype.fields[j].dtype,
+                    self._data.child_at(j),
+                    True,
                 ).get(i, None)
                 for j in range(self._data.children_size())
             )
@@ -304,7 +308,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             {
                 self.dtype.fields[i]
                 .name: ColumnFromVelox.from_velox(
-                    self.scope, self.device,
+                    self.scope,
+                    self.device,
                     self.dtype.fields[i].dtype,
                     self._data.child_at(i),
                     True,
@@ -318,7 +323,11 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
     def get_column(self, column):
         idx = self._data.type().get_child_idx(column)
         return ColumnFromVelox.from_velox(
-            self.scope, self.device, self.dtype.fields[idx].dtype, self._data.child_at(idx), True
+            self.scope,
+            self.device,
+            self.dtype.fields[idx].dtype,
+            self._data.child_at(idx),
+            True,
         )
 
     def get_columns(self, columns):
@@ -336,7 +345,11 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
         for i in range(_start, _stop):
             m = self.columns[i]
             res[m] = ColumnFromVelox.from_velox(
-                self.scope, self.device, self.dtype.fields[i].dtype, self._data.child_at(i), True
+                self.scope,
+                self.device,
+                self.dtype.fields[i].dtype,
+                self._data.child_at(i),
+                True,
             )
         return self._fromdata(res, self._mask)
 
@@ -363,7 +376,11 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
         if len(columns) == 1:
             idx = self._data.type().get_child_idx(columns[0])
             return ColumnFromVelox.from_velox(
-                self.scope, self.device, self.dtype.fields[idx].dtype, self._data.child_at(idx), True
+                self.scope,
+                self.device,
+                self.dtype.fields[idx].dtype,
+                self._data.child_at(idx),
+                True,
             ).map(arg, na_action, dtype)
         else:
 
@@ -377,7 +394,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
                 idx = self._data.type().get_child_idx(n)
                 cols.append(
                     ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[idx].dtype,
                         self._data.child_at(idx),
                         True,
@@ -459,7 +477,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             idx = self._data.type().get_child_idx(n)
             cols.append(
                 ColumnFromVelox.from_velox(
-                    self.scope, self.device,
+                    self.scope,
+                    self.device,
                     self.dtype.fields[idx].dtype,
                     self._data.child_at(idx),
                     True,
@@ -543,13 +562,15 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
                     )
                     + ColumnFromVelox.from_velox(
-                        other.scope, other.device,
+                        other.scope,
+                        other.device,
                         other.dtype.fields[i].dtype,
                         other._data.child_at(i),
                         True,
@@ -562,7 +583,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -584,7 +606,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
                 {
                     self.dtype.fields[i].name: other
                     + ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -601,13 +624,15 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
                     )
                     - ColumnFromVelox.from_velox(
-                        other.scope, other.device,
+                        other.scope,
+                        other.device,
                         other.dtype.fields[i].dtype,
                         other._data.child_at(i),
                         True,
@@ -620,7 +645,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -638,13 +664,15 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        other.scope, other.device,
+                        other.scope,
+                        other.device,
                         other.dtype.fields[i].dtype,
                         other._data.child_at(i),
                         True,
                     )
                     - ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -658,7 +686,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
                 {
                     self.dtype.fields[i].name: other
                     - ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -675,13 +704,15 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
                     )
                     * ColumnFromVelox.from_velox(
-                        other.scope, other.device,
+                        other.scope,
+                        other.device,
                         other.dtype.fields[i].dtype,
                         other._data.child_at(i),
                         True,
@@ -694,7 +725,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -712,13 +744,15 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        other.scope, other.device,
+                        other.scope,
+                        other.device,
                         other.dtype.fields[i].dtype,
                         other._data.child_at(i),
                         True,
                     )
                     * ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -732,7 +766,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
                 {
                     self.dtype.fields[i].name: other
                     * ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -749,13 +784,15 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
                     )
                     // ColumnFromVelox.from_velox(
-                        other.scope, other.device,
+                        other.scope,
+                        other.device,
                         other.dtype.fields[i].dtype,
                         other._data.child_at(i),
                         True,
@@ -768,7 +805,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -786,13 +824,15 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        other.scope, other.device,
+                        other.scope,
+                        other.device,
                         other.dtype.fields[i].dtype,
                         other._data.child_at(i),
                         True,
                     )
                     // ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -806,7 +846,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
                 {
                     self.dtype.fields[i].name: other
                     // ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -823,13 +864,15 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
                     )
                     / ColumnFromVelox.from_velox(
-                        other.scope, other.device,
+                        other.scope,
+                        other.device,
                         other.dtype.fields[i].dtype,
                         other._data.child_at(i),
                         True,
@@ -842,7 +885,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -872,7 +916,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -899,13 +944,15 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
                     )
                     ** ColumnFromVelox.from_velox(
-                        other.scope, other.device,
+                        other.scope,
+                        other.device,
                         other.dtype.fields[i].dtype,
                         other._data.child_at(i),
                         True,
@@ -918,7 +965,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -936,13 +984,15 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        other.scope, other.device,
+                        other.scope,
+                        other.device,
                         other.dtype.fields[i].dtype,
                         other._data.child_at(i),
                         True,
                     )
                     ** ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -956,7 +1006,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
                 {
                     self.dtype.fields[i].name: other
                     ** ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -973,13 +1024,15 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
                     )
                     == ColumnFromVelox.from_velox(
-                        other.scope, other.device,
+                        other.scope,
+                        other.device,
                         other.dtype.fields[i].dtype,
                         other._data.child_at(i),
                         True,
@@ -992,7 +1045,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -1021,13 +1075,15 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
                     )
                     < ColumnFromVelox.from_velox(
-                        other.scope, other.device,
+                        other.scope,
+                        other.device,
                         other.dtype.fields[i].dtype,
                         other._data.child_at(i),
                         True,
@@ -1040,7 +1096,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -1058,13 +1115,15 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
                     )
                     > ColumnFromVelox.from_velox(
-                        other.scope, other.device,
+                        other.scope,
+                        other.device,
                         other.dtype.fields[i].dtype,
                         other._data.child_at(i),
                         True,
@@ -1077,7 +1136,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -1097,7 +1157,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -1114,13 +1175,15 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
                     )
                     >= ColumnFromVelox.from_velox(
-                        other.scope, other.device,
+                        other.scope,
+                        other.device,
                         other.dtype.fields[i].dtype,
                         other._data.child_at(i),
                         True,
@@ -1143,7 +1206,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             return self._fromdata(
                 {
                     self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -1185,7 +1249,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
         return self._fromdata(
             {
                 self.dtype.fields[i].name: -ColumnFromVelox.from_velox(
-                    self.scope, self.device,
+                    self.scope,
+                    self.device,
                     self.dtype.fields[i].dtype,
                     self._data.child_at(i),
                     True,
@@ -1199,7 +1264,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
         return self._fromdata(
             {
                 self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                    self.scope, self.device,
+                    self.scope,
+                    self.device,
                     self.dtype.fields[i].dtype,
                     self._data.child_at(i),
                     True,
@@ -1220,7 +1286,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
                 {
                     self.dtype.fields[i]
                     .name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -1257,7 +1324,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
                 {
                     self.dtype.fields[i]
                     .name: ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -1454,7 +1522,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
         res["unique"] = self.scope.Column(
             [
                 ColumnFromVelox.from_velox(
-                    self.scope, self.device,
+                    self.scope,
+                    self.device,
                     f.dtype,
                     self._data.child_at(self._data.type().get_child_idx(f.name)),
                     True,
@@ -1471,7 +1540,11 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
         for i in range(self._data.children_size()):
             result = func(
                 ColumnFromVelox.from_velox(
-                    self.scope, self.device, self.dtype.fields[i].dtype, self._data.child_at(i), True
+                    self.scope,
+                    self.device,
+                    self.dtype.fields[i].dtype,
+                    self._data.child_at(i),
+                    True,
                 )
             )()
             if result is None:
@@ -1489,7 +1562,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             for i in range(self._data.children_size()):
                 child = func(
                     ColumnFromVelox.from_velox(
-                        self.scope, self.device,
+                        self.scope,
+                        self.device,
                         self.dtype.fields[i].dtype,
                         self._data.child_at(i),
                         True,
@@ -1500,7 +1574,9 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
                     child._data,
                 )
             res.set_length(len(self._data))
-            return ColumnFromVelox.from_velox(self.scope, self.device, self.dtype, res, True)
+            return ColumnFromVelox.from_velox(
+                self.scope, self.device, self.dtype, res, True
+            )
         raise NotImplementedError("Dataframe row is not allowed to have nulls")
 
     # describe ----------------------------------------------------------------
@@ -1550,7 +1626,11 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
         for s in selected:
             idx = self._data.type().get_child_idx(s)
             c = ColumnFromVelox.from_velox(
-                self.scope, self.device, self.dtype.fields[idx].dtype, self._data.child_at(idx), True
+                self.scope,
+                self.device,
+                self.dtype.fields[idx].dtype,
+                self._data.child_at(idx),
+                True,
             )
             res[s] = self.scope.Column(
                 [c.count(), c.mean(), c.std(), c.min()]
@@ -1571,7 +1651,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
         return self._fromdata(
             {
                 self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                    self.scope, self.device,
+                    self.scope,
+                    self.device,
                     self.dtype.fields[i].dtype,
                     self._data.child_at(i),
                     True,
@@ -1592,7 +1673,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
         return self._fromdata(
             {
                 self.dtype.fields[i].name: ColumnFromVelox.from_velox(
-                    self.scope, self.device,
+                    self.scope,
+                    self.device,
                     self.dtype.fields[i].dtype,
                     self._data.child_at(i),
                     True,
@@ -1612,7 +1694,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
                 column_mapper.get(
                     self.dtype.fields[i].name, self.dtype.fields[i].name
                 ): ColumnFromVelox.from_velox(
-                    self.scope, self.device,
+                    self.scope,
+                    self.device,
                     self.dtype.fields[i].dtype,
                     self._data.child_at(i),
                     True,
@@ -1632,7 +1715,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
         return self._fromdata(
             {
                 col: ColumnFromVelox.from_velox(
-                    self.scope, self.device,
+                    self.scope,
+                    self.device,
                     self.dtype.fields[self._data.type().get_child_idx(col)].dtype,
                     self._data.child_at(self._data.type().get_child_idx(col)),
                     True,
@@ -1745,7 +1829,8 @@ class DataFrameCpu(IDataFrame, ColumnFromVelox):
             n = self.dtype.fields[i].name
             if n in output_columns:
                 res[n] = ColumnFromVelox.from_velox(
-                    self.scope, self.device,
+                    self.scope,
+                    self.device,
                     self.dtype.fields[i].dtype,
                     self._data.child_at(i),
                     True,

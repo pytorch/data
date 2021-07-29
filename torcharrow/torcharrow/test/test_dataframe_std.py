@@ -4,7 +4,9 @@ import unittest
 
 import torcharrow.dtypes as dt
 from torcharrow import IDataFrame, Scope, me
+
 from .test_dataframe import TestDataFrame
+
 # run python3 -m unittest outside this directory to run all tests
 
 
@@ -18,7 +20,6 @@ class TestDataFrameStd(TestDataFrame):
         self.assertEqual(len(empty._mask), 0)
 
         return self.base_test_internals_empty()
-
 
     def test_internals_full(self):
         df = self.ts.DataFrame(dt.Struct([dt.Field("a", dt.int64)]))

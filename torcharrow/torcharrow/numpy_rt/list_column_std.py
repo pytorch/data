@@ -1,9 +1,8 @@
 import array as ar
-from tabulate import tabulate
 
 import numpy as np
-
 import torcharrow.dtypes as dt
+from tabulate import tabulate
 from torcharrow.ilist_column import IListColumn, IListMethods
 from torcharrow.scope import ColumnFactory
 

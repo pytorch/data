@@ -2,10 +2,9 @@ import unittest
 
 import torcharrow.dtypes as dt
 from torcharrow import Scope, IStringColumn
+from torcharrow.velox_rt.functional import functional
 
 from .test_string_column import TestStringColumn
-
-from torcharrow.velox_rt.functional import functional
 
 
 class TestStringColumnCpu(TestStringColumn):
@@ -32,12 +31,11 @@ class TestStringColumnCpu(TestStringColumn):
 
         self.assertEqual(
             list(functional.torcharrow_isalpha(str_col)),
-            [False, True, True, False, False, None]
+            [False, True, True, False, False, None],
         )
 
         self.assertEqual(
-            list(functional.upper(str_col)),
-            ["", "ABC", "XYZ", "123", "XYZ123", None]
+            list(functional.upper(str_col)), ["", "ABC", "XYZ", "123", "XYZ123", None]
         )
 
 

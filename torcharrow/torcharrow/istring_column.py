@@ -1,20 +1,20 @@
-import array as ar
-from dataclasses import dataclass
 import abc
-import typing as ty
+import array as ar
 
 # TODO: use re2
 import re
-#import re2 as re  # type: ignore
+import typing as ty
+from dataclasses import dataclass
+
+# import re2 as re  # type: ignore
 
 import numpy as np
 import numpy.ma as ma
-
 import torcharrow.dtypes as dt
 from torcharrow.expression import Call
 
-from .icolumn import IColumn
 from .expression import expression
+from .icolumn import IColumn
 from .scope import ColumnFactory
 
 # ------------------------------------------------------------------------------
@@ -93,7 +93,10 @@ class IStringMethods(abc.ABC):
                 return tuple(ws + ([None] * (maxsplit + 1 - len(ws))))
 
             dtype = dt.Struct(
-                [dt.Field(str(i), dt.String(nullable=True)) for i in range(maxsplit + 1)],
+                [
+                    dt.Field(str(i), dt.String(nullable=True))
+                    for i in range(maxsplit + 1)
+                ],
                 nullable=me.dtype.nullable,
             )
 
@@ -120,7 +123,10 @@ class IStringMethods(abc.ABC):
                 )
 
             dtype = dt.Struct(
-                [dt.Field(str(i), dt.String(nullable=True)) for i in range(maxsplit + 1)],
+                [
+                    dt.Field(str(i), dt.String(nullable=True))
+                    for i in range(maxsplit + 1)
+                ],
                 nullable=me.dtype.nullable,
             )
 
@@ -448,7 +454,10 @@ class IStringMethods(abc.ABC):
                 return tuple(ws + ([None] * (maxsplit + 1 - len(ws))))
 
             dtype = dt.Struct(
-                [dt.Field(str(i), dt.String(nullable=True)) for i in range(maxsplit + 1)],
+                [
+                    dt.Field(str(i), dt.String(nullable=True))
+                    for i in range(maxsplit + 1)
+                ],
                 nullable=me.dtype.nullable,
             )
 

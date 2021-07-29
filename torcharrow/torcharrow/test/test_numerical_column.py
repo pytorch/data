@@ -55,7 +55,6 @@ class TestNumericalColumn(unittest.TestCase):
         col = col.append([3])
         self.assertEqual(col[-1], 3)
 
-
         self.assertEqual(col.length(), 4)
         self.assertEqual(col.null_count(), 3)
 

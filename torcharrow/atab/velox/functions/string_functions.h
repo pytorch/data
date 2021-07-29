@@ -116,4 +116,51 @@ bool call(bool& result, const arg_type<facebook::f4d::Varchar>& input) {
   return true;
 }
 VELOX_UDF_END();
+
+/**
+ * torcharrow_isinteger(string) → bool
+ * Return True if first character is -/+ or a number,
+ * followed by all numbers, False otherwise.
+ **/
+VELOX_UDF_BEGIN(torcharrow_isinteger)
+FOLLY_ALWAYS_INLINE
+bool call(bool& result, const arg_type<facebook::f4d::Varchar>& input) {
+  using namespace f4d::functions;
+  using namespace internal;
+
+  size_t size = input.size();
+  if (size == 0) {
+    result = false;
+    return true;
+  }
+
+  bool has_digit = false; //this is needed for the case where the string is "+" or "-"
+  size_t index = 0;
+  while (index < size) {
+    int codePointSize;
+    utf8proc_int32_t codePoint =
+        utf8proc_codepoint(input.data() + index, codePointSize);
+
+    if (index == 0 && (codePoint == '+' || codePoint == '-')) {
+        index += codePointSize;
+        continue;
+    }
+
+    utf8proc_category_t category =
+        static_cast<utf8proc_category_t>(utf8proc_category(codePoint));
+
+    if (Utf8CatUtils::isNumber(category)) {
+         has_digit = true;
+    }
+    else {
+         result = false;
+         return true;
+    }
+
+    index += codePointSize;
+  }
+  result = has_digit;
+  return true;
+}
+VELOX_UDF_END();
 } // namespace facebook::torcharrow::functions

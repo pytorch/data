@@ -69,79 +69,78 @@ class TestSimpleColumns(unittest.TestCase):
     def test_SimpleColumnInt64_unary(self):
         data = [1, -2, None, 3, -4, None]
         col = infer_column(data)
-        self.assertEqual(col.type().kind_name(), 'BIGINT')
+        self.assertEqual(col.type().kind_name(), "BIGINT")
 
         neg_col = col.neg()
         self.assert_SimpleColumn(neg_col, [-1, 2, None, -3, 4, None])
-        self.assertEqual(neg_col.type().kind_name(), 'BIGINT')
+        self.assertEqual(neg_col.type().kind_name(), "BIGINT")
 
         neg_col2 = neg_col.neg()
         self.assert_SimpleColumn(neg_col2, [1, -2, None, 3, -4, None])
-        self.assertEqual(neg_col2.type().kind_name(), 'BIGINT')
+        self.assertEqual(neg_col2.type().kind_name(), "BIGINT")
 
         neg_col3 = neg_col2.neg()
         self.assert_SimpleColumn(neg_col3, [-1, 2, None, -3, 4, None])
-        self.assertEqual(neg_col3.type().kind_name(), 'BIGINT')
+        self.assertEqual(neg_col3.type().kind_name(), "BIGINT")
 
         abs_col = col.abs()
         self.assert_SimpleColumn(abs_col, [1, 2, None, 3, 4, None])
-        self.assertEqual(abs_col.type().kind_name(), 'BIGINT')
+        self.assertEqual(abs_col.type().kind_name(), "BIGINT")
 
     def test_SimpleColumnInt64_binary(self):
-        data1= [1, -2, None, 3, -4, None]
+        data1 = [1, -2, None, 3, -4, None]
         col1 = infer_column(data1)
-        data2= [None, 1, 2, 3, 4, 5]
+        data2 = [None, 1, 2, 3, 4, 5]
         col2 = infer_column(data2)
 
         sum_col = col1.add(col2)
         self.assert_SimpleColumn(sum_col, [None, -1, None, 6, 0, None])
-        self.assertEqual(sum_col.type().kind_name(), 'BIGINT')
+        self.assertEqual(sum_col.type().kind_name(), "BIGINT")
 
         # type promotion
-        data3= [None, 1., 2., 3., 4., 5.]
+        data3 = [None, 1.0, 2.0, 3.0, 4.0, 5.0]
         col3 = infer_column(data3)
-        self.assertEqual(col3.type().kind_name(), 'REAL')
+        self.assertEqual(col3.type().kind_name(), "REAL")
 
         sum_col = col1.add(col3)
-        self.assertEqual(sum_col.type().kind_name(), 'REAL')
-        self.assert_SimpleColumn(sum_col, [None, -1., None, 6., 0., None])
+        self.assertEqual(sum_col.type().kind_name(), "REAL")
+        self.assert_SimpleColumn(sum_col, [None, -1.0, None, 6.0, 0.0, None])
 
         sum_col2 = col3.add(col1)
-        self.assertEqual(sum_col2.type().kind_name(), 'REAL')
-        self.assert_SimpleColumn(sum_col2, [None, -1., None, 6., 0., None])
+        self.assertEqual(sum_col2.type().kind_name(), "REAL")
+        self.assert_SimpleColumn(sum_col2, [None, -1.0, None, 6.0, 0.0, None])
 
         # add scalar
         add_scalar = col1.add(1)
-        self.assertEqual(add_scalar.type().kind_name(), 'BIGINT')
+        self.assertEqual(add_scalar.type().kind_name(), "BIGINT")
         self.assert_SimpleColumn(add_scalar, [2, -1, None, 4, -3, None])
 
         add_scalar = col1.add(0.1)
-        self.assertEqual(add_scalar.type().kind_name(), 'REAL')
+        self.assertEqual(add_scalar.type().kind_name(), "REAL")
         self.assert_SimpleColumn(add_scalar, [1.1, -1.9, None, 3.1, -3.9, None])
 
         # It's debatable whether this (add BIGINT with BOOLEAN) should be supported.
         # But since PyTorch supports it for NumPy compatbility, TorchArrow also supports this.
         add_scalar = col1.add(True)
-        self.assertEqual(add_scalar.type().kind_name(), 'BIGINT')
+        self.assertEqual(add_scalar.type().kind_name(), "BIGINT")
         self.assert_SimpleColumn(add_scalar, [2, -1, None, 4, -3, None])
-
 
     def test_SimpleColumnFloat32_unary(self):
         data = [1.2, -2.3, None, 3.4, -4.6, None]
         col = infer_column(data)
-        self.assertEqual(col.type().kind_name(), 'REAL')
+        self.assertEqual(col.type().kind_name(), "REAL")
 
         neg_col = col.neg()
         self.assert_SimpleColumn(neg_col, [-1.2, 2.3, None, -3.4, 4.6, None])
-        self.assertEqual(neg_col.type().kind_name(), 'REAL')
+        self.assertEqual(neg_col.type().kind_name(), "REAL")
 
         abs_col = col.abs()
         self.assert_SimpleColumn(abs_col, [1.2, 2.3, None, 3.4, 4.6, None])
-        self.assertEqual(abs_col.type().kind_name(), 'REAL')
+        self.assertEqual(abs_col.type().kind_name(), "REAL")
 
         round_col = col.round()
-        self.assert_SimpleColumn(round_col, [1., -2., None, 3., -5., None])
-        self.assertEqual(round_col.type().kind_name(), 'REAL')
+        self.assert_SimpleColumn(round_col, [1.0, -2.0, None, 3.0, -5.0, None])
+        self.assertEqual(round_col.type().kind_name(), "REAL")
 
     def test_SimpleColumnBoolean(self):
         data = [True, True, True, True]
@@ -170,10 +169,10 @@ class TestSimpleColumns(unittest.TestCase):
     def test_SimpleColumnBoolean_unary(self):
         data = [True, False, None, True, False, None]
         col = infer_column(data)
-        self.assertEqual(col.type().kind_name(), 'BOOLEAN')
+        self.assertEqual(col.type().kind_name(), "BOOLEAN")
 
         inv_col = col.invert()
-        self.assertEqual(inv_col.type().kind_name(), 'BOOLEAN')
+        self.assertEqual(inv_col.type().kind_name(), "BOOLEAN")
         self.assert_SimpleColumn(inv_col, [False, True, None, False, True, None])
 
     def test_SimpleColumnString(self):
@@ -205,23 +204,39 @@ class TestSimpleColumns(unittest.TestCase):
         col = infer_column(data)
 
         lcol = col.lower()
-        self.assert_SimpleColumn(lcol, ["abc", "abc", "xyz123", None, "xyz", "123", "äöå", ",.!"])
+        self.assert_SimpleColumn(
+            lcol, ["abc", "abc", "xyz123", None, "xyz", "123", "äöå", ",.!"]
+        )
 
         ucol = col.upper()
-        self.assert_SimpleColumn(ucol, ["ABC", "ABC", "XYZ123", None, "XYZ", "123", "ÄÖÅ", ",.!"])
+        self.assert_SimpleColumn(
+            ucol, ["ABC", "ABC", "XYZ123", None, "XYZ", "123", "ÄÖÅ", ",.!"]
+        )
 
         lcol2 = ucol.lower()
-        self.assert_SimpleColumn(lcol2, ["abc", "abc", "xyz123", None, "xyz", "123", "äöå", ",.!"])
+        self.assert_SimpleColumn(
+            lcol2, ["abc", "abc", "xyz123", None, "xyz", "123", "äöå", ",.!"]
+        )
 
         ucol2 = lcol.upper()
-        self.assert_SimpleColumn(ucol2, ["ABC", "ABC", "XYZ123", None, "XYZ", "123", "ÄÖÅ", ",.!"])
+        self.assert_SimpleColumn(
+            ucol2, ["ABC", "ABC", "XYZ123", None, "XYZ", "123", "ÄÖÅ", ",.!"]
+        )
 
         alpha = col.isalpha()
-        self.assert_SimpleColumn(alpha, [True, True, False, None, True, False, True, False])
+        self.assert_SimpleColumn(
+            alpha, [True, True, False, None, True, False, True, False]
+        )
 
         alnum = col.isalnum()
-        self.assert_SimpleColumn(alnum, [True, True, True, None, True, True, True, False])
+        self.assert_SimpleColumn(
+            alnum, [True, True, True, None, True, True, True, False]
+        )
 
+        integer = col.isinteger()
+        self.assert_SimpleColumn(
+            integer, [False, False, False, None, False, True, False, False]
+        )
 
     def test_SimpleColumnUTF(self):
         s = ["hello.this", "is.interesting.", "this.is_24", "paradise"]
@@ -249,7 +264,6 @@ class TestSimpleColumns(unittest.TestCase):
         self.assertTrue(isinstance(add_result.type(), ta.VeloxType_BIGINT))
         self.assert_SimpleColumn(add_result, [43, 40, None, 45, 38, None])
 
-
         ###########
         #  REAL
         col = ta.ConstantColumn(4.2, 6)
@@ -267,12 +281,11 @@ class TestSimpleColumns(unittest.TestCase):
         self.assertTrue(isinstance(add_result.type(), ta.VeloxType_REAL))
         self.assert_SimpleColumn(add_result, [5.4, 1.9, None, 7.6, -0.4, None])
 
-
         ###########
         #  VARCHAR
-        col = ta.ConstantColumn('abc', 6)
+        col = ta.ConstantColumn("abc", 6)
         self.assertTrue(isinstance(col.type(), ta.VeloxType_VARCHAR))
-        self.assert_SimpleColumn(col, ['abc'] * 6)
+        self.assert_SimpleColumn(col, ["abc"] * 6)
 
 
 def is_same_type(a, b) -> bool:
@@ -295,9 +308,11 @@ class Unresolved:
     def union(self, other: Unresolved) -> Unresolved:
         return other
 
+
 @dataclass(frozen=True)
 class UnresolvedArray(Unresolved):
     element_type: Unresolved
+
 
 def infer_column(data) -> ta.BaseColumn:
     inferred_column = _infer_column(data)
@@ -420,9 +435,12 @@ def _infer_column(data) -> Union[ta.BaseColumn, Unresolved, None]:
                 raise NotImplementedError()
 
         else:
-            type_ = {int: ta.VeloxType_BIGINT(), float: ta.VeloxType_REAL(), str: ta.VeloxType_VARCHAR(), bool: ta.VeloxType_BOOLEAN()}.get(
-                type(non_null_item)
-            )
+            type_ = {
+                int: ta.VeloxType_BIGINT(),
+                float: ta.VeloxType_REAL(),
+                str: ta.VeloxType_VARCHAR(),
+                bool: ta.VeloxType_BOOLEAN(),
+            }.get(type(non_null_item))
             if type_ is None:
                 raise NotImplementedError(f"Cannot infer {type(non_null_item)}")
             else:
@@ -441,7 +459,11 @@ def resolve_column(item, type_) -> ta.BaseColumn:
         if value is None:
             col.append_null()
         else:
-            if type(type_) in (ta.VeloxType_INTEGER, ta.VeloxType_VARCHAR, ta.VeloxType_BOOLEAN):
+            if type(type_) in (
+                ta.VeloxType_INTEGER,
+                ta.VeloxType_VARCHAR,
+                ta.VeloxType_BOOLEAN,
+            ):
                 col.append(value)
             elif type(type_) == ta.VeloxArrayType:
                 col.append(resolve_column(value, type_.element_type()))
@@ -464,7 +486,11 @@ class TestInferColumn(unittest.TestCase):
     def test_infer_nested_array(self):
         data = [[[1]], [[2], [5]], [[3, 4]]]
         type_ = infer_column(data).type()
-        self.assertTrue(is_same_type(type_, ta.VeloxArrayType(ta.VeloxArrayType(ta.VeloxType_BIGINT()))))
+        self.assertTrue(
+            is_same_type(
+                type_, ta.VeloxArrayType(ta.VeloxArrayType(ta.VeloxType_BIGINT()))
+            )
+        )
 
     def test_unresolved(self):
         data = []
@@ -620,7 +646,11 @@ class TestMapColumns(unittest.TestCase):
 
 class TestRowColumns(unittest.TestCase):
     def test_RowColumn1(self):
-        col = ta.Column(ta.VeloxRowType(["a", "b"], [ta.VeloxType_INTEGER(), ta.VeloxType_VARCHAR()]))
+        col = ta.Column(
+            ta.VeloxRowType(
+                ["a", "b"], [ta.VeloxType_INTEGER(), ta.VeloxType_VARCHAR()]
+            )
+        )
         col.child_at(0).append(1)
         col.child_at(1).append("x")
         col.set_length(1)
@@ -644,7 +674,11 @@ class TestRowColumns(unittest.TestCase):
         )
 
     def test_set_child(self):
-        col = ta.Column(ta.VeloxRowType(["a", "b"], [ta.VeloxType_INTEGER(), ta.VeloxType_VARCHAR()]))
+        col = ta.Column(
+            ta.VeloxRowType(
+                ["a", "b"], [ta.VeloxType_INTEGER(), ta.VeloxType_VARCHAR()]
+            )
+        )
         col.child_at(0).append(1)
         col.child_at(1).append("x")
         col.set_length(1)
@@ -666,7 +700,12 @@ class TestRowColumns(unittest.TestCase):
         col = ta.Column(
             ta.VeloxRowType(
                 ["a", "b"],
-                [ta.VeloxType_INTEGER(), ta.VeloxRowType(["b1", "b2"], [ta.VeloxType_VARCHAR(), ta.VeloxType_INTEGER()])],
+                [
+                    ta.VeloxType_INTEGER(),
+                    ta.VeloxRowType(
+                        ["b1", "b2"], [ta.VeloxType_VARCHAR(), ta.VeloxType_INTEGER()]
+                    ),
+                ],
             )
         )
         col.child_at(0).append(1)

@@ -3,11 +3,10 @@ from typing import Dict, List, Literal, Optional, Union
 
 import numpy as np
 import numpy.ma as ma
-
 import torcharrow.dtypes as dt
-from torcharrow.icolumn import IColumn
 from torcharrow.column_factory import ColumnFactory
 from torcharrow.expression import expression
+from torcharrow.icolumn import IColumn
 from torcharrow.inumerical_column import INumericalColumn
 from torcharrow.trace import trace
 
@@ -59,7 +58,9 @@ class NumericalColumnStd(INumericalColumn):
         # DON'T CALL: _empty USE _EmptyColumn instead
         # Any _empty must be followed by a _finalize; no other ops are allowed during this time
         _mask = mask if mask is not None else ar.array("b")
-        return NumericalColumnStd(scope, device, dtype, ar.array(dtype.arraycode), _mask)
+        return NumericalColumnStd(
+            scope, device, dtype, ar.array(dtype.arraycode), _mask
+        )
 
     def _append_null(self):
         self._mask.append(True)
@@ -241,7 +242,9 @@ class NumericalColumnStd(INumericalColumn):
             if not isinstance(masked_array.mask, np.bool8)
             else np.full((len(masked_array),), masked_array.mask)
         )
-        return NumericalColumnStd(self.scope, self.device, dtype, masked_array.data, mask)
+        return NumericalColumnStd(
+            self.scope, self.device, dtype, masked_array.data, mask
+        )
 
     @trace
     @expression
