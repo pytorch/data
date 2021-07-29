@@ -2,11 +2,10 @@ import array as ar
 import copy
 from collections import OrderedDict
 from dataclasses import dataclass
-from tabulate import tabulate
 
 import numpy as np
 import torcharrow.dtypes as dt
-
+from tabulate import tabulate
 from torcharrow.column_factory import ColumnFactory
 from torcharrow.icolumn import IColumn
 from torcharrow.imap_column import IMapColumn, IMapMethods

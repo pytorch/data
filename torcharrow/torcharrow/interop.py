@@ -7,9 +7,7 @@ import numpy.ma as ma  # type: ignore
 # Skipping analyzing 'pandas': found module but no type hints or library stubs
 import pandas as pd  # type: ignore
 import pyarrow as pa  # type: ignore
-
 import torcharrow.dtypes as dt
-
 from torcharrow import Scope
 
 
@@ -92,7 +90,9 @@ def from_arrow_array(array, dtype=None, scope=None, device=""):
         return scope.Column(pydata, dtype, device=device)
     else:
         return scope.Column(
-            pydata, dtype=_arrowtype_to_dtype(array.type, array.null_count > 0), device=device
+            pydata,
+            dtype=_arrowtype_to_dtype(array.type, array.null_count > 0),
+            device=device,
         )
 
 

@@ -1,13 +1,13 @@
+import dataclasses
+import inspect
 import re
 import typing as ty
-import typing_inspect
-import inspect
 from abc import ABC, abstractmethod
-import dataclasses
 from dataclasses import dataclass, replace, is_dataclass
 from operator import is_
 
 import numpy as np
+import typing_inspect
 
 # -----------------------------------------------------------------------------
 # Aux
@@ -46,7 +46,7 @@ class Field:
 # Immutable Types with structural equality...
 
 
-@dataclass(frozen=True) # type: ignore
+@dataclass(frozen=True)  # type: ignore
 class DType(ABC):
 
     typecode: ty.ClassVar[str] = "__TO_BE_DEFINED_IN_SUBCLASS__"
@@ -830,29 +830,31 @@ def typeof_np_dtype(t: np.dtype) -> DType:
         f"translation of numpy type {type(t).__name__} to dtype unsupported"
     )
 
+
 # Only for scalar types
 # TODO: use enum for typekind
 def velox_scalar_type_kind_to_dtype(typekind: str) -> DType:
-    if typekind == 'TINYINT':
+    if typekind == "TINYINT":
         return int8
-    if typekind == 'SMALLINT':
+    if typekind == "SMALLINT":
         return int16
-    if typekind == 'INTEGER':
+    if typekind == "INTEGER":
         return int32
-    if typekind == 'BIGINT':
+    if typekind == "BIGINT":
         return int64
-    if typekind == 'REAL':
+    if typekind == "REAL":
         return float32
-    if typekind == 'DOUBLE':
+    if typekind == "DOUBLE":
         return float64
-    if typekind == 'VARCHAR':
+    if typekind == "VARCHAR":
         return string
-    if typekind == 'BOOLEAN':
+    if typekind == "BOOLEAN":
         return boolean
 
     raise AssertionError(
         f"translation of Velox typekind {typekind} to dtype unsupported"
     )
+
 
 def cast_as(dtype):
     if is_string(dtype):
@@ -890,7 +892,9 @@ def dtype_of_type(typ: ty.Optional[ty.Type]) -> DType:
             )
         return Struct([Field(n, dtype_of_type(field_types[n])) for n in fields])
     if is_dataclass(typ):
-        return Struct([Field(f.name, dtype_of_type(f.type)) for f in dataclasses.fields(typ)])
+        return Struct(
+            [Field(f.name, dtype_of_type(f.type)) for f in dataclasses.fields(typ)]
+        )
     if ty.get_origin(typ) in (List, list):
         args = ty.get_args(typ)
         assert len(args) == 1

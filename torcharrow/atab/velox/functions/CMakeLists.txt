@@ -4,4 +4,4 @@ add_library(
   string_functions.h
 )
 
-target_link_libraries(torcharrow_udfs f4d_functions_string f4d_functions_common)
+target_link_libraries(torcharrow_udfs velox_functions_string velox_functions_common)

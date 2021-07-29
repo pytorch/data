@@ -1,5 +1,5 @@
-import unittest
 import operator
+import unittest
 
 import torcharrow.dtypes as dt
 from torcharrow import IListColumn, INumericalColumn, Scope
@@ -14,7 +14,6 @@ class TestListColumn(unittest.TestCase):
 
         self.assertEqual(c.length(), 0)
         self.assertEqual(c.null_count(), 0)
-
 
     def base_test_nonempty(self):
         c = self.ts.Column(dt.List(dt.int64))

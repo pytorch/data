@@ -1,7 +1,7 @@
-from .icolumn import IColumn
-
-from torcharrow.column_factory import Device
 import torcharrow.dtypes as dt
+from torcharrow.column_factory import Device
+
+from .icolumn import IColumn
 
 
 class INumericalColumn(IColumn):

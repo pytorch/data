@@ -10,12 +10,11 @@ from tabulate import tabulate
 from torcharrow.expression import expression
 from torcharrow.istring_column import IStringColumn, IStringMethods
 from torcharrow.scope import ColumnFactory, Scope, Device
+from torcharrow.velox_rt.functional import functional
 
+from .column import ColumnFromVelox
 from .column import ColumnFromVelox
 from .typing import get_velox_type
-from .column import ColumnFromVelox
-
-from torcharrow.velox_rt.functional import functional
 
 # ------------------------------------------------------------------------------
 # StringColumnCpu
@@ -213,14 +212,32 @@ class StringMethodsCpu(IStringMethods):
         return functional.lower(self._parent).with_null(self._parent.dtype.nullable)
 
     def upper(self) -> IStringColumn:
-        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.device, self._parent.dtype, self._parent._data.upper(), True)
+        return ColumnFromVelox.from_velox(
+            self._parent.scope,
+            self._parent.device,
+            self._parent.dtype,
+            self._parent._data.upper(),
+            True,
+        )
 
     def isalpha(self) -> IStringColumn:
-        return ColumnFromVelox.from_velox(self._parent.scope, self._parent.device, dt.Boolean(self._parent.dtype.nullable), self._parent._data.isalpha(), True)
+        return ColumnFromVelox.from_velox(
+            self._parent.scope,
+            self._parent.device,
+            dt.Boolean(self._parent.dtype.nullable),
+            self._parent._data.isalpha(),
+            True,
+        )
 
     def isalnum(self) -> IStringColumn:
         # return ColumnFromVelox.from_velox(self._parent.scope, self._parent.device, dt.Boolean(self._parent.dtype.nullable), self._parent._data.isalnum(), True)
-        return functional.torcharrow_isalnum(self._parent).with_null(self._parent.dtype.nullable)
+        return functional.torcharrow_isalnum(self._parent).with_null(
+            self._parent.dtype.nullable
+        )
+
+    def isinteger(self) -> IStringColumn:
+        # return ColumnFromVelox.from_velox(self._parent.scope, self._parent.device, dt.Boolean(self._parent.dtype.nullable), self._parent._data.isalnum(), True)
+        return functional.torcharrow_isinteger(self._parent).with_null(self._parent.dtype.nullable)
 
 
 # ------------------------------------------------------------------------------

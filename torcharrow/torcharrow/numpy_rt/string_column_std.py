@@ -1,14 +1,13 @@
 import array as ar
 from dataclasses import dataclass
 from typing import cast
-from tabulate import tabulate
 
 import numpy as np
 import numpy.ma as ma
-
 import torcharrow.dtypes as dt
-from torcharrow.istring_column import IStringColumn, IStringMethods
+from tabulate import tabulate
 from torcharrow.expression import expression
+from torcharrow.istring_column import IStringColumn, IStringMethods
 from torcharrow.scope import ColumnFactory
 
 

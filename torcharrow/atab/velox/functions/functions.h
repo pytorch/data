@@ -29,6 +29,10 @@ inline void registerTorchArrowFunctions() {
       facebook::torcharrow::functions::udf_torcharrow_isalnum,
       bool,
       facebook::f4d::Varchar>();
+  facebook::f4d::registerFunction<
+      facebook::torcharrow::functions::udf_torcharrow_isinteger,
+      bool,
+      facebook::f4d::Varchar>();
 }
 
 inline void initializeTorchArrowTypeResolver() {

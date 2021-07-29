@@ -1,11 +1,13 @@
-import torch  # type: ignore
-from dataclasses import dataclass
 from collections import OrderedDict
+from dataclasses import dataclass
 from typing import TypeVar, Generic, Union, List, Any, Optional, Tuple
+
+import torch  # type: ignore
+
+from . import dtypes
 from .dtypes import DType, is_numerical, is_struct, is_list, is_map, is_string
 from .icolumn import Column
 from .idataframe import DataFrame
-from . import dtypes
 
 T = TypeVar("T")
 KT = TypeVar("KT")

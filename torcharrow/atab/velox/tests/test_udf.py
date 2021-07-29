@@ -17,6 +17,7 @@ from typing import List, Any
 # @manual=//pytorch/torchdata/torcharrow/atab/velox:_torcharrow
 import _torcharrow as ta
 
+
 class TestSimpleColumns(unittest.TestCase):
     def assert_SimpleColumn(self, col: ta.BaseColumn, val: List[Any]):
         self.assertEqual(len(col), len(val))
@@ -46,16 +47,24 @@ class TestSimpleColumns(unittest.TestCase):
         col = self.construct_simple_column(ta.VeloxType_VARCHAR(), data)
 
         lcol = ta.generic_udf_dispatch("lower", col)
-        self.assert_SimpleColumn(lcol, ["abc", "abc", "xyz123", None, "xyz", "123", "äöå"])
+        self.assert_SimpleColumn(
+            lcol, ["abc", "abc", "xyz123", None, "xyz", "123", "äöå"]
+        )
 
         ucol = ta.generic_udf_dispatch("upper", col)
-        self.assert_SimpleColumn(ucol, ["ABC", "ABC", "XYZ123", None, "XYZ", "123", "ÄÖÅ"])
+        self.assert_SimpleColumn(
+            ucol, ["ABC", "ABC", "XYZ123", None, "XYZ", "123", "ÄÖÅ"]
+        )
 
         lcol2 = ta.generic_udf_dispatch("lower", ucol)
-        self.assert_SimpleColumn(lcol2, ["abc", "abc", "xyz123", None, "xyz", "123", "äöå"])
+        self.assert_SimpleColumn(
+            lcol2, ["abc", "abc", "xyz123", None, "xyz", "123", "äöå"]
+        )
 
         ucol2 = ta.generic_udf_dispatch("upper", lcol)
-        self.assert_SimpleColumn(ucol2, ["ABC", "ABC", "XYZ123", None, "XYZ", "123", "ÄÖÅ"])
+        self.assert_SimpleColumn(
+            ucol2, ["ABC", "ABC", "XYZ123", None, "XYZ", "123", "ÄÖÅ"]
+        )
 
         alpha = ta.generic_udf_dispatch("torcharrow_isalpha", col)
         self.assert_SimpleColumn(alpha, [True, True, False, None, True, False, True])
@@ -66,9 +75,10 @@ class TestSimpleColumns(unittest.TestCase):
         neg = ta.generic_udf_dispatch("negate", col2)
         self.assert_SimpleColumn(neg, [-1, -2, -3, None, -5, None, 7])
 
-
     def test_lower(self):
         data = ["abc", "ABC", "XYZ123", None, "xYZ", "123", "äöå"]
         col = self.construct_simple_column(ta.VeloxType_VARCHAR(), data)
         lcol = ta.generic_udf_dispatch("lower", col)
-        self.assert_SimpleColumn(lcol, ["abc", "abc", "xyz123", None, "xyz", "123", "äöå"])
+        self.assert_SimpleColumn(
+            lcol, ["abc", "abc", "xyz123", None, "xyz", "123", "äöå"]
+        )

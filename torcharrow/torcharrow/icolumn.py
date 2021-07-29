@@ -11,9 +11,8 @@ import typing as ty
 from collections import OrderedDict, defaultdict
 
 import numpy as np
-from tabulate import tabulate
-
 import torcharrow.dtypes as dt
+from tabulate import tabulate
 
 from .column_factory import Device
 from .expression import expression

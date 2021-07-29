@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
-
 import torcharrow.dtypes as dt
 
 from .icolumn import IColumn

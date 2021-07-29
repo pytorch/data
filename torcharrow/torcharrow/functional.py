@@ -1,7 +1,8 @@
+from dataclasses import dataclass
 from types import ModuleType
 from typing import Callable, Dict, List, Optional
+
 import torcharrow.dtypes as dt
-from dataclasses import dataclass
 
 
 # type of functions in functional. Having this class makes it easy to
@@ -37,10 +38,16 @@ class _Namespace(ModuleType):
         super().__init__("torcharrow.functional." + name)
         self._registered_functions: Dict[str, GenericUDF] = {}
 
-    def register_function(self, udf_name: str, fn: Callable, signatures: List[FunctionSignature], alias: Optional[str] = None):
+    def register_function(
+        self,
+        udf_name: str,
+        fn: Callable,
+        signatures: List[FunctionSignature],
+        alias: Optional[str] = None,
+    ):
         alias = alias or udf_name
         assert alias not in dir(self)
-        #TODO: fn.__doc__ = ';'.join(signature.help_msg for signature in signatures)
+        # TODO: fn.__doc__ = ';'.join(signature.help_msg for signature in signatures)
         function = FunctionHandle(udf_name, alias, fn)
         self._registered_functions[alias] = GenericUDF(function, signatures)
         setattr(self, alias, function)
@@ -57,7 +64,7 @@ class _Namespace(ModuleType):
 
 class _Functional(ModuleType):
     def __init__(self):
-        super().__init__('torcharrow.functional')
+        super().__init__("torcharrow.functional")
         self._namespaces: Dict[str, _Namespace] = {}
 
     def __getattr__(self, name: str) -> _Namespace:

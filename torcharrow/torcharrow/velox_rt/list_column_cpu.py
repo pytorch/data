@@ -21,7 +21,9 @@ class ListColumnCpu(IListColumn, ColumnFromVelox):
         assert dt.is_list(dtype)
         super().__init__(scope, device, dtype)
 
-        self._data = velox.Column(velox.VeloxArrayType(get_velox_type(dtype.item_dtype)))
+        self._data = velox.Column(
+            velox.VeloxArrayType(get_velox_type(dtype.item_dtype))
+        )
         if len(data) > 0:
             self.append(data)
         self._finialized = False
@@ -82,7 +84,11 @@ class ListColumnCpu(IListColumn, ColumnFromVelox):
         else:
             return list(
                 ColumnFromVelox.from_velox(
-                    self.scope, self.device, self._dtype.item_dtype, self._data[i], False
+                    self.scope,
+                    self.device,
+                    self._dtype.item_dtype,
+                    self._data[i],
+                    False,
                 )
             )
 

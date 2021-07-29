@@ -11,7 +11,11 @@ class ColumnFromVelox:
 
     @staticmethod
     def from_velox(
-        scope: Scope, device: Device, dtype: DType, data: velox.BaseColumn, finialized: bool
+        scope: Scope,
+        device: Device,
+        dtype: DType,
+        data: velox.BaseColumn,
+        finialized: bool,
     ) -> IColumn:
         col = scope.Column(dtype=dtype, device=device)
         col._data = data
@@ -22,9 +26,5 @@ class ColumnFromVelox:
     # This help method allows to alter it based on context (e.g. methods in IStringMethods can have better inference)
     def with_null(self, nullable: bool):
         return self.from_velox(
-            self.scope,
-            self.device,
-            self.dtype.with_null(nullable),
-            self._data,
-            True
+            self.scope, self.device, self.dtype.with_null(nullable), self._data, True
         )

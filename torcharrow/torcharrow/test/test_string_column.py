@@ -1,7 +1,7 @@
 import unittest
 
-from torcharrow import Scope, IStringColumn
 import torcharrow.dtypes as dt
+from torcharrow import Scope, IStringColumn
 
 
 class TestStringColumn(unittest.TestCase):
@@ -72,12 +72,24 @@ class TestStringColumn(unittest.TestCase):
         )
 
         self.assertEqual(
-            list(self.ts.Column(["", "abc", "XYZ", "123", "XYZ123", "äöå", ",.!", None]).str.isalpha()),
-            [False, True, True, False, False, True, False, None]
+            list(
+                self.ts.Column(
+                    ["", "abc", "XYZ", "123", "XYZ123", "äöå", ",.!", None]
+                ).str.isalpha()
+            ),
+            [False, True, True, False, False, True, False, None],
         )
         self.assertEqual(
-            list(self.ts.Column(["", "abc", "XYZ", "123", "XYZ123", "äöå", ",.!", None]).str.isalnum()),
-            [False, True, True, True, True, True, False, None]
+            list(
+                self.ts.Column(
+                    ["", "abc", "XYZ", "123", "XYZ123", "äöå", ",.!", None]
+                ).str.isalnum()
+            ),
+            [False, True, True, True, True, True, False, None],
+        )
+        self.assertEqual(
+            list(self.ts.Column(["", "abc", "XYZ", "123", "XYZ123", "äöå", ",.!", None]).str.isinteger()),
+            [False, False, False, True, False, False, False, None]
         )
         self.assertEqual(list(self.ts.Column(["abc"]).str.isascii()), [True])
         self.assertEqual(list(self.ts.Column(["abc"]).str.isdigit()), [False])
@@ -138,7 +150,6 @@ class TestStringColumn(unittest.TestCase):
             list(self.ts.Column(s).str.translate({ord("."): ord("_")})),
             ["hello_this", "is_interesting_", "this_is_24", "paradise"],
         )
-
 
         self.assertEqual(list(self.ts.Column(s).str.count(".")), [1, 2, 1, 0])
         self.assertEqual(

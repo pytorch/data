@@ -12,13 +12,7 @@ setup(
     + find_packages(where="./velox_rt")
     + find_packages(where="./numpy_rt")
     + find_packages(where="./test"),
-    install_requires=[
-        "arrow",
-        "numpy",
-        "pandas",
-        "typing",
-        "tabulate"
-    ],
+    install_requires=["arrow", "numpy", "pandas", "typing", "tabulate"],
     classifiers=[
         "Development Status :: 1 - Planning",
         "Intended Audience :: Science/Research",

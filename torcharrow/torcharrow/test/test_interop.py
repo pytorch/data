@@ -5,18 +5,17 @@ from typing import List, Optional
 import numpy as np  # type: ignore
 import numpy.ma as ma  # type: ignore
 
-
 # Skipping analyzing 'pandas': found module but no type hints or library stubs
 import pandas as pd  # type: ignore
 import pyarrow as pa  # type: ignore
-from torcharrow.scope import Scope
+import torcharrow.dtypes as dt
 from torcharrow.interop import (
     from_arrow_table,
     from_arrow_array,
     from_pandas_dataframe,
     from_pandas_series,
 )
-import torcharrow.dtypes as dt
+from torcharrow.scope import Scope
 
 
 # replicated here since we don't expose it from interop.py

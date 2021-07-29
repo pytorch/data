@@ -1,6 +1,9 @@
 import types
+
 import _torcharrow as ta
+
 from .column import ColumnFromVelox
+
 
 class VeloxFunctional(types.ModuleType):
     def __init__(self):
@@ -12,9 +15,11 @@ class VeloxFunctional(types.ModuleType):
         def wrapper(*args):
             wrapped_args = []
 
-            first_col = next((arg for arg in args if isinstance(arg, ColumnFromVelox)), None)
+            first_col = next(
+                (arg for arg in args if isinstance(arg, ColumnFromVelox)), None
+            )
             if first_col is None:
-                raise AssertionError('None of the argument is Column')
+                raise AssertionError("None of the argument is Column")
             length = len(first_col)
 
             for arg in args:
@@ -29,11 +34,8 @@ class VeloxFunctional(types.ModuleType):
             result_dtype = result_col.dtype().with_null(True)
 
             return ColumnFromVelox.from_velox(
-                first_col.scope,
-                first_col.device,
-                result_dtype,
-                result_col,
-                True)
+                first_col.scope, first_col.device, result_dtype, result_col, True
+            )
 
         return wrapper
 
@@ -44,5 +46,6 @@ class VeloxFunctional(types.ModuleType):
     def _populate_udfs(self):
         # TODO: implement this
         pass
+
 
 functional = VeloxFunctional()
