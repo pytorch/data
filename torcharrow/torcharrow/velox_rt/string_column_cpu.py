@@ -237,7 +237,9 @@ class StringMethodsCpu(IStringMethods):
 
     def isinteger(self) -> IStringColumn:
         # return ColumnFromVelox.from_velox(self._parent.scope, self._parent.device, dt.Boolean(self._parent.dtype.nullable), self._parent._data.isalnum(), True)
-        return functional.torcharrow_isinteger(self._parent).with_null(self._parent.dtype.nullable)
+        return functional.torcharrow_isinteger(self._parent).with_null(
+            self._parent.dtype.nullable
+        )
 
 
 # ------------------------------------------------------------------------------

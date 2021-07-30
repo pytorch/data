@@ -88,8 +88,12 @@ class TestStringColumn(unittest.TestCase):
             [False, True, True, True, True, True, False, None],
         )
         self.assertEqual(
-            list(self.ts.Column(["", "abc", "XYZ", "123", "XYZ123", "äöå", ",.!", None]).str.isinteger()),
-            [False, False, False, True, False, False, False, None]
+            list(
+                self.ts.Column(
+                    ["", "abc", "XYZ", "123", "XYZ123", "äöå", ",.!", None]
+                ).str.isinteger()
+            ),
+            [False, False, False, True, False, False, False, None],
         )
         self.assertEqual(list(self.ts.Column(["abc"]).str.isascii()), [True])
         self.assertEqual(list(self.ts.Column(["abc"]).str.isdigit()), [False])
