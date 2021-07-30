@@ -1,6 +1,0 @@
-[submodule "torcharrow/atab/velox/pybind11"]
-	path = torcharrow/atab/velox/pybind11
-	url = https://github.com/pybind/pybind11.git
-[submodule "torcharrow/atab/velox/f4d"]
-	path = torcharrow/atab/velox/f4d
-	url = https://github.com/facebookexternal/f4d
