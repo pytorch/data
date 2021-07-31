@@ -14,8 +14,9 @@
 
 #pragma once
 
-#include "f4d/parse/Expressions.h"
 #include "f4d/exec/tests/utils/FunctionUtils.h"
+#include "f4d/functions/lib/Re2Functions.h"
+#include "f4d/parse/Expressions.h"
 #include "string_functions.h"
 
 namespace facebook::torcharrow::functions {
@@ -33,6 +34,11 @@ inline void registerTorchArrowFunctions() {
       facebook::torcharrow::functions::udf_torcharrow_isinteger,
       bool,
       facebook::f4d::Varchar>();
+
+  facebook::f4d::exec::registerStatefulVectorFunction(
+      "match_re",
+      f4d::functions::re2MatchSignatures(),
+      f4d::functions::makeRe2Match);
 }
 
 inline void initializeTorchArrowTypeResolver() {

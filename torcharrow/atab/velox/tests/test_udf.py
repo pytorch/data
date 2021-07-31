@@ -75,6 +75,21 @@ class TestSimpleColumns(unittest.TestCase):
         neg = ta.generic_udf_dispatch("negate", col2)
         self.assert_SimpleColumn(neg, [-1, -2, -3, None, -5, None, 7])
 
+    def test_regex(self):
+        # test some regex UDF
+        data = ["abc", "a1", "b2", "c3", "___d4___", None]
+        col = self.construct_simple_column(ta.VeloxType_VARCHAR(), data)
+
+        match = ta.generic_udf_dispatch(
+            "match_re", col, ta.ConstantColumn("[a-z]\\d", 6)
+        )
+        self.assert_SimpleColumn(match, [False, True, True, True, False, None])
+
+        search = ta.generic_udf_dispatch(
+            "regexp_like", col, ta.ConstantColumn("[a-z]\\d", 6)
+        )
+        self.assert_SimpleColumn(search, [False, True, True, True, True, None])
+
     def test_lower(self):
         data = ["abc", "ABC", "XYZ123", None, "xYZ", "123", "äöå"]
         col = self.construct_simple_column(ta.VeloxType_VARCHAR(), data)

@@ -284,6 +284,7 @@ PYBIND11_MODULE(_torcharrow, m) {
 
   // generic UDF dispatch
   m.def("generic_udf_dispatch", &BaseColumn::genericUnaryUDF);
+  m.def("generic_udf_dispatch", &BaseColumn::genericBinaryUDF);
 
   py::register_exception<NotAppendableException>(m, "NotAppendableException");
 
