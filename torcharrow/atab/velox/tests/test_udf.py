@@ -97,3 +97,6 @@ class TestSimpleColumns(unittest.TestCase):
         self.assert_SimpleColumn(
             lcol, ["abc", "abc", "xyz123", None, "xyz", "123", "äöå"]
         )
+
+if __name__ == "__main__":
+    unittest.main()
