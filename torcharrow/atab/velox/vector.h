@@ -18,24 +18,21 @@
 #include <f4d/vector/BaseVector.h>
 #include <f4d/vector/ComplexVector.h>
 
-namespace facebook {
+namespace facebook::torcharrow {
 
-using namespace f4d;
+f4d::VectorPtr vectorSlice(const f4d::BaseVector& src, int start, int end);
 
-namespace torcharrow {
+template <f4d::TypeKind kind>
+f4d::VectorPtr
+simpleVectorSlice(const f4d::BaseVector& src, int start, int end);
 
-VectorPtr vectorSlice(const BaseVector& src, int start, int end);
+f4d::VectorPtr
+arrayVectorSlice(const f4d::ArrayVector& src, int start, int end);
 
-template <TypeKind kind>
-VectorPtr simpleVectorSlice(const BaseVector& src, int start, int end);
+f4d::VectorPtr reshape(
+    f4d::VectorPtr vec,
+    std::function<f4d::vector_size_t(f4d::vector_size_t)> offsets,
+    std::function<f4d::vector_size_t(f4d::vector_size_t)> lengths,
+    f4d::vector_size_t size);
 
-VectorPtr arrayVectorSlice(const ArrayVector& src, int start, int end);
-
-VectorPtr reshape(
-    VectorPtr vec,
-    std::function<vector_size_t(vector_size_t)> offsets,
-    std::function<vector_size_t(vector_size_t)> lengths,
-    vector_size_t size);
-
-} // namespace torcharrow
-} // namespace facebook
+} // namespace facebook::torcharrow

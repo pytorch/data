@@ -27,11 +27,7 @@
 #include "f4d/vector/FlatVector.h"
 #include "vector.h"
 
-namespace facebook {
-
-using namespace f4d;
-
-namespace torcharrow {
+namespace facebook::torcharrow {
 
 class NotAppendableException : public std::exception {
  public:
@@ -41,12 +37,12 @@ class NotAppendableException : public std::exception {
 };
 
 struct TorchArrowGlobalStatic {
-  static core::QueryCtx& queryContext();
-  static core::ExecCtx& execContext();
+  static f4d::core::QueryCtx& queryContext();
+  static f4d::core::ExecCtx& execContext();
 
   static f4d::memory::MemoryPool* rootMemoryPool() {
     static f4d::memory::MemoryPool* const pool =
-        &memory::getProcessDefaultMemoryManager().getRoot();
+        &f4d::memory::getProcessDefaultMemoryManager().getRoot();
     return pool;
   }
 };
@@ -66,46 +62,46 @@ inline bool operator==(
   return lhs.udfName == rhs.udfName && lhs.typeSignature == rhs.typeSignature;
 }
 
-variant pyToVariant(const pybind11::handle& obj);
+f4d::variant pyToVariant(const pybind11::handle& obj);
 
 class BaseColumn;
 
 struct OperatorHandle {
-  RowTypePtr inputRowType_;
-  std::shared_ptr<exec::ExprSet> exprSet_;
+  f4d::RowTypePtr inputRowType_;
+  std::shared_ptr<f4d::exec::ExprSet> exprSet_;
 
   OperatorHandle(
-      RowTypePtr inputRowType,
-      std::shared_ptr<exec::ExprSet> exprSet)
+      f4d::RowTypePtr inputRowType,
+      std::shared_ptr<f4d::exec::ExprSet> exprSet)
       : inputRowType_(inputRowType), exprSet_(exprSet) {}
 
   static std::unique_ptr<OperatorHandle> fromGenericUDF(
-      RowTypePtr inputRowType,
+      f4d::RowTypePtr inputRowType,
       const std::string& udfName);
 
   static std::unique_ptr<OperatorHandle> fromExpression(
-      RowTypePtr inputRowType,
+      f4d::RowTypePtr inputRowType,
       const std::string& expr);
 
-  static RowVectorPtr wrapRowVector(
-      const std::vector<VectorPtr>& children,
-      std::shared_ptr<const RowType> rowType) {
-    return std::make_shared<RowVector>(
+  static f4d::RowVectorPtr wrapRowVector(
+      const std::vector<f4d::VectorPtr>& children,
+      std::shared_ptr<const f4d::RowType> rowType) {
+    return std::make_shared<f4d::RowVector>(
         TorchArrowGlobalStatic::rootMemoryPool(),
         rowType,
-        BufferPtr(nullptr),
+        f4d::BufferPtr(nullptr),
         children[0]->size(),
         children,
         folly::none);
   }
 
   // Specialized invoke methods for common arities
-  // Input type VectorPtr (instead of BaseColumn) since it might be a
+  // Input type f4d::VectorPtr (instead of BaseColumn) since it might be a
   // ConstantVector
   // TODO: Use Column once ConstantColumn is supported
-  std::unique_ptr<BaseColumn> call(VectorPtr a, VectorPtr b);
+  std::unique_ptr<BaseColumn> call(f4d::VectorPtr a, f4d::VectorPtr b);
 
-  std::unique_ptr<BaseColumn> call(const std::vector<VectorPtr>& args);
+  std::unique_ptr<BaseColumn> call(const std::vector<f4d::VectorPtr>& args);
 };
 
 class BaseColumn {
@@ -115,10 +111,10 @@ class BaseColumn {
   friend struct OperatorHandle;
 
  protected:
-  VectorPtr _delegate;
-  vector_size_t _offset;
-  vector_size_t _length;
-  vector_size_t _nullCount;
+  f4d::VectorPtr _delegate;
+  f4d::vector_size_t _offset;
+  f4d::vector_size_t _length;
+  f4d::vector_size_t _nullCount;
 
   void bumpLength() {
     _length++;
@@ -130,13 +126,13 @@ class BaseColumn {
   }
 
   // TODO: move this method as static...
-  RowVectorPtr wrapRowVector(
-      const std::vector<VectorPtr>& children,
-      std::shared_ptr<const RowType> rowType) {
-    return std::make_shared<RowVector>(
+  f4d::RowVectorPtr wrapRowVector(
+      const std::vector<f4d::VectorPtr>& children,
+      std::shared_ptr<const f4d::RowType> rowType) {
+    return std::make_shared<f4d::RowVector>(
         pool_,
         rowType,
-        BufferPtr(nullptr),
+        f4d::BufferPtr(nullptr),
         children[0]->size(),
         children,
         folly::none);
@@ -144,13 +140,13 @@ class BaseColumn {
 
  private:
   f4d::memory::MemoryPool* pool_ =
-      &memory::getProcessDefaultMemoryManager().getRoot();
+      &f4d::memory::getProcessDefaultMemoryManager().getRoot();
 
  public:
   BaseColumn(
       const BaseColumn& other,
-      vector_size_t offset,
-      vector_size_t length)
+      f4d::vector_size_t offset,
+      f4d::vector_size_t length)
       : _delegate(other._delegate), _offset(offset), _length(length) {
     _nullCount = 0;
     for (int i = 0; i < length; i++) {
@@ -159,10 +155,11 @@ class BaseColumn {
       }
     }
   }
-  BaseColumn(TypePtr type) : _offset(0), _length(0), _nullCount(0) {
-    _delegate = BaseVector::create(type, 0, pool_);
+  explicit BaseColumn(f4d::TypePtr type)
+      : _offset(0), _length(0), _nullCount(0) {
+    _delegate = f4d::BaseVector::create(type, 0, pool_);
   }
-  BaseColumn(VectorPtr delegate)
+  explicit BaseColumn(f4d::VectorPtr delegate)
       : _delegate(delegate),
         _offset(0),
         _length(delegate.get()->size()),
@@ -170,65 +167,68 @@ class BaseColumn {
 
   virtual ~BaseColumn() = default;
 
-  TypePtr type() const {
+  f4d::TypePtr type() const {
     return _delegate->type();
   }
 
-  bool isNullAt(vector_size_t idx) const {
+  bool isNullAt(f4d::vector_size_t idx) const {
     return _delegate->isNullAt(_offset + idx);
   }
 
-  vector_size_t getOffset() const {
+  f4d::vector_size_t getOffset() const {
     return _offset;
   }
 
-  vector_size_t getLength() const {
+  f4d::vector_size_t getLength() const {
     return _length;
   }
 
-  vector_size_t getNullCount() const {
+  f4d::vector_size_t getNullCount() const {
     return _nullCount;
   }
 
-  VectorPtr getUnderlyingVeloxVector() const {
+  f4d::VectorPtr getUnderlyingVeloxVector() const {
     return _delegate;
   }
 
   // TODO: add output type
-  static std::shared_ptr<exec::ExprSet> genUnaryExprSet(
+  static std::shared_ptr<f4d::exec::ExprSet> genUnaryExprSet(
       // input row type is required even for unary op since the input vector
-      // needs to be wrapped into a RowVector before evaluation.
-      std::shared_ptr<const facebook::f4d::RowType> inputRowType,
-      TypePtr outputType,
+      // needs to be wrapped into a f4d::RowVector before evaluation.
+      std::shared_ptr<const f4d::RowType> inputRowType,
+      f4d::TypePtr outputType,
       const std::string& functionName);
 
   std::unique_ptr<BaseColumn> applyUnaryExprSet(
       // input row type is required even for unary op since the input vector
-      // needs to be wrapped into a RowVector before evaluation.
-      std::shared_ptr<const facebook::f4d::RowType> inputRowType,
-      std::shared_ptr<exec::ExprSet> exprSet);
+      // needs to be wrapped into a f4d::RowVector before evaluation.
+      std::shared_ptr<const f4d::RowType> inputRowType,
+      std::shared_ptr<f4d::exec::ExprSet> exprSet);
 
-  static std::shared_ptr<exec::ExprSet> genBinaryExprSet(
-      std::shared_ptr<const facebook::f4d::RowType> inputRowType,
-      std::shared_ptr<const facebook::f4d::Type> commonType,
+  static std::shared_ptr<f4d::exec::ExprSet> genBinaryExprSet(
+      std::shared_ptr<const f4d::RowType> inputRowType,
+      std::shared_ptr<const f4d::Type> commonType,
       const std::string& functionName);
 
-  // From f4d/type/Variant.h
+  // From f4d/type/f4d::variant.h
   // TODO: refactor into some type utility class
-  template <TypeKind Kind>
-  static const std::shared_ptr<const Type> kind2type() {
-    return TypeFactory<Kind>::create();
+  template <f4d::TypeKind Kind>
+  static const std::shared_ptr<const f4d::Type> kind2type() {
+    return f4d::TypeFactory<Kind>::create();
   }
 
-  static TypeKind promoteNumericTypeKind(TypeKind a, TypeKind b) {
-    constexpr auto b1 = TypeKind::BOOLEAN;
-    constexpr auto i1 = TypeKind::TINYINT;
-    constexpr auto i2 = TypeKind::SMALLINT;
-    constexpr auto i4 = TypeKind::INTEGER;
-    constexpr auto i8 = TypeKind::BIGINT;
-    constexpr auto f4 = TypeKind::REAL;
-    constexpr auto f8 = TypeKind::DOUBLE;
-    constexpr auto num_numeric_types = static_cast<int>(TypeKind::DOUBLE) + 1;
+  static f4d::TypeKind promoteNumericTypeKind(
+      f4d::TypeKind a,
+      f4d::TypeKind b) {
+    constexpr auto b1 = f4d::TypeKind::BOOLEAN;
+    constexpr auto i1 = f4d::TypeKind::TINYINT;
+    constexpr auto i2 = f4d::TypeKind::SMALLINT;
+    constexpr auto i4 = f4d::TypeKind::INTEGER;
+    constexpr auto i8 = f4d::TypeKind::BIGINT;
+    constexpr auto f4 = f4d::TypeKind::REAL;
+    constexpr auto f8 = f4d::TypeKind::DOUBLE;
+    constexpr auto num_numeric_types =
+        static_cast<int>(f4d::TypeKind::DOUBLE) + 1;
 
     VELOX_CHECK(
         static_cast<int>(a) < num_numeric_types &&
@@ -240,7 +240,7 @@ class BaseColumn {
 
     // Sliced from
     // https://github.com/pytorch/pytorch/blob/1c502d1f8ec861c31a08d580ae7b73b7fbebebed/c10/core/ScalarType.h#L402-L421
-    static constexpr TypeKind
+    static constexpr f4d::TypeKind
         _promoteTypesLookup[num_numeric_types][num_numeric_types] = {
             /*        b1  i1  i2  i4  i8  f4  f8*/
             /* b1 */ {b1, i1, i2, i4, i8, f4, f8},
@@ -266,28 +266,30 @@ class BaseColumn {
 
   // factory methods to create columns
   static std::unique_ptr<BaseColumn> createConstantColumn(
-      variant value,
-      vector_size_t size);
+      f4d::variant value,
+      f4d::vector_size_t size);
 };
 
-std::unique_ptr<BaseColumn> createColumn(VectorPtr vec);
+std::unique_ptr<BaseColumn> createColumn(f4d::VectorPtr vec);
 
-std::unique_ptr<BaseColumn>
-createColumn(VectorPtr vec, vector_size_t offset, vector_size_t length);
+std::unique_ptr<BaseColumn> createColumn(
+    f4d::VectorPtr vec,
+    f4d::vector_size_t offset,
+    f4d::vector_size_t length);
 
 template <typename T>
 class SimpleColumn : public BaseColumn {
  public:
-  SimpleColumn() : BaseColumn(CppToType<T>::create()) {}
-  SimpleColumn(VectorPtr delegate) : BaseColumn(delegate) {}
+  SimpleColumn() : BaseColumn(f4d::CppToType<T>::create()) {}
+  explicit SimpleColumn(f4d::VectorPtr delegate) : BaseColumn(delegate) {}
   SimpleColumn(
       const SimpleColumn& other,
-      vector_size_t offset,
-      vector_size_t length)
+      f4d::vector_size_t offset,
+      f4d::vector_size_t length)
       : BaseColumn(other, offset, length) {}
 
   T valueAt(int i) {
-    return _delegate.get()->template as<SimpleVector<T>>()->valueAt(
+    return _delegate.get()->template as<f4d::SimpleVector<T>>()->valueAt(
         _offset + i);
   }
 
@@ -314,8 +316,8 @@ class SimpleColumn : public BaseColumn {
   }
 
   std::unique_ptr<SimpleColumn<T>> slice(
-      vector_size_t offset,
-      vector_size_t length) {
+      f4d::vector_size_t offset,
+      f4d::vector_size_t length) {
     return std::make_unique<SimpleColumn<T>>(*this, offset, length);
   }
 
@@ -325,44 +327,50 @@ class SimpleColumn : public BaseColumn {
 
   // TODO: return SimpleColumn<T> instead?
   std::unique_ptr<BaseColumn> invert() {
-    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto inputRowType =
+        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
     const static auto exprSet = BaseColumn::genUnaryExprSet(
-        inputRowType, CppToType<T>::create(), "not");
+        inputRowType, f4d::CppToType<T>::create(), "not");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> neg() {
-    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto inputRowType =
+        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
     const static auto exprSet = BaseColumn::genUnaryExprSet(
-        inputRowType, CppToType<T>::create(), "negate");
+        inputRowType, f4d::CppToType<T>::create(), "negate");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> abs() {
-    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto inputRowType =
+        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
     const static auto exprSet = BaseColumn::genUnaryExprSet(
-        inputRowType, CppToType<T>::create(), "abs");
+        inputRowType, f4d::CppToType<T>::create(), "abs");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> ceil() {
-    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto inputRowType =
+        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
     const static auto exprSet = BaseColumn::genUnaryExprSet(
-        inputRowType, CppToType<T>::create(), "ceil");
+        inputRowType, f4d::CppToType<T>::create(), "ceil");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> floor() {
-    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto inputRowType =
+        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
     const static auto exprSet = BaseColumn::genUnaryExprSet(
-        inputRowType, CppToType<T>::create(), "floor");
+        inputRowType, f4d::CppToType<T>::create(), "floor");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> round() {
-    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto inputRowType =
+        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
     const static auto exprSet = BaseColumn::genUnaryExprSet(
-        inputRowType, CppToType<T>::create(), "round");
+        inputRowType, f4d::CppToType<T>::create(), "round");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
@@ -372,10 +380,10 @@ class SimpleColumn : public BaseColumn {
 
   // TODO: Model binary functions as UDF.
   std::unique_ptr<OperatorHandle> createBinaryOperatorHandle(
-      TypePtr otherType,
+      f4d::TypePtr otherType,
       const std::string& functionName) {
-    auto inputRowType = ROW({"c0", "c1"}, {this->type(), otherType});
-    TypeKind commonTypeKind =
+    auto inputRowType = f4d::ROW({"c0", "c1"}, {this->type(), otherType});
+    f4d::TypeKind commonTypeKind =
         promoteNumericTypeKind(this->type()->kind(), otherType->kind());
     auto commonType =
         VELOX_DYNAMIC_SCALAR_TYPE_DISPATCH(kind2type, commonTypeKind);
@@ -387,8 +395,9 @@ class SimpleColumn : public BaseColumn {
 
   std::unique_ptr<BaseColumn> addColumn(const BaseColumn& other) {
     // FIXME The correctness of num_numeric_types depends on the implementation
-    // detail of TypeKind
-    constexpr auto num_numeric_types = static_cast<int>(TypeKind::DOUBLE) + 1;
+    // detail of f4d::TypeKind
+    constexpr auto num_numeric_types =
+        static_cast<int>(f4d::TypeKind::DOUBLE) + 1;
     static std::array<
         std::unique_ptr<OperatorHandle>,
         num_numeric_types> /* library-local */ ops;
@@ -406,10 +415,11 @@ class SimpleColumn : public BaseColumn {
 
   std::unique_ptr<BaseColumn> addScalar(const pybind11::handle& obj) {
     auto val = pyToVariant(obj);
-    auto other = BaseVector::createConstant(
+    auto other = f4d::BaseVector::createConstant(
         val, _delegate->size(), TorchArrowGlobalStatic::rootMemoryPool());
 
-    constexpr auto num_numeric_types = static_cast<int>(TypeKind::DOUBLE) + 1;
+    constexpr auto num_numeric_types =
+        static_cast<int>(f4d::TypeKind::DOUBLE) + 1;
     static std::array<
         std::unique_ptr<OperatorHandle>,
         num_numeric_types> /* library-local */ ops;
@@ -433,10 +443,11 @@ class SimpleColumn : public BaseColumn {
   //
   std::unique_ptr<BaseColumn> lower() {
     static_assert(
-        std::is_same<StringView, T>(),
+        std::is_same<f4d::StringView, T>(),
         "lower should only be called over VARCHAR column");
 
-    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto inputRowType =
+        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
     const static auto op =
         OperatorHandle::fromGenericUDF(inputRowType, "lower");
     return op->call({_delegate});
@@ -444,10 +455,11 @@ class SimpleColumn : public BaseColumn {
 
   std::unique_ptr<BaseColumn> upper() {
     static_assert(
-        std::is_same<StringView, T>(),
+        std::is_same<f4d::StringView, T>(),
         "upper should only be called over VARCHAR column");
 
-    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto inputRowType =
+        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
     const static auto op =
         OperatorHandle::fromGenericUDF(inputRowType, "upper");
     return op->call({_delegate});
@@ -455,10 +467,11 @@ class SimpleColumn : public BaseColumn {
 
   std::unique_ptr<BaseColumn> isalpha() {
     static_assert(
-        std::is_same<StringView, T>(),
+        std::is_same<f4d::StringView, T>(),
         "isalpha should only be called over VARCHAR column");
 
-    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto inputRowType =
+        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
     const static auto op =
         OperatorHandle::fromGenericUDF(inputRowType, "torcharrow_isalpha");
     return op->call({_delegate});
@@ -466,10 +479,11 @@ class SimpleColumn : public BaseColumn {
 
   std::unique_ptr<BaseColumn> isalnum() {
     static_assert(
-        std::is_same<StringView, T>(),
+        std::is_same<f4d::StringView, T>(),
         "isalnum should only be called over VARCHAR column");
 
-    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto inputRowType =
+        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
     const static auto op =
         OperatorHandle::fromExpression(inputRowType, "torcharrow_isalnum(c0)");
     return op->call({_delegate});
@@ -477,10 +491,11 @@ class SimpleColumn : public BaseColumn {
 
   std::unique_ptr<BaseColumn> isinteger() {
     static_assert(
-        std::is_same<StringView, T>(),
+        std::is_same<f4d::StringView, T>(),
         "isinteger should only be called over VARCHAR column");
 
-    const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
+    const static auto inputRowType =
+        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
     const static auto op = OperatorHandle::fromExpression(
         inputRowType, "torcharrow_isinteger(c0)");
     return op->call({_delegate});
@@ -493,8 +508,8 @@ class FlatColumn : public SimpleColumn<T> {};
 template <typename T>
 class ConstantColumn : public SimpleColumn<T> {
  public:
-  ConstantColumn(variant value, vector_size_t size)
-      : SimpleColumn<T>(BaseVector::createConstant(
+  ConstantColumn(f4d::variant value, f4d::vector_size_t size)
+      : SimpleColumn<T>(f4d::BaseVector::createConstant(
             value,
             size,
             TorchArrowGlobalStatic::rootMemoryPool())) {}
@@ -502,19 +517,19 @@ class ConstantColumn : public SimpleColumn<T> {
 
 class ArrayColumn : public BaseColumn {
  public:
-  ArrayColumn(TypePtr type) : BaseColumn(type) {}
-  ArrayColumn(VectorPtr delegate) : BaseColumn(delegate) {}
+  explicit ArrayColumn(f4d::TypePtr type) : BaseColumn(type) {}
+  explicit ArrayColumn(f4d::VectorPtr delegate) : BaseColumn(delegate) {}
   ArrayColumn(
       const ArrayColumn& other,
-      vector_size_t offset,
-      vector_size_t length)
+      f4d::vector_size_t offset,
+      f4d::vector_size_t length)
       : BaseColumn(other, offset, length) {}
 
   void appendElement(const BaseColumn& new_element) {
     if (!isAppendable()) {
       throw NotAppendableException();
     }
-    auto dataPtr = _delegate.get()->as<ArrayVector>();
+    auto dataPtr = _delegate.get()->as<f4d::ArrayVector>();
     auto elements = dataPtr->elements();
     auto new_index = dataPtr->size();
     dataPtr->resize(new_index + 1);
@@ -529,7 +544,7 @@ class ArrayColumn : public BaseColumn {
     if (!isAppendable()) {
       throw NotAppendableException();
     }
-    auto dataPtr = _delegate.get()->as<ArrayVector>();
+    auto dataPtr = _delegate.get()->as<f4d::ArrayVector>();
     auto elements = dataPtr->elements();
     auto new_index = dataPtr->size();
     dataPtr->resize(new_index + 1);
@@ -540,35 +555,38 @@ class ArrayColumn : public BaseColumn {
     bumpLength();
   }
 
-  std::unique_ptr<BaseColumn> valueAt(vector_size_t i);
+  std::unique_ptr<BaseColumn> valueAt(f4d::vector_size_t i);
 
   std::unique_ptr<ArrayColumn> slice(
-      vector_size_t offset,
-      vector_size_t length) {
+      f4d::vector_size_t offset,
+      f4d::vector_size_t length) {
     return std::make_unique<ArrayColumn>(*this, offset, length);
   }
 };
 
 class MapColumn : public BaseColumn {
  public:
-  MapColumn(TypePtr type) : BaseColumn(type) {}
-  MapColumn(VectorPtr delegate) : BaseColumn(delegate) {}
-  MapColumn(const MapColumn& other, vector_size_t offset, vector_size_t length)
+  explicit MapColumn(f4d::TypePtr type) : BaseColumn(type) {}
+  explicit MapColumn(f4d::VectorPtr delegate) : BaseColumn(delegate) {}
+  MapColumn(
+      const MapColumn& other,
+      f4d::vector_size_t offset,
+      f4d::vector_size_t length)
       : BaseColumn(other, offset, length) {}
 
-  vector_size_t offsetAt(vector_size_t index) const {
-    return _delegate.get()->as<MapVector>()->offsetAt(_offset + index);
+  f4d::vector_size_t offsetAt(f4d::vector_size_t index) const {
+    return _delegate.get()->as<f4d::MapVector>()->offsetAt(_offset + index);
   }
 
-  vector_size_t sizeAt(vector_size_t index) const {
-    return _delegate.get()->as<MapVector>()->sizeAt(_offset + index);
+  f4d::vector_size_t sizeAt(f4d::vector_size_t index) const {
+    return _delegate.get()->as<f4d::MapVector>()->sizeAt(_offset + index);
   }
 
   void appendElement(const BaseColumn& newKey, const BaseColumn& newValue) {
     if (!isAppendable()) {
       throw NotAppendableException();
     }
-    auto dataPtr = _delegate.get()->as<MapVector>();
+    auto dataPtr = _delegate.get()->as<f4d::MapVector>();
 
     auto keys = dataPtr->mapKeys();
     auto values = dataPtr->mapValues();
@@ -586,7 +604,7 @@ class MapColumn : public BaseColumn {
     if (!isAppendable()) {
       throw NotAppendableException();
     }
-    auto dataPtr = _delegate.get()->as<MapVector>();
+    auto dataPtr = _delegate.get()->as<f4d::MapVector>();
 
     auto keys = dataPtr->mapKeys();
     auto values = dataPtr->mapValues();
@@ -599,69 +617,76 @@ class MapColumn : public BaseColumn {
     bumpLength();
   }
 
-  std::unique_ptr<BaseColumn> valueAt(vector_size_t i);
+  std::unique_ptr<BaseColumn> valueAt(f4d::vector_size_t i);
 
   std::unique_ptr<BaseColumn> mapKeys() {
-    auto dataPtr = _delegate.get()->as<MapVector>();
+    auto dataPtr = _delegate.get()->as<f4d::MapVector>();
     auto keys = dataPtr->mapKeys();
     auto reshapedKeys = reshape(
         keys,
-        std::bind(&MapVector::offsetAt, *dataPtr, std::placeholders::_1),
-        std::bind(&MapVector::sizeAt, *dataPtr, std::placeholders::_1),
+        std::bind(&f4d::MapVector::offsetAt, *dataPtr, std::placeholders::_1),
+        std::bind(&f4d::MapVector::sizeAt, *dataPtr, std::placeholders::_1),
         dataPtr->size());
     return createColumn(reshapedKeys, _offset, _length);
   }
 
   std::unique_ptr<BaseColumn> mapValues() {
-    auto dataPtr = _delegate.get()->as<MapVector>();
+    auto dataPtr = _delegate.get()->as<f4d::MapVector>();
     auto values = dataPtr->mapValues();
     auto reshapedValues = reshape(
         values,
-        std::bind(&MapVector::offsetAt, *dataPtr, std::placeholders::_1),
-        std::bind(&MapVector::sizeAt, *dataPtr, std::placeholders::_1),
+        std::bind(&f4d::MapVector::offsetAt, *dataPtr, std::placeholders::_1),
+        std::bind(&f4d::MapVector::sizeAt, *dataPtr, std::placeholders::_1),
         dataPtr->size());
     return createColumn(reshapedValues, _offset, _length);
   }
 
-  std::unique_ptr<MapColumn> slice(vector_size_t offset, vector_size_t length) {
+  std::unique_ptr<MapColumn> slice(
+      f4d::vector_size_t offset,
+      f4d::vector_size_t length) {
     return std::make_unique<MapColumn>(*this, offset, length);
   }
 };
 
 class RowColumn : public BaseColumn {
  public:
-  RowColumn(TypePtr type) : BaseColumn(type) {}
-  RowColumn(VectorPtr delegate) : BaseColumn(delegate) {}
-  RowColumn(const RowColumn& other, vector_size_t offset, vector_size_t length)
+  explicit RowColumn(f4d::TypePtr type) : BaseColumn(type) {}
+  explicit RowColumn(f4d::VectorPtr delegate) : BaseColumn(delegate) {}
+  RowColumn(
+      const RowColumn& other,
+      f4d::vector_size_t offset,
+      f4d::vector_size_t length)
       : BaseColumn(other, offset, length) {}
 
-  std::unique_ptr<BaseColumn> childAt(ChannelIndex index) {
-    auto dataPtr = _delegate.get()->as<RowVector>();
+  std::unique_ptr<BaseColumn> childAt(f4d::ChannelIndex index) {
+    auto dataPtr = _delegate.get()->as<f4d::RowVector>();
     return createColumn(dataPtr->childAt(index), _offset, _length);
   }
 
-  void setChild(ChannelIndex index, const BaseColumn& new_child) {
-    auto dataPtr = _delegate.get()->as<RowVector>();
+  void setChild(f4d::ChannelIndex index, const BaseColumn& new_child) {
+    auto dataPtr = _delegate.get()->as<f4d::RowVector>();
     dataPtr->children()[index] = new_child._delegate;
   }
 
   size_t childrenSize() {
-    auto dataPtr = _delegate.get()->as<RowVector>();
+    auto dataPtr = _delegate.get()->as<f4d::RowVector>();
     return dataPtr->childrenSize();
   }
 
-  std::unique_ptr<RowColumn> slice(vector_size_t offset, vector_size_t length) {
+  std::unique_ptr<RowColumn> slice(
+      f4d::vector_size_t offset,
+      f4d::vector_size_t length) {
     return std::make_unique<RowColumn>(*this, offset, length);
   }
 
-  void setLength(vector_size_t length) {
+  void setLength(f4d::vector_size_t length) {
     _length = length;
-    auto dataPtr = _delegate.get()->as<RowVector>();
+    auto dataPtr = _delegate.get()->as<f4d::RowVector>();
     dataPtr->resize(_offset + _length);
   }
 
-  void setNullAt(vector_size_t idx) {
-    auto dataPtr = _delegate.get()->as<RowVector>();
+  void setNullAt(f4d::vector_size_t idx) {
+    auto dataPtr = _delegate.get()->as<f4d::RowVector>();
     if (!isNullAt(idx)) {
       _nullCount++;
     }
@@ -669,8 +694,9 @@ class RowColumn : public BaseColumn {
   }
 
   std::unique_ptr<BaseColumn> copy() {
-    auto dataPtr = _delegate.get()->as<RowVector>();
-    auto newVector = RowVector::createEmpty(dataPtr->type(), dataPtr->pool());
+    auto dataPtr = _delegate.get()->as<f4d::RowVector>();
+    auto newVector =
+        f4d::RowVector::createEmpty(dataPtr->type(), dataPtr->pool());
     newVector.get()->resize(dataPtr->size());
     newVector.get()->copy(dataPtr, 0, 0, dataPtr->size());
     auto newColumn = createColumn(newVector, _offset, _length);
@@ -678,8 +704,7 @@ class RowColumn : public BaseColumn {
   }
 };
 
-} // namespace torcharrow
-} // namespace facebook
+} // namespace facebook::torcharrow
 
 namespace std {
 template <>

@@ -29,20 +29,19 @@
 
 namespace py = pybind11;
 
-using namespace facebook::f4d;
-using namespace facebook::torcharrow;
-
 PYBIND11_MAKE_OPAQUE(std::vector<bool>);
 
+namespace facebook::torcharrow {
+
 template <
-    TypeKind kind,
+    f4d::TypeKind kind,
     typename D,
-    typename T = typename TypeTraits<kind>::NativeType>
+    typename T = typename f4d::TypeTraits<kind>::NativeType>
 py::class_<SimpleColumn<T>, BaseColumn> declareSimpleType(
     py::module& m,
     const D& decoder) {
   py::class_<SimpleColumn<T>, BaseColumn> result(
-      m, (std::string("SimpleColumn") + TypeTraits<kind>::name).c_str());
+      m, (std::string("SimpleColumn") + f4d::TypeTraits<kind>::name).c_str());
   result
       .def(
           "__getitem__",
@@ -53,18 +52,18 @@ py::class_<SimpleColumn<T>, BaseColumn> declareSimpleType(
       .def("slice", &SimpleColumn<T>::slice);
 
   py::class_<FlatColumn<T>, SimpleColumn<T>>(
-      m, (std::string("FlatColumn") + TypeTraits<kind>::name).c_str());
+      m, (std::string("FlatColumn") + f4d::TypeTraits<kind>::name).c_str());
 
   py::class_<ConstantColumn<T>, SimpleColumn<T>>(
-      m, (std::string("ConstantColumn") + TypeTraits<kind>::name).c_str())
+      m, (std::string("ConstantColumn") + f4d::TypeTraits<kind>::name).c_str())
       .def("__getitem__", [&decoder](ConstantColumn<T>& self, int index) {
         return decoder(self.valueAt(index));
       });
 
-  using I = typename TypeTraits<kind>::ImplType;
-  py::class_<I, Type, std::shared_ptr<I>>(
+  using I = typename f4d::TypeTraits<kind>::ImplType;
+  py::class_<I, f4d::Type, std::shared_ptr<I>>(
       m,
-      (std::string("VeloxType_") + TypeTraits<kind>::name).c_str(),
+      (std::string("VeloxType_") + f4d::TypeTraits<kind>::name).c_str(),
       // TODO: Move the Koksi binding of Velox type to OSS
       py::module_local())
       .def(py::init());
@@ -82,14 +81,14 @@ void declareArrayType(py::module& m) {
       .def("__getitem__", &ArrayColumn::valueAt)
       .def("slice", &ArrayColumn::slice);
 
-  using I = typename TypeTraits<TypeKind::ARRAY>::ImplType;
-  py::class_<I, Type, std::shared_ptr<I>>(
+  using I = typename f4d::TypeTraits<f4d::TypeKind::ARRAY>::ImplType;
+  py::class_<I, f4d::Type, std::shared_ptr<I>>(
       m,
       "VeloxArrayType",
       // TODO: Move the Koksi binding of Velox type to OSS
       py::module_local())
-      .def(py::init<TypePtr>())
-      .def("element_type", &ArrayType::elementType);
+      .def(py::init<f4d::TypePtr>())
+      .def("element_type", &f4d::ArrayType::elementType);
   m.def("Column", [](std::shared_ptr<I> type) {
     return std::make_unique<ArrayColumn>(type);
   });
@@ -106,13 +105,13 @@ void declareMapType(py::module& m) {
       .def("values", &MapColumn::mapValues)
       .def("slice", &MapColumn::slice);
 
-  using I = typename TypeTraits<TypeKind::MAP>::ImplType;
-  py::class_<I, Type, std::shared_ptr<I>>(
+  using I = typename f4d::TypeTraits<f4d::TypeKind::MAP>::ImplType;
+  py::class_<I, f4d::Type, std::shared_ptr<I>>(
       m,
       "VeloxMapType",
       // TODO: Move the Koksi binding of Velox type to OSS
       py::module_local())
-      .def(py::init<TypePtr, TypePtr>());
+      .def(py::init<f4d::TypePtr, f4d::TypePtr>());
   m.def("Column", [](std::shared_ptr<I> type) {
     return std::make_unique<MapColumn>(type);
   });
@@ -128,15 +127,15 @@ void declareRowType(py::module& m) {
       .def("set_null_at", &RowColumn::setNullAt)
       .def("copy", &RowColumn::copy);
 
-  using I = typename TypeTraits<TypeKind::ROW>::ImplType;
-  py::class_<I, Type, std::shared_ptr<I>>(
+  using I = typename f4d::TypeTraits<f4d::TypeKind::ROW>::ImplType;
+  py::class_<I, f4d::Type, std::shared_ptr<I>>(
       m,
       "VeloxRowType",
       // TODO: Move the Koksi binding of Velox type to OSS
       py::module_local())
       .def(py::init<
            std::vector<std::string>&&,
-           std::vector<std::shared_ptr<const Type>>&&>())
+           std::vector<std::shared_ptr<const f4d::Type>>&&>())
       .def("get_child_idx", &I::getChildIdx)
       .def("contains_child", &I::containsChild)
       .def("name_of", &I::nameOf)
@@ -156,7 +155,7 @@ PYBIND11_MODULE(_torcharrow, m) {
         .. autosummary::
            :toctree: _generate
 
-        TypeKind
+        f4d::TypeKind
     )pbdoc";
 
   py::class_<BaseColumn>(m, "BaseColumn")
@@ -167,33 +166,35 @@ PYBIND11_MODULE(_torcharrow, m) {
       .def_property_readonly("length", &BaseColumn::getLength)
       .def("__len__", &BaseColumn::getLength);
 
-  py::enum_<TypeKind>(
+  py::enum_<f4d::TypeKind>(
       m,
       "TypeKind", // TODO: Move the Koksi binding of Velox type to OSS
       py::module_local())
-      .value("BOOLEAN", TypeKind::BOOLEAN)
-      .value("TINYINT", TypeKind::TINYINT)
-      .value("SMALLINT", TypeKind::SMALLINT)
-      .value("INTEGER", TypeKind::INTEGER)
-      .value("BIGINT", TypeKind::BIGINT)
-      .value("REAL", TypeKind::REAL)
-      .value("DOUBLE", TypeKind::DOUBLE)
-      .value("VARCHAR", TypeKind::VARCHAR)
-      .value("VARBINARY", TypeKind::VARBINARY)
-      .value("TIMESTAMP", TypeKind::TIMESTAMP)
-      .value("ARRAY", TypeKind::ARRAY)
-      .value("MAP", TypeKind::MAP)
-      .value("ROW", TypeKind::ROW)
+      .value("BOOLEAN", f4d::TypeKind::BOOLEAN)
+      .value("TINYINT", f4d::TypeKind::TINYINT)
+      .value("SMALLINT", f4d::TypeKind::SMALLINT)
+      .value("INTEGER", f4d::TypeKind::INTEGER)
+      .value("BIGINT", f4d::TypeKind::BIGINT)
+      .value("REAL", f4d::TypeKind::REAL)
+      .value("DOUBLE", f4d::TypeKind::DOUBLE)
+      .value("VARCHAR", f4d::TypeKind::VARCHAR)
+      .value("VARBINARY", f4d::TypeKind::VARBINARY)
+      .value("TIMESTAMP", f4d::TypeKind::TIMESTAMP)
+      .value("ARRAY", f4d::TypeKind::ARRAY)
+      .value("MAP", f4d::TypeKind::MAP)
+      .value("ROW", f4d::TypeKind::ROW)
       .export_values();
 
-  py::class_<Type, std::shared_ptr<Type>>(
+  py::class_<f4d::Type, std::shared_ptr<f4d::Type>>(
       m,
       "VeloxType",
       // TODO: Move the Koksi binding of Velox type to OSS
       py::module_local())
-      .def("kind", &Type::kind);
+      .def("kind", &f4d::Type::kind)
+      .def("kind_name", &f4d::Type::kindName);
 
-  declareSimpleType<TypeKind::BIGINT>(m, [](auto val) { return py::cast(val); })
+  declareSimpleType<f4d::TypeKind::BIGINT>(
+      m, [](auto val) { return py::cast(val); })
       .def(
           "append",
           [](SimpleColumn<int64_t>& self, py::int_ value) {
@@ -204,25 +205,25 @@ PYBIND11_MODULE(_torcharrow, m) {
       .def("add", &SimpleColumn<int64_t>::addColumn)
       .def("add", &SimpleColumn<int64_t>::addScalar);
 
-  declareSimpleType<TypeKind::INTEGER>(m, [](auto val) {
+  declareSimpleType<f4d::TypeKind::INTEGER>(m, [](auto val) {
     return py::cast(val);
   }).def("append", [](SimpleColumn<int32_t>& self, py::int_ value) {
     self.append(py::cast<int32_t>(value));
   });
 
-  declareSimpleType<TypeKind::SMALLINT>(m, [](auto val) {
+  declareSimpleType<f4d::TypeKind::SMALLINT>(m, [](auto val) {
     return py::cast(val);
   }).def("append", [](SimpleColumn<int16_t>& self, py::int_ value) {
     self.append(py::cast<int16_t>(value));
   });
 
-  declareSimpleType<TypeKind::TINYINT>(m, [](auto val) {
+  declareSimpleType<f4d::TypeKind::TINYINT>(m, [](auto val) {
     return py::cast(val);
   }).def("append", [](SimpleColumn<int8_t>& self, py::int_ value) {
     self.append(py::cast<int8_t>(value));
   });
 
-  declareSimpleType<TypeKind::BOOLEAN>(
+  declareSimpleType<f4d::TypeKind::BOOLEAN>(
       m, [](auto val) { return py::cast(val); })
       .def(
           "append",
@@ -236,7 +237,8 @@ PYBIND11_MODULE(_torcharrow, m) {
           })
       .def("invert", &SimpleColumn<bool>::invert);
 
-  declareSimpleType<TypeKind::REAL>(m, [](auto val) { return py::cast(val); })
+  declareSimpleType<f4d::TypeKind::REAL>(
+      m, [](auto val) { return py::cast(val); })
       .def(
           "append",
           [](SimpleColumn<float>& self, py::float_ value) {
@@ -255,7 +257,8 @@ PYBIND11_MODULE(_torcharrow, m) {
       .def("add", &SimpleColumn<float>::addColumn)
       .def("add", &SimpleColumn<float>::addScalar);
 
-  declareSimpleType<TypeKind::DOUBLE>(m, [](auto val) { return py::cast(val); })
+  declareSimpleType<f4d::TypeKind::DOUBLE>(
+      m, [](auto val) { return py::cast(val); })
       .def(
           "append",
           [](SimpleColumn<double>& self, py::float_ value) {
@@ -274,7 +277,7 @@ PYBIND11_MODULE(_torcharrow, m) {
       .def("add", &SimpleColumn<double>::addColumn)
       .def("add", &SimpleColumn<double>::addScalar);
 
-  declareSimpleType<TypeKind::VARCHAR>(
+  declareSimpleType<f4d::TypeKind::VARCHAR>(
       m,
       [](const auto& val) {
         return py::cast<py::str>(
@@ -282,14 +285,14 @@ PYBIND11_MODULE(_torcharrow, m) {
       })
       .def(
           "append",
-          [](SimpleColumn<StringView>& self, const std::string& value) {
-            self.append(StringView(value));
+          [](SimpleColumn<f4d::StringView>& self, const std::string& value) {
+            self.append(f4d::StringView(value));
           })
-      .def("lower", &SimpleColumn<StringView>::lower)
-      .def("upper", &SimpleColumn<StringView>::upper)
-      .def("isalpha", &SimpleColumn<StringView>::isalpha)
-      .def("isalnum", &SimpleColumn<StringView>::isalnum)
-      .def("isinteger", &SimpleColumn<StringView>::isinteger);
+      .def("lower", &SimpleColumn<f4d::StringView>::lower)
+      .def("upper", &SimpleColumn<f4d::StringView>::upper)
+      .def("isalpha", &SimpleColumn<f4d::StringView>::isalpha)
+      .def("isalnum", &SimpleColumn<f4d::StringView>::isalnum)
+      .def("isinteger", &SimpleColumn<f4d::StringView>::isinteger);
 
   declareArrayType(m);
   declareMapType(m);
@@ -298,7 +301,7 @@ PYBIND11_MODULE(_torcharrow, m) {
   // constant columns
   m.def("ConstantColumn", [](const py::handle& value, py::int_ size) {
     return BaseColumn::createConstantColumn(
-        pyToVariant(value), py::cast<vector_size_t>(size));
+        pyToVariant(value), py::cast<f4d::vector_size_t>(size));
   });
 
   // generic UDF dispatch
@@ -309,15 +312,17 @@ PYBIND11_MODULE(_torcharrow, m) {
 
   // Register Velox UDFs
   // TODO: we may only need to register UDFs that TorchArrow required?
-  facebook::f4d::functions::registerFunctions();
-  facebook::f4d::functions::registerVectorFunctions();
+  f4d::functions::registerFunctions();
+  f4d::functions::registerVectorFunctions();
 
-  facebook::torcharrow::functions::registerTorchArrowFunctions();
-  facebook::torcharrow::functions::initializeTorchArrowTypeResolver();
+  functions::registerTorchArrowFunctions();
+  functions::initializeTorchArrowTypeResolver();
 
 #ifdef VERSION_INFO
-      m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
+  m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
 #else
-      m.attr("__version__") = "dev";
+  m.attr("__version__") = "dev";
 #endif
 }
+
+} // namespace facebook::torcharrow
