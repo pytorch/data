@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, replace, is_dataclass
 from operator import is_
 
+import _torcharrow
 import numpy as np
 import typing_inspect
 
@@ -831,28 +832,27 @@ def typeof_np_dtype(t: np.dtype) -> DType:
     )
 
 
-# Only for scalar types
-# TODO: use enum for typekind
-def velox_scalar_type_kind_to_dtype(typekind: str) -> DType:
-    if typekind == "TINYINT":
-        return int8
-    if typekind == "SMALLINT":
-        return int16
-    if typekind == "INTEGER":
-        return int32
-    if typekind == "BIGINT":
-        return int64
-    if typekind == "REAL":
-        return float32
-    if typekind == "DOUBLE":
-        return float64
-    if typekind == "VARCHAR":
-        return string
-    if typekind == "BOOLEAN":
+def dtype_of_velox_type(vtype: _torcharrow.VeloxType) -> DType:
+    if vtype.kind() == _torcharrow.TypeKind.BOOLEAN:
         return boolean
+    if vtype.kind() == _torcharrow.TypeKind.TINYINT:
+        return int8
+    if vtype.kind() == _torcharrow.TypeKind.SMALLINT:
+        return int16
+    if vtype.kind() == _torcharrow.TypeKind.INTEGER:
+        return int32
+    if vtype.kind() == _torcharrow.TypeKind.BIGINT:
+        return int64
+    if vtype.kind() == _torcharrow.TypeKind.REAL:
+        return float32
+    if vtype.kind() == _torcharrow.TypeKind.DOUBLE:
+        return float64
+    if vtype.kind() == _torcharrow.TypeKind.VARCHAR:
+        return string
 
+    # TODO: Support ARRAY/MAP/ROW
     raise AssertionError(
-        f"translation of Velox typekind {typekind} to dtype unsupported"
+        f"translation of Velox typekind {vtype.kind()} to dtype unsupported"
     )
 
 

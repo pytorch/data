@@ -167,12 +167,31 @@ PYBIND11_MODULE(_torcharrow, m) {
       .def_property_readonly("length", &BaseColumn::getLength)
       .def("__len__", &BaseColumn::getLength);
 
+  py::enum_<TypeKind>(
+      m,
+      "TypeKind", // TODO: Move the Koksi binding of Velox type to OSS
+      py::module_local())
+      .value("BOOLEAN", TypeKind::BOOLEAN)
+      .value("TINYINT", TypeKind::TINYINT)
+      .value("SMALLINT", TypeKind::SMALLINT)
+      .value("INTEGER", TypeKind::INTEGER)
+      .value("BIGINT", TypeKind::BIGINT)
+      .value("REAL", TypeKind::REAL)
+      .value("DOUBLE", TypeKind::DOUBLE)
+      .value("VARCHAR", TypeKind::VARCHAR)
+      .value("VARBINARY", TypeKind::VARBINARY)
+      .value("TIMESTAMP", TypeKind::TIMESTAMP)
+      .value("ARRAY", TypeKind::ARRAY)
+      .value("MAP", TypeKind::MAP)
+      .value("ROW", TypeKind::ROW)
+      .export_values();
+
   py::class_<Type, std::shared_ptr<Type>>(
       m,
       "VeloxType",
       // TODO: Move the Koksi binding of Velox type to OSS
       py::module_local())
-      .def("kind_name", &Type::kindName);
+      .def("kind", &Type::kind);
 
   declareSimpleType<TypeKind::BIGINT>(m, [](auto val) { return py::cast(val); })
       .def(

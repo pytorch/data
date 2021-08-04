@@ -69,23 +69,23 @@ class TestSimpleColumns(unittest.TestCase):
     def test_SimpleColumnInt64_unary(self):
         data = [1, -2, None, 3, -4, None]
         col = infer_column(data)
-        self.assertEqual(col.type().kind_name(), "BIGINT")
+        self.assertEqual(col.type().kind(), ta.TypeKind.BIGINT)
 
         neg_col = col.neg()
         self.assert_SimpleColumn(neg_col, [-1, 2, None, -3, 4, None])
-        self.assertEqual(neg_col.type().kind_name(), "BIGINT")
+        self.assertEqual(neg_col.type().kind(), ta.TypeKind.BIGINT)
 
         neg_col2 = neg_col.neg()
         self.assert_SimpleColumn(neg_col2, [1, -2, None, 3, -4, None])
-        self.assertEqual(neg_col2.type().kind_name(), "BIGINT")
+        self.assertEqual(neg_col2.type().kind(), ta.TypeKind.BIGINT)
 
         neg_col3 = neg_col2.neg()
         self.assert_SimpleColumn(neg_col3, [-1, 2, None, -3, 4, None])
-        self.assertEqual(neg_col3.type().kind_name(), "BIGINT")
+        self.assertEqual(neg_col3.type().kind(), ta.TypeKind.BIGINT)
 
         abs_col = col.abs()
         self.assert_SimpleColumn(abs_col, [1, 2, None, 3, 4, None])
-        self.assertEqual(abs_col.type().kind_name(), "BIGINT")
+        self.assertEqual(abs_col.type().kind(), ta.TypeKind.BIGINT)
 
     def test_SimpleColumnInt64_binary(self):
         data1 = [1, -2, None, 3, -4, None]
@@ -95,52 +95,52 @@ class TestSimpleColumns(unittest.TestCase):
 
         sum_col = col1.add(col2)
         self.assert_SimpleColumn(sum_col, [None, -1, None, 6, 0, None])
-        self.assertEqual(sum_col.type().kind_name(), "BIGINT")
+        self.assertEqual(sum_col.type().kind(), ta.TypeKind.BIGINT)
 
         # type promotion
         data3 = [None, 1.0, 2.0, 3.0, 4.0, 5.0]
         col3 = infer_column(data3)
-        self.assertEqual(col3.type().kind_name(), "REAL")
+        self.assertEqual(col3.type().kind(), ta.TypeKind.REAL)
 
         sum_col = col1.add(col3)
-        self.assertEqual(sum_col.type().kind_name(), "REAL")
+        self.assertEqual(sum_col.type().kind(), ta.TypeKind.REAL)
         self.assert_SimpleColumn(sum_col, [None, -1.0, None, 6.0, 0.0, None])
 
         sum_col2 = col3.add(col1)
-        self.assertEqual(sum_col2.type().kind_name(), "REAL")
+        self.assertEqual(sum_col2.type().kind(), ta.TypeKind.REAL)
         self.assert_SimpleColumn(sum_col2, [None, -1.0, None, 6.0, 0.0, None])
 
         # add scalar
         add_scalar = col1.add(1)
-        self.assertEqual(add_scalar.type().kind_name(), "BIGINT")
+        self.assertEqual(add_scalar.type().kind(), ta.TypeKind.BIGINT)
         self.assert_SimpleColumn(add_scalar, [2, -1, None, 4, -3, None])
 
         add_scalar = col1.add(0.1)
-        self.assertEqual(add_scalar.type().kind_name(), "REAL")
+        self.assertEqual(add_scalar.type().kind(), ta.TypeKind.REAL)
         self.assert_SimpleColumn(add_scalar, [1.1, -1.9, None, 3.1, -3.9, None])
 
         # It's debatable whether this (add BIGINT with BOOLEAN) should be supported.
         # But since PyTorch supports it for NumPy compatbility, TorchArrow also supports this.
         add_scalar = col1.add(True)
-        self.assertEqual(add_scalar.type().kind_name(), "BIGINT")
+        self.assertEqual(add_scalar.type().kind(), ta.TypeKind.BIGINT)
         self.assert_SimpleColumn(add_scalar, [2, -1, None, 4, -3, None])
 
     def test_SimpleColumnFloat32_unary(self):
         data = [1.2, -2.3, None, 3.4, -4.6, None]
         col = infer_column(data)
-        self.assertEqual(col.type().kind_name(), "REAL")
+        self.assertEqual(col.type().kind(), ta.TypeKind.REAL)
 
         neg_col = col.neg()
         self.assert_SimpleColumn(neg_col, [-1.2, 2.3, None, -3.4, 4.6, None])
-        self.assertEqual(neg_col.type().kind_name(), "REAL")
+        self.assertEqual(neg_col.type().kind(), ta.TypeKind.REAL)
 
         abs_col = col.abs()
         self.assert_SimpleColumn(abs_col, [1.2, 2.3, None, 3.4, 4.6, None])
-        self.assertEqual(abs_col.type().kind_name(), "REAL")
+        self.assertEqual(abs_col.type().kind(), ta.TypeKind.REAL)
 
         round_col = col.round()
         self.assert_SimpleColumn(round_col, [1.0, -2.0, None, 3.0, -5.0, None])
-        self.assertEqual(round_col.type().kind_name(), "REAL")
+        self.assertEqual(round_col.type().kind(), ta.TypeKind.REAL)
 
     def test_SimpleColumnBoolean(self):
         data = [True, True, True, True]
@@ -169,10 +169,10 @@ class TestSimpleColumns(unittest.TestCase):
     def test_SimpleColumnBoolean_unary(self):
         data = [True, False, None, True, False, None]
         col = infer_column(data)
-        self.assertEqual(col.type().kind_name(), "BOOLEAN")
+        self.assertEqual(col.type().kind(), ta.TypeKind.BOOLEAN)
 
         inv_col = col.invert()
-        self.assertEqual(inv_col.type().kind_name(), "BOOLEAN")
+        self.assertEqual(inv_col.type().kind(), ta.TypeKind.BOOLEAN)
         self.assert_SimpleColumn(inv_col, [False, True, None, False, True, None])
 
     def test_SimpleColumnString(self):
