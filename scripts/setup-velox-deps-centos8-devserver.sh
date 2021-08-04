@@ -45,6 +45,8 @@ function with-proxy() {
 # Python3 refers to fbcode's python and it has pip disabled, let's activate it
 python3.8 -m venv python-env
 source python-env/bin/activate
+# The default index server pypi.facebook.com is no longer available
+pip3 config --user set global.index-url https://pypi.org/simple
 with-proxy pip3 install cmake_format regex
 
 # black and clang-format come preinstalled already
