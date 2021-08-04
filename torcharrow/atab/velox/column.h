@@ -18,6 +18,7 @@
 #include <f4d/core/QueryCtx.h>
 #include <pybind11/pybind11.h>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include "f4d/common/base/Exceptions.h"
 #include "f4d/expression/Expr.h"
@@ -26,6 +27,10 @@
 #include "f4d/vector/ComplexVector.h"
 #include "f4d/vector/FlatVector.h"
 #include "vector.h"
+
+// TODO: Move uses of static variables into .cpp. Static variables are local to
+// the compilation units so every file that includes this header will have its
+// own instance of the static variables, which in most cases is not what we want
 
 namespace facebook::torcharrow {
 
@@ -102,6 +107,86 @@ struct OperatorHandle {
   std::unique_ptr<BaseColumn> call(f4d::VectorPtr a, f4d::VectorPtr b);
 
   std::unique_ptr<BaseColumn> call(const std::vector<f4d::VectorPtr>& args);
+};
+
+class PromoteNumericTypeKind {
+ public:
+  static f4d::TypeKind promoteColumnColumn(f4d::TypeKind a, f4d::TypeKind b) {
+    return promote(a, b, PromoteStrategy::ColumnColumn);
+  }
+
+  // Assume a being a column and b being a scalar
+  static f4d::TypeKind promoteColumnScalar(f4d::TypeKind a, f4d::TypeKind b) {
+    return promote(a, b, PromoteStrategy::ColumnScalar);
+  }
+
+ private:
+  enum class PromoteStrategy {
+    ColumnColumn,
+    ColumnScalar,
+  };
+
+  static f4d::TypeKind
+  promote(f4d::TypeKind a, f4d::TypeKind b, PromoteStrategy promoteStrategy) {
+    constexpr auto b1 = f4d::TypeKind::BOOLEAN;
+    constexpr auto i1 = f4d::TypeKind::TINYINT;
+    constexpr auto i2 = f4d::TypeKind::SMALLINT;
+    constexpr auto i4 = f4d::TypeKind::INTEGER;
+    constexpr auto i8 = f4d::TypeKind::BIGINT;
+    constexpr auto f4 = f4d::TypeKind::REAL;
+    constexpr auto f8 = f4d::TypeKind::DOUBLE;
+    constexpr auto num_numeric_types =
+        static_cast<int>(f4d::TypeKind::DOUBLE) + 1;
+
+    VELOX_CHECK(
+        static_cast<int>(a) < num_numeric_types &&
+        static_cast<int>(b) < num_numeric_types);
+
+    if (a == b) {
+      return a;
+    }
+
+    switch (promoteStrategy) {
+      case PromoteStrategy::ColumnColumn: {
+        // Sliced from
+        // https://github.com/pytorch/pytorch/blob/1c502d1f8ec861c31a08d580ae7b73b7fbebebed/c10/core/ScalarType.h#L402-L421
+        static constexpr f4d::TypeKind
+            promoteTypesLookup[num_numeric_types][num_numeric_types] = {
+                /*        b1  i1  i2  i4  i8  f4  f8*/
+                /* b1 */ {b1, i1, i2, i4, i8, f4, f8},
+                /* i1 */ {i1, i1, i2, i4, i8, f4, f8},
+                /* i2 */ {i2, i2, i2, i4, i8, f4, f8},
+                /* i4 */ {i4, i4, i4, i4, i8, f4, f8},
+                /* i8 */ {i8, i8, i8, i8, i8, f4, f8},
+                /* f4 */ {f4, f4, f4, f4, f4, f4, f8},
+                /* f8 */ {f8, f8, f8, f8, f8, f8, f8},
+            };
+        return promoteTypesLookup[static_cast<int>(a)][static_cast<int>(b)];
+      } break;
+      case PromoteStrategy::ColumnScalar: {
+        // TODO: Decide on how we want to handle column-scalar type promotion.
+        // Current strategy is to always respect the type of the column for
+        // int-int cases.
+        static constexpr f4d::TypeKind
+            promoteTypesLookup[num_numeric_types][num_numeric_types] = {
+                /*        b1  i1  i2  i4  i8  f4  f8*/
+                /* b1 */ {b1, b1, b1, b1, b1, f4, f8},
+                /* i1 */ {i1, i1, i1, i1, i1, f4, f8},
+                /* i2 */ {i2, i2, i2, i2, i2, f4, f8},
+                /* i4 */ {i4, i4, i4, i4, i4, f4, f8},
+                /* i8 */ {i8, i8, i8, i8, i8, f4, f8},
+                /* f4 */ {f4, f4, f4, f4, f4, f4, f8},
+                /* f8 */ {f8, f8, f8, f8, f8, f8, f8},
+            };
+        return promoteTypesLookup[static_cast<int>(a)][static_cast<int>(b)];
+      } break;
+      default: {
+        throw std::logic_error(
+            "Unsupported promote: " +
+            std::to_string(static_cast<int64_t>(promoteStrategy)));
+      } break;
+    }
+  }
 };
 
 class BaseColumn {
@@ -217,43 +302,7 @@ class BaseColumn {
     return f4d::TypeFactory<Kind>::create();
   }
 
-  static f4d::TypeKind promoteNumericTypeKind(
-      f4d::TypeKind a,
-      f4d::TypeKind b) {
-    constexpr auto b1 = f4d::TypeKind::BOOLEAN;
-    constexpr auto i1 = f4d::TypeKind::TINYINT;
-    constexpr auto i2 = f4d::TypeKind::SMALLINT;
-    constexpr auto i4 = f4d::TypeKind::INTEGER;
-    constexpr auto i8 = f4d::TypeKind::BIGINT;
-    constexpr auto f4 = f4d::TypeKind::REAL;
-    constexpr auto f8 = f4d::TypeKind::DOUBLE;
-    constexpr auto num_numeric_types =
-        static_cast<int>(f4d::TypeKind::DOUBLE) + 1;
-
-    VELOX_CHECK(
-        static_cast<int>(a) < num_numeric_types &&
-        static_cast<int>(b) < num_numeric_types);
-
-    if (a == b) {
-      return a;
-    }
-
-    // Sliced from
-    // https://github.com/pytorch/pytorch/blob/1c502d1f8ec861c31a08d580ae7b73b7fbebebed/c10/core/ScalarType.h#L402-L421
-    static constexpr f4d::TypeKind
-        _promoteTypesLookup[num_numeric_types][num_numeric_types] = {
-            /*        b1  i1  i2  i4  i8  f4  f8*/
-            /* b1 */ {b1, i1, i2, i4, i8, f4, f8},
-            /* i1 */ {i1, i1, i2, i4, i8, f4, f8},
-            /* i2 */ {i2, i2, i2, i4, i8, f4, f8},
-            /* i4 */ {i4, i4, i4, i4, i8, f4, f8},
-            /* i8 */ {i8, i8, i8, i8, i8, f4, f8},
-            /* f4 */ {f4, f4, f4, f4, f4, f4, f8},
-            /* f8 */ {f8, f8, f8, f8, f8, f8, f8},
-        };
-    return _promoteTypesLookup[static_cast<int>(a)][static_cast<int>(b)];
-  }
-
+ public:
   // generic UDF
   static std::unique_ptr<BaseColumn> genericUnaryUDF(
       const std::string& udfName,
@@ -378,64 +427,81 @@ class SimpleColumn : public BaseColumn {
   // binary numeric column ops
   //
 
+ private:
+  enum class OpCode : int16_t {
+    Plus = 0,
+  };
+
+  static std::string opCodeToName(OpCode opCode) {
+    switch (opCode) {
+      case OpCode::Plus: {
+        return "plus";
+      } break;
+      default: {
+        throw std::logic_error(
+            "Unsupported OpCode: " +
+            std::to_string(static_cast<int16_t>(opCode)));
+      } break;
+    }
+  }
+
   // TODO: Model binary functions as UDF.
   std::unique_ptr<OperatorHandle> createBinaryOperatorHandle(
       f4d::TypePtr otherType,
-      const std::string& functionName) {
+      f4d::TypeKind commonTypeKind,
+      OpCode opCode) {
     auto inputRowType = f4d::ROW({"c0", "c1"}, {this->type(), otherType});
-    f4d::TypeKind commonTypeKind =
-        promoteNumericTypeKind(this->type()->kind(), otherType->kind());
     auto commonType =
         VELOX_DYNAMIC_SCALAR_TYPE_DISPATCH(kind2type, commonTypeKind);
-    auto exprSet =
-        BaseColumn::genBinaryExprSet(inputRowType, commonType, functionName);
+    auto exprSet = BaseColumn::genBinaryExprSet(
+        inputRowType, commonType, opCodeToName(opCode));
 
     return std::make_unique<OperatorHandle>(inputRowType, exprSet);
   }
 
-  std::unique_ptr<BaseColumn> addColumn(const BaseColumn& other) {
-    // FIXME The correctness of num_numeric_types depends on the implementation
-    // detail of f4d::TypeKind
-    constexpr auto num_numeric_types =
-        static_cast<int>(f4d::TypeKind::DOUBLE) + 1;
-    static std::array<
-        std::unique_ptr<OperatorHandle>,
-        num_numeric_types> /* library-local */ ops;
+  std::unique_ptr<BaseColumn> dispatchBinaryOperation(
+      f4d::VectorPtr other,
+      f4d::TypeKind commonTypeKind,
+      OpCode opCode) {
+    // FIXME This is fragile as it assumes f4d::TypeKind numbers numeric types
+    // starting from 0 and has DOUBLE being the last one
+    constexpr size_t num_numeric_types =
+        static_cast<size_t>(f4d::TypeKind::DOUBLE) + 1;
+    constexpr size_t num_ops = static_cast<size_t>(OpCode::Plus) + 1;
+    // Indices are [otherTypeKind][commonTypeKind][opCode]
+    static std::unique_ptr<OperatorHandle> ops[num_numeric_types]
+                                              [num_numeric_types][num_ops];
 
-    int dispatch_id = static_cast<int>(other.type()->kind());
-    if (ops[dispatch_id] == nullptr) {
-      ops[dispatch_id] = createBinaryOperatorHandle(other.type(), "plus");
+    size_t id0 = static_cast<size_t>(other->typeKind());
+    size_t id1 = static_cast<size_t>(commonTypeKind);
+    size_t id2 = static_cast<size_t>(opCode);
+    if (ops[id0][id1][id2] == nullptr) {
+      ops[id0][id1][id2] =
+          createBinaryOperatorHandle(other->type(), commonTypeKind, opCode);
     }
 
-    auto result =
-        ops[dispatch_id]->call(_delegate, other.getUnderlyingVeloxVector());
-
+    auto result = ops[id0][id1][id2]->call(_delegate, other);
     return result;
   }
 
+ public:
+  std::unique_ptr<BaseColumn> addColumn(const BaseColumn& other) {
+    f4d::TypeKind commonTypeKind = PromoteNumericTypeKind::promoteColumnColumn(
+        this->type()->kind(), other.type()->kind());
+
+    return dispatchBinaryOperation(
+        other.getUnderlyingVeloxVector(), commonTypeKind, OpCode::Plus);
+  }
+
   std::unique_ptr<BaseColumn> addScalar(const pybind11::handle& obj) {
-    auto val = pyToVariant(obj);
-    auto other = f4d::BaseVector::createConstant(
+    f4d::variant val = pyToVariant(obj);
+    f4d::VectorPtr other = f4d::BaseVector::createConstant(
         val, _delegate->size(), TorchArrowGlobalStatic::rootMemoryPool());
 
-    constexpr auto num_numeric_types =
-        static_cast<int>(f4d::TypeKind::DOUBLE) + 1;
-    static std::array<
-        std::unique_ptr<OperatorHandle>,
-        num_numeric_types> /* library-local */ ops;
+    f4d::TypeKind commonTypeKind = PromoteNumericTypeKind::promoteColumnScalar(
+        this->type()->kind(), other->typeKind());
 
-    int dispatch_id = static_cast<int>(other->typeKind());
-    if (ops[dispatch_id] == nullptr) {
-      // TODO: this is incorrect, since tensor-scalar type promotion rule is
-      // different from tensor-tensor type promotion rule
-      //
-      // That's why this part of code has its own cached dispatch stub table
-      // (and didn't refactor with addColumn)
-      ops[dispatch_id] = createBinaryOperatorHandle(other->type(), "plus");
-    }
-
-    auto result = ops[dispatch_id]->call(_delegate, other);
-    return result;
+    return dispatchBinaryOperation(other, commonTypeKind, OpCode::Plus);
   }
 
   //
