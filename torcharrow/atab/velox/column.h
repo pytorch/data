@@ -45,7 +45,7 @@ struct TorchArrowGlobalStatic {
   static core::ExecCtx& execContext();
 
   static f4d::memory::MemoryPool* rootMemoryPool() {
-     static f4d::memory::MemoryPool* const pool =
+    static f4d::memory::MemoryPool* const pool =
         &memory::getProcessDefaultMemoryManager().getRoot();
     return pool;
   }
@@ -77,8 +77,7 @@ struct OperatorHandle {
   OperatorHandle(
       RowTypePtr inputRowType,
       std::shared_ptr<exec::ExprSet> exprSet)
-      : inputRowType_(inputRowType),
-        exprSet_(exprSet){}
+      : inputRowType_(inputRowType), exprSet_(exprSet) {}
 
   static std::unique_ptr<OperatorHandle> fromGenericUDF(
       RowTypePtr inputRowType,
@@ -101,7 +100,8 @@ struct OperatorHandle {
   }
 
   // Specialized invoke methods for common arities
-  // Input type VectorPtr (instead of BaseColumn) since it might be a ConstantVector
+  // Input type VectorPtr (instead of BaseColumn) since it might be a
+  // ConstantVector
   // TODO: Use Column once ConstantColumn is supported
   std::unique_ptr<BaseColumn> call(VectorPtr a, VectorPtr b);
 
@@ -265,7 +265,9 @@ class BaseColumn {
       const BaseColumn& col2);
 
   // factory methods to create columns
-  static std::unique_ptr<BaseColumn> createConstantColumn(variant value, vector_size_t size);
+  static std::unique_ptr<BaseColumn> createConstantColumn(
+      variant value,
+      vector_size_t size);
 };
 
 std::unique_ptr<BaseColumn> createColumn(VectorPtr vec);
@@ -324,22 +326,22 @@ class SimpleColumn : public BaseColumn {
   // TODO: return SimpleColumn<T> instead?
   std::unique_ptr<BaseColumn> invert() {
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
-    const static auto exprSet =
-        BaseColumn::genUnaryExprSet(inputRowType, CppToType<T>::create(), "not");
+    const static auto exprSet = BaseColumn::genUnaryExprSet(
+        inputRowType, CppToType<T>::create(), "not");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> neg() {
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
-    const static auto exprSet =
-        BaseColumn::genUnaryExprSet(inputRowType, CppToType<T>::create(), "negate");
+    const static auto exprSet = BaseColumn::genUnaryExprSet(
+        inputRowType, CppToType<T>::create(), "negate");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> abs() {
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
-    const static auto exprSet =
-        BaseColumn::genUnaryExprSet(inputRowType, CppToType<T>::create(), "abs");
+    const static auto exprSet = BaseColumn::genUnaryExprSet(
+        inputRowType, CppToType<T>::create(), "abs");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
@@ -384,6 +386,8 @@ class SimpleColumn : public BaseColumn {
   }
 
   std::unique_ptr<BaseColumn> addColumn(const BaseColumn& other) {
+    // FIXME The correctness of num_numeric_types depends on the implementation
+    // detail of TypeKind
     constexpr auto num_numeric_types = static_cast<int>(TypeKind::DOUBLE) + 1;
     static std::array<
         std::unique_ptr<OperatorHandle>,
@@ -394,7 +398,8 @@ class SimpleColumn : public BaseColumn {
       ops[dispatch_id] = createBinaryOperatorHandle(other.type(), "plus");
     }
 
-    auto result = ops[dispatch_id]->call(_delegate, other.getUnderlyingVeloxVector());
+    auto result =
+        ops[dispatch_id]->call(_delegate, other.getUnderlyingVeloxVector());
 
     return result;
   }
@@ -419,8 +424,7 @@ class SimpleColumn : public BaseColumn {
       ops[dispatch_id] = createBinaryOperatorHandle(other->type(), "plus");
     }
 
-    auto result =
-        ops[dispatch_id]->call(_delegate, other);
+    auto result = ops[dispatch_id]->call(_delegate, other);
     return result;
   }
 
@@ -477,8 +481,8 @@ class SimpleColumn : public BaseColumn {
         "isinteger should only be called over VARCHAR column");
 
     const static auto inputRowType = ROW({"c0"}, {CppToType<T>::create()});
-    const static auto op =
-        OperatorHandle::fromExpression(inputRowType, "torcharrow_isinteger(c0)");
+    const static auto op = OperatorHandle::fromExpression(
+        inputRowType, "torcharrow_isinteger(c0)");
     return op->call({_delegate});
   }
 };
@@ -486,14 +490,14 @@ class SimpleColumn : public BaseColumn {
 template <typename T>
 class FlatColumn : public SimpleColumn<T> {};
 
-template<typename T>
+template <typename T>
 class ConstantColumn : public SimpleColumn<T> {
-  public:
-   ConstantColumn(variant value, vector_size_t size)
-       : SimpleColumn<T>(BaseVector::createConstant(
-             value,
-             size,
-             TorchArrowGlobalStatic::rootMemoryPool())) {}
+ public:
+  ConstantColumn(variant value, vector_size_t size)
+      : SimpleColumn<T>(BaseVector::createConstant(
+            value,
+            size,
+            TorchArrowGlobalStatic::rootMemoryPool())) {}
 };
 
 class ArrayColumn : public BaseColumn {
