@@ -386,6 +386,28 @@ class Tuple(DType):
         return tuple(f.dtype.default_value() for f in self.fields)
 
 
+@dataclass(frozen=True)
+class Any(DType):
+    nullable: bool = True
+    typecode: ty.ClassVar[str] = "?"
+    arraycode: ty.ClassVar[str] = "?"
+    name: ty.ClassVar[str] = "any"
+    default: ty.ClassVar[ty.Optional[bool]] = None
+
+    @property
+    def size(self):
+        # currently 1 byte per bit
+        raise ValueError("Shouldn't be called")
+
+    @property
+    def py_type(self):
+        raise ValueError("Shouldn't be called")
+
+    def constructor(self, nullable=True):
+        assert nullable
+        return Any()
+
+
 # TorchArrow does not yet support these types ---------------------------------
 Tag = str
 
@@ -576,6 +598,10 @@ def is_tuple(t):
     return t.typecode.startswith("+t")
 
 
+def is_any(t):
+    return t.typecode == "?"
+
+
 # Infer types from values -----------------------------------------------------
 PREFIX_LENGTH = 5
 
@@ -613,7 +639,7 @@ def infer_dtype_from_value(value):
 
 def infer_dtype_from_prefix(prefix):
     if len(prefix) == 0:
-        raise ValueError(f"Cannot infer type of {prefix}")
+        return Any()
     dtype = infer_dtype_from_value(prefix[0])
     for p in prefix[1:]:
         old_dtype = dtype
@@ -659,6 +685,11 @@ def common_dtype(l, r):
         return r.with_null()
     if is_void(r):
         return l.with_null()
+    if is_any(l):
+        return r
+    if is_any(r):
+        return l
+
     if is_string(l) and is_string(r):
         return String(l.nullable or r.nullable)
     if is_boolean_or_numerical(l) and is_boolean_or_numerical(r):

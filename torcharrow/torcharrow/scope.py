@@ -177,8 +177,8 @@ class Scope:
                     if i > 5:
                         break
                 dtype = dt.infer_dtype_from_prefix(prefix)
-                if dtype is None:
-                    raise TypeError("Column cannot infer type from data")
+                if dtype is None or dt.is_any(dtype):
+                    raise ValueError("Column cannot infer type from data")
                 if dt.is_tuple(dtype):
                     # TODO fox me
                     raise TypeError(
