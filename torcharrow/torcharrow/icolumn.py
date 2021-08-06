@@ -239,7 +239,7 @@ class IColumn(ty.Sized, ty.Iterable, abc.ABC):
         raise self._not_supported("getdata")
 
     def valid(self, index):
-        """Return wether data ast index i is valid, i.e., non-masked"""
+        """Return whether data at index i is valid, i.e., non-masked"""
         return not self.getmask(index)
 
     def get(self, index, fill_value=None):
