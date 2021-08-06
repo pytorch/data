@@ -49,8 +49,8 @@ class Utf8CatUtils {
  **/
 VELOX_UDF_BEGIN(torcharrow_isalpha)
 FOLLY_ALWAYS_INLINE
-bool call(bool& result, const arg_type<facebook::f4d::Varchar>& input) {
-  using namespace f4d::functions;
+bool call(bool& result, const arg_type<facebook::velox::Varchar>& input) {
+  using namespace velox::functions;
   using namespace internal;
 
   size_t size = input.size();
@@ -86,8 +86,8 @@ VELOX_UDF_END();
  **/
 VELOX_UDF_BEGIN(torcharrow_isalnum)
 FOLLY_ALWAYS_INLINE
-bool call(bool& result, const arg_type<facebook::f4d::Varchar>& input) {
-  using namespace f4d::functions;
+bool call(bool& result, const arg_type<facebook::velox::Varchar>& input) {
+  using namespace velox::functions;
   using namespace internal;
 
   size_t size = input.size();
@@ -124,8 +124,8 @@ VELOX_UDF_END();
  **/
 VELOX_UDF_BEGIN(torcharrow_isinteger)
 FOLLY_ALWAYS_INLINE
-bool call(bool& result, const arg_type<facebook::f4d::Varchar>& input) {
-  using namespace f4d::functions;
+bool call(bool& result, const arg_type<facebook::velox::Varchar>& input) {
+  using namespace velox::functions;
   using namespace internal;
 
   size_t size = input.size();

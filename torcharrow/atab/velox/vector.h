@@ -20,19 +20,19 @@
 
 namespace facebook::torcharrow {
 
-f4d::VectorPtr vectorSlice(const f4d::BaseVector& src, int start, int end);
+velox::VectorPtr vectorSlice(const velox::BaseVector& src, int start, int end);
 
-template <f4d::TypeKind kind>
-f4d::VectorPtr
-simpleVectorSlice(const f4d::BaseVector& src, int start, int end);
+template <velox::TypeKind kind>
+velox::VectorPtr
+simpleVectorSlice(const velox::BaseVector& src, int start, int end);
 
-f4d::VectorPtr
-arrayVectorSlice(const f4d::ArrayVector& src, int start, int end);
+velox::VectorPtr
+arrayVectorSlice(const velox::ArrayVector& src, int start, int end);
 
-f4d::VectorPtr reshape(
-    f4d::VectorPtr vec,
-    std::function<f4d::vector_size_t(f4d::vector_size_t)> offsets,
-    std::function<f4d::vector_size_t(f4d::vector_size_t)> lengths,
-    f4d::vector_size_t size);
+velox::VectorPtr reshape(
+    velox::VectorPtr vec,
+    std::function<velox::vector_size_t(velox::vector_size_t)> offsets,
+    std::function<velox::vector_size_t(velox::vector_size_t)> lengths,
+    velox::vector_size_t size);
 
 } // namespace facebook::torcharrow

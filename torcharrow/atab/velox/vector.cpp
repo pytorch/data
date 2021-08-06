@@ -20,22 +20,22 @@
 
 namespace facebook::torcharrow {
 
-template <f4d::TypeKind kind>
-f4d::VectorPtr
-simpleVectorSlice(const f4d::BaseVector& src, int start, int end) {
-  using T = typename f4d::TypeTraits<kind>::NativeType;
-  auto newVector = f4d::BaseVector::create(
-      f4d::CppToType<T>::create(), end - start, src.pool());
+template <velox::TypeKind kind>
+velox::VectorPtr
+simpleVectorSlice(const velox::BaseVector& src, int start, int end) {
+  using T = typename velox::TypeTraits<kind>::NativeType;
+  auto newVector = velox::BaseVector::create(
+      velox::CppToType<T>::create(), end - start, src.pool());
   newVector.get()->copy(&src, 0, start, end - start);
   return newVector;
 }
 
-f4d::VectorPtr
-arrayVectorSlice(const f4d::ArrayVector& src, int start, int end) {
+velox::VectorPtr
+arrayVectorSlice(const velox::ArrayVector& src, int start, int end) {
   auto length = end - start;
-  std::shared_ptr<const f4d::Type> elementType = src.type();
-  auto result = f4d::BaseVector::create(ARRAY(elementType), length, src.pool());
-  auto ptr = result.get()->as<f4d::ArrayVector>();
+  std::shared_ptr<const velox::Type> elementType = src.type();
+  auto result = velox::BaseVector::create(ARRAY(elementType), length, src.pool());
+  auto ptr = result.get()->as<velox::ArrayVector>();
   if (length > 0) {
     ptr->setElements(vectorSlice(
         *src.elements(),
@@ -56,14 +56,14 @@ arrayVectorSlice(const f4d::ArrayVector& src, int start, int end) {
   return result;
 }
 
-f4d::VectorPtr vectorSlice(const f4d::BaseVector& src, int start, int end) {
+velox::VectorPtr vectorSlice(const velox::BaseVector& src, int start, int end) {
   auto type = src.type();
   auto kind = type.get()->kind();
   switch (kind) {
-    case f4d::TypeKind::ARRAY: {
-      return arrayVectorSlice(*src.as<f4d::ArrayVector>(), start, end);
+    case velox::TypeKind::ARRAY: {
+      return arrayVectorSlice(*src.as<velox::ArrayVector>(), start, end);
     }
-    case f4d::TypeKind::MAP: {
+    case velox::TypeKind::MAP: {
       throw "Not implemented yet.";
     }
     default:
@@ -72,16 +72,16 @@ f4d::VectorPtr vectorSlice(const f4d::BaseVector& src, int start, int end) {
   }
 }
 
-f4d::VectorPtr reshape(
-    f4d::VectorPtr vec,
-    std::function<f4d::vector_size_t(f4d::vector_size_t)> offsets,
-    std::function<f4d::vector_size_t(f4d::vector_size_t)> lengths,
-    f4d::vector_size_t size) {
-  auto result = f4d::BaseVector::create(
+velox::VectorPtr reshape(
+    velox::VectorPtr vec,
+    std::function<velox::vector_size_t(velox::vector_size_t)> offsets,
+    std::function<velox::vector_size_t(velox::vector_size_t)> lengths,
+    velox::vector_size_t size) {
+  auto result = velox::BaseVector::create(
       ARRAY(vec.get()->type()), size, vec.get()->pool());
-  result.get()->as<f4d::ArrayVector>()->setElements(vec);
+  result.get()->as<velox::ArrayVector>()->setElements(vec);
   for (int i = 0; i < size; i++) {
-    result.get()->as<f4d::ArrayVector>()->setOffsetAndSize(
+    result.get()->as<velox::ArrayVector>()->setOffsetAndSize(
         i, offsets(i), lengths(i));
   }
   return result;

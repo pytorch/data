@@ -42,12 +42,12 @@ class NotAppendableException : public std::exception {
 };
 
 struct TorchArrowGlobalStatic {
-  static f4d::core::QueryCtx& queryContext();
-  static f4d::core::ExecCtx& execContext();
+  static velox::core::QueryCtx& queryContext();
+  static velox::core::ExecCtx& execContext();
 
-  static f4d::memory::MemoryPool* rootMemoryPool() {
-    static f4d::memory::MemoryPool* const pool =
-        &f4d::memory::getProcessDefaultMemoryManager().getRoot();
+  static velox::memory::MemoryPool* rootMemoryPool() {
+    static velox::memory::MemoryPool* const pool =
+        &velox::memory::getProcessDefaultMemoryManager().getRoot();
     return pool;
   }
 };
@@ -67,56 +67,56 @@ inline bool operator==(
   return lhs.udfName == rhs.udfName && lhs.typeSignature == rhs.typeSignature;
 }
 
-f4d::variant pyToVariant(const pybind11::handle& obj);
+velox::variant pyToVariant(const pybind11::handle& obj);
 
 class BaseColumn;
 
 struct OperatorHandle {
-  f4d::RowTypePtr inputRowType_;
-  std::shared_ptr<f4d::exec::ExprSet> exprSet_;
+  velox::RowTypePtr inputRowType_;
+  std::shared_ptr<velox::exec::ExprSet> exprSet_;
 
   OperatorHandle(
-      f4d::RowTypePtr inputRowType,
-      std::shared_ptr<f4d::exec::ExprSet> exprSet)
+      velox::RowTypePtr inputRowType,
+      std::shared_ptr<velox::exec::ExprSet> exprSet)
       : inputRowType_(inputRowType), exprSet_(exprSet) {}
 
   static std::unique_ptr<OperatorHandle> fromGenericUDF(
-      f4d::RowTypePtr inputRowType,
+      velox::RowTypePtr inputRowType,
       const std::string& udfName);
 
   static std::unique_ptr<OperatorHandle> fromExpression(
-      f4d::RowTypePtr inputRowType,
+      velox::RowTypePtr inputRowType,
       const std::string& expr);
 
-  static f4d::RowVectorPtr wrapRowVector(
-      const std::vector<f4d::VectorPtr>& children,
-      std::shared_ptr<const f4d::RowType> rowType) {
-    return std::make_shared<f4d::RowVector>(
+  static velox::RowVectorPtr wrapRowVector(
+      const std::vector<velox::VectorPtr>& children,
+      std::shared_ptr<const velox::RowType> rowType) {
+    return std::make_shared<velox::RowVector>(
         TorchArrowGlobalStatic::rootMemoryPool(),
         rowType,
-        f4d::BufferPtr(nullptr),
+        velox::BufferPtr(nullptr),
         children[0]->size(),
         children,
         folly::none);
   }
 
   // Specialized invoke methods for common arities
-  // Input type f4d::VectorPtr (instead of BaseColumn) since it might be a
+  // Input type velox::VectorPtr (instead of BaseColumn) since it might be a
   // ConstantVector
   // TODO: Use Column once ConstantColumn is supported
-  std::unique_ptr<BaseColumn> call(f4d::VectorPtr a, f4d::VectorPtr b);
+  std::unique_ptr<BaseColumn> call(velox::VectorPtr a, velox::VectorPtr b);
 
-  std::unique_ptr<BaseColumn> call(const std::vector<f4d::VectorPtr>& args);
+  std::unique_ptr<BaseColumn> call(const std::vector<velox::VectorPtr>& args);
 };
 
 class PromoteNumericTypeKind {
  public:
-  static f4d::TypeKind promoteColumnColumn(f4d::TypeKind a, f4d::TypeKind b) {
+  static velox::TypeKind promoteColumnColumn(velox::TypeKind a, velox::TypeKind b) {
     return promote(a, b, PromoteStrategy::ColumnColumn);
   }
 
   // Assume a being a column and b being a scalar
-  static f4d::TypeKind promoteColumnScalar(f4d::TypeKind a, f4d::TypeKind b) {
+  static velox::TypeKind promoteColumnScalar(velox::TypeKind a, velox::TypeKind b) {
     return promote(a, b, PromoteStrategy::ColumnScalar);
   }
 
@@ -126,17 +126,17 @@ class PromoteNumericTypeKind {
     ColumnScalar,
   };
 
-  static f4d::TypeKind
-  promote(f4d::TypeKind a, f4d::TypeKind b, PromoteStrategy promoteStrategy) {
-    constexpr auto b1 = f4d::TypeKind::BOOLEAN;
-    constexpr auto i1 = f4d::TypeKind::TINYINT;
-    constexpr auto i2 = f4d::TypeKind::SMALLINT;
-    constexpr auto i4 = f4d::TypeKind::INTEGER;
-    constexpr auto i8 = f4d::TypeKind::BIGINT;
-    constexpr auto f4 = f4d::TypeKind::REAL;
-    constexpr auto f8 = f4d::TypeKind::DOUBLE;
+  static velox::TypeKind
+  promote(velox::TypeKind a, velox::TypeKind b, PromoteStrategy promoteStrategy) {
+    constexpr auto b1 = velox::TypeKind::BOOLEAN;
+    constexpr auto i1 = velox::TypeKind::TINYINT;
+    constexpr auto i2 = velox::TypeKind::SMALLINT;
+    constexpr auto i4 = velox::TypeKind::INTEGER;
+    constexpr auto i8 = velox::TypeKind::BIGINT;
+    constexpr auto f4 = velox::TypeKind::REAL;
+    constexpr auto f8 = velox::TypeKind::DOUBLE;
     constexpr auto num_numeric_types =
-        static_cast<int>(f4d::TypeKind::DOUBLE) + 1;
+        static_cast<int>(velox::TypeKind::DOUBLE) + 1;
 
     VELOX_CHECK(
         static_cast<int>(a) < num_numeric_types &&
@@ -150,7 +150,7 @@ class PromoteNumericTypeKind {
       case PromoteStrategy::ColumnColumn: {
         // Sliced from
         // https://github.com/pytorch/pytorch/blob/1c502d1f8ec861c31a08d580ae7b73b7fbebebed/c10/core/ScalarType.h#L402-L421
-        static constexpr f4d::TypeKind
+        static constexpr velox::TypeKind
             promoteTypesLookup[num_numeric_types][num_numeric_types] = {
                 /*        b1  i1  i2  i4  i8  f4  f8*/
                 /* b1 */ {b1, i1, i2, i4, i8, f4, f8},
@@ -167,7 +167,7 @@ class PromoteNumericTypeKind {
         // TODO: Decide on how we want to handle column-scalar type promotion.
         // Current strategy is to always respect the type of the column for
         // int-int cases.
-        static constexpr f4d::TypeKind
+        static constexpr velox::TypeKind
             promoteTypesLookup[num_numeric_types][num_numeric_types] = {
                 /*        b1  i1  i2  i4  i8  f4  f8*/
                 /* b1 */ {b1, b1, b1, b1, b1, f4, f8},
@@ -196,10 +196,10 @@ class BaseColumn {
   friend struct OperatorHandle;
 
  protected:
-  f4d::VectorPtr _delegate;
-  f4d::vector_size_t _offset;
-  f4d::vector_size_t _length;
-  f4d::vector_size_t _nullCount;
+  velox::VectorPtr _delegate;
+  velox::vector_size_t _offset;
+  velox::vector_size_t _length;
+  velox::vector_size_t _nullCount;
 
   void bumpLength() {
     _length++;
@@ -211,27 +211,27 @@ class BaseColumn {
   }
 
   // TODO: move this method as static...
-  f4d::RowVectorPtr wrapRowVector(
-      const std::vector<f4d::VectorPtr>& children,
-      std::shared_ptr<const f4d::RowType> rowType) {
-    return std::make_shared<f4d::RowVector>(
+  velox::RowVectorPtr wrapRowVector(
+      const std::vector<velox::VectorPtr>& children,
+      std::shared_ptr<const velox::RowType> rowType) {
+    return std::make_shared<velox::RowVector>(
         pool_,
         rowType,
-        f4d::BufferPtr(nullptr),
+        velox::BufferPtr(nullptr),
         children[0]->size(),
         children,
         folly::none);
   }
 
  private:
-  f4d::memory::MemoryPool* pool_ =
-      &f4d::memory::getProcessDefaultMemoryManager().getRoot();
+  velox::memory::MemoryPool* pool_ =
+      &velox::memory::getProcessDefaultMemoryManager().getRoot();
 
  public:
   BaseColumn(
       const BaseColumn& other,
-      f4d::vector_size_t offset,
-      f4d::vector_size_t length)
+      velox::vector_size_t offset,
+      velox::vector_size_t length)
       : _delegate(other._delegate), _offset(offset), _length(length) {
     _nullCount = 0;
     for (int i = 0; i < length; i++) {
@@ -240,11 +240,11 @@ class BaseColumn {
       }
     }
   }
-  explicit BaseColumn(f4d::TypePtr type)
+  explicit BaseColumn(velox::TypePtr type)
       : _offset(0), _length(0), _nullCount(0) {
-    _delegate = f4d::BaseVector::create(type, 0, pool_);
+    _delegate = velox::BaseVector::create(type, 0, pool_);
   }
-  explicit BaseColumn(f4d::VectorPtr delegate)
+  explicit BaseColumn(velox::VectorPtr delegate)
       : _delegate(delegate),
         _offset(0),
         _length(delegate.get()->size()),
@@ -252,54 +252,54 @@ class BaseColumn {
 
   virtual ~BaseColumn() = default;
 
-  f4d::TypePtr type() const {
+  velox::TypePtr type() const {
     return _delegate->type();
   }
 
-  bool isNullAt(f4d::vector_size_t idx) const {
+  bool isNullAt(velox::vector_size_t idx) const {
     return _delegate->isNullAt(_offset + idx);
   }
 
-  f4d::vector_size_t getOffset() const {
+  velox::vector_size_t getOffset() const {
     return _offset;
   }
 
-  f4d::vector_size_t getLength() const {
+  velox::vector_size_t getLength() const {
     return _length;
   }
 
-  f4d::vector_size_t getNullCount() const {
+  velox::vector_size_t getNullCount() const {
     return _nullCount;
   }
 
-  f4d::VectorPtr getUnderlyingVeloxVector() const {
+  velox::VectorPtr getUnderlyingVeloxVector() const {
     return _delegate;
   }
 
   // TODO: add output type
-  static std::shared_ptr<f4d::exec::ExprSet> genUnaryExprSet(
+  static std::shared_ptr<velox::exec::ExprSet> genUnaryExprSet(
       // input row type is required even for unary op since the input vector
-      // needs to be wrapped into a f4d::RowVector before evaluation.
-      std::shared_ptr<const f4d::RowType> inputRowType,
-      f4d::TypePtr outputType,
+      // needs to be wrapped into a velox::RowVector before evaluation.
+      std::shared_ptr<const velox::RowType> inputRowType,
+      velox::TypePtr outputType,
       const std::string& functionName);
 
   std::unique_ptr<BaseColumn> applyUnaryExprSet(
       // input row type is required even for unary op since the input vector
-      // needs to be wrapped into a f4d::RowVector before evaluation.
-      std::shared_ptr<const f4d::RowType> inputRowType,
-      std::shared_ptr<f4d::exec::ExprSet> exprSet);
+      // needs to be wrapped into a velox::RowVector before evaluation.
+      std::shared_ptr<const velox::RowType> inputRowType,
+      std::shared_ptr<velox::exec::ExprSet> exprSet);
 
-  static std::shared_ptr<f4d::exec::ExprSet> genBinaryExprSet(
-      std::shared_ptr<const f4d::RowType> inputRowType,
-      std::shared_ptr<const f4d::Type> commonType,
+  static std::shared_ptr<velox::exec::ExprSet> genBinaryExprSet(
+      std::shared_ptr<const velox::RowType> inputRowType,
+      std::shared_ptr<const velox::Type> commonType,
       const std::string& functionName);
 
-  // From f4d/type/f4d::variant.h
+  // From f4d/type/velox::variant.h
   // TODO: refactor into some type utility class
-  template <f4d::TypeKind Kind>
-  static const std::shared_ptr<const f4d::Type> kind2type() {
-    return f4d::TypeFactory<Kind>::create();
+  template <velox::TypeKind Kind>
+  static const std::shared_ptr<const velox::Type> kind2type() {
+    return velox::TypeFactory<Kind>::create();
   }
 
  public:
@@ -315,30 +315,30 @@ class BaseColumn {
 
   // factory methods to create columns
   static std::unique_ptr<BaseColumn> createConstantColumn(
-      f4d::variant value,
-      f4d::vector_size_t size);
+      velox::variant value,
+      velox::vector_size_t size);
 };
 
-std::unique_ptr<BaseColumn> createColumn(f4d::VectorPtr vec);
+std::unique_ptr<BaseColumn> createColumn(velox::VectorPtr vec);
 
 std::unique_ptr<BaseColumn> createColumn(
-    f4d::VectorPtr vec,
-    f4d::vector_size_t offset,
-    f4d::vector_size_t length);
+    velox::VectorPtr vec,
+    velox::vector_size_t offset,
+    velox::vector_size_t length);
 
 template <typename T>
 class SimpleColumn : public BaseColumn {
  public:
-  SimpleColumn() : BaseColumn(f4d::CppToType<T>::create()) {}
-  explicit SimpleColumn(f4d::VectorPtr delegate) : BaseColumn(delegate) {}
+  SimpleColumn() : BaseColumn(velox::CppToType<T>::create()) {}
+  explicit SimpleColumn(velox::VectorPtr delegate) : BaseColumn(delegate) {}
   SimpleColumn(
       const SimpleColumn& other,
-      f4d::vector_size_t offset,
-      f4d::vector_size_t length)
+      velox::vector_size_t offset,
+      velox::vector_size_t length)
       : BaseColumn(other, offset, length) {}
 
   T valueAt(int i) {
-    return _delegate.get()->template as<f4d::SimpleVector<T>>()->valueAt(
+    return _delegate.get()->template as<velox::SimpleVector<T>>()->valueAt(
         _offset + i);
   }
 
@@ -365,8 +365,8 @@ class SimpleColumn : public BaseColumn {
   }
 
   std::unique_ptr<SimpleColumn<T>> slice(
-      f4d::vector_size_t offset,
-      f4d::vector_size_t length) {
+      velox::vector_size_t offset,
+      velox::vector_size_t length) {
     return std::make_unique<SimpleColumn<T>>(*this, offset, length);
   }
 
@@ -377,49 +377,49 @@ class SimpleColumn : public BaseColumn {
   // TODO: return SimpleColumn<T> instead?
   std::unique_ptr<BaseColumn> invert() {
     const static auto inputRowType =
-        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
+        velox::ROW({"c0"}, {velox::CppToType<T>::create()});
     const static auto exprSet = BaseColumn::genUnaryExprSet(
-        inputRowType, f4d::CppToType<T>::create(), "not");
+        inputRowType, velox::CppToType<T>::create(), "not");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> neg() {
     const static auto inputRowType =
-        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
+        velox::ROW({"c0"}, {velox::CppToType<T>::create()});
     const static auto exprSet = BaseColumn::genUnaryExprSet(
-        inputRowType, f4d::CppToType<T>::create(), "negate");
+        inputRowType, velox::CppToType<T>::create(), "negate");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> abs() {
     const static auto inputRowType =
-        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
+        velox::ROW({"c0"}, {velox::CppToType<T>::create()});
     const static auto exprSet = BaseColumn::genUnaryExprSet(
-        inputRowType, f4d::CppToType<T>::create(), "abs");
+        inputRowType, velox::CppToType<T>::create(), "abs");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> ceil() {
     const static auto inputRowType =
-        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
+        velox::ROW({"c0"}, {velox::CppToType<T>::create()});
     const static auto exprSet = BaseColumn::genUnaryExprSet(
-        inputRowType, f4d::CppToType<T>::create(), "ceil");
+        inputRowType, velox::CppToType<T>::create(), "ceil");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> floor() {
     const static auto inputRowType =
-        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
+        velox::ROW({"c0"}, {velox::CppToType<T>::create()});
     const static auto exprSet = BaseColumn::genUnaryExprSet(
-        inputRowType, f4d::CppToType<T>::create(), "floor");
+        inputRowType, velox::CppToType<T>::create(), "floor");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
   std::unique_ptr<BaseColumn> round() {
     const static auto inputRowType =
-        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
+        velox::ROW({"c0"}, {velox::CppToType<T>::create()});
     const static auto exprSet = BaseColumn::genUnaryExprSet(
-        inputRowType, f4d::CppToType<T>::create(), "round");
+        inputRowType, velox::CppToType<T>::create(), "round");
     return this->applyUnaryExprSet(inputRowType, exprSet);
   }
 
@@ -447,10 +447,10 @@ class SimpleColumn : public BaseColumn {
 
   // TODO: Model binary functions as UDF.
   std::unique_ptr<OperatorHandle> createBinaryOperatorHandle(
-      f4d::TypePtr otherType,
-      f4d::TypeKind commonTypeKind,
+      velox::TypePtr otherType,
+      velox::TypeKind commonTypeKind,
       OpCode opCode) {
-    auto inputRowType = f4d::ROW({"c0", "c1"}, {this->type(), otherType});
+    auto inputRowType = velox::ROW({"c0", "c1"}, {this->type(), otherType});
     auto commonType =
         VELOX_DYNAMIC_SCALAR_TYPE_DISPATCH(kind2type, commonTypeKind);
     auto exprSet = BaseColumn::genBinaryExprSet(
@@ -460,13 +460,13 @@ class SimpleColumn : public BaseColumn {
   }
 
   std::unique_ptr<BaseColumn> dispatchBinaryOperation(
-      f4d::VectorPtr other,
-      f4d::TypeKind commonTypeKind,
+      velox::VectorPtr other,
+      velox::TypeKind commonTypeKind,
       OpCode opCode) {
-    // FIXME This is fragile as it assumes f4d::TypeKind numbers numeric types
+    // FIXME This is fragile as it assumes velox::TypeKind numbers numeric types
     // starting from 0 and has DOUBLE being the last one
     constexpr size_t num_numeric_types =
-        static_cast<size_t>(f4d::TypeKind::DOUBLE) + 1;
+        static_cast<size_t>(velox::TypeKind::DOUBLE) + 1;
     constexpr size_t num_ops = static_cast<size_t>(OpCode::Plus) + 1;
     // Indices are [otherTypeKind][commonTypeKind][opCode]
     static std::unique_ptr<OperatorHandle> ops[num_numeric_types]
@@ -486,7 +486,7 @@ class SimpleColumn : public BaseColumn {
 
  public:
   std::unique_ptr<BaseColumn> addColumn(const BaseColumn& other) {
-    f4d::TypeKind commonTypeKind = PromoteNumericTypeKind::promoteColumnColumn(
+    velox::TypeKind commonTypeKind = PromoteNumericTypeKind::promoteColumnColumn(
         this->type()->kind(), other.type()->kind());
 
     return dispatchBinaryOperation(
@@ -494,11 +494,11 @@ class SimpleColumn : public BaseColumn {
   }
 
   std::unique_ptr<BaseColumn> addScalar(const pybind11::handle& obj) {
-    f4d::variant val = pyToVariant(obj);
-    f4d::VectorPtr other = f4d::BaseVector::createConstant(
+    velox::variant val = pyToVariant(obj);
+    velox::VectorPtr other = velox::BaseVector::createConstant(
         val, _delegate->size(), TorchArrowGlobalStatic::rootMemoryPool());
 
-    f4d::TypeKind commonTypeKind = PromoteNumericTypeKind::promoteColumnScalar(
+    velox::TypeKind commonTypeKind = PromoteNumericTypeKind::promoteColumnScalar(
         this->type()->kind(), other->typeKind());
 
     return dispatchBinaryOperation(other, commonTypeKind, OpCode::Plus);
@@ -509,11 +509,11 @@ class SimpleColumn : public BaseColumn {
   //
   std::unique_ptr<BaseColumn> lower() {
     static_assert(
-        std::is_same<f4d::StringView, T>(),
+        std::is_same<velox::StringView, T>(),
         "lower should only be called over VARCHAR column");
 
     const static auto inputRowType =
-        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
+        velox::ROW({"c0"}, {velox::CppToType<T>::create()});
     const static auto op =
         OperatorHandle::fromGenericUDF(inputRowType, "lower");
     return op->call({_delegate});
@@ -521,11 +521,11 @@ class SimpleColumn : public BaseColumn {
 
   std::unique_ptr<BaseColumn> upper() {
     static_assert(
-        std::is_same<f4d::StringView, T>(),
+        std::is_same<velox::StringView, T>(),
         "upper should only be called over VARCHAR column");
 
     const static auto inputRowType =
-        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
+        velox::ROW({"c0"}, {velox::CppToType<T>::create()});
     const static auto op =
         OperatorHandle::fromGenericUDF(inputRowType, "upper");
     return op->call({_delegate});
@@ -533,11 +533,11 @@ class SimpleColumn : public BaseColumn {
 
   std::unique_ptr<BaseColumn> isalpha() {
     static_assert(
-        std::is_same<f4d::StringView, T>(),
+        std::is_same<velox::StringView, T>(),
         "isalpha should only be called over VARCHAR column");
 
     const static auto inputRowType =
-        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
+        velox::ROW({"c0"}, {velox::CppToType<T>::create()});
     const static auto op =
         OperatorHandle::fromGenericUDF(inputRowType, "torcharrow_isalpha");
     return op->call({_delegate});
@@ -545,11 +545,11 @@ class SimpleColumn : public BaseColumn {
 
   std::unique_ptr<BaseColumn> isalnum() {
     static_assert(
-        std::is_same<f4d::StringView, T>(),
+        std::is_same<velox::StringView, T>(),
         "isalnum should only be called over VARCHAR column");
 
     const static auto inputRowType =
-        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
+        velox::ROW({"c0"}, {velox::CppToType<T>::create()});
     const static auto op =
         OperatorHandle::fromExpression(inputRowType, "torcharrow_isalnum(c0)");
     return op->call({_delegate});
@@ -557,11 +557,11 @@ class SimpleColumn : public BaseColumn {
 
   std::unique_ptr<BaseColumn> isinteger() {
     static_assert(
-        std::is_same<f4d::StringView, T>(),
+        std::is_same<velox::StringView, T>(),
         "isinteger should only be called over VARCHAR column");
 
     const static auto inputRowType =
-        f4d::ROW({"c0"}, {f4d::CppToType<T>::create()});
+        velox::ROW({"c0"}, {velox::CppToType<T>::create()});
     const static auto op = OperatorHandle::fromExpression(
         inputRowType, "torcharrow_isinteger(c0)");
     return op->call({_delegate});
@@ -574,8 +574,8 @@ class FlatColumn : public SimpleColumn<T> {};
 template <typename T>
 class ConstantColumn : public SimpleColumn<T> {
  public:
-  ConstantColumn(f4d::variant value, f4d::vector_size_t size)
-      : SimpleColumn<T>(f4d::BaseVector::createConstant(
+  ConstantColumn(velox::variant value, velox::vector_size_t size)
+      : SimpleColumn<T>(velox::BaseVector::createConstant(
             value,
             size,
             TorchArrowGlobalStatic::rootMemoryPool())) {}
@@ -583,19 +583,19 @@ class ConstantColumn : public SimpleColumn<T> {
 
 class ArrayColumn : public BaseColumn {
  public:
-  explicit ArrayColumn(f4d::TypePtr type) : BaseColumn(type) {}
-  explicit ArrayColumn(f4d::VectorPtr delegate) : BaseColumn(delegate) {}
+  explicit ArrayColumn(velox::TypePtr type) : BaseColumn(type) {}
+  explicit ArrayColumn(velox::VectorPtr delegate) : BaseColumn(delegate) {}
   ArrayColumn(
       const ArrayColumn& other,
-      f4d::vector_size_t offset,
-      f4d::vector_size_t length)
+      velox::vector_size_t offset,
+      velox::vector_size_t length)
       : BaseColumn(other, offset, length) {}
 
   void appendElement(const BaseColumn& new_element) {
     if (!isAppendable()) {
       throw NotAppendableException();
     }
-    auto dataPtr = _delegate.get()->as<f4d::ArrayVector>();
+    auto dataPtr = _delegate.get()->as<velox::ArrayVector>();
     auto elements = dataPtr->elements();
     auto new_index = dataPtr->size();
     dataPtr->resize(new_index + 1);
@@ -610,7 +610,7 @@ class ArrayColumn : public BaseColumn {
     if (!isAppendable()) {
       throw NotAppendableException();
     }
-    auto dataPtr = _delegate.get()->as<f4d::ArrayVector>();
+    auto dataPtr = _delegate.get()->as<velox::ArrayVector>();
     auto elements = dataPtr->elements();
     auto new_index = dataPtr->size();
     dataPtr->resize(new_index + 1);
@@ -621,38 +621,38 @@ class ArrayColumn : public BaseColumn {
     bumpLength();
   }
 
-  std::unique_ptr<BaseColumn> valueAt(f4d::vector_size_t i);
+  std::unique_ptr<BaseColumn> valueAt(velox::vector_size_t i);
 
   std::unique_ptr<ArrayColumn> slice(
-      f4d::vector_size_t offset,
-      f4d::vector_size_t length) {
+      velox::vector_size_t offset,
+      velox::vector_size_t length) {
     return std::make_unique<ArrayColumn>(*this, offset, length);
   }
 };
 
 class MapColumn : public BaseColumn {
  public:
-  explicit MapColumn(f4d::TypePtr type) : BaseColumn(type) {}
-  explicit MapColumn(f4d::VectorPtr delegate) : BaseColumn(delegate) {}
+  explicit MapColumn(velox::TypePtr type) : BaseColumn(type) {}
+  explicit MapColumn(velox::VectorPtr delegate) : BaseColumn(delegate) {}
   MapColumn(
       const MapColumn& other,
-      f4d::vector_size_t offset,
-      f4d::vector_size_t length)
+      velox::vector_size_t offset,
+      velox::vector_size_t length)
       : BaseColumn(other, offset, length) {}
 
-  f4d::vector_size_t offsetAt(f4d::vector_size_t index) const {
-    return _delegate.get()->as<f4d::MapVector>()->offsetAt(_offset + index);
+  velox::vector_size_t offsetAt(velox::vector_size_t index) const {
+    return _delegate.get()->as<velox::MapVector>()->offsetAt(_offset + index);
   }
 
-  f4d::vector_size_t sizeAt(f4d::vector_size_t index) const {
-    return _delegate.get()->as<f4d::MapVector>()->sizeAt(_offset + index);
+  velox::vector_size_t sizeAt(velox::vector_size_t index) const {
+    return _delegate.get()->as<velox::MapVector>()->sizeAt(_offset + index);
   }
 
   void appendElement(const BaseColumn& newKey, const BaseColumn& newValue) {
     if (!isAppendable()) {
       throw NotAppendableException();
     }
-    auto dataPtr = _delegate.get()->as<f4d::MapVector>();
+    auto dataPtr = _delegate.get()->as<velox::MapVector>();
 
     auto keys = dataPtr->mapKeys();
     auto values = dataPtr->mapValues();
@@ -670,7 +670,7 @@ class MapColumn : public BaseColumn {
     if (!isAppendable()) {
       throw NotAppendableException();
     }
-    auto dataPtr = _delegate.get()->as<f4d::MapVector>();
+    auto dataPtr = _delegate.get()->as<velox::MapVector>();
 
     auto keys = dataPtr->mapKeys();
     auto values = dataPtr->mapValues();
@@ -683,76 +683,76 @@ class MapColumn : public BaseColumn {
     bumpLength();
   }
 
-  std::unique_ptr<BaseColumn> valueAt(f4d::vector_size_t i);
+  std::unique_ptr<BaseColumn> valueAt(velox::vector_size_t i);
 
   std::unique_ptr<BaseColumn> mapKeys() {
-    auto dataPtr = _delegate.get()->as<f4d::MapVector>();
+    auto dataPtr = _delegate.get()->as<velox::MapVector>();
     auto keys = dataPtr->mapKeys();
     auto reshapedKeys = reshape(
         keys,
-        std::bind(&f4d::MapVector::offsetAt, *dataPtr, std::placeholders::_1),
-        std::bind(&f4d::MapVector::sizeAt, *dataPtr, std::placeholders::_1),
+        std::bind(&velox::MapVector::offsetAt, *dataPtr, std::placeholders::_1),
+        std::bind(&velox::MapVector::sizeAt, *dataPtr, std::placeholders::_1),
         dataPtr->size());
     return createColumn(reshapedKeys, _offset, _length);
   }
 
   std::unique_ptr<BaseColumn> mapValues() {
-    auto dataPtr = _delegate.get()->as<f4d::MapVector>();
+    auto dataPtr = _delegate.get()->as<velox::MapVector>();
     auto values = dataPtr->mapValues();
     auto reshapedValues = reshape(
         values,
-        std::bind(&f4d::MapVector::offsetAt, *dataPtr, std::placeholders::_1),
-        std::bind(&f4d::MapVector::sizeAt, *dataPtr, std::placeholders::_1),
+        std::bind(&velox::MapVector::offsetAt, *dataPtr, std::placeholders::_1),
+        std::bind(&velox::MapVector::sizeAt, *dataPtr, std::placeholders::_1),
         dataPtr->size());
     return createColumn(reshapedValues, _offset, _length);
   }
 
   std::unique_ptr<MapColumn> slice(
-      f4d::vector_size_t offset,
-      f4d::vector_size_t length) {
+      velox::vector_size_t offset,
+      velox::vector_size_t length) {
     return std::make_unique<MapColumn>(*this, offset, length);
   }
 };
 
 class RowColumn : public BaseColumn {
  public:
-  explicit RowColumn(f4d::TypePtr type) : BaseColumn(type) {}
-  explicit RowColumn(f4d::VectorPtr delegate) : BaseColumn(delegate) {}
+  explicit RowColumn(velox::TypePtr type) : BaseColumn(type) {}
+  explicit RowColumn(velox::VectorPtr delegate) : BaseColumn(delegate) {}
   RowColumn(
       const RowColumn& other,
-      f4d::vector_size_t offset,
-      f4d::vector_size_t length)
+      velox::vector_size_t offset,
+      velox::vector_size_t length)
       : BaseColumn(other, offset, length) {}
 
-  std::unique_ptr<BaseColumn> childAt(f4d::ChannelIndex index) {
-    auto dataPtr = _delegate.get()->as<f4d::RowVector>();
+  std::unique_ptr<BaseColumn> childAt(velox::ChannelIndex index) {
+    auto dataPtr = _delegate.get()->as<velox::RowVector>();
     return createColumn(dataPtr->childAt(index), _offset, _length);
   }
 
-  void setChild(f4d::ChannelIndex index, const BaseColumn& new_child) {
-    auto dataPtr = _delegate.get()->as<f4d::RowVector>();
+  void setChild(velox::ChannelIndex index, const BaseColumn& new_child) {
+    auto dataPtr = _delegate.get()->as<velox::RowVector>();
     dataPtr->children()[index] = new_child._delegate;
   }
 
   size_t childrenSize() {
-    auto dataPtr = _delegate.get()->as<f4d::RowVector>();
+    auto dataPtr = _delegate.get()->as<velox::RowVector>();
     return dataPtr->childrenSize();
   }
 
   std::unique_ptr<RowColumn> slice(
-      f4d::vector_size_t offset,
-      f4d::vector_size_t length) {
+      velox::vector_size_t offset,
+      velox::vector_size_t length) {
     return std::make_unique<RowColumn>(*this, offset, length);
   }
 
-  void setLength(f4d::vector_size_t length) {
+  void setLength(velox::vector_size_t length) {
     _length = length;
-    auto dataPtr = _delegate.get()->as<f4d::RowVector>();
+    auto dataPtr = _delegate.get()->as<velox::RowVector>();
     dataPtr->resize(_offset + _length);
   }
 
-  void setNullAt(f4d::vector_size_t idx) {
-    auto dataPtr = _delegate.get()->as<f4d::RowVector>();
+  void setNullAt(velox::vector_size_t idx) {
+    auto dataPtr = _delegate.get()->as<velox::RowVector>();
     if (!isNullAt(idx)) {
       _nullCount++;
     }
@@ -760,9 +760,9 @@ class RowColumn : public BaseColumn {
   }
 
   std::unique_ptr<BaseColumn> copy() {
-    auto dataPtr = _delegate.get()->as<f4d::RowVector>();
+    auto dataPtr = _delegate.get()->as<velox::RowVector>();
     auto newVector =
-        f4d::RowVector::createEmpty(dataPtr->type(), dataPtr->pool());
+        velox::RowVector::createEmpty(dataPtr->type(), dataPtr->pool());
     newVector.get()->resize(dataPtr->size());
     newVector.get()->copy(dataPtr, 0, 0, dataPtr->size());
     auto newColumn = createColumn(newVector, _offset, _length);

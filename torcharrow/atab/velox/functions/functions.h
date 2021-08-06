@@ -22,26 +22,26 @@
 namespace facebook::torcharrow::functions {
 
 inline void registerTorchArrowFunctions() {
-  facebook::f4d::registerFunction<
+  facebook::velox::registerFunction<
       facebook::torcharrow::functions::udf_torcharrow_isalpha,
       bool,
-      facebook::f4d::Varchar>();
-  facebook::f4d::registerFunction<
+      facebook::velox::Varchar>();
+  facebook::velox::registerFunction<
       facebook::torcharrow::functions::udf_torcharrow_isalnum,
       bool,
-      facebook::f4d::Varchar>();
-  facebook::f4d::registerFunction<
+      facebook::velox::Varchar>();
+  facebook::velox::registerFunction<
       facebook::torcharrow::functions::udf_torcharrow_isinteger,
       bool,
-      facebook::f4d::Varchar>();
+      facebook::velox::Varchar>();
 
-  facebook::f4d::exec::registerStatefulVectorFunction(
+  facebook::velox::exec::registerStatefulVectorFunction(
       "match_re",
-      f4d::functions::re2MatchSignatures(),
-      f4d::functions::makeRe2Match);
+      velox::functions::re2MatchSignatures(),
+      velox::functions::makeRe2Match);
 }
 
 inline void initializeTorchArrowTypeResolver() {
-  facebook::f4d::exec::test::registerTypeResolver();
+  facebook::velox::exec::test::registerTypeResolver();
 }
 }
