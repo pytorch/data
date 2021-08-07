@@ -14,9 +14,9 @@
 
 #pragma once
 
-#include "velox/functions/Udf.h"
-#include "velox/functions/lib/string/StringCore.h"
-#include "velox/functions/lib/string/StringImpl.h"
+#include "f4d/functions/Udf.h"
+#include "f4d/functions/lib/string/StringCore.h"
+#include "f4d/functions/lib/string/StringImpl.h"
 
 namespace facebook::torcharrow::functions {
 

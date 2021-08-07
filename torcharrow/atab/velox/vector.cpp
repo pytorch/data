@@ -12,10 +12,10 @@
  * limitations under the License.
  */
 #include "vector.h"
-#include <velox/common/memory/Memory.h>
-#include <velox/type/Type.h>
-#include <velox/vector/BaseVector.h>
-#include <velox/vector/ComplexVector.h>
+#include <f4d/common/memory/Memory.h>
+#include <f4d/type/Type.h>
+#include <f4d/vector/BaseVector.h>
+#include <f4d/vector/ComplexVector.h>
 #include <iostream>
 
 namespace facebook::torcharrow {
