@@ -14,9 +14,9 @@
 
 #pragma once
 
-#include "f4d/exec/tests/utils/FunctionUtils.h"
-#include "f4d/functions/lib/Re2Functions.h"
-#include "f4d/parse/Expressions.h"
+#include "velox/exec/tests/utils/FunctionUtils.h"
+#include "velox/functions/lib/Re2Functions.h"
+#include "velox/parse/Expressions.h"
 #include "string_functions.h"
 
 namespace facebook::torcharrow::functions {

@@ -14,18 +14,18 @@
 
 #pragma once
 
-#include <f4d/common/memory/Memory.h>
-#include <f4d/core/QueryCtx.h>
+#include <velox/common/memory/Memory.h>
+#include <velox/core/QueryCtx.h>
 #include <pybind11/pybind11.h>
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include "f4d/common/base/Exceptions.h"
-#include "f4d/expression/Expr.h"
-#include "f4d/type/Type.h"
-#include "f4d/vector/BaseVector.h"
-#include "f4d/vector/ComplexVector.h"
-#include "f4d/vector/FlatVector.h"
+#include "velox/common/base/Exceptions.h"
+#include "velox/expression/Expr.h"
+#include "velox/type/Type.h"
+#include "velox/vector/BaseVector.h"
+#include "velox/vector/ComplexVector.h"
+#include "velox/vector/FlatVector.h"
 #include "vector.h"
 
 // TODO: Move uses of static variables into .cpp. Static variables are local to

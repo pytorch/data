@@ -12,20 +12,20 @@
  * limitations under the License.
  */
 #include "column.h"
-#include <f4d/common/memory/Memory.h>
-#include <f4d/type/Type.h>
-#include <f4d/vector/ComplexVector.h>
+#include <velox/common/memory/Memory.h>
+#include <velox/type/Type.h>
+#include <velox/vector/ComplexVector.h>
 #include <chrono>
 #include <memory>
 #include <ratio>
-#include "f4d/common/base/Exceptions.h"
-#include "f4d/core/Expressions.h"
-#include "f4d/core/ITypedExpr.h"
-#include "f4d/expression/Expr.h"
-#include "f4d/functions/common/CoreFunctions.h"
-#include "f4d/parse/Expressions.h"
-#include "f4d/parse/ExpressionsParser.h"
-#include "f4d/vector/BaseVector.h"
+#include "velox/common/base/Exceptions.h"
+#include "velox/core/Expressions.h"
+#include "velox/core/ITypedExpr.h"
+#include "velox/expression/Expr.h"
+#include "velox/functions/common/CoreFunctions.h"
+#include "velox/parse/Expressions.h"
+#include "velox/parse/ExpressionsParser.h"
+#include "velox/vector/BaseVector.h"
 
 namespace py = pybind11;
 

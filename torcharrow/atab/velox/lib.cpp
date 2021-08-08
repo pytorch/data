@@ -11,17 +11,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <f4d/common/memory/Memory.h>
-#include <f4d/type/Type.h>
-#include <f4d/vector/TypeAliases.h>
+#include <velox/common/memory/Memory.h>
+#include <velox/type/Type.h>
+#include <velox/vector/TypeAliases.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
 #include <iostream>
 #include "column.h"
-#include "f4d/functions/common/CoreFunctions.h"
-#include "f4d/functions/common/VectorFunctions.h"
-#include "f4d/vector/TypeAliases.h"
+#include "velox/functions/common/CoreFunctions.h"
+#include "velox/functions/common/VectorFunctions.h"
+#include "velox/vector/TypeAliases.h"
 #include "functions/functions.h" // @manual=//pytorch/torchdata/torcharrow/atab/velox/functions:torcharrow_functions
 
 #define STRINGIFY(x) #x

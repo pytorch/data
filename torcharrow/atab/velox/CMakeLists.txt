@@ -16,7 +16,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 project(TorchArrow-Velox)
 
-set(F4D_ROOT ${CMAKE_BINARY_DIR}/f4d)
+set(F4D_ROOT ${CMAKE_BINARY_DIR}/velox)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -35,16 +35,16 @@ else()
 endif()
 
 # Find Python interpreter, compiler and development environment (include directories and libraries).
-# Copied from sadboy's CMakeLists.txt: https://github.com/sadboy/f4d/blob/57bbc67c3501d0a6a88d71d81bac271fadea9e88/torcharrow/CMakeLists.txt#L14
+# Copied from sadboy's CMakeLists.txt: https://github.com/sadboy/velox/blob/57bbc67c3501d0a6a88d71d81bac271fadea9e88/torcharrow/CMakeLists.txt#L14
 find_package(Python COMPONENTS Interpreter Development)
 
-include_directories(f4d)
+include_directories(velox)
 # Otherwise some targets, such as dwrf-proto-wrapper.cpp.o
 # will complain cannot find files to be included
 # Reference: https://github.com/facebookexternal/presto_cpp/blob/f278b9b186d9753dc59f58f31bd09db1c89c3c2b/CMakeLists.txt#L104
 include_directories(${F4D_ROOT})
 
-add_subdirectory(f4d)
+add_subdirectory(velox)
 add_subdirectory(pybind11)
 add_subdirectory(functions)
 
@@ -58,8 +58,8 @@ pybind11_add_module(
   column.h
   column.cpp)
 
-# TODO: Need this to match with f4d, however pybind11 requires "hidden" visibility
-# Copied from sadboy's CMakeLists.txt: https://github.com/sadboy/f4d/blob/57bbc67c3501d0a6a88d71d81bac271fadea9e88/torcharrow/CMakeLists.txt#L29
+# TODO: Need this to match with velox, however pybind11 requires "hidden" visibility
+# Copied from sadboy's CMakeLists.txt: https://github.com/sadboy/velox/blob/57bbc67c3501d0a6a88d71d81bac271fadea9e88/torcharrow/CMakeLists.txt#L29
 set_target_properties(_torcharrow PROPERTIES CXX_VISIBILITY_PRESET default)
 
 # Link with Velox:
