@@ -10,6 +10,8 @@ class CSVParserIterDataPipe(IterDataPipe):
 
     def __iter__(self):
         for file_name, stream in self.source_datapipe:
-            reader = csv.reader(stream)
+            lines = [bytes_line.decode(errors="ignore")
+                     for bytes_line in stream.readlines()]
+            reader = csv.reader(lines)
             for row in reader:
                 yield [file_name] + row
