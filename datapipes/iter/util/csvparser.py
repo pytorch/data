@@ -14,4 +14,4 @@ class CSVParserIterDataPipe(IterDataPipe):
                      for bytes_line in stream.readlines()]
             reader = csv.reader(lines)
             for row in reader:
-                yield [file_name] + row
+                yield tuple([file_name] + row)
