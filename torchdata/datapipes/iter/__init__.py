@@ -14,7 +14,10 @@ from torchdata.datapipes.iter.util.cacheholder import (
 )
 from torchdata.datapipes.iter.util.indexadder import IndexAdderIterDataPipe as IndexAdder
 from torchdata.datapipes.iter.util.combining import KeyZipperIterDataPipe as KeyZipper
-from torchdata.datapipes.iter.util.csvparser import CSVParserIterDataPipe as CSVParser
+from torchdata.datapipes.iter.util.csvparser import (
+    CSVDictParserIterDataPipe as CSVDictParser,
+    CSVParserIterDataPipe as CSVParser
+)
 from torchdata.datapipes.iter.util.cycler import CyclerIterDataPipe as Cycler
 from torchdata.datapipes.iter.util.hashchecker import \
     HashCheckerIterDataPipe as HashChecker
@@ -42,6 +45,7 @@ from torchdata.datapipes.iter.util.ziparchivereader import \
 from torch.utils.data.datapipes.iter import IterableWrapper
 
 __all__ = ['BucketBatcher',
+           'CSVDictParser',
            'CSVParser',
            'Cycler',
            'GDriveReader',

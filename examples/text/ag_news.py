@@ -36,6 +36,6 @@ def AG_NEWS(root, split):
     # Stack CSV Parser directly on top of web-stream
     return (
         HttpReader([URL[split]])
-        .parse_csv_files()
-        .map(lambda t: (int(t[1]), " ".join(t[2:])))
+        .parse_csv()
+        .map(lambda t: (int(t[0]), " ".join(t[1:])))
     )

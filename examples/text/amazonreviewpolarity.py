@@ -65,6 +65,6 @@ def AmazonReviewPolarity(root, split):
     )
 
     # stack CSV reader and do some mapping
-    return check_filter_extracted_files.parse_csv_files().map(
-        lambda t: (int(t[1]), t[2])
+    return check_filter_extracted_files.parse_csv().map(
+        lambda t: (int(t[0]), t[1])
     )
