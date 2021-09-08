@@ -31,7 +31,7 @@ class SampleMultiplexerDataPipe(IterDataPipe):
         total_weight: float = 0
         for v in pipes_to_weights_dict.values():
             if v <= 0:
-                raise ValueError(f"Expecting a positive weight, got {v}")
+                raise ValueError(f"Expecting a positive and non-zero weight, got {v}")
             total_weight += v
 
         self.pipes_and_weights = [(k, v / total_weight) for k, v in pipes_to_weights_dict.items()]

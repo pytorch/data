@@ -21,5 +21,5 @@ class LineReaderIterDataPipe(IterDataPipe[Tuple[str, str]]):
         for file_name, stream in self.source_datapipe:
             for line in stream:
                 if self.strip_newline:
-                    line = line.rstrip(b"\n")
-                yield (file_name, line)
+                    line = line.rstrip("\n")
+                yield file_name, line

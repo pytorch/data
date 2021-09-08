@@ -9,16 +9,16 @@ from torch.utils.data import IterDataPipe, functional_datapipe
 class KeyZipperIterDataPipe(IterDataPipe):
     r""":class:`KeyZipperIterDataPipe`.
 
-    Iterable datapipe to zip two datapipes based on the matching key.
+    Iterable DataPipe to zip two DataPipes based on the matching key.
 
     Args:
-        source_datapipe: KeyZipper will yield data based on the order of this datapipe
+        source_datapipe: KeyZipper will yield data based on the order of this DataPipe
         ref_datapipe: Reference datapipe to find matching key for `source_datapipe`
         key_fn: Callable to extract key of data from source_datapipe
         ref_key_fn: Callable to extract key of data from ref_datapipe.
             If it's not specified, the `key_fn` would be applied to reference data
         keep_key: Option to yield matching key
-        buffer_size: The size of buffer used to hold key-data pair from reference datapipe.
+        buffer_size: The size of buffer used to hold key-data pair from reference DataPipe.
             If it's specified as None, the buffer size becomes infinite
     """
 
@@ -37,7 +37,7 @@ class KeyZipperIterDataPipe(IterDataPipe):
         self.ref_key_fn = key_fn if ref_key_fn is None else ref_key_fn
         self.keep_key = keep_key
         if buffer_size is not None and buffer_size <= 0:
-            raise ValueError("'buffer_size' is required to be either None or positive integer.")
+            raise ValueError("'buffer_size' is required to be either None or a positive integer.")
         self.buffer_size = buffer_size
 
     def __iter__(self):
@@ -50,10 +50,8 @@ class KeyZipperIterDataPipe(IterDataPipe):
                 try:
                     ref_data = next(ref_it)
                 except StopIteration:
-                    raise BufferError(
-                        "No matching key can be found from reference DataPipe for the data {}. "
-                        "Please consider increase buffer size.".format(data)
-                    )
+                    raise BufferError(f"No matching key can be found from reference DataPipe for the data {data}. "
+                                      "Please consider increasing the buffer size.")
                 ref_key = self.ref_key_fn(ref_data)
                 if ref_key in buffer:
                     raise ValueError("Duplicate key is found in reference DataPipe")

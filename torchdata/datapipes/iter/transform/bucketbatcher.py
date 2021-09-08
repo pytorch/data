@@ -26,8 +26,8 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         datapipe: Iterable DataPipe being batched
         batch_size: The size of each batch
         drop_last: Option to drop the last batch if it's not full
-        batch_num: Number of batches to consist a bucket
-        bucket_num: Number of buckets to consist a pool for shuffling
+        batch_num: Number of batches within a bucket (i.e. bucket_size = batch_size * batch_num)
+        bucket_num: Number of buckets to consist a pool for shuffling (i.e. pool_size = bucket_size * bucket_num)
         sort_key: Callable to specify the comparison key for sorting within bucket
         in_batch_shuffle: Option to do in-batch shuffle or buffer shuffle
     """
@@ -55,8 +55,7 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         assert bucket_num > 0, "Number of buckets is required to be larger than 0!"
         super().__init__()
 
-        # TODO: Verify _datapippe is not going to be serialized twice
-        # and be able to reconstruct
+        # TODO: Verify _datapippe is not going to be serialized twice and is able to reconstruct
         self._datapipe = datapipe
         self.batch_size = batch_size
         self.drop_last = drop_last
@@ -68,6 +67,7 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         self.bucket_size = batch_size * batch_num
         self.pool_size = self.bucket_size * bucket_num
 
+        # Shuffle by pool_size
         if bucket_num > 1 or sort_key is None:
             if in_batch_shuffle:
                 datapipe = (
@@ -75,9 +75,12 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
                 )
             else:
                 datapipe = datapipe.shuffle(buffer_size=self.pool_size)
+        # Sort by bucket_size if sort_key is given
         if sort_key is not None:
             datapipe = datapipe.batch(self.bucket_size).map(fn=sort_key).unbatch()
+        # Batch and drop last (if needed)
         datapipe = datapipe.batch(batch_size, drop_last=drop_last)
+        # Shuffle the batched data
         if sort_key is not None:
             # In-batch shuffle each bucket seems not that useful
             if in_batch_shuffle:
@@ -85,7 +88,6 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
             else:
                 datapipe = datapipe.shuffle(buffer_size=self.bucket_size)
         self.datapipe = datapipe
-
         self.length = None
 
     def __iter__(self) -> Iterator:
