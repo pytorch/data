@@ -5,7 +5,7 @@ import tempfile
 import warnings
 
 from io import BufferedIOBase
-from typing import Iterable, List, Union
+from typing import Iterable, List, Tuple, Union
 
 
 def match_masks(name : str, masks : Union[str, List[str]]) -> bool:
@@ -57,7 +57,14 @@ def get_file_binaries_from_pathnames(pathnames: Iterable, mode: str):
         yield (pathname, open(pathname, mode))
 
 
-def validate_pathname_binary_tuple(data):
+def _default_filepath_fn(data):
+    # Cross-platform Temporary Directory
+    temp_dir = tempfile.gettempdir()
+    return os.path.join(temp_dir, os.path.basename(data))
+    return os.path.normpath(data)
+
+
+def validate_pathname_binary_tuple(data: Tuple[str, BufferedIOBase]):
     if not isinstance(data, tuple):
         raise TypeError("pathname binary data should be tuple type, but got {}".format(type(data)))
     if len(data) != 2:
@@ -66,10 +73,3 @@ def validate_pathname_binary_tuple(data):
         raise TypeError("pathname binary tuple should have string type pathname, but got {}".format(type(data[0])))
     if not isinstance(data[1], BufferedIOBase):
         raise TypeError("pathname binary tuple should have BufferedIOBase based binary type, but got {}".format(type(data[1])))
-
-
-def _default_filepath_fn(data):
-    # Cross-platform Temporary Directory
-    temp_dir = tempfile.gettempdir()
-    return os.path.join(temp_dir, os.path.basename(data))
-    return os.path.normpath(data)
