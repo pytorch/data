@@ -1,8 +1,3 @@
-# image folder
-benchmark/image_training/images_dataset_ds/train/*/
-benchmark/image_training/images_dataset_ds/val/*/
-benchmark/image_training/images_dataset_tar
-
 build/*
 dist/*
 torchdata.egg-info/*
@@ -24,11 +19,6 @@ torchdata/version.py
 # Compiled python
 *.pyc
 *.pyd
-
-images_dataset_ds
-images_dataset_tar
-benchmark/image_training/images_dataset_ds
-benchmark/image_training/images_dataset_tar
 
 # setup script artifacts for Velox
 f4d-deps
