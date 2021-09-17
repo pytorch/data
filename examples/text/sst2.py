@@ -5,7 +5,7 @@ from torchdata.datapipes.iter import (
     HttpReader,
     IterableWrapper,
 )
-from torchtext.data.datasets_utils import (
+from .utils import (
     _add_docstring_header,
     _create_dataset_directory,
     _wrap_split_argument,
