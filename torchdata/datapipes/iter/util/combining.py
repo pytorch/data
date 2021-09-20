@@ -40,7 +40,7 @@ class KeyZipperIterDataPipe(IterDataPipe):
         self.buffer_size = buffer_size
 
     def __iter__(self):
-        buffer = OrderedDict()
+        buffer: OrderedDict = OrderedDict()
         ref_it = iter(self.ref_datapipe)
         warn_once_flag = True
         for data in self.source_datapipe:

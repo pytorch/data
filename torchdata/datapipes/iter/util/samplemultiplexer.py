@@ -24,7 +24,7 @@ class SampleMultiplexerDataPipe(IterDataPipe):
     ):
         if not pipes_to_weights_dict:
             raise ValueError("Empty dictionary passed to SampleMultiplexerDataPipe")
-        total_weight = 0
+        total_weight: float = 0
         for v in pipes_to_weights_dict.values():
             if v <= 0:
                 raise ValueError(f"Expecting a positive weight, got {v}")
@@ -35,13 +35,13 @@ class SampleMultiplexerDataPipe(IterDataPipe):
             self.random = random.Random()
         else:
             self.random = random.Random(seed)
-        self.length = None
+        self.length: Optional[int] = None
 
     def __iter__(self):
         pipes_and_weights = [(iter(k), v) for k, v in self.pipes_and_weights]
         while len(pipes_and_weights) > 1:
             r = self.random.random()
-            s = 0
+            s: float = 0
             for it, weight in pipes_and_weights:
                 s += weight
                 if r < s:

@@ -3,7 +3,7 @@ import sys
 
 from collections import deque
 from os import path
-from typing import Optional
+from typing import Deque, Optional
 
 from torch.utils.data import IterDataPipe, functional_datapipe
 from torch.utils.data.datapipes.iter import FileLoader
@@ -13,7 +13,6 @@ from torchdata.datapipes.utils.common import _default_filepath_fn
 @functional_datapipe("in_memory_cache")
 class InMemoryCacheHolderIterDataPipe(IterDataPipe):
     size: Optional[int] = None
-    done: bool
     idx: int
 
     def __init__(self, source_dp, size=None):
@@ -21,12 +20,11 @@ class InMemoryCacheHolderIterDataPipe(IterDataPipe):
         # cache size in MB
         if size is not None:
             self.size = size * 1024 * 1024
-        self.cache = None
-        self.done = False
+        self.cache: Optional[Deque] = None
         self.idx = 0
 
     def __iter__(self):
-        if self.done:
+        if self.cache:
             for idx, data in enumerate(self.source_dp):
                 if idx < self.idx:
                     yield data
@@ -35,7 +33,7 @@ class InMemoryCacheHolderIterDataPipe(IterDataPipe):
             yield from self.cache
         else:
             # Local cache
-            cache = deque()
+            cache: Deque = deque()
             idx = 0
             for data in self.source_dp:
                 cache.append(data)
@@ -44,7 +42,6 @@ class InMemoryCacheHolderIterDataPipe(IterDataPipe):
                     cache.popleft()
                     idx += 1
                 yield data
-            self.done = True
             self.cache = cache
             self.idx = idx
 

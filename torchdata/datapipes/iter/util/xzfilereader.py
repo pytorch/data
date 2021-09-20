@@ -34,7 +34,7 @@ class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
             validate_pathname_binary_tuple(data)
             pathname, data_stream = data
             try:
-                extracted_fobj = lzma.open(data_stream, mode="rb")
+                extracted_fobj = lzma.open(data_stream, mode="rb")  # type: ignore[call-overload]
                 new_pathname = pathname.rstrip(".xz")
                 yield new_pathname, extracted_fobj  # type: ignore[misc]
             except Exception as e:
