@@ -33,7 +33,8 @@ def IMDB(root, split):
     """Demonstrates complex use case where each sample is stored in seperate file and compressed in tar file
     Here we show some fancy filtering and mapping operations.
     Filtering is needed to know which files belong to train/test and neg/pos label
-    Mapping is needed to yield proper data samples by extracting label from file name and reading data from file
+    Mapping is needed to yield proper data samples by extracting label from file name
+        and reading data from file
     """
 
     # cache data on-disk
@@ -44,20 +45,15 @@ def IMDB(root, split):
     )
 
     # do sanity check
-    check_cache_dp = cache_dp.check_hash(
-        {os.path.join(root, os.path.basename(URL)): MD5}, "md5"
-    )
+    check_cache_dp = cache_dp.check_hash({os.path.join(root, os.path.basename(URL)): MD5}, "md5")
 
     # stack TAR extractor on top of load files data pipe
     extracted_files = check_cache_dp.read_from_tar()
 
     # filter the files as applicable to create dataset for given split (train or test)
     filter_files = extracted_files.filter(
-        lambda x: Path(x[0]).parts[-3] == split
-        and Path(x[0]).parts[-2] in ["pos", "neg"]
+        lambda x: Path(x[0]).parts[-3] == split and Path(x[0]).parts[-2] in ["pos", "neg"]
     )
 
     # map the file to yield proper data samples
-    return filter_files.map(
-        lambda x: (Path(x[0]).parts[-2], x[1].read().decode("utf-8"))
-    )
+    return filter_files.map(lambda x: (Path(x[0]).parts[-2], x[1].read().decode("utf-8")))

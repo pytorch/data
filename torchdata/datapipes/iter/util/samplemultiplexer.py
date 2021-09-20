@@ -2,7 +2,7 @@
 from typing import Dict, Optional, Sized
 import random
 
-from torch.utils.data import IterDataPipe, functional_datapipe
+from torch.utils.data import IterDataPipe
 
 
 class SampleMultiplexerDataPipe(IterDataPipe):
@@ -30,9 +30,7 @@ class SampleMultiplexerDataPipe(IterDataPipe):
                 raise ValueError(f"Expecting a positive weight, got {v}")
             total_weight += v
 
-        self.pipes_and_weights = [
-            (k, v / total_weight) for k, v in pipes_to_weights_dict.items()
-        ]
+        self.pipes_and_weights = [(k, v / total_weight) for k, v in pipes_to_weights_dict.items()]
         if seed is None:
             self.random = random.Random()
         else:
@@ -54,9 +52,7 @@ class SampleMultiplexerDataPipe(IterDataPipe):
                         # remove the current stream
                         new_total = 1 - weight
                         assert new_total > 0
-                        pipes_and_weights = [
-                            (k, v / new_total) for k, v in pipes_and_weights if k != it
-                        ]
+                        pipes_and_weights = [(k, v / new_total) for k, v in pipes_and_weights if k != it]
                     break
 
         # only one stream left
@@ -66,9 +62,7 @@ class SampleMultiplexerDataPipe(IterDataPipe):
     def __len__(self) -> int:
         if self.length is not None:
             if self.length == -1:
-                raise TypeError(
-                    "{} instance doesn't have valid length".format(type(self).__name__)
-                )
+                raise TypeError("{} instance doesn't have valid length".format(type(self).__name__))
             return self.length
         if all(isinstance(dp, Sized) for dp, _ in self.pipes_and_weights):
             self.length = sum(len(dp) for dp, _ in self.pipes_and_weights)

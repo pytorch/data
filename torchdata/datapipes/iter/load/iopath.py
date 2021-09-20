@@ -12,7 +12,8 @@ class IoPathFileListerIterDataPipe(IterDataPipe):
             raise ModuleNotFoundError(
                 "Package `iopath` is required to be installed to use this "
                 "datapipe. Please use `pip install iopath` or `conda install "
-                "iopath`""to install the package"
+                "iopath`"
+                "to install the package"
             )
 
         self.root = root
@@ -35,7 +36,8 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe):
             raise ModuleNotFoundError(
                 "Package `iopath` is required to be installed to use this "
                 "datapipe. Please use `pip install iopath` or `conda install "
-                "iopath`""to install the package"
+                "iopath`"
+                "to install the package"
             )
 
         self.source_datapipe = source_datapipe

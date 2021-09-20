@@ -43,9 +43,7 @@ class _ParseSQuADQAData(IterDataPipe):
                     for layer3 in layer2["qas"]:
                         _context, _question = layer2["context"], layer3["question"]
                         _answers = [item["text"] for item in layer3["answers"]]
-                        _answer_start = [
-                            item["answer_start"] for item in layer3["answers"]
-                        ]
+                        _answer_start = [item["answer_start"] for item in layer3["answers"]]
                         if len(_answers) == 0:
                             _answers = [""]
                             _answer_start = [-1]
@@ -57,7 +55,8 @@ class _ParseSQuADQAData(IterDataPipe):
 @_wrap_split_argument(("train", "dev"))
 def SQuAD2(root, split):
     """Demonstrates use case when more complex processing is needed on data-stream
-    Here we process dictionary returned by standard JSON reader and write custom datapipe to orchestrates data samples for Q&A use-case
+    Here we process dictionary returned by standard JSON reader and write custom
+        datapipe to orchestrates data samples for Q&A use-case
     """
 
     # cache data on-disk
@@ -68,9 +67,7 @@ def SQuAD2(root, split):
     )
 
     # do sanity check
-    check_cache_dp = cache_dp.check_hash(
-        {os.path.join(root, os.path.basename(URL[split])): MD5[split]}, "md5"
-    )
+    check_cache_dp = cache_dp.check_hash({os.path.join(root, os.path.basename(URL[split])): MD5[split]}, "md5")
 
     # stack custom data pipe on top of JSON reader to orchestrate data samples for Q&A dataset
     return _ParseSQuADQAData(check_cache_dp.parse_json_files())

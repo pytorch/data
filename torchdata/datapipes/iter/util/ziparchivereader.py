@@ -13,9 +13,9 @@ from torch.utils.data import IterDataPipe, functional_datapipe
 # nuke source class when repo is open-sourced
 
 
-@functional_datapipe('read_from_zip')
+@functional_datapipe("read_from_zip")
 class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
-    r""" :class:`ZipArchiveReaderIterDataPipe`.
+    r""":class:`ZipArchiveReaderIterDataPipe`.
 
     Iterable data pipe to extract zip binary streams from input iterable which contains a tuple of pathname and
     zip binary stream. This yields a tuple of pathname and extracted binary stream.
@@ -30,10 +30,8 @@ class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         or let Python's GC close them periodically. Due to how zipfiles implements its open() method,
         the data_stream variable below cannot be closed within the scope of this function.
     """
-    def __init__(
-            self,
-            datapipe: Iterable[Tuple[str, BufferedIOBase]],
-            length: int = -1):
+
+    def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1):
         super().__init__()
         self.datapipe: Iterable[Tuple[str, BufferedIOBase]] = datapipe
         self.length: int = length
@@ -50,14 +48,13 @@ class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                     if sys.version_info[1] >= 6:
                         if zipinfo.is_dir():
                             continue
-                    elif zipinfo.filename.endswith('/'):
+                    elif zipinfo.filename.endswith("/"):
                         continue
                     extracted_fobj = zips.open(zipinfo)
                     inner_pathname = os.path.normpath(os.path.join(pathname, zipinfo.filename))
                     yield (inner_pathname, extracted_fobj)  # type: ignore[misc]
             except Exception as e:
-                warnings.warn(
-                    f"Unable to extract files from corrupted zipfile stream {pathname} due to: {e}, abort!")
+                warnings.warn(f"Unable to extract files from corrupted zipfile stream {pathname} due to: {e}, abort!")
                 raise e
             # We are unable to close 'data_stream' here, because it needs to be available to use later
 

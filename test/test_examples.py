@@ -3,20 +3,22 @@ import unittest
 
 import sys
 import os
+
 current = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.dirname(current)
 sys.path.append(ROOT)
 
-from torchdata.datapipes.iter import IterableWrapper
 from examples.vision.caltech101 import Caltech101
 from examples.vision.caltech256 import Caltech256
 
 try:
     import scipy  # type: ignore[import] # noqa: F401 F403
+
     HAS_SCIPY = True
 except ImportError:
     HAS_SCIPY = False
 skipIfNoSciPy = unittest.skipIf(not HAS_SCIPY, "no scipy")
+
 
 class TestVisionExamples(unittest.TestCase):
     @skipIfNoSciPy
@@ -30,5 +32,6 @@ class TestVisionExamples(unittest.TestCase):
         samples = list(Caltech256(path))
         self.assertEqual(6, len(samples))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

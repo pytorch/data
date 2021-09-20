@@ -34,6 +34,7 @@ def Caltech256(root=ROOT):
     dp = RoutedDecoder(dp, imagehandler("pil"))
     return Mapper(dp, collate_sample)
 
+
 if __name__ == "__main__":
     for sample in Caltech256():
         pass

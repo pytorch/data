@@ -14,10 +14,13 @@ class KeyZipperIterDataPipe(IterDataPipe):
         source_datapipe: KeyZipper will yield data based on the order of this datapipe
         ref_datapipe: Reference datapipe to find matching key for `source_datapipe`
         key_fn: Callable to extract key of data from source_datapipe
-        ref_key_fn: Callable to extract key of data from ref_datapipe. If it's not specified, i will use same Callable as `key_fn`
+        ref_key_fn: Callable to extract key of data from ref_datapipe.
+            If it's not specified, the `key_fn` would be applied to reference data
         keep_key: Option to yield matching key
-        buffer_size: The size of buffer used to hold key-data pair from reference datapipe. If it's specified as None, the buffer size becomes infinite
+        buffer_size: The size of buffer used to hold key-data pair from reference datapipe.
+            If it's specified as None, the buffer size becomes infinite
     """
+
     def __init__(
         self,
         source_datapipe,
@@ -46,15 +49,20 @@ class KeyZipperIterDataPipe(IterDataPipe):
                 try:
                     ref_data = next(ref_it)
                 except StopIteration:
-                    raise BufferError("No matching key can be found from reference DataPipe for the data {}. Please consider increase buffer size.".format(data))
+                    raise BufferError(
+                        "No matching key can be found from reference DataPipe for the data {}. "
+                        "Please consider increase buffer size.".format(data)
+                    )
                 ref_key = self.ref_key_fn(ref_data)
                 if ref_key in buffer:
                     raise ValueError("Duplicate key is found in reference DataPipe")
                 if self.buffer_size is not None and len(buffer) > self.buffer_size:
                     if warn_once_flag:
                         warn_once_flag = False
-                        warnings.warn("Buffer reaches the upper limit, so reference key-data pair begins to "
-                                      "be removed from buffer in FIFO order. Please consider increase buffer size.")
+                        warnings.warn(
+                            "Buffer reaches the upper limit, so reference key-data pair begins to "
+                            "be removed from buffer in FIFO order. Please consider increase buffer size."
+                        )
                     buffer.popitem(last=False)
                 buffer[ref_key] = ref_data
             if self.keep_key:

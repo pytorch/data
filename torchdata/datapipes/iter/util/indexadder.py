@@ -4,7 +4,7 @@ from torch.utils.data import IterDataPipe, functional_datapipe
 
 @functional_datapipe("add_index")
 class IndexAdderIterDataPipe(IterDataPipe):
-    r""" :class:`AddIndex`.
+    r""":class:`AddIndex`.
 
     Iterable DataPipe to add an index to an existing datapipe. The row or batch
     must be of type dict otherwise a `NotImplementedError` is thrown. The index
@@ -24,9 +24,7 @@ class IndexAdderIterDataPipe(IterDataPipe):
                 row_or_batch[self.index_name] = i
                 yield row_or_batch
             else:
-                raise NotImplementedError(
-                    "We only support adding index to row or batch in dict type"
-                )
+                raise NotImplementedError("We only support adding index to row or batch in dict type")
 
     def __len__(self):
         return len(self.source_datapipe)

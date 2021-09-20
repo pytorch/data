@@ -4,7 +4,7 @@ import json
 from torch.utils.data import IterDataPipe, functional_datapipe
 
 
-@functional_datapipe('parse_json_files')
+@functional_datapipe("parse_json_files")
 class JsonParserIterDataPipe(IterDataPipe):
     def __init__(self, source_datapipe, **kwargs):
         self.source_datapipe = source_datapipe
