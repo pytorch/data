@@ -17,8 +17,11 @@ def _check_default_set(split, target_select, dataset_name):
     if not isinstance(split, tuple):
         raise ValueError("Internal error: Expected split to be of type tuple.")
     if not set(split).issubset(set(target_select)):
-        raise TypeError('Given selection {} of splits is not supported for dataset {}. Please choose from {}.'.format(
-            split, dataset_name, target_select))
+        raise TypeError(
+            "Given selection {} of splits is not supported for dataset {}. Please choose from {}.".format(
+                split, dataset_name, target_select
+            )
+        )
     return split
 
 
@@ -38,8 +41,7 @@ def _dataset_docstring_header(fn, num_lines=None, num_classes=None):
     Assumes function signature of form (root='.data', split=<some tuple of strings>, **kwargs)
     """
     argspec = inspect.getfullargspec(fn)
-    if not (argspec.args[0] == "root" and
-            argspec.args[1] == "split"):
+    if not (argspec.args[0] == "root" and argspec.args[1] == "split"):
         raise ValueError("Internal Error: Given function {} did not adhere to standard signature.".format(fn))
     default_split = argspec.defaults[1]
 
@@ -69,7 +71,7 @@ def _dataset_docstring_header(fn, num_lines=None, num_classes=None):
 
     if isinstance(default_split, tuple):
         args_s += "\n    split: split or splits to be returned. Can be a string or tuple of strings."
-        args_s += "\n        Default: {}""".format(str(default_split))
+        args_s += "\n        Default: {}" "".format(str(default_split))
 
     if isinstance(default_split, str):
         args_s += "\n     split: Only {default_split} is available."
@@ -87,6 +89,7 @@ def _add_docstring_header(docstring=None, num_lines=None, num_classes=None):
         if old_doc is not None:
             fn.__doc__ += old_doc
         return fn
+
     return docstring_decorator
 
 
@@ -102,17 +105,18 @@ def _wrap_split_argument_with_fn(fn, splits):
     train, valid = AG_NEWS(split=('train', 'valid'))
     """
     argspec = inspect.getfullargspec(fn)
-    if not (argspec.args[0] == "root" and
-            argspec.args[1] == "split" and
-            argspec.varargs is None and
-            argspec.varkw is None and
-            len(argspec.kwonlyargs) == 0 and
-            len(argspec.annotations) == 0
-            ):
+    if not (
+        argspec.args[0] == "root"
+        and argspec.args[1] == "split"
+        and argspec.varargs is None
+        and argspec.varkw is None
+        and len(argspec.kwonlyargs) == 0
+        and len(argspec.annotations) == 0
+    ):
         raise ValueError("Internal Error: Given function {} did not adhere to standard signature.".format(fn))
 
     @functools.wraps(fn)
-    def new_fn(root=os.path.expanduser('~/.torchtext/cache'), split=splits, **kwargs):
+    def new_fn(root=os.path.expanduser("~/.torchtext/cache"), split=splits, **kwargs):
         result = []
         for item in _check_default_set(split, splits, fn.__name__):
             result.append(fn(root, item, **kwargs))
@@ -121,8 +125,8 @@ def _wrap_split_argument_with_fn(fn, splits):
     new_sig = inspect.signature(new_fn)
     new_sig_params = new_sig.parameters
     new_params = []
-    new_params.append(new_sig_params['root'].replace(default='.data'))
-    new_params.append(new_sig_params['split'].replace(default=splits))
+    new_params.append(new_sig_params["root"].replace(default=".data"))
+    new_params.append(new_sig_params["split"].replace(default=splits))
     new_params += [entry[1] for entry in list(new_sig_params.items())[2:]]
     new_sig = new_sig.replace(parameters=tuple(new_params))
     new_fn.__signature__ = new_sig
@@ -133,23 +137,25 @@ def _wrap_split_argument_with_fn(fn, splits):
 def _wrap_split_argument(splits):
     def new_fn(fn):
         return _wrap_split_argument_with_fn(fn, splits)
+
     return new_fn
 
 
 def _create_dataset_directory(dataset_name):
     def decorator(func):
         argspec = inspect.getfullargspec(func)
-        if not (argspec.args[0] == "root" and
-                argspec.args[1] == "split" and
-                argspec.varargs is None and
-                argspec.varkw is None and
-                len(argspec.kwonlyargs) == 0 and
-                len(argspec.annotations) == 0
-                ):
+        if not (
+            argspec.args[0] == "root"
+            and argspec.args[1] == "split"
+            and argspec.varargs is None
+            and argspec.varkw is None
+            and len(argspec.kwonlyargs) == 0
+            and len(argspec.annotations) == 0
+        ):
             raise ValueError("Internal Error: Given function {} did not adhere to standard signature.".format(fn))
 
         @functools.wraps(func)
-        def wrapper(root=os.path.expanduser('~/.torchtext/cache'), *args, **kwargs):
+        def wrapper(root=os.path.expanduser("~/.torchtext/cache"), *args, **kwargs):
             new_root = os.path.join(root, dataset_name)
             if not os.path.exists(new_root):
                 os.makedirs(new_root)
