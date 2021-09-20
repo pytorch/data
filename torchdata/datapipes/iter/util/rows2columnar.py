@@ -22,8 +22,7 @@ class Rows2ColumnarIterDataPipe(IterDataPipe):
                             # this line will raise a KeyError if column_name
                             # is not within list_or_dict_row which is the
                             # expected bahavior
-                            columnar[column_name].append(
-                                list_or_dict_row[column_name])
+                            columnar[column_name].append(list_or_dict_row[column_name])
                     else:
                         for k, v in list_or_dict_row.items():
                             columnar[k].append(v)

@@ -14,7 +14,7 @@ from torch.utils.data import IterDataPipe, functional_datapipe
 
 @functional_datapipe("read_from_tar")
 class TarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
-    r""" :class:`TarArchiveReaderIterDataPipe`.
+    r""":class:`TarArchiveReaderIterDataPipe`.
     Iterable datapipe to extract tar binary streams from input iterable which contains tuples of pathnames and
     tar binary stream. This yields a tuple of pathname and extracted binary stream.
     Args:
@@ -27,12 +27,8 @@ class TarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         is attached. Otherwise, user should be responsible to close file handles explicitly
         or let Python's GC close them periodically.
     """
-    def __init__(
-        self,
-        datapipe: Iterable[Tuple[str, BufferedIOBase]],
-        mode: str = "r:*",
-        length: int = -1
-    ):
+
+    def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], mode: str = "r:*", length: int = -1):
         super().__init__()
         self.datapipe: Iterable[Tuple[str, BufferedIOBase]] = datapipe
         self.mode: str = mode
@@ -56,7 +52,8 @@ class TarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                     yield (inner_pathname, extracted_fobj)  # type: ignore[misc]
             except Exception as e:
                 warnings.warn(
-                    "Unable to extract files from corrupted tarfile stream {} due to: {}, abort!".format(pathname, e))
+                    "Unable to extract files from corrupted tarfile stream {} due to: {}, abort!".format(pathname, e)
+                )
                 raise e
             finally:
                 data_stream.close()

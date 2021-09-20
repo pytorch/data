@@ -15,5 +15,6 @@ class HeaderIterDataPipe(IterDataPipe):
             else:
                 break
 
+    # TODO: Fix the case that the length of source_datapipe is shorter than limit
     def __len__(self):
-        return len(self.limit)
+        return self.limit

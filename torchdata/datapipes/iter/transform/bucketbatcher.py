@@ -2,9 +2,9 @@
 import random
 
 from torch.utils.data import IterDataPipe, functional_datapipe, DataChunk
-from typing import Any, Callable, Dict, Iterator, List, Optional, Sized, Tuple, TypeVar, DefaultDict
+from typing import Callable, Iterator, Optional, Sized, TypeVar
 
-T_co = TypeVar('T_co', covariant=True)
+T_co = TypeVar("T_co", covariant=True)
 
 
 # TODO(ejguan): https://github.com/pytorch/pytorch/issues/63095
@@ -14,9 +14,9 @@ def _in_batch_shuffle_fn(data: DataChunk):
     return DataChunk(d)
 
 
-@functional_datapipe('bucketbatch')
+@functional_datapipe("bucketbatch")
 class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
-    r""" :class:`BucketBatcherIterDataPipe`.
+    r""":class:`BucketBatcherIterDataPipe`.
 
     Iterable DataPipe to create mini-batches of data from sorted bucket. An outer
     dimension will be added as `batch_size` if `drop_last` is set to `True`,
@@ -39,15 +39,16 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
     in_batch_shuffle: bool
     length: Optional[int]
 
-    def __init__(self,
-                 datapipe: IterDataPipe[T_co],
-                 batch_size: int,
-                 drop_last: bool = False,
-                 batch_num: int = 100,
-                 bucket_num: int = 1,
-                 sort_key: Optional[Callable] = None,
-                 in_batch_shuffle: bool = True
-                 ) -> None:
+    def __init__(
+        self,
+        datapipe: IterDataPipe[T_co],
+        batch_size: int,
+        drop_last: bool = False,
+        batch_num: int = 100,
+        bucket_num: int = 1,
+        sort_key: Optional[Callable] = None,
+        in_batch_shuffle: bool = True,
+    ) -> None:
         assert batch_size > 0, "Batch size is required to be larger than 0!"
         assert batch_num > 0, "Number of batches is required to be larger than 0!"
         assert bucket_num > 0, "Number of buckets is required to be larger than 0!"
@@ -68,7 +69,9 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
 
         if bucket_num > 1 or sort_key is None:
             if in_batch_shuffle:
-                datapipe = datapipe.batch(batch_size=self.pool_size, drop_last=False).map(fn=_in_batch_shuffle_fn).unbatch()
+                datapipe = (
+                    datapipe.batch(batch_size=self.pool_size, drop_last=False).map(fn=_in_batch_shuffle_fn).unbatch()
+                )
             else:
                 datapipe = datapipe.shuffle(buffer_size=self.pool_size)
         if sort_key is not None:

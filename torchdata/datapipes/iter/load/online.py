@@ -24,19 +24,25 @@ def _get_response_from_http(url, *, timeout):
 
         return (url, r)
     except HTTPError as e:
-        raise Exception("Could not get the file.\
-                        [HTTP Error] {code}: {reason}."
-                        .format(code=e.code, reason=e.reason))
+        raise Exception(
+            "Could not get the file.\
+                        [HTTP Error] {code}: {reason}.".format(
+                code=e.code, reason=e.reason
+            )
+        )
     except URLError as e:
-        raise Exception("Could not get the file at {url}.\
-                         [URL Error] {reason}."
-                        .format(reason=e.reason, url=url))
+        raise Exception(
+            "Could not get the file at {url}.\
+                         [URL Error] {reason}.".format(
+                reason=e.reason, url=url
+            )
+        )
     except Exception:
         raise
 
 
 class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
-    r""" :class:`HTTPReaderIterDataPipe`
+    r""":class:`HTTPReaderIterDataPipe`
 
     Iterable DataPipe to load file url(s) (http url(s) pointing to file(s)),
     yield file url and IO stream in a tuple
@@ -66,21 +72,18 @@ def _get_response_from_google_drive(url):
     if confirm_token is None:
         if "Quota exceeded" in str(response.content):
             raise RuntimeError(
-                "Google drive link {} is currently unavailable, because the quota was exceeded.".format(
-                    url
-                ))
+                "Google drive link {} is currently unavailable, because the quota was exceeded.".format(url)
+            )
 
     if confirm_token:
         url = url + "&confirm=" + confirm_token
 
     response = session.get(url, stream=True)
 
-    if 'content-disposition' not in response.headers:
-        raise RuntimeError(
-            "Internal error: headers don't contain content-disposition.")
+    if "content-disposition" not in response.headers:
+        raise RuntimeError("Internal error: headers don't contain content-disposition.")
 
-    filename = re.findall("filename=\"(.+)\"",
-                          response.headers['content-disposition'])
+    filename = re.findall('filename="(.+)"', response.headers["content-disposition"])
     if filename is None:
         raise RuntimeError("Filename could not be autodetected")
     filename = filename[0]

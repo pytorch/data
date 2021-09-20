@@ -18,7 +18,7 @@ from torchdata.datapipes.iter import IterableWrapper, KeyZipper
 # Download size is ~150 MB so fake data is provided
 URL = dict(
     images="http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz",
-    annotations="http://www.vision.caltech.edu/Image_Datasets/Caltech101/Annotations.tar"
+    annotations="http://www.vision.caltech.edu/Image_Datasets/Caltech101/Annotations.tar",
 )
 # We really shouldn't use MD5 anymore and switch to a more secure hash like SHA256 or
 # SHA512
@@ -95,18 +95,16 @@ def Caltech101(root=ROOT):
     anns_dp = RoutedDecoder(anns_dp, mathandler())
     anns_dp = Mapper(anns_dp, collate_ann)
 
-    images_dp = IterableWrapper(
-        [os.path.join(root, "101_ObjectCategories.tar.gz")])
+    images_dp = IterableWrapper([os.path.join(root, "101_ObjectCategories.tar.gz")])
     images_dp = FileLoader(images_dp)
     images_dp = TarArchiveReader(images_dp)
     images_dp = Filter(images_dp, is_not_background_image)
     images_dp = Filter(images_dp, is_not_rogue_image)
     images_dp = RoutedDecoder(images_dp, imagehandler("pil"))
 
-    dp = KeyZipper(
-        images_dp, anns_dp, images_key_fn, ref_key_fn=anns_key_fn, buffer_size=None
-    )
+    dp = KeyZipper(images_dp, anns_dp, images_key_fn, ref_key_fn=anns_key_fn, buffer_size=None)
     return Mapper(dp, collate_sample)
+
 
 if __name__ == "__main__":
     for sample in Caltech101():

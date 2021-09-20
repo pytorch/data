@@ -1,5 +1,4 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-import os
 import lzma
 import warnings
 from io import BufferedIOBase
@@ -9,7 +8,7 @@ from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 from torch.utils.data import IterDataPipe, functional_datapipe
 
 
-@functional_datapipe('read_from_xz')
+@functional_datapipe("read_from_xz")
 class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     r"""
 
@@ -24,10 +23,8 @@ class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         is attached. Otherwise, user should be responsible to close file handles explicitly
         or let Python's GC close them periodically.
     """
-    def __init__(
-            self,
-            datapipe: Iterable[Tuple[str, BufferedIOBase]],
-            length: int = -1):
+
+    def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1):
         super().__init__()
         self.datapipe: Iterable[Tuple[str, BufferedIOBase]] = datapipe
         self.length: int = length
@@ -37,12 +34,11 @@ class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
             validate_pathname_binary_tuple(data)
             pathname, data_stream = data
             try:
-                extracted_fobj = lzma.open(data_stream, mode="rb")
+                extracted_fobj = lzma.open(data_stream, mode="rb")  # type: ignore[call-overload]
                 new_pathname = pathname.rstrip(".xz")
                 yield new_pathname, extracted_fobj  # type: ignore[misc]
             except Exception as e:
-                warnings.warn(
-                    f"Unable to extract files from corrupted xz/lzma stream {pathname} due to: {e}, abort!")
+                warnings.warn(f"Unable to extract files from corrupted xz/lzma stream {pathname} due to: {e}, abort!")
                 raise e
 
     def __len__(self):

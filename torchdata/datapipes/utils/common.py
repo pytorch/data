@@ -8,7 +8,7 @@ from io import BufferedIOBase
 from typing import Iterable, List, Tuple, Union
 
 
-def match_masks(name : str, masks : Union[str, List[str]]) -> bool:
+def match_masks(name: str, masks: Union[str, List[str]]) -> bool:
     # empty mask matches any input name
     if not masks:
         return True
@@ -23,13 +23,11 @@ def match_masks(name : str, masks : Union[str, List[str]]) -> bool:
 
 
 def get_file_pathnames_from_root(
-        root: str,
-        masks: Union[str, List[str]],
-        recursive: bool = False,
-        abspath: bool = False) -> Iterable[str]:
+    root: str, masks: Union[str, List[str]], recursive: bool = False, abspath: bool = False
+) -> Iterable[str]:
 
     # print out an error message and raise the error out
-    def onerror(err : OSError):
+    def onerror(err: OSError):
         warnings.warn(err.filename + " : " + err.strerror)
         raise err
 
@@ -45,15 +43,16 @@ def get_file_pathnames_from_root(
 
 def get_file_binaries_from_pathnames(pathnames: Iterable, mode: str):
     if not isinstance(pathnames, Iterable):
-        pathnames = [pathnames, ]
+        pathnames = [
+            pathnames,
+        ]
 
-    if mode in ('b', 't'):
-        mode = 'r' + mode
+    if mode in ("b", "t"):
+        mode = "r" + mode
 
     for pathname in pathnames:
         if not isinstance(pathname, str):
-            raise TypeError("Expected string type for pathname, but got {}"
-                            .format(type(pathname)))
+            raise TypeError("Expected string type for pathname, but got {}".format(type(pathname)))
         yield (pathname, open(pathname, mode))
 
 
@@ -72,4 +71,6 @@ def validate_pathname_binary_tuple(data: Tuple[str, BufferedIOBase]):
     if not isinstance(data[0], str):
         raise TypeError("pathname binary tuple should have string type pathname, but got {}".format(type(data[0])))
     if not isinstance(data[1], BufferedIOBase):
-        raise TypeError("pathname binary tuple should have BufferedIOBase based binary type, but got {}".format(type(data[1])))
+        raise TypeError(
+            "pathname binary tuple should have BufferedIOBase based binary type, but got {}".format(type(data[1]))
+        )

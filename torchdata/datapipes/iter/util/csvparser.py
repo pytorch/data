@@ -48,7 +48,7 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
                     yield row
 
 
-@functional_datapipe('parse_csv')
+@functional_datapipe("parse_csv")
 class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
     def __init__(
         self,
@@ -61,17 +61,19 @@ class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
         keep_filename=False,
         **fmtparams
     ):
-        super().__init__(source_datapipe,
-                         csv.reader,
-                         skip_header=skip_header,
-                         decode=decode,
-                         encoding=encoding,
-                         errors=errors,
-                         keep_filename=keep_filename,
-                         **fmtparams)
+        super().__init__(
+            source_datapipe,
+            csv.reader,
+            skip_header=skip_header,
+            decode=decode,
+            encoding=encoding,
+            errors=errors,
+            keep_filename=keep_filename,
+            **fmtparams
+        )
 
 
-@functional_datapipe('parse_csv_as_dict')
+@functional_datapipe("parse_csv_as_dict")
 class CSVDictParserIterDataPipe(_CSVBaseParserIterDataPipe):
     def __init__(
         self,
@@ -84,11 +86,13 @@ class CSVDictParserIterDataPipe(_CSVBaseParserIterDataPipe):
         keep_filename=False,
         **fmtparams
     ):
-        super().__init__(source_datapipe,
-                         csv.DictReader,
-                         skip_header=skip_header,
-                         decode=decode,
-                         encoding=encoding,
-                         errors=errors,
-                         keep_filename=keep_filename,
-                         **fmtparams)
+        super().__init__(
+            source_datapipe,
+            csv.DictReader,
+            skip_header=skip_header,
+            decode=decode,
+            encoding=encoding,
+            errors=errors,
+            keep_filename=keep_filename,
+            **fmtparams
+        )
