@@ -29,7 +29,7 @@ class IoPathFileListerIterDataPipe(IterDataPipe):
 
 @functional_datapipe("load_file_by_iopath")
 class IoPathFileLoaderIterDataPipe(IterDataPipe):
-    def __init__(self, source_datapipe):
+    def __init__(self, source_datapipe, mode='rt'):
         try:
             from iopath.common.file_io import g_pathmgr
         except ImportError:
@@ -42,11 +42,12 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe):
 
         self.source_datapipe = source_datapipe
         self.pathmgr = g_pathmgr
+        self.mode = mode
 
     def __iter__(self):
         for file_name in self.source_datapipe:
-            with self.pathmgr.open(file_name) as file:
-                yield file
+            with self.pathmgr.open(file_name, self.mode) as file:
+                yield (file_name, file)
 
     def __len__(self):
         return len(self.source_datapipe)
