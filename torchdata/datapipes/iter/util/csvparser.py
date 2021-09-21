@@ -50,6 +50,20 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
 
 @functional_datapipe("parse_csv")
 class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
+    r"""
+    Iterable DataPipe that accepts a DataPipe consists of tuples of file name and CSV data stream.
+    This reads and returns the contents within the CSV files one row at a time (as a List
+    by default, depending on fmtparams).
+
+    Args:
+        source_datapipe: source DataPipe with tuples of file name and CSV data stream
+        skip_header: number of rows to skip at the beginning of each file
+        decode: if True, this will decode the contents of the file based on the specified encoding
+        encoding: the character encoding of the files (default='utf-8')
+        errors: the error handling scheme used while decoding
+        keep_filename: if True, each row will return a tuple of file name and contents, rather
+            than just the contents
+    """
     def __init__(
         self,
         source_datapipe,
@@ -75,6 +89,22 @@ class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
 
 @functional_datapipe("parse_csv_as_dict")
 class CSVDictParserIterDataPipe(_CSVBaseParserIterDataPipe):
+    r"""
+    Iterable DataPipe that accepts a DataPipe consists of tuples of file name and CSV data stream.
+    This reads and returns the contents within the CSV files one row at a time (as a Dict by default,
+    depedning on fmtparams).
+    The first row of each file, unless skipped, will be used as the header; the contents of the header row
+    will be used as keys for the Dicts generated from the remaining rows.
+
+    Args:
+        source_datapipe: source DataPipe with tuples of file name and CSV data stream
+        skip_header: number of rows to skip at the beginning of each file
+        decode: if True, this will decode the contents of the file based on the specified encoding
+        encoding: the character encoding of the files (default='utf-8')
+        errors: the error handling scheme used while decoding
+        keep_filename: if True, each row will return a tuple of file name and contents, rather
+          than just the contents
+    """
     def __init__(
         self,
         source_datapipe,

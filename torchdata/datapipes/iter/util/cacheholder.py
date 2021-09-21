@@ -12,6 +12,15 @@ from torchdata.datapipes.utils.common import _default_filepath_fn
 
 @functional_datapipe("in_memory_cache")
 class InMemoryCacheHolderIterDataPipe(IterDataPipe):
+    r"""
+    Iterable DataPipe that stores elements from the source DataPipe in memory, up to a size limit (if given).
+    This cache is FIFO - once the cache is full, further elements will not be added to the cache
+    until the previous ones are yielded and popped off the cache.
+
+    Args:
+        source_dp: source DataPipe from which elements are read and stored in memory
+        size: The maximum size (in megabytes) that this DataPipe can hold in memory. This defaults to unlimited.
+    """
     size: Optional[int] = None
     idx: int
 
@@ -63,6 +72,16 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     bottleneck like Download, Decompress.
     Default `filepath_fn` return a path in temporary directory based
     on the basename of data yielded from `source_datapipe`.
+
+    Args:
+        source_datapipe: source DataPipe with URLs or file strings
+        opDataPipe: DataPipe to perform the desired operation on the source (e.g. download, decompress)
+        op_args: arguments for opDataPipe
+        op_kwargs: keyword arguments for opDataPipe
+        op_map: function that will be applied via .map to opDataPipe
+        mode: mode in which the file will be opened for write the data
+        filepath_fn: Given URL or file path string, returns a path to the target directory
+
     Example:
         from urllib.parse import urlparse
 
