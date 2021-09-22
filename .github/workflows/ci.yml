@@ -22,5 +22,5 @@ jobs:
           pip install -r requirements.txt
           pip install --pre torch torchvision torchaudio -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
           pip install pytest
-      - name: Run tests with pytest
+      - name: Run DataPipes tests with pytest
         run: pytest test
