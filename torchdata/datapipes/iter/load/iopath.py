@@ -47,7 +47,7 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe):
     def __iter__(self):
         for file_name in self.source_datapipe:
             with self.pathmgr.open(file_name, self.mode) as file:
-                yield (file_name, file)
+                yield file_name, file
 
     def __len__(self):
         return len(self.source_datapipe)
