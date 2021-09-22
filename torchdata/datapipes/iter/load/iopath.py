@@ -29,6 +29,15 @@ class IoPathFileListerIterDataPipe(IterDataPipe):
 
 @functional_datapipe("load_file_by_iopath")
 class IoPathFileLoaderIterDataPipe(IterDataPipe):
+    r""":class:`IoPathFileLoaderIterDataPipe`.
+
+    Iterable DataPipe to load files from input datapipe which contains
+    pathnames. This yields a tuple of pathname and an opened filestream.
+    Args:
+        source_datapipe: Iterable DataPipe that provides the pathname
+        mode: Specifies the mode in which the file is opened
+    """
+
     def __init__(self, source_datapipe, mode='rt'):
         try:
             from iopath.common.file_io import g_pathmgr
