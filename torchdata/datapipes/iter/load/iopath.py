@@ -5,6 +5,15 @@ from torch.utils.data import IterDataPipe, functional_datapipe
 
 
 class IoPathFileListerIterDataPipe(IterDataPipe):
+    r""":class:`IoPathFileListerIterDataPipe`.
+
+    Iterable DataPipe to list the contents of the directory at the provided
+    `root` URI.
+    pathnames. This yields the full URI for each file within the directory.
+    Args:
+        root: The base URI directory to list files from
+    """
+
     def __init__(self, *, root):
         try:
             from iopath.common.file_io import g_pathmgr
@@ -32,10 +41,11 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe):
     r""":class:`IoPathFileLoaderIterDataPipe`.
 
     Iterable DataPipe to load files from input datapipe which contains
-    pathnames. This yields a tuple of pathname and an opened filestream.
+    URIs. This yields a tuple of pathname and an opened filestream.
     Args:
         source_datapipe: Iterable DataPipe that provides the pathname
-        mode: Specifies the mode in which the file is opened
+        mode: Specifies the mode in which the file is opened. This arg will be
+        passed into `iopath.common.file_io.g_pathmgr.open`.
     """
 
     def __init__(self, source_datapipe, mode='rt'):
@@ -54,9 +64,9 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe):
         self.mode = mode
 
     def __iter__(self):
-        for file_name in self.source_datapipe:
-            with self.pathmgr.open(file_name, self.mode) as file:
-                yield file_name, file
+        for file_uri in self.source_datapipe:
+            with self.pathmgr.open(file_uri, self.mode) as file:
+                yield file_uri, file
 
     def __len__(self):
         return len(self.source_datapipe)
