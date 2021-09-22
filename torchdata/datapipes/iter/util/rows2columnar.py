@@ -7,6 +7,19 @@ from torch.utils.data import IterDataPipe, functional_datapipe
 
 @functional_datapipe("rows2columnar")
 class Rows2ColumnarIterDataPipe(IterDataPipe):
+    r"""
+    Iterable DataPipe that accepts an input DataPipe with batches of data, and each row
+    within a batch must either be a Dict or a List. This DataPipe processes one batch
+    at a time and yields a Dict for each batch, with column names as keys and lists of
+    corresponding values from each row as values.
+
+    Note: If column names are not given and each row is a Dict, the keys of that Dict will be used as column names.
+
+    Args:
+        source_datapipe: a DataPipe where each item is a batch. Within each batch,
+            there are rows and each row is a List or Dict.
+        column_names: a function that joins a list of lines together
+    """
     def __init__(self, source_datapipe, column_names: List[str] = [""]):
         self.source_datapipe = source_datapipe
         self.column_names = column_names

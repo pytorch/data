@@ -11,12 +11,12 @@ from torch.utils.data import IterDataPipe, functional_datapipe
 @functional_datapipe("read_from_xz")
 class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     r"""
+    Iterable DataPipe to uncompress xz (lzma) binary streams from an input iterable which contains tuples of
+    path name and xy binary streams. This yields a tuple of path name and extracted binary stream.
 
-    Iterable datapipe to uncompress xz (lzma) binary streams from an input iterable which contains tuples of
-    pathname and xy binary streams. This yields a tuple of pathname and extracted binary stream.
-    args:
-        datapipe: Iterable datapipe that provides tuples of pathname and xy binary stream
-        length: Nominal length of the datapipe
+    Args:
+        datapipe: Iterable DataPipe that provides tuples of path name and xy binary stream
+        length: Nominal length of the DataPipe
 
     Note:
         The opened file handles will be closed automatically if the default DecoderDataPipe

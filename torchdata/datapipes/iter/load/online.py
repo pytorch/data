@@ -44,10 +44,12 @@ def _get_response_from_http(url, *, timeout):
 class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
     r""":class:`HTTPReaderIterDataPipe`
 
-    Iterable DataPipe to load file url(s) (http url(s) pointing to file(s)),
-    yield file url and IO stream in a tuple
-    args:
-        timeout : timeout for http request
+    Iterable DataPipe that takes file URLs (http URLs pointing to files), and
+    yields tuples of file URL and IO stream
+
+    Args:
+        source_datapipe: a DataPipe that contains URLs
+        timeout : timeout in seconds for http request
     """
 
     def __init__(self, source_datapipe, timeout=None):
@@ -92,6 +94,13 @@ def _get_response_from_google_drive(url):
 
 
 class GDriveReaderDataPipe(IterDataPipe):
+    r"""
+    Iterable DataPipe that takes URLs point at GDrive files, and
+    yields tuples of file name and IO stream
+
+    Args:
+        source_datapipe: a DataPipe that contains URLs to GDrive files
+    """
     def __init__(self, source_datapipe):
         self.source_datapipe = source_datapipe
 
@@ -104,6 +113,14 @@ class GDriveReaderDataPipe(IterDataPipe):
 
 
 class OnlineReaderIterDataPipe(IterDataPipe):
+    r""":class:
+    Iterable DataPipe that takes file URLs (can be http URLs pointing to files or URLs to GDrive files), and
+    yields tuples of file URL and IO stream
+
+    Args:
+        source_datapipe: a DataPipe that contains URLs
+        timeout : timeout in seconds for http request
+    """
     def __init__(self, source_datapipe, *, timeout=None):
         self.source_datapipe = source_datapipe
         self.timeout = timeout

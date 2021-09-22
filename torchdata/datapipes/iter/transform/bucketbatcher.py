@@ -21,7 +21,8 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
     Iterable DataPipe to create mini-batches of data from sorted bucket. An outer
     dimension will be added as `batch_size` if `drop_last` is set to `True`,
     or `length % batch_size` for the last batch if `drop_last` is set to `False`.
-        args:
+
+    Args:
         datapipe: Iterable DataPipe being batched
         batch_size: The size of each batch
         drop_last: Option to drop the last batch if it's not full

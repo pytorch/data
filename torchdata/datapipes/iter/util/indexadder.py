@@ -9,7 +9,8 @@ class IndexAdderIterDataPipe(IterDataPipe):
     Iterable DataPipe to add an index to an existing datapipe. The row or batch
     must be of type dict otherwise a `NotImplementedError` is thrown. The index
     of the data is set to the `index_name` field provided.
-        args:
+
+    Args:
         source_datapipe: Iterable DataPipe being indexed
         index_name: Name of the key to store data index
     """

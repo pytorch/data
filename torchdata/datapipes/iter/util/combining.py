@@ -10,7 +10,8 @@ class KeyZipperIterDataPipe(IterDataPipe):
     r""":class:`KeyZipperIterDataPipe`.
 
     Iterable datapipe to zip two datapipes based on the matching key.
-    args:
+
+    Args:
         source_datapipe: KeyZipper will yield data based on the order of this datapipe
         ref_datapipe: Reference datapipe to find matching key for `source_datapipe`
         key_fn: Callable to extract key of data from source_datapipe

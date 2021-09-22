@@ -6,7 +6,11 @@ from typing import Optional
 @functional_datapipe("cycle")
 class CyclerIterDataPipe(IterDataPipe):
     """
-    Cycle the specified input forever (default), or specified number of times.
+    Cycle the specified input in perpetuity (by default), or for the specified number of times.
+
+    Args:
+        source_datapipe: source DataPipe that will be cycled through
+        count: the number of times to read through the source DataPipe (if `None`, it will cycle in perpetuity)
     """
 
     def __init__(self, source_datapipe: IterDataPipe, count: Optional[int] = None):
