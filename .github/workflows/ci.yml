@@ -22,5 +22,9 @@ jobs:
           set -eux
           pip3 install --pre torch torchvision torchaudio -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html --user
           pip3 install requests pytest expecttest --user
+      - name: Build TorchData
+        run: |
+          set -eux
+          python setup.py develop --user
       - name: Run DataPipes tests with pytest
         run: pytest test
