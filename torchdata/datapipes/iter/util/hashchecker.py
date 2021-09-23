@@ -15,14 +15,17 @@ class HashCheckerIterDataPipe(IterDataPipe):
         source_datapipe: a DataPipe with tuples of file name and data stream
         hash_dict: a Dict that maps file names to their corresponding hashes
         hash_type: the type of hash function to apply
+        rewind: rewind the stream after using the stream to compute the hash (this
+            does not work with non-seekable stream, e.g. HTTP)
 
     Usage: dp = dp.check_hash({'train.py':'0d8b94d9fa9fb1ad89b9e3da9e1521495dca558fc5213b0fd7fd7b71c23f9921'})
     """
 
-    def __init__(self, source_datapipe, hash_dict, hash_type="sha256"):
+    def __init__(self, source_datapipe, hash_dict, hash_type="sha256", rewind=True):
         self.source_datapipe = source_datapipe
         self.hash_dict = hash_dict
         self.hash_type = hash_type
+        self.rewind = rewind
 
         if self.hash_type not in ["sha256", "md5"]:
             raise ValueError("Invalid hash_type requested, should be one of {}".format(["sha256", "md5"]))
@@ -42,9 +45,9 @@ class HashCheckerIterDataPipe(IterDataPipe):
                     break
                 hash_func.update(chunk)
 
-            # Rewind steam back (if possible)
             # TODO(VitalyFedyunin): this will not work (or work crappy for non-seekable steams like http)
-            stream.seek(0)
+            if self.rewind:
+                stream.seek(0)
 
             if file_name not in self.hash_dict:
                 raise RuntimeError("Unspecified hash for file {}".format(file_name))
