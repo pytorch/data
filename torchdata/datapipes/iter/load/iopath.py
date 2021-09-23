@@ -45,10 +45,12 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe):
     Args:
         source_datapipe: Iterable DataPipe that provides the pathname
         mode: Specifies the mode in which the file is opened. This arg will be
-        passed into `iopath.common.file_io.g_pathmgr.open` (internal only).
+            passed into `iopath.common.file_io.g_pathmgr.open` (internal only).
+            Check each subclass of `PathHandler` to determine which modes are
+            supported.
     """
 
-    def __init__(self, source_datapipe, mode='rt'):
+    def __init__(self, source_datapipe, mode="r"):
         try:
             from iopath.common.file_io import g_pathmgr
         except ImportError:
