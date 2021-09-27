@@ -18,8 +18,14 @@ class LineReaderIterDataPipe(IterDataPipe[Tuple[str, str]]):
         self.strip_newline = strip_newline
 
     def __iter__(self):
+        is_string = None
         for file_name, stream in self.source_datapipe:
             for line in stream:
+                if is_string is None:
+                    is_string = type(line) == str
                 if self.strip_newline:
-                    line = line.rstrip("\n")
+                    if is_string:
+                        line = line.rstrip("\n")
+                    else:
+                        line = line.rstrip(b"\n")
                 yield file_name, line

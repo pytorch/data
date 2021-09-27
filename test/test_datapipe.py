@@ -14,6 +14,7 @@ from collections import defaultdict
 from json.decoder import JSONDecodeError
 from torch.utils.data import IterDataPipe
 from torch.utils.data.datapipes.iter import FileLister, FileLoader, IterableWrapper
+from torch.testing._internal.common_utils import slowTest
 from torchdata.datapipes.iter import (
     InMemoryCacheHolder,
     KeyZipper,
@@ -33,9 +34,17 @@ from torchdata.datapipes.iter import (
     TarArchiveReader,
     ZipArchiveReader,
     XzFileReader,
+    HttpReader,
+    GDriveReader,
+    OnlineReader,
 )
 from typing import Dict
-from _utils._common_utils_for_test import create_temp_dir_and_files, IDP_NoLen, get_name, reset_after_n_next_calls
+from _utils._common_utils_for_test import (
+    create_temp_dir_and_files,
+    IDP_NoLen,
+    get_name,
+    reset_after_n_next_calls,
+)
 
 
 class TestDataPipe(expecttest.TestCase):
@@ -246,7 +255,17 @@ class TestDataPipe(expecttest.TestCase):
         ]
         self.assertEqual(expected_result, list(line_reader_dp))
 
-        # Functional Test: strip new lines
+        # Functional Test: strip new lines for bytes
+        source_dp = IterableWrapper(
+            [("file1", io.BytesIO(text1.encode("utf-8"))), ("file2", io.BytesIO(text2.encode("utf-8")))]
+        )
+        line_reader_dp = source_dp.readlines()
+        expected_result_bytes = [("file1", line.encode("utf-8")) for line in text1.split("\n")] + [
+            ("file2", line.encode("utf-8")) for line in text2.split("\n")
+        ]
+        self.assertEqual(expected_result_bytes, list(line_reader_dp))
+
+        # Functional Test: do not strip new lines
         source_dp = IterableWrapper([("file1", io.StringIO(text1)), ("file2", io.StringIO(text2))])
         line_reader_dp = source_dp.readlines(strip_newline=False)
         expected_result = [
@@ -425,7 +444,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
             self.temp_sub_dir.cleanup()
             self.temp_dir.cleanup()
         except Exception as e:
-            warnings.warn("TestIterableDatasetBasic was not able to cleanup temp dir due to {}".format(str(e)))
+            warnings.warn(f"TestDataPipeWithIO was not able to cleanup temp dir due to {e}")
 
     def _custom_files_set_up(self, files):
         for fname, content in files.items():
@@ -469,7 +488,6 @@ class TestDataPipeWithIO(expecttest.TestCase):
         csv_parser_dp = datapipe3.parse_csv()
         expected_res = [["key", "item"], ["a", "1"], ["b", "2"], []]
         self.assertEqual(expected_res, list(csv_parser_dp))
-        print(list(csv_parser_dp))
 
         # Functional Test: yield one row at time from each file, skipping over empty content and header
         csv_parser_dp = datapipe3.parse_csv(skip_header=1)
@@ -547,9 +565,15 @@ class TestDataPipeWithIO(expecttest.TestCase):
         hash_check_dp = HashChecker(datapipe2, hash_dict)
 
         # Functional Test: Ensure the DataPipe values are unchanged if the hashes are the same
-        for (path1, stream1), (path2, stream2) in zip(datapipe2, hash_check_dp):
-            self.assertEqual(path1, path2)
-            self.assertEqual(stream1.read(), stream2.read())
+        for (expected_path, expected_stream), (actual_path, actual_stream) in zip(datapipe2, hash_check_dp):
+            self.assertEqual(expected_path, actual_path)
+            self.assertEqual(expected_stream.read(), actual_stream.read())
+
+        # Functional Test: Ensure the rewind option works, and the stream is empty when there is no rewind
+        hash_check_dp_no_reset = HashChecker(datapipe2, hash_dict, rewind=False)
+        for (expected_path, _), (actual_path, actual_stream) in zip(datapipe2, hash_check_dp_no_reset):
+            self.assertEqual(expected_path, actual_path)
+            self.assertEqual(b"", actual_stream.read())
 
         # Functional Test: Error when file/path is not in hash_dict
         hash_check_dp = HashChecker(datapipe2, {})
@@ -568,12 +592,12 @@ class TestDataPipeWithIO(expecttest.TestCase):
         hash_check_dp = datapipe2.check_hash(hash_dict)
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(hash_check_dp, n_elements_before_reset)
-        for (path1, stream1), (path2, stream2) in zip(datapipe2, res_before_reset):
-            self.assertEqual(path1, path2)
-            self.assertEqual(stream1.read(), stream2.read())
-        for (path1, stream1), (path2, stream2) in zip(datapipe2, res_after_reset):
-            self.assertEqual(path1, path2)
-            self.assertEqual(stream1.read(), stream2.read())
+        for (expected_path, expected_stream), (actual_path, actual_stream) in zip(datapipe2, res_before_reset):
+            self.assertEqual(expected_path, actual_path)
+            self.assertEqual(expected_stream.read(), actual_stream.read())
+        for (expected_path, expected_stream), (actual_path, actual_stream) in zip(datapipe2, res_after_reset):
+            self.assertEqual(expected_path, actual_path)
+            self.assertEqual(expected_stream.read(), actual_stream.read())
 
         # __len__ Test: returns the length of source DataPipe
         with self.assertRaisesRegex(TypeError, "FileLoaderIterDataPipe instance doesn't have valid length"):
@@ -754,16 +778,114 @@ class TestDataPipeWithIO(expecttest.TestCase):
     def test_io_path_file_loader_iterdatapipe(self):
         pass
 
+
+class TestDataPipeConnection(expecttest.TestCase):
+    @slowTest
     def test_http_reader_iterdatapipe(self):
-        pass
 
+        # TODO: Change to point at TorchData's after repo and URL becomes certain
+        file_url = "https://raw.githubusercontent.com/pytorch/pytorch/master/README.md"
+        expected_file_name = "README.md"
+        expected_MD5_hash = "e2d08f3b1a42efa9c1050f14b7247174"
+        http_reader_dp = HttpReader(IterableWrapper([file_url]))
+
+        # Functional Test: test if the Http Reader can download and read properly
+        reader_dp = http_reader_dp.readlines()
+        it = iter(reader_dp)
+        path, line = next(it)
+        self.assertEqual(expected_file_name, os.path.basename(path))
+        self.assertTrue(b"pytorch" in line)
+
+        # Reset Test: http_reader_dp has been read, but we reset when calling check_hash()
+        check_cache_dp = http_reader_dp.check_hash({file_url: expected_MD5_hash}, "md5", rewind=False)
+        it = iter(check_cache_dp)
+        path, stream = next(it)
+        self.assertEqual(expected_file_name, os.path.basename(path))
+        self.assertTrue(io.BufferedReader, type(stream))
+
+        # __len__ Test: returns the length of source DataPipe
+        source_dp = IterableWrapper([file_url])
+        http_dp = HttpReader(source_dp)
+        self.assertEqual(1, len(http_dp))
+
+    @slowTest
     def test_gdrive_iterdatapipe(self):
-        pass
 
+        amazon_review_url = "https://drive.google.com/uc?export=download&id=0Bz8a_Dbh9QhbaW12WVVZS2drcnM"
+        expected_file_name = "amazon_review_polarity_csv.tar.gz"
+        expected_MD5_hash = "fe39f8b653cada45afd5792e0f0e8f9b"
+        gdrive_reader_dp = GDriveReader(IterableWrapper([amazon_review_url]))
+
+        # Functional Test: test if the GDrive Reader can download and read properly
+        reader_dp = gdrive_reader_dp.readlines()
+        it = iter(reader_dp)
+        path, line = next(it)
+        self.assertEqual(expected_file_name, os.path.basename(path))
+        self.assertTrue(line != b"")
+
+        # Reset Test: gdrive_reader_dp has been read, but we reset when calling check_hash()
+        check_cache_dp = gdrive_reader_dp.check_hash({expected_file_name: expected_MD5_hash}, "md5", rewind=False)
+        it = iter(check_cache_dp)
+        path, stream = next(it)
+        self.assertEqual(expected_file_name, os.path.basename(path))
+        self.assertTrue(io.BufferedReader, type(stream))
+
+        # __len__ Test: returns the length of source DataPipe
+        source_dp = IterableWrapper([amazon_review_url])
+        gdrive_dp = GDriveReader(source_dp)
+        self.assertEqual(1, len(gdrive_dp))
+
+    @slowTest
     def test_online_iterdatapipe(self):
-        pass
+
+        readme_file_url = "https://raw.githubusercontent.com/pytorch/pytorch/master/README.md"
+        amazon_review_url = "https://drive.google.com/uc?export=download&id=0Bz8a_Dbh9QhbaW12WVVZS2drcnM"
+        expected_readme_file_name = "README.md"
+        expected_amazon_file_name = "amazon_review_polarity_csv.tar.gz"
+        expected_readme_MD5_hash = "e2d08f3b1a42efa9c1050f14b7247174"
+        expected_amazon_MD5_hash = "fe39f8b653cada45afd5792e0f0e8f9b"
+
+        file_hash_dict = {
+            readme_file_url: expected_readme_MD5_hash,
+            expected_amazon_file_name: expected_amazon_MD5_hash,
+        }
+
+        # Functional Test: can read from GDrive links
+        online_reader_dp = OnlineReader(IterableWrapper([amazon_review_url]))
+        reader_dp = online_reader_dp.readlines()
+        it = iter(reader_dp)
+        path, line = next(it)
+        self.assertEqual(expected_amazon_file_name, os.path.basename(path))
+        self.assertTrue(line != b"")
+
+        # Functional Test: can read from other links
+        online_reader_dp = OnlineReader(IterableWrapper([readme_file_url]))
+        reader_dp = online_reader_dp.readlines()
+        it = iter(reader_dp)
+        path, line = next(it)
+        self.assertEqual(expected_readme_file_name, os.path.basename(path))
+        self.assertTrue(line != b"")
+
+        # Reset Test: reset online_reader_dp by calling check_hash
+        check_cache_dp = online_reader_dp.check_hash(file_hash_dict, "md5", rewind=False)
+        it = iter(check_cache_dp)
+        path, stream = next(it)
+        self.assertEqual(expected_readme_file_name, os.path.basename(path))
+        self.assertTrue(io.BufferedReader, type(stream))
+
+        # Functional Test: works with multiple URLs of different sources
+        online_reader_dp = OnlineReader(IterableWrapper([readme_file_url, amazon_review_url]))
+        check_cache_dp = online_reader_dp.check_hash(file_hash_dict, "md5", rewind=False)
+        it = iter(check_cache_dp)
+        for expected_file_name, (path, stream) in zip([expected_readme_file_name, expected_amazon_file_name], it):
+            self.assertEqual(expected_file_name, os.path.basename(path))
+            self.assertTrue(io.BufferedReader, type(stream))
+
+        # __len__ Test: returns the length of source DataPipe
+        self.assertEqual(2, len(online_reader_dp))
 
 
 if __name__ == "__main__":
     TestDataPipe()
     TestDataPipeWithIO()
+    TestDataPipeConnection()
