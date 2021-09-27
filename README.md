@@ -28,9 +28,9 @@ Over many years of feedback and organic community usage of the PyTorch DataLoade
 
 ### Colab
 
-Follow the instructions [in this Colab notebook (TODO)](https://colab.research.google.com/drive/1x1ESG0_N02txFuQwyTfCnjhqzS-PzQjA#scrollTo=SVnu66W-wQfF)
+Follow the instructions [in this Colab notebook](https://colab.research.google.com/drive/1x1ESG0_N02txFuQwyTfCnjhqzS-PzQjA#scrollTo=SVnu66W-wQfF)
 
-### Local pip or conda (TODO: Finish)
+### Local pip or conda
 
 First, set up an environment. We will be installing a nightly PyTorch binary
 as well as torchdata. If you're using conda, create a conda environment:
@@ -63,19 +63,19 @@ pip install --user "git+https://github.com/pytorch/data.git"
 
 Run a quick sanity check in python:
 ```py
->>> from torchdata.datapipes.iter import HttpReader
->>> URL = "https://raw.githubusercontent.com/mhjabreel/CharCnn_Keras/master/data/ag_news_csv/train.csv"
->>> ag_news_train = HttpReader([URL]).parse_csv_files().map(lambda t: (int(t[1]), " ".join(t[2:])))
->>> agn_batches = ag_news_train.batch(2).map(lambda batch: {'labels': [sample[0] for sample in batch],\
+from torchdata.datapipes.iter import HttpReader
+URL = "https://raw.githubusercontent.com/mhjabreel/CharCnn_Keras/master/data/ag_news_csv/train.csv"
+ag_news_train = HttpReader([URL]).parse_csv().map(lambda t: (int(t[0]), " ".join(t[1:])))
+agn_batches = ag_news_train.batch(2).map(lambda batch: {'labels': [sample[0] for sample in batch],\
                                       'text': [sample[1].split() for sample in batch]})
->>> first_batch = next(iter(agn_batches))
->>> assert batch['text'][0][0:8] == ['Wall', 'St.', 'Bears', 'Claw', 'Back', 'Into', 'the', 'Black']
+batch = next(iter(agn_batches))
+assert batch['text'][0][0:8] == ['Wall', 'St.', 'Bears', 'Claw', 'Back', 'Into', 'the', 'Black']
 ```
 
 ### From source
 
 ```bash
-$ pip install -e git+https://github.com/pytorch/torchdata
+$ pip install -e git+https://github.com/pytorch/data#egg=torchdata
 ```
 
 ## What are DataPipes?
