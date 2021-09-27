@@ -9,9 +9,9 @@
 
 **This is a prototype library currently under heavy development. It does not currently have stable releases, and as such will likely be modified significantly in BC-breaking ways until beta release (targeting early 2022), and can only be used with the PyTorch nighly binaries. If you have suggestions on the API or use cases you'd like to be covered, please open a github issue. We'd love to hear thoughts and feedback.**
 
-`torchdata` is a prototype library of common modular data loading primitives for easily constructing flexible and performant data pipelines. 
+`torchdata` is a prototype library of common modular data loading primitives for easily constructing flexible and performant data pipelines.
 
-It aims to provide composable iter-style and map-style building blocks called [`DataPipes`](#what-are-datapipes) that work well out of the box with the PyTorch `DataLoader`. Right now it only contains basic functionality to reproduce several datasets in TorchVision and TorchText, namely including loading, parsing, caching, and several other utilities (e.g. hash checking). We plan to expand and harden this set considerably over the coming months. 
+It aims to provide composable iter-style and map-style building blocks called [`DataPipes`](#what-are-datapipes) that work well out of the box with the PyTorch `DataLoader`. Right now it only contains basic functionality to reproduce several datasets in TorchVision and TorchText, namely including loading, parsing, caching, and several other utilities (e.g. hash checking). We plan to expand and harden this set considerably over the coming months.
 
 To understand the basic structure of `DataPipes`, please see [What are DataPipes?](#what-are-datapipes) below, and to see how `DataPipes` can be practically composed into datasets, please see our [`examples/`](examples/) directory.
 
@@ -80,9 +80,9 @@ $ pip install -e git+https://github.com/pytorch/torchdata
 
 ## What are DataPipes?
 
-Early on, we observed widespread confusion between the PyTorch `DataSets` which represented reusable loading 
-tooling (e.g. TorchVision's [`ImageFolder`](https://github.com/pytorch/vision/blob/main/torchvision/datasets/folder.py#L272)), 
-and those that represented pre-built iterators/accessors over actual data corpora (e.g. TorchVision's [ImageNet](https://github.com/pytorch/vision/blob/main/torchvision/datasets/imagenet.py#L20)). This led to an unfortunate 
+Early on, we observed widespread confusion between the PyTorch `DataSets` which represented reusable loading
+tooling (e.g. TorchVision's [`ImageFolder`](https://github.com/pytorch/vision/blob/main/torchvision/datasets/folder.py#L272)),
+and those that represented pre-built iterators/accessors over actual data corpora (e.g. TorchVision's [ImageNet](https://github.com/pytorch/vision/blob/main/torchvision/datasets/imagenet.py#L20)). This led to an unfortunate
 pattern of siloed inheritence of data tooling rather than composition.
 
 `DataPipe` is simply a renaming and repurposing of the PyTorch `DataSet` for composed usage. A `DataPipe` takes in some access function over Python data structures, `__iter__` for `IterDataPipes` and `__getitem__` for `MapDataPipes`, and returns a new access function with a slight transformation applied. For example, take a look at this `JsonParser`, which accepts an IterDataPipe over file names and raw streams, and produces a new iterator over the filenames and deserialized data:
@@ -104,11 +104,11 @@ class JsonParserIterDataPipe(IterDataPipe):
         return len(self.source_datapipe)
 ```
 
-You can see in this example how DataPipes can be easily chained together to compose graphs of transformations that reproduce 
-sohpisticated data pipelines, with streamed operation as a first-class citizen. 
+You can see in this example how DataPipes can be easily chained together to compose graphs of transformations that reproduce
+sohpisticated data pipelines, with streamed operation as a first-class citizen.
 
 Under this naming convention, `DataSet` simply refers to a graph of `DataPipes`, and a dataset module like
-`ImageNet` can be rebuilt as a factory function returning the requisite composed `DataPipes`. Note that the 
+`ImageNet` can be rebuilt as a factory function returning the requisite composed `DataPipes`. Note that the
 vast majority of initial support is focused on `IterDataPipes`, while more `MapDataPipes` support will come later.
 
 ### Implementing DataPipes

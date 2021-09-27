@@ -94,7 +94,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     """
 
     def __new__(
-        self,
+        cls,
         source_datapipe,
         opDataPipe,
         op_args=None,

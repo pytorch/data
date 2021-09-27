@@ -31,7 +31,7 @@ def get_file_pathnames_from_root(
         warnings.warn(err.filename + " : " + err.strerror)
         raise err
 
-    for path, dirs, files in os.walk(root, onerror=onerror):
+    for path, _, files in os.walk(root, onerror=onerror):
         if abspath:
             path = os.path.abspath(path)
         for f in files:
