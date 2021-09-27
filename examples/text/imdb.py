@@ -30,7 +30,7 @@ DATASET_NAME = "IMDB"
 @_create_dataset_directory(dataset_name=DATASET_NAME)
 @_wrap_split_argument(("train", "test"))
 def IMDB(root, split):
-    """Demonstrates complex use case where each sample is stored in seperate file and compressed in tar file
+    """Demonstrates complex use case where each sample is stored in separate file and compressed in tar file
     Here we show some fancy filtering and mapping operations.
     Filtering is needed to know which files belong to train/test and neg/pos label
     Mapping is needed to yield proper data samples by extracting label from file name
