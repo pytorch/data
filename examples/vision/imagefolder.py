@@ -29,10 +29,10 @@ data_transform = transforms.Compose(
 )
 
 # DataPipes implementation of ImageFolder constructs and executes graph of DataPipes (aka DataPipeline)
-# ListDirFiles -> ObtainCategories
+# FileLister -> ObtainCategories
 #                       |
 #                       V
-# ListDirFiles -> AttributeCategories -> LoadAndDecodeImages (using `map`) -> ApplyTorchVisionTransforms (using `map`)
+# FileLister -> AttributeCategories -> LoadAndDecodeImages (using `map`) -> ApplyTorchVisionTransforms (using `map`)
 
 
 def get_category_name(path):
@@ -85,7 +85,7 @@ def MyImageFolder(root=IMAGES_ROOT, transform=None):
         list_files_0 = FileLister(root=IMAGES_ROOT, recursive=True)
         list_files_1 = FileLister(root=IMAGES_ROOT, recursive=True).sharding_filter()
     else:
-        list_files_0, list_files_1 = ListDirFiles(root=IMAGES_ROOT, recursive=True).fork(2)
+        list_files_0, list_files_1 = FileLister(root=IMAGES_ROOT, recursive=True).fork(2)
         list_files_1 = list_files_1.sharding_filter()
 
     categories = ObtainCategories(list_files_0)
