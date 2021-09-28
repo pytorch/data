@@ -8,6 +8,7 @@ import lzma
 import os
 import tarfile
 import warnings
+import unittest
 import zipfile
 
 from collections import defaultdict
@@ -886,6 +887,4 @@ class TestDataPipeConnection(expecttest.TestCase):
 
 
 if __name__ == "__main__":
-    TestDataPipe()
-    TestDataPipeWithIO()
-    TestDataPipeConnection()
+    unittest.main()
