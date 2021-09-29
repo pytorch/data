@@ -41,7 +41,7 @@ print('-- Building version ' + VERSION)
 pytorch_package_version = os.getenv('PYTORCH_VERSION')
 
 pytorch_package_dep = 'torch'
-if pytorch_package_version is not None:
+if pytorch_package_version:
     pytorch_package_dep += "==" + pytorch_package_version
 
 
