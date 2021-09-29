@@ -423,7 +423,7 @@ class TestDataPipe(expecttest.TestCase):
         )
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(batch_dp, n_elements_before_reset)
-        self.assertEqual(n_elements_before_reset, len(res_before_reset))
+        self.assertEqual(2, len(res_before_reset))
         self.assertEqual(6, len([item for batch in res_before_reset for item in batch]))
         self.assertEqual(3, len(res_after_reset))
         self.assertEqual(9, len([item for batch in res_after_reset for item in batch]))
@@ -617,7 +617,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
             "2.json": '{"__complex__": true, "real": 1, "imag": 2}',
         }
         self._custom_files_set_up(json_files)
-        datapipe1 = IterableWrapper([f"{self.temp_dir.name}/{fname}"for fname in ["empty.json", "1.json", "2.json"]])
+        datapipe1 = FileLister(self.temp_dir.name, "*.json")
         datapipe2 = FileLoader(datapipe1)
         datapipe3 = datapipe2.map(get_name)
         datapipe_empty = datapipe3.filter(is_empty_json)
@@ -645,7 +645,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
         self.assertEqual(expected_res, res_after_reset)
 
         # __len__ Test: length isn't implemented since it cannot be known ahead of time
-        with self.assertRaisesRegex(TypeError, "len"):
+        with self.assertRaisesRegex(TypeError, "has no len"):
             len(json_dp)
 
     def test_saver_iterdatapipe(self):
