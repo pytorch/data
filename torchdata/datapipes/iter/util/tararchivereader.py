@@ -59,8 +59,6 @@ class TarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                     "Unable to extract files from corrupted tarfile stream {} due to: {}, abort!".format(pathname, e)
                 )
                 raise e
-            finally:
-                data_stream.close()
 
     def __len__(self):
         if self.length == -1:
