@@ -7,7 +7,7 @@
 | [**Contributing**](#contributing)
 | [**Future Plans**](#future-plans)
 
-**This is a prototype library currently under heavy development. It does not currently have stable releases, and as such will likely be modified significantly in BC-breaking ways until beta release (targeting early 2022), and can only be used with the PyTorch nighly binaries. If you have suggestions on the API or use cases you'd like to be covered, please open a github issue. We'd love to hear thoughts and feedback.**
+**This is a prototype library currently under heavy development. It does not currently have stable releases, and as such will likely be modified significantly in BC-breaking ways until beta release (targeting early 2022), and can only be used with the PyTorch nightly binaries. If you have suggestions on the API or use cases you'd like to be covered, please open a github issue. We'd love to hear thoughts and feedback.**
 
 `torchdata` is a prototype library of common modular data loading primitives for easily constructing flexible and performant data pipelines.
 
