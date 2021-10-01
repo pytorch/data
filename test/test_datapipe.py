@@ -540,6 +540,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
         res_before_reset, res_after_reset = reset_after_n_next_calls(csv_parser_dp, n_elements_before_reset)
         self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
         self.assertEqual(expected_res, res_after_reset)
+        datapipe2.close_all_streams()
 
         # __len__ Test: length isn't implemented since it cannot be known ahead of time
         with self.assertRaisesRegex(TypeError, "has no len"):
@@ -577,6 +578,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
         res_before_reset, res_after_reset = reset_after_n_next_calls(csv_dict_parser_dp, n_elements_before_reset)
         self.assertEqual(expected_res4[:n_elements_before_reset], res_before_reset)
         self.assertEqual(expected_res4, res_after_reset)
+        datapipe2.close_all_streams()
 
         # __len__ Test: length isn't implemented since it cannot be known ahead of time
         with self.assertRaisesRegex(TypeError, "has no len"):
@@ -634,6 +636,8 @@ class TestDataPipeWithIO(expecttest.TestCase):
             self.assertEqual(expected_path, actual_path)
             self.assertEqual(expected_stream.read(), actual_stream.read())
 
+        datapipe2.close_all_streams()
+
         # __len__ Test: returns the length of source DataPipe
         with self.assertRaisesRegex(TypeError, "FileLoaderIterDataPipe instance doesn't have valid length"):
             len(hash_check_dp)
@@ -677,6 +681,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
         res_before_reset, res_after_reset = reset_after_n_next_calls(json_dp, n_elements_before_reset)
         self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
         self.assertEqual(expected_res, res_after_reset)
+        datapipe2.close_all_streams()
 
         # __len__ Test: length isn't implemented since it cannot be known ahead of time
         with self.assertRaisesRegex(TypeError, "len"):
