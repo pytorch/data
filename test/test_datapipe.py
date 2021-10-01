@@ -799,10 +799,10 @@ class TestDataPipeWithIO(expecttest.TestCase):
     @skipIfNoIOPath
     def test_io_path_file_loader_iterdatapipe(self):
         datapipe1 = IoPathFileLister(root=self.temp_sub_dir.name)
-        datapipe2 = datapipe1.load_file_by_iopath()
+        datapipe2 = IoPathFileLoader(datapipe1)
 
         # check contents of file match
-        for name, f in datapipe2:
+        for _, f in datapipe2:
             self.assertEqual(f.read(), "0123456789abcdef")
 
 
