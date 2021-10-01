@@ -42,13 +42,10 @@ class PlainTextReaderHelper:
             return
 
         for line in stream:
-            if self._strip_newline:
-                if isinstance(line, str):
-                    yield line.strip("\n")
-                else:
-                    yield line.strip(b"\n")
+            if isinstance(line, str):
+                yield line.strip("\n")
             else:
-                yield line
+                yield line.strip(b"\n")
 
     def decode(self, stream: Iterator[Union[str, bytes]]) -> Iterator[Union[str, bytes]]:
         if not self._decode:
@@ -56,10 +53,7 @@ class PlainTextReaderHelper:
             return
 
         for line in stream:
-            if self._decode and isinstance(line, bytes):
-                yield line.decode(self._encoding, self._errors)
-            else:
-                yield line
+            yield line.decode(self._encoding, self._errors) if isinstance(line, bytes) else line
 
     def return_path(self, stream: Iterator[D], *, path: str) -> Iterator[Union[D, Tuple[str, D]]]:
         if not self._return_path:
@@ -67,10 +61,7 @@ class PlainTextReaderHelper:
             return
 
         for data in stream:
-            if self._return_path:
-                yield path, data
-            else:
-                yield data
+            yield path, data
 
 
 @functional_datapipe("readlines")
