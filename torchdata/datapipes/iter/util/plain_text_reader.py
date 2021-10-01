@@ -28,27 +28,47 @@ class PlainTextReaderHelper:
         self._return_path = return_path
 
     def skip_lines(self, stream: Iterator[D]) -> Iterator[D]:
-        for _ in range(self._skip_lines):
-            next(stream)
-        return stream
+        if self._skip_lines:
+            try:
+                for _ in range(self._skip_lines):
+                    next(stream)
+            except StopIteration:
+                stream = iter(())
 
-    def strip_newline(self, stream: Iterator[bytes]) -> Iterator[bytes]:
+        yield from stream
+
+    def strip_newline(self, stream: Iterator[Union[bytes, str]]) -> Iterator[Union[bytes, str]]:
         if not self._strip_newline:
-            return stream
+            yield from stream
+            return
 
-        return (line.rstrip(b"\n") for line in stream)
+        for line in stream:
+            if self._strip_newline:
+                yield line.rstrip(b"\n" if isinstance(line, bytes) else "\n")
+            else:
+                yield line
 
-    def decode(self, stream: Iterator[bytes]) -> Iterator[Union[str, bytes]]:
+    def decode(self, stream: Iterator[Union[str, bytes]]) -> Iterator[Union[str, bytes]]:
         if not self._decode:
-            return stream
+            yield from stream
+            return
 
-        return (line.decode(self._encoding, self._errors) for line in stream)
+        for line in stream:
+            if self._decode:
+                yield line.decode(self._encoding, self._errors)
+            else:
+                yield line
 
     def return_path(self, stream: Iterator[D], *, path: str) -> Iterator[Union[D, Tuple[str, D]]]:
         if not self._return_path:
-            return stream
+            yield from stream
+            return
 
-        return ((path, data) for data in stream)
+        for data in stream:
+            if self._return_path:
+                yield path, data
+            else:
+                yield data
 
 
 @functional_datapipe("readlines")
@@ -90,7 +110,7 @@ class LineReaderIterDataPipe(IterDataPipe[Union[Union[str, bytes], Tuple[str, Un
         )
 
     def __iter__(self):
-        for path, stream in self.datapipe:
+        for path, stream in self.source_datapipe:
             stream = self._helper.skip_lines(stream)
             stream = self._helper.strip_newline(stream)
             stream = self._helper.decode(stream)
@@ -112,7 +132,7 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
         **fmtparams,
     ):
         self.source_datapipe = source_datapipe
-        self.csv_reader = csv_reader
+        self._csv_reader = csv_reader
         self._helper = PlainTextReaderHelper(
             skip_lines=skip_lines,
             decode=decode,
@@ -126,8 +146,9 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
         for path, stream in self.source_datapipe:
             stream = self._helper.skip_lines(stream)
             stream = self._helper.decode(stream)
-            stream = self.csv_reader(stream, **self.fmtparams)
-            yield from self._helper.return_path(stream, path=path)
+            stream = self._csv_reader(stream, **self.fmtparams)
+            stream = self._helper.return_path(stream, path=path)
+            yield from stream
 
 
 @functional_datapipe("parse_csv")
