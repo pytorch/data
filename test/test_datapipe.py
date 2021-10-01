@@ -785,7 +785,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
             len(xz_reader_dp)
 
-    # TODO (erjia): this test currently only covers reading from local
+    # TODO (ejguan): this test currently only covers reading from local
     # filesystem. It needs to be modified once test data can be stored on
     # gdrive/s3/onedrive
     @skipIfNoIOPath
