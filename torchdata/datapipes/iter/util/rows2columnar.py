@@ -2,7 +2,8 @@
 from collections import defaultdict
 from typing import List
 
-from torchdata.datapipes.iter import IterDataPipe, functional_datapipe
+from torchdata.datapipes import functional_datapipe
+from torchdata.datapipes.iter import IterDataPipe
 
 
 @functional_datapipe("rows2columnar")

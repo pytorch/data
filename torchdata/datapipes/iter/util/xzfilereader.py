@@ -5,7 +5,8 @@ from io import BufferedIOBase
 from typing import Iterable, Iterator, Tuple
 
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
-from torchdata.datapipes.iter import IterDataPipe, functional_datapipe
+from torchdata.datapipes import functional_datapipe
+from torchdata.datapipes.iter import IterDataPipe
 
 
 @functional_datapipe("read_from_xz")

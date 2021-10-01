@@ -2,7 +2,8 @@
 from io import IOBase
 from typing import Any, Callable, Tuple
 
-from torchdata.datapipes.iter import IterDataPipe, functional_datapipe
+from torchdata.datapipes import functional_datapipe
+from torchdata.datapipes.iter import IterDataPipe
 
 from torchdata.datapipes.utils.common import _default_filepath_fn
 

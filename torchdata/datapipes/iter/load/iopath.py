@@ -1,7 +1,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import os
 
-from torchdata.datapipes.iter import IterDataPipe, functional_datapipe
+from torchdata.datapipes import functional_datapipe
+from torchdata.datapipes.iter import IterDataPipe
 
 
 class IoPathFileListerIterDataPipe(IterDataPipe):

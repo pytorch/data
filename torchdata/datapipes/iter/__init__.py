@@ -1,5 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-from torch.utils.data import IterDataPipe, functional_datapipe
+from torch.utils.data import IterDataPipe
 from torch.utils.data.datapipes.iter import (
     Collator,
     Mapper,
@@ -102,7 +102,6 @@ __all__ = [
     "XzFileReader",
     "ZipArchiveReader",
     "Zipper",
-    "functional_datapipe",
 ]
 
 # Please keep this list sorted

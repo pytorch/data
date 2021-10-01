@@ -1,7 +1,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import random
 
-from torchdata.datapipes.iter import IterDataPipe, functional_datapipe
+from torchdata.datapipes import functional_datapipe
+from torchdata.datapipes.iter import IterDataPipe
 from torch.utils.data import DataChunk
 from typing import Callable, Iterator, Optional, Sized, TypeVar
 

@@ -2,7 +2,8 @@
 import warnings
 from collections import OrderedDict
 
-from torchdata.datapipes.iter import IterDataPipe, functional_datapipe
+from torchdata.datapipes import functional_datapipe
+from torchdata.datapipes.iter import IterDataPipe
 
 
 @functional_datapipe("zip_by_key")
