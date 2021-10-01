@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import contextlib
 import csv
-from typing import Tuple, Union, Iterator, TypeVar
+from typing import Tuple, Union, Iterator, TypeVar, IO
 
 from torch.utils.data import IterDataPipe, functional_datapipe
 
@@ -28,14 +28,14 @@ class PlainTextReaderHelper:
         self._errors = errors
         self._return_path = return_path
 
-    def skip_lines(self, stream: Iterator[D]) -> Iterator[D]:
+    def skip_lines(self, file: IO) -> Union[Iterator[bytes], Iterator[str]]:
         with contextlib.suppress(StopIteration):
             for _ in range(self._skip_lines):
-                next(stream)
+                next(file)
 
-        yield from stream
+        yield from file
 
-    def strip_newline(self, stream: Iterator[Union[bytes, str]]) -> Iterator[Union[bytes, str]]:
+    def strip_newline(self, stream: Union[Iterator[bytes], Iterator[str]]) -> Union[Iterator[bytes], Iterator[str]]:
         if not self._strip_newline:
             yield from stream
             return
@@ -46,7 +46,7 @@ class PlainTextReaderHelper:
             else:
                 yield line.strip(b"\n")
 
-    def decode(self, stream: Iterator[Union[str, bytes]]) -> Iterator[Union[str, bytes]]:
+    def decode(self, stream: Union[Iterator[bytes], Iterator[str]]) -> Union[Iterator[bytes], Iterator[str]]:
         if not self._decode:
             yield from stream
             return
@@ -82,7 +82,7 @@ class LineReaderIterDataPipe(IterDataPipe[Union[Union[str, bytes], Tuple[str, Un
 
     def __init__(
         self,
-        source_datapipe,
+        source_datapipe: IterDataPipe[Tuple[str, IO]],
         *,
         skip_lines: int = 0,
         strip_newline: bool = True,
@@ -102,12 +102,11 @@ class LineReaderIterDataPipe(IterDataPipe[Union[Union[str, bytes], Tuple[str, Un
         )
 
     def __iter__(self):
-        for path, stream in self.source_datapipe:
-            stream = self._helper.skip_lines(stream)
+        for path, file in self.source_datapipe:
+            stream = self._helper.skip_lines(file)
             stream = self._helper.strip_newline(stream)
             stream = self._helper.decode(stream)
-            stream = self._helper.return_path(stream, path=path)
-            yield from stream
+            yield from self._helper.return_path(stream, path=path)
 
 
 class _CSVBaseParserIterDataPipe(IterDataPipe):
@@ -135,12 +134,11 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
         self.fmtparams = fmtparams
 
     def __iter__(self):
-        for path, stream in self.source_datapipe:
-            stream = self._helper.skip_lines(stream)
+        for path, file in self.source_datapipe:
+            stream = self._helper.skip_lines(file)
             stream = self._helper.decode(stream)
             stream = self._csv_reader(stream, **self.fmtparams)
-            stream = self._helper.return_path(stream, path=path)
-            yield from stream
+            yield from self._helper.return_path(stream, path=path)
 
 
 @functional_datapipe("parse_csv")
@@ -163,7 +161,7 @@ class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
 
     def __init__(
         self,
-        source_datapipe,
+        source_datapipe: IterDataPipe[Tuple[str, IO]],
         *,
         skip_lines=0,
         decode=True,
