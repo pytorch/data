@@ -28,12 +28,11 @@ class PlainTextReaderHelper:
         self._return_path = return_path
 
     def skip_lines(self, stream: Iterator[D]) -> Iterator[D]:
-        if self._skip_lines:
-            try:
-                for _ in range(self._skip_lines):
-                    next(stream)
-            except StopIteration:
-                stream = iter(())
+        try:
+            for _ in range(self._skip_lines):
+                next(stream)
+        except StopIteration:
+            stream = iter(())
 
         yield from stream
 
