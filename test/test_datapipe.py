@@ -22,6 +22,8 @@ from torchdata.datapipes.iter import (
     Cycler,
     Header,
     IndexAdder,
+    IoPathFileLister,
+    IoPathFileLoader,
     LineReader,
     ParagraphAggregator,
     Rows2Columnar,
@@ -46,6 +48,13 @@ from _utils._common_utils_for_test import (
     get_name,
     reset_after_n_next_calls,
 )
+
+try:
+    import iopath  # type: ignore[import] # noqa: F401 F403
+    HAS_IOPATH = True
+except ImportError:
+    HAS_IOPATH = False
+skipIfNoIOPath = unittest.skipIf(not HAS_IOPATH, "no iopath")
 
 
 class TestDataPipe(expecttest.TestCase):
@@ -776,8 +785,25 @@ class TestDataPipeWithIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
             len(xz_reader_dp)
 
+    # TODO (ejguan): this test currently only covers reading from local
+    # filesystem. It needs to be modified once test data can be stored on
+    # gdrive/s3/onedrive
+    @skipIfNoIOPath
+    def test_io_path_file_lister_iterdatapipe(self):
+        datapipe = IoPathFileLister(root=self.temp_sub_dir.name)
+
+        # check all file paths within sub_folder are listed
+        for path in datapipe:
+            self.assertTrue(path in self.temp_sub_files)
+
+    @skipIfNoIOPath
     def test_io_path_file_loader_iterdatapipe(self):
-        pass
+        datapipe1 = IoPathFileLister(root=self.temp_sub_dir.name)
+        datapipe2 = IoPathFileLoader(datapipe1)
+
+        # check contents of file match
+        for _, f in datapipe2:
+            self.assertEqual(f.read(), "0123456789abcdef")
 
 
 class TestDataPipeConnection(expecttest.TestCase):
