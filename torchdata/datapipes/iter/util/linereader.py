@@ -13,6 +13,7 @@ class LineReaderIterDataPipe(IterDataPipe[Tuple[str, str]]):
         source_datapipe: a DataPipe with tuples of file name and string data stream
         strip_newline: if True, the new line character ('\n') will be stripped
     """
+
     def __init__(self, source_datapipe, strip_newline=True):
         self.source_datapipe = source_datapipe
         self.strip_newline = strip_newline

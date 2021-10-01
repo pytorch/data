@@ -5,11 +5,12 @@ from io import BufferedIOBase
 from typing import Iterable, Iterator, Tuple
 
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
-from torch.utils.data import IterDataPipe, functional_datapipe
+from torchdata.datapipes.iter.util._archivereader import _ArchiveReaderIterDataPipe
+from torch.utils.data import functional_datapipe
 
 
 @functional_datapipe("read_from_xz")
-class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
+class XzFileReaderIterDataPipe(_ArchiveReaderIterDataPipe):
     r"""
     Iterable DataPipe to uncompress xz (lzma) binary streams from an input iterable which contains tuples of
     path name and xy binary streams. This yields a tuple of path name and extracted binary stream.
@@ -33,9 +34,11 @@ class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         for data in self.datapipe:
             validate_pathname_binary_tuple(data)
             pathname, data_stream = data
+            self.open_source_streams[pathname].append(data_stream)
             try:
                 extracted_fobj = lzma.open(data_stream, mode="rb")  # type: ignore[call-overload]
                 new_pathname = pathname.rstrip(".xz")
+                self.open_archive_streams[new_pathname].append(extracted_fobj)
                 yield new_pathname, extracted_fobj  # type: ignore[misc]
             except Exception as e:
                 warnings.warn(f"Unable to extract files from corrupted xz/lzma stream {pathname} due to: {e}, abort!")

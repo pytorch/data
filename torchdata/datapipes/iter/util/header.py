@@ -11,6 +11,7 @@ class HeaderIterDataPipe(IterDataPipe):
         source_datapipe: the DataPipe from which elements will be yielded
         limit: the number of elements to yield before stopping
     """
+
     def __init__(self, source_datapipe, limit: int = 10):
         self.source_datapipe = source_datapipe
         self.limit = limit

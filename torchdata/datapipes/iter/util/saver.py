@@ -18,6 +18,7 @@ class SaverIterDataPipe(IterDataPipe):
         mode: mode in which the file will be opened for write the data
         filepath_fn: a function that takes in metadata nad returns the target path of the new file
     """
+
     def __init__(
         self,
         source_datapipe: IterDataPipe[Tuple[Any, IOBase]],

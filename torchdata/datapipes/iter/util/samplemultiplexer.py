@@ -21,10 +21,9 @@ class SampleMultiplexerDataPipe(IterDataPipe):
             unexhausted DataPipes will be normalized to 1 for the purpose of sampling.
         seed: random seed to initialize the random number generator
     """
+
     def __init__(
-        self,
-        pipes_to_weights_dict: Dict[IterDataPipe, float],
-        seed: Optional[int] = None,
+        self, pipes_to_weights_dict: Dict[IterDataPipe, float], seed: Optional[int] = None,
     ):
         if not pipes_to_weights_dict:
             raise ValueError("Empty dictionary passed to SampleMultiplexerDataPipe")

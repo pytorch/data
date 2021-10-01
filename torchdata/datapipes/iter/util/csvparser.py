@@ -64,6 +64,7 @@ class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
         keep_filename: if True, each row will return a tuple of file name and contents, rather
             than just the contents
     """
+
     def __init__(
         self,
         source_datapipe,
@@ -105,6 +106,7 @@ class CSVDictParserIterDataPipe(_CSVBaseParserIterDataPipe):
         keep_filename: if True, each row will return a tuple of file name and contents, rather
           than just the contents
     """
+
     def __init__(
         self,
         source_datapipe,

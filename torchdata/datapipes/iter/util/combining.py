@@ -23,13 +23,7 @@ class KeyZipperIterDataPipe(IterDataPipe):
     """
 
     def __init__(
-        self,
-        source_datapipe,
-        ref_datapipe,
-        key_fn,
-        ref_key_fn=None,
-        keep_key=False,
-        buffer_size=10000,
+        self, source_datapipe, ref_datapipe, key_fn, ref_key_fn=None, keep_key=False, buffer_size=10000,
     ):
         self.source_datapipe = source_datapipe
         self.ref_datapipe = ref_datapipe
@@ -50,8 +44,10 @@ class KeyZipperIterDataPipe(IterDataPipe):
                 try:
                     ref_data = next(ref_it)
                 except StopIteration:
-                    raise BufferError(f"No matching key can be found from reference DataPipe for the data {data}. "
-                                      "Please consider increasing the buffer size.")
+                    raise BufferError(
+                        f"No matching key can be found from reference DataPipe for the data {data}. "
+                        "Please consider increasing the buffer size."
+                    )
                 ref_key = self.ref_key_fn(ref_data)
                 if ref_key in buffer:
                     raise ValueError("Duplicate key is found in reference DataPipe")

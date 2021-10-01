@@ -20,6 +20,7 @@ class Rows2ColumnarIterDataPipe(IterDataPipe):
             there are rows and each row is a List or Dict.
         column_names: a function that joins a list of lines together
     """
+
     def __init__(self, source_datapipe, column_names: List[str] = [""]):
         self.source_datapipe = source_datapipe
         self.column_names = column_names
