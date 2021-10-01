@@ -64,4 +64,4 @@ def SST2(root, split):
     )
 
     # Parse CSV file and yield data samples
-    return check_extracted_files.parse_csv(skip_header=True, delimiter="\t").map(lambda x: (x[0], x[1]))
+    return check_extracted_files.parse_csv(skip_lines=True, delimiter="\t").map(lambda x: (x[0], x[1]))
