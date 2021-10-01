@@ -44,7 +44,10 @@ class PlainTextReaderHelper:
 
         for line in stream:
             if self._strip_newline:
-                yield line.rstrip(b"\n" if isinstance(line, bytes) else "\n")
+                if isinstance(line, str):
+                    yield line.strip("\n")
+                else:
+                    yield line.strip(b"\n")
             else:
                 yield line
 
@@ -54,7 +57,7 @@ class PlainTextReaderHelper:
             return
 
         for line in stream:
-            if self._decode:
+            if self._decode and isinstance(line, bytes):
                 yield line.decode(self._encoding, self._errors)
             else:
                 yield line
