@@ -3,7 +3,7 @@
 import os
 import tempfile
 
-from torch.utils.data import IterDataPipe
+from torchdata.datapipes.iter import IterDataPipe
 from typing import Any, List, Tuple, TypeVar
 
 

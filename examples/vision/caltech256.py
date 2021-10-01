@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import os.path
 
-from torch.utils.data.datapipes.iter import (
+from torchdata.datapipes.iter (
     FileLoader,
     TarArchiveReader,
     Mapper,

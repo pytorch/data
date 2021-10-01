@@ -3,7 +3,7 @@ import os.path
 import re
 
 import torch
-from torch.utils.data.datapipes.iter import (
+from torchdata.datapipes.iter (
     FileLoader,
     TarArchiveReader,
     Mapper,

@@ -1,4 +1,26 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+from torch.utils.data import IterDataPipe, functional_datapipe
+from torch.utils.data.datapipes.iter import (
+    Collator,
+    Mapper,
+    Sampler,
+    Shuffler,
+    Concater,
+    Demultiplexer,
+    Forker,
+    Multiplexer,
+    Zipper,
+    FileLister,
+    FileLoader,
+    Batcher,
+    Grouper,
+    UnBatcher,
+    RoutedDecoder,
+    Filter,
+    StreamReader,
+    IterableWrapper,
+)
+
 from torchdata.datapipes.iter.load.online import (
     OnlineReaderIterDataPipe as OnlineReader,
     HTTPReaderIterDataPipe as HttpReader,
@@ -35,14 +57,22 @@ from torchdata.datapipes.iter.util.ziparchivereader import ZipArchiveReaderIterD
 ###############################################################################
 # Reference From PyTorch Core
 ###############################################################################
-from torch.utils.data.datapipes.iter import IterableWrapper
 
 __all__ = [
+    "Batcher",
     "BucketBatcher",
     "CSVDictParser",
     "CSVParser",
+    "Collator",
+    "Concater",
     "Cycler",
+    "Demultiplexer",
+    "FileLister",
+    "FileLoader",
+    "Filter",
+    "Forker",
     "GDriveReader",
+    "Grouper",
     "HashChecker",
     "Header",
     "HttpReader",
@@ -50,19 +80,29 @@ __all__ = [
     "IndexAdder",
     "IoPathFileLister",
     "IoPathFileLoader",
+    "IterDataPipe",
     "IterableWrapper",
     "JsonParser",
     "KeyZipper",
     "LineReader",
+    "Mapper",
+    "Multiplexer",
     "OnDiskCacheHolder",
     "OnlineReader",
     "ParagraphAggregator",
+    "RoutedDecoder",
     "Rows2Columnar",
     "SampleMultiplexer",
+    "Sampler",
     "Saver",
+    "Shuffler",
+    "StreamReader",
     "TarArchiveReader",
+    "UnBatcher",
     "XzFileReader",
     "ZipArchiveReader",
+    "Zipper",
+    "functional_datapipe",
 ]
 
 # Please keep this list sorted

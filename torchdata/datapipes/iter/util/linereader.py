@@ -1,6 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from typing import Tuple
-from torch.utils.data import IterDataPipe, functional_datapipe
+from torchdata.datapipes.iter import IterDataPipe, functional_datapipe
 
 
 @functional_datapipe("readlines")

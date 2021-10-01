@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import csv
 
-from torch.utils.data import IterDataPipe, functional_datapipe
+from torchdata.datapipes.iter import IterDataPipe, functional_datapipe
 
 
 class _CSVBaseParserIterDataPipe(IterDataPipe):
