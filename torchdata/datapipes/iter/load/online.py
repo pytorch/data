@@ -8,7 +8,7 @@ import re
 
 import requests
 
-from torch.utils.data import IterDataPipe
+from torchdata.datapipes.iter import IterDataPipe
 
 # TODO(VitalyFedyunin): This HTTP part is copy-pasted from the pytorch repo
 # nuke torch/utils/data/datapipes/iter/httpreader.py, when torchdata

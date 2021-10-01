@@ -13,10 +13,14 @@ import zipfile
 
 from collections import defaultdict
 from json.decoder import JSONDecodeError
-from torch.utils.data import IterDataPipe
-from torch.utils.data.datapipes.iter import FileLister, FileLoader, IterableWrapper
+import torch.utils.data.datapipes.iter
 from torch.testing._internal.common_utils import slowTest
+import torchdata
 from torchdata.datapipes.iter import (
+    IterDataPipe,
+    FileLister,
+    FileLoader,
+    IterableWrapper,
     InMemoryCacheHolder,
     KeyZipper,
     Cycler,
@@ -56,6 +60,26 @@ try:
 except ImportError:
     HAS_IOPATH = False
 skipIfNoIOPath = unittest.skipIf(not HAS_IOPATH, "no iopath")
+
+
+def test_torchdata_pytorch_consistency():
+    def extract_datapipe_names(module):
+        return {
+            name
+            for name, dp_type in module.__dict__.items()
+            if not name.startswith("_") and isinstance(dp_type, type) and issubclass(dp_type, IterDataPipe)
+        }
+
+    pytorch_datapipes = extract_datapipe_names(torch.utils.data.datapipes.iter)
+    torchdata_datapipes = extract_datapipe_names(torchdata.datapipes.iter)
+
+    missing_datapipes = pytorch_datapipes - torchdata_datapipes
+    if any(missing_datapipes):
+        msg = (
+            "The following datapipes are exposed under `torch.utils.data.datapipes.iter`, "
+            "but not under `torchdata.datapipes.iter`:\n"
+        )
+        raise AssertionError(msg + "\n".join(sorted(missing_datapipes)))
 
 
 class TestDataPipe(expecttest.TestCase):
