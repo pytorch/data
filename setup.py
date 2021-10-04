@@ -44,27 +44,6 @@ pytorch_package_dep = 'torch'
 if pytorch_package_version:
     pytorch_package_dep += "==" + pytorch_package_version
 
-
-class clean(distutils.command.clean.clean):
-    def run(self):
-
-        # Run default behavior first
-        distutils.command.clean.clean.run(self)
-
-        # Remove torchdata extension
-        for path in (ROOT_DIR / 'torchdata').glob('**/*.so'):
-            print(f'removing \'{path}\'')
-            path.unlink()
-        # Remove build directory
-        build_dirs = [
-            ROOT_DIR / 'build',
-        ]
-        for path in build_dirs:
-            if path.exists():
-                print(f'removing \'{path}\' (and everything under it)')
-                shutil.rmtree(str(path), ignore_errors=True)
-
-
 setup(
     # Metadata
     name='torchdata',
@@ -90,9 +69,6 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence"
     ],
     # Package Info
-    packages=find_packages(exclude=["build*", "test*", "benchmark*", "third_party*", "examples"]),
+    packages=find_packages(exclude=["build*", "test*", "third_party*", "examples"]),
     zip_safe=False,
-    cmdclass={
-        'clean': clean,
-    },
 )
