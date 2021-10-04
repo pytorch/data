@@ -6,7 +6,8 @@ from io import BufferedIOBase
 from typing import IO, Iterable, Iterator, Optional, Tuple, cast
 
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
-from torch.utils.data import IterDataPipe, functional_datapipe
+from torchdata.datapipes import functional_datapipe
+from torchdata.datapipes.iter import IterDataPipe
 
 # TODO(VitalyFedyunin): This file copy-pasted from the pytorch repo
 # nuke source class when repo is open-sourced
@@ -59,8 +60,6 @@ class TarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                     "Unable to extract files from corrupted tarfile stream {} due to: {}, abort!".format(pathname, e)
                 )
                 raise e
-            finally:
-                data_stream.close()
 
     def __len__(self):
         if self.length == -1:

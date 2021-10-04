@@ -3,7 +3,8 @@ import contextlib
 import csv
 from typing import Tuple, Union, Iterator, TypeVar, IO
 
-from torch.utils.data import IterDataPipe, functional_datapipe
+from torchdata.datapipes import functional_datapipe
+from torchdata.datapipes.iter import IterDataPipe
 
 D = TypeVar("D")
 

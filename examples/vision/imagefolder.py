@@ -10,8 +10,8 @@ import torchvision.datasets as datasets
 import torchvision.datasets.folder
 import torchvision.transforms as transforms
 from PIL import Image
-from torch.utils.data import DataLoader, IterDataPipe
-from torch.utils.data.datapipes.iter import HttpReader, FileLister
+from torch.utils.data import DataLoader
+from torchdata.datapipes.iter import HttpReader, FileLister, IterDataPipe
 
 IMAGES_ROOT = os.path.join("fakedata", "imagefolder")
 

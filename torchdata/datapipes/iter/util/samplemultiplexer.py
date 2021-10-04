@@ -2,7 +2,7 @@
 from typing import Dict, Optional, Sized
 import random
 
-from torch.utils.data import IterDataPipe
+from torchdata.datapipes.iter import IterDataPipe
 
 
 class SampleMultiplexerDataPipe(IterDataPipe):

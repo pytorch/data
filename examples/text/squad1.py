@@ -2,10 +2,10 @@
 import os
 
 from torchdata.datapipes.iter import (
+    IterDataPipe,
     HttpReader,
     IterableWrapper,
 )
-from torch.utils.data import IterDataPipe
 from .utils import (
     _wrap_split_argument,
     _add_docstring_header,

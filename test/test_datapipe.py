@@ -13,15 +13,21 @@ import zipfile
 
 from collections import defaultdict
 from json.decoder import JSONDecodeError
-from torch.utils.data import IterDataPipe
-from torch.utils.data.datapipes.iter import FileLister, FileLoader, IterableWrapper
+import torch.utils.data.datapipes.iter
 from torch.testing._internal.common_utils import slowTest
+import torchdata
 from torchdata.datapipes.iter import (
+    IterDataPipe,
+    FileLister,
+    FileLoader,
+    IterableWrapper,
     InMemoryCacheHolder,
     KeyZipper,
     Cycler,
     Header,
     IndexAdder,
+    IoPathFileLister,
+    IoPathFileLoader,
     LineReader,
     ParagraphAggregator,
     Rows2Columnar,
@@ -46,6 +52,33 @@ from _utils._common_utils_for_test import (
     get_name,
     reset_after_n_next_calls,
 )
+
+try:
+    import iopath  # type: ignore[import] # noqa: F401 F403
+    HAS_IOPATH = True
+except ImportError:
+    HAS_IOPATH = False
+skipIfNoIOPath = unittest.skipIf(not HAS_IOPATH, "no iopath")
+
+
+def test_torchdata_pytorch_consistency():
+    def extract_datapipe_names(module):
+        return {
+            name
+            for name, dp_type in module.__dict__.items()
+            if not name.startswith("_") and isinstance(dp_type, type) and issubclass(dp_type, IterDataPipe)
+        }
+
+    pytorch_datapipes = extract_datapipe_names(torch.utils.data.datapipes.iter)
+    torchdata_datapipes = extract_datapipe_names(torchdata.datapipes.iter)
+
+    missing_datapipes = pytorch_datapipes - torchdata_datapipes
+    if any(missing_datapipes):
+        msg = (
+            "The following datapipes are exposed under `torch.utils.data.datapipes.iter`, "
+            "but not under `torchdata.datapipes.iter`:\n"
+        )
+        raise AssertionError(msg + "\n".join(sorted(missing_datapipes)))
 
 
 class TestDataPipe(expecttest.TestCase):
@@ -776,8 +809,25 @@ class TestDataPipeWithIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
             len(xz_reader_dp)
 
+    # TODO (ejguan): this test currently only covers reading from local
+    # filesystem. It needs to be modified once test data can be stored on
+    # gdrive/s3/onedrive
+    @skipIfNoIOPath
+    def test_io_path_file_lister_iterdatapipe(self):
+        datapipe = IoPathFileLister(root=self.temp_sub_dir.name)
+
+        # check all file paths within sub_folder are listed
+        for path in datapipe:
+            self.assertTrue(path in self.temp_sub_files)
+
+    @skipIfNoIOPath
     def test_io_path_file_loader_iterdatapipe(self):
-        pass
+        datapipe1 = IoPathFileLister(root=self.temp_sub_dir.name)
+        datapipe2 = IoPathFileLoader(datapipe1)
+
+        # check contents of file match
+        for _, f in datapipe2:
+            self.assertEqual(f.read(), "0123456789abcdef")
 
 
 class TestDataPipeConnection(expecttest.TestCase):

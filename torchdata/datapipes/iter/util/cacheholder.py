@@ -5,8 +5,8 @@ from collections import deque
 from os import path
 from typing import Deque, Optional
 
-from torch.utils.data import IterDataPipe, functional_datapipe
-from torch.utils.data.datapipes.iter import FileLoader
+from torchdata.datapipes import functional_datapipe
+from torchdata.datapipes.iter import IterDataPipe, FileLoader
 from torchdata.datapipes.utils.common import _default_filepath_fn
 
 

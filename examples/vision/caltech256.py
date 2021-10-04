@@ -1,15 +1,14 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import os.path
 
-from torch.utils.data.datapipes.iter import (
+from torchdata.datapipes.iter import (
     FileLoader,
     TarArchiveReader,
     Mapper,
     RoutedDecoder,
+    IterableWrapper,
 )
 from torch.utils.data.datapipes.utils.decoder import imagehandler
-
-from torchdata.datapipes.iter import IterableWrapper
 
 
 # Download size is ~1.2 GB so fake data is provided
