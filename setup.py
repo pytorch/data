@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # Copyright (c) Facebook, Inc. and its affiliates.
 import os
-import shutil
 import subprocess
-import distutils.command.clean
 from pathlib import Path
 from setuptools import find_packages, setup
 
@@ -18,8 +16,9 @@ def _get_version():
     except Exception:
         pass
 
-    if os.getenv('BUILD_VERSION'):
-        version = os.getenv('BUILD_VERSION')
+    os_build_version = os.getenv('BUILD_VERSION')
+    if os_build_version:
+        version = os_build_version
     elif sha != 'Unknown':
         version += '+' + sha[:7]
 
