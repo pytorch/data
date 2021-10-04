@@ -90,12 +90,9 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence"
     ],
     # Package Info
-    packages=find_packages(exclude=["build*", "test*", "benchmark*", "third_party*", "build_tools*",
-                                    "datapipes_old", "examples", "scripts"]),
+    packages=find_packages(exclude=["build*", "test*", "benchmark*", "third_party*", "examples"]),
     zip_safe=False,
-    # ext_modules = ???  # TODO: do we need external modules?
     cmdclass={
-        # 'build_ext': ???  # TODO: if we need external modules
         'clean': clean,
     },
 )
