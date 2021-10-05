@@ -8,7 +8,7 @@ from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 
 
 @functional_datapipe("read_from_rar")
-class ReadFilesFromRar(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
+class RarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
     def __init__(self, datapipe: IterDataPipe[Tuple[str, io.BufferedIOBase]]):
         self._rarfile = self._verify_dependencies()
         super().__init__()
