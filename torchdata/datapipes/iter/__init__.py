@@ -37,7 +37,8 @@ from torchdata.datapipes.iter.util.cacheholder import (
 )
 from torchdata.datapipes.iter.util.indexadder import IndexAdderIterDataPipe as IndexAdder
 from torchdata.datapipes.iter.util.combining import KeyZipperIterDataPipe as KeyZipper
-from torchdata.datapipes.iter.util.csvparser import (
+from torchdata.datapipes.iter.util.plain_text_reader import (
+    LineReaderIterDataPipe as LineReader,
     CSVDictParserIterDataPipe as CSVDictParser,
     CSVParserIterDataPipe as CSVParser,
 )
@@ -45,7 +46,6 @@ from torchdata.datapipes.iter.util.cycler import CyclerIterDataPipe as Cycler
 from torchdata.datapipes.iter.util.hashchecker import HashCheckerIterDataPipe as HashChecker
 from torchdata.datapipes.iter.util.header import HeaderIterDataPipe as Header
 from torchdata.datapipes.iter.util.jsonparser import JsonParserIterDataPipe as JsonParser
-from torchdata.datapipes.iter.util.linereader import LineReaderIterDataPipe as LineReader
 from torchdata.datapipes.iter.util.paragraphaggregator import ParagraphAggregatorIterDataPipe as ParagraphAggregator
 from torchdata.datapipes.iter.util.rows2columnar import Rows2ColumnarIterDataPipe as Rows2Columnar
 from torchdata.datapipes.iter.util.samplemultiplexer import SampleMultiplexerDataPipe as SampleMultiplexer
