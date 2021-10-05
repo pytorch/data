@@ -91,6 +91,7 @@ __all__ = [
     "OnDiskCacheHolder",
     "OnlineReader",
     "ParagraphAggregator",
+    "RarArchiveReader",
     "RoutedDecoder",
     "Rows2Columnar",
     "SampleMultiplexer",

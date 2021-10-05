@@ -21,9 +21,11 @@ class RarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
         except ImportError as error:
             raise ModuleNotFoundError(
                 "Package `rarfile` is required to be installed to use this datapipe. "
-                "Please use `pip install rarfile` or `conda -c conda-forge install rarfile` to it."
+                "Please use `pip install rarfile` or `conda -c conda-forge install rarfile` to install it."
             ) from error
 
+        # check if at least one system library for reading rar archives is available to
+        # be used by rarfile
         rarfile.tool_setup()
 
         return rarfile
