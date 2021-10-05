@@ -1,8 +1,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+import os
+import sys
 import unittest
 
-import sys
-import os
 
 current = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.dirname(current)
