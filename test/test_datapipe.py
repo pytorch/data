@@ -524,17 +524,17 @@ class TestDataPipeWithIO(expecttest.TestCase):
         self.assertEqual(expected_res, list(csv_parser_dp))
 
         # Functional Test: yield one row at time from each file, skipping over empty content and header
-        csv_parser_dp = datapipe3.parse_csv(skip_header=1)
+        csv_parser_dp = datapipe3.parse_csv(skip_lines=1)
         expected_res = [["a", "1"], ["b", "2"]]
         self.assertEqual(expected_res, list(csv_parser_dp))
 
         # Functional Test: yield one row at time from each file with file name, skipping over empty content
-        csv_parser_dp = datapipe3.parse_csv(keep_filename=True)
+        csv_parser_dp = datapipe3.parse_csv(return_path=True)
         expected_res = [("1.csv", ["key", "item"]), ("1.csv", ["a", "1"]), ("1.csv", ["b", "2"]), ("empty2.csv", [])]
         self.assertEqual(expected_res, list(csv_parser_dp))
 
         # Reset Test:
-        csv_parser_dp = CSVParser(datapipe3, keep_filename=True)
+        csv_parser_dp = CSVParser(datapipe3, return_path=True)
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(csv_parser_dp, n_elements_before_reset)
         self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
@@ -560,12 +560,12 @@ class TestDataPipeWithIO(expecttest.TestCase):
         self.assertEqual(expected_res1, list(csv_dict_parser_dp))
 
         # Functional Test: yield one row at a time as dict, skip over first row, with the second row being the header
-        csv_dict_parser_dp = datapipe3.parse_csv_as_dict(skip_header=1)
+        csv_dict_parser_dp = datapipe3.parse_csv_as_dict(skip_lines=1)
         expected_res2 = [{"a": "b", "1": "2"}]
         self.assertEqual(expected_res2, list(csv_dict_parser_dp))
 
         # Functional Test: yield one row at a time as dict with file name, and the first row being the header (key)
-        csv_dict_parser_dp = datapipe3.parse_csv_as_dict(keep_filename=True)
+        csv_dict_parser_dp = datapipe3.parse_csv_as_dict(return_path=True)
         expected_res3 = [("1.csv", {"key": "a", "item": "1"}), ("1.csv", {"key": "b", "item": "2"})]
         self.assertEqual(expected_res3, list(csv_dict_parser_dp))
 
