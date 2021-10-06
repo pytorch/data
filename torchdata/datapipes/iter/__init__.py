@@ -44,6 +44,7 @@ from torchdata.datapipes.iter.util.plain_text_reader import (
 )
 from torchdata.datapipes.iter.util.cycler import CyclerIterDataPipe as Cycler
 from torchdata.datapipes.iter.util.hashchecker import HashCheckerIterDataPipe as HashChecker
+from torchdata.datapipes.iter.util.hashjoiner import HashJoinerIterDataPipe as HashJoiner
 from torchdata.datapipes.iter.util.header import HeaderIterDataPipe as Header
 from torchdata.datapipes.iter.util.jsonparser import JsonParserIterDataPipe as JsonParser
 from torchdata.datapipes.iter.util.paragraphaggregator import ParagraphAggregatorIterDataPipe as ParagraphAggregator
@@ -74,6 +75,7 @@ __all__ = [
     "GDriveReader",
     "Grouper",
     "HashChecker",
+    "HashJoiner",
     "Header",
     "HttpReader",
     "InMemoryCacheHolder",
