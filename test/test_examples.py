@@ -28,9 +28,9 @@ except ImportError:
 skipIfNoPillow = unittest.skipIf(not HAS_PILLOW, "no pillow")
 
 
+@skipIfNoSciPy
+@skipIfNoPillow
 class TestVisionExamples(unittest.TestCase):
-    @skipIfNoSciPy
-    @skipIfNoPillow
     def test_Caltech101(self):
         path = os.path.join(ROOT, "examples", "vision", "fakedata", "caltech101")
         samples = list(Caltech101(path))
