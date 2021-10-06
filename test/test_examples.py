@@ -20,7 +20,7 @@ except ImportError:
 skipIfNoSciPy = unittest.skipIf(not HAS_SCIPY, "no scipy")
 
 try:
-    import PIL # type: ignore[import] # noqa: F401 F403
+    import PIL  # type: ignore[import] # noqa: F401 F403
 
     HAS_PILLOW = True
 except ImportError:
