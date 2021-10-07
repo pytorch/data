@@ -3,17 +3,17 @@ import warnings
 from collections import OrderedDict
 
 from torch.utils.data import IterDataPipe, MapDataPipe, functional_datapipe
-from typing import Callable
+from typing import Callable, Optional
 
 
-@functional_datapipe("zip_by_key")
-class KeyZipperIterDataPipe(IterDataPipe):
-    r""":class:`KeyZipperIterDataPipe`.
+@functional_datapipe("zip_with_iter")
+class IterZipperIterDataPipe(IterDataPipe):
+    r""":class:`IterZipperIterDataPipe`.
 
     Iterable DataPipe to zip two DataPipes based on the matching key.
 
     Args:
-        source_datapipe: KeyZipper will yield data based on the order of this DataPipe
+        source_datapipe: IterZipper will yield data based on the order of this DataPipe
         ref_datapipe: Reference datapipe to find matching key for `source_datapipe`
         key_fn: Callable to extract key of data from source_datapipe
         ref_key_fn: Callable to extract key of data from ref_datapipe.
@@ -24,7 +24,13 @@ class KeyZipperIterDataPipe(IterDataPipe):
     """
 
     def __init__(
-        self, source_datapipe, ref_datapipe, key_fn, ref_key_fn=None, keep_key=False, buffer_size=10000,
+        self,
+        source_datapipe: IterDataPipe,
+        ref_datapipe: IterDataPipe,
+        key_fn: Callable,
+        ref_key_fn: Optional[Callable] = None,
+        keep_key: bool = False,
+        buffer_size: Optional[int] = 10000,
     ):
         self.source_datapipe = source_datapipe
         self.ref_datapipe = ref_datapipe

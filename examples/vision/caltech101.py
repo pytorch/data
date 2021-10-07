@@ -10,7 +10,7 @@ from torchdata.datapipes.iter import (
     RoutedDecoder,
     Filter,
     IterableWrapper,
-    KeyZipper,
+    IterZipper,
 )
 from torch.utils.data.datapipes.utils.decoder import imagehandler, mathandler
 
@@ -102,7 +102,7 @@ def Caltech101(root=ROOT):
     images_dp = Filter(images_dp, is_not_rogue_image)
     images_dp = RoutedDecoder(images_dp, imagehandler("pil"))
 
-    dp = KeyZipper(images_dp, anns_dp, images_key_fn, ref_key_fn=anns_key_fn, buffer_size=None)
+    dp = IterZipper(images_dp, anns_dp, images_key_fn, ref_key_fn=anns_key_fn, buffer_size=None)
     return Mapper(dp, collate_sample)
 
 

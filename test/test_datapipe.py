@@ -21,16 +21,16 @@ from torchdata.datapipes.iter import (
     IterDataPipe,
     FileLister,
     FileLoader,
+    IterZipper,
     IterableWrapper,
     InMemoryCacheHolder,
-    KeyZipper,
     Cycler,
     Header,
-    MapZipper,
     IndexAdder,
     IoPathFileLister,
     IoPathFileLoader,
     LineReader,
+    MapZipper,
     ParagraphAggregator,
     Rows2Columnar,
     SampleMultiplexer,
@@ -121,26 +121,26 @@ class TestDataPipe(expecttest.TestCase):
         list(cache_dp)
         self.assertEqual(10, len(cache_dp))
 
-    def test_keyzipper_iterdatapipe(self):
+    def test_iterzipper_iterdatapipe(self):
 
         source_dp = IterableWrapper(range(10))
         ref_dp = IterableWrapper(range(20))
 
         # Functional Test: Output should be a zip list of tuple
-        zip_dp = source_dp.zip_by_key(
+        zip_dp = source_dp.zip_with_iter(
             ref_datapipe=ref_dp, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=False, buffer_size=100
         )
         self.assertEqual([(i, i) for i in range(10)], list(zip_dp))
 
         # Functional Test: keep_key=True, and key should show up as the first element
-        zip_dp_w_key = source_dp.zip_by_key(
+        zip_dp_w_key = source_dp.zip_with_iter(
             ref_datapipe=ref_dp, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=True, buffer_size=10
         )
         self.assertEqual([(i, i, i) for i in range(10)], list(zip_dp_w_key))
 
         # Functional Test: element is in source but missing in reference
         ref_dp_missing = IterableWrapper(range(1, 10))
-        zip_dp = source_dp.zip_by_key(
+        zip_dp = source_dp.zip_with_iter(
             ref_datapipe=ref_dp_missing, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=False, buffer_size=100
         )
         with self.assertRaisesRegex(BufferError, r"No matching key can be found"):
@@ -148,7 +148,7 @@ class TestDataPipe(expecttest.TestCase):
 
         # Functional Test: Buffer is not large enough, hence, element can't be found and raises error
         ref_dp_end = IterableWrapper(list(range(1, 10)) + [0])
-        zip_dp = source_dp.zip_by_key(
+        zip_dp = source_dp.zip_with_iter(
             ref_datapipe=ref_dp_end, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=False, buffer_size=5
         )
         it = iter(zip_dp)
@@ -163,13 +163,13 @@ class TestDataPipe(expecttest.TestCase):
             next(it)
 
         # Functional Test: Buffer is just big enough
-        zip_dp = source_dp.zip_by_key(
+        zip_dp = source_dp.zip_with_iter(
             ref_datapipe=ref_dp_end, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=False, buffer_size=10
         )
         self.assertEqual([(i, i) for i in range(10)], list(zip_dp))
 
         # Reset Test: reset the DataPipe after reading part of it
-        zip_dp = KeyZipper(
+        zip_dp = IterZipper(
             source_datapipe=source_dp,
             ref_datapipe=ref_dp,
             key_fn=lambda x: x,
