@@ -14,6 +14,7 @@ import zipfile
 from collections import defaultdict
 from json.decoder import JSONDecodeError
 import torch.utils.data.datapipes.iter
+from torch.utils.data.datapipes.map import SequenceWrapper
 from torch.testing._internal.common_utils import slowTest
 import torchdata
 from torchdata.datapipes.iter import (
@@ -25,7 +26,7 @@ from torchdata.datapipes.iter import (
     KeyZipper,
     Cycler,
     Header,
-    HashJoiner,
+    MapZipper,
     IndexAdder,
     IoPathFileLister,
     IoPathFileLoader,
@@ -51,7 +52,6 @@ from _utils._common_utils_for_test import (
     create_temp_dir_and_files,
     IDP_NoLen,
     get_name,
-    MDP,
     reset_after_n_next_calls,
 )
 
@@ -640,15 +640,15 @@ class TestDataPipeWithIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "FileLoaderIterDataPipe instance doesn't have valid length"):
             len(hash_check_dp)
 
-    def test_hash_joiner_datapipe(self):
+    def test_map_zipper_datapipe(self):
         source_dp = IterableWrapper(range(10))
-        map_dp = MDP(["even", "odd"])
+        map_dp = SequenceWrapper(["even", "odd"])
 
         # Functional Test: ensure the hash join is working and return tuple by default
         def odd_even(i: int) -> int:
             return i % 2
 
-        result_dp = source_dp.hashjoin(map_dp, odd_even)
+        result_dp = source_dp.zip_with_map(map_dp, odd_even)
 
         def odd_even_string(i: int) -> str:
             return "odd" if i % 2 else "even"
@@ -660,7 +660,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
         def custom_merge(a, b):
             return f"{a} is a {b} number."
 
-        result_dp = source_dp.hashjoin(map_dp, odd_even, custom_merge)
+        result_dp = source_dp.zip_with_map(map_dp, odd_even, custom_merge)
         expected_res2 = [f"{i} is a {odd_even_string(i)} number." for i in range(10)]
         self.assertEqual(expected_res2, list(result_dp))
 
@@ -668,20 +668,20 @@ class TestDataPipeWithIO(expecttest.TestCase):
         def odd_even_bug(i: int) -> int:
             return 2 if i == 0 else i % 2
 
-        result_dp = HashJoiner(source_dp, map_dp, odd_even_bug)
+        result_dp = MapZipper(source_dp, map_dp, odd_even_bug)
         it = iter(result_dp)
         with self.assertRaisesRegex(KeyError, "is not a valid key in the given MapDataPipe"):
             next(it)
 
         # Reset Test:
         n_elements_before_reset = 4
-        result_dp = source_dp.hashjoin(map_dp, odd_even)
+        result_dp = source_dp.zip_with_map(map_dp, odd_even)
         res_before_reset, res_after_reset = reset_after_n_next_calls(result_dp, n_elements_before_reset)
         self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
         self.assertEqual(expected_res, res_after_reset)
 
         # __len__ Test: returns the length of source DataPipe
-        result_dp = source_dp.hashjoin(map_dp, odd_even)
+        result_dp = source_dp.zip_with_map(map_dp, odd_even)
         self.assertEqual(len(source_dp), len(result_dp))
 
     def test_json_parser_iterdatapipe(self):

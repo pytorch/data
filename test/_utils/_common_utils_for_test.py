@@ -3,7 +3,6 @@
 import os
 import tempfile
 
-from torch.utils.data import MapDataPipe
 from torchdata.datapipes.iter import IterDataPipe
 from typing import Any, List, Tuple, TypeVar
 
@@ -19,19 +18,6 @@ class IDP_NoLen(IterDataPipe):
     def __iter__(self):
         for i in self.input_dp:
             yield i
-
-
-class MDP(MapDataPipe):
-    def __init__(self, input_dp):
-        super().__init__()
-        self.input_dp = input_dp
-        self.length = len(input_dp)
-
-    def __getitem__(self, index):
-        return self.input_dp[index]
-
-    def __len__(self) -> int:
-        return self.length
 
 
 def get_name(path_and_stream):
