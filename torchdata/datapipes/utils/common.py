@@ -6,6 +6,7 @@ import warnings
 
 from io import BufferedIOBase
 from typing import Iterable, List, Tuple, Union
+from urllib3.response import HTTPResponse
 
 
 def match_masks(name: str, masks: Union[str, List[str]]) -> bool:
@@ -63,14 +64,14 @@ def _default_filepath_fn(data):
     return os.path.normpath(data)
 
 
-def validate_pathname_binary_tuple(data: Tuple[str, BufferedIOBase]):
+def validate_pathname_binary_tuple(data: Tuple[str, Union[BufferedIOBase, HTTPResponse]]):
     if not isinstance(data, tuple):
-        raise TypeError("pathname binary data should be tuple type, but got {}".format(type(data)))
+        raise TypeError(f"pathname binary data should be tuple type, but got {type(data)}")
     if len(data) != 2:
-        raise TypeError("pathname binary tuple length should be 2, but got {}".format(str(len(data))))
+        raise TypeError(f"pathname binary tuple length should be 2, but got {len(data)}")
     if not isinstance(data[0], str):
-        raise TypeError("pathname binary tuple should have string type pathname, but got {}".format(type(data[0])))
-    if not isinstance(data[1], BufferedIOBase):
+        raise TypeError(f"pathname binary tuple should have string type pathname, but got {type(data[0])}")
+    if not isinstance(data[1], BufferedIOBase) and not isinstance(data[1], HTTPResponse):
         raise TypeError(
-            "pathname binary tuple should have BufferedIOBase based binary type, but got {}".format(type(data[1]))
+            f"pathname binary tuple should have BufferedIOBase binary or HTTPResponse as type, but got {type(data[1])}"
         )
