@@ -98,6 +98,8 @@ class MapZipperIterDataPipe(IterDataPipe):
         key_fn: Callable,
         merge_fn: Callable = tuple_merge,
     ):
+        if not isinstance(map_datapipe, MapDataPipe):
+            raise TypeError(f"map_datapipe must be a MapDataPipe, but its type is {type(map_datapipe)} instead.")
         self.source_iterdatapipe = source_iterdatapipe
         self.map_datapipe = map_datapipe
         self.key_fn = key_fn
