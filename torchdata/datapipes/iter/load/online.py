@@ -1,42 +1,27 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-import urllib.request as urllib
 from io import IOBase
 from typing import Tuple
-from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
+from requests.exceptions import HTTPError, RequestException
 import re
 
 import requests
 
 from torchdata.datapipes.iter import IterDataPipe
 
-# TODO(VitalyFedyunin): This HTTP part is copy-pasted from the pytorch repo
-# nuke torch/utils/data/datapipes/iter/httpreader.py, when torchdata
-# is open sourced
-
 
 def _get_response_from_http(url, *, timeout):
     try:
+        session = requests.Session()
         if timeout is None:
-            r = urllib.urlopen(url)
+            r = session.get(url, stream=True)
         else:
-            r = urllib.urlopen(url, timeout=timeout)
-
-        return (url, r)
+            r = session.get(url, timeout=timeout, stream=True)
+        return url, r.raw
     except HTTPError as e:
-        raise Exception(
-            "Could not get the file.\
-                        [HTTP Error] {code}: {reason}.".format(
-                code=e.code, reason=e.reason
-            )
-        )
-    except URLError as e:
-        raise Exception(
-            "Could not get the file at {url}.\
-                         [URL Error] {reason}.".format(
-                reason=e.reason, url=url
-            )
-        )
+        raise Exception(f"Could not get the file. [HTTP Error] {e.response}.")
+    except RequestException as e:
+        raise Exception(f"Could not get the file at {url}. [RequestException] {e.response}.")
     except Exception:
         raise
 
@@ -101,6 +86,7 @@ class GDriveReaderDataPipe(IterDataPipe):
     Args:
         source_datapipe: a DataPipe that contains URLs to GDrive files
     """
+
     def __init__(self, source_datapipe):
         self.source_datapipe = source_datapipe
 
@@ -121,6 +107,7 @@ class OnlineReaderIterDataPipe(IterDataPipe):
         source_datapipe: a DataPipe that contains URLs
         timeout : timeout in seconds for http request
     """
+
     def __init__(self, source_datapipe, *, timeout=None):
         self.source_datapipe = source_datapipe
         self.timeout = timeout
