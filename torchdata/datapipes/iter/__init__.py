@@ -36,7 +36,10 @@ from torchdata.datapipes.iter.util.cacheholder import (
     OnDiskCacheHolderIterDataPipe as OnDiskCacheHolder,
 )
 from torchdata.datapipes.iter.util.indexadder import IndexAdderIterDataPipe as IndexAdder
-from torchdata.datapipes.iter.util.combining import KeyZipperIterDataPipe as KeyZipper
+from torchdata.datapipes.iter.util.combining import (
+    KeyZipperIterDataPipe as KeyZipper,
+    MapZipperIterDataPipe as MapZipper,
+)
 from torchdata.datapipes.iter.util.plain_text_reader import (
     LineReaderIterDataPipe as LineReader,
     CSVDictParserIterDataPipe as CSVDictParser,
@@ -85,6 +88,7 @@ __all__ = [
     "JsonParser",
     "KeyZipper",
     "LineReader",
+    "MapZipper",
     "Mapper",
     "Multiplexer",
     "OnDiskCacheHolder",

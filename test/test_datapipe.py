@@ -14,6 +14,7 @@ import zipfile
 from collections import defaultdict
 from json.decoder import JSONDecodeError
 import torch.utils.data.datapipes.iter
+from torch.utils.data.datapipes.map import SequenceWrapper
 from torch.testing._internal.common_utils import slowTest
 import torchdata
 from torchdata.datapipes.iter import (
@@ -25,6 +26,7 @@ from torchdata.datapipes.iter import (
     KeyZipper,
     Cycler,
     Header,
+    MapZipper,
     IndexAdder,
     IoPathFileLister,
     IoPathFileLoader,
@@ -55,6 +57,7 @@ from _utils._common_utils_for_test import (
 
 try:
     import iopath  # type: ignore[import] # noqa: F401 F403
+
     HAS_IOPATH = True
 except ImportError:
     HAS_IOPATH = False
@@ -637,6 +640,50 @@ class TestDataPipeWithIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "FileLoaderIterDataPipe instance doesn't have valid length"):
             len(hash_check_dp)
 
+    def test_map_zipper_datapipe(self):
+        source_dp = IterableWrapper(range(10))
+        map_dp = SequenceWrapper(["even", "odd"])
+
+        # Functional Test: ensure the hash join is working and return tuple by default
+        def odd_even(i: int) -> int:
+            return i % 2
+
+        result_dp = source_dp.zip_with_map(map_dp, odd_even)
+
+        def odd_even_string(i: int) -> str:
+            return "odd" if i % 2 else "even"
+
+        expected_res = [(i, odd_even_string(i)) for i in range(10)]
+        self.assertEqual(expected_res, list(result_dp))
+
+        # Functional Test: ensure that a custom merge function works
+        def custom_merge(a, b):
+            return f"{a} is a {b} number."
+
+        result_dp = source_dp.zip_with_map(map_dp, odd_even, custom_merge)
+        expected_res2 = [f"{i} is a {odd_even_string(i)} number." for i in range(10)]
+        self.assertEqual(expected_res2, list(result_dp))
+
+        # Functional Test: raises error when key is invalid
+        def odd_even_bug(i: int) -> int:
+            return 2 if i == 0 else i % 2
+
+        result_dp = MapZipper(source_dp, map_dp, odd_even_bug)
+        it = iter(result_dp)
+        with self.assertRaisesRegex(KeyError, "is not a valid key in the given MapDataPipe"):
+            next(it)
+
+        # Reset Test:
+        n_elements_before_reset = 4
+        result_dp = source_dp.zip_with_map(map_dp, odd_even)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(result_dp, n_elements_before_reset)
+        self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_res, res_after_reset)
+
+        # __len__ Test: returns the length of source DataPipe
+        result_dp = source_dp.zip_with_map(map_dp, odd_even)
+        self.assertEqual(len(source_dp), len(result_dp))
+
     def test_json_parser_iterdatapipe(self):
         def is_empty_json(path_and_stream):
             return path_and_stream[0] == "empty.json"
@@ -650,7 +697,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
             "2.json": '{"__complex__": true, "real": 1, "imag": 2}',
         }
         self._custom_files_set_up(json_files)
-        datapipe1 = IterableWrapper([f"{self.temp_dir.name}/{fname}"for fname in ["empty.json", "1.json", "2.json"]])
+        datapipe1 = IterableWrapper([f"{self.temp_dir.name}/{fname}" for fname in ["empty.json", "1.json", "2.json"]])
         datapipe2 = FileLoader(datapipe1)
         datapipe3 = datapipe2.map(get_name)
         datapipe_empty = datapipe3.filter(is_empty_json)
