@@ -38,7 +38,7 @@ class ZipArchiveReaderIterDataPipe(_ArchiveReaderIterDataPipe):
         for data in self.datapipe:
             validate_pathname_binary_tuple(data)
             pathname, data_stream = data
-            self.open_source_streams[pathname].append(data_stream)
+            self._open_source_streams[pathname].append(data_stream)
             folder_name = os.path.dirname(pathname)
             try:
                 # typing.cast is used here to silence mypy's type checker
@@ -52,12 +52,10 @@ class ZipArchiveReaderIterDataPipe(_ArchiveReaderIterDataPipe):
                         continue
                     extracted_fobj = zips.open(zipinfo)
                     inner_pathname = os.path.normpath(os.path.join(folder_name, zipinfo.filename))
-                    self.open_archive_streams[inner_pathname].append(extracted_fobj)
                     yield (inner_pathname, extracted_fobj)  # type: ignore[misc]
             except Exception as e:
                 warnings.warn(f"Unable to extract files from corrupted zipfile stream {pathname} due to: {e}, abort!")
                 raise e
-            # We are unable to close 'data_stream' here, because it needs to be available to use later
 
     def __len__(self):
         if self.length == -1:
