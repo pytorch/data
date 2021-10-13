@@ -14,6 +14,7 @@ import zipfile
 from collections import defaultdict
 from json.decoder import JSONDecodeError
 import torch.utils.data.datapipes.iter
+from torch.utils.data.datapipes.map import SequenceWrapper
 from torch.testing._internal.common_utils import slowTest
 import torchdata
 from torchdata.datapipes.iter import (
@@ -25,6 +26,7 @@ from torchdata.datapipes.iter import (
     KeyZipper,
     Cycler,
     Header,
+    MapZipper,
     IndexAdder,
     IoPathFileLister,
     IoPathFileLoader,
@@ -525,17 +527,17 @@ class TestDataPipeWithIO(expecttest.TestCase):
         self.assertEqual(expected_res, list(csv_parser_dp))
 
         # Functional Test: yield one row at time from each file, skipping over empty content and header
-        csv_parser_dp = datapipe3.parse_csv(skip_header=1)
+        csv_parser_dp = datapipe3.parse_csv(skip_lines=1)
         expected_res = [["a", "1"], ["b", "2"]]
         self.assertEqual(expected_res, list(csv_parser_dp))
 
         # Functional Test: yield one row at time from each file with file name, skipping over empty content
-        csv_parser_dp = datapipe3.parse_csv(keep_filename=True)
+        csv_parser_dp = datapipe3.parse_csv(return_path=True)
         expected_res = [("1.csv", ["key", "item"]), ("1.csv", ["a", "1"]), ("1.csv", ["b", "2"]), ("empty2.csv", [])]
         self.assertEqual(expected_res, list(csv_parser_dp))
 
         # Reset Test:
-        csv_parser_dp = CSVParser(datapipe3, keep_filename=True)
+        csv_parser_dp = CSVParser(datapipe3, return_path=True)
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(csv_parser_dp, n_elements_before_reset)
         self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
@@ -561,12 +563,12 @@ class TestDataPipeWithIO(expecttest.TestCase):
         self.assertEqual(expected_res1, list(csv_dict_parser_dp))
 
         # Functional Test: yield one row at a time as dict, skip over first row, with the second row being the header
-        csv_dict_parser_dp = datapipe3.parse_csv_as_dict(skip_header=1)
+        csv_dict_parser_dp = datapipe3.parse_csv_as_dict(skip_lines=1)
         expected_res2 = [{"a": "b", "1": "2"}]
         self.assertEqual(expected_res2, list(csv_dict_parser_dp))
 
         # Functional Test: yield one row at a time as dict with file name, and the first row being the header (key)
-        csv_dict_parser_dp = datapipe3.parse_csv_as_dict(keep_filename=True)
+        csv_dict_parser_dp = datapipe3.parse_csv_as_dict(return_path=True)
         expected_res3 = [("1.csv", {"key": "a", "item": "1"}), ("1.csv", {"key": "b", "item": "2"})]
         self.assertEqual(expected_res3, list(csv_dict_parser_dp))
 
@@ -637,6 +639,50 @@ class TestDataPipeWithIO(expecttest.TestCase):
         # __len__ Test: returns the length of source DataPipe
         with self.assertRaisesRegex(TypeError, "FileLoaderIterDataPipe instance doesn't have valid length"):
             len(hash_check_dp)
+
+    def test_map_zipper_datapipe(self):
+        source_dp = IterableWrapper(range(10))
+        map_dp = SequenceWrapper(["even", "odd"])
+
+        # Functional Test: ensure the hash join is working and return tuple by default
+        def odd_even(i: int) -> int:
+            return i % 2
+
+        result_dp = source_dp.zip_with_map(map_dp, odd_even)
+
+        def odd_even_string(i: int) -> str:
+            return "odd" if i % 2 else "even"
+
+        expected_res = [(i, odd_even_string(i)) for i in range(10)]
+        self.assertEqual(expected_res, list(result_dp))
+
+        # Functional Test: ensure that a custom merge function works
+        def custom_merge(a, b):
+            return f"{a} is a {b} number."
+
+        result_dp = source_dp.zip_with_map(map_dp, odd_even, custom_merge)
+        expected_res2 = [f"{i} is a {odd_even_string(i)} number." for i in range(10)]
+        self.assertEqual(expected_res2, list(result_dp))
+
+        # Functional Test: raises error when key is invalid
+        def odd_even_bug(i: int) -> int:
+            return 2 if i == 0 else i % 2
+
+        result_dp = MapZipper(source_dp, map_dp, odd_even_bug)
+        it = iter(result_dp)
+        with self.assertRaisesRegex(KeyError, "is not a valid key in the given MapDataPipe"):
+            next(it)
+
+        # Reset Test:
+        n_elements_before_reset = 4
+        result_dp = source_dp.zip_with_map(map_dp, odd_even)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(result_dp, n_elements_before_reset)
+        self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_res, res_after_reset)
+
+        # __len__ Test: returns the length of source DataPipe
+        result_dp = source_dp.zip_with_map(map_dp, odd_even)
+        self.assertEqual(len(source_dp), len(result_dp))
 
     def test_json_parser_iterdatapipe(self):
         def is_empty_json(path_and_stream):
@@ -835,10 +881,9 @@ class TestDataPipeConnection(expecttest.TestCase):
     @slowTest
     def test_http_reader_iterdatapipe(self):
 
-        # TODO: Change to point at TorchData's after repo and URL becomes certain
-        file_url = "https://raw.githubusercontent.com/pytorch/pytorch/master/README.md"
-        expected_file_name = "README.md"
-        expected_MD5_hash = "e2d08f3b1a42efa9c1050f14b7247174"
+        file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
+        expected_file_name = "LICENSE"
+        expected_MD5_hash = "6fc98cce3570de1956f7dbfcb9ca9dd1"
         http_reader_dp = HttpReader(IterableWrapper([file_url]))
 
         # Functional Test: test if the Http Reader can download and read properly
@@ -846,7 +891,7 @@ class TestDataPipeConnection(expecttest.TestCase):
         it = iter(reader_dp)
         path, line = next(it)
         self.assertEqual(expected_file_name, os.path.basename(path))
-        self.assertTrue(b"pytorch" in line)
+        self.assertTrue(b"BSD" in line)
 
         # Reset Test: http_reader_dp has been read, but we reset when calling check_hash()
         check_cache_dp = http_reader_dp.check_hash({file_url: expected_MD5_hash}, "md5", rewind=False)
@@ -890,15 +935,15 @@ class TestDataPipeConnection(expecttest.TestCase):
     @slowTest
     def test_online_iterdatapipe(self):
 
-        readme_file_url = "https://raw.githubusercontent.com/pytorch/pytorch/master/README.md"
+        license_file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
         amazon_review_url = "https://drive.google.com/uc?export=download&id=0Bz8a_Dbh9QhbaW12WVVZS2drcnM"
-        expected_readme_file_name = "README.md"
+        expected_license_file_name = "LICENSE"
         expected_amazon_file_name = "amazon_review_polarity_csv.tar.gz"
-        expected_readme_MD5_hash = "e2d08f3b1a42efa9c1050f14b7247174"
+        expected_license_MD5_hash = "6fc98cce3570de1956f7dbfcb9ca9dd1"
         expected_amazon_MD5_hash = "fe39f8b653cada45afd5792e0f0e8f9b"
 
         file_hash_dict = {
-            readme_file_url: expected_readme_MD5_hash,
+            license_file_url: expected_license_MD5_hash,
             expected_amazon_file_name: expected_amazon_MD5_hash,
         }
 
@@ -911,25 +956,25 @@ class TestDataPipeConnection(expecttest.TestCase):
         self.assertTrue(line != b"")
 
         # Functional Test: can read from other links
-        online_reader_dp = OnlineReader(IterableWrapper([readme_file_url]))
+        online_reader_dp = OnlineReader(IterableWrapper([license_file_url]))
         reader_dp = online_reader_dp.readlines()
         it = iter(reader_dp)
         path, line = next(it)
-        self.assertEqual(expected_readme_file_name, os.path.basename(path))
+        self.assertEqual(expected_license_file_name, os.path.basename(path))
         self.assertTrue(line != b"")
 
         # Reset Test: reset online_reader_dp by calling check_hash
         check_cache_dp = online_reader_dp.check_hash(file_hash_dict, "md5", rewind=False)
         it = iter(check_cache_dp)
         path, stream = next(it)
-        self.assertEqual(expected_readme_file_name, os.path.basename(path))
+        self.assertEqual(expected_license_file_name, os.path.basename(path))
         self.assertTrue(io.BufferedReader, type(stream))
 
         # Functional Test: works with multiple URLs of different sources
-        online_reader_dp = OnlineReader(IterableWrapper([readme_file_url, amazon_review_url]))
+        online_reader_dp = OnlineReader(IterableWrapper([license_file_url, amazon_review_url]))
         check_cache_dp = online_reader_dp.check_hash(file_hash_dict, "md5", rewind=False)
         it = iter(check_cache_dp)
-        for expected_file_name, (path, stream) in zip([expected_readme_file_name, expected_amazon_file_name], it):
+        for expected_file_name, (path, stream) in zip([expected_license_file_name, expected_amazon_file_name], it):
             self.assertEqual(expected_file_name, os.path.basename(path))
             self.assertTrue(io.BufferedReader, type(stream))
 
