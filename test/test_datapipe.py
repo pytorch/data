@@ -724,12 +724,10 @@ class TestDataPipeWithIO(expecttest.TestCase):
 
         # Functional Test: Read extracted files before reaching the end of the tarfile
         self._compressed_files_comparison_helper(self.temp_files, tar_reader_dp, check_length=False)
-        tar_reader_dp.close_all_streams()
 
         # Functional Test: Read extracted files after reaching the end of the tarfile
         data_refs = list(tar_reader_dp)
         self._compressed_files_comparison_helper(self.temp_files, data_refs)
-        tar_reader_dp.close_all_streams()
 
         # Reset Test: reset the DataPipe after reading part of it
         tar_reader_dp = datapipe2.read_from_tar()
@@ -739,7 +737,6 @@ class TestDataPipeWithIO(expecttest.TestCase):
         self._compressed_files_comparison_helper(self.temp_files[:n_elements_before_reset], res_before_reset)
         # Check result accumulated after reset
         self._compressed_files_comparison_helper(self.temp_files, res_after_reset)
-        tar_reader_dp.close_all_streams()
 
         # __len__ Test: doesn't have valid length
         with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
@@ -757,12 +754,10 @@ class TestDataPipeWithIO(expecttest.TestCase):
 
         # Functional Test: read extracted files before reaching the end of the zipfile
         self._compressed_files_comparison_helper(self.temp_files, zip_reader_dp, check_length=False)
-        zip_reader_dp.close_all_streams()
 
         # Functional Test: read extracted files after reaching the end of the zipile
         data_refs = list(zip_reader_dp)
         self._compressed_files_comparison_helper(self.temp_files, data_refs)
-        zip_reader_dp.close_all_streams()
 
         # Reset Test: reset the DataPipe after reading part of it
         zip_reader_dp = datapipe2.read_from_zip()
@@ -772,7 +767,6 @@ class TestDataPipeWithIO(expecttest.TestCase):
         self._compressed_files_comparison_helper(self.temp_files[:n_elements_before_reset], res_before_reset)
         # Check the results accumulated after reset
         self._compressed_files_comparison_helper(self.temp_files, res_after_reset)
-        zip_reader_dp.close_all_streams()
 
         # __len__ Test: doesn't have valid length
         with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
@@ -793,12 +787,10 @@ class TestDataPipeWithIO(expecttest.TestCase):
 
         # Functional Test: Read extracted files before reaching the end of the xzfile
         self._unordered_compressed_files_comparison_helper(self.temp_files, xz_reader_dp, check_length=False)
-        xz_reader_dp.close_all_streams()
 
         # Functional Test: Read extracted files after reaching the end of the xzfile
         data_refs = list(xz_reader_dp)
         self._unordered_compressed_files_comparison_helper(self.temp_files, data_refs)
-        xz_reader_dp.close_all_streams()
 
         # Reset Test: reset the DataPipe after reading part of it
         xz_reader_dp = datapipe2.read_from_xz()
@@ -809,12 +801,10 @@ class TestDataPipeWithIO(expecttest.TestCase):
         self._unordered_compressed_files_comparison_helper(self.temp_files, res_before_reset, check_length=False)
         # Check result accumulated after reset
         self._unordered_compressed_files_comparison_helper(self.temp_files, res_after_reset)
-        xz_reader_dp.close_all_streams()
 
         # Reset Test: Ensure the order is consistent between iterations
         for r1, r2 in zip(xz_reader_dp, xz_reader_dp):
             self.assertEqual(r1[0], r2[0])
-        xz_reader_dp.close_all_streams()
 
         # __len__ Test: doesn't have valid length
         with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):

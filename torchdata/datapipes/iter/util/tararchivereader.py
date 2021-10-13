@@ -39,7 +39,7 @@ class TarArchiveReaderIterDataPipe(_ArchiveReaderIterDataPipe):
         for data in self.datapipe:
             validate_pathname_binary_tuple(data)
             pathname, data_stream = data
-            self.open_source_streams[pathname].append(data_stream)
+            self._open_source_streams[pathname].append(data_stream)
             folder_name = os.path.dirname(pathname)
             try:
                 # typing.cast is used here to silence mypy's type checker
@@ -52,7 +52,6 @@ class TarArchiveReaderIterDataPipe(_ArchiveReaderIterDataPipe):
                         warnings.warn("failed to extract file {} from source tarfile {}".format(tarinfo.name, pathname))
                         raise tarfile.ExtractError
                     inner_pathname = os.path.normpath(os.path.join(folder_name, tarinfo.name))
-                    self.open_archive_streams[inner_pathname].append(extracted_fobj)
                     yield (inner_pathname, extracted_fobj)  # type: ignore[misc]
             except Exception as e:
                 warnings.warn(
