@@ -4,7 +4,7 @@ import fnmatch
 import tempfile
 import warnings
 
-from io import BufferedIOBase
+from io import IOBase
 from typing import Iterable, List, Tuple, Union
 
 
@@ -63,14 +63,15 @@ def _default_filepath_fn(data):
     return os.path.normpath(data)
 
 
-def validate_pathname_binary_tuple(data: Tuple[str, BufferedIOBase]):
+def validate_pathname_binary_tuple(data: Tuple[str, IOBase]):
     if not isinstance(data, tuple):
-        raise TypeError("pathname binary data should be tuple type, but got {}".format(type(data)))
+        raise TypeError(f"pathname binary data should be tuple type, but it is type {type(data)}")
     if len(data) != 2:
-        raise TypeError("pathname binary tuple length should be 2, but got {}".format(str(len(data))))
+        raise TypeError(f"pathname binary stream tuple length should be 2, but got {len(data)}")
     if not isinstance(data[0], str):
-        raise TypeError("pathname binary tuple should have string type pathname, but got {}".format(type(data[0])))
-    if not isinstance(data[1], BufferedIOBase):
+        raise TypeError(f"pathname within the tuple should have string type pathname, but it is type {type(data[0])}")
+    if not isinstance(data[1], IOBase):
         raise TypeError(
-            "pathname binary tuple should have BufferedIOBase based binary type, but got {}".format(type(data[1]))
+            f"binary stream within the tuple should have IOBase or"
+            f"its subclasses as type, but it is type {type(data[1])}"
         )
