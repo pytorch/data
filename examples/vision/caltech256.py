@@ -23,7 +23,7 @@ def collate_sample(data):
     path, image = data
     dir = os.path.split(os.path.dirname(path))[1]
     label_str, cls = dir.split(".")
-    return dict(path=path, image=image, label=int(label_str), cls=cls)
+    return {"path": path, "image": image, "label": int(label_str), "cls": cls}
 
 
 def Caltech256(root=ROOT):
@@ -35,5 +35,5 @@ def Caltech256(root=ROOT):
 
 
 if __name__ == "__main__":
-    for sample in Caltech256():
+    for _sample in Caltech256():
         pass

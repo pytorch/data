@@ -34,11 +34,10 @@ class XzFileReaderIterDataPipe(_ArchiveReaderIterDataPipe):
         for data in self.datapipe:
             validate_pathname_binary_tuple(data)
             pathname, data_stream = data
-            self.open_source_streams[pathname].append(data_stream)
+            self._open_source_streams[pathname].append(data_stream)
             try:
                 extracted_fobj = lzma.open(data_stream, mode="rb")  # type: ignore[call-overload]
                 new_pathname = pathname.rstrip(".xz")
-                self.open_archive_streams[new_pathname].append(extracted_fobj)
                 yield new_pathname, extracted_fobj  # type: ignore[misc]
             except Exception as e:
                 warnings.warn(f"Unable to extract files from corrupted xz/lzma stream {pathname} due to: {e}, abort!")

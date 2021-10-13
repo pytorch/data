@@ -22,9 +22,11 @@ class Rows2ColumnarIterDataPipe(IterDataPipe):
         column_names: a function that joins a list of lines together
     """
 
-    def __init__(self, source_datapipe, column_names: List[str] = [""]):
+    column_names: List[str]
+
+    def __init__(self, source_datapipe, column_names: List[str] = None):
         self.source_datapipe = source_datapipe
-        self.column_names = column_names
+        self.column_names = [] if column_names is None else column_names
 
     def __iter__(self):
         for batch in self.source_datapipe:
