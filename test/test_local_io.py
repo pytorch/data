@@ -57,7 +57,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             self.temp_sub_dir.cleanup()
             self.temp_dir.cleanup()
         except Exception as e:
-            warnings.warn(f"TestDataPipeWithIO was not able to cleanup temp dir due to {e}")
+            warnings.warn(f"TestDataPipeLocalIO was not able to cleanup temp dir due to {e}")
 
     def _custom_files_set_up(self, files):
         for fname, content in files.items():

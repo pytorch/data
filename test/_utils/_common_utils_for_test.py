@@ -4,7 +4,7 @@ import os
 import tempfile
 
 from torchdata.datapipes.iter import IterDataPipe
-from typing import Any, List, Tuple, TypeVar
+from typing import List, Tuple, TypeVar
 
 
 T_co = TypeVar("T_co", covariant=True)
