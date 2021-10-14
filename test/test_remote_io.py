@@ -13,8 +13,21 @@ from torchdata.datapipes.iter import (
     OnlineReader,
 )
 
+from _utils._common_utils_for_test import (
+    create_temp_dir,
+)
+
 
 class TestDataPipeRemoteIO(expecttest.TestCase):
+    def setUp(self):
+        self.temp_dir = create_temp_dir()
+
+    def tearDown(self):
+        try:
+            self.temp_dir.cleanup()
+        except Exception as e:
+            warnings.warn(f"TestDataPipeRemote was not able to cleanup temp dir due to {e}")
+
     @slowTest
     def test_http_reader_iterdatapipe(self):
 

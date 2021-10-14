@@ -30,7 +30,8 @@ from torchdata.datapipes.iter import (
 )
 
 from _utils._common_utils_for_test import (
-    create_temp_dir_and_files,
+    create_temp_dir,
+    create_temp_files,
     get_name,
     reset_after_n_next_calls,
 )
@@ -46,11 +47,10 @@ skipIfNoIOPath = unittest.skipIf(not HAS_IOPATH, "no iopath")
 
 class TestDataPipeLocalIO(expecttest.TestCase):
     def setUp(self):
-        ret = create_temp_dir_and_files()
-        self.temp_dir = ret[0][0]
-        self.temp_files = ret[0][1:]
-        self.temp_sub_dir = ret[1][0]
-        self.temp_sub_files = ret[1][1:]
+        self.temp_dir = create_temp_dir()
+        self.temp_files = create_temp_files(self.temp_dir)
+        self.temp_sub_dir = create_temp_dir(self.temp_dir.name)
+        self.temp_sub_files = create_temp_files(self.temp_sub_dir, 4, False)
 
     def tearDown(self):
         try:
