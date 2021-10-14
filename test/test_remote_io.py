@@ -7,6 +7,7 @@ import unittest
 
 from torch.testing._internal.common_utils import slowTest
 from torchdata.datapipes.iter import (
+    FileLoader,
     GDriveReader,
     HttpReader,
     IterableWrapper,
@@ -130,6 +131,46 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
 
         # __len__ Test: returns the length of source DataPipe
         self.assertEqual(2, len(online_reader_dp))
+
+    def test_on_disk_cache_holder_iterdatapipe(self):
+        file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
+        expected_file_name = os.path.join(self.temp_dir.name, "OnDisk_LICENSE")
+        expected_MD5_hash = "4aabe940637d4389eca42ac1a0e874ec"
+
+        file_dp = IterableWrapper([file_url])
+
+        def _filepath_fn(url):
+            filename = "OnDisk_" + os.path.basename(url)
+            return os.path.join(self.temp_dir.name, filename)
+
+        def _cache_check_fn(url):
+            import hashlib
+            filename = "OnDisk_" + os.path.basename(url)
+            filepath = os.path.join(self.temp_dir.name, filename)
+            if not os.path.exists(filepath):
+                return False
+
+            hash_fn = hashlib.md5()
+            with open(filepath, "rb") as f:
+                chunk = f.read(1024 ** 2)
+                while chunk:
+                    hash_fn.update(chunk)
+                    chunk = f.read(1024 ** 2)
+            return hash_fn.hexdigest() == expected_MD5_hash
+
+        cache_dp = file_dp.on_disk_cache(mode="wt", filepath_fn=_filepath_fn, cache_check_fn=_cache_check_fn).open_url().map(fn=lambda x: b''.join(x).decode(), input_col=1).end_caching()
+
+        self.assertFalse(os.path.exists(expected_file_name))
+        it = iter(cache_dp)
+        path = next(it)
+        self.assertTrue(os.path.exists(expected_file_name))
+
+        self.assertEqual(expected_file_name, path)
+
+        # Validate file without Error
+        fl_dp = FileLoader(cache_dp)
+        check_hash_dp = fl_dp.check_hash({expected_file_name: expected_MD5_hash}, "md5", rewind=False).map(lambda fd: fd.close(), input_col=1)
+        _ = list(check_hash_dp)
 
 
 if __name__ == "__main__":

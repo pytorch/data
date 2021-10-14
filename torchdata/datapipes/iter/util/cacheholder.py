@@ -6,8 +6,8 @@ from os import path
 from typing import Deque, Optional
 
 from torchdata.datapipes import functional_datapipe
-from torchdata.datapipes.iter import IterDataPipe, FileLoader
-from torchdata.datapipes.utils.common import _default_filepath_fn
+from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.utils.common import _default_filepath_fn, _default_cache_check_fn
 
 
 @functional_datapipe("in_memory_cache")
@@ -64,71 +64,58 @@ class InMemoryCacheHolderIterDataPipe(IterDataPipe):
                 raise TypeError(f"{type(self).__name__} instance doesn't have valid length until the cache is loaded.")
 
 
+class _CacheOp:
+    def __init__(self, cache_holder, fn_name):
+        self.cache_holder = cache_holder
+        self.fn_name = fn_name
+
+    def __call__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+        return self.cache_holder
+
+
 @functional_datapipe("on_disk_cache")
 class OnDiskCacheHolderIterDataPipe(IterDataPipe):
-    """
-    `OnDiskCacheHolder` is a factory DataPipe to create cached local file
-    for the output of opDataPipe, which is normally performance
-    bottleneck like Download, Decompress.
-    Default `filepath_fn` return a path in temporary directory based
-    on the basename of data yielded from `source_datapipe`.
-
-    Args:
-        source_datapipe: source DataPipe with URLs or file strings
-        opDataPipe: DataPipe to perform the desired operation on the source (e.g. download, decompress)
-        op_args: arguments for opDataPipe
-        op_kwargs: keyword arguments for opDataPipe
-        op_map: function that will be applied via .map to opDataPipe
-        mode: mode in which the file will be opened for write the data
-        filepath_fn: Given URL or file path string, returns a path to the target directory
-
-    Example:
-        from urllib.parse import urlparse
-
-        def url_path_fn(url):
-            return "~/.data/" + url.stripe().split('/')[-1]
-
-        dp = ListofUrl(urls).on_disk_cache(HTTPReader, filepath_fn=url_path_fn)
-        # Existing file will be skipped for downloading and directly loaded from disk
-        # Non-existing file will be downloaded by HTTP request and saved to disk, then loaded from disk
-    """
-
-    def __new__(
-        cls,
+    def __init__(
+        self,
         source_datapipe,
-        opDataPipe,
-        op_args=None,
-        op_kwargs=None,
-        op_map=None,
-        mode="wb",
         filepath_fn=_default_filepath_fn,
+        mode: str = "wb",
+        cache_check_fn=_default_cache_check_fn,
     ):
+        self.source_datapipe = source_datapipe
+        self.filepath_fn = filepath_fn
+        self.mode = mode
+        self.cache_check_fn = cache_check_fn
+        self.ops = []
 
-        assert isinstance(source_datapipe, IterDataPipe), "'source_datapipe' needs to be an IterDataPipe"
-        if op_args is None:
-            op_args = ()
-        if op_kwargs is None:
-            op_kwargs = {}
-        # source_datapipe should either yield url or file string
-        dp = source_datapipe.map(fn=lambda data: (filepath_fn(data), data))
-        # Out of order
-        cached_dp, todo_dp = dp.demux(2, lambda d: 0 if path.exists(d[0]) else 1)
+    # TODO: Whenever `IterDataPipe` has a new magic function
+    # implemented, it's needed accordingly
+    def __iter__(self):
+        raise RuntimeError("Please call `end_caching()` before iteration.")
 
+    def __add__(self, other_datapipe):
+        raise RuntimeError("`OnDiskCacheHolder` doesn't support add operation")
+
+    def __reduce_ex__(self):
+        raise RuntimeError("Please call `end_caching()` before calling graph or serialization.")
+
+    def __getattr__(self, name):
+        op = _CacheOp(self, name)
+        self.ops.append(op)
+        return op
+
+    def end_caching(self):
+        #  dp = self.source_datapipe.map(fn=lambda d: (self.filepath_fn(d), d))
+        dp = self.source_datapipe
+        todo_dp, cached_dp = dp.demux(2, self.cache_check_fn)
         # Cached: keeps filepath
-        cached_dp = cached_dp.map(fn=lambda data: data[0])
+        cached_dp = cached_dp.map(fn=self.filepath_fn)
 
-        # Non-cached
-        # opDataPipe yield bytes
-        if not op_map:
-            todo_dp = opDataPipe(todo_dp.map(fn=lambda data: data[1]), *op_args, **op_kwargs).save_to_disk(
-                mode=mode, filepath_fn=filepath_fn
-            )
-        else:
-            todo_dp = (
-                opDataPipe(todo_dp.map(fn=lambda data: data[1]), *op_args, **op_kwargs)
-                .map(op_map)
-                .save_to_disk(mode=mode, filepath_fn=filepath_fn)
-            )
+        for op in self.ops:
+            todo_dp = getattr(todo_dp, op.fn_name)(*op.args, **op.kwargs)
 
-        # Load files from local disk
-        return FileLoader(cached_dp.concat(todo_dp))
+        todo_dp = todo_dp.save_to_disk(mode=self.mode, filepath_fn=self.filepath_fn)
+        # Return filenames
+        return cached_dp.concat(todo_dp)

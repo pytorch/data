@@ -7,6 +7,7 @@ import re
 
 import requests
 
+from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
 
@@ -26,6 +27,7 @@ def _get_response_from_http(url, *, timeout):
         raise
 
 
+@functional_datapipe("open_url")
 class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
     r""":class:`HTTPReaderIterDataPipe`
 
