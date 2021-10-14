@@ -2,7 +2,7 @@
 import sys
 
 from collections import deque
-from typing import Deque, Optional
+from typing import Deque, List, Optional
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -87,7 +87,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         self.filepath_fn = filepath_fn
         self.mode = mode
         self.cache_check_fn = cache_check_fn
-        self.ops = []
+        self.ops: List[_CacheOp] = []
 
     # TODO: Whenever `IterDataPipe` has a new magic function
     # implemented, it's needed accordingly
