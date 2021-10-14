@@ -2,7 +2,6 @@
 import sys
 
 from collections import deque
-from os import path
 from typing import Deque, Optional
 
 from torchdata.datapipes import functional_datapipe

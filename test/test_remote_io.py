@@ -2,8 +2,8 @@
 import io
 import expecttest
 import os
-
 import unittest
+import warnings
 
 from torch.testing._internal.common_utils import slowTest
 from torchdata.datapipes.iter import (
@@ -27,7 +27,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         try:
             self.temp_dir.cleanup()
         except Exception as e:
-            warnings.warn(f"TestDataPipeRemote was not able to cleanup temp dir due to {e}")
+            warnings.warn(f"TestDataPipeRemoteIO was not able to cleanup temp dir due to {e}")
 
     @slowTest
     def test_http_reader_iterdatapipe(self):

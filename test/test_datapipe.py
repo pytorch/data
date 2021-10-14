@@ -434,5 +434,6 @@ class TestDataPipe(expecttest.TestCase):
         # __len__ Test: returns the number of batches
         self.assertEqual(3, len(batch_dp))
 
+
 if __name__ == "__main__":
     unittest.main()
