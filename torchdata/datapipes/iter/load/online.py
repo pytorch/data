@@ -12,11 +12,11 @@ from torchdata.datapipes.iter import IterDataPipe
 
 def _get_response_from_http(url, *, timeout):
     try:
-        session = requests.Session()
-        if timeout is None:
-            r = session.get(url, stream=True)
-        else:
-            r = session.get(url, timeout=timeout, stream=True)
+        with requests.Session() as session:
+            if timeout is None:
+                r = session.get(url, stream=True)
+            else:
+                r = session.get(url, timeout=timeout, stream=True)
         return url, r.raw
     except HTTPError as e:
         raise Exception(f"Could not get the file. [HTTP Error] {e.response}.")
