@@ -6,6 +6,8 @@ on:
   pull_request:
     branches:
       - main
+      # For PR created by ghstack
+      - gh/*/*/base
 
 jobs:
   test:
