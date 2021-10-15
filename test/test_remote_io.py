@@ -28,12 +28,11 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         except Exception as e:
             warnings.warn(f"TestDataPipeRemoteIO was not able to cleanup temp dir due to {e}")
 
-    @slowTest
     def test_http_reader_iterdatapipe(self):
 
         file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
         expected_file_name = "LICENSE"
-        expected_MD5_hash = "6fc98cce3570de1956f7dbfcb9ca9dd1"
+        expected_MD5_hash = "4aabe940637d4389eca42ac1a0e874ec"
         http_reader_dp = HttpReader(IterableWrapper([file_url]))
 
         # Functional Test: test if the Http Reader can download and read properly
@@ -89,7 +88,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         amazon_review_url = "https://drive.google.com/uc?export=download&id=0Bz8a_Dbh9QhbaW12WVVZS2drcnM"
         expected_license_file_name = "LICENSE"
         expected_amazon_file_name = "amazon_review_polarity_csv.tar.gz"
-        expected_license_MD5_hash = "6fc98cce3570de1956f7dbfcb9ca9dd1"
+        expected_license_MD5_hash = "4aabe940637d4389eca42ac1a0e874ec"
         expected_amazon_MD5_hash = "fe39f8b653cada45afd5792e0f0e8f9b"
 
         file_hash_dict = {
