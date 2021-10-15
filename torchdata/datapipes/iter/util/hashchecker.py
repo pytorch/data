@@ -39,12 +39,10 @@ class HashCheckerIterDataPipe(IterDataPipe):
             else:
                 hash_func = hashlib.md5()
 
-            while True:
-                # Read by chunk to avoid filling memory
-                chunk = stream.read(1024 ** 2)
-                if not chunk:
-                    break
-                hash_func.update(chunk)
+            # Considering not all of streams has `read(bytes)` method,
+            # `__iter__` is chosen becuase it's an interface of IOBase
+            for d in stream:
+                hash_func.update(d)
 
             # TODO(VitalyFedyunin): this will not work (or work crappy for non-seekable steams like http)
             if self.rewind:
