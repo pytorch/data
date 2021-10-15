@@ -29,12 +29,11 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         except Exception as e:
             warnings.warn(f"TestDataPipeRemoteIO was not able to cleanup temp dir due to {e}")
 
-    @slowTest
     def test_http_reader_iterdatapipe(self):
 
         file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
         expected_file_name = "LICENSE"
-        expected_MD5_hash = "6fc98cce3570de1956f7dbfcb9ca9dd1"
+        expected_MD5_hash = "4aabe940637d4389eca42ac1a0e874ec"
         http_reader_dp = HttpReader(IterableWrapper([file_url]))
 
         # Functional Test: test if the Http Reader can download and read properly
@@ -90,7 +89,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         amazon_review_url = "https://drive.google.com/uc?export=download&id=0Bz8a_Dbh9QhbaW12WVVZS2drcnM"
         expected_license_file_name = "LICENSE"
         expected_amazon_file_name = "amazon_review_polarity_csv.tar.gz"
-        expected_license_MD5_hash = "6fc98cce3570de1956f7dbfcb9ca9dd1"
+        expected_license_MD5_hash = "4aabe940637d4389eca42ac1a0e874ec"
         expected_amazon_MD5_hash = "fe39f8b653cada45afd5792e0f0e8f9b"
 
         file_hash_dict = {
@@ -133,6 +132,8 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         self.assertEqual(2, len(online_reader_dp))
 
     def test_on_disk_cache_holder_iterdatapipe(self):
+        import hashlib
+
         file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
         expected_file_name = os.path.join(self.temp_dir.name, "OnDisk_LICENSE")
         expected_MD5_hash = "4aabe940637d4389eca42ac1a0e874ec"
@@ -144,9 +145,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             return os.path.join(self.temp_dir.name, filename)
 
         def _cache_check_fn(url):
-            import hashlib
-            filename = "OnDisk_" + os.path.basename(url)
-            filepath = os.path.join(self.temp_dir.name, filename)
+            filepath = _filepath_fn(url)
             if not os.path.exists(filepath):
                 return False
 
@@ -165,11 +164,12 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         path = next(it)
         self.assertTrue(os.path.exists(expected_file_name))
 
+        # File has been saved to disk
         self.assertEqual(expected_file_name, path)
 
         # Validate file without Error
         fl_dp = FileLoader(cache_dp)
-        check_hash_dp = fl_dp.check_hash({expected_file_name: expected_MD5_hash}, "md5", rewind=False).map(lambda fd: fd.close(), input_col=1)
+        check_hash_dp = fl_dp.check_hash({expected_file_name: expected_MD5_hash}, "md5", rewind=False)
         _ = list(check_hash_dp)
 
 

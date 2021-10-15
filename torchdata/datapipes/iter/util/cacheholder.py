@@ -1,4 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+import os.path
 import sys
 
 from collections import deque
@@ -6,7 +7,7 @@ from typing import Deque, List, Optional
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
-from torchdata.datapipes.utils.common import _default_filepath_fn, _default_cache_check_fn
+from torchdata.datapipes.utils.common import _default_filepath_fn
 
 
 @functional_datapipe("in_memory_cache")
@@ -74,19 +75,24 @@ class _CacheOp:
         return self.cache_holder
 
 
+def _default_cache_check_fn(data):
+    path = _default_filepath_fn(data)
+    return os.path.exists(path)
+
+
 @functional_datapipe("on_disk_cache")
 class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     def __init__(
         self,
         source_datapipe,
-        filepath_fn=_default_filepath_fn,
-        mode: str = "wb",
         cache_check_fn=_default_cache_check_fn,
+        mode: str = "wb",
+        filepath_fn=_default_filepath_fn,
     ):
         self.source_datapipe = source_datapipe
+        self.cache_check_fn = cache_check_fn
         self.filepath_fn = filepath_fn
         self.mode = mode
-        self.cache_check_fn = cache_check_fn
         self.ops: List[_CacheOp] = []
 
     # TODO: Whenever `IterDataPipe` has a new magic function
@@ -106,9 +112,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         return op
 
     def end_caching(self):
-        #  dp = self.source_datapipe.map(fn=lambda d: (self.filepath_fn(d), d))
-        dp = self.source_datapipe
-        todo_dp, cached_dp = dp.demux(2, self.cache_check_fn)
+        todo_dp, cached_dp = self.source_datapipe.demux(2, self.cache_check_fn)
         # Cached: keeps filepath
         cached_dp = cached_dp.map(fn=self.filepath_fn)
 
