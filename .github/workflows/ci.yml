@@ -7,7 +7,7 @@ on:
     branches:
       - main
       # For PR created by ghstack
-      - gh/*/base
+      - gh/*/*/base
 
 jobs:
   test:
