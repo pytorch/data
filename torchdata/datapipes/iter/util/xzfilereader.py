@@ -25,7 +25,7 @@ class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         or let Python's GC close them periodically.
     """
 
-    def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1):
+    def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1) -> None:
         super().__init__()
         self.datapipe: Iterable[Tuple[str, BufferedIOBase]] = datapipe
         self.length: int = length

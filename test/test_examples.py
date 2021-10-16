@@ -31,12 +31,12 @@ skipIfNoPillow = unittest.skipIf(not HAS_PILLOW, "no pillow")
 @skipIfNoSciPy
 @skipIfNoPillow
 class TestVisionExamples(unittest.TestCase):
-    def test_Caltech101(self):
+    def test_Caltech101(self) -> None:
         path = os.path.join(ROOT, "examples", "vision", "fakedata", "caltech101")
         samples = list(Caltech101(path))
         self.assertEqual(6, len(samples))
 
-    def test_Caltech256(self):
+    def test_Caltech256(self) -> None:
         path = os.path.join(ROOT, "examples", "vision", "fakedata", "caltech256")
         samples = list(Caltech256(path))
         self.assertEqual(6, len(samples))

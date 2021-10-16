@@ -32,7 +32,7 @@ class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         the data_stream variable below cannot be closed within the scope of this function.
     """
 
-    def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1):
+    def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1) -> None:
         super().__init__()
         self.datapipe: Iterable[Tuple[str, BufferedIOBase]] = datapipe
         self.length: int = length

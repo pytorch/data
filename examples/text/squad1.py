@@ -32,7 +32,7 @@ DATASET_NAME = "SQuAD1"
 
 
 class _ParseSQuADQAData(IterDataPipe):
-    def __init__(self, source_datapipe):
+    def __init__(self, source_datapipe) -> None:
         self.source_datapipe = source_datapipe
 
     def __iter__(self):

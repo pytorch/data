@@ -14,7 +14,7 @@ class CyclerIterDataPipe(IterDataPipe):
         count: the number of times to read through the source DataPipe (if `None`, it will cycle in perpetuity)
     """
 
-    def __init__(self, source_datapipe: IterDataPipe, count: Optional[int] = None):
+    def __init__(self, source_datapipe: IterDataPipe, count: Optional[int] = None) -> None:
         self.source_datapipe = source_datapipe
         self.count = count
         if count is not None and count < 0:

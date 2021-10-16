@@ -64,7 +64,7 @@ except ImportError:
 skipIfNoIOPath = unittest.skipIf(not HAS_IOPATH, "no iopath")
 
 
-def test_torchdata_pytorch_consistency():
+def test_torchdata_pytorch_consistency() -> None:
     def extract_datapipe_names(module):
         return {
             name
@@ -85,7 +85,7 @@ def test_torchdata_pytorch_consistency():
 
 
 class TestDataPipe(expecttest.TestCase):
-    def test_in_memory_cache_holder_iterdatapipe(self):
+    def test_in_memory_cache_holder_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(10))
         cache_dp = source_dp.in_memory_cache(size=5)
 
@@ -121,7 +121,7 @@ class TestDataPipe(expecttest.TestCase):
         list(cache_dp)
         self.assertEqual(10, len(cache_dp))
 
-    def test_keyzipper_iterdatapipe(self):
+    def test_keyzipper_iterdatapipe(self) -> None:
 
         source_dp = IterableWrapper(range(10))
         ref_dp = IterableWrapper(range(20))
@@ -185,7 +185,7 @@ class TestDataPipe(expecttest.TestCase):
         # __len__ Test: inherits length from source_dp
         self.assertEqual(10, len(zip_dp))
 
-    def test_cycler_iterdatapipe(self):
+    def test_cycler_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(5))
 
         # Functional Test: cycle for finite number of times and ends
@@ -221,7 +221,7 @@ class TestDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "instance cycles forever, and therefore doesn't have valid length"):
             len(cycler_dp)
 
-    def test_header_iterdatapipe(self):
+    def test_header_iterdatapipe(self) -> None:
         # Functional Test: ensure the limit is enforced
         source_dp = IterableWrapper(range(20))
         header_dp = source_dp.header(5)
@@ -248,7 +248,7 @@ class TestDataPipe(expecttest.TestCase):
         # header_dp = source_dp.header(30)
         # self.assertEqual(20, len(header_dp))
 
-    def test_index_adder_iterdatapipe(self):
+    def test_index_adder_iterdatapipe(self) -> None:
         letters = "abcdefg"
         source_dp = IterableWrapper([{i: i} for i in letters])
         index_adder_dp = source_dp.add_index()
@@ -280,7 +280,7 @@ class TestDataPipe(expecttest.TestCase):
         # __len__ Test: returns length of source DataPipe
         self.assertEqual(7, len(index_adder_dp))
 
-    def test_line_reader_iterdatapipe(self):
+    def test_line_reader_iterdatapipe(self) -> None:
         text1 = "Line1\nLine2"
         text2 = "Line2,1\nLine2,2\nLine2,3"
 
@@ -326,7 +326,7 @@ class TestDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "has no len"):
             len(line_reader_dp)
 
-    def test_paragraph_aggregator_iterdatapipe(self):
+    def test_paragraph_aggregator_iterdatapipe(self) -> None:
         # Functional Test: aggregate lines correctly
         source_dp = IterableWrapper(
             [("file1", "Line1"), ("file1", "Line2"), ("file2", "Line2,1"), ("file2", "Line2,2"), ("file2", "Line2,3")]
@@ -349,7 +349,7 @@ class TestDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "has no len"):
             len(para_agg_dp)
 
-    def test_rows_to_columnar_iterdatapipe(self):
+    def test_rows_to_columnar_iterdatapipe(self) -> None:
         # Functional Test: working with DataPipe with dict
         column_names_dict = {"a", "b", "c"}
         source_dp = IterableWrapper(
@@ -385,7 +385,7 @@ class TestDataPipe(expecttest.TestCase):
         # __len__ Test: returns length of source DataPipe
         self.assertEqual(2, len(result_dp))
 
-    def test_sample_multiplexer_iterdatapipe(self):
+    def test_sample_multiplexer_iterdatapipe(self) -> None:
         # Functional Test: yields all values from the sources
         source_dp1 = IterableWrapper([0] * 10)
         source_dp2 = IterableWrapper([1] * 10)
@@ -414,7 +414,7 @@ class TestDataPipe(expecttest.TestCase):
         # __len__ Test: returns the sum of the lengths of the sources
         self.assertEqual(20, len(sample_mul_dp))
 
-    def test_bucket_batcher_iterdatapipe(self):
+    def test_bucket_batcher_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(10))
 
         # Functional Test: drop last reduces length
@@ -511,7 +511,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
                 self.assertEqual(res[1].read(), f.read())
             res[1].close()
 
-    def test_csv_parser_iterdatapipe(self):
+    def test_csv_parser_iterdatapipe(self) -> None:
         def make_path(fname):
             return f"{self.temp_dir.name}/{fname}"
 
@@ -547,7 +547,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "has no len"):
             len(csv_parser_dp)
 
-    def test_csv_dict_parser_iterdatapipe(self):
+    def test_csv_dict_parser_iterdatapipe(self) -> None:
         def get_name(path_and_stream):
             return os.path.basename(path_and_stream[0]), path_and_stream[1]
 
@@ -584,7 +584,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "has no len"):
             len(csv_dict_parser_dp)
 
-    def test_hash_checker_iterdatapipe(self):
+    def test_hash_checker_iterdatapipe(self) -> None:
         hash_dict = {}
 
         def fill_hash_dict():
@@ -640,7 +640,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "FileLoaderIterDataPipe instance doesn't have valid length"):
             len(hash_check_dp)
 
-    def test_map_zipper_datapipe(self):
+    def test_map_zipper_datapipe(self) -> None:
         source_dp = IterableWrapper(range(10))
         map_dp = SequenceWrapper(["even", "odd"])
 
@@ -684,7 +684,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
         result_dp = source_dp.zip_with_map(map_dp, odd_even)
         self.assertEqual(len(source_dp), len(result_dp))
 
-    def test_json_parser_iterdatapipe(self):
+    def test_json_parser_iterdatapipe(self) -> None:
         def is_empty_json(path_and_stream):
             return path_and_stream[0] == "empty.json"
 
@@ -728,7 +728,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "len"):
             len(json_dp)
 
-    def test_saver_iterdatapipe(self):
+    def test_saver_iterdatapipe(self) -> None:
         def filepath_fn(name: str) -> str:
             return os.path.join(self.temp_dir.name, os.path.basename(name))
 
@@ -758,7 +758,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
         # __len__ Test: returns the length of source DataPipe
         self.assertEqual(3, len(saver_dp))
 
-    def test_tar_archive_reader_iterdatapipe(self):
+    def test_tar_archive_reader_iterdatapipe(self) -> None:
         temp_tarfile_pathname = os.path.join(self.temp_dir.name, "test_tar.tar")
         with tarfile.open(temp_tarfile_pathname, "w:gz") as tar:
             tar.add(self.temp_files[0])
@@ -788,7 +788,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
             len(tar_reader_dp)
 
-    def test_zip_archive_reader_iterdatapipe(self):
+    def test_zip_archive_reader_iterdatapipe(self) -> None:
         temp_zipfile_pathname = os.path.join(self.temp_dir.name, "test_zip.zip")
         with zipfile.ZipFile(temp_zipfile_pathname, "w") as myzip:
             myzip.write(self.temp_files[0])
@@ -818,7 +818,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
             len(zip_reader_dp)
 
-    def test_xz_archive_reader_iterdatapipe(self):
+    def test_xz_archive_reader_iterdatapipe(self) -> None:
         # Worth noting that the .tar and .zip tests write multiple files into the same compressed file
         # Whereas we create multiple .xz files in the same directories below.
         for path in self.temp_files:
@@ -860,7 +860,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
     # filesystem. It needs to be modified once test data can be stored on
     # gdrive/s3/onedrive
     @skipIfNoIOPath
-    def test_io_path_file_lister_iterdatapipe(self):
+    def test_io_path_file_lister_iterdatapipe(self) -> None:
         datapipe = IoPathFileLister(root=self.temp_sub_dir.name)
 
         # check all file paths within sub_folder are listed
@@ -868,7 +868,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
             self.assertTrue(path in self.temp_sub_files)
 
     @skipIfNoIOPath
-    def test_io_path_file_loader_iterdatapipe(self):
+    def test_io_path_file_loader_iterdatapipe(self) -> None:
         datapipe1 = IoPathFileLister(root=self.temp_sub_dir.name)
         datapipe2 = IoPathFileLoader(datapipe1)
 
@@ -879,7 +879,7 @@ class TestDataPipeWithIO(expecttest.TestCase):
 
 class TestDataPipeConnection(expecttest.TestCase):
     @slowTest
-    def test_http_reader_iterdatapipe(self):
+    def test_http_reader_iterdatapipe(self) -> None:
 
         file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
         expected_file_name = "LICENSE"
@@ -906,7 +906,7 @@ class TestDataPipeConnection(expecttest.TestCase):
         self.assertEqual(1, len(http_dp))
 
     @slowTest
-    def test_gdrive_iterdatapipe(self):
+    def test_gdrive_iterdatapipe(self) -> None:
 
         amazon_review_url = "https://drive.google.com/uc?export=download&id=0Bz8a_Dbh9QhbaW12WVVZS2drcnM"
         expected_file_name = "amazon_review_polarity_csv.tar.gz"
@@ -933,7 +933,7 @@ class TestDataPipeConnection(expecttest.TestCase):
         self.assertEqual(1, len(gdrive_dp))
 
     @slowTest
-    def test_online_iterdatapipe(self):
+    def test_online_iterdatapipe(self) -> None:
 
         license_file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
         amazon_review_url = "https://drive.google.com/uc?export=download&id=0Bz8a_Dbh9QhbaW12WVVZS2drcnM"
