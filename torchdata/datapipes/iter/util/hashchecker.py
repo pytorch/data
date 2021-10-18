@@ -39,8 +39,8 @@ class HashCheckerIterDataPipe(IterDataPipe):
             else:
                 hash_func = hashlib.md5()
 
-            # Considering not all of streams has `read(bytes)` method,
-            # `__iter__` is chosen becuase it's an interface of IOBase
+            # Not all of streams have `read(bytes)` method.
+            # `__iter__` method is chosen becauce it's a common interface for IOBase.
             for d in stream:
                 hash_func.update(d)
 
