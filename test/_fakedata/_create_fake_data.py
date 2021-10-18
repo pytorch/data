@@ -4,10 +4,10 @@ import tarfile
 
 NUMBER_OF_FILES = 3
 FILES = [
-    ("bytes", "bt", "{fn}_0123456789abcdef", True),
-    ("csv", "csv", "key,item\n0,{fn}_0\n1,{fn}_1"),
-    ("json", "json", '{{"{fn}_0": [{{"{fn}_01": 1}}, {{"{fn}_02": 2}}], "{fn}_1": 1}}'),
-    ("txt", "txt", "{fn}_0123456789abcdef"),
+    ("bytes", "bt", "{fn}_0123456789abcdef\n", True),
+    ("csv", "csv", "key,item\n0,{fn}_0\n1,{fn}_1\n"),
+    ("json", "json", '{{"{fn}_0": [{{"{fn}_01": 1}}, {{"{fn}_02": 2}}], "{fn}_1": 1}}\n'),
+    ("txt", "txt", "{fn}_0123456789abcdef\n"),
 ]
 
 
