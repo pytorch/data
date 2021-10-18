@@ -60,7 +60,7 @@ class HashCheckerIterDataPipe(IterDataPipe):
                     )
                 )
 
-            yield (file_name, stream)
+            yield file_name, stream
 
     def __len__(self):
         return len(self.source_datapipe)

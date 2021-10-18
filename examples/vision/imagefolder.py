@@ -66,13 +66,10 @@ class AttributeCategories(IterDataPipe):
         for data in self.listfiles_dp:
             if isinstance(data, tuple):
                 category = cat_to_dp[self.parse_category_fn(data[0])]
-                ct = tuple([category])
-                yield data + ct
+                yield data + (category, )
             else:
                 category = cat_to_dp[self.parse_category_fn(data)]
-                ct = tuple([category])
-                data = tuple([data])
-                yield data + ct
+                yield (data, category)
 
 
 def MyImageFolder(root=IMAGES_ROOT, transform=None):
