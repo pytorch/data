@@ -6,7 +6,7 @@ import zipfile
 from io import BufferedIOBase
 from typing import IO, Iterable, Iterator, Tuple, cast
 
-from torch.utils.data.datapipes.utils.common import StreamWrapper
+from torchdata.datapipes.utils import StreamWrapper
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
