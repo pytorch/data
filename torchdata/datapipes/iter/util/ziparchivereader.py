@@ -6,12 +6,10 @@ import zipfile
 from io import BufferedIOBase
 from typing import IO, Iterable, Iterator, Tuple, cast
 
+from torch.utils.data.datapipes.utils.common import StreamWrapper
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
-
-# TODO(VitalyFedyunin): This file copy-pasted from the pytorch repo
-# nuke source class when repo is open-sourced
 
 
 @functional_datapipe("read_from_zip")
@@ -54,7 +52,7 @@ class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                         continue
                     extracted_fobj = zips.open(zipinfo)
                     inner_pathname = os.path.normpath(os.path.join(folder_name, zipinfo.filename))
-                    yield (inner_pathname, extracted_fobj)  # type: ignore[misc]
+                    yield inner_pathname, StreamWrapper(extracted_fobj)  # type: ignore[misc]
             except Exception as e:
                 warnings.warn(f"Unable to extract files from corrupted zipfile stream {pathname} due to: {e}, abort!")
                 raise e
