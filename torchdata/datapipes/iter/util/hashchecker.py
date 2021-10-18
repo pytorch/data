@@ -22,7 +22,7 @@ class HashCheckerIterDataPipe(IterDataPipe):
     Usage: dp = dp.check_hash({'train.py':'0d8b94d9fa9fb1ad89b9e3da9e1521495dca558fc5213b0fd7fd7b71c23f9921'})
     """
 
-    def __init__(self, source_datapipe, hash_dict, hash_type="sha256", rewind=True):
+    def __init__(self, source_datapipe, hash_dict, hash_type="sha256", rewind=True) -> None:
         self.source_datapipe = source_datapipe
         self.hash_dict = hash_dict
         self.hash_type = hash_type

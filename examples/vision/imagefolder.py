@@ -42,7 +42,7 @@ def get_category_name(path):
 
 
 class ObtainCategories(IterDataPipe):
-    def __init__(self, source_dp, parse_category_fn=get_category_name):
+    def __init__(self, source_dp, parse_category_fn=get_category_name) -> None:
         self.source_dp = source_dp
         self.parse_category_fn = parse_category_fn
 
@@ -55,7 +55,7 @@ class ObtainCategories(IterDataPipe):
 
 
 class AttributeCategories(IterDataPipe):
-    def __init__(self, listfiles_dp, categories_dp, parse_category_fn=get_category_name):
+    def __init__(self, listfiles_dp, categories_dp, parse_category_fn=get_category_name) -> None:
         self.listfiles_dp = listfiles_dp
         self.categories_dp = categories_dp
         self.parse_category_fn = parse_category_fn
@@ -93,7 +93,7 @@ def MyImageFolder(root=IMAGES_ROOT, transform=None):
 
 
 class ExpandURLPatternDataPipe(IterDataPipe):
-    def __init__(self, pattern):
+    def __init__(self, pattern) -> None:
         result = re.match(r"(.*?)\{(.*?)}(.*)", pattern)
         if result:
             self.prefix = result.group(1)

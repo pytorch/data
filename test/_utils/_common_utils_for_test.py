@@ -11,7 +11,7 @@ T_co = TypeVar("T_co", covariant=True)
 
 
 class IDP_NoLen(IterDataPipe):
-    def __init__(self, input_dp):
+    def __init__(self, input_dp) -> None:
         super().__init__()
         self.input_dp = input_dp
 
