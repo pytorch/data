@@ -5,7 +5,7 @@ import warnings
 from io import BufferedIOBase
 from typing import IO, Iterable, Iterator, Optional, Tuple, cast
 
-from torch.utils.data.datapipes.utils.common import StreamWrapper
+from torchdata.datapipes.utils import StreamWrapper
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -30,7 +30,7 @@ class TarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         or let Python's GC close them periodically.
     """
 
-    def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], mode: str = "r:*", length: int = -1):
+    def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], mode: str = "r:*", length: int = -1) -> None:
         super().__init__()
         self.datapipe: Iterable[Tuple[str, BufferedIOBase]] = datapipe
         self.mode: str = mode
