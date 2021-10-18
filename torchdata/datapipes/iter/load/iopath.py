@@ -15,7 +15,7 @@ class IoPathFileListerIterDataPipe(IterDataPipe):
         root: The base URI directory to list files from
     """
 
-    def __init__(self, *, root):
+    def __init__(self, *, root) -> None:
         try:
             from iopath.common.file_io import g_pathmgr
         except ImportError:
@@ -51,7 +51,7 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe):
             supported.
     """
 
-    def __init__(self, source_datapipe, mode="r"):
+    def __init__(self, source_datapipe, mode="r") -> None:
         try:
             from iopath.common.file_io import g_pathmgr
         except ImportError:

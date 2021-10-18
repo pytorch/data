@@ -20,7 +20,7 @@ class ParagraphAggregatorIterDataPipe(IterDataPipe):
         source_datapipe: a DataPipe with tuples of a file name and a line
         joiner: a function that joins a list of lines together
     """
-    def __init__(self, source_datapipe, joiner=_default_line_join):
+    def __init__(self, source_datapipe, joiner=_default_line_join) -> None:
         self.source_datapipe = source_datapipe
         self.joiner = joiner
 
