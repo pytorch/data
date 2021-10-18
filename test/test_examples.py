@@ -1,8 +1,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+import os
+import sys
 import unittest
 
-import sys
-import os
 
 current = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.dirname(current)
@@ -19,9 +19,18 @@ except ImportError:
     HAS_SCIPY = False
 skipIfNoSciPy = unittest.skipIf(not HAS_SCIPY, "no scipy")
 
+try:
+    import PIL  # type: ignore[import] # noqa: F401 F403
 
+    HAS_PILLOW = True
+except ImportError:
+    HAS_PILLOW = False
+skipIfNoPillow = unittest.skipIf(not HAS_PILLOW, "no pillow")
+
+
+@skipIfNoSciPy
+@skipIfNoPillow
 class TestVisionExamples(unittest.TestCase):
-    @skipIfNoSciPy
     def test_Caltech101(self):
         path = os.path.join(ROOT, "examples", "vision", "fakedata", "caltech101")
         samples = list(Caltech101(path))

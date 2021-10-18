@@ -6,9 +6,11 @@ on:
   pull_request:
     branches:
       - main
+      # For PR created by ghstack
+      - gh/*/*/base
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Setup Python environment
@@ -33,4 +35,4 @@ jobs:
           set -eux
           python setup.py develop --user
       - name: Run DataPipes tests with pytest
-        run: pytest test
+        run: pytest --no-header -v test
