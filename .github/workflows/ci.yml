@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    if: ${{ github.event.action != 'labeled' || startsWith(github.event.label.name, 'ciflow') }}
+    if: ${{ github.repository_owner == 'pytorch' && (github.event.action != 'labeled' || startsWith(github.event.label.name, 'ciflow')) }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -54,6 +54,7 @@ jobs:
         run: PYTORCH_TEST_WITH_SLOW=1 pytest --no-header -v test/test_period.py
 
   test-torchvision:
+    if: ${{ github.repository_owner == 'pytorch' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
