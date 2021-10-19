@@ -31,20 +31,28 @@ class TestStream(expecttest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()  # noqa: P201
         self.temp_dir_path = self.temp_dir.name
         self.port = 8006
-        self.start_test_server(self.temp_dir_path, self.port)
+        self.stop_server = False
+        self.server_thread = threading.Thread(
+            target=self.running_server
+        )  # TestStream.start_test_server(self.temp_dir_path, self.port)
+        self.server_thread.start()
 
     def tearDown(self) -> None:
         print("Tear down is running...")
-        self.stop_test_server(self.port)
+        self.stop_server = True
+        self.server_thread.join(timeout=3)
+        print("Server is stopped")
+        print("Removing Temp Directory...")
+        self.temp_dir.cleanup()
+        print("Tear down has completed")
 
-    def start_test_server(self, path, port: int) -> None:
-        self.httpd = socketserver.TCPServer(("", port), handler_from(path))
-        print(f"Starting TCP server on port {port}...")
-        threading.Thread(target=self.httpd.serve_forever).start()
-
-    def stop_test_server(self, port: int) -> None:
-        self.httpd.server_close()  # TODO: Might need to call thread to close this?
-        print(f"Stopping TCP server on port {port}...")
+    def running_server(self):
+        httpd = socketserver.TCPServer(("", self.port), handler_from(self.temp_dir_path))
+        print(f"Starting TCP server on port {self.port}...")
+        httpd.serve_forever()
+        while True:
+            if self.stop_server:  # TODO: This is not closing
+                httpd.server_close()
 
     @staticmethod
     def generate_binary_files(path, num_files: int, num_kbs: int = 16) -> List[str]:
@@ -81,7 +89,7 @@ class TestStream(expecttest.TestCase):
     def test_tar_stream(self) -> None:
         os.chdir(self.temp_dir_path)
         # 10 files, 1MB each
-        file_names = TestStream.generate_binary_files(path=self.temp_dir_path, num_files=10, num_kbs=1024)
+        file_names = TestStream.generate_binary_files(path=self.temp_dir_path, num_files=5, num_kbs=1024)
         file_type = "tar"
         tar_file_name, write_mode, read_mode = TestStream.get_name_mode_from_file_type(file_type=file_type)
         temp_tarfile_pathname = os.path.join(self.temp_dir_path, tar_file_name)
@@ -94,9 +102,10 @@ class TestStream(expecttest.TestCase):
         tar_dp = http_reader_dp.read_from_tar(mode=read_mode)
         stream_read_dp = StreamReader(tar_dp, chunk=16)  # Read 16 bytes at a time
 
-        for fname, chunk in stream_read_dp:
-            print(f"{fname}: {chunk}")
+        for _fname, chunk in stream_read_dp:
             self.assertEqual(b"0123456789abcdef", chunk)
+            if not chunk:
+                break
 
 
 if __name__ == "__main__":
