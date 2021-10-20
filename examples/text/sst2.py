@@ -49,9 +49,8 @@ def SST2(root, split):
     # cache data on-disk
     cache_dp = IterableWrapper([URL]).on_disk_cache(
         HttpReader,
-        op_map=lambda x: (x[0], b"".join(x[1]).decode()),
+        op_map=lambda x: (x[0], x[1].read()),
         filepath_fn=lambda x: os.path.join(root, os.path.basename(x)),
-        mode="wt",
     )
 
     # do sanity check
