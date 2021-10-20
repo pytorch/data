@@ -12,6 +12,7 @@ on:
 
 jobs:
   test:
+    if: ${{ github.event.label.name == 'ciflow/slow' }}
     runs-on: ubuntu-latest
     steps:
       - name: Setup Python environment
@@ -38,6 +39,6 @@ jobs:
       - name: Run DataPipes tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run: pytest --no-header -v test
-      - name: Run DataPipes tests with pytest
+      - name: Run DataPipes tests with pytest (including slow tests)
         if: ${{ contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run: PYTORCH_TEST_WITH_SLOW=1 pytest --no-header -v test
