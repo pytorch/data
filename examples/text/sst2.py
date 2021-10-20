@@ -21,10 +21,12 @@ NUM_LINES = {
 MD5 = "9f81648d4199384278b86e315dac217c"
 URL = "https://dl.fbaipublicfiles.com/glue/data/SST-2.zip"
 
+_PATH = "SST-2.zip"
+
 _EXTRACTED_FILES = {
-    "train": f"{os.sep}".join(["SST-2", "train.tsv"]),
-    "dev": f"{os.sep}".join(["SST-2", "dev.tsv"]),
-    "test": f"{os.sep}".join(["SST-2", "test.tsv"]),
+    "train": f"{os.sep}".join([_PATH, "SST-2", "train.tsv"]),
+    "dev": f"{os.sep}".join([_PATH, "SST-2", "dev.tsv"]),
+    "test": f"{os.sep}".join([_PATH, "SST-2", "test.tsv"]),
 }
 
 _EXTRACTED_FILES_MD5 = {
