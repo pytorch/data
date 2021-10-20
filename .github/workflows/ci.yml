@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    if: ${{ github.event.label.name == 'ciflow/slow' }}
+    if: ${{ github.event.action != 'labeled' || github.event.label.name == 'ciflow/slow' }}
     runs-on: ubuntu-latest
     steps:
       - name: Setup Python environment
