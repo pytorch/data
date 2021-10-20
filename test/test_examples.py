@@ -14,7 +14,6 @@ from examples.text.amazonreviewpolarity import AmazonReviewPolarity
 from examples.text.imdb import IMDB
 from examples.text.squad1 import SQuAD1
 from examples.text.squad2 import SQuAD2
-from examples.text.sst2 import SST2
 from examples.vision.caltech101 import Caltech101
 from examples.vision.caltech256 import Caltech256
 
@@ -75,10 +74,6 @@ class TestTextExamples(unittest.TestCase):
     @slowTest
     def test_SQuAD2(self) -> None:
         self._test_helper(SQuAD2)
-
-    @slowTest
-    def test_SST2(self) -> None:
-        self._test_helper(SST2)
 
 
 if __name__ == "__main__":
