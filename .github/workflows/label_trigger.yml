@@ -1,0 +1,37 @@
+name: Run DataPipes Tests (slow)
+on:
+  pull_request:
+    types: [ labeled ]
+    branches:
+      - main
+      # For PR created by ghstack
+      - gh/*/*/base
+
+jobs:
+  test:
+    if: ${{ github.repository_owner == 'pytorch' && github.event.label.name == 'ciflow/slow' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python environment
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.6
+      - name: Check out source repository
+        uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          set -eux
+          pip3 install --pre torch torchvision torchaudio -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html --user
+          pip3 install expecttest requests --user  # TODO: Install from requirements except torch
+      - name: Install dependencies for test
+        run: |
+          set -eux
+          pip3 install scipy Pillow --user
+          pip3 install -U iopath --user
+          pip3 install pytest --user
+      - name: Build TorchData
+        run: |
+          set -eux
+          python setup.py develop --user
+      - name: Run DataPipes tests with pytest
+        run: PYTORCH_TEST_WITH_SLOW=1 pytest --no-header -v test
