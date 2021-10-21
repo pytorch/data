@@ -75,23 +75,18 @@ class _CacheOp:
         return self.cache_holder
 
 
-def _default_cache_check_fn(data):
-    path = _default_filepath_fn(data)
-    return os.path.exists(path)
-
-
 @functional_datapipe("on_disk_cache")
 class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     def __init__(
         self,
         source_datapipe,
-        cache_check_fn=_default_cache_check_fn,
-        mode: str = "wb",
         filepath_fn=_default_filepath_fn,
+        extra_check_fn=None,
+        mode: str = "wb",
     ):
         self.source_datapipe = source_datapipe
-        self.cache_check_fn = cache_check_fn
         self.filepath_fn = filepath_fn
+        self.extra_check_fn = extra_check_fn
         self.mode = mode
         self.ops: List[_CacheOp] = []
 
@@ -111,8 +106,14 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         self.ops.append(op)
         return op
 
+    def _cache_check_fn(self, data):
+        filepath = self.filepath_fn(data)
+        if self.extra_check_fn:
+            return os.path.exists(filepath) and self.extra_check_fn(filepath)
+        return os.path.exists(filepath)
+
     def end_caching(self):
-        todo_dp, cached_dp = self.source_datapipe.demux(2, self.cache_check_fn)
+        todo_dp, cached_dp = self.source_datapipe.demux(2, self._cache_check_fn)
         # Cached: keeps filepath
         cached_dp = cached_dp.map(fn=self.filepath_fn)
 

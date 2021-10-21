@@ -65,11 +65,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             filename = "OnDisk_" + os.path.basename(url)
             return os.path.join(self.temp_dir.name, filename)
 
-        def _cache_check_fn(url):
-            filepath = _filepath_fn(url)
-            if not os.path.exists(filepath):
-                return False
-
+        def _hash_fn(filepath):
             hash_fn = hashlib.md5()
             with open(filepath, "rb") as f:
                 chunk = f.read(1024 ** 2)
@@ -78,14 +74,15 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
                     chunk = f.read(1024 ** 2)
             return hash_fn.hexdigest() == expected_MD5_hash
 
-        cache_dp = file_dp.on_disk_cache(mode="wt", filepath_fn=_filepath_fn, cache_check_fn=_cache_check_fn).open_url().map(fn=lambda x: b''.join(x).decode(), input_col=1).end_caching()
+        cache_dp = file_dp.on_disk_cache(filepath_fn=_filepath_fn, extra_check_fn=_hash_fn, mode="wt").open_url().map(fn=lambda x: b''.join(x).decode(), input_col=1).end_caching()
 
+        # File doesn't exist on disk
         self.assertFalse(os.path.exists(expected_file_name))
         it = iter(cache_dp)
         path = next(it)
         self.assertTrue(os.path.exists(expected_file_name))
 
-        # File has been saved to disk
+        # File is cached to disk
         self.assertEqual(expected_file_name, path)
 
         # Validate file without Error
