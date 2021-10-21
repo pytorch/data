@@ -77,6 +77,30 @@ class _CacheOp:
 
 @functional_datapipe("on_disk_cache")
 class OnDiskCacheHolderIterDataPipe(IterDataPipe):
+    """
+    `OnDiskCacheHolder` is a factory IterDataPipe that creates cached local file for the
+    output from a sequence of DataPipe operations, which are normally performance bottleneck like
+    Download, Decompress. Default `filepath_fn` return a path in temporary directory based
+    on the basename of data yielded from `source_datapipe`.
+
+    Use `end_caching` method to stop tracing the sequence of Data operations and start saving
+    result to local file system.
+
+    Args:
+        source_datapipe: DataPipe with URLs or file strings
+        filepath_fn: Given URL or file path string, returns a file path to local file system
+        extra_check_fn: Function to check if the traced operations need to be applied on
+            the data from `source_datapipe`  with the file path returned by `filepath_fn`
+        mode: mode in which the file will be opened for write the data
+
+    Returns:
+        It would returns a IterDataPipe that yields local file paths
+
+    Example:
+        url = IterableWrapper(["https://path/to/filename", ])
+        cache_dp = file_dp.on_disk_cache(mode="wt").open_url().map(fn=lambda x: b''.join(x).decode(), input_col=1).end_caching()
+        # Return a DataPipe yielding ["/tmp/xxx/filename", ]
+    """
     def __init__(
         self,
         source_datapipe,
