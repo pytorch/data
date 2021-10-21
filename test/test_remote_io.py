@@ -6,6 +6,7 @@ import unittest
 import warnings
 
 from torchdata.datapipes.iter import (
+    FileLoader,
     HttpReader,
     IterableWrapper,
 )
