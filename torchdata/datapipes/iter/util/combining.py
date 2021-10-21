@@ -34,7 +34,7 @@ class KeyZipperIterDataPipe(IterDataPipe):
         self,
         source_datapipe: IterDataPipe,
         ref_datapipe: IterDataPipe,
-        key_fn,
+        key_fn: Callable,
         ref_key_fn: Callable = None,
         keep_key: bool = False,
         buffer_size: int = 10000,
