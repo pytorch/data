@@ -363,7 +363,7 @@ class TestDataPipe(expecttest.TestCase):
 
         # Functional Test: raises error for empty dict
         with self.assertRaisesRegex(ValueError, "Empty dictionary"):
-            SampleMultiplexer(pipes_to_weights_dict={}, seed=0)
+            SampleMultiplexer(pipes_to_weights_dict={}, seed=0)  # type: ignore[arg-type]
 
         # Functional Test: raises error for negative or zero weight
         d = {source_dp1: 99999999, source_dp2: 0}

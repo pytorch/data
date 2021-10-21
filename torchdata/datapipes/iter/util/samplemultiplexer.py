@@ -7,6 +7,7 @@ from torchdata.datapipes.iter import IterDataPipe
 
 T_co = TypeVar("T_co", covariant=True)
 
+
 class SampleMultiplexerDataPipe(IterDataPipe[T_co]):
     """
     IterDataPipe that takes a dict of (IterDataPipe, Weight), and yields items by sampling from these
