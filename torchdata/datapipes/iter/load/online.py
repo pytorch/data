@@ -39,7 +39,7 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
         timeout : timeout in seconds for http request
     """
 
-    def __init__(self, source_datapipe, timeout=None):
+    def __init__(self, source_datapipe, timeout=None) -> None:
         self.source_datapipe = source_datapipe
         self.timeout = timeout
 
@@ -89,7 +89,7 @@ class GDriveReaderDataPipe(IterDataPipe):
         source_datapipe: a DataPipe that contains URLs to GDrive files
     """
 
-    def __init__(self, source_datapipe):
+    def __init__(self, source_datapipe) -> None:
         self.source_datapipe = source_datapipe
 
     def __iter__(self):
@@ -110,7 +110,7 @@ class OnlineReaderIterDataPipe(IterDataPipe):
         timeout : timeout in seconds for http request
     """
 
-    def __init__(self, source_datapipe, *, timeout=None):
+    def __init__(self, source_datapipe, *, timeout=None) -> None:
         self.source_datapipe = source_datapipe
         self.timeout = timeout
 

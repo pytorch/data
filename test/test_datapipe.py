@@ -31,7 +31,7 @@ from _utils._common_utils_for_test import (
 )
 
 
-def test_torchdata_pytorch_consistency():
+def test_torchdata_pytorch_consistency() -> None:
     def extract_datapipe_names(module):
         return {
             name
@@ -52,7 +52,7 @@ def test_torchdata_pytorch_consistency():
 
 
 class TestDataPipe(expecttest.TestCase):
-    def test_in_memory_cache_holder_iterdatapipe(self):
+    def test_in_memory_cache_holder_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(10))
         cache_dp = source_dp.in_memory_cache(size=5)
 
@@ -88,7 +88,7 @@ class TestDataPipe(expecttest.TestCase):
         list(cache_dp)
         self.assertEqual(10, len(cache_dp))
 
-    def test_keyzipper_iterdatapipe(self):
+    def test_keyzipper_iterdatapipe(self) -> None:
 
         source_dp = IterableWrapper(range(10))
         ref_dp = IterableWrapper(range(20))
@@ -152,7 +152,7 @@ class TestDataPipe(expecttest.TestCase):
         # __len__ Test: inherits length from source_dp
         self.assertEqual(10, len(zip_dp))
 
-    def test_cycler_iterdatapipe(self):
+    def test_cycler_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(5))
 
         # Functional Test: cycle for finite number of times and ends
@@ -188,7 +188,7 @@ class TestDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "instance cycles forever, and therefore doesn't have valid length"):
             len(cycler_dp)
 
-    def test_header_iterdatapipe(self):
+    def test_header_iterdatapipe(self) -> None:
         # Functional Test: ensure the limit is enforced
         source_dp = IterableWrapper(range(20))
         header_dp = source_dp.header(5)
@@ -215,7 +215,7 @@ class TestDataPipe(expecttest.TestCase):
         # header_dp = source_dp.header(30)
         # self.assertEqual(20, len(header_dp))
 
-    def test_index_adder_iterdatapipe(self):
+    def test_index_adder_iterdatapipe(self) -> None:
         letters = "abcdefg"
         source_dp = IterableWrapper([{i: i} for i in letters])
         index_adder_dp = source_dp.add_index()
@@ -247,7 +247,7 @@ class TestDataPipe(expecttest.TestCase):
         # __len__ Test: returns length of source DataPipe
         self.assertEqual(7, len(index_adder_dp))
 
-    def test_line_reader_iterdatapipe(self):
+    def test_line_reader_iterdatapipe(self) -> None:
         text1 = "Line1\nLine2"
         text2 = "Line2,1\nLine2,2\nLine2,3"
 
@@ -293,7 +293,7 @@ class TestDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "has no len"):
             len(line_reader_dp)
 
-    def test_paragraph_aggregator_iterdatapipe(self):
+    def test_paragraph_aggregator_iterdatapipe(self) -> None:
         # Functional Test: aggregate lines correctly
         source_dp = IterableWrapper(
             [("file1", "Line1"), ("file1", "Line2"), ("file2", "Line2,1"), ("file2", "Line2,2"), ("file2", "Line2,3")]
@@ -316,7 +316,7 @@ class TestDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "has no len"):
             len(para_agg_dp)
 
-    def test_rows_to_columnar_iterdatapipe(self):
+    def test_rows_to_columnar_iterdatapipe(self) -> None:
         # Functional Test: working with DataPipe with dict
         column_names_dict = {"a", "b", "c"}
         source_dp = IterableWrapper(
@@ -352,7 +352,7 @@ class TestDataPipe(expecttest.TestCase):
         # __len__ Test: returns length of source DataPipe
         self.assertEqual(2, len(result_dp))
 
-    def test_sample_multiplexer_iterdatapipe(self):
+    def test_sample_multiplexer_iterdatapipe(self) -> None:
         # Functional Test: yields all values from the sources
         source_dp1 = IterableWrapper([0] * 10)
         source_dp2 = IterableWrapper([1] * 10)
@@ -381,7 +381,7 @@ class TestDataPipe(expecttest.TestCase):
         # __len__ Test: returns the sum of the lengths of the sources
         self.assertEqual(20, len(sample_mul_dp))
 
-    def test_bucket_batcher_iterdatapipe(self):
+    def test_bucket_batcher_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(10))
 
         # Functional Test: drop last reduces length

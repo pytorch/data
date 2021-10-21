@@ -24,7 +24,7 @@ class InMemoryCacheHolderIterDataPipe(IterDataPipe):
     size: Optional[int] = None
     idx: int
 
-    def __init__(self, source_dp, size=None):
+    def __init__(self, source_dp, size=None) -> None:
         self.source_dp = source_dp
         # cache size in MB
         if size is not None:

@@ -23,7 +23,7 @@ class Rows2ColumnarIterDataPipe(IterDataPipe):
     """
     column_names: List[str]
 
-    def __init__(self, source_datapipe, column_names: List[str] = None):
+    def __init__(self, source_datapipe, column_names: List[str] = None) -> None:
         self.source_datapipe = source_datapipe
         self.column_names = [] if column_names is None else column_names
 

@@ -3,7 +3,7 @@ import os.path
 import tempfile
 
 from io import IOBase
-from torch.utils.data.datapipes.utils.common import StreamWrapper
+from torchdata.datapipes.utils import StreamWrapper
 from typing import Tuple
 
 

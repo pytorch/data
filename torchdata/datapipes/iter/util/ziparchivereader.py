@@ -6,7 +6,7 @@ import zipfile
 from io import BufferedIOBase
 from typing import IO, Iterable, Iterator, Tuple, cast
 
-from torch.utils.data.datapipes.utils.common import StreamWrapper
+from torchdata.datapipes.utils import StreamWrapper
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -30,7 +30,7 @@ class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         the data_stream variable below cannot be closed within the scope of this function.
     """
 
-    def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1):
+    def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1) -> None:
         super().__init__()
         self.datapipe: Iterable[Tuple[str, BufferedIOBase]] = datapipe
         self.length: int = length
@@ -39,7 +39,6 @@ class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         for data in self.datapipe:
             validate_pathname_binary_tuple(data)
             pathname, data_stream = data
-            folder_name = os.path.dirname(pathname)
             try:
                 # typing.cast is used here to silence mypy's type checker
                 zips = zipfile.ZipFile(cast(IO[bytes], data_stream))
@@ -51,7 +50,7 @@ class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                     elif zipinfo.filename.endswith("/"):
                         continue
                     extracted_fobj = zips.open(zipinfo)
-                    inner_pathname = os.path.normpath(os.path.join(folder_name, zipinfo.filename))
+                    inner_pathname = os.path.normpath(os.path.join(pathname, zipinfo.filename))
                     yield inner_pathname, StreamWrapper(extracted_fobj)  # type: ignore[misc]
             except Exception as e:
                 warnings.warn(f"Unable to extract files from corrupted zipfile stream {pathname} due to: {e}, abort!")

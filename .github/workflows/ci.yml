@@ -4,6 +4,7 @@ on:
     branches:
       - main
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches:
       - main
       # For PR created by ghstack
@@ -11,6 +12,7 @@ on:
 
 jobs:
   test:
+    if: ${{ github.event.action != 'labeled' || startsWith(github.event.label.name, 'ciflow') }}
     runs-on: ubuntu-latest
     steps:
       - name: Setup Python environment
@@ -35,4 +37,40 @@ jobs:
           set -eux
           python setup.py develop --user
       - name: Run DataPipes tests with pytest
-        run: pytest --no-header -v test
+        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+        run: pytest --no-header -v test --ignore=test/test_period.py
+      - name: Run DataPipes tests with pytest (including slow tests)
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+        run: PYTORCH_TEST_WITH_SLOW=1 pytest --no-header -v test --ignore=test/test_period.py
+      - name: Run DataPipes period tests with pytest
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'ciflow/period') }}
+        run: PYTORCH_TEST_WITH_SLOW=1 pytest --no-header -v test/test_period.py
+
+  test-torchvision:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python environment
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.6
+
+      - name: Install torch and torchvision from nightlies
+        run: pip install --pre torch torchvision -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
+
+      - name: Check out torchdata repository
+        uses: actions/checkout@v2
+
+      - name: Install torchdata
+        run: python setup.py install
+
+      - name: Install test utilities
+        run: pip install pytest pytest-mock
+
+      - name: Check out torchvision repository
+        uses: actions/checkout@v2
+        with:
+          repository: pytorch/vision
+          path: vision
+
+      - name: Run torchvision datasets tests
+        run: pytest --no-header -v vision/test/test_prototype_datasets.py
