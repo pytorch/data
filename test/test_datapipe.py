@@ -125,6 +125,28 @@ class TestDataPipe(expecttest.TestCase):
         )
         self.assertEqual([(i, f"{i},{i}") for i in range(10)], list(zip_dp_w_key_str_merge))
 
+        # Functional Test: testing nested zipping
+        zip_dp = source_dp.zip_by_key(
+            ref_datapipe=ref_dp, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=False, buffer_size=100
+        )
+
+        # Without a custom merge function, there will be nested tuples
+        zip_dp2 = zip_dp.zip_by_key(
+            ref_datapipe=ref_dp, key_fn=lambda x: x[0], ref_key_fn=lambda x: x, keep_key=False, buffer_size=100
+        )
+        self.assertEqual([((i, i), i) for i in range(10)], list(zip_dp2))
+
+        # With a custom merge function, nesting can be prevented
+        zip_dp2_w_merge = zip_dp.zip_by_key(
+            ref_datapipe=ref_dp,
+            key_fn=lambda x: x[0],
+            ref_key_fn=lambda x: x,
+            keep_key=False,
+            buffer_size=100,
+            merge_fn=lambda x, y: list(x) + [y],
+        )
+        self.assertEqual([[i, i, i] for i in range(10)], list(zip_dp2_w_merge))
+
         # Functional Test: element is in source but missing in reference
         ref_dp_missing = IterableWrapper(range(1, 10))
         zip_dp = source_dp.zip_by_key(

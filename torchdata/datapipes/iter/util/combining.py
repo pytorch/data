@@ -3,11 +3,7 @@ import warnings
 from collections import OrderedDict
 
 from torch.utils.data import IterDataPipe, MapDataPipe, functional_datapipe
-from typing import Callable
-
-
-def tuple_merge(item, item_from_map):
-    return item, item_from_map
+from typing import Callable, Optional
 
 
 @functional_datapipe("zip_by_key")
@@ -38,7 +34,7 @@ class KeyZipperIterDataPipe(IterDataPipe):
         ref_key_fn: Callable = None,
         keep_key: bool = False,
         buffer_size: int = 10000,
-        merge_fn: Callable = tuple_merge,
+        merge_fn: Optional[Callable] = None,
     ):
         self.source_datapipe = source_datapipe
         self.ref_datapipe = ref_datapipe
@@ -76,10 +72,11 @@ class KeyZipperIterDataPipe(IterDataPipe):
                         )
                     buffer.popitem(last=False)
                 buffer[ref_key] = ref_data
+            res = self.merge_fn(data, buffer.pop(key)) if self.merge_fn else (data, buffer.pop(key))
             if self.keep_key:
-                yield key, self.merge_fn(data, buffer.pop(key))
+                yield key, res
             else:
-                yield self.merge_fn(data, buffer.pop(key))
+                yield res
 
     def __len__(self):
         return len(self.source_datapipe)
@@ -107,7 +104,7 @@ class MapZipperIterDataPipe(IterDataPipe):
         source_iterdatapipe: IterDataPipe,
         map_datapipe: MapDataPipe,
         key_fn: Callable,
-        merge_fn: Callable = tuple_merge,
+        merge_fn: Optional[Callable] = None,
     ):
         if not isinstance(map_datapipe, MapDataPipe):
             raise TypeError(f"map_datapipe must be a MapDataPipe, but its type is {type(map_datapipe)} instead.")
@@ -124,7 +121,7 @@ class MapZipperIterDataPipe(IterDataPipe):
                 map_item = self.map_datapipe[key]
             except (KeyError, IndexError):
                 raise KeyError(f"key_fn maps {item} to {key}, which is not a valid key in the given MapDataPipe.")
-            yield self.merge_fn(item, map_item)
+            yield self.merge_fn(item, map_item) if self.merge_fn else (item, map_item)
 
     def __len__(self) -> int:
         if self.length == -1:
