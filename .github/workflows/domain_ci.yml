@@ -1,0 +1,48 @@
+name: Run Domain Tests
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+      # For PR created by ghstack
+      - gh/*/*/base
+
+jobs:
+  test-torchvision:
+    if: ${{ github.repository_owner == 'pytorch' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - 3.6
+          - 3.7
+          - 3.9
+    steps:
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install torch and torchvision from nightlies
+        run: pip install --pre torch torchvision -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
+
+      - name: Check out torchdata repository
+        uses: actions/checkout@v2
+
+      - name: Install torchdata
+        run: python setup.py install
+
+      - name: Install test utilities
+        run: pip install pytest pytest-mock
+
+      - name: Check out torchvision repository
+        uses: actions/checkout@v2
+        with:
+          repository: pytorch/vision
+          path: vision
+
+      - name: Run torchvision datasets tests
+        run: pytest --no-header -v vision/test/test_prototype_datasets.py
