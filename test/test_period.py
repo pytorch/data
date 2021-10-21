@@ -11,6 +11,7 @@ from torchdata.datapipes.iter import (
 )
 
 
+# This TestCase is created due to the limited quota to access google drive
 class TestDataPipePeriod(expecttest.TestCase):
     def test_gdrive_iterdatapipe(self):
 
