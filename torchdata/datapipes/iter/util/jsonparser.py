@@ -14,7 +14,7 @@ class JsonParserIterDataPipe(IterDataPipe):
         source_datapipe: a DataPipe with tuples of file name and JSON data stream
         kwargs: keyword arguments that will be passed through to `json.loads`
     """
-    def __init__(self, source_datapipe, **kwargs):
+    def __init__(self, source_datapipe, **kwargs) -> None:
         self.source_datapipe = source_datapipe
         self.kwargs = kwargs
 

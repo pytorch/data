@@ -16,7 +16,7 @@ class IndexAdderIterDataPipe(IterDataPipe):
         index_name: Name of the key to store data index
     """
 
-    def __init__(self, source_datapipe, index_name="index"):
+    def __init__(self, source_datapipe, index_name="index") -> None:
         self.source_datapipe = source_datapipe
         self.index_name = index_name
 
