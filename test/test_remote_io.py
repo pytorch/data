@@ -5,7 +5,6 @@ import os
 import unittest
 import warnings
 
-from torch.testing._internal.common_utils import slowTest
 from torchdata.datapipes.iter import (
     HttpReader,
     IterableWrapper,
