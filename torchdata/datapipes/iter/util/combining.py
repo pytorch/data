@@ -6,31 +6,46 @@ from torch.utils.data import IterDataPipe, MapDataPipe, functional_datapipe
 from typing import Callable
 
 
+def tuple_merge(item, item_from_map):
+    return item, item_from_map
+
+
 @functional_datapipe("zip_by_key")
 class KeyZipperIterDataPipe(IterDataPipe):
     r""":class:`KeyZipperIterDataPipe`.
 
-    Iterable DataPipe to zip two DataPipes based on the matching key.
+    Iterable DataPipe to zip two IterDataPipes together based on the matching key.
 
     Args:
-        source_datapipe: KeyZipper will yield data based on the order of this DataPipe
-        ref_datapipe: Reference datapipe to find matching key for `source_datapipe`
+        source_datapipe: KeyZipper will yield data based on the order of this IterDataPipe
+        ref_datapipe: Reference IterdataPipe to find matching key for `source_datapipe`
         key_fn: Callable to extract key of data from source_datapipe
         ref_key_fn: Callable to extract key of data from ref_datapipe.
             If it's not specified, the `key_fn` would be applied to reference data
-        keep_key: Option to yield matching key
+        keep_key: Option to yield the matching key along with the items in a tuple,
+            resulting in (key, merge_fn(item1, item2))
         buffer_size: The size of buffer used to hold key-data pair from reference DataPipe.
             If it's specified as None, the buffer size becomes infinite
+        merge_fn: Function that combines the item from source_iterdatapipe and the item from ref_datapipe,
+            by default a tuple is created
     """
 
     def __init__(
-        self, source_datapipe, ref_datapipe, key_fn, ref_key_fn=None, keep_key=False, buffer_size=10000,
+        self,
+        source_datapipe: IterDataPipe,
+        ref_datapipe: IterDataPipe,
+        key_fn,
+        ref_key_fn: Callable = None,
+        keep_key: bool = False,
+        buffer_size: int = 10000,
+        merge_fn: Callable = tuple_merge,
     ):
         self.source_datapipe = source_datapipe
         self.ref_datapipe = ref_datapipe
         self.key_fn = key_fn
         self.ref_key_fn = key_fn if ref_key_fn is None else ref_key_fn
         self.keep_key = keep_key
+        self.merge_fn = merge_fn
         if buffer_size is not None and buffer_size <= 0:
             raise ValueError("'buffer_size' is required to be either None or a positive integer.")
         self.buffer_size = buffer_size
@@ -62,16 +77,12 @@ class KeyZipperIterDataPipe(IterDataPipe):
                     buffer.popitem(last=False)
                 buffer[ref_key] = ref_data
             if self.keep_key:
-                yield key, data, buffer.pop(key)
+                yield key, self.merge_fn(data, buffer.pop(key))
             else:
-                yield data, buffer.pop(key)
+                yield self.merge_fn(data, buffer.pop(key))
 
     def __len__(self):
         return len(self.source_datapipe)
-
-
-def tuple_merge(item, item_from_map):
-    return (item, item_from_map)
 
 
 @functional_datapipe("zip_with_map")

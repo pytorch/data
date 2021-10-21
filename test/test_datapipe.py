@@ -103,7 +103,27 @@ class TestDataPipe(expecttest.TestCase):
         zip_dp_w_key = source_dp.zip_by_key(
             ref_datapipe=ref_dp, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=True, buffer_size=10
         )
-        self.assertEqual([(i, i, i) for i in range(10)], list(zip_dp_w_key))
+        self.assertEqual([(i, (i, i)) for i in range(10)], list(zip_dp_w_key))
+
+        # Functional Test: using a different merge function
+        def merge_to_string(item1, item2):
+            return f"{item1},{item2}"
+
+        zip_dp_w_str_merge = source_dp.zip_by_key(
+            ref_datapipe=ref_dp, key_fn=lambda x: x, ref_key_fn=lambda x: x, buffer_size=10, merge_fn=merge_to_string
+        )
+        self.assertEqual([f"{i},{i}" for i in range(10)], list(zip_dp_w_str_merge))
+
+        # Functional Test: using a different merge function and keep_key=True
+        zip_dp_w_key_str_merge = source_dp.zip_by_key(
+            ref_datapipe=ref_dp,
+            key_fn=lambda x: x,
+            ref_key_fn=lambda x: x,
+            keep_key=True,
+            buffer_size=10,
+            merge_fn=merge_to_string,
+        )
+        self.assertEqual([(i, f"{i},{i}") for i in range(10)], list(zip_dp_w_key_str_merge))
 
         # Functional Test: element is in source but missing in reference
         ref_dp_missing = IterableWrapper(range(1, 10))
