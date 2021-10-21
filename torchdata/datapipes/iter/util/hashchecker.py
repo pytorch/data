@@ -3,10 +3,11 @@ import hashlib
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+from typing import Dict, IO, Tuple
 
 
 @functional_datapipe("check_hash")
-class HashCheckerIterDataPipe(IterDataPipe):
+class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, IO]]):
     r"""
     Iterable DataPipe that computes and checks the hash of each file, from an input
     DataPipe of tuples of file name and data stream. If the hashes match the given hash
@@ -22,17 +23,22 @@ class HashCheckerIterDataPipe(IterDataPipe):
     Usage: dp = dp.check_hash({'train.py':'0d8b94d9fa9fb1ad89b9e3da9e1521495dca558fc5213b0fd7fd7b71c23f9921'})
     """
 
-    def __init__(self, source_datapipe, hash_dict, hash_type="sha256", rewind=True) -> None:
-        self.source_datapipe = source_datapipe
-        self.hash_dict = hash_dict
-        self.hash_type = hash_type
-        self.rewind = rewind
+    def __init__(
+        self,
+        source_datapipe: IterDataPipe[Tuple[str, IO]],
+        hash_dict: Dict[str, str],
+        hash_type: str = "sha256",
+        rewind: bool = True,
+    ) -> None:
+        self.source_datapipe: IterDataPipe[Tuple[str, IO]] = source_datapipe
+        self.hash_dict: Dict[str, str] = hash_dict
+        self.hash_type: str = hash_type
+        self.rewind: bool = rewind
 
         if self.hash_type not in ["sha256", "md5"]:
             raise ValueError("Invalid hash_type requested, should be one of {}".format(["sha256", "md5"]))
 
     def __iter__(self):
-
         for file_name, stream in self.source_datapipe:
             if self.hash_type == "sha256":
                 hash_func = hashlib.sha256()

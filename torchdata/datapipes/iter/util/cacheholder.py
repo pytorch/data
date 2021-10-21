@@ -2,16 +2,19 @@
 import sys
 
 from collections import deque
+from io import IOBase
 from os import path
-from typing import Deque, Optional
+from typing import Deque, Optional, Tuple, TypeVar
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe, FileLoader
 from torchdata.datapipes.utils.common import _default_filepath_fn
 
+T_co = TypeVar("T_co", covariant=True)
+
 
 @functional_datapipe("in_memory_cache")
-class InMemoryCacheHolderIterDataPipe(IterDataPipe):
+class InMemoryCacheHolderIterDataPipe(IterDataPipe[T_co]):
     r"""
     Iterable DataPipe that stores elements from the source DataPipe in memory, up to a size limit (if given).
     This cache is FIFO - once the cache is full, further elements will not be added to the cache
@@ -65,7 +68,7 @@ class InMemoryCacheHolderIterDataPipe(IterDataPipe):
 
 
 @functional_datapipe("on_disk_cache")
-class OnDiskCacheHolderIterDataPipe(IterDataPipe):
+class OnDiskCacheHolderIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
     """
     `OnDiskCacheHolder` is a factory DataPipe to create cached local file
     for the output of opDataPipe, which is normally performance

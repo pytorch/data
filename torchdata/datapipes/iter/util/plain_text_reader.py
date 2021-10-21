@@ -126,11 +126,7 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
         self.source_datapipe = source_datapipe
         self._csv_reader = csv_reader
         self._helper = PlainTextReaderHelper(
-            skip_lines=skip_lines,
-            decode=decode,
-            encoding=encoding,
-            errors=errors,
-            return_path=return_path,
+            skip_lines=skip_lines, decode=decode, encoding=encoding, errors=errors, return_path=return_path,
         )
         self.fmtparams = fmtparams
 
@@ -164,11 +160,11 @@ class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
         self,
         source_datapipe: IterDataPipe[Tuple[str, IO]],
         *,
-        skip_lines=0,
-        decode=True,
-        encoding="utf-8",
-        errors="ignore",
-        return_path=False,
+        skip_lines: int = 0,
+        decode: bool = True,
+        encoding: str = "utf-8",
+        errors: str = "ignore",
+        return_path: bool = False,
         **fmtparams,
     ):
         super().__init__(
@@ -188,7 +184,7 @@ class CSVDictParserIterDataPipe(_CSVBaseParserIterDataPipe):
     r"""
     Iterable DataPipe that accepts a DataPipe consists of tuples of file name and CSV data stream.
     This reads and returns the contents within the CSV files one row at a time (as a Dict by default,
-    depedning on fmtparams).
+    depending on fmtparams).
     The first row of each file, unless skipped, will be used as the header; the contents of the header row
     will be used as keys for the Dicts generated from the remaining rows.
 
@@ -205,13 +201,13 @@ class CSVDictParserIterDataPipe(_CSVBaseParserIterDataPipe):
 
     def __init__(
         self,
-        source_datapipe,
+        source_datapipe: IterDataPipe[Tuple[str, IO]],
         *,
-        skip_lines=0,
-        decode=True,
-        encoding="utf-8",
-        errors="ignore",
-        return_path=False,
+        skip_lines: int = 0,
+        decode: bool = True,
+        encoding: str = "utf-8",
+        errors: str = "ignore",
+        return_path: bool = False,
         **fmtparams,
     ):
         super().__init__(

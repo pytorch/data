@@ -58,13 +58,13 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         super().__init__()
 
         # TODO: Verify _datapippe is not going to be serialized twice and is able to reconstruct
-        self._datapipe = datapipe
-        self.batch_size = batch_size
-        self.drop_last = drop_last
-        self.batch_num = batch_num
-        self.bucket_num = bucket_num
-        self.sort_key = sort_key
-        self.in_batch_shuffle = in_batch_shuffle
+        self._datapipe: IterDataPipe[T_co] = datapipe
+        self.batch_size: int = batch_size
+        self.drop_last: bool = drop_last
+        self.batch_num: int = batch_num
+        self.bucket_num: int = bucket_num
+        self.sort_key: Optional[Callable] = sort_key
+        self.in_batch_shuffle: bool = in_batch_shuffle
 
         self.bucket_size = batch_size * batch_num
         self.pool_size = self.bucket_size * bucket_num

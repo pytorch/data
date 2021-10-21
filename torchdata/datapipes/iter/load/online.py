@@ -10,7 +10,7 @@ import requests
 from torchdata.datapipes.iter import IterDataPipe
 
 
-def _get_response_from_http(url, *, timeout):
+def _get_response_from_http(url: str, *, timeout):
     try:
         with requests.Session() as session:
             if timeout is None:
@@ -37,8 +37,8 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
         timeout : timeout in seconds for http request
     """
 
-    def __init__(self, source_datapipe, timeout=None) -> None:
-        self.source_datapipe = source_datapipe
+    def __init__(self, source_datapipe: IterDataPipe[str], timeout=None) -> None:
+        self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.timeout = timeout
 
     def __iter__(self):
@@ -78,7 +78,7 @@ def _get_response_from_google_drive(url):
     return filename, response.raw
 
 
-class GDriveReaderDataPipe(IterDataPipe):
+class GDriveReaderDataPipe(IterDataPipe[Tuple[str, IOBase]]):
     r"""
     Iterable DataPipe that takes URLs point at GDrive files, and
     yields tuples of file name and IO stream
@@ -87,8 +87,8 @@ class GDriveReaderDataPipe(IterDataPipe):
         source_datapipe: a DataPipe that contains URLs to GDrive files
     """
 
-    def __init__(self, source_datapipe) -> None:
-        self.source_datapipe = source_datapipe
+    def __init__(self, source_datapipe: IterDataPipe[str]) -> None:
+        self.source_datapip: IterDataPipe[str] = source_datapipe
 
     def __iter__(self):
         for url in self.source_datapipe:
@@ -98,7 +98,7 @@ class GDriveReaderDataPipe(IterDataPipe):
         return len(self.source_datapipe)
 
 
-class OnlineReaderIterDataPipe(IterDataPipe):
+class OnlineReaderIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
     r""":class:
     Iterable DataPipe that takes file URLs (can be http URLs pointing to files or URLs to GDrive files), and
     yields tuples of file URL and IO stream
@@ -108,8 +108,8 @@ class OnlineReaderIterDataPipe(IterDataPipe):
         timeout : timeout in seconds for http request
     """
 
-    def __init__(self, source_datapipe, *, timeout=None) -> None:
-        self.source_datapipe = source_datapipe
+    def __init__(self, source_datapipe: IterDataPipe[str], *, timeout=None) -> None:
+        self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.timeout = timeout
 
     def __iter__(self):

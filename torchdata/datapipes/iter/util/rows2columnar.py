@@ -1,13 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from collections import defaultdict
-from typing import List
+from typing import Dict, List, Union
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
 
 @functional_datapipe("rows2columnar")
-class Rows2ColumnarIterDataPipe(IterDataPipe):
+class Rows2ColumnarIterDataPipe(IterDataPipe[Dict]):
     r"""
     Iterable DataPipe that accepts an input DataPipe with batches of data, and each row
     within a batch must either be a Dict or a List. This DataPipe processes one batch
@@ -23,9 +23,9 @@ class Rows2ColumnarIterDataPipe(IterDataPipe):
     """
     column_names: List[str]
 
-    def __init__(self, source_datapipe, column_names: List[str] = None) -> None:
-        self.source_datapipe = source_datapipe
-        self.column_names = [] if column_names is None else column_names
+    def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], column_names: List[str] = None) -> None:
+        self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
+        self.column_names: List[str] = [] if column_names is None else column_names
 
     def __iter__(self):
         for batch in self.source_datapipe:

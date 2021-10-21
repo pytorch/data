@@ -3,11 +3,12 @@ import warnings
 from collections import OrderedDict
 
 from torch.utils.data import IterDataPipe, MapDataPipe, functional_datapipe
-from typing import Callable
+from typing import Callable, TypeVar
 
+T_co = TypeVar("T_co", covariant=True)
 
 @functional_datapipe("zip_by_key")
-class KeyZipperIterDataPipe(IterDataPipe):
+class KeyZipperIterDataPipe(IterDataPipe[T_co]):
     r""":class:`KeyZipperIterDataPipe`.
 
     Iterable DataPipe to zip two DataPipes based on the matching key.
@@ -75,7 +76,7 @@ def tuple_merge(item, item_from_map):
 
 
 @functional_datapipe("zip_with_map")
-class MapZipperIterDataPipe(IterDataPipe):
+class MapZipperIterDataPipe(IterDataPipe[T_co]):
     r""" :class:`MapZipperIterDataPipe`.
 
     IterDataPipe that joins the items from the source IterDataPipe with items from a MapDataPipe. The

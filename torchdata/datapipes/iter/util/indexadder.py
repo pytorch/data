@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+from typing import Dict
 
 
 @functional_datapipe("add_index")
@@ -16,7 +17,7 @@ class IndexAdderIterDataPipe(IterDataPipe):
         index_name: Name of the key to store data index
     """
 
-    def __init__(self, source_datapipe, index_name="index") -> None:
+    def __init__(self, source_datapipe: IterDataPipe[Dict], index_name: str = "index") -> None:
         self.source_datapipe = source_datapipe
         self.index_name = index_name
 

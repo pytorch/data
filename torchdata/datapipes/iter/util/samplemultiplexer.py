@@ -1,11 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-from typing import Dict, Optional, Sized
+from typing import Dict, Optional, Sized, TypeVar
 import random
 
 from torchdata.datapipes.iter import IterDataPipe
 
 
-class SampleMultiplexerDataPipe(IterDataPipe):
+T_co = TypeVar("T_co", covariant=True)
+
+class SampleMultiplexerDataPipe(IterDataPipe[T_co]):
     """
     IterDataPipe that takes a dict of (IterDataPipe, Weight), and yields items by sampling from these
     DataPipes with respect to their weights. When individual DataPipes are exhausted, it continues to sample from
@@ -23,7 +25,7 @@ class SampleMultiplexerDataPipe(IterDataPipe):
     """
     def __init__(
         self,
-        pipes_to_weights_dict: Dict[IterDataPipe, float],
+        pipes_to_weights_dict: Dict[IterDataPipe[T_co], float],
         seed: Optional[int] = None,
     ):
         if not pipes_to_weights_dict:
@@ -51,7 +53,7 @@ class SampleMultiplexerDataPipe(IterDataPipe):
                 if r < s:
                     try:
                         item = next(it)
-                        yield (item)
+                        yield item
                     except StopIteration:
                         # remove the current stream
                         new_total = 1 - weight
@@ -61,7 +63,7 @@ class SampleMultiplexerDataPipe(IterDataPipe):
 
         # only one stream left
         for item in pipes_and_weights[0][0]:
-            yield (item)
+            yield item
 
     def __len__(self) -> int:
         if self.length is not None:
