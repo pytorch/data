@@ -31,12 +31,12 @@ jobs:
       - name: Install dependencies
         run: |
           set -eux
-          pip3 install --pre torch torchvision torchaudio -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html --user
           pip3 install expecttest requests --user  # TODO: Install from requirements except torch
+          pip3 install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html --user
       - name: Install dependencies for test
         run: |
           set -eux
-          pip3 install scipy Pillow --user
+          pip3 install numpy --user
           pip3 install -U iopath --user
           pip3 install pytest --user
       - name: Build TorchData
