@@ -59,7 +59,7 @@ def AmazonReviewPolarity(root, split):
 
     # stack sanity checker on top of extracted files
     check_filter_extracted_files = filter_extracted_files.check_hash(
-        {os.path.join(root, _EXTRACTED_FILES[split]): _EXTRACTED_FILES_MD5[split]},
+        {os.path.normpath(os.path.join(root, _EXTRACTED_FILES[split])): _EXTRACTED_FILES_MD5[split]},
         "md5",
     )
 
