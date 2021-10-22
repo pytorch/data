@@ -35,7 +35,10 @@ from torchdata.datapipes.iter.util.cacheholder import (
     InMemoryCacheHolderIterDataPipe as InMemoryCacheHolder,
     OnDiskCacheHolderIterDataPipe as OnDiskCacheHolder,
 )
-from torchdata.datapipes.iter.util.indexadder import IndexAdderIterDataPipe as IndexAdder
+from torchdata.datapipes.iter.util.indexadder import (
+    EnumeratorIterDataPipe as Enumerator,
+    IndexAdderIterDataPipe as IndexAdder,
+)
 from torchdata.datapipes.iter.util.combining import (
     KeyZipperIterDataPipe as KeyZipper,
     MapZipperIterDataPipe as MapZipper,
