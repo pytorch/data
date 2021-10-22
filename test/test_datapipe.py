@@ -257,6 +257,27 @@ class TestDataPipe(expecttest.TestCase):
         # header_dp = source_dp.header(30)
         # self.assertEqual(20, len(header_dp))
 
+    def test_enumerator_iterdatapipe(self) -> None:
+        letters = "abcde"
+        source_dp = IterableWrapper(letters)
+        enum_dp = source_dp.enumerate()
+
+        # Functional Test: ensure that the correct index value is added to each element (tuple)
+        self.assertEqual([(0, 'a'), (1, 'b'), (2, 'c'), (3, 'd'), (4, 'e')], list(enum_dp))
+
+        # Functional Test: start index from non-zero
+        enum_dp = source_dp.enumerate(starting_index=10)
+        self.assertEqual([(10, 'a'), (11, 'b'), (12, 'c'), (13, 'd'), (14, 'e')], list(enum_dp))
+
+        # Reset Test:
+        n_elements_before_reset = 2
+        res_before_reset, res_after_reset = reset_after_n_next_calls(enum_dp, n_elements_before_reset)
+        self.assertEqual([(10, 'a'), (11, 'b')], res_before_reset)
+        self.assertEqual([(10, 'a'), (11, 'b'), (12, 'c'), (13, 'd'), (14, 'e')], res_after_reset)
+
+        # __len__ Test: returns length of source DataPipe
+        self.assertEqual(5, len(enum_dp))
+
     def test_index_adder_iterdatapipe(self) -> None:
         letters = "abcdefg"
         source_dp = IterableWrapper([{i: i} for i in letters])
