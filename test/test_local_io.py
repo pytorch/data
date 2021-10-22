@@ -10,13 +10,10 @@ import warnings
 import zipfile
 
 from json.decoder import JSONDecodeError
-
-from torch.utils.data.datapipes.map import SequenceWrapper
 from torchdata.datapipes.iter import (
     FileLister,
     FileLoader,
     IterableWrapper,
-    MapZipper,
     IoPathFileLister,
     IoPathFileLoader,
     CSVParser,
@@ -215,50 +212,6 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # __len__ Test: returns the length of source DataPipe
         with self.assertRaisesRegex(TypeError, "FileLoaderIterDataPipe instance doesn't have valid length"):
             len(hash_check_dp)
-
-    def test_map_zipper_datapipe(self):
-        source_dp = IterableWrapper(range(10))
-        map_dp = SequenceWrapper(["even", "odd"])
-
-        # Functional Test: ensure the hash join is working and return tuple by default
-        def odd_even(i: int) -> int:
-            return i % 2
-
-        result_dp = source_dp.zip_with_map(map_dp, odd_even)
-
-        def odd_even_string(i: int) -> str:
-            return "odd" if i % 2 else "even"
-
-        expected_res = [(i, odd_even_string(i)) for i in range(10)]
-        self.assertEqual(expected_res, list(result_dp))
-
-        # Functional Test: ensure that a custom merge function works
-        def custom_merge(a, b):
-            return f"{a} is a {b} number."
-
-        result_dp = source_dp.zip_with_map(map_dp, odd_even, custom_merge)
-        expected_res2 = [f"{i} is a {odd_even_string(i)} number." for i in range(10)]
-        self.assertEqual(expected_res2, list(result_dp))
-
-        # Functional Test: raises error when key is invalid
-        def odd_even_bug(i: int) -> int:
-            return 2 if i == 0 else i % 2
-
-        result_dp = MapZipper(source_dp, map_dp, odd_even_bug)
-        it = iter(result_dp)
-        with self.assertRaisesRegex(KeyError, "is not a valid key in the given MapDataPipe"):
-            next(it)
-
-        # Reset Test:
-        n_elements_before_reset = 4
-        result_dp = source_dp.zip_with_map(map_dp, odd_even)
-        res_before_reset, res_after_reset = reset_after_n_next_calls(result_dp, n_elements_before_reset)
-        self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
-        self.assertEqual(expected_res, res_after_reset)
-
-        # __len__ Test: returns the length of source DataPipe
-        result_dp = source_dp.zip_with_map(map_dp, odd_even)
-        self.assertEqual(len(source_dp), len(result_dp))
 
     def test_json_parser_iterdatapipe(self):
         def is_empty_json(path_and_stream):
