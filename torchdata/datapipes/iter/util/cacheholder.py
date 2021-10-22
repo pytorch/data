@@ -98,11 +98,9 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
 
     Example:
         url = IterableWrapper(["https://path/to/filename", ])
-        # Binary File
         cache_dp = file_dp.on_disk_cache().open_url().map(fn=lambda x: b''.join(x), input_col=1).end_caching()
-        # Text File
-        cache_dp = file_dp.on_disk_cache(mode="wt").open_url().map(fn=lambda x: b''.join(x).decode(), input_col=1).end_caching()
 
+        # Hash check
         def hash_fn(filepath):
             hash_fn = hashlib.md5()
             with open(filepath, "rb") as f:
@@ -111,7 +109,6 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                     hash_fn.update(chunk)
                     chunk = f.read(1024 ** 2)
             return hash_fn.hexdigest() == expected_MD5_hash
-        # Hash check
         cache_dp = file_dp.on_disk_cache(extra_check_fn=hash_fn).open_url().map(fn=lambda x: b''.join(x), input_col=1).end_caching()
     """
     def __init__(

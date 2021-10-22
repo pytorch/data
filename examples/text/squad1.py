@@ -62,8 +62,8 @@ def SQuAD1(root, split):
 
     url_dp = IterableWrapper([URL[split]])
     # cache data on-disk with sanity check
-    cache_dp = url_dp.on_disk_cache(filepath_fn=lambda x: os.path.join(root, os.path.basename(x)), extra_check_fn=_check_hash({os.path.join(root, os.path.basename(URL[split])): MD5[split]}), mode="wt")
-    cache_dp = cache_dp.open_url().map(fn=lambda x: b"".join(x).decode(), input_col=1)
+    cache_dp = url_dp.on_disk_cache(filepath_fn=lambda x: os.path.join(root, os.path.basename(x)), extra_check_fn=_check_hash({os.path.join(root, os.path.basename(URL[split])): MD5[split]}), mode="wb")
+    cache_dp = cache_dp.open_url().map(fn=lambda x: b"".join(x), input_col=1)
     cache_dp = cache_dp.end_caching()
 
     cache_dp = FileLoader(cache_dp)

@@ -74,8 +74,8 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
                     chunk = f.read(1024 ** 2)
             return hash_fn.hexdigest() == expected_MD5_hash
 
-        cache_dp = file_dp.on_disk_cache(filepath_fn=_filepath_fn, extra_check_fn=_hash_fn, mode="wt")
-        cache_dp = cache_dp.open_url().map(fn=lambda x: b''.join(x).decode(), input_col=1)
+        cache_dp = file_dp.on_disk_cache(filepath_fn=_filepath_fn, extra_check_fn=_hash_fn, mode="wb")
+        cache_dp = cache_dp.open_url().map(fn=lambda x: b''.join(x), input_col=1)
         cache_dp = cache_dp.end_caching()
 
         # File doesn't exist on disk
@@ -89,22 +89,6 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
 
         # Validate file without Error
         fl_dp = FileLoader(cache_dp)
-        f = list(fl_dp)[0][1]
-        hash_fn = hashlib.md5()
-        chunk = f.read(1024 ** 2)
-        while chunk:
-            hash_fn.update(chunk)
-            chunk = f.read(1024 ** 2)
-        print("==" * 20)
-        print(hash_fn.hexdigest())
-        print("==" * 20)
-        f = list(fl_dp)[0][1]
-        hash_fn = hashlib.md5()
-        for d in f:
-            hash_fn.update(d)
-        print("==" * 20)
-        print(hash_fn.hexdigest())
-        print("==" * 20)
 
         check_hash_dp = fl_dp.check_hash({expected_file_name: expected_MD5_hash}, "md5", rewind=False)
         _ = list(check_hash_dp)
