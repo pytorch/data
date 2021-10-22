@@ -101,7 +101,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         f = list(fl_dp)[0][1]
         hash_fn = hashlib.md5()
         for d in f:
-            hash_func.update(d)
+            hash_fn.update(d)
         print("==" * 20)
         print(hash_fn.hexdigest())
         print("==" * 20)
