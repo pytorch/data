@@ -49,7 +49,7 @@ class HashCheckerIterDataPipe(IterDataPipe):
                 stream.seek(0)
 
             if file_name not in self.hash_dict:
-                raise RuntimeError("Unspecified hash for file {}".format(file_name) + repr(self.hash_dict))
+                raise RuntimeError("Unspecified hash for file {}".format(file_name))
 
             if hash_func.hexdigest() != self.hash_dict[file_name]:
                 raise RuntimeError(
