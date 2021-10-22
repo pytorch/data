@@ -88,7 +88,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         self.assertEqual(expected_file_name, path)
 
         # Validate file without Error
-        fl_dp = FileLoader(cache_dp)
+        fl_dp = FileLoader(cache_dp, mode="rb")
         check_hash_dp = fl_dp.check_hash({expected_file_name: expected_MD5_hash}, "md5", rewind=False)
         _ = list(check_hash_dp)
 
