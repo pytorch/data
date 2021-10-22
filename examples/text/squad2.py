@@ -2,14 +2,15 @@
 import os
 
 from torchdata.datapipes.iter import (
+    FileLoader,
     IterDataPipe,
-    HttpReader,
     IterableWrapper,
 )
 from .utils import (
-    _wrap_split_argument,
     _add_docstring_header,
+    _check_hash,
     _create_dataset_directory,
+    _wrap_split_argument,
 )
 
 URL = {
@@ -59,16 +60,13 @@ def SQuAD2(root, split):
         datapipe to orchestrates data samples for Q&A use-case
     """
 
-    # cache data on-disk
-    cache_dp = IterableWrapper([URL[split]]).on_disk_cache(
-        HttpReader,
-        op_map=lambda x: (x[0], b"".join(x[1]).decode()),
-        filepath_fn=lambda x: os.path.join(root, os.path.basename(x)),
-        mode="wt",
-    )
+    url_dp = IterableWrapper([URL[split]])
+    # cache data on-disk with sanity check
+    cache_dp = url_dp.on_disk_cache(filepath_fn=lambda x: os.path.join(root, os.path.basename(x)), extra_check_fn=_check_hash({os.path.join(root, os.path.basename(URL[split])): MD5[split]}), mode="wt")
+    cache_dp = cache_dp.open_url().map(fn=lambda x: b"".join(x).decode(), input_col=1)
+    cache_dp = cache_dp.end_caching()
 
-    # do sanity check
-    check_cache_dp = cache_dp.check_hash({os.path.join(root, os.path.basename(URL[split])): MD5[split]}, "md5")
+    cache_dp = FileLoader(cache_dp)
 
     # stack custom data pipe on top of JSON reader to orchestrate data samples for Q&A dataset
-    return _ParseSQuADQAData(check_cache_dp.parse_json_files())
+    return _ParseSQuADQAData(cache_dp.parse_json_files())

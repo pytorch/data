@@ -80,6 +80,7 @@ def _get_response_from_google_drive(url):
     return filename, response.raw
 
 
+@functional_datapipe("open_gdrive")
 class GDriveReaderDataPipe(IterDataPipe):
     r"""
     Iterable DataPipe that takes URLs point at GDrive files, and

@@ -74,7 +74,9 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
                     chunk = f.read(1024 ** 2)
             return hash_fn.hexdigest() == expected_MD5_hash
 
-        cache_dp = file_dp.on_disk_cache(filepath_fn=_filepath_fn, extra_check_fn=_hash_fn, mode="wt").open_url().map(fn=lambda x: b''.join(x).decode(), input_col=1).end_caching()
+        cache_dp = file_dp.on_disk_cache(filepath_fn=_filepath_fn, extra_check_fn=_hash_fn, mode="wt")
+        cache_dp = cache_dp.open_url().map(fn=lambda x: b''.join(x).decode(), input_col=1)
+        cache_dp = cache_dp.end_caching()
 
         # File doesn't exist on disk
         self.assertFalse(os.path.exists(expected_file_name))

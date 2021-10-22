@@ -79,11 +79,11 @@ class _CacheOp:
 class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     """
     `OnDiskCacheHolder` is a factory IterDataPipe that creates cached local file for the
-    output from a sequence of DataPipe operations, which are normally performance bottleneck like
-    Download, Decompress. Default `filepath_fn` return a path in temporary directory based
-    on the basename of data yielded from `source_datapipe`.
+    output from DataPipe operations, which are normally performance bottleneck like download,
+    decompress, and etc. Default `filepath_fn` return a path in temporary directory based
+    on the basename of data from `source_datapipe`.
 
-    Use `end_caching` method to stop tracing the sequence of Data operations and start saving
+    Use `end_caching()` to stop tracing the sequence of DataPipe operations and start saving
     result to local file system.
 
     Args:
@@ -91,15 +91,28 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         filepath_fn: Given URL or file path string, returns a file path to local file system
         extra_check_fn: Function to check if the traced operations need to be applied on
             the data from `source_datapipe`  with the file path returned by `filepath_fn`
-        mode: mode in which the file will be opened for write the data
+        mode: Mode in which the file will be opened for write the data
 
     Returns:
-        It would returns a IterDataPipe that yields local file paths
+        An IterDataPipe that yields local file paths
 
     Example:
         url = IterableWrapper(["https://path/to/filename", ])
+        # Binary File
+        cache_dp = file_dp.on_disk_cache().open_url().map(fn=lambda x: b''.join(x), input_col=1).end_caching()
+        # Text File
         cache_dp = file_dp.on_disk_cache(mode="wt").open_url().map(fn=lambda x: b''.join(x).decode(), input_col=1).end_caching()
-        # Return a DataPipe yielding ["/tmp/xxx/filename", ]
+
+        def hash_fn(filepath):
+            hash_fn = hashlib.md5()
+            with open(filepath, "rb") as f:
+                chunk = f.read(1024 ** 2)
+                while chunk:
+                    hash_fn.update(chunk)
+                    chunk = f.read(1024 ** 2)
+            return hash_fn.hexdigest() == expected_MD5_hash
+        # Hash check
+        cache_dp = file_dp.on_disk_cache(extra_check_fn=hash_fn).open_url().map(fn=lambda x: b''.join(x), input_col=1).end_caching()
     """
     def __init__(
         self,
@@ -126,15 +139,20 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         raise RuntimeError("Please call `end_caching()` before calling graph or serialization.")
 
     def __getattr__(self, name):
+        # TODO: Figure out how many operations can not be traced
+        if name == "on_disk_cache":
+            raise RuntimeError("`OnDiskCacheHolder` doesn't support", name, "operation during tracing")
         op = _CacheOp(self, name)
         self.ops.append(op)
         return op
 
     def _cache_check_fn(self, data):
         filepath = self.filepath_fn(data)
+        if not os.path.exists(filepath):
+            return False
         if self.extra_check_fn:
-            return os.path.exists(filepath) and self.extra_check_fn(filepath)
-        return os.path.exists(filepath)
+            return self.extra_check_fn(filepath)
+        return True
 
     def end_caching(self):
         todo_dp, cached_dp = self.source_datapipe.demux(2, self._cache_check_fn)

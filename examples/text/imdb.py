@@ -3,13 +3,14 @@ import os
 from pathlib import Path
 
 from torchdata.datapipes.iter import (
-    HttpReader,
+    FileLoader,
     IterableWrapper,
 )
 from .utils import (
-    _wrap_split_argument,
     _add_docstring_header,
+    _check_hash,
     _create_dataset_directory,
+    _wrap_split_argument,
 )
 
 URL = "http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
@@ -37,18 +38,16 @@ def IMDB(root, split):
         and reading data from file
     """
 
+    url_dp = IterableWrapper([URL])
     # cache data on-disk
-    cache_dp = IterableWrapper([URL]).on_disk_cache(
-        HttpReader,
-        op_map=lambda x: (x[0], x[1].read()),
-        filepath_fn=lambda x: os.path.join(root, os.path.basename(x)),
-    )
+    cache_dp = url_dp.on_disk_cache(filepath_fn=lambda x: os.path.join(root, os.path.basename(x)), extra_check_fn=_check_hash({os.path.join(root, os.path.basename(URL)): MD5}))
+    cache_dp = cache_dp.open_url().map(fn=lambda x: x.read(), input_col=1)
+    cache_dp = cache_dp.end_caching()
 
-    # do sanity check
-    check_cache_dp = cache_dp.check_hash({os.path.join(root, os.path.basename(URL)): MD5}, "md5")
+    cache_dp = FileLoader(cache_dp)
 
     # stack TAR extractor on top of load files data pipe
-    extracted_files = check_cache_dp.read_from_tar()
+    extracted_files = cache_dp.read_from_tar()
 
     # filter the files as applicable to create dataset for given split (train or test)
     filter_files = extracted_files.filter(
