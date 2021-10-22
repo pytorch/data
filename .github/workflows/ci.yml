@@ -13,10 +13,11 @@ on:
 jobs:
   test:
     if: ${{ github.repository_owner == 'pytorch' && (github.event.action != 'labeled' || startsWith(github.event.label.name, 'ciflow')) }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
         python-version:
           - 3.6
           - 3.7
@@ -30,19 +31,12 @@ jobs:
         uses: actions/checkout@v2
       - name: Install dependencies
         run: |
-          set -eux
-          pip3 install expecttest requests --user  # TODO: Install from requirements except torch
-          pip3 install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html --user
+          pip3 install expecttest requests # TODO: Install from requirements except torch
+          pip3 install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
       - name: Install dependencies for test
-        run: |
-          set -eux
-          pip3 install numpy --user
-          pip3 install -U iopath --user
-          pip3 install pytest --user
+        run: pip3 install numpy iopath pytest
       - name: Build TorchData
-        run: |
-          set -eux
-          python setup.py develop --user
+        run: python setup.py develop
       - name: Run DataPipes tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run: pytest --no-header -v test --ignore=test/test_period.py

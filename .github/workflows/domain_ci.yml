@@ -12,10 +12,11 @@ on:
 jobs:
   test-torchvision:
     if: ${{ github.repository_owner == 'pytorch' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
         python-version:
           - 3.6
           - 3.7
