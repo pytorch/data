@@ -73,6 +73,7 @@ __all__ = [
     "Concater",
     "Cycler",
     "Demultiplexer",
+    "Enumerator",
     "FileLister",
     "FileLoader",
     "Filter",
