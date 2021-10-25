@@ -78,27 +78,29 @@ class _CacheOp:
 @functional_datapipe("on_disk_cache")
 class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     """
-    `OnDiskCacheHolder` is a factory IterDataPipe that creates cached local file for the
-    output from DataPipe operations, which are normally performance bottleneck like download,
-    decompress, and etc. Default `filepath_fn` return a path in temporary directory based
-    on the basename of data from `source_datapipe`.
+    `OnDiskCacheHolder` is a IterDataPipe that caches output of multiple DataPipe operations
+    to local files, which are normally performance bottleneck like download, decompress,
+    and etc.
 
     Use `end_caching()` to stop tracing the sequence of DataPipe operations and start saving
-    result to local file system.
+    result to a local file specified by `filepath_fn` per iteration. And, the result of these
+    operations is required to be a tuple of file path and data.
 
     Args:
         source_datapipe: DataPipe with URLs or file strings
-        filepath_fn: Given URL or file path string, returns a file path to local file system
-        extra_check_fn: Function to check if the traced operations need to be applied on
-            the data from `source_datapipe`  with the file path returned by `filepath_fn`
-        mode: Mode in which the file will be opened for write the data
+        filepath_fn: Given URL or file path string, returns a file path to local file system. As default,
+            a file path in a temporary directory with basename of the given URL or file path is returned
+        extra_check_fn: Given the file path returned by `filepath_fn`, returns if the traced DataPipe
+            operation can be skipped as the result has been correctly cached. By default, it will check if
+            the cached file exists in local file system. Hash check can be specified by this function.
+        mode: Mode in which cached files are opened for write the data. Binary mode by default.
 
     Returns:
         An IterDataPipe that yields local file paths
 
     Example:
         url = IterableWrapper(["https://path/to/filename", ])
-        cache_dp = file_dp.on_disk_cache().open_url().map(fn=lambda x: b''.join(x), input_col=1).end_caching()
+        cache_dp = url.on_disk_cache().open_url().map(fn=lambda x: b''.join(x), input_col=1).end_caching()
 
         # Hash check
         def hash_fn(filepath):
@@ -109,7 +111,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                     hash_fn.update(chunk)
                     chunk = f.read(1024 ** 2)
             return hash_fn.hexdigest() == expected_MD5_hash
-        cache_dp = file_dp.on_disk_cache(extra_check_fn=hash_fn).open_url().map(fn=lambda x: b''.join(x), input_col=1).end_caching()
+        cache_dp = url.on_disk_cache(extra_check_fn=hash_fn).open_url().map(fn=lambda x: b''.join(x), input_col=1).end_caching()
     """
     def __init__(
         self,
