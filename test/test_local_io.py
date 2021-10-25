@@ -10,14 +10,11 @@ import warnings
 import zipfile
 
 from json.decoder import JSONDecodeError
-
-from torch.utils.data.datapipes.map import SequenceWrapper
 from torchdata.datapipes.iter import (
     Extractor,
     FileLister,
     FileLoader,
     IterableWrapper,
-    MapZipper,
     IoPathFileLister,
     IoPathFileLoader,
     CSVParser,
@@ -215,50 +212,6 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # __len__ Test: returns the length of source DataPipe
         with self.assertRaisesRegex(TypeError, "FileLoaderIterDataPipe instance doesn't have valid length"):
             len(hash_check_dp)
-
-    def test_map_zipper_datapipe(self):
-        source_dp = IterableWrapper(range(10))
-        map_dp = SequenceWrapper(["even", "odd"])
-
-        # Functional Test: ensure the hash join is working and return tuple by default
-        def odd_even(i: int) -> int:
-            return i % 2
-
-        result_dp = source_dp.zip_with_map(map_dp, odd_even)
-
-        def odd_even_string(i: int) -> str:
-            return "odd" if i % 2 else "even"
-
-        expected_res = [(i, odd_even_string(i)) for i in range(10)]
-        self.assertEqual(expected_res, list(result_dp))
-
-        # Functional Test: ensure that a custom merge function works
-        def custom_merge(a, b):
-            return f"{a} is a {b} number."
-
-        result_dp = source_dp.zip_with_map(map_dp, odd_even, custom_merge)
-        expected_res2 = [f"{i} is a {odd_even_string(i)} number." for i in range(10)]
-        self.assertEqual(expected_res2, list(result_dp))
-
-        # Functional Test: raises error when key is invalid
-        def odd_even_bug(i: int) -> int:
-            return 2 if i == 0 else i % 2
-
-        result_dp = MapZipper(source_dp, map_dp, odd_even_bug)
-        it = iter(result_dp)
-        with self.assertRaisesRegex(KeyError, "is not a valid key in the given MapDataPipe"):
-            next(it)
-
-        # Reset Test:
-        n_elements_before_reset = 4
-        result_dp = source_dp.zip_with_map(map_dp, odd_even)
-        res_before_reset, res_after_reset = reset_after_n_next_calls(result_dp, n_elements_before_reset)
-        self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
-        self.assertEqual(expected_res, res_after_reset)
-
-        # __len__ Test: returns the length of source DataPipe
-        result_dp = source_dp.zip_with_map(map_dp, odd_even)
-        self.assertEqual(len(source_dp), len(result_dp))
 
     def test_json_parser_iterdatapipe(self):
         def is_empty_json(path_and_stream):
@@ -465,13 +418,6 @@ class TestDataPipeLocalIO(expecttest.TestCase):
                 with open(expected_file, "rb") as f:
                     self.assertEqual(f.read(), extracted_fobj.read())
 
-    def test_try_gzip(self):
-
-        with open(f"{self.temp_dir.name}/temp.gz", mode='rb') as fo:
-            gz = gzip.GzipFile(fileobj=fo)
-            print()
-            print(gz.read())
-
     def _write_single_gz_file(self):
         import gzip
         with gzip.open(f"{self.temp_dir.name}/temp.gz", 'wb') as k:
@@ -482,38 +428,58 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self._write_test_tar_files()
         self._write_single_gz_file()
         self._write_test_zip_files()
+        # self._write_single_zip_file()
         self._write_test_xz_files()
-
 
         # Functional Test: work with .tar files
         tar_file_dp = FileLister(self.temp_dir.name, "*.tar")
         tar_load_dp = FileLoader(tar_file_dp)
-        tar_extract_dp = Extractor(tar_load_dp, "tar")
+        tar_extract_dp = Extractor(tar_load_dp, file_type="tar")
         self._extractor_tar_test_helper(self.temp_files, tar_extract_dp)
 
         # Functional Test: work with .gz files
         gz_file_dp = IterableWrapper([f"{self.temp_dir.name}/temp.gz"])
         gz_load_dp = FileLoader(gz_file_dp)
-        gz_extract_dp = Extractor(gz_load_dp, "gzip")
-        for _, stream in gz_extract_dp:
+        gz_extract_dp = Extractor(gz_load_dp, file_type="gzip")
+        for _, gz_stream in gz_extract_dp:
             with open(self.temp_files[0], "rb") as f:
-                self.assertEqual(f.read(), stream.read())
+                self.assertEqual(f.read(), gz_stream.read())
 
         # Functional Test: work with .zip files
-        # zip_file_dp = FileLister(self.temp_dir.name, "*.zip")
-        # zip_load_dp = FileLoader(zip_file_dp)
-        # zip_extract_dp = Extractor(zip_load_dp, "zip")
+        zip_file_dp = FileLister(self.temp_dir.name, "*.zip")
+        zip_load_dp = FileLoader(zip_file_dp)
+        zip_extract_dp = zip_load_dp.extract(file_type="zip")
+        for _, zip_stream in zip_extract_dp:
+            for fname in self.temp_files:
+                with open(fname, "rb") as f:
+                    self.assertEqual(f.read(), zip_stream.read(name=fname[1:]))
 
         # Functional Test: work with .xz files
-        # xz_file_dp = FileLister(self.temp_dir.name, "*.xz")
-        # xz_load_dp = FileLoader(xz_file_dp)
-        # xz_extract_dp = Extractor(xz_load_dp, "lzma")
+        xz_file_dp = FileLister(self.temp_dir.name, "*.xz")
+        xz_load_dp = FileLoader(xz_file_dp)
+        xz_extract_dp = Extractor(xz_load_dp, file_type="lzma")
+        for xz_file_name, xz_stream in xz_extract_dp:
+            expected_file = xz_file_name[:-3]
+            with open(expected_file, "rb") as f:
+                self.assertEqual(f.read(), xz_stream.read())
 
         # Functional Test: work without file type as input
+        tar_extract_dp = Extractor(tar_load_dp, file_type=None)
+        self._extractor_tar_test_helper(self.temp_files, tar_extract_dp)
+
+        xz_extract_dp = Extractor(xz_load_dp)
+        for xz_file_name, xz_stream in xz_extract_dp:
+            expected_file = xz_file_name[:-3]
+            with open(expected_file, "rb") as f:
+                self.assertEqual(f.read(), xz_stream.read())
 
         # Functional Test: Compression Type is works for both upper and lower case strings
+        tar_extract_dp = Extractor(tar_load_dp, file_type="TAr")
+        self._extractor_tar_test_helper(self.temp_files, tar_extract_dp)
 
         # Functional Test: Compression Type throws error for invalid file type
+        with self.assertRaisesRegex(ValueError, "not a valid CompressionType"):
+            tar_extract_dp = Extractor(tar_load_dp, file_type="ABC")
 
         # Reset Test: Ensure the order is consistent between iterations
 
