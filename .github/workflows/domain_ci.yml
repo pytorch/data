@@ -43,10 +43,15 @@ jobs:
       - name: Install test utilities
         run: pip install pytest pytest-mock
 
+      - name: Extract torchvision ref
+        id: torchvision
+        run: echo "::set-output name=ref::$(python -c 'import torchvision; print(torchvision.version.git_version)')"
+
       - name: Check out torchvision repository
         uses: actions/checkout@v2
         with:
           repository: pytorch/vision
+          ref: ${{ steps.torchvision.outputs.ref }}
           path: vision
 
       - name: Run torchvision datasets tests
