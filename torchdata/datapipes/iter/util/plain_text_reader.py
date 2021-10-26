@@ -7,6 +7,7 @@ from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
 D = TypeVar("D")
+Str_Or_Bytes = Union[str, bytes]
 
 
 class PlainTextReaderHelper:
@@ -65,7 +66,7 @@ class PlainTextReaderHelper:
 
 
 @functional_datapipe("readlines")
-class LineReaderIterDataPipe(IterDataPipe[Union[Union[str, bytes], Tuple[str, Union[str, bytes]]]]):
+class LineReaderIterDataPipe(IterDataPipe[Union[Str_Or_Bytes, Tuple[str, Str_Or_Bytes]]]):
     r"""
     Iterable DataPipe that accepts a DataPipe consisting of tuples of file name and string data stream,
     and for each line in the stream, it yields a tuple of file name and the line
@@ -102,7 +103,7 @@ class LineReaderIterDataPipe(IterDataPipe[Union[Union[str, bytes], Tuple[str, Un
             return_path=return_path,
         )
 
-    def __iter__(self) -> Iterator[Union[Union[str, bytes], Tuple[str, Union[str, bytes]]]]:
+    def __iter__(self) -> Iterator[Union[Str_Or_Bytes, Tuple[str, Str_Or_Bytes]]]:
         for path, file in self.source_datapipe:
             stream = self._helper.skip_lines(file)
             stream = self._helper.strip_newline(stream)

@@ -13,7 +13,7 @@ def _default_line_join(lines: List[str]) -> str:
 
 
 @functional_datapipe("lines_to_paragraphs")
-class ParagraphAggregatorIterDataPipe(IterDataPipe[Tuple[str, K_co]]):
+class ParagraphAggregatorIterDataPipe(IterDataPipe[Tuple[str, str]]):
     r"""
     Iterable DataPipe that aggregates lines of text from the same file into a single paragraph.
     Specifically, this accepts a DataPipe consisting of tuples of a file name and a line. For each tuple,
@@ -29,7 +29,7 @@ class ParagraphAggregatorIterDataPipe(IterDataPipe[Tuple[str, K_co]]):
         self.source_datapipe: IterDataPipe[Tuple[str, T_co]] = source_datapipe
         self.joiner: Callable = joiner
 
-    def __iter__(self) -> Iterator[Tuple[str, K_co]]:
+    def __iter__(self) -> Iterator[Tuple[str, str]]:
         buffer = []
         prev_filename = None
         for filename, line in self.source_datapipe:

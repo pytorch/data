@@ -177,13 +177,13 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Functional Test: Ensure the DataPipe values are unchanged if the hashes are the same
         for (expected_path, expected_stream), (actual_path, actual_stream) in zip(datapipe2, hash_check_dp):
             self.assertEqual(expected_path, actual_path)
-            self.assertEqual(expected_stream.read(), actual_stream.read())  # type: ignore[union-attr]
+            self.assertEqual(expected_stream.read(), actual_stream.read())  # type: ignore[attr-defined]
 
         # Functional Test: Ensure the rewind option works, and the stream is empty when there is no rewind
         hash_check_dp_no_reset = HashChecker(datapipe2, hash_dict, rewind=False)
         for (expected_path, _), (actual_path, actual_stream) in zip(datapipe2, hash_check_dp_no_reset):
             self.assertEqual(expected_path, actual_path)
-            self.assertEqual(b"", actual_stream.read())  # type: ignore[union-attr]
+            self.assertEqual(b"", actual_stream.read())  # type: ignore[attr-defined]
 
         # Functional Test: Error when file/path is not in hash_dict
         hash_check_dp = HashChecker(datapipe2, {})
@@ -204,10 +204,10 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         res_before_reset, res_after_reset = reset_after_n_next_calls(hash_check_dp, n_elements_before_reset)
         for (expected_path, expected_stream), (actual_path, actual_stream) in zip(datapipe2, res_before_reset):
             self.assertEqual(expected_path, actual_path)
-            self.assertEqual(expected_stream.read(), actual_stream.read())  # type: ignore[union-attr]
+            self.assertEqual(expected_stream.read(), actual_stream.read())  # type: ignore[attr-defined]
         for (expected_path, expected_stream), (actual_path, actual_stream) in zip(datapipe2, res_after_reset):
             self.assertEqual(expected_path, actual_path)
-            self.assertEqual(expected_stream.read(), actual_stream.read())  # type: ignore[union-attr]
+            self.assertEqual(expected_stream.read(), actual_stream.read())  # type: ignore[attr-defined]
 
         # __len__ Test: returns the length of source DataPipe
         with self.assertRaisesRegex(TypeError, "FileLoaderIterDataPipe instance doesn't have valid length"):
@@ -403,7 +403,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         # check contents of file match
         for _, f in datapipe2:
-            self.assertEqual(f.read(), "0123456789abcdef")
+            self.assertEqual(f.read(), "0123456789abcdef")  # type: ignore[attr-defined]
 
 
 if __name__ == "__main__":
