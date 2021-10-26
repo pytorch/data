@@ -21,13 +21,15 @@ class CompressionType(Enum):
 
 
 @functional_datapipe("extract")
-class ExtractorIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
+class ExtractorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
-    Iterable DataPipe
+    Iterable DataPipe that takes tuples of path and compressed stream of data, and return tuples of
+    path and decompressed (extracted) stream of data. The input compression format can be specified
+    or automatially detected based on the files' file extensions.
 
     Args:
-        source_datapipe: DataPipe
-        file_type:
+        source_datapipe: IterDataPipe containing tuples of path and compressed stream of data
+        file_type: Optional string or CompressionType that represents what compression format of the inputs
     """
 
     types = CompressionType
@@ -66,11 +68,8 @@ class ExtractorIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
                 f"ExtractorIterDataPipe."
             )
 
-    def __iter__(self) -> Iterator[Tuple[str, IOBase]]:
+    def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for path, file in self.source_datapipe:
             file_type = self._detect_compression_type(path)
             decompressor = self._DECOMPRESSORS[file_type]
             yield path, StreamWrapper(decompressor(file))
-
-    def __len__(self):
-        return len(self.source_datapipe)

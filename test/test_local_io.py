@@ -409,14 +409,20 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
             len(xz_reader_dp)
 
-    def _extractor_tar_test_helper(self, expected_files, extractor_dp):
-        for file, child_obj in extractor_dp:
+    def _extractor_tar_test_helper(self, expected_files, tar_extract_dp):
+        for _file, child_obj in tar_extract_dp:
             for expected_file, tarinfo in zip(expected_files, child_obj):
                 if not tarinfo.isfile():
                     continue
                 extracted_fobj = child_obj.extractfile(tarinfo)
                 with open(expected_file, "rb") as f:
                     self.assertEqual(f.read(), extracted_fobj.read())
+
+    def _extractor_xz_test_helper(self, xz_extract_dp):
+        for xz_file_name, xz_stream in xz_extract_dp:
+            expected_file = xz_file_name[:-3]
+            with open(expected_file, "rb") as f:
+                self.assertEqual(f.read(), xz_stream.read())
 
     def _write_single_gz_file(self):
         import gzip
@@ -428,7 +434,6 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self._write_test_tar_files()
         self._write_single_gz_file()
         self._write_test_zip_files()
-        # self._write_single_zip_file()
         self._write_test_xz_files()
 
         # Functional Test: work with .tar files
@@ -458,20 +463,14 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         xz_file_dp = FileLister(self.temp_dir.name, "*.xz")
         xz_load_dp = FileLoader(xz_file_dp)
         xz_extract_dp = Extractor(xz_load_dp, file_type="lzma")
-        for xz_file_name, xz_stream in xz_extract_dp:
-            expected_file = xz_file_name[:-3]
-            with open(expected_file, "rb") as f:
-                self.assertEqual(f.read(), xz_stream.read())
+        self._extractor_xz_test_helper(xz_extract_dp)
 
         # Functional Test: work without file type as input
         tar_extract_dp = Extractor(tar_load_dp, file_type=None)
         self._extractor_tar_test_helper(self.temp_files, tar_extract_dp)
 
         xz_extract_dp = Extractor(xz_load_dp)
-        for xz_file_name, xz_stream in xz_extract_dp:
-            expected_file = xz_file_name[:-3]
-            with open(expected_file, "rb") as f:
-                self.assertEqual(f.read(), xz_stream.read())
+        self._extractor_xz_test_helper(xz_extract_dp)
 
         # Functional Test: Compression Type is works for both upper and lower case strings
         tar_extract_dp = Extractor(tar_load_dp, file_type="TAr")
@@ -479,12 +478,17 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         # Functional Test: Compression Type throws error for invalid file type
         with self.assertRaisesRegex(ValueError, "not a valid CompressionType"):
-            tar_extract_dp = Extractor(tar_load_dp, file_type="ABC")
+            Extractor(tar_load_dp, file_type="ABC")
 
         # Reset Test: Ensure the order is consistent between iterations
+        n_elements_before_reset = 2
+        res_before_reset, res_after_reset = reset_after_n_next_calls(xz_extract_dp, n_elements_before_reset)
+        self._extractor_xz_test_helper(res_before_reset)
+        self._extractor_xz_test_helper(res_after_reset)
 
         # __len__ Test: doesn't have valid length
-
+        with self.assertRaisesRegex(TypeError, "has no len"):
+            len(tar_extract_dp)
 
     # TODO (ejguan): this test currently only covers reading from local
     # filesystem. It needs to be modified once test data can be stored on
