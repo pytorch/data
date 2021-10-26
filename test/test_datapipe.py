@@ -9,12 +9,13 @@ from typing import Dict
 
 import torchdata
 import torch.utils.data.datapipes.iter
-
+from torch.utils.data.datapipes.map import SequenceWrapper
 from torchdata.datapipes.iter import (
     IterDataPipe,
     IterableWrapper,
     InMemoryCacheHolder,
     KeyZipper,
+    MapZipper,
     Cycler,
     Header,
     IndexAdder,
@@ -103,7 +104,49 @@ class TestDataPipe(expecttest.TestCase):
         zip_dp_w_key = source_dp.zip_by_key(
             ref_datapipe=ref_dp, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=True, buffer_size=10
         )
-        self.assertEqual([(i, i, i) for i in range(10)], list(zip_dp_w_key))
+        self.assertEqual([(i, (i, i)) for i in range(10)], list(zip_dp_w_key))
+
+        # Functional Test: using a different merge function
+        def merge_to_string(item1, item2):
+            return f"{item1},{item2}"
+
+        zip_dp_w_str_merge = source_dp.zip_by_key(
+            ref_datapipe=ref_dp, key_fn=lambda x: x, ref_key_fn=lambda x: x, buffer_size=10, merge_fn=merge_to_string
+        )
+        self.assertEqual([f"{i},{i}" for i in range(10)], list(zip_dp_w_str_merge))
+
+        # Functional Test: using a different merge function and keep_key=True
+        zip_dp_w_key_str_merge = source_dp.zip_by_key(
+            ref_datapipe=ref_dp,
+            key_fn=lambda x: x,
+            ref_key_fn=lambda x: x,
+            keep_key=True,
+            buffer_size=10,
+            merge_fn=merge_to_string,
+        )
+        self.assertEqual([(i, f"{i},{i}") for i in range(10)], list(zip_dp_w_key_str_merge))
+
+        # Functional Test: testing nested zipping
+        zip_dp = source_dp.zip_by_key(
+            ref_datapipe=ref_dp, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=False, buffer_size=100
+        )
+
+        # Without a custom merge function, there will be nested tuples
+        zip_dp2 = zip_dp.zip_by_key(
+            ref_datapipe=ref_dp, key_fn=lambda x: x[0], ref_key_fn=lambda x: x, keep_key=False, buffer_size=100
+        )
+        self.assertEqual([((i, i), i) for i in range(10)], list(zip_dp2))
+
+        # With a custom merge function, nesting can be prevented
+        zip_dp2_w_merge = zip_dp.zip_by_key(
+            ref_datapipe=ref_dp,
+            key_fn=lambda x: x[0],
+            ref_key_fn=lambda x: x,
+            keep_key=False,
+            buffer_size=100,
+            merge_fn=lambda x, y: list(x) + [y],
+        )
+        self.assertEqual([[i, i, i] for i in range(10)], list(zip_dp2_w_merge))
 
         # Functional Test: element is in source but missing in reference
         ref_dp_missing = IterableWrapper(range(1, 10))
@@ -151,6 +194,50 @@ class TestDataPipe(expecttest.TestCase):
 
         # __len__ Test: inherits length from source_dp
         self.assertEqual(10, len(zip_dp))
+
+    def test_map_zipper_datapipe(self):
+        source_dp = IterableWrapper(range(10))
+        map_dp = SequenceWrapper(["even", "odd"])
+
+        # Functional Test: ensure the hash join is working and return tuple by default
+        def odd_even(i: int) -> int:
+            return i % 2
+
+        result_dp = source_dp.zip_with_map(map_dp, odd_even)
+
+        def odd_even_string(i: int) -> str:
+            return "odd" if i % 2 else "even"
+
+        expected_res = [(i, odd_even_string(i)) for i in range(10)]
+        self.assertEqual(expected_res, list(result_dp))
+
+        # Functional Test: ensure that a custom merge function works
+        def custom_merge(a, b):
+            return f"{a} is a {b} number."
+
+        result_dp = source_dp.zip_with_map(map_dp, odd_even, custom_merge)
+        expected_res2 = [f"{i} is a {odd_even_string(i)} number." for i in range(10)]
+        self.assertEqual(expected_res2, list(result_dp))
+
+        # Functional Test: raises error when key is invalid
+        def odd_even_bug(i: int) -> int:
+            return 2 if i == 0 else i % 2
+
+        result_dp = MapZipper(source_dp, map_dp, odd_even_bug)
+        it = iter(result_dp)
+        with self.assertRaisesRegex(KeyError, "is not a valid key in the given MapDataPipe"):
+            next(it)
+
+        # Reset Test:
+        n_elements_before_reset = 4
+        result_dp = source_dp.zip_with_map(map_dp, odd_even)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(result_dp, n_elements_before_reset)
+        self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_res, res_after_reset)
+
+        # __len__ Test: returns the length of source DataPipe
+        result_dp = source_dp.zip_with_map(map_dp, odd_even)
+        self.assertEqual(len(source_dp), len(result_dp))
 
     def test_cycler_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(5))
@@ -214,6 +301,27 @@ class TestDataPipe(expecttest.TestCase):
         # TODO: __len__ Test: returns the length of source when it is less than the limit
         # header_dp = source_dp.header(30)
         # self.assertEqual(20, len(header_dp))
+
+    def test_enumerator_iterdatapipe(self) -> None:
+        letters = "abcde"
+        source_dp = IterableWrapper(letters)
+        enum_dp = source_dp.enumerate()
+
+        # Functional Test: ensure that the correct index value is added to each element (tuple)
+        self.assertEqual([(0, 'a'), (1, 'b'), (2, 'c'), (3, 'd'), (4, 'e')], list(enum_dp))
+
+        # Functional Test: start index from non-zero
+        enum_dp = source_dp.enumerate(starting_index=10)
+        self.assertEqual([(10, 'a'), (11, 'b'), (12, 'c'), (13, 'd'), (14, 'e')], list(enum_dp))
+
+        # Reset Test:
+        n_elements_before_reset = 2
+        res_before_reset, res_after_reset = reset_after_n_next_calls(enum_dp, n_elements_before_reset)
+        self.assertEqual([(10, 'a'), (11, 'b')], res_before_reset)
+        self.assertEqual([(10, 'a'), (11, 'b'), (12, 'c'), (13, 'd'), (14, 'e')], res_after_reset)
+
+        # __len__ Test: returns length of source DataPipe
+        self.assertEqual(5, len(enum_dp))
 
     def test_index_adder_iterdatapipe(self) -> None:
         letters = "abcdefg"
