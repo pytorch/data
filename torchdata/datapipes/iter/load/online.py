@@ -8,6 +8,7 @@ import re
 import requests
 
 from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.utils import StreamWrapper
 
 
 def _get_response_from_http(url, *, timeout):
@@ -17,7 +18,7 @@ def _get_response_from_http(url, *, timeout):
                 r = session.get(url, stream=True)
             else:
                 r = session.get(url, timeout=timeout, stream=True)
-        return url, r.raw
+        return url, StreamWrapper(r.raw)
     except HTTPError as e:
         raise Exception(f"Could not get the file. [HTTP Error] {e.response}.")
     except RequestException as e:
@@ -75,7 +76,7 @@ def _get_response_from_google_drive(url):
         raise RuntimeError("Filename could not be autodetected")
     filename = filename[0]
 
-    return filename, response.raw
+    return filename, StreamWrapper(response.raw)
 
 
 class GDriveReaderDataPipe(IterDataPipe):
