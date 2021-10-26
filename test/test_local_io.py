@@ -338,9 +338,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
     def _write_test_zip_files(self):
         path = os.path.join(self.temp_dir.name, "test_zip.zip")
         with zipfile.ZipFile(path, "w") as myzip:
-            myzip.write(self.temp_files[0])
-            myzip.write(self.temp_files[1])
-            myzip.write(self.temp_files[2])
+            myzip.write(self.temp_files[0], arcname=os.path.basename(self.temp_files[0]))
+            myzip.write(self.temp_files[1], arcname=os.path.basename(self.temp_files[1]))
+            myzip.write(self.temp_files[2], arcname=os.path.basename(self.temp_files[2]))
 
     def test_zip_archive_reader_iterdatapipe(self):
         self._write_test_zip_files()
@@ -457,7 +457,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         for _, zip_stream in zip_extract_dp:
             for fname in self.temp_files:
                 with open(fname, "rb") as f:
-                    self.assertEqual(f.read(), zip_stream.read(name=fname[1:]))
+                    self.assertEqual(f.read(), zip_stream.read(name=os.path.basename(fname)))
 
         # Functional Test: work with .xz files
         xz_file_dp = FileLister(self.temp_dir.name, "*.xz")
