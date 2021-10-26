@@ -294,8 +294,8 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             tar.add(self.temp_files[1])
             tar.add(self.temp_files[2])
 
-    def _write_test_gz_files(self):
-        path = os.path.join(self.temp_dir.name, "test_gz.gz")
+    def _write_test_tar_gz_files(self):
+        path = os.path.join(self.temp_dir.name, "test_gz.tar.gz")
         with tarfile.open(path, "w:gz") as tar:
             tar.add(self.temp_files[0])
             tar.add(self.temp_files[1])
@@ -307,8 +307,8 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         datapipe2 = FileLoader(datapipe1)
         tar_reader_dp = TarArchiveReader(datapipe2)
 
-        self._write_test_gz_files()
-        datapipe_gz_1 = FileLister(self.temp_dir.name, "*.gz")
+        self._write_test_tar_gz_files()
+        datapipe_gz_1 = FileLister(self.temp_dir.name, "*.tar.gz")
         datapipe_gz_2 = FileLoader(datapipe_gz_1)
         gz_reader_dp = TarArchiveReader(datapipe_gz_2)
 
@@ -432,6 +432,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
     def test_extractor_iterdatapipe(self):
         self._write_test_tar_files()
+        self._write_test_tar_gz_files()
         self._write_single_gz_file()
         self._write_test_zip_files()
         self._write_test_xz_files()
@@ -441,6 +442,12 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         tar_load_dp = FileLoader(tar_file_dp)
         tar_extract_dp = Extractor(tar_load_dp, file_type="tar")
         self._extractor_tar_test_helper(self.temp_files, tar_extract_dp)
+
+        # Functional test: work with .tar.gz files
+        tar_gz_file_dp = FileLister(self.temp_dir.name, "*.tar.gz")
+        tar_gz_load_dp = FileLoader(tar_gz_file_dp)
+        tar_gz_extract_dp = Extractor(tar_gz_load_dp, file_type="tar")
+        self._extractor_tar_test_helper(self.temp_files, tar_gz_extract_dp)
 
         # Functional Test: work with .gz files
         gz_file_dp = IterableWrapper([f"{self.temp_dir.name}/temp.gz"])
@@ -465,12 +472,17 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         xz_extract_dp = Extractor(xz_load_dp, file_type="lzma")
         self._extractor_xz_test_helper(xz_extract_dp)
 
-        # Functional Test: work without file type as input
+        # Functional Test: work without file type as input for .tar files
         tar_extract_dp = Extractor(tar_load_dp, file_type=None)
         self._extractor_tar_test_helper(self.temp_files, tar_extract_dp)
 
+        # Functional Test: work without file type as input for .xz files
         xz_extract_dp = Extractor(xz_load_dp)
         self._extractor_xz_test_helper(xz_extract_dp)
+
+        # Functional Test: work without file type as input for .tar.gz files
+        tar_gz_extract_dp = Extractor(tar_gz_load_dp, file_type=None)
+        self._extractor_tar_test_helper(self.temp_files, tar_gz_extract_dp)
 
         # Functional Test: Compression Type is works for both upper and lower case strings
         tar_extract_dp = Extractor(tar_load_dp, file_type="TAr")

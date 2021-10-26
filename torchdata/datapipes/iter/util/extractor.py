@@ -2,6 +2,7 @@
 import gzip
 import lzma
 import os
+import pathlib
 import tarfile
 import zipfile
 
@@ -25,7 +26,7 @@ class ExtractorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
     Iterable DataPipe that takes tuples of path and compressed stream of data, and return tuples of
     path and decompressed (extracted) stream of data. The input compression format can be specified
-    or automatially detected based on the files' file extensions.
+    or automatically detected based on the files' file extensions.
 
     Args:
         source_datapipe: IterDataPipe containing tuples of path and compressed stream of data
@@ -53,13 +54,17 @@ class ExtractorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         if self.file_type:
             return self.file_type
 
-        ext = os.path.splitext(path)[1]
-        if ext == ".gz":
-            return self.types.GZIP
+        ext = ''.join(pathlib.Path(path).suffixes)
+        if ext in {".tar.gz", ".tar.xz"}:
+            return self.types.TAR
+        else:
+            ext = os.path.splitext(path)[1]
+        if ext == ".tar":
+            return self.types.TAR
         elif ext == ".xz":
             return self.types.LZMA
-        elif ext == ".tar":
-            return self.types.TAR
+        elif ext == ".gz":
+            return self.types.GZIP
         elif ext == ".zip":
             return self.types.ZIP
         else:
