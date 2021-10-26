@@ -1,9 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import os
 
-from io import IOBase
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.utils import StreamWrapper
 from typing import Iterator, Tuple
 
 
@@ -40,7 +40,7 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
 
 
 @functional_datapipe("load_file_by_iopath")
-class IoPathFileLoaderIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
+class IoPathFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r""":class:`IoPathFileLoaderIterDataPipe`.
 
     Iterable DataPipe to load files from input datapipe which contains
@@ -68,10 +68,10 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
         self.pathmgr = g_pathmgr
         self.mode: str = mode
 
-    def __iter__(self) -> Iterator[Tuple[str, IOBase]]:
+    def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for file_uri in self.source_datapipe:
             with self.pathmgr.open(file_uri, self.mode) as file:
-                yield file_uri, file
+                yield file_uri, StreamWrapper(file)
 
     def __len__(self) -> int:
         return len(self.source_datapipe)

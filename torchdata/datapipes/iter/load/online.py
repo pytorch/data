@@ -1,5 +1,4 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-from io import IOBase
 from typing import Iterator, Tuple
 from urllib.parse import urlparse
 from requests.exceptions import HTTPError, RequestException
@@ -8,16 +7,17 @@ import re
 import requests
 
 from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.utils import StreamWrapper
 
 
-def _get_response_from_http(url: str, *, timeout: float) -> Tuple[str, IOBase]:
+def _get_response_from_http(url: str, *, timeout: float) -> Tuple[str, StreamWrapper]:
     try:
         with requests.Session() as session:
             if timeout is None:
                 r = session.get(url, stream=True)
             else:
                 r = session.get(url, timeout=timeout, stream=True)
-        return url, r.raw
+        return url, StreamWrapper(r.raw)
     except HTTPError as e:
         raise Exception(f"Could not get the file. [HTTP Error] {e.response}.")
     except RequestException as e:
@@ -26,7 +26,7 @@ def _get_response_from_http(url: str, *, timeout: float) -> Tuple[str, IOBase]:
         raise
 
 
-class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
+class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r""":class:`HTTPReaderIterDataPipe`
 
     Iterable DataPipe that takes file URLs (http URLs pointing to files), and
@@ -41,7 +41,7 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.timeout = timeout
 
-    def __iter__(self) -> Iterator[Tuple[str, IOBase]]:
+    def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for url in self.source_datapipe:
             yield _get_response_from_http(url, timeout=self.timeout)
 
@@ -49,7 +49,7 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
         return len(self.source_datapipe)
 
 
-def _get_response_from_google_drive(url: str) -> Tuple[str, IOBase]:
+def _get_response_from_google_drive(url: str) -> Tuple[str, StreamWrapper]:
     confirm_token = None
     session = requests.Session()
     response = session.get(url, stream=True)
@@ -73,11 +73,10 @@ def _get_response_from_google_drive(url: str) -> Tuple[str, IOBase]:
     filename = re.findall('filename="(.+)"', response.headers["content-disposition"])
     if filename is None:
         raise RuntimeError("Filename could not be autodetected")
+    return filename[0], StreamWrapper(response.raw)
 
-    return filename[0], response.raw
 
-
-class GDriveReaderDataPipe(IterDataPipe[Tuple[str, IOBase]]):
+class GDriveReaderDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
     Iterable DataPipe that takes URLs point at GDrive files, and
     yields tuples of file name and IO stream
@@ -89,7 +88,7 @@ class GDriveReaderDataPipe(IterDataPipe[Tuple[str, IOBase]]):
     def __init__(self, source_datapipe: IterDataPipe[str]) -> None:
         self.source_datapip: IterDataPipe[str] = source_datapipe
 
-    def __iter__(self) -> Iterator[Tuple[str, IOBase]]:
+    def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for url in self.source_datapipe:
             yield _get_response_from_google_drive(url)
 
@@ -97,7 +96,7 @@ class GDriveReaderDataPipe(IterDataPipe[Tuple[str, IOBase]]):
         return len(self.source_datapipe)
 
 
-class OnlineReaderIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
+class OnlineReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r""":class:
     Iterable DataPipe that takes file URLs (can be http URLs pointing to files or URLs to GDrive files), and
     yields tuples of file URL and IO stream
@@ -111,7 +110,7 @@ class OnlineReaderIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.timeout = timeout
 
-    def __iter__(self) -> Iterator[Tuple[str, IOBase]]:
+    def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for url in self.source_datapipe:
             parts = urlparse(url)
 

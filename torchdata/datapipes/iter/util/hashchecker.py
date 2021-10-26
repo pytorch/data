@@ -4,11 +4,12 @@ import hashlib
 from io import IOBase
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.utils import StreamWrapper
 from typing import Dict, Iterator, Tuple
 
 
 @functional_datapipe("check_hash")
-class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
+class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
     Iterable DataPipe that computes and checks the hash of each file, from an input
     DataPipe of tuples of file name and data stream. If the hashes match the given hash
@@ -39,7 +40,7 @@ class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
         if self.hash_type not in ["sha256", "md5"]:
             raise ValueError("Invalid hash_type requested, should be one of {}".format(["sha256", "md5"]))
 
-    def __iter__(self) -> Iterator[Tuple[str, IOBase]]:
+    def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for file_name, stream in self.source_datapipe:
             if self.hash_type == "sha256":
                 hash_func = hashlib.sha256()
@@ -65,7 +66,7 @@ class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
                     )
                 )
 
-            yield file_name, stream
+            yield file_name, StreamWrapper(stream)
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
