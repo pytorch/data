@@ -91,7 +91,7 @@ class LineReaderIterDataPipe(IterDataPipe[Union[Union[str, bytes], Tuple[str, Un
         encoding="utf-8",
         errors: str = "ignore",
         return_path: bool = True,
-    ):
+    ) -> None:
         self.source_datapipe = source_datapipe
         self._helper = PlainTextReaderHelper(
             skip_lines=skip_lines,
@@ -102,12 +102,12 @@ class LineReaderIterDataPipe(IterDataPipe[Union[Union[str, bytes], Tuple[str, Un
             return_path=return_path,
         )
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Union[Union[str, bytes], Tuple[str, Union[str, bytes]]]]:
         for path, file in self.source_datapipe:
             stream = self._helper.skip_lines(file)
             stream = self._helper.strip_newline(stream)
             stream = self._helper.decode(stream)
-            yield from self._helper.return_path(stream, path=path)
+            yield from self._helper.return_path(stream, path=path)  # type: ignore[misc]
 
 
 class _CSVBaseParserIterDataPipe(IterDataPipe):
@@ -122,7 +122,7 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
         errors: str = "ignore",
         return_path: bool = True,
         **fmtparams,
-    ):
+    ) -> None:
         self.source_datapipe = source_datapipe
         self._csv_reader = csv_reader
         self._helper = PlainTextReaderHelper(
@@ -130,12 +130,12 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
         )
         self.fmtparams = fmtparams
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Union[D, Tuple[str, D]]]:
         for path, file in self.source_datapipe:
             stream = self._helper.skip_lines(file)
             stream = self._helper.decode(stream)
             stream = self._csv_reader(stream, **self.fmtparams)
-            yield from self._helper.return_path(stream, path=path)
+            yield from self._helper.return_path(stream, path=path)  # type: ignore[misc]
 
 
 @functional_datapipe("parse_csv")
@@ -166,7 +166,7 @@ class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
         errors: str = "ignore",
         return_path: bool = False,
         **fmtparams,
-    ):
+    ) -> None:
         super().__init__(
             source_datapipe,
             csv.reader,
@@ -209,7 +209,7 @@ class CSVDictParserIterDataPipe(_CSVBaseParserIterDataPipe):
         errors: str = "ignore",
         return_path: bool = False,
         **fmtparams,
-    ):
+    ) -> None:
         super().__init__(
             source_datapipe,
             csv.DictReader,

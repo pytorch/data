@@ -4,7 +4,7 @@ import hashlib
 from io import IOBase
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
-from typing import Dict, IO, Tuple, Union
+from typing import Dict, IO, Iterator, Tuple, Union
 
 
 @functional_datapipe("check_hash")
@@ -39,7 +39,7 @@ class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, Union[IO, IOBase]]]):
         if self.hash_type not in ["sha256", "md5"]:
             raise ValueError("Invalid hash_type requested, should be one of {}".format(["sha256", "md5"]))
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Tuple[str, Union[IO, IOBase]]]:
         for file_name, stream in self.source_datapipe:
             if self.hash_type == "sha256":
                 hash_func = hashlib.sha256()
@@ -47,7 +47,7 @@ class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, Union[IO, IOBase]]]):
                 hash_func = hashlib.md5()
 
             # Not all of streams have `read(bytes)` method.
-            # `__iter__` method is chosen becauce it's a common interface for IOBase.
+            # `__iter__` method is chosen because it is a common interface for IOBase.
             for d in stream:
                 hash_func.update(d)
 
@@ -67,5 +67,5 @@ class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, Union[IO, IOBase]]]):
 
             yield file_name, stream
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.source_datapipe)

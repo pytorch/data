@@ -1,6 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from collections import defaultdict
-from typing import Dict, List, Union
+from typing import Dict, List, Iterator, Union
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -27,7 +27,7 @@ class Rows2ColumnarIterDataPipe(IterDataPipe[Dict]):
         self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
         self.column_names: List[str] = [] if column_names is None else column_names
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Dict]:
         for batch in self.source_datapipe:
             columnar = defaultdict(list)
             for list_or_dict_row in batch:
@@ -47,5 +47,5 @@ class Rows2ColumnarIterDataPipe(IterDataPipe[Dict]):
                         columnar[self.column_names[i]].append(v)
             yield columnar
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.source_datapipe)

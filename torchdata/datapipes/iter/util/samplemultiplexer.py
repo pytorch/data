@@ -1,5 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-from typing import Dict, Optional, Sized, TypeVar
+from typing import Dict, Iterator, Optional, Sized, TypeVar
 import random
 
 from torchdata.datapipes.iter import IterDataPipe
@@ -44,7 +44,7 @@ class SampleMultiplexerDataPipe(IterDataPipe[T_co]):
             self.random = random.Random(seed)
         self.length: Optional[int] = None
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[T_co]:
         pipes_and_weights = [(iter(k), v) for k, v in self.pipes_and_weights]
         while len(pipes_and_weights) > 1:
             r = self.random.random()

@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
-from typing import TypeVar
+from typing import Iterator, TypeVar
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -19,7 +19,7 @@ class HeaderIterDataPipe(IterDataPipe[T_co]):
         self.source_datapipe: IterDataPipe[T_co] = source_datapipe
         self.limit: int = limit
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[T_co]:
         for i, value in enumerate(self.source_datapipe):
             if i < self.limit:
                 yield value
@@ -27,5 +27,5 @@ class HeaderIterDataPipe(IterDataPipe[T_co]):
                 break
 
     # TODO: Fix the case that the length of source_datapipe is shorter than limit
-    def __len__(self):
+    def __len__(self) -> int:
         return self.limit

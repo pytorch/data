@@ -4,7 +4,7 @@ import sys
 from collections import deque
 from io import IOBase
 from os import path
-from typing import Deque, Optional, Tuple, TypeVar
+from typing import Callable, Deque, Iterator, Optional, Tuple, TypeVar
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe, FileLoader
@@ -27,15 +27,15 @@ class InMemoryCacheHolderIterDataPipe(IterDataPipe[T_co]):
     size: Optional[int] = None
     idx: int
 
-    def __init__(self, source_dp, size=None) -> None:
-        self.source_dp = source_dp
+    def __init__(self, source_dp: IterDataPipe[T_co], size: Optional[int] = None) -> None:
+        self.source_dp: IterDataPipe[T_co] = source_dp
         # cache size in MB
         if size is not None:
             self.size = size * 1024 * 1024
         self.cache: Optional[Deque] = None
-        self.idx = 0
+        self.idx: int = 0
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[T_co]:
         if self.cache:
             for idx, data in enumerate(self.source_dp):
                 if idx < self.idx:
@@ -57,7 +57,7 @@ class InMemoryCacheHolderIterDataPipe(IterDataPipe[T_co]):
             self.cache = cache
             self.idx = idx
 
-    def __len__(self):
+    def __len__(self) -> int:
         try:
             return len(self.source_dp)
         except TypeError:
@@ -98,13 +98,13 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
 
     def __new__(
         cls,
-        source_datapipe,
+        source_datapipe: IterDataPipe,
         opDataPipe,
         op_args=None,
         op_kwargs=None,
-        op_map=None,
-        mode="wb",
-        filepath_fn=_default_filepath_fn,
+        op_map: Optional[Callable] = None,
+        mode: str = "wb",
+        filepath_fn: Callable = _default_filepath_fn,
     ):
 
         assert isinstance(source_datapipe, IterDataPipe), "'source_datapipe' needs to be an IterDataPipe"

@@ -3,7 +3,7 @@ import json
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
-from typing import Dict, Tuple, IO
+from typing import Dict, Iterator, Tuple, IO
 
 
 @functional_datapipe("parse_json_files")
@@ -19,10 +19,10 @@ class JsonParserIterDataPipe(IterDataPipe[Tuple[str, Dict]]):
         self.source_datapipe: IterDataPipe[Tuple[str, IO]] = source_datapipe
         self.kwargs = kwargs
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Tuple[str, Dict]]:
         for file_name, stream in self.source_datapipe:
             data = stream.read()
             yield file_name, json.loads(data)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.source_datapipe)

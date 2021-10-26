@@ -1,6 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from io import IOBase
-from typing import Any, Callable, Tuple
+from typing import Any, Callable, Iterator, Tuple
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -29,12 +29,12 @@ class SaverIterDataPipe(IterDataPipe[str]):
         self.mode: str = mode
         self.fn: Callable = filepath_fn
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         for meta, data in self.source_datapipe:
             filepath = self.fn(meta)
             with open(filepath, self.mode) as f:
                 f.write(data)
             yield filepath
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.source_datapipe)

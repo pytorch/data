@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
-from typing import Optional, TypeVar
+from typing import Iterator, Optional, TypeVar
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -22,14 +22,14 @@ class CyclerIterDataPipe(IterDataPipe[T_co]):
         if count is not None and count < 0:
             raise ValueError(f"Expected non-negative count, got {count}")
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[T_co]:
         i = 0
         while self.count is None or i < self.count:
             for x in self.source_datapipe:
                 yield x
             i += 1
 
-    def __len__(self):
+    def __len__(self) -> int:
         if self.count is None:
             raise TypeError(
                 f"This {type(self).__name__} instance cycles forever, and therefore doesn't have valid length"

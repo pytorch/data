@@ -3,7 +3,7 @@ import os
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
-from typing import IO, Tuple
+from typing import IO, Iterator, Tuple
 
 
 class IoPathFileListerIterDataPipe(IterDataPipe[str]):
@@ -30,7 +30,7 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
         self.root: str = root
         self.pathmgr = g_pathmgr
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         if self.pathmgr.isfile(self.root):
             yield self.root
         else:
@@ -67,10 +67,10 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe[Tuple[str, IO]]):
         self.pathmgr = g_pathmgr
         self.mode: str = mode
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Tuple[str, IO]]:
         for file_uri in self.source_datapipe:
             with self.pathmgr.open(file_uri, self.mode) as file:
                 yield file_uri, file
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.source_datapipe)

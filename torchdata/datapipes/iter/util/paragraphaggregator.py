@@ -1,10 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
-from typing import Callable, List, Tuple, TypeVar
+from typing import Callable, Iterator, List, Tuple, TypeVar
 
 
 T_co = TypeVar("T_co", covariant=True)
+K_co = TypeVar("K_co", covariant=True)
 
 
 def _default_line_join(lines: List[str]) -> str:
@@ -12,7 +13,7 @@ def _default_line_join(lines: List[str]) -> str:
 
 
 @functional_datapipe("lines_to_paragraphs")
-class ParagraphAggregatorIterDataPipe(IterDataPipe[T_co]):
+class ParagraphAggregatorIterDataPipe(IterDataPipe[Tuple[str, K_co]]):
     r"""
     Iterable DataPipe that aggregates lines of text from the same file into a single paragraph.
     Specifically, this accepts a DataPipe consisting of tuples of a file name and a line. For each tuple,
@@ -28,7 +29,7 @@ class ParagraphAggregatorIterDataPipe(IterDataPipe[T_co]):
         self.source_datapipe: IterDataPipe[Tuple[str, T_co]] = source_datapipe
         self.joiner: Callable = joiner
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Tuple[str, K_co]]:
         buffer = []
         prev_filename = None
         for filename, line in self.source_datapipe:
@@ -38,11 +39,11 @@ class ParagraphAggregatorIterDataPipe(IterDataPipe[T_co]):
                 buffer.append(line)
             else:
                 if buffer:
-                    yield prev_filename, self.joiner(buffer)
+                    yield prev_filename, self.joiner(buffer)  # type: ignore[misc]
                 if line:
                     buffer = [line]
                 else:
                     buffer = []
                 prev_filename = filename
         if buffer:
-            yield prev_filename, self.joiner(buffer)
+            yield prev_filename, self.joiner(buffer)  # type: ignore[misc]
