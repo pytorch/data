@@ -1,14 +1,19 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+from typing import Callable, Iterator, List, Tuple, TypeVar
 
 
-def _default_line_join(lines):
+T_co = TypeVar("T_co", covariant=True)
+K_co = TypeVar("K_co", covariant=True)
+
+
+def _default_line_join(lines: List[str]) -> str:
     return "\n".join(lines)
 
 
 @functional_datapipe("lines_to_paragraphs")
-class ParagraphAggregatorIterDataPipe(IterDataPipe):
+class ParagraphAggregatorIterDataPipe(IterDataPipe[Tuple[str, str]]):
     r"""
     Iterable DataPipe that aggregates lines of text from the same file into a single paragraph.
     Specifically, this accepts a DataPipe consisting of tuples of a file name and a line. For each tuple,
@@ -20,11 +25,11 @@ class ParagraphAggregatorIterDataPipe(IterDataPipe):
         source_datapipe: a DataPipe with tuples of a file name and a line
         joiner: a function that joins a list of lines together
     """
-    def __init__(self, source_datapipe, joiner=_default_line_join) -> None:
-        self.source_datapipe = source_datapipe
-        self.joiner = joiner
+    def __init__(self, source_datapipe: IterDataPipe[Tuple[str, T_co]], joiner: Callable = _default_line_join) -> None:
+        self.source_datapipe: IterDataPipe[Tuple[str, T_co]] = source_datapipe
+        self.joiner: Callable = joiner
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Tuple[str, str]]:
         buffer = []
         prev_filename = None
         for filename, line in self.source_datapipe:
@@ -34,11 +39,11 @@ class ParagraphAggregatorIterDataPipe(IterDataPipe):
                 buffer.append(line)
             else:
                 if buffer:
-                    yield (prev_filename, self.joiner(buffer))
+                    yield prev_filename, self.joiner(buffer)  # type: ignore[misc]
                 if line:
                     buffer = [line]
                 else:
                     buffer = []
                 prev_filename = filename
         if buffer:
-            yield (prev_filename, self.joiner(buffer))
+            yield prev_filename, self.joiner(buffer)  # type: ignore[misc]
