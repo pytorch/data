@@ -3,6 +3,7 @@ import hashlib
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.utils import StreamWrapper
 
 
 @functional_datapipe("check_hash")
@@ -58,7 +59,7 @@ class HashCheckerIterDataPipe(IterDataPipe):
                     )
                 )
 
-            yield file_name, stream
+            yield file_name, StreamWrapper(stream)
 
     def __len__(self):
         return len(self.source_datapipe)
