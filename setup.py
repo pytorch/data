@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta, Inc. and its affiliates.
 import os
 import subprocess
 from pathlib import Path

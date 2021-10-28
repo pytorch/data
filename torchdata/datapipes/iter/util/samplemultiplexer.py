@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta, Inc. and its affiliates.
 from typing import Dict, Iterator, Optional, Sized, TypeVar
 import random
 

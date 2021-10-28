@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta, Inc. and its affiliates.
 from torchdata.datapipes.iter import HttpReader
 from .utils import (
     _wrap_split_argument,

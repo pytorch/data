@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta, Inc. and its affiliates.
 from io import IOBase
 from typing import Any, Callable, Iterator, Tuple
 

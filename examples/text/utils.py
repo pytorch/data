@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta, Inc. and its affiliates.
 
 # The following utility functions are copied from torchtext
 # https://github.com/pytorch/text/blob/main/torchtext/data/datasets_utils.py

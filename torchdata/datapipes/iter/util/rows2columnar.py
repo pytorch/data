@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta, Inc. and its affiliates.
 from collections import defaultdict
 from typing import Dict, List, Iterator, Union
 

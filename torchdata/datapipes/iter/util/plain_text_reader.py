@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta, Inc. and its affiliates.
 import contextlib
 import csv
 from typing import Tuple, Union, Iterator, TypeVar, IO
