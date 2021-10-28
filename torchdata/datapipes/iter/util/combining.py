@@ -3,39 +3,52 @@ import warnings
 from collections import OrderedDict
 
 from torch.utils.data import IterDataPipe, MapDataPipe, functional_datapipe
-from typing import Callable
+from typing import Callable, Iterator, Optional, TypeVar
+
+T_co = TypeVar("T_co", covariant=True)
 
 
 @functional_datapipe("zip_by_key")
-class KeyZipperIterDataPipe(IterDataPipe):
+class KeyZipperIterDataPipe(IterDataPipe[T_co]):
     r""":class:`KeyZipperIterDataPipe`.
 
-    Iterable DataPipe to zip two DataPipes based on the matching key.
+    Iterable DataPipe to zip two IterDataPipes together based on the matching key.
 
     Args:
-        source_datapipe: KeyZipper will yield data based on the order of this DataPipe
-        ref_datapipe: Reference datapipe to find matching key for `source_datapipe`
+        source_datapipe: KeyZipper will yield data based on the order of this IterDataPipe
+        ref_datapipe: Reference IterdataPipe to find matching key for `source_datapipe`
         key_fn: Callable to extract key of data from source_datapipe
         ref_key_fn: Callable to extract key of data from ref_datapipe.
             If it's not specified, the `key_fn` would be applied to reference data
-        keep_key: Option to yield matching key
+        keep_key: Option to yield the matching key along with the items in a tuple,
+            resulting in (key, merge_fn(item1, item2))
         buffer_size: The size of buffer used to hold key-data pair from reference DataPipe.
             If it's specified as None, the buffer size becomes infinite
+        merge_fn: Function that combines the item from source_iterdatapipe and the item from ref_datapipe,
+            by default a tuple is created
     """
 
     def __init__(
-        self, source_datapipe, ref_datapipe, key_fn, ref_key_fn=None, keep_key=False, buffer_size=10000,
-    ):
+        self,
+        source_datapipe: IterDataPipe,
+        ref_datapipe: IterDataPipe,
+        key_fn: Callable,
+        ref_key_fn: Optional[Callable] = None,
+        keep_key: bool = False,
+        buffer_size: int = 10000,
+        merge_fn: Optional[Callable] = None,
+    ) -> None:
         self.source_datapipe = source_datapipe
         self.ref_datapipe = ref_datapipe
         self.key_fn = key_fn
         self.ref_key_fn = key_fn if ref_key_fn is None else ref_key_fn
         self.keep_key = keep_key
+        self.merge_fn = merge_fn
         if buffer_size is not None and buffer_size <= 0:
             raise ValueError("'buffer_size' is required to be either None or a positive integer.")
-        self.buffer_size = buffer_size
+        self.buffer_size: int = buffer_size
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         buffer: OrderedDict = OrderedDict()
         ref_it = iter(self.ref_datapipe)
         warn_once_flag = True
@@ -61,21 +74,18 @@ class KeyZipperIterDataPipe(IterDataPipe):
                         )
                     buffer.popitem(last=False)
                 buffer[ref_key] = ref_data
+            res = self.merge_fn(data, buffer.pop(key)) if self.merge_fn else (data, buffer.pop(key))
             if self.keep_key:
-                yield key, data, buffer.pop(key)
+                yield key, res
             else:
-                yield data, buffer.pop(key)
+                yield res
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.source_datapipe)
 
 
-def tuple_merge(item, item_from_map):
-    return (item, item_from_map)
-
-
 @functional_datapipe("zip_with_map")
-class MapZipperIterDataPipe(IterDataPipe):
+class MapZipperIterDataPipe(IterDataPipe[T_co]):
     r""" :class:`MapZipperIterDataPipe`.
 
     IterDataPipe that joins the items from the source IterDataPipe with items from a MapDataPipe. The
@@ -96,24 +106,24 @@ class MapZipperIterDataPipe(IterDataPipe):
         source_iterdatapipe: IterDataPipe,
         map_datapipe: MapDataPipe,
         key_fn: Callable,
-        merge_fn: Callable = tuple_merge,
+        merge_fn: Optional[Callable] = None,
     ):
         if not isinstance(map_datapipe, MapDataPipe):
             raise TypeError(f"map_datapipe must be a MapDataPipe, but its type is {type(map_datapipe)} instead.")
-        self.source_iterdatapipe = source_iterdatapipe
-        self.map_datapipe = map_datapipe
-        self.key_fn = key_fn
-        self.merge_fn = merge_fn
-        self.length = -1
+        self.source_iterdatapipe: IterDataPipe = source_iterdatapipe
+        self.map_datapipe: MapDataPipe = map_datapipe
+        self.key_fn: Callable = key_fn
+        self.merge_fn: Optional[Callable] = merge_fn
+        self.length: int = -1
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         for item in self.source_iterdatapipe:
             key = self.key_fn(item)
             try:
                 map_item = self.map_datapipe[key]
             except (KeyError, IndexError):
                 raise KeyError(f"key_fn maps {item} to {key}, which is not a valid key in the given MapDataPipe.")
-            yield self.merge_fn(item, map_item)
+            yield self.merge_fn(item, map_item) if self.merge_fn else (item, map_item)
 
     def __len__(self) -> int:
         if self.length == -1:

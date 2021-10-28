@@ -7,6 +7,7 @@ from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
 D = TypeVar("D")
+Str_Or_Bytes = Union[str, bytes]
 
 
 class PlainTextReaderHelper:
@@ -65,7 +66,7 @@ class PlainTextReaderHelper:
 
 
 @functional_datapipe("readlines")
-class LineReaderIterDataPipe(IterDataPipe[Union[Union[str, bytes], Tuple[str, Union[str, bytes]]]]):
+class LineReaderIterDataPipe(IterDataPipe[Union[Str_Or_Bytes, Tuple[str, Str_Or_Bytes]]]):
     r"""
     Iterable DataPipe that accepts a DataPipe consisting of tuples of file name and string data stream,
     and for each line in the stream, it yields a tuple of file name and the line
@@ -91,7 +92,7 @@ class LineReaderIterDataPipe(IterDataPipe[Union[Union[str, bytes], Tuple[str, Un
         encoding="utf-8",
         errors: str = "ignore",
         return_path: bool = True,
-    ):
+    ) -> None:
         self.source_datapipe = source_datapipe
         self._helper = PlainTextReaderHelper(
             skip_lines=skip_lines,
@@ -102,12 +103,12 @@ class LineReaderIterDataPipe(IterDataPipe[Union[Union[str, bytes], Tuple[str, Un
             return_path=return_path,
         )
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Union[Str_Or_Bytes, Tuple[str, Str_Or_Bytes]]]:
         for path, file in self.source_datapipe:
             stream = self._helper.skip_lines(file)
             stream = self._helper.strip_newline(stream)
             stream = self._helper.decode(stream)
-            yield from self._helper.return_path(stream, path=path)
+            yield from self._helper.return_path(stream, path=path)  # type: ignore[misc]
 
 
 class _CSVBaseParserIterDataPipe(IterDataPipe):
@@ -122,24 +123,20 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
         errors: str = "ignore",
         return_path: bool = True,
         **fmtparams,
-    ):
+    ) -> None:
         self.source_datapipe = source_datapipe
         self._csv_reader = csv_reader
         self._helper = PlainTextReaderHelper(
-            skip_lines=skip_lines,
-            decode=decode,
-            encoding=encoding,
-            errors=errors,
-            return_path=return_path,
+            skip_lines=skip_lines, decode=decode, encoding=encoding, errors=errors, return_path=return_path,
         )
         self.fmtparams = fmtparams
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Union[D, Tuple[str, D]]]:
         for path, file in self.source_datapipe:
             stream = self._helper.skip_lines(file)
             stream = self._helper.decode(stream)
             stream = self._csv_reader(stream, **self.fmtparams)
-            yield from self._helper.return_path(stream, path=path)
+            yield from self._helper.return_path(stream, path=path)  # type: ignore[misc]
 
 
 @functional_datapipe("parse_csv")
@@ -164,13 +161,13 @@ class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
         self,
         source_datapipe: IterDataPipe[Tuple[str, IO]],
         *,
-        skip_lines=0,
-        decode=True,
-        encoding="utf-8",
-        errors="ignore",
-        return_path=False,
+        skip_lines: int = 0,
+        decode: bool = True,
+        encoding: str = "utf-8",
+        errors: str = "ignore",
+        return_path: bool = False,
         **fmtparams,
-    ):
+    ) -> None:
         super().__init__(
             source_datapipe,
             csv.reader,
@@ -188,7 +185,7 @@ class CSVDictParserIterDataPipe(_CSVBaseParserIterDataPipe):
     r"""
     Iterable DataPipe that accepts a DataPipe consists of tuples of file name and CSV data stream.
     This reads and returns the contents within the CSV files one row at a time (as a Dict by default,
-    depedning on fmtparams).
+    depending on fmtparams).
     The first row of each file, unless skipped, will be used as the header; the contents of the header row
     will be used as keys for the Dicts generated from the remaining rows.
 
@@ -205,15 +202,15 @@ class CSVDictParserIterDataPipe(_CSVBaseParserIterDataPipe):
 
     def __init__(
         self,
-        source_datapipe,
+        source_datapipe: IterDataPipe[Tuple[str, IO]],
         *,
-        skip_lines=0,
-        decode=True,
-        encoding="utf-8",
-        errors="ignore",
-        return_path=False,
+        skip_lines: int = 0,
+        decode: bool = True,
+        encoding: str = "utf-8",
+        errors: str = "ignore",
+        return_path: bool = False,
         **fmtparams,
-    ):
+    ) -> None:
         super().__init__(
             source_datapipe,
             csv.DictReader,
