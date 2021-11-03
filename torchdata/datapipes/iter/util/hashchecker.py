@@ -1,12 +1,15 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import hashlib
 
+from io import IOBase
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.utils import StreamWrapper
+from typing import Dict, Iterator, Tuple
 
 
 @functional_datapipe("check_hash")
-class HashCheckerIterDataPipe(IterDataPipe):
+class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
     Iterable DataPipe that computes and checks the hash of each file, from an input
     DataPipe of tuples of file name and data stream. If the hashes match the given hash
@@ -22,17 +25,22 @@ class HashCheckerIterDataPipe(IterDataPipe):
     Usage: dp = dp.check_hash({'train.py':'0d8b94d9fa9fb1ad89b9e3da9e1521495dca558fc5213b0fd7fd7b71c23f9921'})
     """
 
-    def __init__(self, source_datapipe, hash_dict, hash_type="sha256", rewind=True) -> None:
-        self.source_datapipe = source_datapipe
-        self.hash_dict = hash_dict
-        self.hash_type = hash_type
-        self.rewind = rewind
+    def __init__(
+        self,
+        source_datapipe: IterDataPipe[Tuple[str, IOBase]],
+        hash_dict: Dict[str, str],
+        hash_type: str = "sha256",
+        rewind: bool = True,
+    ) -> None:
+        self.source_datapipe: IterDataPipe[Tuple[str, IOBase]] = source_datapipe
+        self.hash_dict: Dict[str, str] = hash_dict
+        self.hash_type: str = hash_type
+        self.rewind: bool = rewind
 
         if self.hash_type not in ["sha256", "md5"]:
             raise ValueError("Invalid hash_type requested, should be one of {}".format(["sha256", "md5"]))
 
-    def __iter__(self):
-
+    def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for file_name, stream in self.source_datapipe:
             if self.hash_type == "sha256":
                 hash_func = hashlib.sha256()
@@ -40,7 +48,7 @@ class HashCheckerIterDataPipe(IterDataPipe):
                 hash_func = hashlib.md5()
 
             # Not all of streams have `read(bytes)` method.
-            # `__iter__` method is chosen becauce it's a common interface for IOBase.
+            # `__iter__` method is chosen because it is a common interface for IOBase.
             for d in stream:
                 hash_func.update(d)
 
@@ -58,7 +66,7 @@ class HashCheckerIterDataPipe(IterDataPipe):
                     )
                 )
 
-            yield file_name, stream
+            yield file_name, StreamWrapper(stream)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.source_datapipe)

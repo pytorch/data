@@ -57,7 +57,7 @@ class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                 raise e
             # We are unable to close 'data_stream' here, because it needs to be available to use later
 
-    def __len__(self):
+    def __len__(self) -> int:
         if self.length == -1:
             raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
         return self.length

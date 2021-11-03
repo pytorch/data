@@ -5,13 +5,15 @@ import os
 import unittest
 import warnings
 
+from functools import partial
+
 from torchdata.datapipes.iter import (
-    FileLoader,
     HttpReader,
     IterableWrapper,
 )
 
 from _utils._common_utils_for_test import (
+    check_hash_fn,
     create_temp_dir,
 )
 
@@ -53,45 +55,44 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         self.assertEqual(1, len(http_dp))
 
     def test_on_disk_cache_holder_iterdatapipe(self):
-        import hashlib
-
         file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
-        expected_file_name = os.path.join(self.temp_dir.name, "OnDisk_LICENSE")
+        prefix = "OnDisk_"
+        expected_file_name = os.path.join(self.temp_dir.name, prefix + "LICENSE")
         expected_MD5_hash = "4aabe940637d4389eca42ac1a0e874ec"
 
         file_dp = IterableWrapper([file_url])
 
         def _filepath_fn(url):
-            filename = "OnDisk_" + os.path.basename(url)
+            filename = prefix + os.path.basename(url)
             return os.path.join(self.temp_dir.name, filename)
 
-        def _hash_fn(filepath):
-            hash_fn = hashlib.md5()
-            with open(filepath, "rb") as f:
-                chunk = f.read(1024 ** 2)
-                while chunk:
-                    hash_fn.update(chunk)
-                    chunk = f.read(1024 ** 2)
-            return hash_fn.hexdigest() == expected_MD5_hash
+        cache_dp = file_dp.on_disk_cache(filepath_fn=_filepath_fn, extra_check_fn=partial(check_hash_fn, expected_hash=expected_MD5_hash, hash_type="md5"))
 
-        cache_dp = file_dp.on_disk_cache(filepath_fn=_filepath_fn, extra_check_fn=_hash_fn, mode="wb")
-        cache_dp = cache_dp.open_url().map(fn=lambda x: b''.join(x), input_col=1)
-        cache_dp = cache_dp.end_caching()
+        # DataPipe Constructor
+        cache_dp = HttpReader(cache_dp)
+        # Functional API
+        cache_dp = cache_dp.map(fn=lambda x: b''.join(x), input_col=1)
+
+        # Start iteration without `end_caching`
+        with self.assertRaisesRegex(RuntimeError, "Please call"):
+            _ = list(cache_dp)
+
+        cache_dp = cache_dp.end_caching(mode="wb")
 
         # File doesn't exist on disk
         self.assertFalse(os.path.exists(expected_file_name))
-        it = iter(cache_dp)
-        path = next(it)
+        path = list(cache_dp)[0]
         self.assertTrue(os.path.exists(expected_file_name))
 
         # File is cached to disk
         self.assertEqual(expected_file_name, path)
+        self.assertTrue(check_hash_fn(path, expected_MD5_hash, hash_type="md5"))
 
-        # Validate file without Error
-        fl_dp = FileLoader(cache_dp)
+        # Call `end_caching` again
+        with self.assertRaisesRegex(RuntimeError, "Incomplete `OnDiskCacheHolder` is required in the pipeline"):
+            cache_dp = cache_dp.end_caching()
 
-        check_hash_dp = fl_dp.check_hash({expected_file_name: expected_MD5_hash}, "md5", rewind=False)
-        _ = list(check_hash_dp)
+        # TODO(ejguan): Use case of nested CacheHolder and validation
 
 
 if __name__ == "__main__":

@@ -58,7 +58,7 @@ class TarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                 )
                 raise e
 
-    def __len__(self):
+    def __len__(self) -> int:
         if self.length == -1:
             raise TypeError("{} instance doesn't have valid length".format(type(self).__name__))
         return self.length

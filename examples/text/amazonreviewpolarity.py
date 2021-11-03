@@ -2,6 +2,7 @@
 import os
 
 from torchdata.datapipes.iter import (
+    GDriveReader,
     IterableWrapper,
     FileLoader,
 )
@@ -46,7 +47,7 @@ def AmazonReviewPolarity(root, split):
     url_dp = IterableWrapper([URL])
     # cache data on-disk with sanity check
     cache_dp = url_dp.on_disk_cache(filepath_fn=lambda x: os.path.join(root, _PATH), extra_check_fn=_check_hash({os.path.join(root, _PATH): MD5}))
-    cache_dp = cache_dp.open_gdrive().map(fn=lambda x: x.read(), input_col=1)
+    cache_dp = GDriveReader(cache_dp).map(fn=lambda x: x.read(), input_col=1)
     cache_dp = cache_dp.end_caching()
 
     cache_dp = FileLoader(cache_dp)
@@ -64,4 +65,4 @@ def AmazonReviewPolarity(root, split):
     )
 
     # stack CSV reader and do some mapping
-    return check_filter_extracted_files.parse_csv().map(lambda t: (int(t[0]), t[1]))
+    return check_filter_extracted_files.parse_csv().map(fn=lambda t: (int(t[0]), t[1]))
