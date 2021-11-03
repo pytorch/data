@@ -116,8 +116,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
             for d in self.source_datapipe:
                 yield d
         else:
-            # In case of BC breaking, use RuntimeError for now.
-            # Can be a warning
+            # In case of BC breaking, use RuntimeError for now. Warning is another option
             raise RuntimeError("Please call `end_caching()` before iteration.")
 
     def __add__(self, other_datapipe):

@@ -92,7 +92,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Incomplete `OnDiskCacheHolder` is required in the pipeline"):
             cache_dp = cache_dp.end_caching()
 
-        # TODO(ejguan): Use case of nested CacheHolder and validation
+        # TODO(ejguan): Multiple CacheHolders or nested CacheHolders
 
 
 if __name__ == "__main__":
