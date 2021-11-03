@@ -10,13 +10,11 @@ import warnings
 import zipfile
 
 from json.decoder import JSONDecodeError
-
-from torch.utils.data.datapipes.map import SequenceWrapper
 from torchdata.datapipes.iter import (
+    Extractor,
     FileLister,
     FileLoader,
     IterableWrapper,
-    MapZipper,
     IoPathFileLister,
     IoPathFileLoader,
     CSVParser,
@@ -38,7 +36,6 @@ from _utils._common_utils_for_test import (
 
 try:
     import iopath  # type: ignore[import]  # noqa: F401
-
     HAS_IOPATH = True
 except ImportError:
     HAS_IOPATH = False
@@ -216,50 +213,6 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "FileLoaderIterDataPipe instance doesn't have valid length"):
             len(hash_check_dp)
 
-    def test_map_zipper_datapipe(self):
-        source_dp = IterableWrapper(range(10))
-        map_dp = SequenceWrapper(["even", "odd"])
-
-        # Functional Test: ensure the hash join is working and return tuple by default
-        def odd_even(i: int) -> int:
-            return i % 2
-
-        result_dp = source_dp.zip_with_map(map_dp, odd_even)
-
-        def odd_even_string(i: int) -> str:
-            return "odd" if i % 2 else "even"
-
-        expected_res = [(i, odd_even_string(i)) for i in range(10)]
-        self.assertEqual(expected_res, list(result_dp))
-
-        # Functional Test: ensure that a custom merge function works
-        def custom_merge(a, b):
-            return f"{a} is a {b} number."
-
-        result_dp = source_dp.zip_with_map(map_dp, odd_even, custom_merge)
-        expected_res2 = [f"{i} is a {odd_even_string(i)} number." for i in range(10)]
-        self.assertEqual(expected_res2, list(result_dp))
-
-        # Functional Test: raises error when key is invalid
-        def odd_even_bug(i: int) -> int:
-            return 2 if i == 0 else i % 2
-
-        result_dp = MapZipper(source_dp, map_dp, odd_even_bug)
-        it = iter(result_dp)
-        with self.assertRaisesRegex(KeyError, "is not a valid key in the given MapDataPipe"):
-            next(it)
-
-        # Reset Test:
-        n_elements_before_reset = 4
-        result_dp = source_dp.zip_with_map(map_dp, odd_even)
-        res_before_reset, res_after_reset = reset_after_n_next_calls(result_dp, n_elements_before_reset)
-        self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
-        self.assertEqual(expected_res, res_after_reset)
-
-        # __len__ Test: returns the length of source DataPipe
-        result_dp = source_dp.zip_with_map(map_dp, odd_even)
-        self.assertEqual(len(source_dp), len(result_dp))
-
     def test_json_parser_iterdatapipe(self):
         def is_empty_json(path_and_stream):
             return path_and_stream[0] == "empty.json"
@@ -334,22 +287,40 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # __len__ Test: returns the length of source DataPipe
         self.assertEqual(3, len(saver_dp))
 
-    def test_tar_archive_reader_iterdatapipe(self):
-        temp_tarfile_pathname = os.path.join(self.temp_dir.name, "test_tar.tar")
-        with tarfile.open(temp_tarfile_pathname, "w:gz") as tar:
+    def _write_test_tar_files(self):
+        path = os.path.join(self.temp_dir.name, "test_tar.tar")
+        with tarfile.open(path, "w:tar") as tar:
             tar.add(self.temp_files[0])
             tar.add(self.temp_files[1])
             tar.add(self.temp_files[2])
+
+    def _write_test_tar_gz_files(self):
+        path = os.path.join(self.temp_dir.name, "test_gz.tar.gz")
+        with tarfile.open(path, "w:gz") as tar:
+            tar.add(self.temp_files[0])
+            tar.add(self.temp_files[1])
+            tar.add(self.temp_files[2])
+
+    def test_tar_archive_reader_iterdatapipe(self):
+        self._write_test_tar_files()
         datapipe1 = FileLister(self.temp_dir.name, "*.tar")
         datapipe2 = FileLoader(datapipe1)
         tar_reader_dp = TarArchiveReader(datapipe2)
 
+        self._write_test_tar_gz_files()
+        datapipe_gz_1 = FileLister(self.temp_dir.name, "*.tar.gz")
+        datapipe_gz_2 = FileLoader(datapipe_gz_1)
+        gz_reader_dp = TarArchiveReader(datapipe_gz_2)
+
         # Functional Test: Read extracted files before reaching the end of the tarfile
         self._compressed_files_comparison_helper(self.temp_files, tar_reader_dp, check_length=False)
+        self._compressed_files_comparison_helper(self.temp_files, gz_reader_dp, check_length=False)
 
         # Functional Test: Read extracted files after reaching the end of the tarfile
         data_refs = list(tar_reader_dp)
         self._compressed_files_comparison_helper(self.temp_files, data_refs)
+        data_refs_gz = list(gz_reader_dp)
+        self._compressed_files_comparison_helper(self.temp_files, data_refs_gz)
 
         # Reset Test: reset the DataPipe after reading part of it
         tar_reader_dp = datapipe2.read_from_tar()
@@ -364,12 +335,15 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
             len(tar_reader_dp)
 
+    def _write_test_zip_files(self):
+        path = os.path.join(self.temp_dir.name, "test_zip.zip")
+        with zipfile.ZipFile(path, "w") as myzip:
+            myzip.write(self.temp_files[0], arcname=os.path.basename(self.temp_files[0]))
+            myzip.write(self.temp_files[1], arcname=os.path.basename(self.temp_files[1]))
+            myzip.write(self.temp_files[2], arcname=os.path.basename(self.temp_files[2]))
+
     def test_zip_archive_reader_iterdatapipe(self):
-        temp_zipfile_pathname = os.path.join(self.temp_dir.name, "test_zip.zip")
-        with zipfile.ZipFile(temp_zipfile_pathname, "w") as myzip:
-            myzip.write(self.temp_files[0])
-            myzip.write(self.temp_files[1])
-            myzip.write(self.temp_files[2])
+        self._write_test_zip_files()
         datapipe1 = FileLister(self.temp_dir.name, "*.zip")
         datapipe2 = FileLoader(datapipe1)
         zip_reader_dp = ZipArchiveReader(datapipe2)
@@ -394,15 +368,18 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
             len(zip_reader_dp)
 
-    def test_xz_archive_reader_iterdatapipe(self):
-        # Worth noting that the .tar and .zip tests write multiple files into the same compressed file
-        # Whereas we create multiple .xz files in the same directories below.
+    def _write_test_xz_files(self):
         for path in self.temp_files:
             fname = os.path.basename(path)
             temp_xzfile_pathname = os.path.join(self.temp_dir.name, f"{fname}.xz")
             with open(path, "r") as f:
                 with lzma.open(temp_xzfile_pathname, "w") as xz:
                     xz.write(f.read().encode("utf-8"))
+
+    def test_xz_archive_reader_iterdatapipe(self):
+        # Worth noting that the .tar and .zip tests write multiple files into the same compressed file
+        # Whereas we create multiple .xz files in the same directories below.
+        self._write_test_xz_files()
         datapipe1 = FileLister(self.temp_dir.name, "*.xz")
         datapipe2 = FileLoader(datapipe1)
         xz_reader_dp = XzFileReader(datapipe2)
@@ -431,6 +408,99 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # __len__ Test: doesn't have valid length
         with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
             len(xz_reader_dp)
+
+    def _extractor_tar_test_helper(self, expected_files, tar_extract_dp):
+        for _file, child_obj in tar_extract_dp:
+            for expected_file, tarinfo in zip(expected_files, child_obj):
+                if not tarinfo.isfile():
+                    continue
+                extracted_fobj = child_obj.extractfile(tarinfo)
+                with open(expected_file, "rb") as f:
+                    self.assertEqual(f.read(), extracted_fobj.read())
+
+    def _extractor_xz_test_helper(self, xz_extract_dp):
+        for xz_file_name, xz_stream in xz_extract_dp:
+            expected_file = xz_file_name[:-3]
+            with open(expected_file, "rb") as f:
+                self.assertEqual(f.read(), xz_stream.read())
+
+    def _write_single_gz_file(self):
+        import gzip
+        with gzip.open(f"{self.temp_dir.name}/temp.gz", 'wb') as k:
+            with open(self.temp_files[0], 'rb') as f:
+                k.write(f.read())
+
+    def test_extractor_iterdatapipe(self):
+        self._write_test_tar_files()
+        self._write_test_tar_gz_files()
+        self._write_single_gz_file()
+        self._write_test_zip_files()
+        self._write_test_xz_files()
+
+        # Functional Test: work with .tar files
+        tar_file_dp = FileLister(self.temp_dir.name, "*.tar")
+        tar_load_dp = FileLoader(tar_file_dp)
+        tar_extract_dp = Extractor(tar_load_dp, file_type="tar")
+        self._extractor_tar_test_helper(self.temp_files, tar_extract_dp)
+
+        # Functional test: work with .tar.gz files
+        tar_gz_file_dp = FileLister(self.temp_dir.name, "*.tar.gz")
+        tar_gz_load_dp = FileLoader(tar_gz_file_dp)
+        tar_gz_extract_dp = Extractor(tar_gz_load_dp, file_type="tar")
+        self._extractor_tar_test_helper(self.temp_files, tar_gz_extract_dp)
+
+        # Functional Test: work with .gz files
+        gz_file_dp = IterableWrapper([f"{self.temp_dir.name}/temp.gz"])
+        gz_load_dp = FileLoader(gz_file_dp)
+        gz_extract_dp = Extractor(gz_load_dp, file_type="gzip")
+        for _, gz_stream in gz_extract_dp:
+            with open(self.temp_files[0], "rb") as f:
+                self.assertEqual(f.read(), gz_stream.read())
+
+        # Functional Test: work with .zip files
+        zip_file_dp = FileLister(self.temp_dir.name, "*.zip")
+        zip_load_dp = FileLoader(zip_file_dp)
+        zip_extract_dp = zip_load_dp.extract(file_type="zip")
+        for _, zip_stream in zip_extract_dp:
+            for fname in self.temp_files:
+                with open(fname, "rb") as f:
+                    self.assertEqual(f.read(), zip_stream.read(name=os.path.basename(fname)))
+
+        # Functional Test: work with .xz files
+        xz_file_dp = FileLister(self.temp_dir.name, "*.xz")
+        xz_load_dp = FileLoader(xz_file_dp)
+        xz_extract_dp = Extractor(xz_load_dp, file_type="lzma")
+        self._extractor_xz_test_helper(xz_extract_dp)
+
+        # Functional Test: work without file type as input for .tar files
+        tar_extract_dp = Extractor(tar_load_dp, file_type=None)
+        self._extractor_tar_test_helper(self.temp_files, tar_extract_dp)
+
+        # Functional Test: work without file type as input for .xz files
+        xz_extract_dp = Extractor(xz_load_dp)
+        self._extractor_xz_test_helper(xz_extract_dp)
+
+        # Functional Test: work without file type as input for .tar.gz files
+        tar_gz_extract_dp = Extractor(tar_gz_load_dp, file_type=None)
+        self._extractor_tar_test_helper(self.temp_files, tar_gz_extract_dp)
+
+        # Functional Test: Compression Type is works for both upper and lower case strings
+        tar_extract_dp = Extractor(tar_load_dp, file_type="TAr")
+        self._extractor_tar_test_helper(self.temp_files, tar_extract_dp)
+
+        # Functional Test: Compression Type throws error for invalid file type
+        with self.assertRaisesRegex(ValueError, "not a valid CompressionType"):
+            Extractor(tar_load_dp, file_type="ABC")
+
+        # Reset Test: Ensure the order is consistent between iterations
+        n_elements_before_reset = 2
+        res_before_reset, res_after_reset = reset_after_n_next_calls(xz_extract_dp, n_elements_before_reset)
+        self._extractor_xz_test_helper(res_before_reset)
+        self._extractor_xz_test_helper(res_after_reset)
+
+        # __len__ Test: doesn't have valid length
+        with self.assertRaisesRegex(TypeError, "has no len"):
+            len(tar_extract_dp)
 
     # TODO (ejguan): this test currently only covers reading from local
     # filesystem. It needs to be modified once test data can be stored on
