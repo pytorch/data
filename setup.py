@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) Meta, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 import os
 import subprocess
 from pathlib import Path

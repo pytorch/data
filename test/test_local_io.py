@@ -1,4 +1,4 @@
-# Copyright (c) Meta, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 import expecttest
 import hashlib
 import itertools

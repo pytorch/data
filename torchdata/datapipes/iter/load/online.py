@@ -1,4 +1,4 @@
-# Copyright (c) Meta, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 from typing import Iterator, Tuple
 from urllib.parse import urlparse
 from requests.exceptions import HTTPError, RequestException
