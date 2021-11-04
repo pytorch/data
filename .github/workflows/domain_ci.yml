@@ -41,7 +41,7 @@ jobs:
         run: python setup.py install
 
       - name: Install test requirements
-        run: pip install pytest pytest-mock  scipy iopath
+        run: pip install pytest pytest-mock scipy iopath
 
       - name: Extract torchvision ref
         id: torchvision
