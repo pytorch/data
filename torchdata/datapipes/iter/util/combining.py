@@ -3,11 +3,13 @@ import warnings
 from collections import OrderedDict
 
 from torch.utils.data import IterDataPipe, MapDataPipe, functional_datapipe
-from typing import Callable, Optional
+from typing import Callable, Iterator, Optional, TypeVar
+
+T_co = TypeVar("T_co", covariant=True)
 
 
 @functional_datapipe("zip_by_key")
-class KeyZipperIterDataPipe(IterDataPipe):
+class KeyZipperIterDataPipe(IterDataPipe[T_co]):
     r""":class:`KeyZipperIterDataPipe`.
 
     Iterable DataPipe to zip two IterDataPipes together based on the matching key.
@@ -31,11 +33,11 @@ class KeyZipperIterDataPipe(IterDataPipe):
         source_datapipe: IterDataPipe,
         ref_datapipe: IterDataPipe,
         key_fn: Callable,
-        ref_key_fn: Callable = None,
+        ref_key_fn: Optional[Callable] = None,
         keep_key: bool = False,
         buffer_size: int = 10000,
         merge_fn: Optional[Callable] = None,
-    ):
+    ) -> None:
         self.source_datapipe = source_datapipe
         self.ref_datapipe = ref_datapipe
         self.key_fn = key_fn
@@ -44,9 +46,9 @@ class KeyZipperIterDataPipe(IterDataPipe):
         self.merge_fn = merge_fn
         if buffer_size is not None and buffer_size <= 0:
             raise ValueError("'buffer_size' is required to be either None or a positive integer.")
-        self.buffer_size = buffer_size
+        self.buffer_size: int = buffer_size
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         buffer: OrderedDict = OrderedDict()
         ref_it = iter(self.ref_datapipe)
         warn_once_flag = True
@@ -78,12 +80,12 @@ class KeyZipperIterDataPipe(IterDataPipe):
             else:
                 yield res
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.source_datapipe)
 
 
 @functional_datapipe("zip_with_map")
-class MapZipperIterDataPipe(IterDataPipe):
+class MapZipperIterDataPipe(IterDataPipe[T_co]):
     r""" :class:`MapZipperIterDataPipe`.
 
     IterDataPipe that joins the items from the source IterDataPipe with items from a MapDataPipe. The
@@ -108,13 +110,13 @@ class MapZipperIterDataPipe(IterDataPipe):
     ):
         if not isinstance(map_datapipe, MapDataPipe):
             raise TypeError(f"map_datapipe must be a MapDataPipe, but its type is {type(map_datapipe)} instead.")
-        self.source_iterdatapipe = source_iterdatapipe
-        self.map_datapipe = map_datapipe
-        self.key_fn = key_fn
-        self.merge_fn = merge_fn
-        self.length = -1
+        self.source_iterdatapipe: IterDataPipe = source_iterdatapipe
+        self.map_datapipe: MapDataPipe = map_datapipe
+        self.key_fn: Callable = key_fn
+        self.merge_fn: Optional[Callable] = merge_fn
+        self.length: int = -1
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         for item in self.source_iterdatapipe:
             key = self.key_fn(item)
             try:

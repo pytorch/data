@@ -3,9 +3,11 @@ import os
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.utils import StreamWrapper
+from typing import Iterator, Tuple
 
 
-class IoPathFileListerIterDataPipe(IterDataPipe):
+class IoPathFileListerIterDataPipe(IterDataPipe[str]):
     r""":class:`IoPathFileListerIterDataPipe`.
 
     Iterable DataPipe to list the contents of the directory at the provided
@@ -15,7 +17,7 @@ class IoPathFileListerIterDataPipe(IterDataPipe):
         root: The base URI directory to list files from
     """
 
-    def __init__(self, *, root) -> None:
+    def __init__(self, *, root: str) -> None:
         try:
             from iopath.common.file_io import g_pathmgr
         except ImportError:
@@ -26,10 +28,10 @@ class IoPathFileListerIterDataPipe(IterDataPipe):
                 "to install the package"
             )
 
-        self.root = root
+        self.root: str = root
         self.pathmgr = g_pathmgr
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         if self.pathmgr.isfile(self.root):
             yield self.root
         else:
@@ -38,7 +40,7 @@ class IoPathFileListerIterDataPipe(IterDataPipe):
 
 
 @functional_datapipe("load_file_by_iopath")
-class IoPathFileLoaderIterDataPipe(IterDataPipe):
+class IoPathFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r""":class:`IoPathFileLoaderIterDataPipe`.
 
     Iterable DataPipe to load files from input datapipe which contains
@@ -51,7 +53,7 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe):
             supported.
     """
 
-    def __init__(self, source_datapipe, mode="r") -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r") -> None:
         try:
             from iopath.common.file_io import g_pathmgr
         except ImportError:
@@ -62,14 +64,14 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe):
                 "to install the package"
             )
 
-        self.source_datapipe = source_datapipe
+        self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.pathmgr = g_pathmgr
-        self.mode = mode
+        self.mode: str = mode
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for file_uri in self.source_datapipe:
             with self.pathmgr.open(file_uri, self.mode) as file:
-                yield file_uri, file
+                yield file_uri, StreamWrapper(file)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.source_datapipe)

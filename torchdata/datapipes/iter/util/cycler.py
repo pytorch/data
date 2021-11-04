@@ -1,11 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
-from typing import Optional
+from typing import Iterator, Optional, TypeVar
+
+T_co = TypeVar("T_co", covariant=True)
 
 
 @functional_datapipe("cycle")
-class CyclerIterDataPipe(IterDataPipe):
+class CyclerIterDataPipe(IterDataPipe[T_co]):
     """
     Cycle the specified input in perpetuity (by default), or for the specified number of times.
 
@@ -14,20 +16,20 @@ class CyclerIterDataPipe(IterDataPipe):
         count: the number of times to read through the source DataPipe (if `None`, it will cycle in perpetuity)
     """
 
-    def __init__(self, source_datapipe: IterDataPipe, count: Optional[int] = None) -> None:
-        self.source_datapipe = source_datapipe
-        self.count = count
+    def __init__(self, source_datapipe: IterDataPipe[T_co], count: Optional[int] = None) -> None:
+        self.source_datapipe: IterDataPipe[T_co] = source_datapipe
+        self.count: Optional[int] = count
         if count is not None and count < 0:
             raise ValueError(f"Expected non-negative count, got {count}")
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[T_co]:
         i = 0
         while self.count is None or i < self.count:
             for x in self.source_datapipe:
                 yield x
             i += 1
 
-    def __len__(self):
+    def __len__(self) -> int:
         if self.count is None:
             raise TypeError(
                 f"This {type(self).__name__} instance cycles forever, and therefore doesn't have valid length"
