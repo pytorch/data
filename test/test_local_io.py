@@ -15,6 +15,7 @@ from torchdata.datapipes.iter import (
     FileLister,
     FileLoader,
     IterableWrapper,
+    IterDataPipe,
     IoPathFileLister,
     IoPathFileLoader,
     CSVParser,
@@ -526,7 +527,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
     def test_io_path_file_loader_iterdatapipe_with_tar(self):
         self._write_test_tar_files()
 
-        dp = FileLister(self.temp_dir.name, "*.tar")
+        dp: IterDataPipe = FileLister(self.temp_dir.name, "*.tar")
         dp = IoPathFileLoader(dp, mode="rb")
         # Can be any buffered datapipe that exhausts the previous one
         dp = dp.shuffle()
