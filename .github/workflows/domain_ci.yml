@@ -54,5 +54,5 @@ jobs:
           ref: ${{ steps.torchvision.outputs.ref }}
           path: vision
 
-      - name: Run torchvision datasets tests
-        run: pytest --no-header -v vision/test/test_prototype_datasets.py
+      - name: Run torchvision builtin datasets tests
+        run: pytest --no-header -v vision/test/test_prototype_builtin_datasets.py
