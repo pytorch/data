@@ -10,7 +10,7 @@ on:
       - gh/*/*/base
 
 jobs:
-  test-torchvision:
+  torchvision:
     if: ${{ github.repository_owner == 'pytorch' }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -40,8 +40,8 @@ jobs:
       - name: Install torchdata
         run: python setup.py install
 
-      - name: Install test utilities
-        run: pip install pytest pytest-mock
+      - name: Install test requirements
+        run: pip install pytest pytest-mock  scipy iopath
 
       - name: Extract torchvision ref
         id: torchvision
