@@ -10,16 +10,20 @@ on:
       - gh/*/*/base
 
 jobs:
-  test-torchvision:
+  torchvision:
     if: ${{ github.repository_owner == 'pytorch' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
         python-version:
           - 3.6
           - 3.7
+          - 3.8
           - 3.9
     steps:
       - name: Setup Python ${{ matrix.python-version }}
@@ -36,14 +40,19 @@ jobs:
       - name: Install torchdata
         run: python setup.py install
 
-      - name: Install test utilities
-        run: pip install pytest pytest-mock
+      - name: Install test requirements
+        run: pip install pytest pytest-mock scipy iopath
+
+      - name: Extract torchvision ref
+        id: torchvision
+        run: echo "::set-output name=ref::$(python -c 'import torchvision; print(torchvision.version.git_version)')"
 
       - name: Check out torchvision repository
         uses: actions/checkout@v2
         with:
           repository: pytorch/vision
+          ref: ${{ steps.torchvision.outputs.ref }}
           path: vision
 
-      - name: Run torchvision datasets tests
-        run: pytest --no-header -v vision/test/test_prototype_datasets.py
+      - name: Run torchvision builtin datasets tests
+        run: pytest --no-header -v vision/test/test_prototype_builtin_datasets.py

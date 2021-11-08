@@ -24,8 +24,8 @@ NUM_LINES = {
 _PATH = "amazon_review_polarity_csv.tar.gz"
 
 _EXTRACTED_FILES = {
-    "train": f"{os.sep}".join([_PATH, "amazon_review_polarity_csv", "train.csv"]),
-    "test": f"{os.sep}".join([_PATH, "amazon_review_polarity_csv", "test.csv"]),
+    "train": os.path.join(_PATH, "amazon_review_polarity_csv", "train.csv"),
+    "test": os.path.join(_PATH, "amazon_review_polarity_csv", "test.csv"),
 }
 
 _EXTRACTED_FILES_MD5 = {
@@ -60,7 +60,7 @@ def AmazonReviewPolarity(root, split):
 
     # stack sanity checker on top of extracted files
     check_filter_extracted_files = filter_extracted_files.check_hash(
-        {os.path.join(root, _EXTRACTED_FILES[split]): _EXTRACTED_FILES_MD5[split]},
+        {os.path.normpath(os.path.join(root, _EXTRACTED_FILES[split])): _EXTRACTED_FILES_MD5[split]},
         "md5",
     )
 
