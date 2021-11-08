@@ -48,8 +48,8 @@ Next, install one of the following following PyTorch nightly binaries.
 ```
 # For CUDA 10.2
 pip install --pre torch -f https://download.pytorch.org/whl/nightly/cu102/torch_nightly.html
-# For CUDA 11.1
-pip install --pre torch -f https://download.pytorch.org/whl/nightly/cu111/torch_nightly.html
+# For CUDA 11.3
+pip install --pre torch -f https://download.pytorch.org/whl/nightly/cu113/torch_nightly.html
 # For CPU-only build
 pip install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
 ```
