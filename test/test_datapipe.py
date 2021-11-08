@@ -15,7 +15,7 @@ from torchdata.datapipes.iter import (
     IterableWrapper,
     InMemoryCacheHolder,
     IterKeyZipper,
-    MapZipper,
+    MapKeyZipper,
     Cycler,
     Header,
     IndexAdder,
@@ -89,7 +89,7 @@ class TestDataPipe(expecttest.TestCase):
         list(cache_dp)
         self.assertEqual(10, len(cache_dp))
 
-    def test_iterkeyzipper_iterdatapipe(self) -> None:
+    def test_iter_key_zipper_iterdatapipe(self) -> None:
 
         source_dp = IterableWrapper(range(10))
         ref_dp = IterableWrapper(range(20))
@@ -195,7 +195,7 @@ class TestDataPipe(expecttest.TestCase):
         # __len__ Test: inherits length from source_dp
         self.assertEqual(10, len(zip_dp))
 
-    def test_map_zipper_datapipe(self) -> None:
+    def test_map_key_zipper_datapipe(self) -> None:
         source_dp = IterableWrapper(range(10))
         map_dp = SequenceWrapper(["even", "odd"])
 
@@ -223,7 +223,7 @@ class TestDataPipe(expecttest.TestCase):
         def odd_even_bug(i: int) -> int:
             return 2 if i == 0 else i % 2
 
-        result_dp = MapZipper(source_dp, map_dp, odd_even_bug)
+        result_dp = MapKeyZipper(source_dp, map_dp, odd_even_bug)
         it = iter(result_dp)
         with self.assertRaisesRegex(KeyError, "is not a valid key in the given MapDataPipe"):
             next(it)
