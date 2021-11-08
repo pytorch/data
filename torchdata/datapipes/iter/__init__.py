@@ -40,7 +40,7 @@ from torchdata.datapipes.iter.util.indexadder import (
     IndexAdderIterDataPipe as IndexAdder,
 )
 from torchdata.datapipes.iter.util.combining import (
-    IterZipperIterDataPipe as IterZipper,
+    IterZipperIterDataPipe as IterKeyZipper,
     MapZipperIterDataPipe as MapZipper,
 )
 from torchdata.datapipes.iter.util.plain_text_reader import (
@@ -90,7 +90,7 @@ __all__ = [
     "IoPathFileLister",
     "IoPathFileLoader",
     "IterDataPipe",
-    "IterZipper",
+    "IterKeyZipper",
     "IterableWrapper",
     "JsonParser",
     "LineReader",

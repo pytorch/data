@@ -84,9 +84,10 @@ class GDriveReaderDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Args:
         source_datapipe: a DataPipe that contains URLs to GDrive files
     """
+    source_datapipe: IterDataPipe[str]
 
     def __init__(self, source_datapipe: IterDataPipe[str]) -> None:
-        self.source_datapip: IterDataPipe[str] = source_datapipe
+        self.source_datapipe = source_datapipe
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for url in self.source_datapipe:
@@ -105,9 +106,10 @@ class OnlineReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         source_datapipe: a DataPipe that contains URLs
         timeout : timeout in seconds for http request
     """
+    source_datapipe: IterDataPipe[str]
 
     def __init__(self, source_datapipe: IterDataPipe[str], *, timeout=None) -> None:
-        self.source_datapipe: IterDataPipe[str] = source_datapipe
+        self.source_datapipe = source_datapipe
         self.timeout = timeout
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:

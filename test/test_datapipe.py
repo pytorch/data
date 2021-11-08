@@ -14,7 +14,7 @@ from torchdata.datapipes.iter import (
     IterDataPipe,
     IterableWrapper,
     InMemoryCacheHolder,
-    IterZipper,
+    IterKeyZipper,
     MapZipper,
     Cycler,
     Header,
@@ -89,7 +89,7 @@ class TestDataPipe(expecttest.TestCase):
         list(cache_dp)
         self.assertEqual(10, len(cache_dp))
 
-    def test_iterzipper_iterdatapipe(self) -> None:
+    def test_iterkeyzipper_iterdatapipe(self) -> None:
 
         source_dp = IterableWrapper(range(10))
         ref_dp = IterableWrapper(range(20))
@@ -179,7 +179,7 @@ class TestDataPipe(expecttest.TestCase):
         self.assertEqual([(i, i) for i in range(10)], list(zip_dp))
 
         # Reset Test: reset the DataPipe after reading part of it
-        zip_dp = IterZipper(
+        zip_dp = IterKeyZipper(
             source_datapipe=source_dp,
             ref_datapipe=ref_dp,
             key_fn=lambda x: x,

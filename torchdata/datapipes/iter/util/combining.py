@@ -15,7 +15,7 @@ class IterZipperIterDataPipe(IterDataPipe[T_co]):
     Iterable DataPipe to zip two IterDataPipes together based on the matching key.
 
     Args:
-        source_datapipe: IterZipper will yield data based on the order of this IterDataPipe
+        source_datapipe: IterKeyZipper will yield data based on the order of this IterDataPipe
         ref_datapipe: Reference IterDataPipe to find matching key for `source_datapipe`
         key_fn: Callable to extract key of data from source_datapipe
         ref_key_fn: Callable to extract key of data from ref_datapipe.
