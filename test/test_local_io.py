@@ -15,7 +15,6 @@ from torchdata.datapipes.iter import (
     FileLister,
     FileLoader,
     IterableWrapper,
-    IterDataPipe,
     IoPathFileLister,
     IoPathFileLoader,
     CSVParser,
@@ -503,6 +502,14 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "has no len"):
             len(tar_extract_dp)
 
+    def _write_text_files(self):
+        def filepath_fn(name: str) -> str:
+            return os.path.join(self.temp_dir.name, os.path.basename(name))
+        name_to_data = {"1.text": b"DATA", "2.text": b"DATA", "3.text": b"DATA"}
+        source_dp = IterableWrapper(sorted(name_to_data.items()))
+        saver_dp = source_dp.save_to_disk(filepath_fn=filepath_fn)
+        list(saver_dp)
+
     # TODO (ejguan): this test currently only covers reading from local
     # filesystem. It needs to be modified once test data can be stored on
     # gdrive/s3/onedrive
@@ -523,17 +530,19 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         for _, f in datapipe2:
             self.assertEqual(f.read(), "0123456789abcdef")
 
-    @skipIfNoIOPath
-    def test_io_path_file_loader_iterdatapipe_with_tar(self):
-        self._write_test_tar_files()
+        # Reset Test: Ensure the resulting streams are still readable after the DataPipe is reset/exhausted
+        self._write_text_files()
+        lister_dp = FileLister(self.temp_dir.name, "*.text")
+        iopath_file_loader_dp = IoPathFileLoader(lister_dp, mode="rb")
 
-        dp: IterDataPipe = FileLister(self.temp_dir.name, "*.tar")
-        dp = IoPathFileLoader(dp, mode="rb")
-        # Can be any buffered datapipe that exhausts the previous one
-        dp = dp.shuffle()
-
-        for _, buffer in dp:
-            buffer.read()
+        n_elements_before_reset = 2
+        res_before_reset, res_after_reset = reset_after_n_next_calls(iopath_file_loader_dp, n_elements_before_reset)
+        self.assertEqual(2, len(res_before_reset))
+        self.assertEqual(3, len(res_after_reset))
+        for _name, stream in res_before_reset:
+            self.assertEqual(b"DATA", stream.read())
+        for _name, stream in res_after_reset:
+            self.assertEqual(b"DATA", stream.read())
 
 
 if __name__ == "__main__":
