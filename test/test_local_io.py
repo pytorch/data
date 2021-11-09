@@ -264,7 +264,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Functional Test: Saving some data
         name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
         source_dp = IterableWrapper(sorted(name_to_data.items()))
-        saver_dp = source_dp.save_to_disk(filepath_fn=filepath_fn)
+        saver_dp = source_dp.save_to_disk(filepath_fn=filepath_fn, mode="wb")
         res_file_paths = list(saver_dp)
         expected_paths = [filepath_fn(name) for name in name_to_data.keys()]
         self.assertEqual(expected_paths, res_file_paths)
@@ -274,7 +274,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # Reset Test:
-        saver_dp = Saver(source_dp, filepath_fn=filepath_fn)
+        saver_dp = Saver(source_dp, filepath_fn=filepath_fn, mode="wb")
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(saver_dp, n_elements_before_reset)
         self.assertEqual([filepath_fn("1.txt"), filepath_fn("2.txt")], res_before_reset)
