@@ -146,6 +146,11 @@ class IoPathSaverIterDataPipe(IterDataPipe[str]):
         *,
         pathmgr=None,
     ):
+        if iopath is None:
+            raise ModuleNotFoundError(
+                "Package `iopath` is required to be installed to use this "
+                "datapipe. Please use `pip install iopath` to install the package"
+            )
         self.source_datapipe: IterDataPipe[Tuple[Any, U]] = source_datapipe
         self.mode: str = mode
         self.fn: Callable[[Any], str] = filepath_fn
