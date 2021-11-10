@@ -18,6 +18,7 @@ except ImportError:
 
 def _create_default_pathmanager():
     from iopath.common.file_io import HTTPURLHandler, OneDrivePathHandler, PathManager
+
     pathmgr = PathManager()
     pathmgr.register_handler(HTTPURLHandler(), allow_override=True)
     pathmgr.register_handler(OneDrivePathHandler(), allow_override=True)
@@ -40,9 +41,10 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
     Args:
         root: The root local filepath or url directory to list files from
         masks: Unix style filter string or string list for filtering file name(s)
+        pathmgr: Custom iopath PathManager. If not specified, a default PathManager is created.
 
     Note:
-        This IterDataPipe currently supports local file path, normal HTTP url and OneDrive url.
+        Default PathManager currently supports local file path, normal HTTP url and OneDrive url.
         S3 url is supported only with `iopath`>=0.1.9.
     """
 
@@ -50,6 +52,8 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
         self,
         root: str,
         masks: Union[str, List[str]] = "",
+        *,
+        pathmgr=None,
     ) -> None:
         if iopath is None:
             raise ModuleNotFoundError(
@@ -58,7 +62,7 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
             )
 
         self.root: str = root
-        self.pathmgr = _create_default_pathmanager()
+        self.pathmgr = _create_default_pathmanager() if pathmgr is None else pathmgr
         self.masks = masks
 
     def register_handler(self, handler, allow_override=False):
@@ -83,13 +87,14 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Args:
         source_datapipe: Iterable DataPipe that provides the pathnames or urls
         mode: An optional string that specifies the mode in which the file is opened ('r' by default)
+        pathmgr: Custom iopath PathManager. If not specified, a default PathManager is created.
 
     Note:
-        This IterDataPipe currently supports local file path, normal HTTP url and OneDrive url.
+        Default PathManager currently supports local file path, normal HTTP url and OneDrive url.
         S3 url is supported only with `iopath`>=0.1.9.
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r") -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r", pathmgr=None) -> None:
         if iopath is None:
             raise ModuleNotFoundError(
                 "Package `iopath` is required to be installed to use this "
@@ -97,7 +102,7 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
             )
 
         self.source_datapipe: IterDataPipe[str] = source_datapipe
-        self.pathmgr = _create_default_pathmanager()
+        self.pathmgr = _create_default_pathmanager() if pathmgr is None else pathmgr
         self.mode: str = mode
 
     def register_handler(self, handler, allow_override=False):
