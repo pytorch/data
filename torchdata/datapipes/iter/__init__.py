@@ -29,6 +29,7 @@ from torchdata.datapipes.iter.load.online import (
 from torchdata.datapipes.iter.load.iopath import (
     IoPathFileListerIterDataPipe as IoPathFileLister,
     IoPathFileLoaderIterDataPipe as IoPathFileLoader,
+    IoPathSaverIterDataPipe as IoPathSaver,
 )
 from torchdata.datapipes.iter.transform.bucketbatcher import BucketBatcherIterDataPipe as BucketBatcher
 from torchdata.datapipes.iter.util.cacheholder import (
@@ -89,6 +90,7 @@ __all__ = [
     "IndexAdder",
     "IoPathFileLister",
     "IoPathFileLoader",
+    "IoPathSaver",
     "IterDataPipe",
     "IterKeyZipper",
     "IterableWrapper",

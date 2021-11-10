@@ -60,8 +60,9 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
     ) -> None:
         if iopath is None:
             raise ModuleNotFoundError(
-                "Package `iopath` is required to be installed to use this "
-                "datapipe. Please use `pip install iopath` to install the package"
+                "Package `iopath` is required to be installed to use this datapipe."
+                "Please use `pip install iopath` or `conda install -c conda-forge iopath`"
+                "to install the package"
             )
 
         self.root: str = root
@@ -100,8 +101,9 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r", pathmgr=None) -> None:
         if iopath is None:
             raise ModuleNotFoundError(
-                "Package `iopath` is required to be installed to use this "
-                "datapipe. Please use `pip install iopath` to install the package"
+                "Package `iopath` is required to be installed to use this datapipe."
+                "Please use `pip install iopath` or `conda install -c conda-forge iopath`"
+                "to install the package"
             )
 
         self.source_datapipe: IterDataPipe[str] = source_datapipe
@@ -148,9 +150,11 @@ class IoPathSaverIterDataPipe(IterDataPipe[str]):
     ):
         if iopath is None:
             raise ModuleNotFoundError(
-                "Package `iopath` is required to be installed to use this "
-                "datapipe. Please use `pip install iopath` to install the package"
+                "Package `iopath` is required to be installed to use this datapipe."
+                "Please use `pip install iopath` or `conda install -c conda-forge iopath`"
+                "to install the package"
             )
+
         self.source_datapipe: IterDataPipe[Tuple[Any, U]] = source_datapipe
         self.mode: str = mode
         self.fn: Callable[[Any], str] = filepath_fn

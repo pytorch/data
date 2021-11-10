@@ -17,6 +17,7 @@ from torchdata.datapipes.iter import (
     IterableWrapper,
     IoPathFileLister,
     IoPathFileLoader,
+    IoPathSaver,
     CSVParser,
     CSVDictParser,
     HashChecker,
@@ -35,11 +36,11 @@ from _utils._common_utils_for_test import (
 )
 
 try:
-    import iopath  # type: ignore[import]  # noqa: F401
+    import iopath
     HAS_IOPATH = True
 except ImportError:
     HAS_IOPATH = False
-skipIfNoIOPath = unittest.skipIf(not HAS_IOPATH, "no iopath")
+skipIfNoIoPath = unittest.skipIf(not HAS_IOPATH, "no iopath")
 
 
 class TestDataPipeLocalIO(expecttest.TestCase):
@@ -505,7 +506,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
     # TODO (ejguan): this test currently only covers reading from local
     # filesystem. It needs to be modified once test data can be stored on
     # gdrive/s3/onedrive
-    @skipIfNoIOPath
+    @skipIfNoIoPath
     def test_io_path_file_lister_iterdatapipe(self):
         datapipe = IoPathFileLister(root=self.temp_sub_dir.name)
 
@@ -513,7 +514,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         for path in datapipe:
             self.assertTrue(path in self.temp_sub_files)
 
-    @skipIfNoIOPath
+    @skipIfNoIoPath
     def test_io_path_file_loader_iterdatapipe(self):
         datapipe1 = IoPathFileLister(root=self.temp_sub_dir.name)
         datapipe2 = IoPathFileLoader(datapipe1)
@@ -522,6 +523,36 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         for _, f in datapipe2:
             self.assertEqual(f.read(), "0123456789abcdef")
 
+    @skipIfNoIoPath
+    def test_io_path_saver_iterdatapipe(self):
+        def filepath_fn(name: str) -> str:
+            return os.path.join(self.temp_dir.name, os.path.basename(name))
+
+        # Functional Test: Saving some data
+        name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
+        source_dp = IterableWrapper(sorted(name_to_data.items()))
+        saver_dp = source_dp.save_by_iopath(filepath_fn=filepath_fn, mode="wb")
+        res_file_paths = list(saver_dp)
+        expected_paths = [filepath_fn(name) for name in name_to_data.keys()]
+        self.assertEqual(expected_paths, res_file_paths)
+        for name in name_to_data.keys():
+            p = filepath_fn(name)
+            with open(p, "r") as f:
+                self.assertEqual(name_to_data[name], f.read().encode())
+
+        # Reset Test:
+        saver_dp = IoPathSaver(source_dp, filepath_fn=filepath_fn, mode="wb")
+        n_elements_before_reset = 2
+        res_before_reset, res_after_reset = reset_after_n_next_calls(saver_dp, n_elements_before_reset)
+        self.assertEqual([filepath_fn("1.txt"), filepath_fn("2.txt")], res_before_reset)
+        self.assertEqual(expected_paths, res_after_reset)
+        for name in name_to_data.keys():
+            p = filepath_fn(name)
+            with open(p, "r") as f:
+                self.assertEqual(name_to_data[name], f.read().encode())
+
+        # __len__ Test: returns the length of source DataPipe
+        self.assertEqual(3, len(saver_dp))
 
 if __name__ == "__main__":
     unittest.main()
