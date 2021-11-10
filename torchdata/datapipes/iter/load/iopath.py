@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import os
 
-from typing import Any, Callable, Iterator, List, Tuple, TypeVar, Union
+from typing import Any, Callable, Iterator, List, Tuple, Union
 
 from torch.utils.data.datapipes.utils.common import match_masks
 
@@ -16,11 +16,12 @@ try:
 except ImportError:
     iopath = None
 
-T_data = TypeVar('T_data', bytes, bytearray, str)
+U = Union[bytes, bytearray, str]
 
 
 def _create_default_pathmanager():
     from iopath.common.file_io import HTTPURLHandler, OneDrivePathHandler, PathManager
+
     pathmgr = PathManager()
     pathmgr.register_handler(HTTPURLHandler(), allow_override=True)
     pathmgr.register_handler(OneDrivePathHandler(), allow_override=True)
@@ -43,9 +44,10 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
     Args:
         root: The root local filepath or url directory to list files from
         masks: Unix style filter string or string list for filtering file name(s)
+        pathmgr: Custom iopath PathManager. If not specified, a default PathManager is created.
 
     Note:
-        This IterDataPipe currently supports local file path, normal HTTP url and OneDrive url.
+        Default PathManager currently supports local file path, normal HTTP url and OneDrive url.
         S3 url is supported only with `iopath`>=0.1.9.
     """
 
@@ -53,6 +55,8 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
         self,
         root: str,
         masks: Union[str, List[str]] = "",
+        *,
+        pathmgr=None,
     ) -> None:
         if iopath is None:
             raise ModuleNotFoundError(
@@ -61,7 +65,7 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
             )
 
         self.root: str = root
-        self.pathmgr = _create_default_pathmanager()
+        self.pathmgr = _create_default_pathmanager() if pathmgr is None else pathmgr
         self.masks = masks
 
     def register_handler(self, handler, allow_override=False):
@@ -86,13 +90,14 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Args:
         source_datapipe: Iterable DataPipe that provides the pathnames or urls
         mode: An optional string that specifies the mode in which the file is opened ('r' by default)
+        pathmgr: Custom iopath PathManager. If not specified, a default PathManager is created.
 
     Note:
-        This IterDataPipe currently supports local file path, normal HTTP url and OneDrive url.
+        Default PathManager currently supports local file path, normal HTTP url and OneDrive url.
         S3 url is supported only with `iopath`>=0.1.9.
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r") -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r", pathmgr=None) -> None:
         if iopath is None:
             raise ModuleNotFoundError(
                 "Package `iopath` is required to be installed to use this "
@@ -100,7 +105,7 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
             )
 
         self.source_datapipe: IterDataPipe[str] = source_datapipe
-        self.pathmgr = _create_default_pathmanager()
+        self.pathmgr = _create_default_pathmanager() if pathmgr is None else pathmgr
         self.mode: str = mode
 
     def register_handler(self, handler, allow_override=False):
@@ -126,17 +131,25 @@ class IoPathSaverIterDataPipe(IterDataPipe[str]):
         source_datapipe: Iterable DataPipe with tuples of metadata and data
         mode: Mode in which the file will be opened for write the data ("w" by default)
         filepath_fn: Function that takes in metadata nad returns the target path of the new file
+        pathmgr: Custom iopath PathManager. If not specified, a default PathManager is created.
+
+    Note:
+        Default PathManager currently supports local file path, normal HTTP url and OneDrive url.
+        S3 url is supported only with `iopath`>=0.1.9.
     """
+
     def __init__(
         self,
-        source_datapipe: IterDataPipe[Tuple[Any, T_data]],
+        source_datapipe: IterDataPipe[Tuple[Any, U]],
         mode: str = "w",
-        filepath_fn: Callable = _default_filepath_fn,
+        filepath_fn: Callable[[Any], str] = _default_filepath_fn,
+        *,
+        pathmgr=None,
     ):
-        self.source_datapipe: IterDataPipe[Tuple[Any, T_data]] = source_datapipe
+        self.source_datapipe: IterDataPipe[Tuple[Any, U]] = source_datapipe
         self.mode: str = mode
-        self.fn: Callable = filepath_fn
-        self.pathmgr = _create_default_pathmanager()
+        self.fn: Callable[[Any], str] = filepath_fn
+        self.pathmgr = _create_default_pathmanager() if pathmgr is None else pathmgr
 
     def __iter__(self) -> Iterator[str]:
         for meta, data in self.source_datapipe:
@@ -144,6 +157,9 @@ class IoPathSaverIterDataPipe(IterDataPipe[str]):
             with self.pathmgr.open(filepath, self.mode) as f:
                 f.write(data)
             yield filepath
+
+    def register_handler(self, handler, allow_override=False):
+        self.pathmgr.register_handler(handler, allow_override=allow_override)
 
     def __len__(self) -> int:
         return len(self.source_datapipe)

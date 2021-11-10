@@ -1,12 +1,12 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-from typing import Any, Callable, Iterator, Tuple, TypeVar
+from typing import Any, Callable, Iterator, Tuple, Union
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
 from torchdata.datapipes.utils.common import _default_filepath_fn
 
-T_data = TypeVar('T_data', bytes, bytearray, str)
+U = Union[bytes, bytearray, str]
 
 
 @functional_datapipe("save_to_disk")
@@ -20,15 +20,16 @@ class SaverIterDataPipe(IterDataPipe[str]):
         mode: Mode in which the file will be opened for write the data ("w" by default)
         filepath_fn: Function that takes in metadata nad returns the target path of the new file
     """
+
     def __init__(
         self,
-        source_datapipe: IterDataPipe[Tuple[Any, T_data]],
+        source_datapipe: IterDataPipe[Tuple[Any, U]],
         mode: str = "w",
-        filepath_fn: Callable = _default_filepath_fn,
+        filepath_fn: Callable[[Any], str] = _default_filepath_fn,
     ):
-        self.source_datapipe: IterDataPipe[Tuple[Any, T_data]] = source_datapipe
+        self.source_datapipe: IterDataPipe[Tuple[Any, U]] = source_datapipe
         self.mode: str = mode
-        self.fn: Callable = filepath_fn
+        self.fn: Callable[[Any], str] = filepath_fn
 
     def __iter__(self) -> Iterator[str]:
         for meta, data in self.source_datapipe:
