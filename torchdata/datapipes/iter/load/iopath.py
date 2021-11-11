@@ -112,8 +112,8 @@ class IoPathFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for file_uri in self.source_datapipe:
-            with self.pathmgr.open(file_uri, self.mode) as file:
-                yield file_uri, StreamWrapper(file)
+            file = self.pathmgr.open(file_uri, self.mode)
+            yield file_uri, StreamWrapper(file)
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
