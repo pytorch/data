@@ -508,7 +508,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             return os.path.join(self.temp_dir.name, os.path.basename(name))
         name_to_data = {"1.text": b"DATA", "2.text": b"DATA", "3.text": b"DATA"}
         source_dp = IterableWrapper(sorted(name_to_data.items()))
-        saver_dp = source_dp.save_to_disk(filepath_fn=filepath_fn)
+        saver_dp = source_dp.save_to_disk(filepath_fn=filepath_fn, mode="wb")
         list(saver_dp)
 
     # TODO (ejguan): this test currently only covers reading from local
