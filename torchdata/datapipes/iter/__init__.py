@@ -41,8 +41,8 @@ from torchdata.datapipes.iter.util.indexadder import (
     IndexAdderIterDataPipe as IndexAdder,
 )
 from torchdata.datapipes.iter.util.combining import (
-    KeyZipperIterDataPipe as KeyZipper,
-    MapZipperIterDataPipe as MapZipper,
+    IterZipperIterDataPipe as IterKeyZipper,
+    MapZipperIterDataPipe as MapKeyZipper,
 )
 from torchdata.datapipes.iter.util.plain_text_reader import (
     LineReaderIterDataPipe as LineReader,
@@ -92,11 +92,11 @@ __all__ = [
     "IoPathFileLister",
     "IoPathFileLoader",
     "IterDataPipe",
+    "IterKeyZipper",
     "IterableWrapper",
     "JsonParser",
-    "KeyZipper",
     "LineReader",
-    "MapZipper",
+    "MapKeyZipper",
     "Mapper",
     "Multiplexer",
     "OnDiskCacheHolder",

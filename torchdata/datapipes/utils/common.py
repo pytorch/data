@@ -1,16 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-import os.path
-import tempfile
-
 from io import IOBase
 from torchdata.datapipes.utils import StreamWrapper
 from typing import Tuple
-
-
-def _default_filepath_fn(data):
-    # Cross-platform Temporary Directory
-    temp_dir = tempfile.gettempdir()
-    return os.path.join(temp_dir, os.path.basename(data))
 
 
 def validate_pathname_binary_tuple(data: Tuple[str, IOBase]):

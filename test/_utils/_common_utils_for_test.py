@@ -65,6 +65,7 @@ def create_temp_files(temp_dir, prefix=1, empty=True):
 
 
 def check_hash_fn(filepath, expected_hash, hash_type="md5"):
+
     if hash_type == "sha256":
         hash_fn = hashlib.sha256()
     elif hash_type == "md5":

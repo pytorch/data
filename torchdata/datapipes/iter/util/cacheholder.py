@@ -1,14 +1,15 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+import hashlib
+import inspect
 import os.path
 import sys
 
 from collections import deque
-from typing import Deque, Iterator, Optional, TypeVar
+from typing import Callable, Deque, Dict, Iterator, Optional, TypeVar
 
 from torch.utils.data.graph import traverse
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
-from torchdata.datapipes.utils.common import _default_filepath_fn
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -67,6 +68,13 @@ class InMemoryCacheHolderIterDataPipe(IterDataPipe[T_co]):
                 raise TypeError(f"{type(self).__name__} instance doesn't have valid length until the cache is loaded.")
 
 
+def _generator_to_list(gen_fn):
+    def list_fn(*args, **kwargs):
+        gen = gen_fn(*args, **kwargs)
+        return list(gen)
+    return list_fn
+
+
 @functional_datapipe("on_disk_cache")
 class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     """
@@ -74,7 +82,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     to local files, which are normally performance bottleneck like download, decompress,
     and etc.
 
-    Use `end_caching()` to stop tracing the sequence of DataPipe operations and save result to local files.
+    Use `.end_caching()` to stop tracing the sequence of DataPipe operations and save result to local files.
 
     Args:
         source_datapipe: DataPipe with URLs or file strings
@@ -100,14 +108,22 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
 
         cache_dp = url.on_disk_cache(extra_check_fn=hash_fn).open_url().map(fn=lambda x: b''.join(x), input_col=1).end_caching()
     """
+
     def __init__(
         self,
-        source_datapipe,
-        filepath_fn=_default_filepath_fn,
-        extra_check_fn=None,
+        source_datapipe: IterDataPipe,
+        filepath_fn,
+        hash_dict: Dict[str, str] = None,
+        hash_type: str = "sha256",
+        extra_check_fn: Optional[Callable[[str], bool]] = None,
     ):
         self.source_datapipe = source_datapipe
-        self.filepath_fn = filepath_fn
+        self.filepath_fn = _generator_to_list(filepath_fn) if inspect.isgeneratorfunction(filepath_fn) else filepath_fn
+        self.hash_dict = hash_dict
+        if hash_dict is not None and hash_type not in ("sha256", "md5"):
+            raise ValueError("Invalid hash_type requested, should be one of {}".format(("sha256", "md5")))
+
+        self.hash_type = hash_type
         self.extra_check_fn = extra_check_fn
         self._end_caching_flag: bool = False
 
@@ -123,12 +139,39 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         raise RuntimeError("`OnDiskCacheHolder` doesn't support add operation")
 
     def _cache_check_fn(self, data):
-        filepath = self.filepath_fn(data)
-        if not os.path.exists(filepath):
-            return False
-        if self.extra_check_fn:
-            return self.extra_check_fn(filepath)
+        filepaths = self.filepath_fn(data)
+        if isinstance(filepaths, str):
+            filepaths = [filepaths, ]
+
+        for filepath in filepaths:
+            if not os.path.exists(filepath):
+                return False
+
+            if self.hash_dict is not None and not self._hash_check(filepath):
+                return False
+
+            if self.extra_check_fn is not None and not self.extra_check_fn(filepath):
+                return False
+
         return True
+
+    def _hash_check(self, filepath):
+
+        if filepath not in self.hash_dict:
+            return False
+
+        if self.hash_type == "sha256":
+            hash_func = hashlib.sha256()
+        else:
+            hash_func = hashlib.md5()
+
+        with open(filepath, "rb") as f:
+            chunk = f.read(1024 ** 2)
+            while chunk:
+                hash_func.update(chunk)
+                chunk = f.read(1024 ** 2)
+
+        return hash_func.hexdigest() == self.hash_dict[filepath]
 
     def _end_caching(self):
         todo_dp, cached_dp = self.source_datapipe.demux(2, self._cache_check_fn)
@@ -136,8 +179,18 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         # Re-assign source_datapipe
         self.source_datapipe = todo_dp
 
-        # Cached: keeps filepath
-        return cached_dp.map(fn=self.filepath_fn)
+        # Cached: keep filepath(s)
+        cached_dp = cached_dp.map(fn=self.filepath_fn)
+        # Convert list back to single elements
+        return cached_dp.unbatch(-1)
+
+
+def _read_bytes(fd):
+    return b"".join(fd)
+
+
+def _read_str(fd):
+    return "".join(fd)
 
 
 @functional_datapipe("end_caching")
@@ -151,20 +204,30 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
     Args:
         mode: Mode in which cached files are opened for write the data. Binary mode by default.
     """
-    def __new__(cls, datapipe, mode="wb"):
+
+    def __new__(cls, datapipe, mode="w", filepath_fn=None):
         graph = traverse(datapipe, exclude_primitive=True)
         cache_holder = EndOnDiskCacheHolderIterDataPipe._recursive_search(graph)
         if cache_holder is None:
-            raise RuntimeError("Incomplete `OnDiskCacheHolder` is required in the pipeline before calling `end_caching` or `EndOnDiskCacheHolder`")
+            raise RuntimeError(
+                "Expected `OnDiskCacheHolder` existing in pipeline when `end_caching` is invoked"
+            )
+        if cache_holder._end_caching_flag:
+            raise RuntimeError("`end_caching` can only be invoked once per `OnDiskCacheHolder`")
+
         cached_dp = cache_holder._end_caching()
-        todo_dp = datapipe.save_to_disk(mode=mode, filepath_fn=cache_holder.filepath_fn)
+        if "b" in mode:
+            todo_dp = datapipe.map(fn=_read_bytes, input_col=1)
+        else:
+            todo_dp = datapipe.map(fn=_read_str, input_col=1)
+        todo_dp = todo_dp.save_to_disk(mode=mode, filepath_fn=filepath_fn)
         return cached_dp.concat(todo_dp)
 
     @staticmethod
     def _recursive_search(graph):
         for dp in graph.keys():
-            # Find the last CacheHolder not ended
-            if isinstance(dp, OnDiskCacheHolderIterDataPipe) and not dp._end_caching_flag:
+            # Find the closest CacheHolder
+            if isinstance(dp, OnDiskCacheHolderIterDataPipe):
                 return dp
         for dp in graph.values():
             res = EndOnDiskCacheHolderIterDataPipe._recursive_search(dp)

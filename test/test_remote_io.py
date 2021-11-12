@@ -8,6 +8,7 @@ import warnings
 from functools import partial
 
 from torchdata.datapipes.iter import (
+    FileLoader,
     HttpReader,
     IterableWrapper,
 )
@@ -55,44 +56,85 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         self.assertEqual(1, len(http_dp))
 
     def test_on_disk_cache_holder_iterdatapipe(self):
-        file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
-        prefix = "OnDisk_"
-        expected_file_name = os.path.join(self.temp_dir.name, prefix + "LICENSE")
-        expected_MD5_hash = "4aabe940637d4389eca42ac1a0e874ec"
+        tar_file_url = "https://raw.githubusercontent.com/pytorch/data/main/test/_fakedata/csv.tar.gz"
+        expected_file_name = os.path.join(self.temp_dir.name, "csv.tar.gz")
+        expected_MD5_hash = "42cd45e588dbcf64c65751fbf0228af9"
+        tar_hash_dict = {expected_file_name: expected_MD5_hash}
 
-        file_dp = IterableWrapper([file_url])
+        tar_file_dp = IterableWrapper([tar_file_url])
+
+        with self.assertRaisesRegex(RuntimeError, "Expected `OnDiskCacheHolder` existing"):
+            _ = tar_file_dp.end_caching()
 
         def _filepath_fn(url):
-            filename = prefix + os.path.basename(url)
+            filename = os.path.basename(url)
             return os.path.join(self.temp_dir.name, filename)
 
-        cache_dp = file_dp.on_disk_cache(filepath_fn=_filepath_fn, extra_check_fn=partial(check_hash_fn, expected_hash=expected_MD5_hash, hash_type="md5"))
+        tar_cache_dp = tar_file_dp.on_disk_cache(
+            filepath_fn=_filepath_fn,
+            hash_dict=tar_hash_dict,
+            hash_type="md5",
+        )
 
         # DataPipe Constructor
-        cache_dp = HttpReader(cache_dp)
-        # Functional API
-        cache_dp = cache_dp.map(fn=lambda x: b''.join(x), input_col=1)
+        tar_cache_dp = HttpReader(tar_cache_dp)
 
         # Start iteration without `end_caching`
         with self.assertRaisesRegex(RuntimeError, "Please call"):
-            _ = list(cache_dp)
+            _ = list(tar_cache_dp)
 
-        cache_dp = cache_dp.end_caching(mode="wb")
+        tar_cache_dp = tar_cache_dp.end_caching(mode="wb", filepath_fn=_filepath_fn)
 
         # File doesn't exist on disk
         self.assertFalse(os.path.exists(expected_file_name))
-        path = list(cache_dp)[0]
-        self.assertTrue(os.path.exists(expected_file_name))
+
+        path = list(tar_cache_dp)[0]
 
         # File is cached to disk
+        self.assertTrue(os.path.exists(expected_file_name))
         self.assertEqual(expected_file_name, path)
-        self.assertTrue(check_hash_fn(path, expected_MD5_hash, hash_type="md5"))
+        self.assertTrue(check_hash_fn(expected_file_name, expected_MD5_hash))
+
+        # Modify the downloaded file to trigger downloading again
+        with open(expected_file_name, "w") as f:
+            f.write("0123456789abcdef")
+
+        self.assertFalse(check_hash_fn(expected_file_name, expected_MD5_hash))
+        path = list(tar_cache_dp)[0]
+        self.assertTrue(check_hash_fn(expected_file_name, expected_MD5_hash))
 
         # Call `end_caching` again
-        with self.assertRaisesRegex(RuntimeError, "Incomplete `OnDiskCacheHolder` is required in the pipeline"):
-            cache_dp = cache_dp.end_caching()
+        with self.assertRaisesRegex(RuntimeError, "`end_caching` can only be invoked once"):
+            _ = tar_cache_dp.end_caching()
 
-        # TODO(ejguan): Multiple CacheHolders or nested CacheHolders
+        # Multiple OnDiskCacheHolder
+
+        def _gen_filepath_fn(tar_path):
+            for i in range(3):
+                yield os.path.join(os.path.dirname(tar_path), "csv", "{}.csv".format(i))
+
+        # Without hash checking
+        file_cache_dp = tar_cache_dp.on_disk_cache(filepath_fn=_gen_filepath_fn)
+        file_cache_dp = FileLoader(file_cache_dp, mode="rb")
+
+        # Functional API
+        file_cache_dp = file_cache_dp.read_from_tar()
+
+        def _csv_filepath_fn(csv_path):
+            return os.path.join(self.temp_dir.name, "csv", os.path.basename(csv_path))
+
+        file_cache_dp = file_cache_dp.end_caching(mode="wb", filepath_fn=_csv_filepath_fn)
+
+        cached_it = iter(file_cache_dp)
+        for expected_csv_path in _gen_filepath_fn(expected_file_name):
+            # File doesn't exist on disk
+            self.assertFalse(os.path.exists(expected_csv_path))
+
+            csv_path = next(cached_it)
+
+            # File is cached to disk
+            self.assertTrue(os.path.exists(expected_csv_path))
+            self.assertEqual(expected_csv_path, csv_path)
 
 
 if __name__ == "__main__":
