@@ -5,8 +5,6 @@ import os
 import unittest
 import warnings
 
-from functools import partial
-
 from torchdata.datapipes.iter import (
     FileLoader,
     HttpReader,

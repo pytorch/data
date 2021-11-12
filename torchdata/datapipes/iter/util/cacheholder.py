@@ -157,7 +157,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
 
     def _hash_check(self, filepath):
 
-        if filepath not in self.hash_dict:
+        if filepath not in self.hash_dict:  # type: ignore[operator]
             return False
 
         if self.hash_type == "sha256":
@@ -171,7 +171,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                 hash_func.update(chunk)
                 chunk = f.read(1024 ** 2)
 
-        return hash_func.hexdigest() == self.hash_dict[filepath]
+        return hash_func.hexdigest() == self.hash_dict[filepath]  # type: ignore[index]
 
     def _end_caching(self):
         todo_dp, cached_dp = self.source_datapipe.demux(2, self._cache_check_fn)
