@@ -35,11 +35,11 @@ from _utils._common_utils_for_test import (
 )
 
 try:
-    import iopath  # type: ignore[import]  # noqa: F401
+    import iopath
     HAS_IOPATH = True
 except ImportError:
     HAS_IOPATH = False
-skipIfNoIOPath = unittest.skipIf(not HAS_IOPATH, "no iopath")
+skipIfNoIoPath = unittest.skipIf(not HAS_IOPATH, "no iopath")
 
 
 class TestDataPipeLocalIO(expecttest.TestCase):
@@ -513,7 +513,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
     # TODO (ejguan): this test currently only covers reading from local
     # filesystem. It needs to be modified once test data can be stored on
     # gdrive/s3/onedrive
-    @skipIfNoIOPath
+    @skipIfNoIoPath
     def test_io_path_file_lister_iterdatapipe(self):
         datapipe = IoPathFileLister(root=self.temp_sub_dir.name)
 
@@ -521,7 +521,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         for path in datapipe:
             self.assertTrue(path in self.temp_sub_files)
 
-    @skipIfNoIOPath
+    @skipIfNoIoPath
     def test_io_path_file_loader_iterdatapipe(self):
         datapipe1 = IoPathFileLister(root=self.temp_sub_dir.name)
         datapipe2 = IoPathFileLoader(datapipe1)
