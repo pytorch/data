@@ -41,8 +41,8 @@ from torchdata.datapipes.iter.util.indexadder import (
     IndexAdderIterDataPipe as IndexAdder,
 )
 from torchdata.datapipes.iter.util.combining import (
-    IterZipperIterDataPipe as IterKeyZipper,
-    MapZipperIterDataPipe as MapKeyZipper,
+    IterKeyZipperIterDataPipe as IterKeyZipper,
+    MapKeyZipperIterDataPipe as MapKeyZipper,
 )
 from torchdata.datapipes.iter.util.plain_text_reader import (
     LineReaderIterDataPipe as LineReader,

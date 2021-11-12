@@ -9,8 +9,8 @@ T_co = TypeVar("T_co", covariant=True)
 
 
 @functional_datapipe("zip_with_iter")
-class IterZipperIterDataPipe(IterDataPipe[T_co]):
-    r""":class:`IterZipperIterDataPipe`.
+class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
+    r""":class:`IterKeyZipperIterDataPipe`.
 
     Iterable DataPipe to zip two IterDataPipes together based on the matching key.
 
@@ -87,8 +87,8 @@ class IterZipperIterDataPipe(IterDataPipe[T_co]):
 
 
 @functional_datapipe("zip_with_map")
-class MapZipperIterDataPipe(IterDataPipe[T_co]):
-    r""" :class:`MapZipperIterDataPipe`.
+class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
+    r""" :class:`MapKeyZipperIterDataPipe`.
 
     IterDataPipe that joins the items from the source IterDataPipe with items from a MapDataPipe. The
     matching is done by the key function, which maps an item from source IterDataPipe to
