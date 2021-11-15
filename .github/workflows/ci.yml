@@ -4,33 +4,53 @@ on:
     branches:
       - main
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches:
       - main
+      # For PR created by ghstack
+      - gh/*/*/base
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  test:
+    if: ${{ github.repository_owner == 'pytorch' && (github.event.action != 'labeled' || startsWith(github.event.label.name, 'ciflow')) }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+        python-version:
+          - 3.6
+          - 3.7
+          - 3.8
+          - 3.9
     steps:
-      - name: Setup Python environment
+      - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
-          python-version: 3.6
+          python-version: ${{ matrix.python-version }}
       - name: Check out source repository
         uses: actions/checkout@v2
       - name: Install dependencies
         run: |
-          set -eux
-          pip3 install --pre torch torchvision torchaudio -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html --user
-          pip3 install expecttest requests --user  # TODO: Install from requirements except torch
-      - name: Install dependencies for test
-        run: |
-          set -eux
-          pip3 install scipy Pillow --user
-          pip3 install -U iopath --user
-          pip3 install pytest --user
+          pip3 install -r requirements.txt
+          pip3 install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
+      - name: Install test requirements
+        run: pip3 install expecttest iopath==0.1.9 numpy pytest
       - name: Build TorchData
-        run: |
-          set -eux
-          python setup.py develop --user
+        run: python setup.py develop
       - name: Run DataPipes tests with pytest
-        run: pytest test
+        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+        run: pytest --no-header -v test --ignore=test/test_period.py
+      - name: Run DataPipes tests with pytest (including slow tests)
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+        run: pytest --no-header -v test --ignore=test/test_period.py
+        env:
+          PYTORCH_TEST_WITH_SLOW: 1
+      - name: Run DataPipes period tests with pytest
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'ciflow/period') }}
+        run: pytest --no-header -v test/test_period.py
+        env:
+          PYTORCH_TEST_WITH_SLOW: 1

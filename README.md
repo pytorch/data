@@ -48,8 +48,8 @@ Next, install one of the following following PyTorch nightly binaries.
 ```
 # For CUDA 10.2
 pip install --pre torch -f https://download.pytorch.org/whl/nightly/cu102/torch_nightly.html
-# For CUDA 11.1
-pip install --pre torch -f https://download.pytorch.org/whl/nightly/cu111/torch_nightly.html
+# For CUDA 11.3
+pip install --pre torch -f https://download.pytorch.org/whl/nightly/cu113/torch_nightly.html
 # For CPU-only build
 pip install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
 ```
@@ -91,7 +91,7 @@ pattern of siloed inheritence of data tooling rather than composition.
 import json
 
 class JsonParserIterDataPipe(IterDataPipe):
-    def __init__(self, source_datapipe, **kwargs):
+    def __init__(self, source_datapipe, **kwargs) -> None:
         self.source_datapipe = source_datapipe
         self.kwargs = kwargs
 
@@ -122,7 +122,7 @@ The naming convention for `DataPipe`s is "Operation"-er, followed by `IterDataPi
 DataSets are now generally constructed as stacks of `DataPipes`, so each `DataPipe` typically takes a source `DataPipe` as its first argument.
 ```py
 class MapperIterDataPipe(IterDataPipe):
-    def __init__(self, dp, fn):
+    def __init__(self, dp, fn) -> None:
         super().__init__()
         self.dp = dp
         self.fn = fn
@@ -182,7 +182,7 @@ To support the above pipeline, `CSVParser` is registered as `parse_csv_files` to
 ```py
 @functional_datapipe("parse_csv_files")
 class CSVParserIterDataPipe(IterDataPipe):
-    def __init__(self, dp, **fmtparams):
+    def __init__(self, dp, **fmtparams) -> None:
         self.dp = dp
         self.fmtparams = fmtparams
 

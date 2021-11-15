@@ -4,6 +4,7 @@ import warnings
 from io import BufferedIOBase
 from typing import Iterable, Iterator, Tuple
 
+from torchdata.datapipes.utils import StreamWrapper
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -25,7 +26,7 @@ class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         or let Python's GC close them periodically.
     """
 
-    def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1):
+    def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1) -> None:
         super().__init__()
         self.datapipe: Iterable[Tuple[str, BufferedIOBase]] = datapipe
         self.length: int = length
@@ -37,12 +38,12 @@ class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
             try:
                 extracted_fobj = lzma.open(data_stream, mode="rb")  # type: ignore[call-overload]
                 new_pathname = pathname.rstrip(".xz")
-                yield new_pathname, extracted_fobj  # type: ignore[misc]
+                yield new_pathname, StreamWrapper(extracted_fobj)  # type: ignore[misc]
             except Exception as e:
                 warnings.warn(f"Unable to extract files from corrupted xz/lzma stream {pathname} due to: {e}, abort!")
                 raise e
 
-    def __len__(self):
+    def __len__(self) -> int:
         if self.length == -1:
             raise TypeError("{} instance doesn't have valid length".format(type(self).__name__))
         return self.length

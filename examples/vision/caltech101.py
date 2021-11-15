@@ -10,22 +10,22 @@ from torchdata.datapipes.iter import (
     RoutedDecoder,
     Filter,
     IterableWrapper,
-    KeyZipper,
+    IterKeyZipper,
 )
 from torch.utils.data.datapipes.utils.decoder import imagehandler, mathandler
 
 
 # Download size is ~150 MB so fake data is provided
-URL = dict(
-    images="http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz",
-    annotations="http://www.vision.caltech.edu/Image_Datasets/Caltech101/Annotations.tar",
-)
+URL = {
+    "images": "http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz",
+    "annotations": "http://www.vision.caltech.edu/Image_Datasets/Caltech101/Annotations.tar",
+}
 # We really shouldn't use MD5 anymore and switch to a more secure hash like SHA256 or
 # SHA512
-MD5 = dict(
-    images="b224c7392d521a49829488ab0f1120d9",
-    annotations="f83eeb1f24d99cab4eb377263132c91",
-)
+MD5 = {
+    "images": "b224c7392d521a49829488ab0f1120d9",
+    "annotations": "f83eeb1f24d99cab4eb377263132c91",
+}
 
 ROOT = os.path.join("fakedata", "caltech101")
 
@@ -51,7 +51,7 @@ def collate_ann(data):
     if cls in ANNS_CLASS_MAP:
         cls = ANNS_CLASS_MAP[cls]
 
-    return path, dict(cls=cls, contour=torch.as_tensor(ann["obj_contour"]))
+    return path, {"cls": cls, "contour": torch.as_tensor(ann["obj_contour"])}
 
 
 def is_not_background_image(data):
@@ -102,10 +102,10 @@ def Caltech101(root=ROOT):
     images_dp = Filter(images_dp, is_not_rogue_image)
     images_dp = RoutedDecoder(images_dp, imagehandler("pil"))
 
-    dp = KeyZipper(images_dp, anns_dp, images_key_fn, ref_key_fn=anns_key_fn, buffer_size=None)
+    dp = IterKeyZipper(images_dp, anns_dp, images_key_fn, ref_key_fn=anns_key_fn, buffer_size=None)
     return Mapper(dp, collate_sample)
 
 
 if __name__ == "__main__":
-    for sample in Caltech101():
+    for _sample in Caltech101():
         pass

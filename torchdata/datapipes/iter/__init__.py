@@ -29,23 +29,31 @@ from torchdata.datapipes.iter.load.online import (
 from torchdata.datapipes.iter.load.iopath import (
     IoPathFileListerIterDataPipe as IoPathFileLister,
     IoPathFileLoaderIterDataPipe as IoPathFileLoader,
+    IoPathSaverIterDataPipe as IoPathSaver,
 )
 from torchdata.datapipes.iter.transform.bucketbatcher import BucketBatcherIterDataPipe as BucketBatcher
 from torchdata.datapipes.iter.util.cacheholder import (
     InMemoryCacheHolderIterDataPipe as InMemoryCacheHolder,
     OnDiskCacheHolderIterDataPipe as OnDiskCacheHolder,
 )
-from torchdata.datapipes.iter.util.indexadder import IndexAdderIterDataPipe as IndexAdder
-from torchdata.datapipes.iter.util.combining import KeyZipperIterDataPipe as KeyZipper
-from torchdata.datapipes.iter.util.csvparser import (
+from torchdata.datapipes.iter.util.indexadder import (
+    EnumeratorIterDataPipe as Enumerator,
+    IndexAdderIterDataPipe as IndexAdder,
+)
+from torchdata.datapipes.iter.util.combining import (
+    IterKeyZipperIterDataPipe as IterKeyZipper,
+    MapKeyZipperIterDataPipe as MapKeyZipper,
+)
+from torchdata.datapipes.iter.util.plain_text_reader import (
+    LineReaderIterDataPipe as LineReader,
     CSVDictParserIterDataPipe as CSVDictParser,
     CSVParserIterDataPipe as CSVParser,
 )
 from torchdata.datapipes.iter.util.cycler import CyclerIterDataPipe as Cycler
+from torchdata.datapipes.iter.util.extractor import ExtractorIterDataPipe as Extractor
 from torchdata.datapipes.iter.util.hashchecker import HashCheckerIterDataPipe as HashChecker
 from torchdata.datapipes.iter.util.header import HeaderIterDataPipe as Header
 from torchdata.datapipes.iter.util.jsonparser import JsonParserIterDataPipe as JsonParser
-from torchdata.datapipes.iter.util.linereader import LineReaderIterDataPipe as LineReader
 from torchdata.datapipes.iter.util.paragraphaggregator import ParagraphAggregatorIterDataPipe as ParagraphAggregator
 from torchdata.datapipes.iter.util.rar_archive_reader import RarArchiveReaderIterDataPipe as RarArchiveReader
 from torchdata.datapipes.iter.util.rows2columnar import Rows2ColumnarIterDataPipe as Rows2Columnar
@@ -68,6 +76,8 @@ __all__ = [
     "Concater",
     "Cycler",
     "Demultiplexer",
+    "Enumerator",
+    "Extractor",
     "FileLister",
     "FileLoader",
     "Filter",
@@ -81,11 +91,13 @@ __all__ = [
     "IndexAdder",
     "IoPathFileLister",
     "IoPathFileLoader",
+    "IoPathSaver",
     "IterDataPipe",
+    "IterKeyZipper",
     "IterableWrapper",
     "JsonParser",
-    "KeyZipper",
     "LineReader",
+    "MapKeyZipper",
     "Mapper",
     "Multiplexer",
     "OnDiskCacheHolder",
