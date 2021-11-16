@@ -6,9 +6,11 @@ import unittest
 import warnings
 
 from torchdata.datapipes.iter import (
+    EndOnDiskCacheHolder,
     FileLoader,
     HttpReader,
     IterableWrapper,
+    OnDiskCacheHolder,
 )
 
 from _utils._common_utils_for_test import (
@@ -111,8 +113,8 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             for i in range(3):
                 yield os.path.join(os.path.dirname(tar_path), "csv", "{}.csv".format(i))
 
-        # Without hash checking
-        file_cache_dp = tar_cache_dp.on_disk_cache(filepath_fn=_gen_filepath_fn)
+        # DataPipe Constructor
+        file_cache_dp = OnDiskCacheHolder(tar_cache_dp, filepath_fn=_gen_filepath_fn)
         file_cache_dp = FileLoader(file_cache_dp, mode="rb")
 
         # Functional API
@@ -121,7 +123,10 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         def _csv_filepath_fn(csv_path):
             return os.path.join(self.temp_dir.name, "csv", os.path.basename(csv_path))
 
-        file_cache_dp = file_cache_dp.end_caching(mode="wb", filepath_fn=_csv_filepath_fn)
+        # Read and decode
+        file_cache_dp = file_cache_dp.map(fn=lambda x: x.read().decode(), input_col=1)
+
+        file_cache_dp = EndOnDiskCacheHolder(file_cache_dp, mode="w", filepath_fn=_csv_filepath_fn, skip_read=True)
 
         cached_it = iter(file_cache_dp)
         for expected_csv_path in _gen_filepath_fn(expected_file_name):
