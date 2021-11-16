@@ -5,7 +5,7 @@ import os.path
 import sys
 
 from collections import deque
-from typing import Callable, Deque, Dict, Iterator, List, Optional, Tuple, TypeVar
+from typing import Callable, Deque, Dict, Iterator, Optional, TypeVar
 
 from torch.utils.data.graph import traverse
 from torchdata.datapipes import functional_datapipe
@@ -140,7 +140,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
 
     def _cache_check_fn(self, data):
         filepaths = data if self.filepath_fn is None else self.filepath_fn(data)
-        if not isinstance(filepaths, (List, Tuple)):
+        if not isinstance(filepaths, (list, tuple)):
             filepaths = [
                 filepaths,
             ]
