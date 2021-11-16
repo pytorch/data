@@ -209,11 +209,14 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
             to be aligned with the type of data or file handle from `datapipe`.
         filepath_fn: Optional function to extract filepath from the metadata from `datapipe`.
             As default, it would directly use the metadata as file path.
+        same_filepath_fn: Set to `True` to use same `filepath_fn` from the `OnDiskCacheHolder`.
         skip_read: Boolean value to skip reading the file handle from `datapipe`.
             As default, reading is enabled and reading function is created based on the `mode`.
     """
 
-    def __new__(cls, datapipe, mode="w", filepath_fn=None, *, skip_read=False):
+    def __new__(cls, datapipe, mode="w", filepath_fn=None, *, same_filepath_fn=False, skip_read=False):
+        if filepath_fn is not None and same_filepath_fn:
+            raise ValueError("`filepath_fn` is mutually exclusive with `same_filepath_fn`")
 
         graph = traverse(datapipe, exclude_primitive=True)
         # Get the last CacheHolder
@@ -224,6 +227,9 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
             raise RuntimeError("`end_caching` can only be invoked once per `OnDiskCacheHolder`")
 
         cached_dp = cache_holder._end_caching()
+
+        if same_filepath_fn:
+            filepath_fn = cache_holder.filepath_fn
 
         todo_dp = datapipe
         if not skip_read:

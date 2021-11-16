@@ -4,22 +4,8 @@
 # https://github.com/pytorch/text/blob/main/torchtext/data/datasets_utils.py
 
 import functools
-import hashlib
 import inspect
 import os
-
-
-def _check_hash(hash_dict):
-    def _check_hash_fn(filepath):
-        hash_fn = hashlib.md5()
-        with open(filepath, "rb") as f:
-            chunk = f.read(1024 ** 2)
-            while chunk:
-                hash_fn.update(chunk)
-                chunk = f.read(1024 ** 2)
-        v = hash_fn.hexdigest() == hash_dict[filepath]
-        return v
-    return _check_hash_fn
 
 
 def _check_default_set(split, target_select, dataset_name):

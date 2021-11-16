@@ -83,7 +83,11 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Please call"):
             _ = list(tar_cache_dp)
 
-        tar_cache_dp = tar_cache_dp.map(fn=_filepath_fn, input_col=0).end_caching(mode="wb")
+        # Both filepath_fn and same_filepath_fn are set
+        with self.assertRaisesRegex(ValueError, "`filepath_fn` is mutually"):
+            _ = tar_cache_dp.end_caching(mode="wb", filepath_fn=_filepath_fn, same_filepath_fn=True)
+
+        tar_cache_dp = tar_cache_dp.end_caching(mode="wb", same_filepath_fn=True)
 
         # File doesn't exist on disk
         self.assertFalse(os.path.exists(expected_file_name))
@@ -107,8 +111,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "`end_caching` can only be invoked once"):
             _ = tar_cache_dp.end_caching()
 
-        # Multiple OnDiskCacheHolder
-
+        # Multiple filepaths
         def _gen_filepath_fn(tar_path):
             for i in range(3):
                 yield os.path.join(os.path.dirname(tar_path), "csv", "{}.csv".format(i))
