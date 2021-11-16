@@ -83,7 +83,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Please call"):
             _ = list(tar_cache_dp)
 
-        tar_cache_dp = tar_cache_dp.end_caching(mode="wb", filepath_fn=_filepath_fn)
+        tar_cache_dp = tar_cache_dp.map(fn=_filepath_fn, input_col=0).end_caching(mode="wb")
 
         # File doesn't exist on disk
         self.assertFalse(os.path.exists(expected_file_name))
