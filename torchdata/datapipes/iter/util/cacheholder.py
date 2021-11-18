@@ -237,7 +237,15 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
                 todo_dp = todo_dp.map(fn=_read_bytes, input_col=1)
             else:
                 todo_dp = todo_dp.map(fn=_read_str, input_col=1)
-        todo_dp = todo_dp.save_to_disk(mode=mode, filepath_fn=filepath_fn)
+
+        todo_dp = todo_dp.map(fn=filepath_fn, input_col=0)
+
+        # Extra hash check here when hash is provided.
+        # And, raise Error if data returned from prior operations doesn't meet hash
+        if cache_holder.hash_dict is not None:
+            todo_dp = todo_dp.check_hash(cache_holder.hash_dict, cache_holder.hash_type)
+
+        todo_dp = todo_dp.save_to_disk(mode=mode)
 
         return cached_dp.concat(todo_dp)
 
