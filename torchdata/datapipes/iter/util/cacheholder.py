@@ -91,7 +91,9 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
             Single file path, tuple or list of file paths is accepted as return type.
             And, generator function that yields file paths is also allowed.
             As default, data from `source_datapipe` is directly used to determine the existency of cache.
-        hash_dict: Dict mapping file names to their corresponding hashes
+        hash_dict: Dict mapping file names to their corresponding hashes. If hash_dict is specified,
+            the extra hash check will be attached before saving data to local file system. If the data
+            doesn't meet the hash, the pipeline will raise Error.
         hash_type: The type of hash function to apply
         extra_check_fn: Optional function to carry out extra validation on
             the given file path from `filepath_fn`.
