@@ -2,20 +2,20 @@ import io
 import os.path
 from typing import Tuple, Iterator
 
+from torchdata.datapipes.utils import StreamWrapper
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 
 
-@functional_datapipe("read_from_rar")
-class RarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
+@functional_datapipe("load_from_rar")
+class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
     def __init__(self, datapipe: IterDataPipe[Tuple[str, io.BufferedIOBase]]):
         self._rarfile = self._verify_dependencies()
         super().__init__()
         self.datapipe = datapipe
 
-    @staticmethod
-    def _verify_dependencies():
+    def _verify_dependencies(self):
         try:
             import rarfile
         except ImportError as error:
@@ -24,8 +24,7 @@ class RarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
                 "Please use `pip install rarfile` or `conda -c conda-forge install rarfile` to install it."
             ) from error
 
-        # check if at least one system library for reading rar archives is available to
-        # be used by rarfile
+        # check if at least one system library for reading rar archives is available to be used by rarfile
         rarfile.tool_setup()
 
         return rarfile
@@ -42,4 +41,4 @@ class RarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
                 inner_path = os.path.join(path, info.filename)
                 file_obj = rar.open(info)
 
-                yield inner_path, file_obj
+                yield inner_path, StreamWrapper(file_obj)
