@@ -5,9 +5,9 @@ import unittest
 
 from torch.testing._internal.common_utils import slowTest
 
-current = os.path.dirname(os.path.realpath(__file__))
+current = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(current)
-sys.path.append(ROOT)
+sys.path.insert(0, ROOT)
 
 from examples.text.ag_news import AG_NEWS
 from examples.text.amazonreviewpolarity import AmazonReviewPolarity

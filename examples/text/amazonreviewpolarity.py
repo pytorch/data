@@ -4,11 +4,12 @@ import os
 from torchdata.datapipes.iter import (
     GDriveReader,
     IterableWrapper,
+    FileLoader,
 )
 from .utils import (
-    _wrap_split_argument,
     _add_docstring_header,
     _create_dataset_directory,
+    _wrap_split_argument,
 )
 
 
@@ -42,18 +43,15 @@ DATASET_NAME = "AmazonReviewPolarity"
 def AmazonReviewPolarity(root, split):
     """Demonstrating caching, extraction and sanity check pipelines."""
 
-    # cache data on-disk
-    cache_dp = IterableWrapper([URL]).on_disk_cache(
-        GDriveReader,
-        op_map=lambda x: (x[0], x[1].read()),
-        filepath_fn=lambda x: os.path.join(root, x),
-    )
+    url_dp = IterableWrapper([URL])
+    # cache data on-disk with sanity check
+    cache_dp = url_dp.on_disk_cache(filepath_fn=lambda x: os.path.join(root, _PATH), hash_dict={os.path.join(root, _PATH): MD5}, hash_type="md5")
+    cache_dp = GDriveReader(cache_dp) .end_caching(mode="wb", same_filepath_fn=True)
 
-    # do sanity check
-    check_cache_dp = cache_dp.check_hash({os.path.join(root, _PATH): MD5}, "md5")
+    cache_dp = FileLoader(cache_dp)
 
     # stack TAR extractor on top of loader DP
-    extracted_files = check_cache_dp.read_from_tar()
+    extracted_files = cache_dp.read_from_tar()
 
     # filter files as necessary
     filter_extracted_files = extracted_files.filter(lambda x: split in x[0])
@@ -65,4 +63,4 @@ def AmazonReviewPolarity(root, split):
     )
 
     # stack CSV reader and do some mapping
-    return check_filter_extracted_files.parse_csv().map(lambda t: (int(t[0]), t[1]))
+    return check_filter_extracted_files.parse_csv().map(fn=lambda t: (int(t[0]), t[1]))

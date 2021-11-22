@@ -33,6 +33,7 @@ from torchdata.datapipes.iter.load.iopath import (
 )
 from torchdata.datapipes.iter.transform.bucketbatcher import BucketBatcherIterDataPipe as BucketBatcher
 from torchdata.datapipes.iter.util.cacheholder import (
+    EndOnDiskCacheHolderIterDataPipe as EndOnDiskCacheHolder,
     InMemoryCacheHolderIterDataPipe as InMemoryCacheHolder,
     OnDiskCacheHolderIterDataPipe as OnDiskCacheHolder,
 )
@@ -75,6 +76,7 @@ __all__ = [
     "Concater",
     "Cycler",
     "Demultiplexer",
+    "EndOnDiskCacheHolder",
     "Enumerator",
     "Extractor",
     "FileLister",

@@ -1,5 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-
+import hashlib
 import os
 import tempfile
 
@@ -62,3 +62,21 @@ def create_temp_files(temp_dir, prefix=1, empty=True):
         return temp_file1_name, temp_file2_name, temp_file3_name
 
     return temp_file1_name, temp_file2_name
+
+
+def check_hash_fn(filepath, expected_hash, hash_type="md5"):
+
+    if hash_type == "sha256":
+        hash_fn = hashlib.sha256()
+    elif hash_type == "md5":
+        hash_fn = hashlib.md5()
+    else:
+        raise ValueError("Invalid hash_type requested, should be one of {}".format(["sha256", "md5"]))
+
+    with open(filepath, "rb") as f:
+        chunk = f.read(1024 ** 2)
+        while chunk:
+            hash_fn.update(chunk)
+            chunk = f.read(1024 ** 2)
+
+    return hash_fn.hexdigest() == expected_hash

@@ -1,14 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import os
 
-from typing import Any, Callable, Iterator, List, Tuple, Union
+from typing import Any, Callable, Iterator, List, Optional, Tuple, Union
 
 from torch.utils.data.datapipes.utils.common import match_masks
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
-from torchdata.datapipes.utils.common import _default_filepath_fn
 
 try:
     import iopath
@@ -144,7 +143,7 @@ class IoPathSaverIterDataPipe(IterDataPipe[str]):
         self,
         source_datapipe: IterDataPipe[Tuple[Any, U]],
         mode: str = "w",
-        filepath_fn: Callable[[Any], str] = _default_filepath_fn,
+        filepath_fn: Optional[Callable] = None,
         *,
         pathmgr=None,
     ):
@@ -157,12 +156,12 @@ class IoPathSaverIterDataPipe(IterDataPipe[str]):
 
         self.source_datapipe: IterDataPipe[Tuple[Any, U]] = source_datapipe
         self.mode: str = mode
-        self.fn: Callable[[Any], str] = filepath_fn
+        self.filepath_fn: Optional[Callable] = filepath_fn
         self.pathmgr = _create_default_pathmanager() if pathmgr is None else pathmgr
 
     def __iter__(self) -> Iterator[str]:
         for meta, data in self.source_datapipe:
-            filepath = self.fn(meta)
+            filepath = meta if self.filepath_fn is None else self.filepath_fn(meta)
             with self.pathmgr.open(filepath, self.mode) as f:
                 f.write(data)
             yield filepath

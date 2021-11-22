@@ -1,14 +1,15 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+import hashlib
+import inspect
+import os.path
 import sys
 
 from collections import deque
-from io import IOBase
-from os import path
-from typing import Callable, Deque, Iterator, Optional, Tuple, TypeVar
+from typing import Callable, Deque, Dict, Iterator, Optional, TypeVar
 
+from torch.utils.data.graph import traverse
 from torchdata.datapipes import functional_datapipe
-from torchdata.datapipes.iter import IterDataPipe, FileLoader
-from torchdata.datapipes.utils.common import _default_filepath_fn
+from torchdata.datapipes.iter import IterDataPipe
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -67,71 +68,197 @@ class InMemoryCacheHolderIterDataPipe(IterDataPipe[T_co]):
                 raise TypeError(f"{type(self).__name__} instance doesn't have valid length until the cache is loaded.")
 
 
+def _generator_to_list(gen_fn):
+    def list_fn(*args, **kwargs):
+        gen = gen_fn(*args, **kwargs)
+        return list(gen)
+
+    return list_fn
+
+
 @functional_datapipe("on_disk_cache")
-class OnDiskCacheHolderIterDataPipe(IterDataPipe[Tuple[str, IOBase]]):
+class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     """
-    `OnDiskCacheHolder` is a factory DataPipe to create cached local file
-    for the output of opDataPipe, which is normally performance
-    bottleneck like Download, Decompress.
-    Default `filepath_fn` return a path in temporary directory based
-    on the basename of data yielded from `source_datapipe`.
+    `OnDiskCacheHolder` is a IterDataPipe that caches output of multiple DataPipe operations
+    to local files, which are normally performance bottleneck like download, decompress,
+    and etc.
+
+    Use `.end_caching()` to stop tracing the sequence of DataPipe operations and save result to local files.
 
     Args:
-        source_datapipe: source DataPipe with URLs or file strings
-        opDataPipe: DataPipe to perform the desired operation on the source (e.g. download, decompress)
-        op_args: arguments for opDataPipe
-        op_kwargs: keyword arguments for opDataPipe
-        op_map: function that will be applied via .map to opDataPipe
-        mode: mode in which the file will be opened for write the data
-        filepath_fn: Given URL or file path string, returns a path to the target directory
+        source_datapipe: IterDataPipe
+        filepath_fn: Given data from `source_datapipe`, returns file path(s) on local file system.
+            Single file path, tuple or list of file paths is accepted as return type.
+            And, generator function that yields file paths is also allowed.
+            As default, data from `source_datapipe` is directly used to determine the existency of cache.
+        hash_dict: Dict mapping file names to their corresponding hashes. If hash_dict is specified,
+            the extra hash check will be attached before saving data to local file system. If the data
+            doesn't meet the hash, the pipeline will raise Error.
+        hash_type: The type of hash function to apply
+        extra_check_fn: Optional function to carry out extra validation on
+            the given file path from `filepath_fn`.
 
     Example:
-        from urllib.parse import urlparse
+        url = IterableWrapper(["https://path/to/filename", ])
 
-        def url_path_fn(url):
-            return "~/.data/" + url.stripe().split('/')[-1]
+        def _filepath_fn(url):
+            temp_dir = tempfile.gettempdir()
+            return os.path.join(temp_dir, os.path.basename(url))
 
-        dp = ListofUrl(urls).on_disk_cache(HTTPReader, filepath_fn=url_path_fn)
-        # Existing file will be skipped for downloading and directly loaded from disk
-        # Non-existing file will be downloaded by HTTP request and saved to disk, then loaded from disk
+        hash_dict = {"expected_filepaht": expected_MD5_hash}
+
+        cache_dp = url.on_disk_cache(filepath_fn=_filepath_fn, hash_dict=_hash_dict, hash_type="md5")
+        cache_dp = HttpReader(cache_dp).end_caching(mode="wb". filepath_fn=_filepath_fn)
     """
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         source_datapipe: IterDataPipe,
-        opDataPipe,
-        op_args=None,
-        op_kwargs=None,
-        op_map: Optional[Callable] = None,
-        mode: str = "wb",
-        filepath_fn: Callable = _default_filepath_fn,
+        filepath_fn: Optional[Callable] = None,
+        hash_dict: Dict[str, str] = None,
+        hash_type: str = "sha256",
+        extra_check_fn: Optional[Callable[[str], bool]] = None,
     ):
+        self.source_datapipe = source_datapipe
+        self.filepath_fn = _generator_to_list(filepath_fn) if inspect.isgeneratorfunction(filepath_fn) else filepath_fn
+        self.hash_dict = hash_dict
+        if hash_dict is not None and hash_type not in ("sha256", "md5"):
+            raise ValueError("Invalid hash_type requested, should be one of {}".format(("sha256", "md5")))
 
-        assert isinstance(source_datapipe, IterDataPipe), "'source_datapipe' needs to be an IterDataPipe"
-        if op_args is None:
-            op_args = ()
-        if op_kwargs is None:
-            op_kwargs = {}
-        # source_datapipe should either yield url or file string
-        dp = source_datapipe.map(fn=lambda data: (filepath_fn(data), data))
-        # Out of order
-        cached_dp, todo_dp = dp.demux(2, lambda d: 0 if path.exists(d[0]) else 1)
+        self.hash_type = hash_type
+        self.extra_check_fn = extra_check_fn
+        self._end_caching_flag: bool = False
 
-        # Cached: keeps filepath
-        cached_dp = cached_dp.map(fn=lambda data: data[0])
-
-        # Non-cached
-        # opDataPipe yield bytes
-        if not op_map:
-            todo_dp = opDataPipe(todo_dp.map(fn=lambda data: data[1]), *op_args, **op_kwargs).save_to_disk(
-                mode=mode, filepath_fn=filepath_fn
-            )
+    def __iter__(self):
+        if self._end_caching_flag:
+            for d in self.source_datapipe:
+                yield d
         else:
-            todo_dp = (
-                opDataPipe(todo_dp.map(fn=lambda data: data[1]), *op_args, **op_kwargs)
-                .map(op_map)
-                .save_to_disk(mode=mode, filepath_fn=filepath_fn)
-            )
+            # In case of BC breaking, use RuntimeError for now. Warning is another option
+            raise RuntimeError("Please call `end_caching()` before iteration.")
 
-        # Load files from local disk
-        return FileLoader(cached_dp.concat(todo_dp))
+    def __add__(self, other_datapipe):
+        raise RuntimeError("`OnDiskCacheHolder` doesn't support add operation")
+
+    def _cache_check_fn(self, data):
+        filepaths = data if self.filepath_fn is None else self.filepath_fn(data)
+        if not isinstance(filepaths, (list, tuple)):
+            filepaths = [
+                filepaths,
+            ]
+
+        for filepath in filepaths:
+            if not os.path.exists(filepath):
+                return False
+
+            if self.hash_dict is not None and not self._hash_check(filepath):
+                return False
+
+            if self.extra_check_fn is not None and not self.extra_check_fn(filepath):
+                return False
+
+        return True
+
+    def _hash_check(self, filepath):
+
+        if filepath not in self.hash_dict:  # type: ignore[operator]
+            return False
+
+        if self.hash_type == "sha256":
+            hash_func = hashlib.sha256()
+        else:
+            hash_func = hashlib.md5()
+
+        with open(filepath, "rb") as f:
+            chunk = f.read(1024 ** 2)
+            while chunk:
+                hash_func.update(chunk)
+                chunk = f.read(1024 ** 2)
+
+        return hash_func.hexdigest() == self.hash_dict[filepath]  # type: ignore[index]
+
+    def _end_caching(self):
+        todo_dp, cached_dp = self.source_datapipe.demux(2, self._cache_check_fn)
+        self._end_caching_flag = True
+        # Re-assign source_datapipe
+        self.source_datapipe = todo_dp
+
+        # Cached: keep filepath(s)
+        cached_dp = cached_dp.map(fn=self.filepath_fn)
+        # Convert list back to single elements
+        return cached_dp.unbatch(-1)
+
+
+def _read_bytes(fd):
+    return b"".join(fd)
+
+
+def _read_str(fd):
+    return "".join(fd)
+
+
+@functional_datapipe("end_caching")
+class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
+    """
+    `EndOnDiskCacheHolder` is a IterDataPipe that indicates when the result of
+    prior DataPipe will be saved local files specified by `filepath_fn`
+    And, the result of source DataPipe is required to be a tuple of metadata and data,
+    or a tuple of metadata and file handle.
+
+    Args:
+        datapipe: IterDataPipe with at least one `OnDiskCacheHolder` in the graph.
+        mode: Mode in which cached files are opened for write the data. This is needed
+            to be aligned with the type of data or file handle from `datapipe`.
+        filepath_fn: Optional function to extract filepath from the metadata from `datapipe`.
+            As default, it would directly use the metadata as file path.
+        same_filepath_fn: Set to `True` to use same `filepath_fn` from the `OnDiskCacheHolder`.
+        skip_read: Boolean value to skip reading the file handle from `datapipe`.
+            As default, reading is enabled and reading function is created based on the `mode`.
+    """
+
+    def __new__(cls, datapipe, mode="w", filepath_fn=None, *, same_filepath_fn=False, skip_read=False):
+        if filepath_fn is not None and same_filepath_fn:
+            raise ValueError("`filepath_fn` is mutually exclusive with `same_filepath_fn`")
+
+        graph = traverse(datapipe, exclude_primitive=True)
+        # Get the last CacheHolder
+        cache_holder = EndOnDiskCacheHolderIterDataPipe._recursive_search(graph)
+        if cache_holder is None:
+            raise RuntimeError("Expected `OnDiskCacheHolder` existing in pipeline when `end_caching` is invoked")
+        if cache_holder._end_caching_flag:
+            raise RuntimeError("`end_caching` can only be invoked once per `OnDiskCacheHolder`")
+
+        cached_dp = cache_holder._end_caching()
+
+        if same_filepath_fn:
+            filepath_fn = cache_holder.filepath_fn
+
+        todo_dp = datapipe
+        if not skip_read:
+            if "b" in mode:
+                todo_dp = todo_dp.map(fn=_read_bytes, input_col=1)
+            else:
+                todo_dp = todo_dp.map(fn=_read_str, input_col=1)
+
+        todo_dp = todo_dp.map(fn=filepath_fn, input_col=0)
+
+        # Extra hash check here when hash is provided.
+        # And, raise Error if data returned from prior operations doesn't meet hash
+        if cache_holder.hash_dict is not None:
+            todo_dp = todo_dp.check_hash(cache_holder.hash_dict, cache_holder.hash_type)
+
+        todo_dp = todo_dp.save_to_disk(mode=mode)
+
+        return cached_dp.concat(todo_dp)
+
+    @staticmethod
+    def _recursive_search(graph):
+        for dp in graph.keys():
+            # Find the closest CacheHolder
+            if isinstance(dp, OnDiskCacheHolderIterDataPipe):
+                return dp
+        for dp in graph.values():
+            res = EndOnDiskCacheHolderIterDataPipe._recursive_search(dp)
+            if res is not None:
+                return res
+        return None
