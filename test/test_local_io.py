@@ -53,7 +53,7 @@ try:
     subprocess.run(("rar", "-?"), check=True)
 
     HAS_RAR_TOOLS = True
-except (ModuleNotFoundError, rarfile.RarCannotExec, subprocess.CalledProcessError):
+except (ModuleNotFoundError, rarfile.RarCannotExec, FileNotFoundError, subprocess.CalledProcessError):
     HAS_RAR_TOOLS = False
 skipIfNoRarTools = unittest.skipIf(not HAS_RAR_TOOLS, "no rar tools")
 
