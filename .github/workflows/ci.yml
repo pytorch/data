@@ -27,6 +27,12 @@ jobs:
           - 3.8
           - 3.9
     steps:
+      - name: Setup additional system libraries
+        if: startsWith( matrix.os, "ubuntu" )
+        run: |
+          sudo add-apt-repository multiverse
+          sudo apt update
+          sudo apt install rar unrar
       - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
