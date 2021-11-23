@@ -41,4 +41,4 @@ class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
                 inner_path = os.path.join(path, info.filename)
                 file_obj = rar.open(info)
 
-                yield inner_path, StreamWrapper(file_obj)
+                yield inner_path, StreamWrapper(file_obj)  # type: ignore[misc]
