@@ -27,18 +27,18 @@ class RarfilePatcher:
             self._cur_avail = self._cur.add_size
             return unpatched_read(self, cnt)
 
-        self._patches = [
+        self._patchers = [
             patch("rarfile.DirectReader._open_extfile", new=patched_open_extfile),
             patch("rarfile.DirectReader._read", new=patched_read)
         ]
 
     def start(self):
-        for patch in self._patches:
-            patch.start()
+        for patcher in self._patchers:
+            patcher.start()
 
     def stop(self):
-        for patch in self._patches:
-            patch.stop()
+        for patcher in self._patchers:
+            patcher.stop()
 
 
 @functional_datapipe("load_from_rar")
