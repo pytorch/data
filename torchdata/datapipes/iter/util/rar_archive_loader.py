@@ -10,10 +10,11 @@ from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 
 @functional_datapipe("load_from_rar")
 class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
-    def __init__(self, datapipe: IterDataPipe[Tuple[str, io.BufferedIOBase]]):
+    def __init__(self, datapipe: IterDataPipe[Tuple[str, io.BufferedIOBase]], *, length: int = -1):
         self._rarfile = self._verify_dependencies()
         super().__init__()
         self.datapipe = datapipe
+        self.length = length
 
     def _verify_dependencies(self):
         try:
@@ -42,3 +43,8 @@ class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
                 file_obj = rar.open(info)
 
                 yield inner_path, StreamWrapper(file_obj)  # type: ignore[misc]
+
+    def __len__(self) -> int:
+        if self.length == -1:
+            raise TypeError("{} instance doesn't have valid length".format(type(self).__name__))
+        return self.length
