@@ -1,11 +1,44 @@
 import io
 import os.path
+from unittest.mock import patch
 from typing import Tuple, Iterator
 
 from torchdata.datapipes.utils import StreamWrapper
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
+
+
+class RarfilePatcher:
+    def __init__(self):
+        from rarfile import XFile, DirectReader
+
+        def patched_open_extfile(self, parser, inf):
+            super(type(self), self)._open_extfile(parser, inf)  # type: ignore[misc]
+
+            self._volfile = self._inf.volume_file
+            self._fd = XFile(self._volfile, 0)
+
+        unpatched_read = DirectReader._read
+
+        def patched_read(self, cnt):
+            self._fd.seek(self._inf.header_offset, 0)
+            self._cur = self._parser._parse_header(self._fd)
+            self._cur_avail = self._cur.add_size
+            return unpatched_read(self, cnt)
+
+        self._patches = [
+            patch("rarfile.DirectReader._open_extfile", new=patched_open_extfile),
+            patch("rarfile.DirectReader._read", new=patched_read)
+        ]
+
+    def start(self):
+        for patch in self._patches:
+            patch.start()
+
+    def stop(self):
+        for patch in self._patches:
+            patch.stop()
 
 
 @functional_datapipe("load_from_rar")
@@ -34,6 +67,10 @@ class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
         for data in self.datapipe:
             validate_pathname_binary_tuple(data)
             path, stream = data
+
+            patcher = RarfilePatcher()
+            patcher.start()
+
             rar = self._rarfile.RarFile(stream)
             for info in rar.infolist():
                 if info.filename.endswith("/"):
