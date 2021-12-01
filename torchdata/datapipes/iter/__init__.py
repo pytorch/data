@@ -29,9 +29,11 @@ from torchdata.datapipes.iter.load.online import (
 from torchdata.datapipes.iter.load.iopath import (
     IoPathFileListerIterDataPipe as IoPathFileLister,
     IoPathFileLoaderIterDataPipe as IoPathFileLoader,
+    IoPathSaverIterDataPipe as IoPathSaver,
 )
 from torchdata.datapipes.iter.transform.bucketbatcher import BucketBatcherIterDataPipe as BucketBatcher
 from torchdata.datapipes.iter.util.cacheholder import (
+    EndOnDiskCacheHolderIterDataPipe as EndOnDiskCacheHolder,
     InMemoryCacheHolderIterDataPipe as InMemoryCacheHolder,
     OnDiskCacheHolderIterDataPipe as OnDiskCacheHolder,
 )
@@ -40,8 +42,8 @@ from torchdata.datapipes.iter.util.indexadder import (
     IndexAdderIterDataPipe as IndexAdder,
 )
 from torchdata.datapipes.iter.util.combining import (
-    KeyZipperIterDataPipe as KeyZipper,
-    MapZipperIterDataPipe as MapZipper,
+    IterKeyZipperIterDataPipe as IterKeyZipper,
+    MapKeyZipperIterDataPipe as MapKeyZipper,
 )
 from torchdata.datapipes.iter.util.plain_text_reader import (
     LineReaderIterDataPipe as LineReader,
@@ -74,6 +76,7 @@ __all__ = [
     "Concater",
     "Cycler",
     "Demultiplexer",
+    "EndOnDiskCacheHolder",
     "Enumerator",
     "Extractor",
     "FileLister",
@@ -89,12 +92,13 @@ __all__ = [
     "IndexAdder",
     "IoPathFileLister",
     "IoPathFileLoader",
+    "IoPathSaver",
     "IterDataPipe",
+    "IterKeyZipper",
     "IterableWrapper",
     "JsonParser",
-    "KeyZipper",
     "LineReader",
-    "MapZipper",
+    "MapKeyZipper",
     "Mapper",
     "Multiplexer",
     "OnDiskCacheHolder",
