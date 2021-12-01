@@ -8,15 +8,15 @@ from typing import Callable, Iterator, Optional, TypeVar
 T_co = TypeVar("T_co", covariant=True)
 
 
-@functional_datapipe("zip_by_key")
-class KeyZipperIterDataPipe(IterDataPipe[T_co]):
-    r""":class:`KeyZipperIterDataPipe`.
+@functional_datapipe("zip_with_iter")
+class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
+    r""":class:`IterKeyZipperIterDataPipe`.
 
     Iterable DataPipe to zip two IterDataPipes together based on the matching key.
 
     Args:
-        source_datapipe: KeyZipper will yield data based on the order of this IterDataPipe
-        ref_datapipe: Reference IterdataPipe to find matching key for `source_datapipe`
+        source_datapipe: IterKeyZipper will yield data based on the order of this IterDataPipe
+        ref_datapipe: Reference IterDataPipe to find matching key for `source_datapipe`
         key_fn: Callable to extract key of data from source_datapipe
         ref_key_fn: Callable to extract key of data from ref_datapipe.
             If it's not specified, the `key_fn` would be applied to reference data
@@ -38,6 +38,8 @@ class KeyZipperIterDataPipe(IterDataPipe[T_co]):
         buffer_size: int = 10000,
         merge_fn: Optional[Callable] = None,
     ) -> None:
+        if not isinstance(ref_datapipe, IterDataPipe):
+            raise TypeError(f"ref_datapipe must be a IterDataPipe, but its type is {type(ref_datapipe)} instead.")
         self.source_datapipe = source_datapipe
         self.ref_datapipe = ref_datapipe
         self.key_fn = key_fn
@@ -85,8 +87,8 @@ class KeyZipperIterDataPipe(IterDataPipe[T_co]):
 
 
 @functional_datapipe("zip_with_map")
-class MapZipperIterDataPipe(IterDataPipe[T_co]):
-    r""" :class:`MapZipperIterDataPipe`.
+class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
+    r""" :class:`MapKeyZipperIterDataPipe`.
 
     IterDataPipe that joins the items from the source IterDataPipe with items from a MapDataPipe. The
     matching is done by the key function, which maps an item from source IterDataPipe to

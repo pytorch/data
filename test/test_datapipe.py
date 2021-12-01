@@ -14,8 +14,8 @@ from torchdata.datapipes.iter import (
     IterDataPipe,
     IterableWrapper,
     InMemoryCacheHolder,
-    KeyZipper,
-    MapZipper,
+    IterKeyZipper,
+    MapKeyZipper,
     Cycler,
     Header,
     IndexAdder,
@@ -89,19 +89,19 @@ class TestDataPipe(expecttest.TestCase):
         list(cache_dp)
         self.assertEqual(10, len(cache_dp))
 
-    def test_keyzipper_iterdatapipe(self) -> None:
+    def test_iter_key_zipper_iterdatapipe(self) -> None:
 
         source_dp = IterableWrapper(range(10))
         ref_dp = IterableWrapper(range(20))
 
         # Functional Test: Output should be a zip list of tuple
-        zip_dp = source_dp.zip_by_key(
+        zip_dp = source_dp.zip_with_iter(
             ref_datapipe=ref_dp, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=False, buffer_size=100
         )
         self.assertEqual([(i, i) for i in range(10)], list(zip_dp))
 
         # Functional Test: keep_key=True, and key should show up as the first element
-        zip_dp_w_key = source_dp.zip_by_key(
+        zip_dp_w_key = source_dp.zip_with_iter(
             ref_datapipe=ref_dp, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=True, buffer_size=10
         )
         self.assertEqual([(i, (i, i)) for i in range(10)], list(zip_dp_w_key))
@@ -110,13 +110,13 @@ class TestDataPipe(expecttest.TestCase):
         def merge_to_string(item1, item2):
             return f"{item1},{item2}"
 
-        zip_dp_w_str_merge = source_dp.zip_by_key(
+        zip_dp_w_str_merge = source_dp.zip_with_iter(
             ref_datapipe=ref_dp, key_fn=lambda x: x, ref_key_fn=lambda x: x, buffer_size=10, merge_fn=merge_to_string
         )
         self.assertEqual([f"{i},{i}" for i in range(10)], list(zip_dp_w_str_merge))
 
         # Functional Test: using a different merge function and keep_key=True
-        zip_dp_w_key_str_merge = source_dp.zip_by_key(
+        zip_dp_w_key_str_merge = source_dp.zip_with_iter(
             ref_datapipe=ref_dp,
             key_fn=lambda x: x,
             ref_key_fn=lambda x: x,
@@ -127,18 +127,18 @@ class TestDataPipe(expecttest.TestCase):
         self.assertEqual([(i, f"{i},{i}") for i in range(10)], list(zip_dp_w_key_str_merge))
 
         # Functional Test: testing nested zipping
-        zip_dp = source_dp.zip_by_key(
+        zip_dp = source_dp.zip_with_iter(
             ref_datapipe=ref_dp, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=False, buffer_size=100
         )
 
         # Without a custom merge function, there will be nested tuples
-        zip_dp2 = zip_dp.zip_by_key(
+        zip_dp2 = zip_dp.zip_with_iter(
             ref_datapipe=ref_dp, key_fn=lambda x: x[0], ref_key_fn=lambda x: x, keep_key=False, buffer_size=100
         )
         self.assertEqual([((i, i), i) for i in range(10)], list(zip_dp2))
 
         # With a custom merge function, nesting can be prevented
-        zip_dp2_w_merge = zip_dp.zip_by_key(
+        zip_dp2_w_merge = zip_dp.zip_with_iter(
             ref_datapipe=ref_dp,
             key_fn=lambda x: x[0],
             ref_key_fn=lambda x: x,
@@ -150,7 +150,7 @@ class TestDataPipe(expecttest.TestCase):
 
         # Functional Test: element is in source but missing in reference
         ref_dp_missing = IterableWrapper(range(1, 10))
-        zip_dp = source_dp.zip_by_key(
+        zip_dp = source_dp.zip_with_iter(
             ref_datapipe=ref_dp_missing, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=False, buffer_size=100
         )
         with self.assertRaisesRegex(BufferError, r"No matching key can be found"):
@@ -158,7 +158,7 @@ class TestDataPipe(expecttest.TestCase):
 
         # Functional Test: Buffer is not large enough, hence, element can't be found and raises error
         ref_dp_end = IterableWrapper(list(range(1, 10)) + [0])
-        zip_dp = source_dp.zip_by_key(
+        zip_dp = source_dp.zip_with_iter(
             ref_datapipe=ref_dp_end, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=False, buffer_size=5
         )
         it = iter(zip_dp)
@@ -173,13 +173,13 @@ class TestDataPipe(expecttest.TestCase):
             next(it)
 
         # Functional Test: Buffer is just big enough
-        zip_dp = source_dp.zip_by_key(
+        zip_dp = source_dp.zip_with_iter(
             ref_datapipe=ref_dp_end, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=False, buffer_size=10
         )
         self.assertEqual([(i, i) for i in range(10)], list(zip_dp))
 
         # Reset Test: reset the DataPipe after reading part of it
-        zip_dp = KeyZipper(
+        zip_dp = IterKeyZipper(
             source_datapipe=source_dp,
             ref_datapipe=ref_dp,
             key_fn=lambda x: x,
@@ -195,7 +195,7 @@ class TestDataPipe(expecttest.TestCase):
         # __len__ Test: inherits length from source_dp
         self.assertEqual(10, len(zip_dp))
 
-    def test_map_zipper_datapipe(self):
+    def test_map_key_zipper_datapipe(self) -> None:
         source_dp = IterableWrapper(range(10))
         map_dp = SequenceWrapper(["even", "odd"])
 
@@ -223,7 +223,7 @@ class TestDataPipe(expecttest.TestCase):
         def odd_even_bug(i: int) -> int:
             return 2 if i == 0 else i % 2
 
-        result_dp = MapZipper(source_dp, map_dp, odd_even_bug)
+        result_dp = MapKeyZipper(source_dp, map_dp, odd_even_bug)
         it = iter(result_dp)
         with self.assertRaisesRegex(KeyError, "is not a valid key in the given MapDataPipe"):
             next(it)
