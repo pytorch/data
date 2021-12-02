@@ -34,8 +34,8 @@ class PlainTextReaderHelper:
         with contextlib.suppress(StopIteration):
             for _ in range(self._skip_lines):
                 next(file)
-
         yield from file
+        file.close()
 
     def strip_newline(self, stream: Union[Iterator[bytes], Iterator[str]]) -> Union[Iterator[bytes], Iterator[str]]:
         if not self._strip_newline:
@@ -60,7 +60,6 @@ class PlainTextReaderHelper:
         if not self._return_path:
             yield from stream
             return
-
         for data in stream:
             yield path, data
 
