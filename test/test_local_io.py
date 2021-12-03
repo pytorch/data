@@ -47,13 +47,13 @@ skipIfNoIoPath = unittest.skipIf(not HAS_IOPATH, "no iopath")
 
 try:
     import rarfile
-
-    rarfile.tool_setup()
-
-    subprocess.run(("rar", "-?"), check=True)
-
     HAS_RAR_TOOLS = True
-except (ModuleNotFoundError, rarfile.RarCannotExec, FileNotFoundError, subprocess.CalledProcessError):
+    try:
+        rarfile.tool_setup()
+        subprocess.run(("rar", "-?"), check=True)
+    except (rarfile.RarCannotExec, subprocess.CalledProcessError):
+        HAS_RAR_TOOLS = False
+except (ModuleNotFoundError, FileNotFoundError):
     HAS_RAR_TOOLS = False
 skipIfNoRarTools = unittest.skipIf(not HAS_RAR_TOOLS, "no rar tools")
 
