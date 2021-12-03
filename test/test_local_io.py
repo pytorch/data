@@ -4,7 +4,6 @@ import hashlib
 import itertools
 import lzma
 import os
-import shlex
 import subprocess
 import tarfile
 import unittest
