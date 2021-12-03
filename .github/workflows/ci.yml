@@ -27,6 +27,12 @@ jobs:
           - 3.8
           - 3.9
     steps:
+      - name: Setup additional system libraries
+        if: startsWith( matrix.os, 'ubuntu' )
+        run: |
+          sudo add-apt-repository multiverse
+          sudo apt update
+          sudo apt install rar unrar
       - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -38,7 +44,7 @@ jobs:
           pip3 install -r requirements.txt
           pip3 install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
       - name: Install test requirements
-        run: pip3 install expecttest iopath==0.1.9 numpy pytest
+        run: pip3 install expecttest iopath==0.1.9 numpy pytest rarfile
       - name: Build TorchData
         run: python setup.py develop
       - name: Run DataPipes tests with pytest

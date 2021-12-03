@@ -4,6 +4,7 @@ import hashlib
 import itertools
 import lzma
 import os
+import subprocess
 import tarfile
 import unittest
 import warnings
@@ -26,6 +27,7 @@ from torchdata.datapipes.iter import (
     TarArchiveReader,
     ZipArchiveReader,
     XzFileReader,
+    RarArchiveLoader,
 )
 
 from _utils._common_utils_for_test import (
@@ -41,6 +43,18 @@ try:
 except ImportError:
     HAS_IOPATH = False
 skipIfNoIoPath = unittest.skipIf(not HAS_IOPATH, "no iopath")
+
+try:
+    import rarfile
+    HAS_RAR_TOOLS = True
+    try:
+        rarfile.tool_setup()
+        subprocess.run(("rar", "-?"), check=True)
+    except (rarfile.RarCannotExec, subprocess.CalledProcessError):
+        HAS_RAR_TOOLS = False
+except (ModuleNotFoundError, FileNotFoundError):
+    HAS_RAR_TOOLS = False
+skipIfNoRarTools = unittest.skipIf(not HAS_RAR_TOOLS, "no rar tools")
 
 
 class TestDataPipeLocalIO(expecttest.TestCase):
@@ -575,6 +589,40 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         # __len__ Test: returns the length of source DataPipe
         self.assertEqual(3, len(saver_dp))
+
+    def _write_test_rar_files(self):
+        # `rarfile` can only read but not write .rar archives so we use to system utilities
+        subprocess.run(("rar", "a", os.path.join(self.temp_dir.name, "test_rar.rar"), *self.temp_files), check=True)
+
+    @skipIfNoRarTools
+    def test_rar_archive_loader(self):
+        self._write_test_rar_files()
+
+        datapipe1 = FileLister(self.temp_dir.name, "*.rar")
+        datapipe2 = FileLoader(datapipe1)
+        rar_loader_dp = RarArchiveLoader(datapipe2)
+
+        # Functional Test: read extracted files before reaching the end of the rarfile
+        self._unordered_compressed_files_comparison_helper(self.temp_files, rar_loader_dp, check_length=False)
+
+        # Functional Test: read extracted files after reaching the end of the rarfile
+        data_refs = list(rar_loader_dp)
+        self._unordered_compressed_files_comparison_helper(self.temp_files, data_refs)
+
+        # Reset Test: reset the DataPipe after reading part of it
+        rar_loader_dp = datapipe2.load_from_rar()
+        n_elements_before_reset = 1
+        res_before_reset, res_after_reset = reset_after_n_next_calls(rar_loader_dp,
+                                                                     n_elements_before_reset)
+        # Check the results accumulated before reset
+        self._unordered_compressed_files_comparison_helper(
+            self.temp_files[:n_elements_before_reset], res_before_reset)
+        # Check the results accumulated after reset
+        self._unordered_compressed_files_comparison_helper(self.temp_files, res_after_reset)
+
+        # __len__ Test: doesn't have valid length
+        with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
+            len(rar_loader_dp)
 
 
 if __name__ == "__main__":

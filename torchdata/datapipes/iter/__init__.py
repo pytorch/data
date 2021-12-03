@@ -56,6 +56,7 @@ from torchdata.datapipes.iter.util.hashchecker import HashCheckerIterDataPipe as
 from torchdata.datapipes.iter.util.header import HeaderIterDataPipe as Header
 from torchdata.datapipes.iter.util.jsonparser import JsonParserIterDataPipe as JsonParser
 from torchdata.datapipes.iter.util.paragraphaggregator import ParagraphAggregatorIterDataPipe as ParagraphAggregator
+from torchdata.datapipes.iter.util.rar_archive_loader import RarArchiveLoaderIterDataPipe as RarArchiveLoader
 from torchdata.datapipes.iter.util.rows2columnar import Rows2ColumnarIterDataPipe as Rows2Columnar
 from torchdata.datapipes.iter.util.samplemultiplexer import SampleMultiplexerDataPipe as SampleMultiplexer
 from torchdata.datapipes.iter.util.saver import SaverIterDataPipe as Saver
@@ -104,6 +105,7 @@ __all__ = [
     "OnDiskCacheHolder",
     "OnlineReader",
     "ParagraphAggregator",
+    "RarArchiveLoader",
     "RoutedDecoder",
     "Rows2Columnar",
     "SampleMultiplexer",
