@@ -17,7 +17,7 @@ class RarfilePatcher:
 
         def patched_read(self, cnt):
             whence = self._cur.add_size - self._cur_avail
-            self._fd.seek(self._inf.header_offset, self._cur.add_size - self._cur_avail)
+            self._fd.seek(self._inf.header_offset, whence)
             if whence == 0:
                 self._cur = self._parser._parse_header(self._fd)
             return unpatched_read(self, cnt)
