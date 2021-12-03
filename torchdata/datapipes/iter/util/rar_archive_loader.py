@@ -11,45 +11,29 @@ from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 
 class RarfilePatcher:
     def __init__(self):
-        from rarfile import XFile, DirectReader
-
-        def patched_open_extfile(self, parser, inf):
-            super(type(self), self)._open_extfile(parser, inf)  # type: ignore[misc]
-
-            self._volfile = self._inf.volume_file
-            self._fd = XFile(self._volfile, 0)
+        from rarfile import DirectReader
 
         unpatched_read = DirectReader._read
 
         def patched_read(self, cnt):
-            self._fd.seek(self._inf.header_offset, 0)
-            self._cur = self._parser._parse_header(self._fd)
-            self._cur_avail = self._cur.add_size
+            whence = self._cur.add_size - self._cur_avail
+            self._fd.seek(self._inf.header_offset, self._cur.add_size - self._cur_avail)
+            if whence == 0:
+                self._cur = self._parser._parse_header(self._fd)
             return unpatched_read(self, cnt)
 
-        self._patchers = [
-            patch("rarfile.DirectReader._open_extfile", new=patched_open_extfile),
-            patch("rarfile.DirectReader._read", new=patched_read)
-        ]
+        self._patch = patch("rarfile.DirectReader._read", new=patched_read)
 
     def start(self):
-        for patcher in self._patchers:
-            patcher.start()
+        self._patch.start()
 
     def stop(self):
-        for patcher in self._patchers:
-            patcher.stop()
+        self._patch.stop()
 
 
 @functional_datapipe("load_from_rar")
 class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
     def __init__(self, datapipe: IterDataPipe[Tuple[str, io.BufferedIOBase]], *, length: int = -1):
-        self._rarfile = self._verify_dependencies()
-        super().__init__()
-        self.datapipe = datapipe
-        self.length = length
-
-    def _verify_dependencies(self):
         try:
             import rarfile
         except ImportError as error:
@@ -61,17 +45,19 @@ class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
         # check if at least one system library for reading rar archives is available to be used by rarfile
         rarfile.tool_setup()
 
-        return rarfile
+        self.datapipe = datapipe
+        self.length = length
 
     def __iter__(self) -> Iterator[Tuple[str, io.BufferedIOBase]]:
+        import rarfile
+        patcher = RarfilePatcher()
+        patcher.start()
+
         for data in self.datapipe:
             validate_pathname_binary_tuple(data)
             path, stream = data
 
-            patcher = RarfilePatcher()
-            patcher.start()
-
-            rar = self._rarfile.RarFile(stream)
+            rar = rarfile.RarFile(stream)
             for info in rar.infolist():
                 if info.filename.endswith("/"):
                     continue
