@@ -43,7 +43,7 @@ body:
   attributes:
     label: Versions
     description: |
-      Please run the following and paste the output below. Make sure the version numbers of all relevant packages (e.g. torch, torchdata, other domain packages) are included. 
+      Please run the following and paste the output below. Make sure the version numbers of all relevant packages (e.g. torch, torchdata, other domain packages) are included.
       ```sh
       wget https://raw.githubusercontent.com/pytorch/pytorch/master/torch/utils/collect_env.py
       # For security purposes, please check the contents of collect_env.py before running it.
