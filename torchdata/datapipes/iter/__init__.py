@@ -31,6 +31,11 @@ from torchdata.datapipes.iter.load.iopath import (
     IoPathFileLoaderIterDataPipe as IoPathFileLoader,
     IoPathSaverIterDataPipe as IoPathSaver,
 )
+from torchdata.datapipes.iter.load.fsspec import (
+    FSSpecFileListerIterDataPipe as FSSpecFileLister,
+    FSSpecFileOpenerIterDataPipe as FSSpecFileOpener,
+    FSSpecSaverIterDataPipe as FSSpecSaver,
+)
 from torchdata.datapipes.iter.transform.bucketbatcher import BucketBatcherIterDataPipe as BucketBatcher
 from torchdata.datapipes.iter.util.cacheholder import (
     EndOnDiskCacheHolderIterDataPipe as EndOnDiskCacheHolder,
@@ -80,6 +85,9 @@ __all__ = [
     "EndOnDiskCacheHolder",
     "Enumerator",
     "Extractor",
+    "FSSpecFileLister",
+    "FSSpecFileOpener",
+    "FSSpecSaver",
     "FileLister",
     "FileLoader",
     "Filter",
