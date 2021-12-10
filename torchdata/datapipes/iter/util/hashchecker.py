@@ -62,7 +62,7 @@ class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, U]]):
                 for d in data:
                     hash_func.update(d)
 
-                # TODO(VitalyFedyunin): this will not work (or work crappy for non-seekable steams like http)
+                # TODO(133): this will not work (or work crappy for non-seekable steams like http)
                 if self.rewind:
                     data.seek(0)
 

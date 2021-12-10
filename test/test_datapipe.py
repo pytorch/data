@@ -67,7 +67,7 @@ class TestDataPipe(expecttest.TestCase):
         self.assertTrue(id(source) == id(cache) for source, cache in zip(source_dp, res1))
         self.assertTrue(id(source) == id(cache) for source, cache in zip(source_dp, res2))
 
-        # TODO: Figure out a way to consistently test caching when size is in megabytes
+        # TODO(122): Figure out a way to consistently test caching when size is in megabytes
 
         # Reset Test: reset the DataPipe after reading part of it
         cache_dp = InMemoryCacheHolder(source_dp, size=5)
@@ -298,7 +298,7 @@ class TestDataPipe(expecttest.TestCase):
         # __len__ Test: returns the limit when it is less than the length of source
         self.assertEqual(5, len(header_dp))
 
-        # TODO: __len__ Test: returns the length of source when it is less than the limit
+        # TODO(123): __len__ Test: returns the length of source when it is less than the limit
         # header_dp = source_dp.header(30)
         # self.assertEqual(20, len(header_dp))
 

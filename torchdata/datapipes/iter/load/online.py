@@ -117,7 +117,7 @@ class OnlineReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
             parts = urlparse(url)
 
             if re.match(r"(drive|docs)[.]google[.]com", parts.netloc):
-                # TODO: can this also have a timeout?
+                # TODO(137): can this also have a timeout?
                 yield _get_response_from_google_drive(url)
             else:
                 yield _get_response_from_http(url, timeout=self.timeout)

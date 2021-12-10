@@ -77,7 +77,7 @@ def MyImageFolder(root=IMAGES_ROOT, transform=None):
         # Yes, we had to scan files twice. Alternativelly it is possible to use
         # `fork` DataPipe, but it will require buffer equal to the size of all
         # full file names
-        # TODO(VitalyFedyunin): Make sure that `fork` complains when buffer becomes
+        # TODO(125): Make sure that `fork` complains when buffer becomes
         # too large
         list_files_0 = FileLister(root=IMAGES_ROOT, recursive=True)
         list_files_1 = FileLister(root=IMAGES_ROOT, recursive=True).sharding_filter()
