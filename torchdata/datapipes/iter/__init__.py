@@ -19,6 +19,7 @@ from torch.utils.data.datapipes.iter import (
     Filter,
     StreamReader,
     IterableWrapper,
+    ShardingFilter,
 )
 
 from torchdata.datapipes.iter.load.online import (
@@ -119,6 +120,7 @@ __all__ = [
     "SampleMultiplexer",
     "Sampler",
     "Saver",
+    "ShardingFilter",
     "Shuffler",
     "StreamReader",
     "TarArchiveReader",
