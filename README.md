@@ -28,7 +28,7 @@ Over many years of feedback and organic community usage of the PyTorch DataLoade
 
 ### Colab
 
-Follow the instructions [in this Colab notebook](https://colab.research.google.com/drive/1x1ESG0_N02txFuQwyTfCnjhqzS-PzQjA#scrollTo=SVnu66W-wQfF)
+Follow the instructions [in this Colab notebook](https://colab.research.google.com/drive/1x1ESG0_N02txFuQwyTfCnjhqzS-PzQjA)
 
 ### Local pip or conda
 
