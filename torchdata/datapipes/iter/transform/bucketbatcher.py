@@ -9,7 +9,7 @@ from typing import Callable, Iterator, Optional, Sized, TypeVar
 T_co = TypeVar("T_co", covariant=True)
 
 
-# TODO(ejguan): https://github.com/pytorch/pytorch/issues/63095
+# TODO(135): https://github.com/pytorch/pytorch/issues/63095
 def _in_batch_shuffle_fn(data: DataChunk):
     d = list(data)
     random.shuffle(d)
@@ -57,7 +57,7 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         assert bucket_num > 0, "Number of buckets is required to be larger than 0!"
         super().__init__()
 
-        # TODO: Verify _datapippe is not going to be serialized twice and is able to reconstruct
+        # TODO(136): Verify _datapippe is not going to be serialized twice and is able to reconstruct
         self._datapipe: IterDataPipe[T_co] = datapipe
         self.batch_size: int = batch_size
         self.drop_last: bool = drop_last

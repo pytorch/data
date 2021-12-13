@@ -525,7 +525,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         saver_dp = source_dp.save_to_disk(filepath_fn=filepath_fn, mode="wb")
         list(saver_dp)
 
-    # TODO (ejguan): this test currently only covers reading from local
+    # TODO(120): this test currently only covers reading from local
     # filesystem. It needs to be modified once test data can be stored on
     # gdrive/s3/onedrive
     @skipIfNoIoPath
