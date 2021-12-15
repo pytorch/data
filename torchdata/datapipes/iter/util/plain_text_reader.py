@@ -126,7 +126,11 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
         self.source_datapipe = source_datapipe
         self._csv_reader = csv_reader
         self._helper = PlainTextReaderHelper(
-            skip_lines=skip_lines, decode=decode, encoding=encoding, errors=errors, return_path=return_path,
+            skip_lines=skip_lines,
+            decode=decode,
+            encoding=encoding,
+            errors=errors,
+            return_path=return_path,
         )
         self.fmtparams = fmtparams
 

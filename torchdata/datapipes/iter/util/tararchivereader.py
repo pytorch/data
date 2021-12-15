@@ -5,10 +5,10 @@ import warnings
 from io import BufferedIOBase
 from typing import IO, Iterable, Iterator, Optional, Tuple, cast
 
-from torchdata.datapipes.utils import StreamWrapper
-from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.utils import StreamWrapper
+from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 
 
 @functional_datapipe("read_from_tar")

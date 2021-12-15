@@ -1,14 +1,17 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import io
-import expecttest
 import unittest
 import warnings
-
 from collections import defaultdict
 from typing import Dict
 
-import torchdata
+import expecttest
 import torch.utils.data.datapipes.iter
+import torchdata
+from _utils._common_utils_for_test import (
+    IDP_NoLen,
+    reset_after_n_next_calls,
+)
 from torch.utils.data.datapipes.map import SequenceWrapper
 from torchdata.datapipes.iter import (
     IterDataPipe,
@@ -24,11 +27,6 @@ from torchdata.datapipes.iter import (
     Rows2Columnar,
     SampleMultiplexer,
     BucketBatcher,
-)
-
-from _utils._common_utils_for_test import (
-    IDP_NoLen,
-    reset_after_n_next_calls,
 )
 
 
@@ -165,7 +163,13 @@ class TestDataPipe(expecttest.TestCase):
         with warnings.catch_warnings(record=True) as wa:
             # In order to find '0' at the end, the buffer is filled, hence the warning
             # and ref_dp is fully traversed
-            self.assertEqual((0, 0,), next(it))
+            self.assertEqual(
+                (
+                    0,
+                    0,
+                ),
+                next(it),
+            )
             self.assertEqual(len(wa), 1)
             self.assertRegex(str(wa[0].message), r"Buffer reaches the upper limit")
         with self.assertRaisesRegex(BufferError, r"No matching key can be found"):
@@ -308,17 +312,17 @@ class TestDataPipe(expecttest.TestCase):
         enum_dp = source_dp.enumerate()
 
         # Functional Test: ensure that the correct index value is added to each element (tuple)
-        self.assertEqual([(0, 'a'), (1, 'b'), (2, 'c'), (3, 'd'), (4, 'e')], list(enum_dp))
+        self.assertEqual([(0, "a"), (1, "b"), (2, "c"), (3, "d"), (4, "e")], list(enum_dp))
 
         # Functional Test: start index from non-zero
         enum_dp = source_dp.enumerate(starting_index=10)
-        self.assertEqual([(10, 'a'), (11, 'b'), (12, 'c'), (13, 'd'), (14, 'e')], list(enum_dp))
+        self.assertEqual([(10, "a"), (11, "b"), (12, "c"), (13, "d"), (14, "e")], list(enum_dp))
 
         # Reset Test:
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(enum_dp, n_elements_before_reset)
-        self.assertEqual([(10, 'a'), (11, 'b')], res_before_reset)
-        self.assertEqual([(10, 'a'), (11, 'b'), (12, 'c'), (13, 'd'), (14, 'e')], res_after_reset)
+        self.assertEqual([(10, "a"), (11, "b")], res_before_reset)
+        self.assertEqual([(10, "a"), (11, "b"), (12, "c"), (13, "d"), (14, "e")], res_after_reset)
 
         # __len__ Test: returns length of source DataPipe
         self.assertEqual(5, len(enum_dp))

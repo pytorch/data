@@ -1,9 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import json
+from typing import Dict, Iterator, Tuple, IO
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
-from typing import Dict, Iterator, Tuple, IO
 
 
 @functional_datapipe("parse_json_files")
@@ -15,6 +15,7 @@ class JsonParserIterDataPipe(IterDataPipe[Tuple[str, Dict]]):
         source_datapipe: a DataPipe with tuples of file name and JSON data stream
         kwargs: keyword arguments that will be passed through to `json.loads`
     """
+
     def __init__(self, source_datapipe: IterDataPipe[Tuple[str, IO]], **kwargs) -> None:
         self.source_datapipe: IterDataPipe[Tuple[str, IO]] = source_datapipe
         self.kwargs = kwargs

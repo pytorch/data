@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+import http.server
 import os
 import re
-import http.server
 import threading
 
 import torch
@@ -66,7 +66,7 @@ class AttributeCategories(IterDataPipe):
         for data in self.listfiles_dp:
             if isinstance(data, tuple):
                 category = cat_to_dp[self.parse_category_fn(data[0])]
-                yield data + (category, )
+                yield data + (category,)
             else:
                 category = cat_to_dp[self.parse_category_fn(data)]
                 yield (data, category)

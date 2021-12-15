@@ -1,6 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import os
-
 from typing import Any, Callable, Iterator, Optional, Tuple, Union
 
 from torchdata.datapipes import functional_datapipe

@@ -1,9 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import warnings
 from collections import OrderedDict
+from typing import Callable, Iterator, Optional, TypeVar
 
 from torch.utils.data import IterDataPipe, MapDataPipe, functional_datapipe
-from typing import Callable, Iterator, Optional, TypeVar
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -88,7 +88,7 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
 
 @functional_datapipe("zip_with_map")
 class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
-    r""" :class:`MapKeyZipperIterDataPipe`.
+    r""":class:`MapKeyZipperIterDataPipe`.
 
     IterDataPipe that joins the items from the source IterDataPipe with items from a MapDataPipe. The
     matching is done by the key function, which maps an item from source IterDataPipe to

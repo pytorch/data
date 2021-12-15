@@ -6,6 +6,7 @@ from torchdata.datapipes.iter import (
     IterableWrapper,
     FileLoader,
 )
+
 from .utils import (
     _add_docstring_header,
     _create_dataset_directory,
@@ -45,8 +46,10 @@ def AmazonReviewPolarity(root, split):
 
     url_dp = IterableWrapper([URL])
     # cache data on-disk with sanity check
-    cache_dp = url_dp.on_disk_cache(filepath_fn=lambda x: os.path.join(root, _PATH), hash_dict={os.path.join(root, _PATH): MD5}, hash_type="md5")
-    cache_dp = GDriveReader(cache_dp) .end_caching(mode="wb", same_filepath_fn=True)
+    cache_dp = url_dp.on_disk_cache(
+        filepath_fn=lambda x: os.path.join(root, _PATH), hash_dict={os.path.join(root, _PATH): MD5}, hash_type="md5"
+    )
+    cache_dp = GDriveReader(cache_dp).end_caching(mode="wb", same_filepath_fn=True)
 
     cache_dp = FileLoader(cache_dp)
 

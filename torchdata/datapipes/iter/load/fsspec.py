@@ -1,11 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import os
 import posixpath
-
 from typing import Any, Callable, Iterator, List, Optional, Tuple, Union
 
 from torch.utils.data.datapipes.utils.common import match_masks
-
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
