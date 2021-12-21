@@ -19,6 +19,7 @@ from torch.utils.data.datapipes.iter import (
     Filter,
     StreamReader,
     IterableWrapper,
+    ShardingFilter,
 )
 # TODO: import ShardingFilter directly from torch.utils.data.datapipes.iter as soon as it is exposed.
 #  https://github.com/pytorch/pytorch/pull/69844 was merged, but is not yet available in the nightly releases
@@ -38,6 +39,10 @@ from torchdata.datapipes.iter.load.fsspec import (
     FSSpecFileListerIterDataPipe as FSSpecFileLister,
     FSSpecFileOpenerIterDataPipe as FSSpecFileOpener,
     FSSpecSaverIterDataPipe as FSSpecSaver,
+)
+from torchdata.datapipes.iter.load.s3io import (
+    S3FileListerIterDataPipe as S3FileLister,
+    S3FileLoaderIterDataPipe as S3FileLoader,
 )
 from torchdata.datapipes.iter.transform.bucketbatcher import BucketBatcherIterDataPipe as BucketBatcher
 from torchdata.datapipes.iter.util.cacheholder import (
@@ -119,6 +124,8 @@ __all__ = [
     "RarArchiveLoader",
     "RoutedDecoder",
     "Rows2Columnar",
+    "S3FileLister",
+    "S3FileLoader",
     "SampleMultiplexer",
     "Sampler",
     "Saver",

@@ -11,6 +11,7 @@ from torchdata.datapipes.iter import (
     HttpReader,
     IterableWrapper,
     OnDiskCacheHolder,
+    S3FileLister,
 )
 
 from _utils._common_utils_for_test import (
@@ -141,6 +142,15 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             # File is cached to disk
             self.assertTrue(os.path.exists(expected_csv_path))
             self.assertEqual(expected_csv_path, csv_path)
+
+        def test_s3_lister_iterdatapipe(self):
+
+            file_url = "s3://pt-s3plugin-test-data-west2/images/test"
+            s3_lister_dp = S3FileLister(IterableWrapper([file_url]))
+            count = 0
+            for item in s3_lister_dp:
+                count = count + 1
+            print("number of items:", count)
 
 
 if __name__ == "__main__":
