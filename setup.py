@@ -9,6 +9,8 @@ from setuptools import find_packages, setup
 from torchdata.datapipes.gen_pyi import gen_pyi
 
 
+from tools import setup_helpers
+
 ROOT_DIR = Path(__file__).parent.resolve()
 
 
@@ -85,5 +87,10 @@ if __name__ == "__main__":
         # Package Info
         packages=find_packages(exclude=["test*", "examples*"]),
         zip_safe=False,
+        extras_require={
+            "scipy": ["scipy"],
+        },
+        ext_modules=setup_helpers.get_ext_modules(),
+        cmdclass=dict(build_ext=setup_helpers.CMakeBuild),
     )
     gen_pyi()

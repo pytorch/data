@@ -19,8 +19,8 @@ from torch.utils.data.datapipes.iter import (
     ShardingFilter,
     Shuffler,
     StreamReader,
-    UnBatcher,
-    Zipper,
+    IterableWrapper,
+    ShardingFilter,
 )
 from torchdata.datapipes.iter.load.fsspec import (
     FSSpecFileListerIterDataPipe as FSSpecFileLister,
@@ -37,6 +37,10 @@ from torchdata.datapipes.iter.load.online import (
     GDriveReaderDataPipe as GDriveReader,
     HTTPReaderIterDataPipe as HttpReader,
     OnlineReaderIterDataPipe as OnlineReader,
+)
+from torchdata.datapipes.iter.load.s3io import (
+    S3FileListerIterDataPipe as S3FileLister,
+    S3FileLoaderIterDataPipe as S3FileLoader,
 )
 from torchdata.datapipes.iter.transform.bucketbatcher import (
     BucketBatcherIterDataPipe as BucketBatcher,
@@ -148,6 +152,8 @@ __all__ = [
     "RarArchiveLoader",
     "RoutedDecoder",
     "Rows2Columnar",
+    "S3FileLister",
+    "S3FileLoader",
     "SampleMultiplexer",
     "Sampler",
     "Saver",
