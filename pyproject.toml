@@ -6,9 +6,3 @@ first_party_detection = false
 
 line-length = 120
 target-version = ["py36"]
-
-[tool.ufmt]
-
-excludes = [
-    "gallery",
-]
