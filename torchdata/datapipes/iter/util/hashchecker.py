@@ -1,11 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import hashlib
-from io import IOBase
-from typing import Dict, Iterator, Tuple, Union
 
+from io import IOBase
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
+from typing import Dict, Iterator, Tuple, Union
 
 
 D_type = Union[str, bytes, bytearray]

@@ -1,9 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import io
+import expecttest
 import os
 import unittest
 
-import expecttest
 from torchdata.datapipes.iter import (
     GDriveReader,
     IterableWrapper,

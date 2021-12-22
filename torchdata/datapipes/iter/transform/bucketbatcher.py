@@ -1,10 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import random
-from typing import Callable, Iterator, Optional, Sized, TypeVar
 
-from torch.utils.data import DataChunk
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+from torch.utils.data import DataChunk
+from typing import Callable, Iterator, Optional, Sized, TypeVar
 
 T_co = TypeVar("T_co", covariant=True)
 

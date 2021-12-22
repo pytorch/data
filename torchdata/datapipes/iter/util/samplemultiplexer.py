@@ -1,6 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-import random
 from typing import Dict, Iterator, Optional, Sized, TypeVar
+import random
 
 from torchdata.datapipes.iter import IterDataPipe
 
@@ -24,7 +24,6 @@ class SampleMultiplexerDataPipe(IterDataPipe[T_co]):
             unexhausted DataPipes will be normalized to 1 for the purpose of sampling.
         seed: random seed to initialize the random number generator
     """
-
     def __init__(
         self,
         pipes_to_weights_dict: Dict[IterDataPipe[T_co], float],

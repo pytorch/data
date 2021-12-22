@@ -1,10 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-import re
 from typing import Iterator, Tuple
 from urllib.parse import urlparse
+from requests.exceptions import HTTPError, RequestException
+import re
 
 import requests
-from requests.exceptions import HTTPError, RequestException
+
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
 

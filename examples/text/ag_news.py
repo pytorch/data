@@ -1,6 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from torchdata.datapipes.iter import HttpReader
-
 from .utils import (
     _wrap_split_argument,
     _add_docstring_header,

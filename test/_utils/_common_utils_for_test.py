@@ -2,9 +2,9 @@
 import hashlib
 import os
 import tempfile
-from typing import List, Tuple, TypeVar
 
 from torchdata.datapipes.iter import IterDataPipe
+from typing import List, Tuple, TypeVar
 
 
 T_co = TypeVar("T_co", covariant=True)

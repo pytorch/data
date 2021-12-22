@@ -7,7 +7,6 @@ from torchdata.datapipes.iter import (
     IterDataPipe,
     IterableWrapper,
 )
-
 from .utils import (
     _add_docstring_header,
     _create_dataset_directory,
@@ -63,11 +62,7 @@ def SQuAD2(root, split):
 
     url_dp = IterableWrapper([URL[split]])
     # cache data on-disk with sanity check
-    cache_dp = url_dp.on_disk_cache(
-        filepath_fn=lambda x: os.path.join(root, os.path.basename(x)),
-        hash_dict={os.path.join(root, os.path.basename(URL[split])): MD5[split]},
-        hash_type="md5",
-    )
+    cache_dp = url_dp.on_disk_cache(filepath_fn=lambda x: os.path.join(root, os.path.basename(x)), hash_dict={os.path.join(root, os.path.basename(URL[split])): MD5[split]}, hash_type="md5")
     cache_dp = HttpReader(cache_dp).end_caching(mode="wb", same_filepath_fn=True)
 
     cache_dp = FileLoader(cache_dp)

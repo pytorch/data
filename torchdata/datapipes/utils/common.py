@@ -1,8 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from io import IOBase
-from typing import Tuple
-
 from torchdata.datapipes.utils import StreamWrapper
+from typing import Tuple
 
 
 def validate_pathname_binary_tuple(data: Tuple[str, IOBase]):

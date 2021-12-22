@@ -1,8 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-from typing import Callable, Iterator, List, Tuple, TypeVar
-
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+from typing import Callable, Iterator, List, Tuple, TypeVar
 
 
 T_co = TypeVar("T_co", covariant=True)
@@ -26,7 +25,6 @@ class ParagraphAggregatorIterDataPipe(IterDataPipe[Tuple[str, str]]):
         source_datapipe: a DataPipe with tuples of a file name and a line
         joiner: a function that joins a list of lines together
     """
-
     def __init__(self, source_datapipe: IterDataPipe[Tuple[str, T_co]], joiner: Callable = _default_line_join) -> None:
         self.source_datapipe: IterDataPipe[Tuple[str, T_co]] = source_datapipe
         self.joiner: Callable = joiner

@@ -1,8 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-from typing import Iterator, Optional, TypeVar
-
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+from typing import Iterator, Optional, TypeVar
 
 T_co = TypeVar("T_co", covariant=True)
 

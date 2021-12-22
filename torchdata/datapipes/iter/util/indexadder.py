@@ -1,8 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-from typing import Dict, Iterator, Tuple, TypeVar
-
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+from typing import Dict, Iterator, Tuple, TypeVar
 
 K = TypeVar("K")
 
@@ -11,13 +10,13 @@ K = TypeVar("K")
 class EnumeratorIterDataPipe(IterDataPipe[Tuple[int, K]]):
     r""":class:`Enumerator`.
 
-    Iterable DataPipe to add an index to an existing DataPipe through enumeration, with
-    the index starting from 0 by default.
+        Iterable DataPipe to add an index to an existing DataPipe through enumeration, with
+        the index starting from 0 by default.
 
-    Args:
-        source_datapipe: Iterable DataPipe being indexed
-        starting_index: Index from which enumeration will start
-    """
+        Args:
+            source_datapipe: Iterable DataPipe being indexed
+            starting_index: Index from which enumeration will start
+        """
 
     def __init__(self, source_datapipe: IterDataPipe[K], starting_index: int = 0) -> None:
         self.source_datapipe: IterDataPipe[K] = source_datapipe
