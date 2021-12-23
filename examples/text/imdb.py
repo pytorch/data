@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 from torchdata.datapipes.iter import (
-    FileLoader,
+    FileOpener,
     HttpReader,
     IterableWrapper,
 )
@@ -43,7 +43,7 @@ def IMDB(root, split):
     cache_dp = url_dp.on_disk_cache(filepath_fn=lambda x: os.path.join(root, os.path.basename(x)), hash_dict={os.path.join(root, os.path.basename(URL)): MD5}, hash_type="md5")
     cache_dp = HttpReader(cache_dp).end_caching(mode="wb", same_filepath_fn=True)
 
-    cache_dp = FileLoader(cache_dp)
+    cache_dp = FileOpener(cache_dp, mode='b')
 
     # stack TAR extractor on top of load files data pipe
     extracted_files = cache_dp.read_from_tar()

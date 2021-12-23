@@ -2,7 +2,7 @@
 import os
 
 from torchdata.datapipes.iter import (
-    FileLoader,
+    FileOpener,
     HttpReader,
     IterDataPipe,
     IterableWrapper,
@@ -65,7 +65,7 @@ def SQuAD2(root, split):
     cache_dp = url_dp.on_disk_cache(filepath_fn=lambda x: os.path.join(root, os.path.basename(x)), hash_dict={os.path.join(root, os.path.basename(URL[split])): MD5[split]}, hash_type="md5")
     cache_dp = HttpReader(cache_dp).end_caching(mode="wb", same_filepath_fn=True)
 
-    cache_dp = FileLoader(cache_dp)
+    cache_dp = FileOpener(cache_dp, mode='b')
 
     # stack custom data pipe on top of JSON reader to orchestrate data samples for Q&A dataset
     return _ParseSQuADQAData(cache_dp.parse_json_files())

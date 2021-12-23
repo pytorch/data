@@ -2,7 +2,7 @@
 import os.path
 
 from torchdata.datapipes.iter import (
-    FileLoader,
+    FileOpener,
     TarArchiveReader,
     Mapper,
     RoutedDecoder,
@@ -28,7 +28,7 @@ def collate_sample(data):
 
 def Caltech256(root=ROOT):
     dp = IterableWrapper([os.path.join(root, "256_ObjectCategories.tar")])
-    dp = FileLoader(dp)
+    dp = FileOpener(dp, mode='b')
     dp = TarArchiveReader(dp)
     dp = RoutedDecoder(dp, imagehandler("pil"))
     return Mapper(dp, collate_sample)

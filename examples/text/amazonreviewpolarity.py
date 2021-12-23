@@ -4,7 +4,7 @@ import os
 from torchdata.datapipes.iter import (
     GDriveReader,
     IterableWrapper,
-    FileLoader,
+    FileOpener,
 )
 from .utils import (
     _add_docstring_header,
@@ -48,7 +48,7 @@ def AmazonReviewPolarity(root, split):
     cache_dp = url_dp.on_disk_cache(filepath_fn=lambda x: os.path.join(root, _PATH), hash_dict={os.path.join(root, _PATH): MD5}, hash_type="md5")
     cache_dp = GDriveReader(cache_dp) .end_caching(mode="wb", same_filepath_fn=True)
 
-    cache_dp = FileLoader(cache_dp)
+    cache_dp = FileOpener(cache_dp, mode='b')
 
     # stack TAR extractor on top of loader DP
     extracted_files = cache_dp.read_from_tar()

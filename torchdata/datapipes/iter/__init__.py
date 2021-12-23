@@ -11,7 +11,7 @@ from torch.utils.data.datapipes.iter import (
     Multiplexer,
     Zipper,
     FileLister,
-    FileLoader,
+    FileOpener,
     Batcher,
     Grouper,
     UnBatcher,
@@ -31,7 +31,7 @@ from torchdata.datapipes.iter.load.online import (
 )
 from torchdata.datapipes.iter.load.iopath import (
     IoPathFileListerIterDataPipe as IoPathFileLister,
-    IoPathFileLoaderIterDataPipe as IoPathFileLoader,
+    IoPathFileOpenerIterDataPipe as IoPathFileOpener,
     IoPathSaverIterDataPipe as IoPathSaver,
 )
 from torchdata.datapipes.iter.load.fsspec import (
@@ -92,7 +92,7 @@ __all__ = [
     "FSSpecFileOpener",
     "FSSpecSaver",
     "FileLister",
-    "FileLoader",
+    "FileOpener",
     "Filter",
     "Forker",
     "GDriveReader",
@@ -103,7 +103,7 @@ __all__ = [
     "InMemoryCacheHolder",
     "IndexAdder",
     "IoPathFileLister",
-    "IoPathFileLoader",
+    "IoPathFileOpener",
     "IoPathSaver",
     "IterDataPipe",
     "IterKeyZipper",
