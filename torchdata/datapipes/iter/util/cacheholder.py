@@ -220,17 +220,13 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
         if filepath_fn is not None and same_filepath_fn:
             raise ValueError("`filepath_fn` is mutually exclusive with `same_filepath_fn`")
 
-        print("-------About to traverse graph in end_caching.--------")
         graph = traverse(datapipe, exclude_primitive=True)
-        print("*******Graph is succesfully traversed in end_caching.******")
         # Get the last CacheHolder
         cache_holder = EndOnDiskCacheHolderIterDataPipe._recursive_search(graph)
-        print("*******Recursive search is succesful in end_caching.******")
         if cache_holder is None:
             raise RuntimeError("Expected `OnDiskCacheHolder` existing in pipeline when `end_caching` is invoked")
         if cache_holder._end_caching_flag:
             raise RuntimeError("`end_caching` can only be invoked once per `OnDiskCacheHolder`")
-        print(f"cache_holder: {cache_holder}")
 
         cached_dp = cache_holder._end_caching()
 
