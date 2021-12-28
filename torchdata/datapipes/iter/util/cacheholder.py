@@ -140,7 +140,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     def __add__(self, other_datapipe):
         raise RuntimeError("`OnDiskCacheHolder` doesn't support add operation")
 
-    def _cache_check_fn(self, data):
+    def _cache_check_fn(self, data) -> bool:
         filepaths = data if self.filepath_fn is None else self.filepath_fn(data)
         if not isinstance(filepaths, (list, tuple)):
             filepaths = [
@@ -159,7 +159,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
 
         return True
 
-    def _hash_check(self, filepath):
+    def _hash_check(self, filepath) -> bool:
 
         if filepath not in self.hash_dict:  # type: ignore[operator]
             return False
@@ -177,11 +177,11 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
 
         return hash_func.hexdigest() == self.hash_dict[filepath]  # type: ignore[index]
 
-    def _end_caching(self):
+    def _end_caching(self) -> IterDataPipe:
         todo_dp, cached_dp = self.source_datapipe.demux(2, self._cache_check_fn)
         self._end_caching_flag = True
         # Re-assign source_datapipe
-        self.source_datapipe = todo_dp
+        # self.source_datapipe = todo_dp  # TODO: This causes infinite recursion in graph traversal
 
         # Cached: keep filepath(s)
         cached_dp = cached_dp.map(fn=self.filepath_fn)
@@ -220,13 +220,17 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
         if filepath_fn is not None and same_filepath_fn:
             raise ValueError("`filepath_fn` is mutually exclusive with `same_filepath_fn`")
 
+        print("-------About to traverse graph in end_caching.--------")
         graph = traverse(datapipe, exclude_primitive=True)
+        print("*******Graph is succesfully traversed in end_caching.******")
         # Get the last CacheHolder
         cache_holder = EndOnDiskCacheHolderIterDataPipe._recursive_search(graph)
+        print("*******Recursive search is succesful in end_caching.******")
         if cache_holder is None:
             raise RuntimeError("Expected `OnDiskCacheHolder` existing in pipeline when `end_caching` is invoked")
         if cache_holder._end_caching_flag:
             raise RuntimeError("`end_caching` can only be invoked once per `OnDiskCacheHolder`")
+        print(f"cache_holder: {cache_holder}")
 
         cached_dp = cache_holder._end_caching()
 
