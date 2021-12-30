@@ -1,5 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-from typing import Iterator, Tuple
+from typing import Iterator, Optional, Tuple
 from urllib.parse import urlparse
 from requests.exceptions import HTTPError, RequestException
 import re
@@ -10,7 +10,7 @@ from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
 
 
-def _get_response_from_http(url: str, *, timeout: float) -> Tuple[str, StreamWrapper]:
+def _get_response_from_http(url: str, *, timeout: Optional[float]) -> Tuple[str, StreamWrapper]:
     try:
         with requests.Session() as session:
             if timeout is None:
@@ -37,7 +37,7 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         timeout : timeout in seconds for http request
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], timeout=None) -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], timeout: Optional[float] = None) -> None:
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.timeout = timeout
 
@@ -49,30 +49,36 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         return len(self.source_datapipe)
 
 
-def _get_response_from_google_drive(url: str) -> Tuple[str, StreamWrapper]:
+def _get_response_from_google_drive(url: str, *, timeout: Optional[float]) -> Tuple[str, StreamWrapper]:
     confirm_token = None
-    session = requests.Session()
-    response = session.get(url, stream=True)
-    for k, v in response.cookies.items():
-        if k.startswith("download_warning"):
-            confirm_token = v
-    if confirm_token is None:
-        if "Quota exceeded" in str(response.content):
-            raise RuntimeError(
-                "Google drive link {} is currently unavailable, because the quota was exceeded.".format(url)
-            )
+    with requests.Session() as session:
+        if timeout is None:
+            response = session.get(url, stream=True)
+        else:
+            response = session.get(url, timeout=timeout, stream=True)
+        for k, v in response.cookies.items():
+            if k.startswith("download_warning"):
+                confirm_token = v
+        if confirm_token is None:
+            if "Quota exceeded" in str(response.content):
+                raise RuntimeError(
+                    "Google drive link {} is currently unavailable, because the quota was exceeded.".format(url)
+                )
 
-    if confirm_token:
-        url = url + "&confirm=" + confirm_token
+        if confirm_token:
+            url = url + "&confirm=" + confirm_token
 
-    response = session.get(url, stream=True)
+        if timeout is None:
+            response = session.get(url, stream=True)
+        else:
+            response = session.get(url, timeout=timeout, stream=True)
 
-    if "content-disposition" not in response.headers:
-        raise RuntimeError("Internal error: headers don't contain content-disposition.")
+        if "content-disposition" not in response.headers:
+            raise RuntimeError("Internal error: headers don't contain content-disposition.")
 
-    filename = re.findall('filename="(.+)"', response.headers["content-disposition"])
-    if filename is None:
-        raise RuntimeError("Filename could not be autodetected")
+        filename = re.findall('filename="(.+)"', response.headers["content-disposition"])
+        if filename is None:
+            raise RuntimeError("Filename could not be autodetected")
     return filename[0], StreamWrapper(response.raw)
 
 
@@ -86,12 +92,13 @@ class GDriveReaderDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     """
     source_datapipe: IterDataPipe[str]
 
-    def __init__(self, source_datapipe: IterDataPipe[str]) -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], *, timeout: Optional[float] = None) -> None:
         self.source_datapipe = source_datapipe
+        self.timeout = timeout
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for url in self.source_datapipe:
-            yield _get_response_from_google_drive(url)
+            yield _get_response_from_google_drive(url, timeout=self.timeout)
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
@@ -108,7 +115,7 @@ class OnlineReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     """
     source_datapipe: IterDataPipe[str]
 
-    def __init__(self, source_datapipe: IterDataPipe[str], *, timeout=None) -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], *, timeout: Optional[float] = None) -> None:
         self.source_datapipe = source_datapipe
         self.timeout = timeout
 
@@ -117,8 +124,7 @@ class OnlineReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
             parts = urlparse(url)
 
             if re.match(r"(drive|docs)[.]google[.]com", parts.netloc):
-                # TODO(137): can this also have a timeout?
-                yield _get_response_from_google_drive(url)
+                yield _get_response_from_google_drive(url, timeout=self.timeout)
             else:
                 yield _get_response_from_http(url, timeout=self.timeout)
 
