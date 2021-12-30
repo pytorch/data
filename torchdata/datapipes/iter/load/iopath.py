@@ -80,9 +80,9 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
                     yield os.path.join(self.root, file_name)
 
 
-@functional_datapipe("open_file_by_iopath")
-class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
-    r""":class:`IoPathFileOpenerIterDataPipe`.
+@functional_datapipe("load_file_by_iopath")
+class IoPathFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
+    r""":class:`IoPathFileLoaderIterDataPipe`.
 
     Iterable DataPipe to open files from input datapipe which contains pathnames or URLs,
     and yields a tuple of pathname and opened file stream.

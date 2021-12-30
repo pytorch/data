@@ -31,7 +31,7 @@ from torchdata.datapipes.iter.load.online import (
 )
 from torchdata.datapipes.iter.load.iopath import (
     IoPathFileListerIterDataPipe as IoPathFileLister,
-    IoPathFileOpenerIterDataPipe as IoPathFileOpener,
+    IoPathFileLoaderIterDataPipe as IoPathFileLoader,
     IoPathSaverIterDataPipe as IoPathSaver,
 )
 from torchdata.datapipes.iter.load.fsspec import (
@@ -103,7 +103,7 @@ __all__ = [
     "InMemoryCacheHolder",
     "IndexAdder",
     "IoPathFileLister",
-    "IoPathFileOpener",
+    "IoPathFileLoader",
     "IoPathSaver",
     "IterDataPipe",
     "IterKeyZipper",
