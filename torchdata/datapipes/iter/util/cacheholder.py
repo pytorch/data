@@ -131,7 +131,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         cache_dp = HttpReader(cache_dp).end_caching(mode="wb". filepath_fn=_filepath_fn)
     """
 
-    _temp_dict = {}
+    _temp_dict: Dict = {}
 
     def __init__(
         self,
