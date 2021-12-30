@@ -8,6 +8,7 @@ from typing import Callable, Iterator, Optional, Sized, TypeVar
 
 T_co = TypeVar("T_co", covariant=True)
 
+
 def _in_batch_shuffle_fn(data: DataChunk):
     d = list(data)
     random.shuffle(d)
