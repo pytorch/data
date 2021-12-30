@@ -17,7 +17,7 @@ from torchdata.datapipes.iter import (
     FileOpener,
     IterableWrapper,
     IoPathFileLister,
-    IoPathFileLoader,
+    IoPathFileOpener,
     IoPathSaver,
     CSVParser,
     CSVDictParser,
@@ -539,7 +539,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
     @skipIfNoIoPath
     def test_io_path_file_loader_iterdatapipe(self):
         datapipe1 = IoPathFileLister(root=self.temp_sub_dir.name)
-        datapipe2 = IoPathFileLoader(datapipe1)
+        datapipe2 = IoPathFileOpener(datapipe1)
 
         # check contents of file match
         for _, f in datapipe2:
@@ -548,7 +548,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Reset Test: Ensure the resulting streams are still readable after the DataPipe is reset/exhausted
         self._write_text_files()
         lister_dp = FileLister(self.temp_dir.name, "*.text")
-        iopath_file_loader_dp = IoPathFileLoader(lister_dp, mode="rb")
+        iopath_file_loader_dp = IoPathFileOpener(lister_dp, mode="rb")
 
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(iopath_file_loader_dp, n_elements_before_reset)
