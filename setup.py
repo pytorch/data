@@ -69,6 +69,6 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     # Package Info
-    packages=find_packages(exclude=["build*", "test*", "third_party*", "examples"]),
+    packages=find_packages(exclude=["test*", "examples*"]),
     zip_safe=False,
 )

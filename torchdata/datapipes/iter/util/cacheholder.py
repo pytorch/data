@@ -5,6 +5,7 @@ import os.path
 import sys
 
 from collections import deque
+from functools import partial
 from typing import Callable, Deque, Dict, Iterator, Optional, TypeVar
 
 from torch.utils.data.graph import traverse
@@ -76,6 +77,25 @@ def _generator_to_list(gen_fn):
     return list_fn
 
 
+def _hash_check(filepath, hash_dict, hash_type):
+
+    if filepath not in hash_dict:
+        return False
+
+    if hash_type == "sha256":
+        hash_func = hashlib.sha256()
+    else:
+        hash_func = hashlib.md5()
+
+    with open(filepath, "rb") as f:
+        chunk = f.read(1024 ** 2)
+        while chunk:
+            hash_func.update(chunk)
+            chunk = f.read(1024 ** 2)
+
+    return hash_func.hexdigest() == hash_dict[filepath]
+
+
 @functional_datapipe("on_disk_cache")
 class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     """
@@ -111,6 +131,8 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         cache_dp = HttpReader(cache_dp).end_caching(mode="wb". filepath_fn=_filepath_fn)
     """
 
+    _temp_dict: Dict = {}
+
     def __init__(
         self,
         source_datapipe: IterDataPipe,
@@ -120,13 +142,11 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         extra_check_fn: Optional[Callable[[str], bool]] = None,
     ):
         self.source_datapipe = source_datapipe
-        self.filepath_fn = _generator_to_list(filepath_fn) if inspect.isgeneratorfunction(filepath_fn) else filepath_fn
-        self.hash_dict = hash_dict
+        filepath_fn = _generator_to_list(filepath_fn) if inspect.isgeneratorfunction(filepath_fn) else filepath_fn
         if hash_dict is not None and hash_type not in ("sha256", "md5"):
             raise ValueError("Invalid hash_type requested, should be one of {}".format(("sha256", "md5")))
+        OnDiskCacheHolderIterDataPipe._temp_dict[self] = (filepath_fn, hash_dict, hash_type, extra_check_fn)
 
-        self.hash_type = hash_type
-        self.extra_check_fn = extra_check_fn
         self._end_caching_flag: bool = False
 
     def __iter__(self):
@@ -139,8 +159,11 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     def __add__(self, other_datapipe):
         raise RuntimeError("`OnDiskCacheHolder` doesn't support add operation")
 
-    def _cache_check_fn(self, data):
-        filepaths = data if self.filepath_fn is None else self.filepath_fn(data)
+    # Since Demux is using this function, we should not attach it to OnDiskCacheHolder instance.
+    # Otherwise, it would cause infinite recursion in graph traversal
+    @staticmethod
+    def _cache_check_fn(data, filepath_fn, hash_dict, hash_type, extra_check_fn):
+        filepaths = data if filepath_fn is None else filepath_fn(data)
         if not isinstance(filepaths, (list, tuple)):
             filepaths = [
                 filepaths,
@@ -150,42 +173,36 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
             if not os.path.exists(filepath):
                 return False
 
-            if self.hash_dict is not None and not self._hash_check(filepath):
+            if hash_dict is not None and not _hash_check(filepath, hash_dict, hash_type):
                 return False
 
-            if self.extra_check_fn is not None and not self.extra_check_fn(filepath):
+            if extra_check_fn is not None and not extra_check_fn(filepath):
                 return False
 
         return True
 
-    def _hash_check(self, filepath):
-
-        if filepath not in self.hash_dict:  # type: ignore[operator]
-            return False
-
-        if self.hash_type == "sha256":
-            hash_func = hashlib.sha256()
-        else:
-            hash_func = hashlib.md5()
-
-        with open(filepath, "rb") as f:
-            chunk = f.read(1024 ** 2)
-            while chunk:
-                hash_func.update(chunk)
-                chunk = f.read(1024 ** 2)
-
-        return hash_func.hexdigest() == self.hash_dict[filepath]  # type: ignore[index]
-
     def _end_caching(self):
-        todo_dp, cached_dp = self.source_datapipe.demux(2, self._cache_check_fn)
-        self._end_caching_flag = True
-        # Re-assign source_datapipe
-        self.source_datapipe = todo_dp
+        filepath_fn, hash_dict, hash_type, extra_check_fn = OnDiskCacheHolderIterDataPipe._temp_dict[self]
 
+        todo_dp, cached_dp = self.source_datapipe.demux(
+            2,
+            partial(
+                OnDiskCacheHolderIterDataPipe._cache_check_fn,
+                filepath_fn=filepath_fn,
+                hash_dict=hash_dict,
+                hash_type=hash_type,
+                extra_check_fn=extra_check_fn,
+            ),
+        )
         # Cached: keep filepath(s)
-        cached_dp = cached_dp.map(fn=self.filepath_fn)
+        cached_dp = cached_dp.map(fn=filepath_fn)
         # Convert list back to single elements
-        return cached_dp.unbatch(-1)
+        cached_dp = cached_dp.unbatch(-1)
+
+        self.source_datapipe = todo_dp
+        self._end_caching_flag = True
+        del OnDiskCacheHolderIterDataPipe._temp_dict[self]
+        return cached_dp
 
 
 def _read_bytes(fd):
@@ -227,10 +244,11 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
         if cache_holder._end_caching_flag:
             raise RuntimeError("`end_caching` can only be invoked once per `OnDiskCacheHolder`")
 
+        _filepath_fn, _hash_dict, _hash_type, _ = OnDiskCacheHolderIterDataPipe._temp_dict[cache_holder]
         cached_dp = cache_holder._end_caching()
 
         if same_filepath_fn:
-            filepath_fn = cache_holder.filepath_fn
+            filepath_fn = _filepath_fn
 
         todo_dp = datapipe
         if not skip_read:
@@ -243,8 +261,8 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
 
         # Extra hash check here when hash is provided.
         # And, raise Error if data returned from prior operations doesn't meet hash
-        if cache_holder.hash_dict is not None:
-            todo_dp = todo_dp.check_hash(cache_holder.hash_dict, cache_holder.hash_type)
+        if _hash_dict is not None:
+            todo_dp = todo_dp.check_hash(_hash_dict, _hash_type)
 
         todo_dp = todo_dp.save_to_disk(mode=mode)
 
