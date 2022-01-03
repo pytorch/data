@@ -1,22 +1,14 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import io
-import expecttest
 import os
 import unittest
 import warnings
 
-from torchdata.datapipes.iter import (
-    EndOnDiskCacheHolder,
-    FileLoader,
-    HttpReader,
-    IterableWrapper,
-    OnDiskCacheHolder,
-)
+import expecttest
 
-from _utils._common_utils_for_test import (
-    check_hash_fn,
-    create_temp_dir,
-)
+from _utils._common_utils_for_test import check_hash_fn, create_temp_dir
+
+from torchdata.datapipes.iter import EndOnDiskCacheHolder, FileLoader, HttpReader, IterableWrapper, OnDiskCacheHolder
 
 
 class TestDataPipeRemoteIO(expecttest.TestCase):

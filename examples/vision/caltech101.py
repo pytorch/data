@@ -3,16 +3,16 @@ import os.path
 import re
 
 import torch
+from torch.utils.data.datapipes.utils.decoder import imagehandler, mathandler
 from torchdata.datapipes.iter import (
     FileLoader,
-    TarArchiveReader,
-    Mapper,
-    RoutedDecoder,
     Filter,
     IterableWrapper,
     IterKeyZipper,
+    Mapper,
+    RoutedDecoder,
+    TarArchiveReader,
 )
-from torch.utils.data.datapipes.utils.decoder import imagehandler, mathandler
 
 
 # Download size is ~150 MB so fake data is provided

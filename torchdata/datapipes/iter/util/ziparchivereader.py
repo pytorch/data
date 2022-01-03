@@ -4,12 +4,13 @@ import sys
 import warnings
 import zipfile
 from io import BufferedIOBase
-from typing import IO, Iterable, Iterator, Tuple, cast
+from typing import cast, IO, Iterable, Iterator, Tuple
+
+from torchdata.datapipes import functional_datapipe
+from torchdata.datapipes.iter import IterDataPipe
 
 from torchdata.datapipes.utils import StreamWrapper
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
-from torchdata.datapipes import functional_datapipe
-from torchdata.datapipes.iter import IterDataPipe
 
 
 @functional_datapipe("read_from_zip")

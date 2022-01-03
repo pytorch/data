@@ -1,14 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import io
-import expecttest
 import os
 import unittest
 
-from torchdata.datapipes.iter import (
-    GDriveReader,
-    IterableWrapper,
-    OnlineReader,
-)
+import expecttest
+
+from torchdata.datapipes.iter import GDriveReader, IterableWrapper, OnlineReader
 
 
 # This TestCase is created due to the limited quota to access google drive
