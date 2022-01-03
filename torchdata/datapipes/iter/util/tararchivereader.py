@@ -49,17 +49,15 @@ class TarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                         continue
                     extracted_fobj = tar.extractfile(tarinfo)
                     if extracted_fobj is None:
-                        warnings.warn("failed to extract file {} from source tarfile {}".format(tarinfo.name, pathname))
+                        warnings.warn(f"failed to extract file {tarinfo.name} from source tarfile {pathname}")
                         raise tarfile.ExtractError
                     inner_pathname = os.path.normpath(os.path.join(pathname, tarinfo.name))
                     yield inner_pathname, StreamWrapper(extracted_fobj)  # type: ignore[misc]
             except Exception as e:
-                warnings.warn(
-                    "Unable to extract files from corrupted tarfile stream {} due to: {}, abort!".format(pathname, e)
-                )
+                warnings.warn(f"Unable to extract files from corrupted tarfile stream {pathname} due to: {e}, abort!")
                 raise e
 
     def __len__(self) -> int:
         if self.length == -1:
-            raise TypeError("{} instance doesn't have valid length".format(type(self).__name__))
+            raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
         return self.length

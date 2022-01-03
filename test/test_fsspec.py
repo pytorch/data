@@ -89,7 +89,7 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         self.assertEqual(expected_paths, res_file_paths)
         for name in name_to_data.keys():
             p = filepath_fn(name).split("://")[1]
-            with open(p, "r") as f:
+            with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # Reset Test:
@@ -100,7 +100,7 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         self.assertEqual(expected_paths, res_after_reset)
         for name in name_to_data.keys():
             p = filepath_fn(name).split("://")[1]
-            with open(p, "r") as f:
+            with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # __len__ Test: returns the length of source DataPipe

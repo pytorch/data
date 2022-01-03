@@ -175,7 +175,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         def fill_hash_dict():
             for path in self.temp_files:
-                with open(path, "r") as f:
+                with open(path) as f:
                     hash_func = hashlib.sha256()
                     content = f.read().encode("utf-8")
                     hash_func.update(content)
@@ -283,7 +283,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self.assertEqual(expected_paths, res_file_paths)
         for name in name_to_data.keys():
             p = filepath_fn(name)
-            with open(p, "r") as f:
+            with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # Reset Test:
@@ -294,7 +294,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self.assertEqual(expected_paths, res_after_reset)
         for name in name_to_data.keys():
             p = filepath_fn(name)
-            with open(p, "r") as f:
+            with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # __len__ Test: returns the length of source DataPipe
@@ -385,7 +385,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         for path in self.temp_files:
             fname = os.path.basename(path)
             temp_xzfile_pathname = os.path.join(self.temp_dir.name, f"{fname}.xz")
-            with open(path, "r") as f:
+            with open(path) as f:
                 with lzma.open(temp_xzfile_pathname, "w") as xz:
                     xz.write(f.read().encode("utf-8"))
 
@@ -573,7 +573,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self.assertEqual(expected_paths, res_file_paths)
         for name in name_to_data.keys():
             p = filepath_fn(name)
-            with open(p, "r") as f:
+            with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # Reset Test:
@@ -584,7 +584,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self.assertEqual(expected_paths, res_after_reset)
         for name in name_to_data.keys():
             p = filepath_fn(name)
-            with open(p, "r") as f:
+            with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # __len__ Test: returns the length of source DataPipe

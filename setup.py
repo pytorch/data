@@ -29,8 +29,8 @@ def _get_version():
 def _export_version(version, sha):
     version_path = ROOT_DIR / "torchdata" / "version.py"
     with open(version_path, "w") as f:
-        f.write("__version__ = '{}'\n".format(version))
-        f.write("git_version = {}\n".format(repr(sha)))
+        f.write(f"__version__ = '{version}'\n")
+        f.write(f"git_version = {repr(sha)}\n")
 
 
 VERSION, SHA = _get_version()

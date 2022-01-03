@@ -16,8 +16,7 @@ class IDP_NoLen(IterDataPipe):
         self.input_dp = input_dp
 
     def __iter__(self):
-        for i in self.input_dp:
-            yield i
+        yield from self.input_dp
 
 
 def get_name(path_and_stream):

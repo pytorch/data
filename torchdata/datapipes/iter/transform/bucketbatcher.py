@@ -105,4 +105,4 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
             else:
                 self.length = (len(self._datapipe) + self.batch_size - 1) // self.batch_size
             return self.length
-        raise TypeError("{} instance doesn't have valid length".format(type(self).__name__))
+        raise TypeError(f"{type(self).__name__} instance doesn't have valid length")

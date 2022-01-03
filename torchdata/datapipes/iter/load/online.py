@@ -58,9 +58,7 @@ def _get_response_from_google_drive(url: str) -> Tuple[str, StreamWrapper]:
             confirm_token = v
     if confirm_token is None:
         if "Quota exceeded" in str(response.content):
-            raise RuntimeError(
-                "Google drive link {} is currently unavailable, because the quota was exceeded.".format(url)
-            )
+            raise RuntimeError(f"Google drive link {url} is currently unavailable, because the quota was exceeded.")
 
     if confirm_token:
         url = url + "&confirm=" + confirm_token

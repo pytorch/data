@@ -106,7 +106,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         # Multiple filepaths
         def _gen_filepath_fn(tar_path):
             for i in range(3):
-                yield os.path.join(os.path.dirname(tar_path), "csv", "{}.csv".format(i))
+                yield os.path.join(os.path.dirname(tar_path), "csv", f"{i}.csv")
 
         # DataPipe Constructor
         file_cache_dp = OnDiskCacheHolder(tar_cache_dp, filepath_fn=_gen_filepath_fn)

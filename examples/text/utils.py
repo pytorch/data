@@ -44,11 +44,11 @@ def _dataset_docstring_header(fn, num_lines=None, num_classes=None):
     """
     argspec = inspect.getfullargspec(fn)
     if not (argspec.args[0] == "root" and argspec.args[1] == "split"):
-        raise ValueError("Internal Error: Given function {} did not adhere to standard signature.".format(fn))
+        raise ValueError(f"Internal Error: Given function {fn} did not adhere to standard signature.")
     default_split = argspec.defaults[1]
 
     if not (isinstance(default_split, tuple) or isinstance(default_split, str)):
-        raise ValueError("default_split type expected to be of string or tuple but got {}".format(type(default_split)))
+        raise ValueError(f"default_split type expected to be of string or tuple but got {type(default_split)}")
 
     header_s = fn.__name__ + " dataset\n"
 
@@ -56,16 +56,16 @@ def _dataset_docstring_header(fn, num_lines=None, num_classes=None):
         header_s += "\nSeparately returns the {} split".format("/".join(default_split))
 
     if isinstance(default_split, str):
-        header_s += "\nOnly returns the {} split".format(default_split)
+        header_s += f"\nOnly returns the {default_split} split"
 
     if num_lines is not None:
         header_s += "\n\nNumber of lines per split:"
         for k, v in num_lines.items():
-            header_s += "\n    {}: {}\n".format(k, v)
+            header_s += f"\n    {k}: {v}\n"
 
     if num_classes is not None:
         header_s += "\n\nNumber of classes"
-        header_s += "\n    {}\n".format(num_classes)
+        header_s += f"\n    {num_classes}\n"
 
     args_s = "\nArgs:"
     args_s += "\n    root: Directory where the datasets are saved."
@@ -115,7 +115,7 @@ def _wrap_split_argument_with_fn(fn, splits):
         and len(argspec.kwonlyargs) == 0
         and len(argspec.annotations) == 0
     ):
-        raise ValueError("Internal Error: Given function {} did not adhere to standard signature.".format(fn))
+        raise ValueError(f"Internal Error: Given function {fn} did not adhere to standard signature.")
 
     @functools.wraps(fn)
     def new_fn(root=os.path.expanduser("~/.torchtext/cache"), split=splits, **kwargs):
@@ -154,7 +154,7 @@ def _create_dataset_directory(dataset_name):
             and len(argspec.kwonlyargs) == 0
             and len(argspec.annotations) == 0
         ):
-            raise ValueError("Internal Error: Given function {} did not adhere to standard signature.".format(func))
+            raise ValueError(f"Internal Error: Given function {func} did not adhere to standard signature.")
 
         @functools.wraps(func)
         def wrapper(root=os.path.expanduser("~/.torchtext/cache"), *args, **kwargs):

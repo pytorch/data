@@ -70,7 +70,7 @@ class SampleMultiplexerDataPipe(IterDataPipe[T_co]):
     def __len__(self) -> int:
         if self.length is not None:
             if self.length == -1:
-                raise TypeError("{} instance doesn't have valid length".format(type(self).__name__))
+                raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
             return self.length
         if all(isinstance(dp, Sized) for dp, _ in self.pipes_and_weights):
             self.length = sum(len(dp) for dp, _ in self.pipes_and_weights)
