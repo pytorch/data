@@ -1,15 +1,23 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from torch.utils.data import IterDataPipe
 from torch.utils.data.datapipes.iter import (
-    Batcher,
     Collator,
+    Mapper,
+    Sampler,
+    Shuffler,
     Concater,
     Demultiplexer,
+    Forker,
+    Multiplexer,
+    Zipper,
     FileLister,
     FileLoader,
-    Filter,
-    Forker,
+    Batcher,
     Grouper,
+    UnBatcher,
+    RoutedDecoder,
+    Filter,
+    StreamReader,
     IterableWrapper,
 )
 
@@ -26,6 +34,11 @@ from torchdata.datapipes.iter.load.online import (
     GDriveReaderDataPipe as GDriveReader,
     HTTPReaderIterDataPipe as HttpReader,
     OnlineReaderIterDataPipe as OnlineReader,
+)
+from torchdata.datapipes.iter.load.fsspec import (
+    FSSpecFileListerIterDataPipe as FSSpecFileLister,
+    FSSpecFileOpenerIterDataPipe as FSSpecFileOpener,
+    FSSpecSaverIterDataPipe as FSSpecSaver,
 )
 from torchdata.datapipes.iter.transform.bucketbatcher import BucketBatcherIterDataPipe as BucketBatcher
 from torchdata.datapipes.iter.util.cacheholder import (
