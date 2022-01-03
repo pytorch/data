@@ -12,15 +12,10 @@ from torch.utils.data.datapipes.iter import (
     Grouper,
     IterableWrapper,
 )
+
 # TODO: import ShardingFilter directly from torch.utils.data.datapipes.iter as soon as it is exposed.
 #  https://github.com/pytorch/pytorch/pull/69844 was merged, but is not yet available in the nightly releases
 from torch.utils.data.datapipes.iter.grouping import ShardingFilterIterDataPipe as ShardingFilter
-
-from torchdata.datapipes.iter.load.online import (
-    OnlineReaderIterDataPipe as OnlineReader,
-    HTTPReaderIterDataPipe as HttpReader,
-    GDriveReaderDataPipe as GDriveReader,
-)
 from torchdata.datapipes.iter.load.iopath import (
     IoPathFileListerIterDataPipe as IoPathFileLister,
     IoPathFileLoaderIterDataPipe as IoPathFileLoader,
