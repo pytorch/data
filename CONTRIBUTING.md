@@ -17,6 +17,22 @@ We actively welcome your pull requests.
 4. Ensure the test suite passes.
 5. If you haven't already, complete the Contributor License Agreement ("CLA").
 
+### Code style
+
+`torchdata` enforces a fairly strict code format through [`pre-commit`](https://pre-commit.com). You can install it with
+
+```shell
+pip install pre-commit
+```
+
+or
+
+```shell
+conda install -c conda-forge pre-commit
+```
+
+To check and in most cases fix the code format, stage all your changes (`git add`) and run `pre-commit run`. To perform the checks automatically before every `git commit`, you can install them with `pre-commit install`.
+
 ## Contributor License Agreement ("CLA")
 
 In order to accept your pull request, we need you to submit a CLA. You only need
