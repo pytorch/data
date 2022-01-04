@@ -9,7 +9,6 @@ from typing import Callable, Iterator, Optional, Sized, TypeVar
 T_co = TypeVar("T_co", covariant=True)
 
 
-# TODO(135): https://github.com/pytorch/pytorch/issues/63095
 def _in_batch_shuffle_fn(data: DataChunk):
     d = list(data)
     random.shuffle(d)
