@@ -34,17 +34,21 @@ Follow the instructions [in this Colab notebook](https://colab.research.google.c
 
 First, set up an environment. We will be installing a nightly PyTorch binary
 as well as torchdata. If you're using conda, create a conda environment:
+
 ```
 conda create --name torchdata
 conda activate torchdata
 ```
+
 If you wish to use `venv` instead:
+
 ```
 python -m venv torchdata-env
 source torchdata-env/bin/activate
 ```
 
 Next, install one of the following following PyTorch nightly binaries.
+
 ```
 # For CUDA 10.2
 pip install --pre torch -f https://download.pytorch.org/whl/nightly/cu102/torch_nightly.html
@@ -53,15 +57,18 @@ pip install --pre torch -f https://download.pytorch.org/whl/nightly/cu113/torch_
 # For CPU-only build
 pip install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
 ```
+
 If you already have a nightly of PyTorch installed and wanted to upgrade it
 (recommended!), append `--upgrade` to one of those commands.
 
 Install torchdata:
+
 ```
 pip install --user "git+https://github.com/pytorch/data.git"
 ```
 
 Run a quick sanity check in python:
+
 ```py
 from torchdata.datapipes.iter import HttpReader
 URL = "https://raw.githubusercontent.com/mhjabreel/CharCnn_Keras/master/data/ag_news_csv/train.csv"
@@ -112,14 +119,18 @@ Under this naming convention, `DataSet` simply refers to a graph of `DataPipes`,
 vast majority of initial support is focused on `IterDataPipes`, while more `MapDataPipes` support will come later.
 
 ### Implementing DataPipes
+
 As a guiding example, let's implement an `IterDataPipe` that applies a callable to the input iterator.
 For `MapDataPipe`s, take a look at the [map](https://github.com/pytorch/pytorch/tree/master/torch/utils/data/datapipes/map) folder for examples, and follow the steps below for the `__getitem__` method instead of `__iter__`.
 
 #### Naming
-The naming convention for `DataPipe`s is "Operation"-er, followed by `IterDataPipe` or `MapDataPipe`, as each DataPipe is essentially a container to apply an operation to data yielded from a source DataPipe. For succintness, we alias to just "Operation-er" in __init__ files. For our `IterDataPipe` example, we'll name the module `MapperIterDataPipe` and alias it as `iter.Mapper` under `datapipes`.
+
+The naming convention for `DataPipe`s is "Operation"-er, followed by `IterDataPipe` or `MapDataPipe`, as each DataPipe is essentially a container to apply an operation to data yielded from a source DataPipe. For succintness, we alias to just "Operation-er" in **init** files. For our `IterDataPipe` example, we'll name the module `MapperIterDataPipe` and alias it as `iter.Mapper` under `datapipes`.
 
 #### Constructor
+
 DataSets are now generally constructed as stacks of `DataPipes`, so each `DataPipe` typically takes a source `DataPipe` as its first argument.
+
 ```py
 class MapperIterDataPipe(IterDataPipe):
     def __init__(self, dp, fn) -> None:
@@ -127,12 +138,16 @@ class MapperIterDataPipe(IterDataPipe):
         self.dp = dp
         self.fn = fn
 ```
+
 Note:
+
 - Avoid loading data from the source DataPipe in `__init__` function, in order to support lazy data loading and save memory.
 - If `IterDataPipe` instance holds data in memory, please be ware of the in-place modification of data. When second iterator is created from the instance, the data may have already changed. Please take [`IterableWrapper`](https://github.com/pytorch/pytorch/blob/master/torch/utils/data/datapipes/iter/utils.py) class as reference to `deepcopy` data for each iterator.
 
 #### Iterator
+
 For `IterDataPipes`, an `__iter__` function is needed to consume data from the source `IterDataPipe` then apply the operation over the data before `yield`.
+
 ```py
 class MapperIterDataPipe(IterDataPipe):
     ...
@@ -143,7 +158,9 @@ class MapperIterDataPipe(IterDataPipe):
 ```
 
 #### Length
+
 In many cases, as in our `MapperIterDataPipe` example, the `__len__` method of a DataPipe returns the length of the source DataPipe.
+
 ```py
 class MapperIterDataPipe(IterDataPipe):
     ...
@@ -151,16 +168,21 @@ class MapperIterDataPipe(IterDataPipe):
     def __len__(self):
         return len(self.dp)
 ```
+
 However, note that `__len__` is optional for `IterDataPipe` and often inadvisable. For `CSVParserIterDataPipe` in the [using DataPipes section below](#using-datapipes), `__len__` is not implemented because the number of rows in each file is unknown before loading it. In some special cases, `__len__` can be made to either return an integer or raise an Error depending on the input. In those cases, the Error must be a `TypeError` to support Python's build-in functions like `list(dp)`.
 
 #### Registering DataPipes with the functional API
+
 Each DataPipe can be registered to support functional invocation using the decorator `functional_datapipe`.
+
 ```py
 @functional_datapipe("map")
 class MapperIterDataPipe(IterDataPipe):
     ...
 ```
+
 The stack of DataPipes can then be constructed in functional form:
+
 ```py
 >>> import torch.utils.data.datapipes as dp
 >>> datapipes1 = dp.iter.FileLoader(['a.file', 'b.file']).map(fn=decoder).shuffle().batch(2)
@@ -170,15 +192,19 @@ The stack of DataPipes can then be constructed in functional form:
 >>> datapipes2 = dp.iter.Shuffler(datapipes2)
 >>> datapipes2 = dp.iter.Batcher(datapipes2, 2)
 ```
+
 In the above example, `datapipes1` and `datapipes2` represent the exact same stack of `IterDataPipe`s.
 
 ### Using DataPipes
+
 For a complete example, suppose we want to load data from CSV files with the following steps:
+
 - List all csv files in a directory
 - Load csv files
 - Parse csv file and yield rows
 
 To support the above pipeline, `CSVParser` is registered as `parse_csv_files` to consume file streams and expand them as rows.
+
 ```py
 @functional_datapipe("parse_csv_files")
 class CSVParserIterDataPipe(IterDataPipe):
@@ -192,7 +218,9 @@ class CSVParserIterDataPipe(IterDataPipe):
             for row in reader:
                 yield filename, row
 ```
+
 Then, the pipeline can be assembled as follows:
+
 ```py
 >>> import torch.utils.data.datapipes as dp
 
