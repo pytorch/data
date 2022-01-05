@@ -8,7 +8,7 @@ import expecttest
 
 from _utils._common_utils_for_test import check_hash_fn, create_temp_dir
 
-from torchdata.datapipes.iter import EndOnDiskCacheHolder, FileLoader, HttpReader, IterableWrapper, OnDiskCacheHolder
+from torchdata.datapipes.iter import EndOnDiskCacheHolder, FileOpener, HttpReader, IterableWrapper, OnDiskCacheHolder
 
 
 class TestDataPipeRemoteIO(expecttest.TestCase):
@@ -110,7 +110,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
 
         # DataPipe Constructor
         file_cache_dp = OnDiskCacheHolder(tar_cache_dp, filepath_fn=_gen_filepath_fn)
-        file_cache_dp = FileLoader(file_cache_dp, mode="rb")
+        file_cache_dp = FileOpener(file_cache_dp, mode="rb")
 
         # Functional API
         file_cache_dp = file_cache_dp.read_from_tar()
