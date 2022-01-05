@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import os
 
-from torchdata.datapipes.iter import FileLoader, GDriveReader, IterableWrapper
+from torchdata.datapipes.iter import FileOpener, GDriveReader, IterableWrapper
 
 from .utils import _add_docstring_header, _create_dataset_directory, _wrap_split_argument
 
@@ -43,7 +43,7 @@ def AmazonReviewPolarity(root, split):
     )
     cache_dp = GDriveReader(cache_dp).end_caching(mode="wb", same_filepath_fn=True)
 
-    cache_dp = FileLoader(cache_dp)
+    cache_dp = FileOpener(cache_dp, mode="b")
 
     # stack TAR extractor on top of loader DP
     extracted_files = cache_dp.read_from_tar()

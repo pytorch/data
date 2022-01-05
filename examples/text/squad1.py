@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import os
 
-from torchdata.datapipes.iter import FileLoader, HttpReader, IterableWrapper, IterDataPipe
+from torchdata.datapipes.iter import FileOpener, HttpReader, IterableWrapper, IterDataPipe
 
 from .utils import _add_docstring_header, _create_dataset_directory, _wrap_split_argument
 
@@ -61,7 +61,7 @@ def SQuAD1(root, split):
     )
     cache_dp = HttpReader(cache_dp).end_caching(mode="wb", same_filepath_fn=True)
 
-    cache_dp = FileLoader(cache_dp)
+    cache_dp = FileOpener(cache_dp, mode="b")
 
     # stack custom data pipe on top of JSON reader to orchestrate data samples for Q&A dataset
     return _ParseSQuADQAData(cache_dp.parse_json_files())

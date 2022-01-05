@@ -19,10 +19,10 @@ from torchdata.datapipes.iter import (
     CSVParser,
     Extractor,
     FileLister,
-    FileLoader,
+    FileOpener,
     HashChecker,
     IoPathFileLister,
-    IoPathFileLoader,
+    IoPathFileOpener,
     IoPathSaver,
     IterableWrapper,
     JsonParser,
@@ -104,7 +104,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         csv_files = {"1.csv": "key,item\na,1\nb,2", "empty.csv": "", "empty2.csv": "\n"}
         self._custom_files_set_up(csv_files)
         datapipe1 = IterableWrapper([make_path(fname) for fname in ["1.csv", "empty.csv", "empty2.csv"]])
-        datapipe2 = FileLoader(datapipe1)
+        datapipe2 = FileOpener(datapipe1, mode="b")
         datapipe3 = datapipe2.map(get_name)
 
         # Functional Test: yield one row at time from each file, skipping over empty content
@@ -140,7 +140,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         csv_files = {"1.csv": "key,item\na,1\nb,2", "empty.csv": "", "empty2.csv": "\n"}
         self._custom_files_set_up(csv_files)
         datapipe1 = FileLister(self.temp_dir.name, "*.csv")
-        datapipe2 = FileLoader(datapipe1)
+        datapipe2 = FileOpener(datapipe1, mode="b")
         datapipe3 = datapipe2.map(get_name)
 
         # Functional Test: yield one row at a time as dict, with the first row being the header (key)
@@ -184,7 +184,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         fill_hash_dict()
 
         datapipe1 = FileLister(self.temp_dir.name, "*")
-        datapipe2 = FileLoader(datapipe1)
+        datapipe2 = FileOpener(datapipe1, mode="b")
         hash_check_dp = HashChecker(datapipe2, hash_dict)
 
         # Functional Test: Ensure the DataPipe values are unchanged if the hashes are the same
@@ -223,7 +223,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             self.assertEqual(expected_stream.read(), actual_stream.read())
 
         # __len__ Test: returns the length of source DataPipe
-        with self.assertRaisesRegex(TypeError, "FileLoaderIterDataPipe instance doesn't have valid length"):
+        with self.assertRaisesRegex(TypeError, "FileOpenerIterDataPipe instance doesn't have valid length"):
             len(hash_check_dp)
 
     def test_json_parser_iterdatapipe(self):
@@ -240,7 +240,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         }
         self._custom_files_set_up(json_files)
         datapipe1 = IterableWrapper([f"{self.temp_dir.name}/{fname}" for fname in ["empty.json", "1.json", "2.json"]])
-        datapipe2 = FileLoader(datapipe1)
+        datapipe2 = FileOpener(datapipe1, mode="b")
         datapipe3 = datapipe2.map(get_name)
         datapipe_empty = datapipe3.filter(is_empty_json)
         datapipe_nonempty = datapipe3.filter(is_nonempty_json)
@@ -317,12 +317,12 @@ class TestDataPipeLocalIO(expecttest.TestCase):
     def test_tar_archive_reader_iterdatapipe(self):
         self._write_test_tar_files()
         datapipe1 = FileLister(self.temp_dir.name, "*.tar")
-        datapipe2 = FileLoader(datapipe1)
+        datapipe2 = FileOpener(datapipe1, mode="b")
         tar_reader_dp = TarArchiveReader(datapipe2)
 
         self._write_test_tar_gz_files()
         datapipe_gz_1 = FileLister(self.temp_dir.name, "*.tar.gz")
-        datapipe_gz_2 = FileLoader(datapipe_gz_1)
+        datapipe_gz_2 = FileOpener(datapipe_gz_1, mode="b")
         gz_reader_dp = TarArchiveReader(datapipe_gz_2)
 
         # Functional Test: Read extracted files before reaching the end of the tarfile
@@ -358,7 +358,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
     def test_zip_archive_reader_iterdatapipe(self):
         self._write_test_zip_files()
         datapipe1 = FileLister(self.temp_dir.name, "*.zip")
-        datapipe2 = FileLoader(datapipe1)
+        datapipe2 = FileOpener(datapipe1, mode="b")
         zip_reader_dp = ZipArchiveReader(datapipe2)
 
         # Functional Test: read extracted files before reaching the end of the zipfile
@@ -394,7 +394,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Whereas we create multiple .xz files in the same directories below.
         self._write_test_xz_files()
         datapipe1 = FileLister(self.temp_dir.name, "*.xz")
-        datapipe2 = FileLoader(datapipe1)
+        datapipe2 = FileOpener(datapipe1, mode="b")
         xz_reader_dp = XzFileReader(datapipe2)
 
         # Functional Test: Read extracted files before reaching the end of the xzfile
@@ -453,19 +453,19 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         # Functional Test: work with .tar files
         tar_file_dp = FileLister(self.temp_dir.name, "*.tar")
-        tar_load_dp = FileLoader(tar_file_dp)
+        tar_load_dp = FileOpener(tar_file_dp, mode="b")
         tar_extract_dp = Extractor(tar_load_dp, file_type="tar")
         self._extractor_tar_test_helper(self.temp_files, tar_extract_dp)
 
         # Functional test: work with .tar.gz files
         tar_gz_file_dp = FileLister(self.temp_dir.name, "*.tar.gz")
-        tar_gz_load_dp = FileLoader(tar_gz_file_dp)
+        tar_gz_load_dp = FileOpener(tar_gz_file_dp, mode="b")
         tar_gz_extract_dp = Extractor(tar_gz_load_dp, file_type="tar")
         self._extractor_tar_test_helper(self.temp_files, tar_gz_extract_dp)
 
         # Functional Test: work with .gz files
         gz_file_dp = IterableWrapper([f"{self.temp_dir.name}/temp.gz"])
-        gz_load_dp = FileLoader(gz_file_dp)
+        gz_load_dp = FileOpener(gz_file_dp, mode="b")
         gz_extract_dp = Extractor(gz_load_dp, file_type="gzip")
         for _, gz_stream in gz_extract_dp:
             with open(self.temp_files[0], "rb") as f:
@@ -473,7 +473,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         # Functional Test: work with .zip files
         zip_file_dp = FileLister(self.temp_dir.name, "*.zip")
-        zip_load_dp = FileLoader(zip_file_dp)
+        zip_load_dp = FileOpener(zip_file_dp, mode="b")
         zip_extract_dp = zip_load_dp.extract(file_type="zip")
         for _, zip_stream in zip_extract_dp:
             for fname in self.temp_files:
@@ -482,7 +482,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         # Functional Test: work with .xz files
         xz_file_dp = FileLister(self.temp_dir.name, "*.xz")
-        xz_load_dp = FileLoader(xz_file_dp)
+        xz_load_dp = FileOpener(xz_file_dp, mode="b")
         xz_extract_dp = Extractor(xz_load_dp, file_type="lzma")
         self._extractor_xz_test_helper(xz_extract_dp)
 
@@ -539,7 +539,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
     @skipIfNoIoPath
     def test_io_path_file_loader_iterdatapipe(self):
         datapipe1 = IoPathFileLister(root=self.temp_sub_dir.name)
-        datapipe2 = IoPathFileLoader(datapipe1)
+        datapipe2 = IoPathFileOpener(datapipe1)
 
         # check contents of file match
         for _, f in datapipe2:
@@ -548,7 +548,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Reset Test: Ensure the resulting streams are still readable after the DataPipe is reset/exhausted
         self._write_text_files()
         lister_dp = FileLister(self.temp_dir.name, "*.text")
-        iopath_file_loader_dp = IoPathFileLoader(lister_dp, mode="rb")
+        iopath_file_loader_dp = IoPathFileOpener(lister_dp, mode="rb")
 
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(iopath_file_loader_dp, n_elements_before_reset)
@@ -599,7 +599,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self._write_test_rar_files()
 
         datapipe1 = FileLister(self.temp_dir.name, "*.rar")
-        datapipe2 = FileLoader(datapipe1)
+        datapipe2 = FileOpener(datapipe1, mode="b")
         rar_loader_dp = RarArchiveLoader(datapipe2)
 
         # Functional Test: read extracted files before reaching the end of the rarfile
