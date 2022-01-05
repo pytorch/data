@@ -1,7 +1,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+from typing import Iterator, Optional, TypeVar
+
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
-from typing import Iterator, Optional, TypeVar
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -25,8 +26,7 @@ class CyclerIterDataPipe(IterDataPipe[T_co]):
     def __iter__(self) -> Iterator[T_co]:
         i = 0
         while self.count is None or i < self.count:
-            for x in self.source_datapipe:
-                yield x
+            yield from self.source_datapipe
             i += 1
 
     def __len__(self) -> int:

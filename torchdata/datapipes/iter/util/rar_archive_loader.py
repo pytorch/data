@@ -1,11 +1,12 @@
 import io
 import os.path
+from typing import Iterator, Tuple
 from unittest.mock import patch
-from typing import Tuple, Iterator
 
-from torchdata.datapipes.utils import StreamWrapper
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+
+from torchdata.datapipes.utils import StreamWrapper
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 
 
@@ -50,6 +51,7 @@ class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
 
     def __iter__(self) -> Iterator[Tuple[str, io.BufferedIOBase]]:
         import rarfile
+
         patcher = RarfilePatcher()
         patcher.start()
 
@@ -69,5 +71,5 @@ class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
 
     def __len__(self) -> int:
         if self.length == -1:
-            raise TypeError("{} instance doesn't have valid length".format(type(self).__name__))
+            raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
         return self.length
