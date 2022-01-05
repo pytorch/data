@@ -25,7 +25,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
 
         file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
         expected_file_name = "LICENSE"
-        expected_MD5_hash = "4aabe940637d4389eca42ac1a0e874ec"
+        expected_MD5_hash = "bb9675028dd39d2dd2bf71002b93e66c"
         http_reader_dp = HttpReader(IterableWrapper([file_url]))
 
         # Functional Test: test if the Http Reader can download and read properly
