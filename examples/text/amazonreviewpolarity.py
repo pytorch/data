@@ -43,7 +43,7 @@ def AmazonReviewPolarity(root, split):
     )
     cache_dp = GDriveReader(cache_dp).end_caching(mode="wb", same_filepath_fn=True)
 
-    cache_dp = FileOpener(cache_dp, mode='b')
+    cache_dp = FileOpener(cache_dp, mode="b")
 
     # stack TAR extractor on top of loader DP
     extracted_files = cache_dp.read_from_tar()
