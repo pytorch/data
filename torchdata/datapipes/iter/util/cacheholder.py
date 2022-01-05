@@ -151,8 +151,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
 
     def __iter__(self):
         if self._end_caching_flag:
-            for d in self.source_datapipe:
-                yield d
+            yield from self.source_datapipe
         else:
             # In case of BC breaking, use RuntimeError for now. Warning is another option
             raise RuntimeError("Please call `end_caching()` before iteration.")

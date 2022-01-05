@@ -1,10 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import random
+from typing import Callable, Iterator, Optional, Sized, TypeVar
+
+from torch.utils.data import DataChunk
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
-from torch.utils.data import DataChunk
-from typing import Callable, Iterator, Optional, Sized, TypeVar
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -103,4 +104,4 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
             else:
                 self.length = (len(self._datapipe) + self.batch_size - 1) // self.batch_size
             return self.length
-        raise TypeError("{} instance doesn't have valid length".format(type(self).__name__))
+        raise TypeError(f"{type(self).__name__} instance doesn't have valid length")

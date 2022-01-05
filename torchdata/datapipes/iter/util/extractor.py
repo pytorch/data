@@ -8,10 +8,11 @@ import zipfile
 
 from enum import Enum
 from io import IOBase
+from typing import Iterator, Optional, Tuple, Union
+
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
-from typing import Iterator, Optional, Tuple, Union
 
 
 class CompressionType(Enum):
@@ -54,7 +55,7 @@ class ExtractorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         if self.file_type:
             return self.file_type
 
-        ext = ''.join(pathlib.Path(path).suffixes)
+        ext = "".join(pathlib.Path(path).suffixes)
         if ext in {".tar.gz", ".tar.xz"}:
             return self.types.TAR
         else:
