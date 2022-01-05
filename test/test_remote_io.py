@@ -119,7 +119,10 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             return os.path.join(self.temp_dir.name, "csv", os.path.basename(csv_path))
 
         # Read and decode
-        file_cache_dp = file_cache_dp.map(fn=lambda x: x.read().decode(), input_col=1)
+        def _read_and_decode(x):
+            return x.read().decode()
+
+        file_cache_dp = file_cache_dp.map(fn=_read_and_decode, input_col=1)
 
         file_cache_dp = EndOnDiskCacheHolder(file_cache_dp, mode="w", filepath_fn=_csv_filepath_fn, skip_read=True)
 
