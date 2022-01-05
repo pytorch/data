@@ -1,17 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import os
 
-from torchdata.datapipes.iter import (
-    FileOpener,
-    HttpReader,
-    IterDataPipe,
-    IterableWrapper,
-)
-from .utils import (
-    _add_docstring_header,
-    _create_dataset_directory,
-    _wrap_split_argument,
-)
+from torchdata.datapipes.iter import FileOpener, HttpReader, IterableWrapper, IterDataPipe
+
+from .utils import _add_docstring_header, _create_dataset_directory, _wrap_split_argument
 
 URL = {
     "train": "https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v1.1.json",
@@ -62,7 +54,11 @@ def SQuAD1(root, split):
 
     url_dp = IterableWrapper([URL[split]])
     # cache data on-disk with sanity check
-    cache_dp = url_dp.on_disk_cache(filepath_fn=lambda x: os.path.join(root, os.path.basename(x)), hash_dict={os.path.join(root, os.path.basename(URL[split])): MD5[split]}, hash_type="md5")
+    cache_dp = url_dp.on_disk_cache(
+        filepath_fn=lambda x: os.path.join(root, os.path.basename(x)),
+        hash_dict={os.path.join(root, os.path.basename(URL[split])): MD5[split]},
+        hash_type="md5",
+    )
     cache_dp = HttpReader(cache_dp).end_caching(mode="wb", same_filepath_fn=True)
 
     cache_dp = FileOpener(cache_dp, mode='b')
