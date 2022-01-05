@@ -1,43 +1,44 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from torch.utils.data import IterDataPipe
 from torch.utils.data.datapipes.iter import (
+    Batcher,
     Collator,
-    Mapper,
-    Sampler,
-    Shuffler,
     Concater,
     Demultiplexer,
-    Forker,
-    Multiplexer,
-    Zipper,
     FileLister,
     FileLoader,
-    Batcher,
-    Grouper,
-    UnBatcher,
-    RoutedDecoder,
     Filter,
-    StreamReader,
+    Forker,
+    Grouper,
     IterableWrapper,
+    Mapper,
+    Multiplexer,
+    RoutedDecoder,
+    Sampler,
+    Shuffler,
+    StreamReader,
+    UnBatcher,
+    Zipper,
 )
+
 # TODO: import ShardingFilter directly from torch.utils.data.datapipes.iter as soon as it is exposed.
 #  https://github.com/pytorch/pytorch/pull/69844 was merged, but is not yet available in the nightly releases
 from torch.utils.data.datapipes.iter.grouping import ShardingFilterIterDataPipe as ShardingFilter
-
-from torchdata.datapipes.iter.load.online import (
-    OnlineReaderIterDataPipe as OnlineReader,
-    HTTPReaderIterDataPipe as HttpReader,
-    GDriveReaderDataPipe as GDriveReader,
+from torchdata.datapipes.iter.load.fsspec import (
+    FSSpecFileListerIterDataPipe as FSSpecFileLister,
+    FSSpecFileOpenerIterDataPipe as FSSpecFileOpener,
+    FSSpecSaverIterDataPipe as FSSpecSaver,
 )
 from torchdata.datapipes.iter.load.iopath import (
     IoPathFileListerIterDataPipe as IoPathFileLister,
     IoPathFileLoaderIterDataPipe as IoPathFileLoader,
     IoPathSaverIterDataPipe as IoPathSaver,
 )
-from torchdata.datapipes.iter.load.fsspec import (
-    FSSpecFileListerIterDataPipe as FSSpecFileLister,
-    FSSpecFileOpenerIterDataPipe as FSSpecFileOpener,
-    FSSpecSaverIterDataPipe as FSSpecSaver,
+
+from torchdata.datapipes.iter.load.online import (
+    GDriveReaderDataPipe as GDriveReader,
+    HTTPReaderIterDataPipe as HttpReader,
+    OnlineReaderIterDataPipe as OnlineReader,
 )
 from torchdata.datapipes.iter.transform.bucketbatcher import BucketBatcherIterDataPipe as BucketBatcher
 from torchdata.datapipes.iter.util.cacheholder import (
@@ -45,25 +46,25 @@ from torchdata.datapipes.iter.util.cacheholder import (
     InMemoryCacheHolderIterDataPipe as InMemoryCacheHolder,
     OnDiskCacheHolderIterDataPipe as OnDiskCacheHolder,
 )
-from torchdata.datapipes.iter.util.indexadder import (
-    EnumeratorIterDataPipe as Enumerator,
-    IndexAdderIterDataPipe as IndexAdder,
-)
 from torchdata.datapipes.iter.util.combining import (
     IterKeyZipperIterDataPipe as IterKeyZipper,
     MapKeyZipperIterDataPipe as MapKeyZipper,
-)
-from torchdata.datapipes.iter.util.plain_text_reader import (
-    LineReaderIterDataPipe as LineReader,
-    CSVDictParserIterDataPipe as CSVDictParser,
-    CSVParserIterDataPipe as CSVParser,
 )
 from torchdata.datapipes.iter.util.cycler import CyclerIterDataPipe as Cycler
 from torchdata.datapipes.iter.util.extractor import ExtractorIterDataPipe as Extractor
 from torchdata.datapipes.iter.util.hashchecker import HashCheckerIterDataPipe as HashChecker
 from torchdata.datapipes.iter.util.header import HeaderIterDataPipe as Header
+from torchdata.datapipes.iter.util.indexadder import (
+    EnumeratorIterDataPipe as Enumerator,
+    IndexAdderIterDataPipe as IndexAdder,
+)
 from torchdata.datapipes.iter.util.jsonparser import JsonParserIterDataPipe as JsonParser
 from torchdata.datapipes.iter.util.paragraphaggregator import ParagraphAggregatorIterDataPipe as ParagraphAggregator
+from torchdata.datapipes.iter.util.plain_text_reader import (
+    CSVDictParserIterDataPipe as CSVDictParser,
+    CSVParserIterDataPipe as CSVParser,
+    LineReaderIterDataPipe as LineReader,
+)
 from torchdata.datapipes.iter.util.rar_archive_loader import RarArchiveLoaderIterDataPipe as RarArchiveLoader
 from torchdata.datapipes.iter.util.rows2columnar import Rows2ColumnarIterDataPipe as Rows2Columnar
 from torchdata.datapipes.iter.util.samplemultiplexer import SampleMultiplexerDataPipe as SampleMultiplexer
