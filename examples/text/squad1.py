@@ -61,7 +61,7 @@ def SQuAD1(root, split):
     )
     cache_dp = HttpReader(cache_dp).end_caching(mode="wb", same_filepath_fn=True)
 
-    cache_dp = FileOpener(cache_dp, mode='b')
+    cache_dp = FileOpener(cache_dp, mode="b")
 
     # stack custom data pipe on top of JSON reader to orchestrate data samples for Q&A dataset
     return _ParseSQuADQAData(cache_dp.parse_json_files())

@@ -23,7 +23,7 @@ def collate_sample(data):
 
 def Caltech256(root=ROOT):
     dp = IterableWrapper([os.path.join(root, "256_ObjectCategories.tar")])
-    dp = FileOpener(dp, mode='b')
+    dp = FileOpener(dp, mode="b")
     dp = TarArchiveReader(dp)
     dp = RoutedDecoder(dp, imagehandler("pil"))
     return Mapper(dp, collate_sample)
