@@ -25,7 +25,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
 
         file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
         expected_file_name = "LICENSE"
-        expected_MD5_hash = "4aabe940637d4389eca42ac1a0e874ec"
+        expected_MD5_hash = "bb9675028dd39d2dd2bf71002b93e66c"
         http_reader_dp = HttpReader(IterableWrapper([file_url]))
 
         # Functional Test: test if the Http Reader can download and read properly
@@ -119,7 +119,10 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             return os.path.join(self.temp_dir.name, "csv", os.path.basename(csv_path))
 
         # Read and decode
-        file_cache_dp = file_cache_dp.map(fn=lambda x: x.read().decode(), input_col=1)
+        def _read_and_decode(x):
+            return x.read().decode()
+
+        file_cache_dp = file_cache_dp.map(fn=_read_and_decode, input_col=1)
 
         file_cache_dp = EndOnDiskCacheHolder(file_cache_dp, mode="w", filepath_fn=_csv_filepath_fn, skip_read=True)
 
