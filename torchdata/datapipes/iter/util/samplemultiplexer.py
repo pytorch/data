@@ -1,6 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-from typing import Dict, Iterator, Optional, Sized, TypeVar
 import random
+from typing import Dict, Iterator, Optional, Sized, TypeVar
 
 from torchdata.datapipes.iter import IterDataPipe
 
@@ -24,6 +24,7 @@ class SampleMultiplexerDataPipe(IterDataPipe[T_co]):
             unexhausted DataPipes will be normalized to 1 for the purpose of sampling.
         seed: random seed to initialize the random number generator
     """
+
     def __init__(
         self,
         pipes_to_weights_dict: Dict[IterDataPipe[T_co], float],
@@ -69,7 +70,7 @@ class SampleMultiplexerDataPipe(IterDataPipe[T_co]):
     def __len__(self) -> int:
         if self.length is not None:
             if self.length == -1:
-                raise TypeError("{} instance doesn't have valid length".format(type(self).__name__))
+                raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
             return self.length
         if all(isinstance(dp, Sized) for dp, _ in self.pipes_and_weights):
             self.length = sum(len(dp) for dp, _ in self.pipes_and_weights)

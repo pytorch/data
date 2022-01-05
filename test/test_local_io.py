@@ -1,5 +1,4 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-import expecttest
 import hashlib
 import itertools
 import lzma
@@ -11,34 +10,32 @@ import warnings
 import zipfile
 
 from json.decoder import JSONDecodeError
+
+import expecttest
+
+from _utils._common_utils_for_test import create_temp_dir, create_temp_files, get_name, reset_after_n_next_calls
 from torchdata.datapipes.iter import (
+    CSVDictParser,
+    CSVParser,
     Extractor,
     FileLister,
     FileOpener,
-    IterableWrapper,
+    HashChecker,
     IoPathFileLister,
     IoPathFileOpener,
     IoPathSaver,
-    CSVParser,
-    CSVDictParser,
-    HashChecker,
+    IterableWrapper,
     JsonParser,
+    RarArchiveLoader,
     Saver,
     TarArchiveReader,
-    ZipArchiveReader,
     XzFileReader,
-    RarArchiveLoader,
-)
-
-from _utils._common_utils_for_test import (
-    create_temp_dir,
-    create_temp_files,
-    get_name,
-    reset_after_n_next_calls,
+    ZipArchiveReader,
 )
 
 try:
     import iopath
+
     HAS_IOPATH = True
 except ImportError:
     HAS_IOPATH = False
@@ -46,6 +43,7 @@ skipIfNoIoPath = unittest.skipIf(not HAS_IOPATH, "no iopath")
 
 try:
     import rarfile
+
     HAS_RAR_TOOLS = True
     try:
         rarfile.tool_setup()
@@ -177,7 +175,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         def fill_hash_dict():
             for path in self.temp_files:
-                with open(path, "r") as f:
+                with open(path) as f:
                     hash_func = hashlib.sha256()
                     content = f.read().encode("utf-8")
                     hash_func.update(content)
@@ -285,7 +283,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self.assertEqual(expected_paths, res_file_paths)
         for name in name_to_data.keys():
             p = filepath_fn(name)
-            with open(p, "r") as f:
+            with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # Reset Test:
@@ -296,7 +294,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self.assertEqual(expected_paths, res_after_reset)
         for name in name_to_data.keys():
             p = filepath_fn(name)
-            with open(p, "r") as f:
+            with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # __len__ Test: returns the length of source DataPipe
@@ -387,7 +385,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         for path in self.temp_files:
             fname = os.path.basename(path)
             temp_xzfile_pathname = os.path.join(self.temp_dir.name, f"{fname}.xz")
-            with open(path, "r") as f:
+            with open(path) as f:
                 with lzma.open(temp_xzfile_pathname, "w") as xz:
                     xz.write(f.read().encode("utf-8"))
 
@@ -441,8 +439,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
     def _write_single_gz_file(self):
         import gzip
-        with gzip.open(f"{self.temp_dir.name}/temp.gz", 'wb') as k:
-            with open(self.temp_files[0], 'rb') as f:
+
+        with gzip.open(f"{self.temp_dir.name}/temp.gz", "wb") as k:
+            with open(self.temp_files[0], "rb") as f:
                 k.write(f.read())
 
     def test_extractor_iterdatapipe(self):
@@ -520,6 +519,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
     def _write_text_files(self):
         def filepath_fn(name: str) -> str:
             return os.path.join(self.temp_dir.name, os.path.basename(name))
+
         name_to_data = {"1.text": b"DATA", "2.text": b"DATA", "3.text": b"DATA"}
         source_dp = IterableWrapper(sorted(name_to_data.items()))
         saver_dp = source_dp.save_to_disk(filepath_fn=filepath_fn, mode="wb")
@@ -573,7 +573,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self.assertEqual(expected_paths, res_file_paths)
         for name in name_to_data.keys():
             p = filepath_fn(name)
-            with open(p, "r") as f:
+            with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # Reset Test:
@@ -584,7 +584,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self.assertEqual(expected_paths, res_after_reset)
         for name in name_to_data.keys():
             p = filepath_fn(name)
-            with open(p, "r") as f:
+            with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # __len__ Test: returns the length of source DataPipe
@@ -612,11 +612,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Reset Test: reset the DataPipe after reading part of it
         rar_loader_dp = datapipe2.load_from_rar()
         n_elements_before_reset = 1
-        res_before_reset, res_after_reset = reset_after_n_next_calls(rar_loader_dp,
-                                                                     n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(rar_loader_dp, n_elements_before_reset)
         # Check the results accumulated before reset
-        self._unordered_compressed_files_comparison_helper(
-            self.temp_files[:n_elements_before_reset], res_before_reset)
+        self._unordered_compressed_files_comparison_helper(self.temp_files[:n_elements_before_reset], res_before_reset)
         # Check the results accumulated after reset
         self._unordered_compressed_files_comparison_helper(self.temp_files, res_after_reset)
 

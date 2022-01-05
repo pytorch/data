@@ -2,10 +2,11 @@
 import hashlib
 
 from io import IOBase
+from typing import Dict, Iterator, Tuple, Union
+
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
-from typing import Dict, Iterator, Tuple, Union
 
 
 D_type = Union[str, bytes, bytearray]
@@ -67,7 +68,7 @@ class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, U]]):
                     data.seek(0)
 
             if file_name not in self.hash_dict:
-                raise RuntimeError("Unspecified hash for file {}".format(file_name))
+                raise RuntimeError(f"Unspecified hash for file {file_name}")
 
             if hash_func.hexdigest() != self.hash_dict[file_name]:
                 raise RuntimeError(
