@@ -1,14 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import os.path
 
-from torchdata.datapipes.iter import (
-    FileLoader,
-    TarArchiveReader,
-    Mapper,
-    RoutedDecoder,
-    IterableWrapper,
-)
 from torch.utils.data.datapipes.utils.decoder import imagehandler
+
+from torchdata.datapipes.iter import FileOpener, IterableWrapper, Mapper, RoutedDecoder, TarArchiveReader
 
 
 # Download size is ~1.2 GB so fake data is provided
@@ -28,7 +23,7 @@ def collate_sample(data):
 
 def Caltech256(root=ROOT):
     dp = IterableWrapper([os.path.join(root, "256_ObjectCategories.tar")])
-    dp = FileLoader(dp)
+    dp = FileOpener(dp, mode="b")
     dp = TarArchiveReader(dp)
     dp = RoutedDecoder(dp, imagehandler("pil"))
     return Mapper(dp, collate_sample)

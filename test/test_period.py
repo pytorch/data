@@ -1,14 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import io
-import expecttest
 import os
 import unittest
 
-from torchdata.datapipes.iter import (
-    GDriveReader,
-    IterableWrapper,
-    OnlineReader,
-)
+import expecttest
+
+from torchdata.datapipes.iter import GDriveReader, IterableWrapper, OnlineReader
 
 
 # This TestCase is created due to the limited quota to access google drive
@@ -45,7 +42,7 @@ class TestDataPipePeriod(expecttest.TestCase):
         amazon_review_url = "https://drive.google.com/uc?export=download&id=0Bz8a_Dbh9QhbaW12WVVZS2drcnM"
         expected_license_file_name = "LICENSE"
         expected_amazon_file_name = "amazon_review_polarity_csv.tar.gz"
-        expected_license_MD5_hash = "4aabe940637d4389eca42ac1a0e874ec"
+        expected_license_MD5_hash = "bb9675028dd39d2dd2bf71002b93e66c"
         expected_amazon_MD5_hash = "fe39f8b653cada45afd5792e0f0e8f9b"
 
         file_hash_dict = {

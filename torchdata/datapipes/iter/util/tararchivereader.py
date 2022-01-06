@@ -3,12 +3,13 @@ import os
 import tarfile
 import warnings
 from io import BufferedIOBase
-from typing import IO, Iterable, Iterator, Optional, Tuple, cast
+from typing import cast, IO, Iterable, Iterator, Optional, Tuple
+
+from torchdata.datapipes import functional_datapipe
+from torchdata.datapipes.iter import IterDataPipe
 
 from torchdata.datapipes.utils import StreamWrapper
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
-from torchdata.datapipes import functional_datapipe
-from torchdata.datapipes.iter import IterDataPipe
 
 
 @functional_datapipe("read_from_tar")
@@ -48,17 +49,15 @@ class TarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                         continue
                     extracted_fobj = tar.extractfile(tarinfo)
                     if extracted_fobj is None:
-                        warnings.warn("failed to extract file {} from source tarfile {}".format(tarinfo.name, pathname))
+                        warnings.warn(f"failed to extract file {tarinfo.name} from source tarfile {pathname}")
                         raise tarfile.ExtractError
                     inner_pathname = os.path.normpath(os.path.join(pathname, tarinfo.name))
                     yield inner_pathname, StreamWrapper(extracted_fobj)  # type: ignore[misc]
             except Exception as e:
-                warnings.warn(
-                    "Unable to extract files from corrupted tarfile stream {} due to: {}, abort!".format(pathname, e)
-                )
+                warnings.warn(f"Unable to extract files from corrupted tarfile stream {pathname} due to: {e}, abort!")
                 raise e
 
     def __len__(self) -> int:
         if self.length == -1:
-            raise TypeError("{} instance doesn't have valid length".format(type(self).__name__))
+            raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
         return self.length
