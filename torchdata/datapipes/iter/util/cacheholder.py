@@ -182,7 +182,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         return True
 
     def _end_caching(self):
-        filepath_fn, hash_dict, hash_type, extra_check_fn = OnDiskCacheHolderIterDataPipe._temp_dict[self]
+        filepath_fn, hash_dict, hash_type, extra_check_fn = OnDiskCacheHolderIterDataPipe._temp_dict.pop(self)
 
         todo_dp, cached_dp = self.source_datapipe.demux(
             2,
@@ -201,7 +201,6 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
 
         self.source_datapipe = todo_dp
         self._end_caching_flag = True
-        del OnDiskCacheHolderIterDataPipe._temp_dict[self]
         return cached_dp
 
 
@@ -257,7 +256,8 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
             else:
                 todo_dp = todo_dp.map(fn=_read_str, input_col=1)
 
-        todo_dp = todo_dp.map(fn=filepath_fn, input_col=0)
+        if filepath_fn is not None:
+            todo_dp = todo_dp.map(fn=filepath_fn, input_col=0)
 
         # Extra hash check here when hash is provided.
         # And, raise Error if data returned from prior operations doesn't meet hash
