@@ -3,16 +3,16 @@ import os.path
 import re
 
 import torch
+from torch.utils.data.datapipes.utils.decoder import imagehandler, mathandler
 from torchdata.datapipes.iter import (
-    FileLoader,
-    TarArchiveReader,
-    Mapper,
-    RoutedDecoder,
+    FileOpener,
     Filter,
     IterableWrapper,
     IterKeyZipper,
+    Mapper,
+    RoutedDecoder,
+    TarArchiveReader,
 )
-from torch.utils.data.datapipes.utils.decoder import imagehandler, mathandler
 
 
 # Download size is ~150 MB so fake data is provided
@@ -89,14 +89,14 @@ def collate_sample(data):
 
 def Caltech101(root=ROOT):
     anns_dp = IterableWrapper([os.path.join(root, "Annotations.tar")])
-    anns_dp = FileLoader(anns_dp)
+    anns_dp = FileOpener(anns_dp, mode="b")
     anns_dp = TarArchiveReader(anns_dp)
     anns_dp = Filter(anns_dp, is_ann)
     anns_dp = RoutedDecoder(anns_dp, mathandler())
     anns_dp = Mapper(anns_dp, collate_ann)
 
     images_dp = IterableWrapper([os.path.join(root, "101_ObjectCategories.tar.gz")])
-    images_dp = FileLoader(images_dp)
+    images_dp = FileOpener(images_dp, mode="b")
     images_dp = TarArchiveReader(images_dp)
     images_dp = Filter(images_dp, is_not_background_image)
     images_dp = Filter(images_dp, is_not_rogue_image)

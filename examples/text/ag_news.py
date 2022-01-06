@@ -1,10 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from torchdata.datapipes.iter import HttpReader
-from .utils import (
-    _wrap_split_argument,
-    _add_docstring_header,
-    _create_dataset_directory,
-)
+
+from .utils import _add_docstring_header, _create_dataset_directory, _wrap_split_argument
 
 URL = {
     "train": "https://raw.githubusercontent.com/mhjabreel/CharCnn_Keras/master/data/ag_news_csv/train.csv",

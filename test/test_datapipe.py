@@ -1,34 +1,32 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import io
-import expecttest
 import unittest
 import warnings
 
 from collections import defaultdict
 from typing import Dict
 
-import torchdata
+import expecttest
 import torch.utils.data.datapipes.iter
+
+import torchdata
+
+from _utils._common_utils_for_test import IDP_NoLen, reset_after_n_next_calls
 from torch.utils.data.datapipes.map import SequenceWrapper
 from torchdata.datapipes.iter import (
-    IterDataPipe,
-    IterableWrapper,
-    InMemoryCacheHolder,
-    IterKeyZipper,
-    MapKeyZipper,
+    BucketBatcher,
     Cycler,
     Header,
     IndexAdder,
+    InMemoryCacheHolder,
+    IterableWrapper,
+    IterDataPipe,
+    IterKeyZipper,
     LineReader,
+    MapKeyZipper,
     ParagraphAggregator,
     Rows2Columnar,
     SampleMultiplexer,
-    BucketBatcher,
-)
-
-from _utils._common_utils_for_test import (
-    IDP_NoLen,
-    reset_after_n_next_calls,
 )
 
 
@@ -165,7 +163,13 @@ class TestDataPipe(expecttest.TestCase):
         with warnings.catch_warnings(record=True) as wa:
             # In order to find '0' at the end, the buffer is filled, hence the warning
             # and ref_dp is fully traversed
-            self.assertEqual((0, 0,), next(it))
+            self.assertEqual(
+                (
+                    0,
+                    0,
+                ),
+                next(it),
+            )
             self.assertEqual(len(wa), 1)
             self.assertRegex(str(wa[0].message), r"Buffer reaches the upper limit")
         with self.assertRaisesRegex(BufferError, r"No matching key can be found"):
@@ -308,17 +312,17 @@ class TestDataPipe(expecttest.TestCase):
         enum_dp = source_dp.enumerate()
 
         # Functional Test: ensure that the correct index value is added to each element (tuple)
-        self.assertEqual([(0, 'a'), (1, 'b'), (2, 'c'), (3, 'd'), (4, 'e')], list(enum_dp))
+        self.assertEqual([(0, "a"), (1, "b"), (2, "c"), (3, "d"), (4, "e")], list(enum_dp))
 
         # Functional Test: start index from non-zero
         enum_dp = source_dp.enumerate(starting_index=10)
-        self.assertEqual([(10, 'a'), (11, 'b'), (12, 'c'), (13, 'd'), (14, 'e')], list(enum_dp))
+        self.assertEqual([(10, "a"), (11, "b"), (12, "c"), (13, "d"), (14, "e")], list(enum_dp))
 
         # Reset Test:
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(enum_dp, n_elements_before_reset)
-        self.assertEqual([(10, 'a'), (11, 'b')], res_before_reset)
-        self.assertEqual([(10, 'a'), (11, 'b'), (12, 'c'), (13, 'd'), (14, 'e')], res_after_reset)
+        self.assertEqual([(10, "a"), (11, "b")], res_before_reset)
+        self.assertEqual([(10, "a"), (11, "b"), (12, "c"), (13, "d"), (14, "e")], res_after_reset)
 
         # __len__ Test: returns length of source DataPipe
         self.assertEqual(5, len(enum_dp))
@@ -506,9 +510,12 @@ class TestDataPipe(expecttest.TestCase):
         self.assertEqual(4, len(batch_dp))
         self.assertEqual(10, len(list(batch_dp.unbatch())))
 
+        def _return_self(x):
+            return x
+
         # Functional Test: using sort_key, with in_batch_shuffle
         batch_dp = source_dp.bucketbatch(
-            batch_size=3, drop_last=True, batch_num=100, bucket_num=1, in_batch_shuffle=True, sort_key=lambda x: x
+            batch_size=3, drop_last=True, batch_num=100, bucket_num=1, in_batch_shuffle=True, sort_key=_return_self
         )
         # bucket_num = 1 means there will be no shuffling if a sort key is given
         self.assertEqual([[0, 1, 2], [3, 4, 5], [6, 7, 8]], list(batch_dp))
@@ -517,7 +524,7 @@ class TestDataPipe(expecttest.TestCase):
 
         # Functional Test: using sort_key, without in_batch_shuffle
         batch_dp = source_dp.bucketbatch(
-            batch_size=3, drop_last=True, batch_num=100, bucket_num=2, in_batch_shuffle=False, sort_key=lambda x: x
+            batch_size=3, drop_last=True, batch_num=100, bucket_num=2, in_batch_shuffle=False, sort_key=_return_self
         )
         self.assertEqual(3, len(batch_dp))
         self.assertEqual(9, len(list(batch_dp.unbatch())))
@@ -530,7 +537,7 @@ class TestDataPipe(expecttest.TestCase):
             batch_num=100,
             bucket_num=2,
             in_batch_shuffle=False,
-            sort_key=lambda x: x,
+            sort_key=_return_self,
         )
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(batch_dp, n_elements_before_reset)
