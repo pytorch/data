@@ -58,7 +58,7 @@ class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, U]]):
                 hash_func.update(data)
             # File Stream
             else:
-                # Not all of streams have `read(bytes)` method.
+                # Not all streams have `read(bytes)` method.
                 # `__iter__` method is chosen because it is a common interface for IOBase.
                 for d in data:
                     hash_func.update(d)
@@ -72,9 +72,8 @@ class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, U]]):
 
             if hash_func.hexdigest() != self.hash_dict[file_name]:
                 raise RuntimeError(
-                    "The hash {} of {} does not match. Delete the file manually and retry.".format(
-                        hash_func.hexdigest(), file_name
-                    )
+                    f"The computed hash {hash_func.hexdigest()} of {file_name} does not match the expected"
+                    f"hash {self.hash_dict[file_name]}. Delete the file manually and retry."
                 )
 
             if isinstance(data, (str, bytes, bytearray)):
