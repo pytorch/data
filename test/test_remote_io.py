@@ -166,14 +166,13 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             self.assertTrue(os.path.exists(expected_csv_path))
             self.assertEqual(expected_csv_path, csv_path)
 
-        def test_s3_lister_iterdatapipe(self):
-
-            file_url = "s3://pt-s3plugin-test-data-west2/images/test"
-            s3_lister_dp = S3FileLister(IterableWrapper([file_url]))
-            count = 0
-            for item in s3_lister_dp:
-                count = count + 1
-            print("number of items:", count)
+    def test_s3_lister_iterdatapipe(self):
+        file_urls = ["s3://ai2-public-datasets/charades"]
+        s3_lister_dp = S3FileLister(IterableWrapper(file_urls))
+        count = 0
+        for item in s3_lister_dp:
+            count = count + 1
+        print("number of items:", count)
 
 
 if __name__ == "__main__":
