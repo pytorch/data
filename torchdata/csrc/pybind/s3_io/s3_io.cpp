@@ -28,8 +28,6 @@ namespace torchdata
     {
         static const size_t s3ReadBufferSize = 120 * 1024 * 1024;              // 16 MB
         static const uint64_t s3MultiPartDownloadChunkSize = 50 * 1024 * 1024; // 50 MB
-        static const int downloadRetries = 3;
-        static const int64_t s3TimeoutMsec = 300000;
         static const int executorPoolSize = 25;
         static const int S3GetFilesMaxKeys = 100;
 
