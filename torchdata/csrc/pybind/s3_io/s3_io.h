@@ -34,9 +34,9 @@ namespace torchdata
       bool multi_part_download_;
 
       std::shared_ptr<Aws::S3::S3Client> InitializeS3Client();
-      std::shared_ptr<Aws::Transfer::TransferManager> InitializeTransferManager();
       std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
       InitializeExecutor();
+      std::shared_ptr<Aws::Transfer::TransferManager> InitializeTransferManager();
       size_t GetFileSize(const std::string &bucket, const std::string &object);
       size_t GetFileSize(const std::string &file_url);
 
@@ -44,14 +44,14 @@ namespace torchdata
       S3Handler();
       ~S3Handler();
 
-      std::shared_ptr<Aws::S3::S3Client> GetS3Client() { return this->s3_client_; };
-      std::shared_ptr<Aws::Transfer::TransferManager> GetTransferManager() { return this->transfer_manager_; };
+      std::shared_ptr<Aws::S3::S3Client> GetS3Client();
       std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
-      GetExecutor() { return this->executor_; };
+      GetExecutor();
+      std::shared_ptr<Aws::Transfer::TransferManager> GetTransferManager();
 
       void S3Read(const std::string &file_url, std::string *result);
       void ListFiles(const std::string &file_url,
-                      std::vector<std::string> *filenames);
+                     std::vector<std::string> *filenames);
    };
 } // namespace torchdata
 
