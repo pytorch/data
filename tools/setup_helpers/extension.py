@@ -2,12 +2,11 @@ from distutils.version import LooseVersion
 import os
 import platform
 from pathlib import Path
-import re
 import subprocess
 import sys
 from setuptools import Extension
 from setuptools.command.build_ext import build_ext
-
+import torch
 
 __all__ = [
     'get_ext_modules',
@@ -17,6 +16,7 @@ __all__ = [
 
 _THIS_DIR = Path(__file__).parent.resolve()
 _ROOT_DIR = _THIS_DIR.parent.parent.resolve()
+
 
 def get_ext_modules():
     return [
@@ -31,10 +31,12 @@ class CMakeBuild(build_ext):
         if not extdir.endswith(os.path.sep):
             extdir += os.path.sep
 
-        cmake_args = ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
-                      '-DPYTHON_EXECUTABLE=' + sys.executable,
-                      '-DCMAKE_PREFIX_PATH=' + os.environ['CMAKE_PREFIX_PATH'],
-                      '-DCMAKE_CXX_FLAGS=' + "-fPIC"]
+        cmake_args = [
+            '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
+            '-DPYTHON_EXECUTABLE=' + sys.executable,
+            f"-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}",
+            '-DCMAKE_CXX_FLAGS=' + "-fPIC",
+        ]
 
         cfg = 'Debug' if self.debug else 'Release'
         build_args = ['--config', cfg]
