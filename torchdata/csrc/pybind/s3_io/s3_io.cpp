@@ -78,13 +78,11 @@ namespace torchdata
                     cfg.verifySSL = true;
                 }
             }
-
             const char *region = getenv("AWS_REGION");
             if (region)
             {
                 cfg.region = region;
             }
-
             const char *endpoint_url = getenv("S3_ENDPOINT_URL");
             if (endpoint_url)
             {
@@ -321,7 +319,7 @@ namespace torchdata
         std::lock_guard<std::mutex> lock(this->initialization_lock_);
 
         Aws::Transfer::TransferManagerConfiguration transfer_config(
-            InitializeExecutor().get());
+            this->GetExecutor().get());
         transfer_config.s3Client = s3_client;
         // This buffer is what we used to initialize streambuf and is in memory
         transfer_config.bufferSize = s3MultiPartDownloadChunkSize;
@@ -366,7 +364,7 @@ namespace torchdata
         std::string bucket, object;
         parseS3Path(file_url, &bucket, &object);
         S3FS s3handler(bucket, object, multi_part_download_,
-                       InitializeTransferManager(), GetS3Client());
+                       GetTransferManager(), GetS3Client());
 
         uint64_t offset = 0;
         uint64_t result_size = 0;
