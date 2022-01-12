@@ -31,9 +31,9 @@ namespace torchdata
         static const int executorPoolSize = 25;
         static const int S3GetFilesMaxKeys = 100;
 
-        Aws::Client::ClientConfiguration &setUpS3Config()
+        std::shared_ptr<Aws::Client::ClientConfiguration> setUpS3Config()
         {
-            static Aws::Client::ClientConfiguration cfg;
+            auto cfg = std::shared_ptr<Aws::Client::ClientConfiguration>(new Aws::Client::ClientConfiguration());
             Aws::String config_file;
             const char *config_file_env = getenv("AWS_CONFIG_FILE");
             if (config_file_env)
@@ -57,11 +57,11 @@ namespace torchdata
             {
                 if (use_https[0] == '0')
                 {
-                    cfg.scheme = Aws::Http::Scheme::HTTP;
+                    cfg->scheme = Aws::Http::Scheme::HTTP;
                 }
                 else
                 {
-                    cfg.scheme = Aws::Http::Scheme::HTTPS;
+                    cfg->scheme = Aws::Http::Scheme::HTTPS;
                 }
             }
             const char *verify_ssl = getenv("S3_VERIFY_SSL");
@@ -69,22 +69,22 @@ namespace torchdata
             {
                 if (verify_ssl[0] == '0')
                 {
-                    cfg.verifySSL = false;
+                    cfg->verifySSL = false;
                 }
                 else
                 {
-                    cfg.verifySSL = true;
+                    cfg->verifySSL = true;
                 }
             }
             const char *region = getenv("AWS_REGION");
             if (region)
             {
-                cfg.region = region;
+                cfg->region = region;
             }
             const char *endpoint_url = getenv("S3_ENDPOINT_URL");
             if (endpoint_url)
             {
-                cfg.endpointOverride = endpoint_url;
+                cfg->endpointOverride = endpoint_url;
             }
             return cfg;
         }
@@ -256,6 +256,8 @@ namespace torchdata
         };
     } // namespace
 
+    std::shared_ptr<Aws::Client::ClientConfiguration> S3Handler::s3_handler_cfg_;
+
     S3Handler::S3Handler()
         : s3_client_(nullptr, ShutdownClient),
           transfer_manager_(nullptr, ShutdownTransferManager),
@@ -292,9 +294,10 @@ namespace torchdata
         Aws::InitAPI(options);
 
         // Set up the request
+        S3Handler::s3_handler_cfg_ = setUpS3Config();
         this->s3_client_ =
             std::shared_ptr<Aws::S3::S3Client>(new Aws::S3::S3Client(
-                setUpS3Config(),
+                *S3Handler::s3_handler_cfg_,
                 Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
                 false));
         return this->s3_client_;
