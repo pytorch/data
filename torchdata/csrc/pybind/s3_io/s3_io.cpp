@@ -84,10 +84,6 @@ namespace torchdata
             {
                 cfg.region = region;
             }
-            else
-            {
-                cfg.region = "us-west-2";
-            }
 
             const char *endpoint_url = getenv("S3_ENDPOINT_URL");
             if (endpoint_url)
