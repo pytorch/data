@@ -16,7 +16,7 @@ if(NOT CMAKE_VERSION VERSION_LESS 3.15.0)
   cmake_policy(SET CMP0092 NEW)
 endif()
 
-project(_torchdata)
+project(torchdata)
 
 # check and set CMAKE_CXX_STANDARD
 string(FIND "${CMAKE_CXX_FLAGS}" "-std=c++" env_cxx_standard)
@@ -29,26 +29,33 @@ endif()
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_C_STANDARD 11)
 
+# https://developercommunity.visualstudio.com/t/VS-16100-isnt-compatible-with-CUDA-11/1433342
+if(MSVC)
+  if(USE_CUDA)
+    set(CMAKE_CXX_STANDARD 17)
+  endif()
+endif()
+
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# Apple specific
+if(APPLE)
+  # Get clang version on macOS
+  execute_process( COMMAND ${CMAKE_CXX_COMPILER} --version OUTPUT_VARIABLE clang_full_version_string )
+  string(REGEX REPLACE "Apple LLVM version ([0-9]+\\.[0-9]+).*" "\\1" CLANG_VERSION_STRING ${clang_full_version_string})
+  message( STATUS "CLANG_VERSION_STRING:         " ${CLANG_VERSION_STRING} )
+
+  # RPATH stuff
+  set(CMAKE_MACOSX_RPATH ON)
+
+  set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
+endif()
+
 # Options
 option(BUILD_S3 "Build s3 io functionality" OFF)
 
 find_package(Torch REQUIRED)
-message(STATUS "BUILD_S3: ${BUILD_S3}")
 
-if(BUILD_S3)
-  message(STATUS "BUILD_S3: ${BUILD_S3}")
-  find_package(Python3 COMPONENTS Interpreter Development)
-  find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
-  find_package(pybind11 REQUIRED)
-  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-  set(INCLUDE_DIRS "torchdata/csrc/pybind/s3_io")
-
-  set(SOURCES "${INCLUDE_DIRS}/s3_io.cpp" )
-
-  include_directories(${INCLUDE_DIRS})
-  pybind11_add_module(_torchdata ${SOURCES} "${INCLUDE_DIRS}/pybind.cpp")
-
-  message(STATUS "All linked libs: ${AWSSDK_LINK_LIBRARIES}")
-
-  target_link_libraries(_torchdata PRIVATE ${AWSSDK_LINK_LIBRARIES} ${AWSSDK_PLATFORM_DEPS})
-endif()
+add_subdirectory(torchdata/csrc)
