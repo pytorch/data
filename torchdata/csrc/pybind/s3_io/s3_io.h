@@ -23,7 +23,7 @@ namespace torchdata
       virtual ~S3UnderlyingStream() = default;
    };
 
-   class S3Init
+   class S3Handler
    {
    private:
       std::shared_ptr<Aws::S3::S3Client> s3_client_;
@@ -35,9 +35,9 @@ namespace torchdata
       size_t get_file_size(const std::string &bucket, const std::string &object);
 
    public:
-      S3Init();
+      S3Handler();
 
-      ~S3Init();
+      ~S3Handler();
 
       std::mutex initialization_lock_;
 
