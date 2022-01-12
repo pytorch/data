@@ -1,16 +1,15 @@
-from distutils.version import LooseVersion
 import os
 import platform
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
+
+import torch
 from setuptools import Extension
 from setuptools.command.build_ext import build_ext
-import torch
 
 __all__ = [
     'get_ext_modules',
-    # 'CMakeExtension',
     'CMakeBuild',
 ]
 
@@ -43,39 +42,68 @@ def get_ext_modules():
     ]
 
 
+# Based off of pybiind cmake_example
+# https://github.com/pybind/cmake_example/blob/2440893c60ed2578fb127dc16e6b348fa0be92c1/setup.py
+# and torchaudio CMakeBuild()
+# https://github.com/pytorch/audio/blob/ece03edc3fc28a1ce2c28ef438d2898ed0a78d3f/tools/setup_helpers/extension.py#L65
 class CMakeBuild(build_ext):
     def build_extension(self, ext):
+        # Because the following `cmake` command will build all of `ext_modules`` at the same time,
+        # we would like to prevent multiple calls to `cmake`.
+        # Therefore, we call `cmake` only for `torchdata._torchdata`,
+        # in case `ext_modules` contains more than one module.
+        if ext.name != 'torchdata._torchdata':
+            return
+
         extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
+
         # required for auto-detection of auxiliary "native" libs
         if not extdir.endswith(os.path.sep):
             extdir += os.path.sep
 
-        print("BUILD_S3:", 'ON' if _BUILD_S3 else 'OFF')
+        debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
+        cfg = "Debug" if debug else "Release"
 
         cmake_args = [
-            '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
-            '-DPYTHON_EXECUTABLE=' + sys.executable,
+            f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
             f"-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}",
-            '-DCMAKE_CXX_FLAGS=' + "-fPIC",
+            f"-DCMAKE_INSTALL_PREFIX={extdir}",
+            f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
+            "-DCMAKE_CXX_FLAGS=-fPIC",
             f"-DBUILD_S3:BOOL={'ON' if _BUILD_S3 else 'OFF'}",
         ]
 
-        cfg = 'Debug' if self.debug else 'Release'
-        build_args = ['--config', cfg]
+        build_args = [
+            '--config', cfg
+        ]
 
-        if platform.system() == "Windows":
-            cmake_args += ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}'.format(cfg.upper(), extdir)]
+        if 'CMAKE_GENERATOR' not in os.environ or platform.system() == 'Windows':
+            cmake_args += ["-GNinja"]
+        if platform.system() == 'Windows':
+            import sys
+            python_version = sys.version_info
+            cmake_args += [
+                "-DCMAKE_C_COMPILER=cl",
+                "-DCMAKE_CXX_COMPILER=cl",
+                f"-DPYTHON_VERSION={python_version.major}.{python_version.minor}",
+                '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}'.format(cfg.upper(), extdir),
+            ]
             if sys.maxsize > 2**32:
                 cmake_args += ['-A', 'x64']
             build_args += ['--', '/m']
         else:
-            cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
             build_args += ['--', '-j2']
 
-        env = os.environ.copy()
-        env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(env.get('CXXFLAGS', ''),
-                                                              self.distribution.get_version())
+        # Set CMAKE_BUILD_PARALLEL_LEVEL to control the parallel build level
+        # across all generators.
+        if "CMAKE_BUILD_PARALLEL_LEVEL" not in os.environ:
+            # self.parallel is a Python 3 only way to set parallel jobs by hand
+            # using -j in the build_ext call, not supported by pip or PyPA-build.
+            if hasattr(self, "parallel") and self.parallel:
+                # CMake 3.12+ only.
+                build_args += ["-j{}".format(self.parallel)]
+
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
-        subprocess.check_call(['cmake', str(_ROOT_DIR)] + cmake_args, cwd=self.build_temp, env=env)
+        subprocess.check_call(['cmake', str(_ROOT_DIR)] + cmake_args, cwd=self.build_temp)
         subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
