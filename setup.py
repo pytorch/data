@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 # Copyright (c) Facebook, Inc. and its affiliates.
+<<<<<<< HEAD
 import argparse
+=======
+import distutils.command.clean
+>>>>>>> 0ceac89 (new build flag, new extension import, new clean command)
 import os
+import shutil
 import subprocess
 import sys
 
@@ -64,6 +69,25 @@ def get_parser():
     return parser
 
 
+class clean(distutils.command.clean.clean):
+    def run(self):
+        # Run default behavior first
+        distutils.command.clean.clean.run(self)
+
+        # Remove torchaudio extension
+        for path in (ROOT_DIR / "torchaudio").glob("**/*.so"):
+            print(f"removing '{path}'")
+            path.unlink()
+        # Remove build directory
+        build_dirs = [
+            ROOT_DIR / "build",
+        ]
+        for path in build_dirs:
+            if path.exists():
+                print(f"removing '{path}' (and everything under it)")
+                shutil.rmtree(str(path), ignore_errors=True)
+
+
 # Use new version of torch on main branch
 pytorch_package_dep = "torch>1.11.0"
 if os.getenv("PYTORCH_VERSION"):
@@ -116,6 +140,9 @@ if __name__ == "__main__":
         zip_safe=False,
         # C++ Extension Modules
         ext_modules=setup_helpers.get_ext_modules(),
-        cmdclass=dict(build_ext=setup_helpers.CMakeBuild),
+        cmdclass={
+            "build_ext": setup_helpers.CMakeBuild,
+            "clean": clean,
+        },
     )
     gen_pyi()

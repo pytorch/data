@@ -30,11 +30,13 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_C_STANDARD 11)
 
 # Options
-option(BUILD_S3 "Build s3 io functionality" ON)
+option(BUILD_S3 "Build s3 io functionality" OFF)
 
 find_package(Torch REQUIRED)
+message(STATUS "BUILD_S3: ${BUILD_S3}")
 
 if(BUILD_S3)
+  message(STATUS "BUILD_S3: ${BUILD_S3}")
   find_package(Python3 COMPONENTS Interpreter Development)
   find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
   find_package(pybind11 REQUIRED)
@@ -46,7 +48,7 @@ if(BUILD_S3)
   include_directories(${INCLUDE_DIRS})
   pybind11_add_module(_torchdata ${SOURCES} "${INCLUDE_DIRS}/pybind.cpp")
 
-  Message(STATUS "All linked libs: ${AWSSDK_LINK_LIBRARIES}")
+  message(STATUS "All linked libs: ${AWSSDK_LINK_LIBRARIES}")
 
   target_link_libraries(_torchdata PRIVATE ${AWSSDK_LINK_LIBRARIES} ${AWSSDK_PLATFORM_DEPS})
 endif()
