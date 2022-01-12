@@ -2,7 +2,7 @@ from typing import Iterator, Tuple
 from itertools import chain
 
 # import torchdata._torchdata
-from torchdata import _torchdata
+import torchdata
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -30,7 +30,7 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
 
     def __iter__(self) -> Iterator[str]:
         # TODO: timeout
-        handler = _torchdata.S3Handler()
+        handler = torchdata._torchdata.S3Handler()
         for prefix in self.source_datapipe:
             # if handler.file_exists(prefix):
             #     yield prefix
@@ -66,7 +66,7 @@ class S3FileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         # TODO: timeout
-        handler = _torchdata.S3Handler()
+        handler = torchdata._torchdata.S3Handler()
         for url in self.source_datapipe:
             yield url, handler.s3_read(url)
 
