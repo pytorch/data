@@ -26,6 +26,8 @@ namespace torchdata
    class S3Handler
    {
    private:
+      static std::shared_ptr<Aws::Client::ClientConfiguration> s3_handler_cfg_;
+
       std::shared_ptr<Aws::S3::S3Client> s3_client_;
       std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor> executor_;
       std::shared_ptr<Aws::Transfer::TransferManager> transfer_manager_;
