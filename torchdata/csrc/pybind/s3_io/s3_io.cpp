@@ -296,50 +296,71 @@ namespace torchdata
     std::shared_ptr<Aws::S3::S3Client> S3Handler::InitializeS3Client()
     {
         std::lock_guard<std::mutex> lock(this->initialization_lock_);
-        if (this->s3_client_.get() == nullptr)
-        {
-            Aws::SDKOptions options;
-            Aws::InitAPI(options);
+        Aws::SDKOptions options;
+        Aws::InitAPI(options);
 
-            // Set up the request
-            this->s3_client_ =
-                std::shared_ptr<Aws::S3::S3Client>(new Aws::S3::S3Client(
-                    setUpS3Config(),
-                    Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
-                    false));
-        }
+        // Set up the request
+        this->s3_client_ =
+            std::shared_ptr<Aws::S3::S3Client>(new Aws::S3::S3Client(
+                setUpS3Config(),
+                Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
+                false));
         return this->s3_client_;
     }
 
     std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
     S3Handler::InitializeExecutor()
     {
-        if (this->executor_.get() == nullptr)
-        {
-            this->executor_ =
-                Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(
-                    "executor", executorPoolSize);
-        }
+        std::lock_guard<std::mutex> lock(this->initialization_lock_);
+        this->executor_ =
+            Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(
+                "executor", executorPoolSize);
         return this->executor_;
     }
 
     std::shared_ptr<Aws::Transfer::TransferManager>
     S3Handler::InitializeTransferManager()
     {
-        std::shared_ptr<Aws::S3::S3Client> s3_client = InitializeS3Client();
+        std::shared_ptr<Aws::S3::S3Client> s3_client = GetS3Client();
         std::lock_guard<std::mutex> lock(this->initialization_lock_);
 
+        Aws::Transfer::TransferManagerConfiguration transfer_config(
+            InitializeExecutor().get());
+        transfer_config.s3Client = s3_client;
+        // This buffer is what we used to initialize streambuf and is in memory
+        transfer_config.bufferSize = s3MultiPartDownloadChunkSize;
+        transfer_config.transferBufferMaxHeapSize =
+            (executorPoolSize + 1) * s3MultiPartDownloadChunkSize;
+        this->transfer_manager_ =
+            Aws::Transfer::TransferManager::Create(transfer_config);
+        return this->transfer_manager_;
+    }
+
+    std::shared_ptr<Aws::S3::S3Client> S3Handler::GetS3Client()
+    {
+        if (this->s3_client_.get() == nullptr)
+        {
+            this->InitializeS3Client();
+        }
+        return this->s3_client_;
+    }
+
+    std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
+    S3Handler::GetExecutor()
+    {
+        if (this->executor_.get() == nullptr)
+        {
+            this->InitializeExecutor();
+        }
+        return this->executor_;
+    }
+
+    std::shared_ptr<Aws::Transfer::TransferManager>
+    S3Handler::GetTransferManager()
+    {
         if (this->transfer_manager_.get() == nullptr)
         {
-            Aws::Transfer::TransferManagerConfiguration transfer_config(
-                InitializeExecutor().get());
-            transfer_config.s3Client = s3_client;
-            // This buffer is what we used to initialize streambuf and is in memory
-            transfer_config.bufferSize = s3MultiPartDownloadChunkSize;
-            transfer_config.transferBufferMaxHeapSize =
-                (executorPoolSize + 1) * s3MultiPartDownloadChunkSize;
-            this->transfer_manager_ =
-                Aws::Transfer::TransferManager::Create(transfer_config);
+            this->InitializeTransferManager();
         }
         return this->transfer_manager_;
     }
@@ -349,7 +370,7 @@ namespace torchdata
         std::string bucket, object;
         parseS3Path(file_url, &bucket, &object);
         S3FS s3handler(bucket, object, multi_part_download_,
-                       InitializeTransferManager(), InitializeS3Client());
+                       InitializeTransferManager(), GetS3Client());
 
         uint64_t offset = 0;
         uint64_t result_size = 0;
@@ -385,12 +406,12 @@ namespace torchdata
     }
 
     size_t S3Handler::GetFileSize(const std::string &bucket,
-                                    const std::string &object)
+                                  const std::string &object)
     {
         Aws::S3::Model::HeadObjectRequest headObjectRequest;
         headObjectRequest.WithBucket(bucket.c_str()).WithKey(object.c_str());
         auto headObjectOutcome =
-            this->InitializeS3Client()->HeadObject(headObjectRequest);
+            this->GetS3Client()->HeadObject(headObjectRequest);
         if (headObjectOutcome.IsSuccess())
         {
             return headObjectOutcome.GetResult().GetContentLength();
@@ -409,7 +430,7 @@ namespace torchdata
     }
 
     void S3Handler::ListFiles(const std::string &file_url,
-                               std::vector<std::string> *filenames)
+                              std::vector<std::string> *filenames)
     {
         std::string bucket, prefix;
         parseS3Path(file_url, &bucket, &prefix);
@@ -428,7 +449,7 @@ namespace torchdata
         do
         {
             auto listObjectsOutcome =
-                this->InitializeS3Client()->ListObjects(listObjectsRequest);
+                this->GetS3Client()->ListObjects(listObjectsRequest);
             if (!listObjectsOutcome.IsSuccess())
             {
                 Aws::String const &error_aws =
