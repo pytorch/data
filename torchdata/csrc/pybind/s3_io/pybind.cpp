@@ -8,25 +8,29 @@
 
 namespace py = pybind11;
 // TODO: change to S3Client
-using torchdata::S3Init;
-PYBIND11_MODULE(_torchdata, m) {
-    py::class_<S3Init>(m, "S3Init")
+using torchdata::S3Handler;
+PYBIND11_MODULE(_torchdata, m)
+{
+    py::class_<S3Handler>(m, "S3Handler")
         // TODO: pass in timeout
         .def(py::init<>())
         .def("s3_read",
-             [](S3Init* self, const std::string& file_url) {
+             [](S3Handler *self, const std::string &file_url)
+             {
                  std::string result;
                  self->s3_read(file_url, &result);
                  return py::bytes(result);
              })
         .def("list_files",
-             [](S3Init* self, const std::string& file_url) {
+             [](S3Handler *self, const std::string &file_url)
+             {
                  std::vector<std::string> filenames;
                  self->list_files(file_url, &filenames);
                  return filenames;
              })
         .def("file_exists",
-             [](S3Init* self, const std::string& file_url) {
+             [](S3Handler *self, const std::string &file_url)
+             {
                  return self->file_exists(file_url);
              });
 }
