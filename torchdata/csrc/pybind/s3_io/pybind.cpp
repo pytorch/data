@@ -18,19 +18,14 @@ PYBIND11_MODULE(_torchdata, m)
              [](S3Handler *self, const std::string &file_url)
              {
                  std::string result;
-                 self->s3_read(file_url, &result);
+                 self->S3Read(file_url, &result);
                  return py::bytes(result);
              })
         .def("list_files",
              [](S3Handler *self, const std::string &file_url)
              {
                  std::vector<std::string> filenames;
-                 self->list_files(file_url, &filenames);
+                 self->ListFiles(file_url, &filenames);
                  return filenames;
-             })
-        .def("file_exists",
-             [](S3Handler *self, const std::string &file_url)
-             {
-                 return self->file_exists(file_url);
              });
 }

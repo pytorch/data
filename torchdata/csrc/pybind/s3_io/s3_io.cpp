@@ -288,12 +288,12 @@ namespace torchdata
                 multi_part_download_ = false;
             }
         }
-        initializeS3Client();
+        InitializeS3Client();
     }
 
     S3Handler::~S3Handler() {}
 
-    std::shared_ptr<Aws::S3::S3Client> S3Handler::initializeS3Client()
+    std::shared_ptr<Aws::S3::S3Client> S3Handler::InitializeS3Client()
     {
         std::lock_guard<std::mutex> lock(this->initialization_lock_);
         if (this->s3_client_.get() == nullptr)
@@ -312,7 +312,7 @@ namespace torchdata
     }
 
     std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
-    S3Handler::initializeExecutor()
+    S3Handler::InitializeExecutor()
     {
         if (this->executor_.get() == nullptr)
         {
@@ -324,15 +324,15 @@ namespace torchdata
     }
 
     std::shared_ptr<Aws::Transfer::TransferManager>
-    S3Handler::initializeTransferManager()
+    S3Handler::InitializeTransferManager()
     {
-        std::shared_ptr<Aws::S3::S3Client> s3_client = initializeS3Client();
+        std::shared_ptr<Aws::S3::S3Client> s3_client = InitializeS3Client();
         std::lock_guard<std::mutex> lock(this->initialization_lock_);
 
         if (this->transfer_manager_.get() == nullptr)
         {
             Aws::Transfer::TransferManagerConfiguration transfer_config(
-                initializeExecutor().get());
+                InitializeExecutor().get());
             transfer_config.s3Client = s3_client;
             // This buffer is what we used to initialize streambuf and is in memory
             transfer_config.bufferSize = s3MultiPartDownloadChunkSize;
@@ -344,16 +344,16 @@ namespace torchdata
         return this->transfer_manager_;
     }
 
-    void S3Handler::s3_read(const std::string &file_url, std::string *result)
+    void S3Handler::S3Read(const std::string &file_url, std::string *result)
     {
         std::string bucket, object;
         parseS3Path(file_url, &bucket, &object);
         S3FS s3handler(bucket, object, multi_part_download_,
-                       initializeTransferManager(), initializeS3Client());
+                       InitializeTransferManager(), InitializeS3Client());
 
         uint64_t offset = 0;
         uint64_t result_size = 0;
-        uint64_t file_size = this->get_file_size(bucket, object);
+        uint64_t file_size = this->GetFileSize(bucket, object);
         std::size_t part_count = (std::max)(
             static_cast<size_t>((file_size + buffer_size_ - 1) / buffer_size_),
             static_cast<std::size_t>(1));
@@ -384,28 +384,13 @@ namespace torchdata
         }
     }
 
-    bool S3Handler::file_exists(const std::string &file_url)
-    {
-        std::string bucket, object;
-        parseS3Path(file_url, &bucket, &object);
-        Aws::S3::Model::HeadObjectRequest headObjectRequest;
-        headObjectRequest.WithBucket(bucket.c_str()).WithKey(object.c_str());
-        auto headObjectOutcome =
-            this->initializeS3Client()->HeadObject(headObjectRequest);
-        if (headObjectOutcome.IsSuccess())
-        {
-            return true;
-        }
-        return false;
-    }
-
-    size_t S3Handler::get_file_size(const std::string &bucket,
+    size_t S3Handler::GetFileSize(const std::string &bucket,
                                     const std::string &object)
     {
         Aws::S3::Model::HeadObjectRequest headObjectRequest;
         headObjectRequest.WithBucket(bucket.c_str()).WithKey(object.c_str());
         auto headObjectOutcome =
-            this->initializeS3Client()->HeadObject(headObjectRequest);
+            this->InitializeS3Client()->HeadObject(headObjectRequest);
         if (headObjectOutcome.IsSuccess())
         {
             return headObjectOutcome.GetResult().GetContentLength();
@@ -416,14 +401,14 @@ namespace torchdata
         return 0;
     }
 
-    size_t S3Handler::get_file_size(const std::string &file_url)
+    size_t S3Handler::GetFileSize(const std::string &file_url)
     {
         std::string bucket, object;
         parseS3Path(file_url, &bucket, &object);
-        return this->get_file_size(bucket, object);
+        return this->GetFileSize(bucket, object);
     }
 
-    void S3Handler::list_files(const std::string &file_url,
+    void S3Handler::ListFiles(const std::string &file_url,
                                std::vector<std::string> *filenames)
     {
         std::string bucket, prefix;
@@ -443,7 +428,7 @@ namespace torchdata
         do
         {
             auto listObjectsOutcome =
-                this->initializeS3Client()->ListObjects(listObjectsRequest);
+                this->InitializeS3Client()->ListObjects(listObjectsRequest);
             if (!listObjectsOutcome.IsSuccess())
             {
                 Aws::String const &error_aws =

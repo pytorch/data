@@ -29,27 +29,28 @@ namespace torchdata
       std::shared_ptr<Aws::S3::S3Client> s3_client_;
       std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor> executor_;
       std::shared_ptr<Aws::Transfer::TransferManager> transfer_manager_;
+      std::mutex initialization_lock_;
       size_t buffer_size_;
       bool multi_part_download_;
 
-      size_t get_file_size(const std::string &bucket, const std::string &object);
+      std::shared_ptr<Aws::S3::S3Client> InitializeS3Client();
+      std::shared_ptr<Aws::Transfer::TransferManager> InitializeTransferManager();
+      std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
+      InitializeExecutor();
+      size_t GetFileSize(const std::string &bucket, const std::string &object);
+      size_t GetFileSize(const std::string &file_url);
 
    public:
       S3Handler();
-
       ~S3Handler();
 
-      std::mutex initialization_lock_;
-
-      std::shared_ptr<Aws::S3::S3Client> initializeS3Client();
+      std::shared_ptr<Aws::S3::S3Client> GetS3Client() { return this->s3_client_; };
+      std::shared_ptr<Aws::Transfer::TransferManager> GetTransferManager() { return this->transfer_manager_; };
       std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
-      initializeExecutor();
-      std::shared_ptr<Aws::Transfer::TransferManager> initializeTransferManager();
+      GetExecutor() { return this->executor_; };
 
-      void s3_read(const std::string &file_url, std::string *result);
-      size_t get_file_size(const std::string &file_url);
-      bool file_exists(const std::string &file_url);
-      void list_files(const std::string &file_url,
+      void S3Read(const std::string &file_url, std::string *result);
+      void ListFiles(const std::string &file_url,
                       std::vector<std::string> *filenames);
    };
 } // namespace torchdata
