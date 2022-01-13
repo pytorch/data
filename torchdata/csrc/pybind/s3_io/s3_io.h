@@ -35,21 +35,19 @@ namespace torchdata
       size_t buffer_size_;
       bool multi_part_download_;
 
-      std::shared_ptr<Aws::S3::S3Client> InitializeS3Client();
-      std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
-      InitializeExecutor();
-      std::shared_ptr<Aws::Transfer::TransferManager> InitializeTransferManager();
-      size_t GetFileSize(const std::string &bucket, const std::string &object);
-      size_t GetFileSize(const std::string &file_url);
-
-   public:
-      S3Handler();
-      ~S3Handler();
+      void InitializeS3Client();
+      void InitializeExecutor();
+      void InitializeTransferManager();
 
       std::shared_ptr<Aws::S3::S3Client> GetS3Client();
       std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
       GetExecutor();
       std::shared_ptr<Aws::Transfer::TransferManager> GetTransferManager();
+      size_t GetFileSize(const std::string &bucket, const std::string &object);
+
+   public:
+      S3Handler();
+      ~S3Handler();
 
       void S3Read(const std::string &file_url, std::string *result);
       void ListFiles(const std::string &file_url,
