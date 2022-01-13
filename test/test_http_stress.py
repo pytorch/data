@@ -11,6 +11,7 @@ import warnings
 from functools import partial
 
 import expecttest
+from torch.testing._internal.common_utils import slowTest
 from torchdata.datapipes.iter import FileLister, FileOpener, HttpReader, IterDataPipe, LineReader, Mapper, StreamReader
 
 
@@ -66,7 +67,7 @@ def create_temp_files_for_serving(tmp_dir, file_count, file_size, file_url_templ
             fsum.write(file_url_template.format(num=i))
 
 
-class TestIterableDataPipeHttp(expecttest.TestCase):
+class TestHttpStress(expecttest.TestCase):
     __server_thread: threading.Thread
     __server_addr: str
     __server: socketserver.TCPServer
@@ -77,7 +78,7 @@ class TestIterableDataPipeHttp(expecttest.TestCase):
             (cls.__server_thread, cls.__server_addr, cls.__server) = set_up_local_server_in_thread()
         except Exception as e:
             warnings.warn(
-                "TestIterableDataPipeHttp could\
+                "TestHttpStress could\
                           not set up due to {}".format(
                     str(e)
                 )
@@ -90,7 +91,7 @@ class TestIterableDataPipeHttp(expecttest.TestCase):
             cls.__server_thread.join(timeout=15)
         except Exception as e:
             warnings.warn(
-                "TestIterableDataPipeHttp could\
+                "TestHttpStress could\
                            not tear down (clean up temp directory or terminate\
                            local server) due to {}".format(
                     str(e)
@@ -123,18 +124,20 @@ class TestIterableDataPipeHttp(expecttest.TestCase):
                 else:
                     self.assertEqual(len(data), test_file_size)
 
-    @unittest.skip("Stress test on large amount of files skipped due to the CI timing constraint.")
+    @slowTest
     def test_stress_http_reader_iterable_datapipes(self):
         test_file_size = 1024
-        # STATS: It takes about 5 hours to stress test 16 * 1024 * 1024 files locally
-        test_file_count = 1024
+        test_file_count = 1024 * 16
         self._http_test_base(test_file_size, test_file_count)
 
-    @unittest.skip("Test on the very large file skipped due to the CI timing constraint.")
+    @slowTest
     def test_large_files_http_reader_iterable_datapipes(self):
-        # STATS: It takes about 11 mins to test a large file of 64GB locally
         test_file_size = 1024 * 1024 * 128
-        test_file_count = 500
+        test_file_count = 200
         timeout = 30
         chunk = 1024 * 1024 * 8
         self._http_test_base(test_file_size, test_file_count, timeout=timeout, chunk=chunk)
+
+
+if __name__ == "__main__":
+    unittest.main()

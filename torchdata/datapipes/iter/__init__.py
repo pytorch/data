@@ -6,7 +6,6 @@ from torch.utils.data.datapipes.iter import (
     Concater,
     Demultiplexer,
     FileLister,
-    FileLoader,
     FileOpener,
     Filter,
     Forker,
@@ -32,7 +31,6 @@ from torchdata.datapipes.iter.load.fsspec import (
 )
 from torchdata.datapipes.iter.load.iopath import (
     IoPathFileListerIterDataPipe as IoPathFileLister,
-    IoPathFileLoaderIterDataPipe as IoPathFileLoader,
     IoPathFileOpenerIterDataPipe as IoPathFileOpener,
     IoPathSaverIterDataPipe as IoPathSaver,
 )
@@ -95,7 +93,6 @@ __all__ = [
     "FSSpecFileOpener",
     "FSSpecSaver",
     "FileLister",
-    "FileLoader",
     "FileOpener",
     "Filter",
     "Forker",
@@ -107,7 +104,6 @@ __all__ = [
     "InMemoryCacheHolder",
     "IndexAdder",
     "IoPathFileLister",
-    "IoPathFileLoader",
     "IoPathFileOpener",
     "IoPathSaver",
     "IterDataPipe",
