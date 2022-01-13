@@ -42,6 +42,11 @@ def test_torchdata_pytorch_consistency() -> None:
     torchdata_datapipes = extract_datapipe_names(torchdata.datapipes.iter)
 
     missing_datapipes = pytorch_datapipes - torchdata_datapipes
+    deprecated_datapipes = {"FileLoader"}
+    for dp in deprecated_datapipes:
+        if dp in missing_datapipes:
+            missing_datapipes.remove("FileLoader")
+
     if any(missing_datapipes):
         msg = (
             "The following datapipes are exposed under `torch.utils.data.datapipes.iter`, "
