@@ -1,7 +1,9 @@
 #include "s3_io.h"
 
+#include <aws/core/auth/AWSAuthSigner.h>
 #include <aws/core/Aws.h>
 #include <aws/core/config/AWSProfileConfigLoader.h>
+#include <aws/core/http/Scheme.h>
 #include <aws/core/utils/FileSystemUtils.h>
 #include <aws/core/utils/StringUtils.h>
 #include <aws/core/utils/logging/AWSLogging.h>
@@ -10,6 +12,7 @@
 #include <aws/core/utils/memory/stl/AWSStreamFwd.h>
 #include <aws/core/utils/stream/PreallocatedStreamBuf.h>
 #include <aws/core/utils/threading/Executor.h>
+#include <aws/crt/auth/Sigv4Signing.h>
 #include <aws/s3/S3Client.h>
 #include <aws/s3/S3Errors.h>
 #include <aws/s3/model/CompletedPart.h>
@@ -33,7 +36,8 @@ namespace torchdata
 
         std::shared_ptr<Aws::Client::ClientConfiguration> setUpS3Config()
         {
-            auto cfg = std::shared_ptr<Aws::Client::ClientConfiguration>(new Aws::Client::ClientConfiguration());
+            std::shared_ptr<Aws::Client::ClientConfiguration> cfg =
+                std::shared_ptr<Aws::Client::ClientConfiguration>(new Aws::Client::ClientConfiguration());
             Aws::String config_file;
             const char *config_file_env = getenv("AWS_CONFIG_FILE");
             if (config_file_env)
@@ -121,27 +125,25 @@ namespace torchdata
         {
             if (fname.empty())
             {
-                throw std::invalid_argument{"The filename cannot be an empty string."};
+                throw std::invalid_argument("The filename cannot be an empty string.");
             }
 
             if (fname.size() < 5 || fname.substr(0, 5) != "s3://")
             {
-                throw std::invalid_argument{
-                    "The filename must start with the S3 scheme."};
+                throw std::invalid_argument("The filename must start with the S3 scheme.");
             }
 
             std::string path = fname.substr(5);
 
             if (path.empty())
             {
-                throw std::invalid_argument{"The filename cannot be an empty string."};
+                throw std::invalid_argument("The filename cannot be an empty string.");
             }
 
-            auto pos = path.find_first_of('/');
+            size_t pos = path.find_first_of('/');
             if (pos == 0)
             {
-                throw std::invalid_argument{
-                    "The filename does not contain a bucket name."};
+                throw std::invalid_argument("The filename does not contain a bucket name.");
             }
 
             *bucket = path.substr(0, pos);
@@ -196,11 +198,11 @@ namespace torchdata
                     []()
                     { return Aws::New<Aws::StringStream>("S3IOAllocationTag"); });
                 // get the object
-                auto getObjectOutcome = this->s3_client_->GetObject(getObjectRequest);
+                Aws::S3::Model::GetObjectOutcome getObjectOutcome = this->s3_client_->GetObject(getObjectRequest);
 
                 if (!getObjectOutcome.IsSuccess())
                 {
-                    auto error = getObjectOutcome.GetError();
+                    Aws::S3::S3Error error = getObjectOutcome.GetError();
                     std::cout << "ERROR: " << error.GetExceptionName() << ": "
                               << error.GetMessage() << std::endl;
                     return 0;
@@ -236,7 +238,7 @@ namespace torchdata
                 if (downloadHandle->GetStatus() !=
                     Aws::Transfer::TransferStatus::COMPLETED)
                 {
-                    auto error = downloadHandle->GetLastError();
+                    const Aws::Client::AWSError<Aws::S3::S3Errors> error = downloadHandle->GetLastError();
                     std::cout << "ERROR: " << error.GetExceptionName() << ": "
                               << error.GetMessage() << std::endl;
                     return 0;
@@ -287,7 +289,7 @@ namespace torchdata
 
     S3Handler::~S3Handler() {}
 
-    std::shared_ptr<Aws::S3::S3Client> S3Handler::InitializeS3Client()
+    void S3Handler::InitializeS3Client()
     {
         std::lock_guard<std::mutex> lock(this->initialization_lock_);
         Aws::SDKOptions options;
@@ -300,21 +302,17 @@ namespace torchdata
                 *S3Handler::s3_handler_cfg_,
                 Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
                 false));
-        return this->s3_client_;
     }
 
-    std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
-    S3Handler::InitializeExecutor()
+    void S3Handler::InitializeExecutor()
     {
         std::lock_guard<std::mutex> lock(this->initialization_lock_);
         this->executor_ =
             Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(
                 "executor", executorPoolSize);
-        return this->executor_;
     }
 
-    std::shared_ptr<Aws::Transfer::TransferManager>
-    S3Handler::InitializeTransferManager()
+    void S3Handler::InitializeTransferManager()
     {
         std::shared_ptr<Aws::S3::S3Client> s3_client = GetS3Client();
         std::lock_guard<std::mutex> lock(this->initialization_lock_);
@@ -328,7 +326,6 @@ namespace torchdata
             (executorPoolSize + 1) * s3MultiPartDownloadChunkSize;
         this->transfer_manager_ =
             Aws::Transfer::TransferManager::Create(transfer_config);
-        return this->transfer_manager_;
     }
 
     std::shared_ptr<Aws::S3::S3Client> S3Handler::GetS3Client()
@@ -405,7 +402,7 @@ namespace torchdata
     {
         Aws::S3::Model::HeadObjectRequest headObjectRequest;
         headObjectRequest.WithBucket(bucket.c_str()).WithKey(object.c_str());
-        auto headObjectOutcome =
+        Aws::S3::Model::HeadObjectOutcome headObjectOutcome =
             this->GetS3Client()->HeadObject(headObjectRequest);
         if (headObjectOutcome.IsSuccess())
         {
@@ -415,13 +412,6 @@ namespace torchdata
         std::string error_str(error_aws.c_str(), error_aws.size());
         throw std::invalid_argument(error_str);
         return 0;
-    }
-
-    size_t S3Handler::GetFileSize(const std::string &file_url)
-    {
-        std::string bucket, object;
-        parseS3Path(file_url, &bucket, &object);
-        return this->GetFileSize(bucket, object);
     }
 
     void S3Handler::ListFiles(const std::string &file_url,
@@ -443,7 +433,7 @@ namespace torchdata
         Aws::S3::Model::ListObjectsResult listObjectsResult;
         do
         {
-            auto listObjectsOutcome =
+            Aws::S3::Model::ListObjectsOutcome listObjectsOutcome =
                 this->GetS3Client()->ListObjects(listObjectsRequest);
             if (!listObjectsOutcome.IsSuccess())
             {
@@ -457,7 +447,7 @@ namespace torchdata
             Aws::Vector<Aws::S3::Model::Object> objects = listObjectsResult.GetContents();
             if (!objects.empty())
             {
-                for (const auto &object : objects)
+                for (const Aws::S3::Model::Object &object : objects)
                 {
                     Aws::String key = default_key + object.GetKey();
                     if (key.back() == '/')
