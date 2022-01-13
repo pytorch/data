@@ -12,8 +12,7 @@ using torchdata::S3Handler;
 PYBIND11_MODULE(_torchdata, m)
 {
     py::class_<S3Handler>(m, "S3Handler")
-        // TODO: pass in timeout
-        .def(py::init<>())
+        .def(py::init<const long, const std::string &>())
         .def("s3_read",
              [](S3Handler *self, const std::string &file_url)
              {
