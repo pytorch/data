@@ -34,7 +34,8 @@ namespace torchdata
         static const int executorPoolSize = 25;
         static const int S3GetFilesMaxKeys = 100;
 
-        std::shared_ptr<Aws::Client::ClientConfiguration> setUpS3Config()
+        std::shared_ptr<Aws::Client::ClientConfiguration> setUpS3Config(const long requestTimeoutMs, const std::string region)
+        // std::shared_ptr<Aws::Client::ClientConfiguration> setUpS3Config()
         {
             std::shared_ptr<Aws::Client::ClientConfiguration> cfg =
                 std::shared_ptr<Aws::Client::ClientConfiguration>(new Aws::Client::ClientConfiguration());
@@ -80,15 +81,25 @@ namespace torchdata
                     cfg->verifySSL = true;
                 }
             }
-            const char *region = getenv("AWS_REGION");
-            if (region)
-            {
-                cfg->region = region;
-            }
             const char *endpoint_url = getenv("S3_ENDPOINT_URL");
             if (endpoint_url)
             {
                 cfg->endpointOverride = endpoint_url;
+            }
+            if (region != "")
+            {
+                cfg->region = region;
+            }
+            else
+            {
+                const char *env_region = getenv("AWS_REGION");
+                if (env_region)
+                {
+                    cfg->region = env_region;
+                }
+            }
+            if (requestTimeoutMs > -1) {
+                cfg->requestTimeoutMs = requestTimeoutMs;
             }
             return cfg;
         }
@@ -260,7 +271,7 @@ namespace torchdata
 
     std::shared_ptr<Aws::Client::ClientConfiguration> S3Handler::s3_handler_cfg_;
 
-    S3Handler::S3Handler()
+    S3Handler::S3Handler(const long requestTimeoutMs, const std::string region)
         : s3_client_(nullptr, ShutdownClient),
           transfer_manager_(nullptr, ShutdownTransferManager),
           executor_(nullptr, ShutdownExecutor),
@@ -284,19 +295,26 @@ namespace torchdata
                 multi_part_download_ = false;
             }
         }
-        InitializeS3Client();
+        InitializeS3Client(requestTimeoutMs, region);
     }
 
     S3Handler::~S3Handler() {}
 
     void S3Handler::InitializeS3Client()
     {
+        const long requestTimeoutMs = -1;
+        const std::string region = "";
+        this->InitializeS3Client(requestTimeoutMs, region);
+    }
+
+    void S3Handler::InitializeS3Client(const long requestTimeoutMs, const std::string region)
+    {
         std::lock_guard<std::mutex> lock(this->initialization_lock_);
         Aws::SDKOptions options;
         Aws::InitAPI(options);
 
         // Set up the request
-        S3Handler::s3_handler_cfg_ = setUpS3Config();
+        S3Handler::s3_handler_cfg_ = setUpS3Config(requestTimeoutMs, region);
         this->s3_client_ =
             std::shared_ptr<Aws::S3::S3Client>(new Aws::S3::S3Client(
                 *S3Handler::s3_handler_cfg_,

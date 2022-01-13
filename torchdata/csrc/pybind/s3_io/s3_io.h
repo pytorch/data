@@ -36,6 +36,7 @@ namespace torchdata
       bool multi_part_download_;
 
       void InitializeS3Client();
+      void InitializeS3Client(const long requestTimeoutMs, const std::string region);
       void InitializeExecutor();
       void InitializeTransferManager();
 
@@ -46,7 +47,7 @@ namespace torchdata
       size_t GetFileSize(const std::string &bucket, const std::string &object);
 
    public:
-      S3Handler();
+      S3Handler(const long requestTimeoutMs, const std::string region);
       ~S3Handler();
 
       void S3Read(const std::string &file_url, std::string *result);
