@@ -1,6 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import os
-import warnings
 
 from typing import Any, Callable, Iterator, List, Optional, Tuple, Union
 
@@ -79,17 +78,6 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
             for file_name in self.pathmgr.ls(self.root):
                 if match_masks(file_name, self.masks):
                     yield os.path.join(self.root, file_name)
-
-
-@functional_datapipe("load_file_by_iopath")
-class IoPathFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
-    def __new__(cls, source_datapipe: IterDataPipe[str], mode: str = "r", pathmgr=None):
-        warnings.warn(
-            "IoPathFileLoaderIterDataPipe and its functional API has been renamed and will be removed "
-            "from this package. Please use 'IoPathFileOpenerIterDataPipe' instead.",
-            DeprecationWarning,
-        )
-        return IoPathFileOpenerIterDataPipe(source_datapipe=source_datapipe, mode=mode, pathmgr=pathmgr)
 
 
 @functional_datapipe("open_file_by_iopath")
