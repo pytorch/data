@@ -19,8 +19,8 @@ from torch.utils.data.datapipes.iter import (
     ShardingFilter,
     Shuffler,
     StreamReader,
-    IterableWrapper,
-    ShardingFilter,
+    UnBatcher,
+    Zipper,
 )
 from torchdata.datapipes.iter.load.fsspec import (
     FSSpecFileListerIterDataPipe as FSSpecFileLister,
