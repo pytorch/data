@@ -15,27 +15,21 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
     Args:
         source_datapipe: a DataPipe that contains URLs/URL prefixes to s3 files
         length: Nominal length of the datapipe
+        requestTimeoutMs: optional, overwrite the default timeout setting for this datapipe
+        region: optional, overwrite the default region inferred from credentials for this datapipe
 
     Note:
         AWS_CPP_SDK is necessary to use the S3 DataPipe(s).
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], length: int = -1) -> None:
-        # TODO: check whether AWS_CPP_SDK available
+    def __init__(self, source_datapipe: IterDataPipe[str], length: int = -1, requestTimeoutMs = -1, region = "") -> None:
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.length: int = length
+        self.handler = torchdata._torchdata.S3Handler(requestTimeoutMs, region)
 
     def __iter__(self) -> Iterator[str]:
-        # TODO: timeout
-        handler = torchdata._torchdata.S3Handler()
         for prefix in self.source_datapipe:
-            # if handler.file_exists(prefix):
-            #     yield prefix
-            # else:
-            #     urls = handler.list_files(prefix)
-            #     for url in urls:
-            #         yield url
-            urls = handler.list_files(prefix)
+            urls = self.handler.list_files(prefix)
             for url in urls:
                 yield url
 
@@ -53,19 +47,20 @@ class S3FileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     Args:
         source_datapipe: a DataPipe that contains URLs to s3 files
+        requestTimeoutMs: optional, overwrite the default timeout setting for this datapipe
+        region: optional, overwrite the default region inferred from credentials for this datapipe
 
     Note:
         AWS_CPP_SDK is necessary to use the S3 DataPipe(s).
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str]) -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], requestTimeoutMs = -1, region = "") -> None:
         self.source_datapipe: IterDataPipe[str] = source_datapipe
+        self.handler = torchdata._torchdata.S3Handler(requestTimeoutMs, region)
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
-        # TODO: timeout
-        handler = torchdata._torchdata.S3Handler()
         for url in self.source_datapipe:
-            yield url, handler.s3_read(url)
+            yield url, self.handler.s3_read(url)
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
