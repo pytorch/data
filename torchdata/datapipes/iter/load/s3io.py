@@ -1,9 +1,6 @@
 from typing import Iterator, Tuple
-from itertools import chain
 
-# import torchdata._torchdata
 import torchdata
-
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
