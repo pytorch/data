@@ -4,14 +4,9 @@ import os
 import unittest
 import warnings
 
-from torchdata.datapipes.iter import (
-    EndOnDiskCacheHolder,
-    FileLoader,
-    HttpReader,
-    IterableWrapper,
-    OnDiskCacheHolder,
-    S3FileLister,
-)
+import expecttest
+
+from _utils._common_utils_for_test import check_hash_fn, create_temp_dir
 
 from torchdata.datapipes.iter import EndOnDiskCacheHolder, FileOpener, HttpReader, IterableWrapper, OnDiskCacheHolder
 
