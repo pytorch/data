@@ -450,8 +450,6 @@ namespace torchdata
             .WithPrefix(prefix)
             .WithMaxKeys(this->max_keys_)
             .WithMarker(this->last_marker_);
-        std::cerr << "max_keys_: " << this->max_keys_ << std::endl;
-        std::cerr << "last_marker_: " << this->last_marker_ << std::endl;
 
         Aws::S3::Model::ListObjectsOutcome listObjectsOutcome =
             this->GetS3Client()->ListObjects(listObjectsRequest);
