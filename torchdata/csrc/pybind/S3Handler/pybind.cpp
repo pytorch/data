@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "s3_io.h"
+#include "S3Handler.h"
 
 namespace py = pybind11;
 using torchdata::S3Handler;
