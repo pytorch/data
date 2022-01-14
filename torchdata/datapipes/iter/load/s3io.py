@@ -22,16 +22,22 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
         AWS_CPP_SDK is necessary to use the S3 DataPipe(s).
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], length: int = -1, requestTimeoutMs = -1, region = "") -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], length: int = -1, request_timeout_ms=-1, region="", max_keys=None) -> None:
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.length: int = length
-        self.handler = torchdata._torchdata.S3Handler(requestTimeoutMs, region)
+        self.handler = torchdata._torchdata.S3Handler(request_timeout_ms, region)
+        if max_keys:
+            self.handler.set_max_keys(max_keys)
 
     def __iter__(self) -> Iterator[str]:
         for prefix in self.source_datapipe:
-            urls = self.handler.list_files(prefix)
-            for url in urls:
-                yield url
+            while True:
+                urls = self.handler.list_files(prefix)
+                for url in urls:
+                    yield url
+                if not urls:
+                    break
+            self.handler.clear_marker()
 
     def __len__(self) -> int:
         if self.length == -1:
@@ -54,7 +60,7 @@ class S3FileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         AWS_CPP_SDK is necessary to use the S3 DataPipe(s).
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], requestTimeoutMs = -1, region = "") -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], requestTimeoutMs=-1, region="") -> None:
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.handler = torchdata._torchdata.S3Handler(requestTimeoutMs, region)
 

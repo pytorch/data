@@ -31,6 +31,9 @@ namespace torchdata
       std::shared_ptr<Aws::S3::S3Client> s3_client_;
       std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor> executor_;
       std::shared_ptr<Aws::Transfer::TransferManager> transfer_manager_;
+
+      Aws::String last_marker_;
+      int max_keys_;
       std::mutex initialization_lock_;
       size_t buffer_size_;
       bool multi_part_download_;
@@ -49,6 +52,9 @@ namespace torchdata
    public:
       S3Handler(const long requestTimeoutMs, const std::string region);
       ~S3Handler();
+
+      void SetMaxKeys(const int max_keys) { this->max_keys_ = max_keys; }
+      void ClearMarker();
 
       void S3Read(const std::string &file_url, std::string *result);
       void ListFiles(const std::string &file_url,
