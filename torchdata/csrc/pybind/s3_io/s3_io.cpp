@@ -32,10 +32,10 @@ namespace torchdata
         static const size_t s3ReadBufferSize = 120 * 1024 * 1024;              // 16 MB
         static const uint64_t s3MultiPartDownloadChunkSize = 50 * 1024 * 1024; // 50 MB
         static const int executorPoolSize = 25;
-        static const int S3GetFilesMaxKeys = 100;
+        static const int S3DefaultMaxKeys = 1000;
+        static const std::string S3DefaultMarker = "";
 
         std::shared_ptr<Aws::Client::ClientConfiguration> setUpS3Config(const long requestTimeoutMs, const std::string region)
-        // std::shared_ptr<Aws::Client::ClientConfiguration> setUpS3Config()
         {
             std::shared_ptr<Aws::Client::ClientConfiguration> cfg =
                 std::shared_ptr<Aws::Client::ClientConfiguration>(new Aws::Client::ClientConfiguration());
@@ -98,7 +98,8 @@ namespace torchdata
                     cfg->region = env_region;
                 }
             }
-            if (requestTimeoutMs > -1) {
+            if (requestTimeoutMs > -1)
+            {
                 cfg->requestTimeoutMs = requestTimeoutMs;
             }
             return cfg;
@@ -131,8 +132,8 @@ namespace torchdata
             }
         }
 
-        void parseS3Path(const std::string &fname, std::string *bucket,
-                         std::string *object)
+        void parseS3Path(const Aws::String &fname, Aws::String *bucket,
+                         Aws::String *object)
         {
             if (fname.empty())
             {
@@ -295,7 +296,11 @@ namespace torchdata
                 multi_part_download_ = false;
             }
         }
+
         InitializeS3Client(requestTimeoutMs, region);
+
+        this->max_keys_ = S3DefaultMaxKeys;
+        this->last_marker_ = S3DefaultMarker;
     }
 
     S3Handler::~S3Handler() {}
@@ -375,6 +380,25 @@ namespace torchdata
         return this->transfer_manager_;
     }
 
+    size_t S3Handler::GetFileSize(const std::string &bucket,
+                                  const std::string &object)
+    {
+        Aws::S3::Model::HeadObjectRequest headObjectRequest;
+        headObjectRequest.WithBucket(bucket.c_str()).WithKey(object.c_str());
+        Aws::S3::Model::HeadObjectOutcome headObjectOutcome =
+            this->GetS3Client()->HeadObject(headObjectRequest);
+        if (headObjectOutcome.IsSuccess())
+        {
+            return headObjectOutcome.GetResult().GetContentLength();
+        }
+        Aws::String const &error_aws = headObjectOutcome.GetError().GetMessage();
+        std::string error_str(error_aws.c_str(), error_aws.size());
+        throw std::invalid_argument(error_str);
+        return 0;
+    }
+
+    void S3Handler::ClearMarker() { this->last_marker_ = S3DefaultMarker; }
+
     void S3Handler::S3Read(const std::string &file_url, std::string *result)
     {
         std::string bucket, object;
@@ -415,70 +439,43 @@ namespace torchdata
         }
     }
 
-    size_t S3Handler::GetFileSize(const std::string &bucket,
-                                  const std::string &object)
-    {
-        Aws::S3::Model::HeadObjectRequest headObjectRequest;
-        headObjectRequest.WithBucket(bucket.c_str()).WithKey(object.c_str());
-        Aws::S3::Model::HeadObjectOutcome headObjectOutcome =
-            this->GetS3Client()->HeadObject(headObjectRequest);
-        if (headObjectOutcome.IsSuccess())
-        {
-            return headObjectOutcome.GetResult().GetContentLength();
-        }
-        Aws::String const &error_aws = headObjectOutcome.GetError().GetMessage();
-        std::string error_str(error_aws.c_str(), error_aws.size());
-        throw std::invalid_argument(error_str);
-        return 0;
-    }
-
     void S3Handler::ListFiles(const std::string &file_url,
                               std::vector<std::string> *filenames)
     {
-        std::string bucket, prefix;
+        Aws::String bucket, prefix;
         parseS3Path(file_url, &bucket, &prefix);
-        Aws::String default_key = "";
-        if (prefix.empty())
-        {
-            default_key = "/";
-        }
 
         Aws::S3::Model::ListObjectsRequest listObjectsRequest;
-        listObjectsRequest.WithBucket(bucket.c_str())
-            .WithPrefix(prefix.c_str())
-            .WithMaxKeys(S3GetFilesMaxKeys);
+        listObjectsRequest.WithBucket(bucket)
+            .WithPrefix(prefix)
+            .WithMaxKeys(this->max_keys_)
+            .WithMarker(this->last_marker_);
+        std::cerr << "max_keys_: " << this->max_keys_ << std::endl;
+        std::cerr << "last_marker_: " << this->last_marker_ << std::endl;
 
-        Aws::S3::Model::ListObjectsResult listObjectsResult;
-        do
+        Aws::S3::Model::ListObjectsOutcome listObjectsOutcome =
+            this->GetS3Client()->ListObjects(listObjectsRequest);
+        if (!listObjectsOutcome.IsSuccess())
         {
-            Aws::S3::Model::ListObjectsOutcome listObjectsOutcome =
-                this->GetS3Client()->ListObjects(listObjectsRequest);
-            if (!listObjectsOutcome.IsSuccess())
-            {
-                Aws::String const &error_aws =
-                    listObjectsOutcome.GetError().GetMessage();
-                std::string error_str(error_aws.c_str(), error_aws.size());
-                throw std::invalid_argument(error_str);
-            }
+            Aws::String const &error_aws =
+                listObjectsOutcome.GetError().GetMessage();
+            throw std::invalid_argument(error_aws);
+        }
 
-            listObjectsResult = listObjectsOutcome.GetResult();
-            Aws::Vector<Aws::S3::Model::Object> objects = listObjectsResult.GetContents();
-            if (!objects.empty())
+        Aws::S3::Model::ListObjectsResult listObjectsResult = listObjectsOutcome.GetResult();
+        Aws::Vector<Aws::S3::Model::Object> objects = listObjectsResult.GetContents();
+        if (!objects.empty())
+        {
+            for (const Aws::S3::Model::Object &object : objects)
             {
-                for (const Aws::S3::Model::Object &object : objects)
+                if (object.GetKey().back() == '/') // ignore folders
                 {
-                    Aws::String key = default_key + object.GetKey();
-                    if (key.back() == '/')
-                    {
-                        continue;
-                    }
-                    Aws::String bucket_aws(bucket.c_str(), bucket.size());
-                    Aws::String entry = "s3://" + bucket_aws + "/" + object.GetKey();
-                    filenames->push_back(entry.c_str());
+                    continue;
                 }
-                listObjectsRequest.SetMarker(listObjectsResult.GetContents().back().GetKey());
+                Aws::String entry = "s3://" + bucket + "/" + object.GetKey();
+                filenames->push_back(entry.c_str());
             }
-        } while (listObjectsResult.GetIsTruncated());
+            this->last_marker_ = listObjectsResult.GetContents().back().GetKey();
+        }
     }
-
 } // namespace torchdata
