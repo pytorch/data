@@ -21,16 +21,17 @@ class HeaderIterDataPipe(IterDataPipe[T_co]):
     def __init__(self, source_datapipe: IterDataPipe[T_co], limit: int = 10) -> None:
         self.source_datapipe: IterDataPipe[T_co] = source_datapipe
         self.limit: int = limit
-        self.length = -1
+        self.length: int = -1
 
     def __iter__(self) -> Iterator[T_co]:
-        i = -1
-        for i, value in enumerate(self.source_datapipe):
-            if i < self.limit:
+        i: int = 0
+        for value in self.source_datapipe:
+            i += 1
+            if i <= self.limit:
                 yield value
             else:
                 break
-        self.length = min(i + 1, self.limit)  # We know length with certainty when we reach here
+        self.length = min(i, self.limit)  # We know length with certainty when we reach here
 
     def __len__(self) -> int:
         if self.length != -1:
