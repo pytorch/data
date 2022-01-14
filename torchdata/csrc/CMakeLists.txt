@@ -5,9 +5,9 @@ if(BUILD_S3)
   find_package(pybind11 REQUIRED)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-  set(SOURCES "pybind/s3_io/s3_io.cpp" )
+  set(SOURCES "pybind/S3Handler/S3Handler.cpp" )
 
-  pybind11_add_module(_torchdata ${SOURCES} "pybind/s3_io/pybind.cpp")
+  pybind11_add_module(_torchdata ${SOURCES} "pybind/S3Handler/pybind.cpp")
 
   message(STATUS "All linked libs: ${AWSSDK_LINK_LIBRARIES}")
 
