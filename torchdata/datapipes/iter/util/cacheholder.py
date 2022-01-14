@@ -8,9 +8,16 @@ from collections import deque
 from functools import partial
 from typing import Callable, Deque, Dict, Iterator, Optional, TypeVar
 
+from torch.utils.data.datapipes.utils.common import check_lambda_fn, DILL_AVAILABLE
+
 from torch.utils.data.graph import traverse
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+
+if DILL_AVAILABLE:
+    import dill
+
+    dill.extend(use_dill=False)
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -142,7 +149,10 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         extra_check_fn: Optional[Callable[[str], bool]] = None,
     ):
         self.source_datapipe = source_datapipe
+
+        check_lambda_fn(filepath_fn)
         filepath_fn = _generator_to_list(filepath_fn) if inspect.isgeneratorfunction(filepath_fn) else filepath_fn
+
         if hash_dict is not None and hash_type not in ("sha256", "md5"):
             raise ValueError("Invalid hash_type requested, should be one of {}".format(("sha256", "md5")))
         OnDiskCacheHolderIterDataPipe._temp_dict[self] = (filepath_fn, hash_dict, hash_type, extra_check_fn)
