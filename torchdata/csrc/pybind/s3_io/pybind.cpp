@@ -7,7 +7,6 @@
 #include "s3_io.h"
 
 namespace py = pybind11;
-// TODO: change to S3Client
 using torchdata::S3Handler;
 PYBIND11_MODULE(_torchdata, m)
 {
@@ -26,5 +25,15 @@ PYBIND11_MODULE(_torchdata, m)
                  std::vector<std::string> filenames;
                  self->ListFiles(file_url, &filenames);
                  return filenames;
+             })
+        .def("set_max_keys",
+             [](S3Handler *self, const int max_keys)
+             {
+                 self->SetMaxKeys(max_keys);
+             })
+        .def("clear_marker",
+             [](S3Handler *self)
+             {
+                 self->ClearMarker();
              });
 }
