@@ -24,6 +24,7 @@ class HeaderIterDataPipe(IterDataPipe[T_co]):
         self.length = -1
 
     def __iter__(self) -> Iterator[T_co]:
+        i = -1
         for i, value in enumerate(self.source_datapipe):
             if i < self.limit:
                 yield value
