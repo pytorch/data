@@ -460,20 +460,26 @@ namespace torchdata
             throw std::invalid_argument(error_aws);
         }
 
-        Aws::S3::Model::ListObjectsResult listObjectsResult = listObjectsOutcome.GetResult();
-        Aws::Vector<Aws::S3::Model::Object> objects = listObjectsResult.GetContents();
-        if (!objects.empty())
+        Aws::Vector<Aws::S3::Model::Object> objects = listObjectsOutcome.GetResult().GetContents();
+        if (objects.empty())
         {
-            for (const Aws::S3::Model::Object &object : objects)
+            return;
+        }
+        for (const Aws::S3::Model::Object &object : objects)
+        {
+            if (object.GetKey().back() == '/') // ignore folders
             {
-                if (object.GetKey().back() == '/') // ignore folders
-                {
-                    continue;
-                }
-                Aws::String entry = "s3://" + bucket + "/" + object.GetKey();
-                filenames->push_back(entry.c_str());
+                continue;
             }
-            this->last_marker_ = listObjectsResult.GetContents().back().GetKey();
+            Aws::String entry = "s3://" + bucket + "/" + object.GetKey();
+            filenames->push_back(entry.c_str());
+        }
+        this->last_marker_ = objects.back().GetKey();
+
+        // extreme cases when all objects are folders
+        if (filenames->size() == 0)
+        {
+            this->ListFiles(file_url, filenames);
         }
     }
 } // namespace torchdata
