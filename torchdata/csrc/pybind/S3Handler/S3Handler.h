@@ -39,7 +39,6 @@ namespace torchdata
       bool multi_part_download_;
 
       void InitializeS3Client();
-      void InitializeS3Client(const long requestTimeoutMs, const std::string region);
       void InitializeExecutor();
       void InitializeTransferManager();
 
