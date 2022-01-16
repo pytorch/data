@@ -168,6 +168,13 @@ namespace torchdata
 
         class S3FS
         {
+        private:
+            std::string bucket_name_;
+            std::string object_name_;
+            bool multi_part_download_;
+            std::shared_ptr<Aws::S3::S3Client> s3_client_;
+            std::shared_ptr<Aws::Transfer::TransferManager> transfer_manager_;
+
         public:
             S3FS(const std::string &bucket, const std::string &object,
                  const bool multi_part_download,
@@ -260,13 +267,6 @@ namespace torchdata
                     return downloadHandle->GetBytesTransferred();
                 }
             }
-
-        private:
-            std::string bucket_name_;
-            std::string object_name_;
-            bool multi_part_download_;
-            std::shared_ptr<Aws::S3::S3Client> s3_client_;
-            std::shared_ptr<Aws::Transfer::TransferManager> transfer_manager_;
         };
     } // namespace
 
@@ -297,7 +297,10 @@ namespace torchdata
             }
         }
 
-        InitializeS3Client(requestTimeoutMs, region);
+        Aws::SDKOptions options;
+        Aws::InitAPI(options);
+        S3Handler::s3_handler_cfg_ = setUpS3Config(requestTimeoutMs, region);
+        InitializeS3Client();
 
         this->max_keys_ = S3DefaultMaxKeys;
         this->last_marker_ = S3DefaultMarker;
@@ -307,19 +310,7 @@ namespace torchdata
 
     void S3Handler::InitializeS3Client()
     {
-        const long requestTimeoutMs = -1;
-        const std::string region = "";
-        this->InitializeS3Client(requestTimeoutMs, region);
-    }
-
-    void S3Handler::InitializeS3Client(const long requestTimeoutMs, const std::string region)
-    {
         std::lock_guard<std::mutex> lock(this->initialization_lock_);
-        Aws::SDKOptions options;
-        Aws::InitAPI(options);
-
-        // Set up the request
-        S3Handler::s3_handler_cfg_ = setUpS3Config(requestTimeoutMs, region);
         this->s3_client_ =
             std::shared_ptr<Aws::S3::S3Client>(new Aws::S3::S3Client(
                 *S3Handler::s3_handler_cfg_,
