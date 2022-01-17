@@ -29,7 +29,7 @@ namespace torchdata
 {
     namespace
     {
-        static const size_t s3ReadBufferSize = 120 * 1024 * 1024;              // 16 MB
+        static const size_t s3ReadBufferSize = 120 * 1024 * 1024;              // 120 MB
         static const uint64_t s3MultiPartDownloadChunkSize = 50 * 1024 * 1024; // 50 MB
         static const int executorPoolSize = 25;
         static const int S3DefaultMaxKeys = 1000;
@@ -186,19 +186,19 @@ namespace torchdata
                   transfer_manager_(transfer_manager),
                   s3_client_(s3_client) {}
 
-            size_t read(uint64_t offset, size_t n, char *buffer)
+            size_t Read(uint64_t offset, size_t n, char *buffer)
             {
                 if (multi_part_download_)
                 {
-                    return readS3TransferManager(offset, n, buffer);
+                    return ReadTransferManager(offset, n, buffer);
                 }
                 else
                 {
-                    return readS3Client(offset, n, buffer);
+                    return ReadS3Client(offset, n, buffer);
                 }
             }
 
-            size_t readS3Client(uint64_t offset, size_t n, char *buffer)
+            size_t ReadS3Client(uint64_t offset, size_t n, char *buffer)
             {
                 Aws::S3::Model::GetObjectRequest getObjectRequest;
 
@@ -235,7 +235,7 @@ namespace torchdata
                 }
             }
 
-            size_t readS3TransferManager(uint64_t offset, size_t n, char *buffer)
+            size_t ReadTransferManager(uint64_t offset, size_t n, char *buffer)
             {
                 auto create_stream_fn = [&]() { // create stream lambda fn
                     return Aws::New<S3UnderlyingStream>(
@@ -394,26 +394,25 @@ namespace torchdata
     {
         std::string bucket, object;
         parseS3Path(file_url, &bucket, &object);
-        S3FS s3handler(bucket, object, multi_part_download_,
-                       GetTransferManager(), GetS3Client());
+        S3FS s3fs(bucket, object, multi_part_download_,
+                  GetTransferManager(), GetS3Client());
 
         uint64_t offset = 0;
         uint64_t result_size = 0;
         uint64_t file_size = this->GetFileSize(bucket, object);
-        std::size_t part_count = (std::max)(
+        size_t part_count = (std::max)(
             static_cast<size_t>((file_size + buffer_size_ - 1) / buffer_size_),
-            static_cast<std::size_t>(1));
+            static_cast<size_t>(1));
         result->resize(file_size);
 
         for (int i = 0; i < part_count; i++)
         {
-
             offset = result_size;
 
             size_t buf_len = std::min<size_t>(buffer_size_, file_size - result_size);
 
             size_t read_len =
-                s3handler.read(offset, buf_len, (char *)(result->data()) + offset);
+                s3fs.Read(offset, buf_len, (char *)(result->data()) + offset);
 
             result_size += read_len;
 
