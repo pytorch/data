@@ -29,7 +29,7 @@ namespace torchdata
 {
     namespace
     {
-        static const size_t S3DefaultBufferSize = 120 * 1024 * 1024;              // 120 MB
+        static const size_t S3DefaultBufferSize = 128 * 1024 * 1024; // 128 MB
         static const uint64_t S3DefaultMultiPartDownloadChunkSize = 5 * 1024 * 1024; // 5 MB
         static const int executorPoolSize = 25;
         static const int S3DefaultMaxKeys = 1000;
