@@ -1,3 +1,4 @@
+from io import BytesIO
 from typing import Iterator, Tuple
 
 import torchdata
@@ -70,7 +71,7 @@ class S3FileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for url in self.source_datapipe:
-            yield url, self.handler.s3_read(url)
+            yield url, StreamWrapper(BytesIO(self.handler.s3_read(url)))
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
