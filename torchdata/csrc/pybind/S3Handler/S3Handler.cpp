@@ -29,8 +29,8 @@ namespace torchdata
 {
     namespace
     {
-        static const size_t s3ReadBufferSize = 120 * 1024 * 1024;              // 120 MB
-        static const uint64_t s3MultiPartDownloadChunkSize = 50 * 1024 * 1024; // 50 MB
+        static const size_t S3DefaultBufferSize = 120 * 1024 * 1024;              // 120 MB
+        static const uint64_t S3DefaultMultiPartDownloadChunkSize = 50 * 1024 * 1024; // 50 MB
         static const int executorPoolSize = 25;
         static const int S3DefaultMaxKeys = 1000;
         static const std::string S3DefaultMarker = "";
@@ -279,19 +279,19 @@ namespace torchdata
           initialization_lock_()
     {
         // Load reading parameters
-        buffer_size_ = s3ReadBufferSize;
+        buffer_size_ = S3DefaultBufferSize;
         const char *bufferSizeStr = getenv("S3_BUFFER_SIZE");
         if (bufferSizeStr)
         {
             buffer_size_ = std::stoull(bufferSizeStr);
         }
         multi_part_download_ = true;
-        const char *multi_download_disable_char =
-            getenv("S3_DISABLE_MULTI_PART_DOWNLOAD");
-        if (multi_download_disable_char)
+        const char *multi_part_download_char =
+            getenv("S3_MULTI_PART_DOWNLOAD");
+        if (multi_part_download_char)
         {
-            std::string multi_download_disable_str(multi_download_disable_char);
-            if (multi_download_disable_str == "ON")
+            std::string multi_download_disable_str(multi_part_download_char);
+            if (multi_download_disable_str == "OFF")
             {
                 multi_part_download_ = false;
             }
@@ -335,9 +335,9 @@ namespace torchdata
             this->GetExecutor().get());
         transfer_config.s3Client = s3_client;
         // This buffer is what we used to initialize streambuf and is in memory
-        transfer_config.bufferSize = s3MultiPartDownloadChunkSize;
+        transfer_config.bufferSize = S3DefaultMultiPartDownloadChunkSize;
         transfer_config.transferBufferMaxHeapSize =
-            (executorPoolSize + 1) * s3MultiPartDownloadChunkSize;
+            (executorPoolSize + 1) * S3DefaultMultiPartDownloadChunkSize;
         this->transfer_manager_ =
             Aws::Transfer::TransferManager::Create(transfer_config);
     }

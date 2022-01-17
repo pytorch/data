@@ -31,6 +31,16 @@ PYBIND11_MODULE(_torchdata, m)
              {
                  self->SetMaxKeys(max_keys);
              })
+        .def("set_buffer_size",
+             [](S3Handler *self, const uint64_t buffer_size)
+             {
+                 self->SetBufferSize(buffer_size);
+             })
+        .def("set_multi_part_download",
+             [](S3Handler *self, const bool multi_part_download)
+             {
+                 self->SetMultiPartDownload(multi_part_download);
+             })
         .def("clear_marker",
              [](S3Handler *self)
              {
