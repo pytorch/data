@@ -53,6 +53,8 @@ namespace torchdata
       ~S3Handler();
 
       void SetMaxKeys(const int max_keys) { this->max_keys_ = max_keys; }
+      void SetBufferSize(const uint64_t buffer_size) { this->buffer_size_ = buffer_size; }
+      void SetMultiPartDownload(const bool multi_part_download) { this->multi_part_download_ = multi_part_download; }
       void ClearMarker();
 
       void S3Read(const std::string &file_url, std::string *result);

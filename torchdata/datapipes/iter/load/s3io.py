@@ -60,9 +60,13 @@ class S3FileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         AWS_CPP_SDK is necessary to use the S3 DataPipe(s).
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], requestTimeoutMs=-1, region="") -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], request_timeout_ms=-1, region="", buffer_size=None, multi_part_download=None) -> None:
         self.source_datapipe: IterDataPipe[str] = source_datapipe
-        self.handler = torchdata._torchdata.S3Handler(requestTimeoutMs, region)
+        self.handler = torchdata._torchdata.S3Handler(request_timeout_ms, region)
+        if buffer_size:
+            self.handler.set_buffer_size(buffer_size)
+        if multi_part_download:
+            self.handler.set_multi_part_download(multi_part_download)
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for url in self.source_datapipe:
