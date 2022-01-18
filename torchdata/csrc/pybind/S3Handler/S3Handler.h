@@ -28,6 +28,7 @@ namespace torchdata
    private:
       static std::shared_ptr<Aws::Client::ClientConfiguration> s3_handler_cfg_;
 
+      std::shared_ptr<std::mutex> initialization_lock_;
       std::shared_ptr<Aws::S3::S3Client> s3_client_;
       std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor> executor_;
       std::shared_ptr<Aws::Transfer::TransferManager> transfer_manager_;
@@ -36,7 +37,6 @@ namespace torchdata
       int max_keys_;
       size_t buffer_size_;
       bool use_multi_part_download_;
-      std::mutex initialization_lock_;
 
       void InitializeS3Client();
       void InitializeExecutor();
@@ -56,6 +56,13 @@ namespace torchdata
       void SetBufferSize(const uint64_t buffer_size) { this->buffer_size_ = buffer_size; }
       void SetMultiPartDownload(const bool multi_part_download) { this->use_multi_part_download_ = multi_part_download; }
       void ClearMarker();
+
+      long GetRequestTimeoutMs() const { return s3_handler_cfg_->requestTimeoutMs; }
+      Aws::String GetRegion() const { return s3_handler_cfg_->region; }
+      Aws::String GetLastMarker() const { return last_marker_; }
+      int GetMaxKeys() const { return max_keys_; }
+      bool GetUseMultiPartDownload() const { return use_multi_part_download_; }
+      size_t GetBufferSize() const { return buffer_size_; }
 
       void S3Read(const std::string &file_url, std::string *result);
       void ListFiles(const std::string &file_url,
