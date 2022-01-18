@@ -2,6 +2,7 @@
 import http.server
 import os
 import socketserver
+import sys
 import tempfile
 import threading
 import time
@@ -122,16 +123,18 @@ class TestHttpStress(expecttest.TestCase):
                 else:
                     self.assertEqual(len(data), test_file_size)
 
+    IS_WINDOWS = sys.platform == "win32"
+
     @slowTest
     def test_stress_http_reader_iterable_datapipes(self):
         test_file_size = 1024
-        test_file_count = 1024 * 16
+        test_file_count = 128 if self.IS_WINDOWS else 1024 * 16
         self._http_test_base(test_file_size, test_file_count)
 
     @slowTest
     def test_large_files_http_reader_iterable_datapipes(self):
         test_file_size = 1024 * 1024 * 128
-        test_file_count = 200
+        test_file_count = 64 if self.IS_WINDOWS else 200
         timeout = 30
         chunk = 1024 * 1024 * 8
         self._http_test_base(test_file_size, test_file_count, timeout=timeout, chunk=chunk, i=1)
