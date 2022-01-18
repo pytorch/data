@@ -1,7 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import http.server
 import os
-import shutil
 import socketserver
 import tempfile
 import threading
@@ -54,18 +53,16 @@ def set_up_local_server_in_thread():
 
 def create_temp_files_for_serving(tmp_dir, file_count, file_size, file_url_template):
     furl_local_file = os.path.join(tmp_dir, "urls_list")
+    f = os.path.join(tmp_dir, "webfile_test_0.data")  # One generated file will be read repeatedly
+    write_chunk = 1024 * 1024 * 16
+    rmn_size = file_size
+    with open(f, "ab+") as fout:
+        while rmn_size > 0:
+            fout.write(os.urandom(min(rmn_size, write_chunk)))
+            rmn_size = rmn_size - min(rmn_size, write_chunk)
     with open(furl_local_file, "w") as fsum:
-        for i in range(0, file_count):
-            f = os.path.join(tmp_dir, f"webfile_test_{i}.data")
-
-            write_chunk = 1024 * 1024 * 16
-            rmn_size = file_size
-            while rmn_size > 0:
-                with open(f, "ab+") as fout:
-                    fout.write(os.urandom(min(rmn_size, write_chunk)))
-                rmn_size = rmn_size - min(rmn_size, write_chunk)
-
-            fsum.write(file_url_template.format(num=i))
+        for _ in range(file_count):
+            fsum.write(file_url_template.format(num=0))
 
 
 class TestHttpStress(expecttest.TestCase):
@@ -124,7 +121,6 @@ class TestHttpStress(expecttest.TestCase):
                     self.assertEqual(len(data), chunk)
                 else:
                     self.assertEqual(len(data), test_file_size)
-            shutil.rmtree(tmpdir)
 
     @slowTest
     def test_stress_http_reader_iterable_datapipes(self):
@@ -135,7 +131,7 @@ class TestHttpStress(expecttest.TestCase):
     @slowTest
     def test_large_files_http_reader_iterable_datapipes(self):
         test_file_size = 1024 * 1024 * 128
-        test_file_count = 100
+        test_file_count = 200
         timeout = 30
         chunk = 1024 * 1024 * 8
         self._http_test_base(test_file_size, test_file_count, timeout=timeout, chunk=chunk)
