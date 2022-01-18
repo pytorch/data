@@ -34,9 +34,9 @@ namespace torchdata
 
       Aws::String last_marker_;
       int max_keys_;
-      std::mutex initialization_lock_;
       size_t buffer_size_;
-      bool multi_part_download_;
+      bool use_multi_part_download_;
+      std::mutex initialization_lock_;
 
       void InitializeS3Client();
       void InitializeExecutor();
@@ -54,7 +54,7 @@ namespace torchdata
 
       void SetMaxKeys(const int max_keys) { this->max_keys_ = max_keys; }
       void SetBufferSize(const uint64_t buffer_size) { this->buffer_size_ = buffer_size; }
-      void SetMultiPartDownload(const bool multi_part_download) { this->multi_part_download_ = multi_part_download; }
+      void SetMultiPartDownload(const bool multi_part_download) { this->use_multi_part_download_ = multi_part_download; }
       void ClearMarker();
 
       void S3Read(const std::string &file_url, std::string *result);
