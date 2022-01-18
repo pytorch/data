@@ -29,7 +29,7 @@ namespace torchdata
 {
     namespace
     {
-        static const size_t S3DefaultBufferSize = 128 * 1024 * 1024; // 128 MB
+        static const size_t S3DefaultBufferSize = 128 * 1024 * 1024;                 // 128 MB
         static const uint64_t S3DefaultMultiPartDownloadChunkSize = 5 * 1024 * 1024; // 5 MB
         static const int executorPoolSize = 25;
         static const int S3DefaultMaxKeys = 1000;
@@ -171,24 +171,24 @@ namespace torchdata
         private:
             std::string bucket_name_;
             std::string object_name_;
-            bool multi_part_download_;
+            bool use_multi_part_download_;
             std::shared_ptr<Aws::S3::S3Client> s3_client_;
             std::shared_ptr<Aws::Transfer::TransferManager> transfer_manager_;
 
         public:
             S3FS(const std::string &bucket, const std::string &object,
-                 const bool multi_part_download,
+                 const bool use_multi_part_download,
                  std::shared_ptr<Aws::Transfer::TransferManager> transfer_manager,
                  std::shared_ptr<Aws::S3::S3Client> s3_client)
                 : bucket_name_(bucket),
                   object_name_(object),
-                  multi_part_download_(multi_part_download),
+                  use_multi_part_download_(use_multi_part_download),
                   transfer_manager_(transfer_manager),
                   s3_client_(s3_client) {}
 
             size_t Read(uint64_t offset, size_t n, char *buffer)
             {
-                if (multi_part_download_)
+                if (use_multi_part_download_)
                 {
                     return ReadTransferManager(offset, n, buffer);
                 }
@@ -285,15 +285,15 @@ namespace torchdata
         {
             buffer_size_ = std::stoull(bufferSizeStr);
         }
-        multi_part_download_ = true;
-        const char *multi_part_download_char =
+        use_multi_part_download_ = true;
+        const char *use_multi_part_download_char =
             getenv("S3_MULTI_PART_DOWNLOAD");
-        if (multi_part_download_char)
+        if (use_multi_part_download_char)
         {
-            std::string multi_download_disable_str(multi_part_download_char);
-            if (multi_download_disable_str == "OFF")
+            std::string use_multi_part_download_str(use_multi_part_download_char);
+            if (use_multi_part_download_str == "OFF")
             {
-                multi_part_download_ = false;
+                use_multi_part_download_ = false;
             }
         }
 
@@ -393,7 +393,7 @@ namespace torchdata
     {
         std::string bucket, object;
         parseS3Path(file_url, &bucket, &object);
-        S3FS s3fs(bucket, object, multi_part_download_,
+        S3FS s3fs(bucket, object, use_multi_part_download_,
                   GetTransferManager(), GetS3Client());
 
         uint64_t offset = 0;
