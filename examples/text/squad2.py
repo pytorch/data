@@ -52,10 +52,13 @@ def SQuAD2(root, split):
         datapipe to orchestrates data samples for Q&A use-case
     """
 
+    def _get_path(path):
+        return os.path.join(root, os.path.basename(path))
+
     url_dp = IterableWrapper([URL[split]])
     # cache data on-disk with sanity check
     cache_dp = url_dp.on_disk_cache(
-        filepath_fn=lambda x: os.path.join(root, os.path.basename(x)),
+        filepath_fn=_get_path,
         hash_dict={os.path.join(root, os.path.basename(URL[split])): MD5[split]},
         hash_type="md5",
     )

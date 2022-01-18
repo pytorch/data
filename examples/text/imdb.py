@@ -31,10 +31,13 @@ def IMDB(root, split):
         and reading data from file
     """
 
+    def _get_path(path):
+        return os.path.join(root, os.path.basename(path))
+
     url_dp = IterableWrapper([URL])
     # cache data on-disk
     cache_dp = url_dp.on_disk_cache(
-        filepath_fn=lambda x: os.path.join(root, os.path.basename(x)),
+        filepath_fn=_get_path,
         hash_dict={os.path.join(root, os.path.basename(URL)): MD5},
         hash_type="md5",
     )
