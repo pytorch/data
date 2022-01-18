@@ -51,9 +51,9 @@ def set_up_local_server_in_thread():
         raise
 
 
-def create_temp_files_for_serving(tmp_dir, file_count, file_size, file_url_template):
+def create_temp_files_for_serving(tmp_dir, file_count, file_size, file_url_template, i):
     furl_local_file = os.path.join(tmp_dir, "urls_list")
-    f = os.path.join(tmp_dir, "webfile_test_0.data")  # One generated file will be read repeatedly
+    f = os.path.join(tmp_dir, f"webfile_test_{i}.data")  # One generated file will be read repeatedly
     write_chunk = 1024 * 1024 * 16
     rmn_size = file_size
     with open(f, "ab+") as fout:
@@ -62,7 +62,7 @@ def create_temp_files_for_serving(tmp_dir, file_count, file_size, file_url_templ
             rmn_size = rmn_size - min(rmn_size, write_chunk)
     with open(furl_local_file, "w") as fsum:
         for _ in range(file_count):
-            fsum.write(file_url_template.format(num=0))
+            fsum.write(file_url_template.format(num=i))
 
 
 class TestHttpStress(expecttest.TestCase):
@@ -96,7 +96,7 @@ class TestHttpStress(expecttest.TestCase):
                 )
             )
 
-    def _http_test_base(self, test_file_size, test_file_count, timeout=None, chunk=None):
+    def _http_test_base(self, test_file_size, test_file_count, timeout=None, chunk=None, i=0):
         def _get_data_from_tuple_fn(data):
             return data[1]
 
@@ -105,7 +105,7 @@ class TestHttpStress(expecttest.TestCase):
             base_tmp_dir = os.path.basename(os.path.normpath(tmpdir))
             url = "http://{server_addr}/{tmp_dir}/webfile_test_{num}.data\n"
             file_url_template = url.format(server_addr=self.__server_addr, tmp_dir=base_tmp_dir, num="{num}")
-            create_temp_files_for_serving(tmpdir, test_file_count, test_file_size, file_url_template)
+            create_temp_files_for_serving(tmpdir, test_file_count, test_file_size, file_url_template, i)
 
             datapipe_dir_f = FileLister(tmpdir, "*_list")
             datapipe_stream = FileOpener(datapipe_dir_f, mode="r")
@@ -134,7 +134,7 @@ class TestHttpStress(expecttest.TestCase):
         test_file_count = 200
         timeout = 30
         chunk = 1024 * 1024 * 8
-        self._http_test_base(test_file_size, test_file_count, timeout=timeout, chunk=chunk)
+        self._http_test_base(test_file_size, test_file_count, timeout=timeout, chunk=chunk, i=1)
 
 
 if __name__ == "__main__":
