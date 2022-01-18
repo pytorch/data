@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import http.server
 import os
+import shutil
 import socketserver
 import tempfile
 import threading
@@ -123,6 +124,7 @@ class TestHttpStress(expecttest.TestCase):
                     self.assertEqual(len(data), chunk)
                 else:
                     self.assertEqual(len(data), test_file_size)
+            shutil.rmtree(tmpdir)
 
     @slowTest
     def test_stress_http_reader_iterable_datapipes(self):
@@ -133,7 +135,7 @@ class TestHttpStress(expecttest.TestCase):
     @slowTest
     def test_large_files_http_reader_iterable_datapipes(self):
         test_file_size = 1024 * 1024 * 128
-        test_file_count = 200
+        test_file_count = 100
         timeout = 30
         chunk = 1024 * 1024 * 8
         self._http_test_base(test_file_size, test_file_count, timeout=timeout, chunk=chunk)
