@@ -110,9 +110,10 @@ class TestHttpStress(expecttest.TestCase):
             file_url_template = url.format(server_addr=self.__server_addr, tmp_dir=base_tmp_dir, num="{num}")
             print()
             print(f"File_url_template: {file_url_template}")
-
             print(f"Server address: {self.__server.server_address}")
             print(f"Socket: {self.__server.socket}")
+            print(f"os.path.normpath(tmpdir): {os.path.normpath(tmpdir)}")
+            print(f"base_tmp_dir: {base_tmp_dir}")
 
             create_temp_files_for_serving(tmpdir, test_file_count, test_file_size, file_url_template, i)
 
