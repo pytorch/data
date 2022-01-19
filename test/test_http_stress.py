@@ -64,6 +64,7 @@ def create_temp_files_for_serving(tmp_dir, file_count, file_size, file_url_templ
     with open(furl_local_file, "w") as fsum:
         for _ in range(file_count):
             fsum.write(file_url_template.format(num=i))
+            print(f"URL written: {file_url_template.format(num=i)}")
 
 
 class TestHttpStress(expecttest.TestCase):
@@ -75,6 +76,7 @@ class TestHttpStress(expecttest.TestCase):
     def setUpClass(cls):
         try:
             (cls.__server_thread, cls.__server_addr, cls.__server) = set_up_local_server_in_thread()
+            print(f"\nServer address: {cls.__server_addr}")
         except Exception as e:
             warnings.warn(
                 "TestHttpStress could\
@@ -106,6 +108,12 @@ class TestHttpStress(expecttest.TestCase):
             base_tmp_dir = os.path.basename(os.path.normpath(tmpdir))
             url = "http://{server_addr}/{tmp_dir}/webfile_test_{num}.data\n"
             file_url_template = url.format(server_addr=self.__server_addr, tmp_dir=base_tmp_dir, num="{num}")
+            print()
+            print(f"File_url_template: {file_url_template}")
+
+            print(f"Server address: {self.__server.server_address}")
+            print(f"Socket: {self.__server.socket}")
+
             create_temp_files_for_serving(tmpdir, test_file_count, test_file_size, file_url_template, i)
 
             datapipe_dir_f = FileLister(tmpdir, "*_list")
@@ -125,16 +133,16 @@ class TestHttpStress(expecttest.TestCase):
 
     IS_WINDOWS = sys.platform == "win32"
 
-    @slowTest
+    # @slowTest
     def test_stress_http_reader_iterable_datapipes(self):
         test_file_size = 1024
-        test_file_count = 2 if self.IS_WINDOWS else 1024 * 16
+        test_file_count = 2  # 2 if self.IS_WINDOWS else 1024 * 16
         self._http_test_base(test_file_size, test_file_count)
 
     @slowTest
     def test_large_files_http_reader_iterable_datapipes(self):
         test_file_size = 1024 * 1024 * 128
-        test_file_count = 2 if self.IS_WINDOWS else 200
+        test_file_count = 2  # 2 if self.IS_WINDOWS else 200
         timeout = 30
         chunk = 1024 * 1024 * 8
         self._http_test_base(test_file_size, test_file_count, timeout=timeout, chunk=chunk, i=1)
