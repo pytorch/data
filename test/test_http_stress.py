@@ -71,6 +71,7 @@ class TestHttpStress(expecttest.TestCase):
     __server_thread: threading.Thread
     __server_addr: str
     __server: socketserver.TCPServer
+    IS_WINDOWS: bool = sys.platform == "win32"
 
     @classmethod
     def setUpClass(cls):
@@ -106,8 +107,13 @@ class TestHttpStress(expecttest.TestCase):
         with tempfile.TemporaryDirectory(dir=os.getcwd()) as tmpdir:
             # create tmp dir and files for test
             base_tmp_dir = os.path.basename(os.path.normpath(tmpdir))
-            url = "http://{server_addr}/{tmp_dir}/webfile_test_{num}.data\n"
-            file_url_template = url.format(server_addr=self.__server_addr, tmp_dir=base_tmp_dir, num="{num}")
+            path_separator = "\\" if self.IS_WINDOWS else "/"
+            url = "http://{server_addr}/{tmp_dir}{path_separator}webfile_test_{num}.data\n"
+            file_url_template = url.format(
+                server_addr=self.__server_addr, tmp_dir=base_tmp_dir, path_separator=path_separator, num="{num}"
+            )
+            create_temp_files_for_serving(tmpdir, test_file_count, test_file_size, file_url_template, i)
+
             print()
             print(f"File_url_template: {file_url_template}")
             print(f"Server address: {self.__server.server_address}")
@@ -121,8 +127,6 @@ class TestHttpStress(expecttest.TestCase):
             print("base_tmp_dir = os.path.basename(os.path.normpath(tmpdir))")
             print(f"base_tmp_dir: {base_tmp_dir}")
             print(f"os.listdir(base_tmp_dir): {os.listdir(base_tmp_dir)}")
-
-            create_temp_files_for_serving(tmpdir, test_file_count, test_file_size, file_url_template, i)
 
             datapipe_dir_f = FileLister(tmpdir, "*_list")
             datapipe_stream = FileOpener(datapipe_dir_f, mode="r")
@@ -138,8 +142,6 @@ class TestHttpStress(expecttest.TestCase):
                     self.assertEqual(len(data), chunk)
                 else:
                     self.assertEqual(len(data), test_file_size)
-
-    IS_WINDOWS = sys.platform == "win32"
 
     # @slowTest
     def test_stress_http_reader_iterable_datapipes(self):
