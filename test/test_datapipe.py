@@ -381,13 +381,13 @@ class TestDataPipe(expecttest.TestCase):
 
     def test_line_reader_iterdatapipe(self) -> None:
         text1 = "Line1\nLine2"
-        text2 = "Line2,1\nLine2,2\nLine2,3"
+        text2 = "Line2,1\r\nLine2,2\r\nLine2,3"
 
         # Functional Test: read lines correctly
         source_dp = IterableWrapper([("file1", io.StringIO(text1)), ("file2", io.StringIO(text2))])
         line_reader_dp = source_dp.readlines()
-        expected_result = [("file1", line) for line in text1.split("\n")] + [
-            ("file2", line) for line in text2.split("\n")
+        expected_result = [("file1", line) for line in text1.splitlines()] + [
+            ("file2", line) for line in text2.splitlines()
         ]
         self.assertEqual(expected_result, list(line_reader_dp))
 
@@ -396,8 +396,8 @@ class TestDataPipe(expecttest.TestCase):
             [("file1", io.BytesIO(text1.encode("utf-8"))), ("file2", io.BytesIO(text2.encode("utf-8")))]
         )
         line_reader_dp = source_dp.readlines()
-        expected_result_bytes = [("file1", line.encode("utf-8")) for line in text1.split("\n")] + [
-            ("file2", line.encode("utf-8")) for line in text2.split("\n")
+        expected_result_bytes = [("file1", line.encode("utf-8")) for line in text1.splitlines()] + [
+            ("file2", line.encode("utf-8")) for line in text2.splitlines()
         ]
         self.assertEqual(expected_result_bytes, list(line_reader_dp))
 
@@ -407,8 +407,8 @@ class TestDataPipe(expecttest.TestCase):
         expected_result = [
             ("file1", "Line1\n"),
             ("file1", "Line2"),
-            ("file2", "Line2,1\n"),
-            ("file2", "Line2,2\n"),
+            ("file2", "Line2,1\r\n"),
+            ("file2", "Line2,2\r\n"),
             ("file2", "Line2,3"),
         ]
         self.assertEqual(expected_result, list(line_reader_dp))
