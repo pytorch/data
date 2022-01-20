@@ -44,9 +44,9 @@ class PlainTextReaderHelper:
 
         for line in stream:
             if isinstance(line, str):
-                yield line.strip("\n")
+                yield line.strip("\r\n")
             else:
-                yield line.strip(b"\n")
+                yield line.strip(b"\r\n")
 
     def decode(self, stream: Union[Iterator[bytes], Iterator[str]]) -> Union[Iterator[bytes], Iterator[str]]:
         if not self._decode:

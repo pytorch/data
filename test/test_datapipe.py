@@ -307,9 +307,24 @@ class TestDataPipe(expecttest.TestCase):
         # __len__ Test: returns the limit when it is less than the length of source
         self.assertEqual(5, len(header_dp))
 
-        # TODO(123): __len__ Test: returns the length of source when it is less than the limit
-        # header_dp = source_dp.header(30)
-        # self.assertEqual(20, len(header_dp))
+        # __len__ Test: returns the length of source when it is less than the limit
+        header_dp = source_dp.header(30)
+        self.assertEqual(20, len(header_dp))
+
+        # __len__ Test: returns limit if source doesn't have length
+        source_dp_NoLen = IDP_NoLen(list(range(20)))
+        header_dp = source_dp_NoLen.header(30)
+        with warnings.catch_warnings(record=True) as wa:
+            self.assertEqual(30, len(header_dp))
+            self.assertEqual(len(wa), 1)
+            self.assertRegex(
+                str(wa[0].message), r"length of this HeaderIterDataPipe is inferred to be equal to its limit"
+            )
+
+        # __len__ Test: returns limit if source doesn't have length, but it has been iterated through once
+        for _ in header_dp:
+            pass
+        self.assertEqual(20, len(header_dp))
 
     def test_enumerator_iterdatapipe(self) -> None:
         letters = "abcde"
@@ -366,13 +381,13 @@ class TestDataPipe(expecttest.TestCase):
 
     def test_line_reader_iterdatapipe(self) -> None:
         text1 = "Line1\nLine2"
-        text2 = "Line2,1\nLine2,2\nLine2,3"
+        text2 = "Line2,1\r\nLine2,2\r\nLine2,3"
 
         # Functional Test: read lines correctly
         source_dp = IterableWrapper([("file1", io.StringIO(text1)), ("file2", io.StringIO(text2))])
         line_reader_dp = source_dp.readlines()
-        expected_result = [("file1", line) for line in text1.split("\n")] + [
-            ("file2", line) for line in text2.split("\n")
+        expected_result = [("file1", line) for line in text1.splitlines()] + [
+            ("file2", line) for line in text2.splitlines()
         ]
         self.assertEqual(expected_result, list(line_reader_dp))
 
@@ -381,8 +396,8 @@ class TestDataPipe(expecttest.TestCase):
             [("file1", io.BytesIO(text1.encode("utf-8"))), ("file2", io.BytesIO(text2.encode("utf-8")))]
         )
         line_reader_dp = source_dp.readlines()
-        expected_result_bytes = [("file1", line.encode("utf-8")) for line in text1.split("\n")] + [
-            ("file2", line.encode("utf-8")) for line in text2.split("\n")
+        expected_result_bytes = [("file1", line.encode("utf-8")) for line in text1.splitlines()] + [
+            ("file2", line.encode("utf-8")) for line in text2.splitlines()
         ]
         self.assertEqual(expected_result_bytes, list(line_reader_dp))
 
@@ -392,8 +407,8 @@ class TestDataPipe(expecttest.TestCase):
         expected_result = [
             ("file1", "Line1\n"),
             ("file1", "Line2"),
-            ("file2", "Line2,1\n"),
-            ("file2", "Line2,2\n"),
+            ("file2", "Line2,1\r\n"),
+            ("file2", "Line2,2\r\n"),
             ("file2", "Line2,3"),
         ]
         self.assertEqual(expected_result, list(line_reader_dp))
