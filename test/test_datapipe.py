@@ -520,14 +520,12 @@ class TestDataPipe(expecttest.TestCase):
         batch_dp = source_dp.bucketbatch(
             batch_size=3, drop_last=True, batch_num=100, bucket_num=1, in_batch_shuffle=True
         )
-        self.assertEqual(3, len(batch_dp))
         self.assertEqual(9, len(list(batch_dp.unbatch())))
 
         # Functional Test: drop last is False preserves length
         batch_dp = source_dp.bucketbatch(
             batch_size=3, drop_last=False, batch_num=100, bucket_num=1, in_batch_shuffle=False
         )
-        self.assertEqual(4, len(batch_dp))
         self.assertEqual(10, len(list(batch_dp.unbatch())))
 
         def _return_self(x):
@@ -539,14 +537,12 @@ class TestDataPipe(expecttest.TestCase):
         )
         # bucket_num = 1 means there will be no shuffling if a sort key is given
         self.assertEqual([[0, 1, 2], [3, 4, 5], [6, 7, 8]], list(batch_dp))
-        self.assertEqual(3, len(batch_dp))
         self.assertEqual(9, len(list(batch_dp.unbatch())))
 
         # Functional Test: using sort_key, without in_batch_shuffle
         batch_dp = source_dp.bucketbatch(
             batch_size=3, drop_last=True, batch_num=100, bucket_num=2, in_batch_shuffle=False, sort_key=_return_self
         )
-        self.assertEqual(3, len(batch_dp))
         self.assertEqual(9, len(list(batch_dp.unbatch())))
 
         # Reset Test:
@@ -567,7 +563,8 @@ class TestDataPipe(expecttest.TestCase):
         self.assertEqual(9, len([item for batch in res_after_reset for item in batch]))
 
         # __len__ Test: returns the number of batches
-        self.assertEqual(3, len(batch_dp))
+        with self.assertRaises(TypeError):
+            len(batch_dp)
 
 
 if __name__ == "__main__":

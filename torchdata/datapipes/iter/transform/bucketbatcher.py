@@ -1,6 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import random
-from typing import Callable, Iterator, Optional, Sized, TypeVar
+from typing import Callable, Optional, TypeVar
 
 from torch.utils.data import DataChunk
 
@@ -42,8 +42,8 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
     in_batch_shuffle: bool
     length: Optional[int]
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         datapipe: IterDataPipe[T_co],
         batch_size: int,
         drop_last: bool = False,
@@ -51,35 +51,23 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         bucket_num: int = 1,
         sort_key: Optional[Callable] = None,
         in_batch_shuffle: bool = True,
-    ) -> None:
+    ) -> IterDataPipe:
         assert batch_size > 0, "Batch size is required to be larger than 0!"
         assert batch_num > 0, "Number of batches is required to be larger than 0!"
         assert bucket_num > 0, "Number of buckets is required to be larger than 0!"
-        super().__init__()
 
-        # TODO(136): Verify _datapippe is not going to be serialized twice and is able to reconstruct
-        self._datapipe: IterDataPipe[T_co] = datapipe
-        self.batch_size: int = batch_size
-        self.drop_last: bool = drop_last
-        self.batch_num: int = batch_num
-        self.bucket_num: int = bucket_num
-        self.sort_key: Optional[Callable] = sort_key
-        self.in_batch_shuffle: bool = in_batch_shuffle
-
-        self.bucket_size = batch_size * batch_num
-        self.pool_size = self.bucket_size * bucket_num
+        bucket_size = batch_size * batch_num
+        pool_size = bucket_size * bucket_num
 
         # Shuffle by pool_size
         if bucket_num > 1 or sort_key is None:
             if in_batch_shuffle:
-                datapipe = (
-                    datapipe.batch(batch_size=self.pool_size, drop_last=False).map(fn=_in_batch_shuffle_fn).unbatch()
-                )
+                datapipe = datapipe.batch(batch_size=pool_size, drop_last=False).map(fn=_in_batch_shuffle_fn).unbatch()
             else:
-                datapipe = datapipe.shuffle(buffer_size=self.pool_size)
+                datapipe = datapipe.shuffle(buffer_size=pool_size)
         # Sort by bucket_size if sort_key is given
         if sort_key is not None:
-            datapipe = datapipe.batch(self.bucket_size).map(fn=sort_key).unbatch()
+            datapipe = datapipe.batch(bucket_size).map(fn=sort_key).unbatch()
         # Batch and drop last (if needed)
         datapipe = datapipe.batch(batch_size, drop_last=drop_last)
         # Shuffle the batched data
@@ -88,20 +76,5 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
             if in_batch_shuffle:
                 datapipe = datapipe.batch(batch_size=bucket_num, drop_last=False).map(fn=_in_batch_shuffle_fn).unbatch()
             else:
-                datapipe = datapipe.shuffle(buffer_size=self.bucket_size)
-        self.datapipe = datapipe
-        self.length = None
-
-    def __iter__(self) -> Iterator:
-        yield from self.datapipe
-
-    def __len__(self) -> int:
-        if self.length is not None:
-            return self.length
-        if isinstance(self._datapipe, Sized):
-            if self.drop_last:
-                self.length = len(self._datapipe) // self.batch_size
-            else:
-                self.length = (len(self._datapipe) + self.batch_size - 1) // self.batch_size
-            return self.length
-        raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
+                datapipe = datapipe.shuffle(buffer_size=bucket_size)
+        return datapipe
