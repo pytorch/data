@@ -86,7 +86,7 @@ jobs:
         run: python setup.py install
 
       - name: Install test requirements
-        run: pip install pytest iopath
+        run: pip install expecttest pytest iopath
 
       - name: Run torchtext example datasets tests
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
