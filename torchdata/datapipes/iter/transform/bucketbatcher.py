@@ -51,7 +51,7 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         bucket_num: int = 1,
         sort_key: Optional[Callable] = None,
         in_batch_shuffle: bool = True,
-    ) -> IterDataPipe:
+    ):
         assert batch_size > 0, "Batch size is required to be larger than 0!"
         assert batch_num > 0, "Number of batches is required to be larger than 0!"
         assert bucket_num > 0, "Number of buckets is required to be larger than 0!"
