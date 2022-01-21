@@ -49,7 +49,6 @@ class TestTextExamples(unittest.TestCase):
         self._test_helper(SST2)
         self._test_DL_helper(SST2)
 
-    @slowTest
     def test_AG_NEWS(self) -> None:
         self._test_helper(AG_NEWS)
         self._test_DL_helper(AG_NEWS)
@@ -64,12 +63,10 @@ class TestTextExamples(unittest.TestCase):
         self._test_helper(IMDB)
         self._test_DL_helper(IMDB)
 
-    @slowTest
     def test_SQuAD1(self) -> None:
         self._test_helper(SQuAD1)
         self._test_DL_helper(SQuAD1)
 
-    @slowTest
     def test_SQuAD2(self) -> None:
         self._test_helper(SQuAD2)
         self._test_DL_helper(SQuAD2)
