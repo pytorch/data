@@ -4,6 +4,7 @@ import unittest
 import warnings
 
 from collections import defaultdict
+from functools import partial
 from typing import Dict
 
 import expecttest
@@ -566,6 +567,16 @@ class TestDataPipe(expecttest.TestCase):
         with self.assertRaises(TypeError):
             len(batch_dp)
 
+    def test_flatmap_datapipe(self):
+        l = [1,2,3,4,5,6]
+        first, second = l[:len(l)//2], l[len(l)//2:]
+        nested_wrapper = IterableWrapper([IterableWrapper(first), IterableWrapper(second)])
+        fn = partial(int.__add__, 1)
+        expected_it = list(map(fn, l))
+        flatmapped_dp = list(nested_wrapper.flatmap(fn))
+        #for flatmap_element, pred_element in zip(expected_it, flatmapped_dp):
+        #    self.assertEqual(flatmap_element, pred_element)
+        self.assertEqual(expected_it, flatmapped_dp)
 
 if __name__ == "__main__":
     unittest.main()

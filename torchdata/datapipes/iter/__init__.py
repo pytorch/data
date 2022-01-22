@@ -41,6 +41,7 @@ from torchdata.datapipes.iter.load.online import (
     OnlineReaderIterDataPipe as OnlineReader,
 )
 from torchdata.datapipes.iter.transform.bucketbatcher import BucketBatcherIterDataPipe as BucketBatcher
+from torchdata.datapipes.iter.transform.flatmap import FlatMapDataPipe as FlatMap
 from torchdata.datapipes.iter.util.cacheholder import (
     EndOnDiskCacheHolderIterDataPipe as EndOnDiskCacheHolder,
     InMemoryCacheHolderIterDataPipe as InMemoryCacheHolder,
