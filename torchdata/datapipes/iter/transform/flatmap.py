@@ -34,6 +34,9 @@ class FlatMapperIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         for e in self.datapipe:
             yield from self.fn(e)
 
+    def __len__(self):
+        raise TypeError(f"{type(self).__name__}'s length relies on the output of its function.")
+
     def __getstate__(self):
         if IterDataPipe.getstate_hook is not None:
             return IterDataPipe.getstate_hook(self)

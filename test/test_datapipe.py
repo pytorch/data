@@ -584,8 +584,10 @@ class TestDataPipe(expecttest.TestCase):
         self.assertEqual(expected_list[:n_elements_before_reset], res_before_reset)
         self.assertEqual(expected_list, res_after_reset)
 
-        # __len__ Test: length should be len(source_dp)*len(fn->out_shape)
-        self.assertEqual(len(fn(0))*len(source_dp), len(flatmapped_dp))
+
+        # __len__ Test: length should be len(source_dp)*len(fn->out_shape) which we can't know
+        with self.assertRaisesRegex(TypeError, "length relies on the output of its function.")
+            len(flatmapped_dp)
 
 if __name__ == "__main__":
     unittest.main()
