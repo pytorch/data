@@ -586,7 +586,7 @@ class TestDataPipe(expecttest.TestCase):
 
 
         # __len__ Test: length should be len(source_dp)*len(fn->out_shape) which we can't know
-        with self.assertRaisesRegex(TypeError, "length relies on the output of its function.")
+        with self.assertRaisesRegex(TypeError, "length relies on the output of its function."):
             len(flatmapped_dp)
 
 if __name__ == "__main__":
