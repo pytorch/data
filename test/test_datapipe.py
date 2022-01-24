@@ -576,9 +576,16 @@ class TestDataPipe(expecttest.TestCase):
         flatmapped_dp = nested_wrapper.flatmap(fn)
         list_flatmapped_dp = list(flatmapped_dp)
         expected_list = list(itertools.chain([(e, e*10) for e in source_dp]))
-        self.assertEqual(expected_list, list_flatmapped_dp)
 
-        self.assertEqual(2*len(source_dp), len(flatmapped_dp))
+        # Reset Test: reset the DataPipe after reading part of it
+        n_elements_before_reset = 5
+        res_before_reset, res_after_reset = reset_after_n_next_calls(flatmapped_dp, n_elements_before_reset)
+
+        self.assertEqual(expected_list[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_list, res_after_reset)
+
+        # __len__ Test: length should be len(source_dp)*len(fn->out_shape)
+        self.assertEqual(len(fn(0))*len(source_dp), len(flatmapped_dp))
 
 if __name__ == "__main__":
     unittest.main()
