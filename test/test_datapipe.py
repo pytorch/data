@@ -568,13 +568,17 @@ class TestDataPipe(expecttest.TestCase):
             len(batch_dp)
 
     def test_flatmap_datapipe(self):
-        l = [1,2,3,4,5,6]
-        first, second = l[:len(l)//2], l[len(l)//2:]
-        nested_wrapper = IterableWrapper([IterableWrapper(first), IterableWrapper(second)])
-        fn = partial(int.__add__, 1)
-        expected_it = list(map(fn, l))
-        flatmapped_dp = list(nested_wrapper.flatmap(fn))
-        self.assertEqual(expected_it, flatmapped_dp)
+        source_dp = IterableWrapper(list(range(20)))
+
+        def fn(e):
+            return [e, e*10]
+
+        flatmapped_dp = nested_wrapper.flatmap(fn)
+        list_flatmapped_dp = list(flatmapped_dp)
+        expected_list = list(itertools.chain([(e, e*10) for e in source_dp]))
+        self.assertEqual(expected_list, list_flatmapped_dp)
+
+        self.assertEqual(2*len(source_dp), len(flatmapped_dp))
 
 if __name__ == "__main__":
     unittest.main()
