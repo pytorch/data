@@ -574,8 +574,6 @@ class TestDataPipe(expecttest.TestCase):
         fn = partial(int.__add__, 1)
         expected_it = list(map(fn, l))
         flatmapped_dp = list(nested_wrapper.flatmap(fn))
-        #for flatmap_element, pred_element in zip(expected_it, flatmapped_dp):
-        #    self.assertEqual(flatmap_element, pred_element)
         self.assertEqual(expected_it, flatmapped_dp)
 
 if __name__ == "__main__":
