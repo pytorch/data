@@ -2,6 +2,7 @@
 import io
 import unittest
 import warnings
+import itertools
 
 from collections import defaultdict
 from functools import partial
@@ -573,9 +574,8 @@ class TestDataPipe(expecttest.TestCase):
         def fn(e):
             return [e, e*10]
 
-        flatmapped_dp = nested_wrapper.flatmap(fn)
-        list_flatmapped_dp = list(flatmapped_dp)
-        expected_list = list(itertools.chain([(e, e*10) for e in source_dp]))
+        flatmapped_dp = source_dp.flatmap(fn)
+        expected_list = list(itertools.chain(*[(e, e*10) for e in source_dp]))
 
         # Reset Test: reset the DataPipe after reading part of it
         n_elements_before_reset = 5
@@ -583,7 +583,6 @@ class TestDataPipe(expecttest.TestCase):
 
         self.assertEqual(expected_list[:n_elements_before_reset], res_before_reset)
         self.assertEqual(expected_list, res_after_reset)
-
 
         # __len__ Test: length should be len(source_dp)*len(fn->out_shape) which we can't know
         with self.assertRaisesRegex(TypeError, "length relies on the output of its function."):
