@@ -576,6 +576,8 @@ class TestDataPipe(expecttest.TestCase):
 
         flatmapped_dp = source_dp.flatmap(fn)
         expected_list = list(itertools.chain(*[(e, e*10) for e in source_dp]))
+        flatmapped_dp_list = list(flatmapped_dp)
+        self.assertEqual(expected_list, flatmapped_dp_list)
 
         # Reset Test: reset the DataPipe after reading part of it
         n_elements_before_reset = 5
