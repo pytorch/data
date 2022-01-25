@@ -14,7 +14,6 @@ T_co = TypeVar("T_co", covariant=True)
 
 @functional_datapipe("flatmap")
 class FlatMapperIterDataPipe(IterDataPipe[DataChunk[T_co]]):
-
     r""":class:`FlatMapperIterDataPipe`.
 
     Iterable DataPipe which applies a structure-changing function to an IterableDataPipe
