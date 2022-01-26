@@ -50,14 +50,14 @@ jobs:
         run: python setup.py develop
       - name: Run DataPipes tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run: pytest --no-header -v test --ignore=test/test_period.py
+        run: pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py
       - name: Run DataPipes tests with pytest (including slow tests)
         if: ${{ contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run: pytest --no-header -v test --ignore=test/test_period.py
+        run: pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py
         env:
           PYTORCH_TEST_WITH_SLOW: 1
       - name: Run DataPipes period tests with pytest
         if: ${{ contains(github.event.pull_request.labels.*.name, 'ciflow/period') }}
-        run: pytest --no-header -v test/test_period.py
+        run: pytest --no-header -v test/test_period.py --ignore=test/test_text_examples.py
         env:
           PYTORCH_TEST_WITH_SLOW: 1
