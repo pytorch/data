@@ -8,6 +8,7 @@ from _utils._common_utils_for_test import reset_after_n_next_calls
 from torchdata.datapipes.iter import DataFrameMaker, IterableWrapper
 
 try:
+    import pyarrow
     import torcharrow
     import torcharrow.dtypes as dt
 
@@ -60,3 +61,7 @@ class TestDataFrame(expecttest.TestCase):
             self._compare_dataframes(exp_df, act_df)
         for exp_df, act_df in zip(expected_dfs, res_after_reset):
             self._compare_dataframes(exp_df, act_df)
+
+    @skipIfNoArrow
+    def test_parquet_dataframe_reader_iterdatapipe(self):
+        pass  # TODO: Generate a temp directory, use PyArrow to create Parquet file, then read it using the DataPipe

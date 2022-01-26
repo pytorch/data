@@ -51,7 +51,10 @@ from torchdata.datapipes.iter.util.combining import (
     MapKeyZipperIterDataPipe as MapKeyZipper,
 )
 from torchdata.datapipes.iter.util.cycler import CyclerIterDataPipe as Cycler
-from torchdata.datapipes.iter.util.dataframemaker import DataFrameMakerIterDataPipe as DataFrameMaker
+from torchdata.datapipes.iter.util.dataframemaker import (
+    DataFrameMakerIterDataPipe as DataFrameMaker,
+    ParquetDFIterDataPipe as ParquetDFReader,
+)
 from torchdata.datapipes.iter.util.extractor import ExtractorIterDataPipe as Extractor
 from torchdata.datapipes.iter.util.hashchecker import HashCheckerIterDataPipe as HashChecker
 from torchdata.datapipes.iter.util.header import HeaderIterDataPipe as Header
