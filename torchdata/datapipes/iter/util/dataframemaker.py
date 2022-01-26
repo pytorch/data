@@ -1,3 +1,4 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
 from functools import partial
 from typing import List, Optional, TypeVar
 
@@ -6,8 +7,10 @@ from torchdata.datapipes.iter import IterDataPipe
 
 try:
     import torcharrow
+    import torcharrow.dtypes
 except ImportError:
     torcharrow = None
+    torcharrow.dtypes = None
 
 T_co = TypeVar("T_co")
 
