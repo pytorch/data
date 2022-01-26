@@ -29,6 +29,7 @@ class TestDataFrame(expecttest.TestCase):
         table = df.to_arrow()
         parquet.write_table(table, os.path.join(self.temp_dir.name, fname))
 
+    @skipIfNoArrow
     def setUp(self) -> None:
         self.temp_dir = create_temp_dir()
 
@@ -42,6 +43,7 @@ class TestDataFrame(expecttest.TestCase):
             fname = f"df{i}.parquet"
             self._write_df_as_parquet(df, fname)
 
+    @skipIfNoArrow
     def tearDown(self) -> None:
         try:
             self.temp_dir.cleanup()
