@@ -122,6 +122,7 @@ __all__ = [
     "OnDiskCacheHolder",
     "OnlineReader",
     "ParagraphAggregator",
+    "ParquetDFReader",
     "RarArchiveLoader",
     "RoutedDecoder",
     "Rows2Columnar",

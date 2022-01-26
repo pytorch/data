@@ -1,14 +1,16 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+import os
 import unittest
+import warnings
 
 import expecttest
+from _utils._common_utils_for_test import create_temp_dir, reset_after_n_next_calls
 
-from _utils._common_utils_for_test import reset_after_n_next_calls
-
-from torchdata.datapipes.iter import DataFrameMaker, IterableWrapper
+from torchdata.datapipes.iter import DataFrameMaker, FileLister, IterableWrapper, ParquetDFReader
 
 try:
     import pyarrow
+    import pyarrow.parquet as parquet
     import torcharrow
     import torcharrow.dtypes as dt
 
@@ -22,6 +24,29 @@ class TestDataFrame(expecttest.TestCase):
     def _compare_dataframes(self, expected_df, actual_df):
         for exp, act in zip(expected_df, actual_df):
             self.assertEqual(exp, act)
+
+    def _write_df_as_parquet(self, df: torcharrow.IDataFrame, fname: str) -> None:
+        table = df.to_arrow()
+        parquet.write_table(table, os.path.join(self.temp_dir.name, fname))
+
+    def setUp(self) -> None:
+        self.temp_dir = create_temp_dir()
+
+        # Create TorchArrow DataFrames
+        DTYPE = dt.Struct([dt.Field("Values", dt.int32)])
+        df1 = torcharrow.DataFrame([(i,) for i in range(10)], dtype=DTYPE)
+        df2 = torcharrow.DataFrame([(i,) for i in range(100)], dtype=DTYPE)
+
+        # Write them as parquet files
+        for i, df in enumerate([df1, df2]):
+            fname = f"df{i}.parquet"
+            self._write_df_as_parquet(df, fname)
+
+    def tearDown(self) -> None:
+        try:
+            self.temp_dir.cleanup()
+        except Exception as e:
+            warnings.warn(f"TestDataFrame was not able to cleanup temp dir due to {e}")
 
     @skipIfNoArrow
     def test_dataframe_maker_iterdatapipe(self):
@@ -64,4 +89,27 @@ class TestDataFrame(expecttest.TestCase):
 
     @skipIfNoArrow
     def test_parquet_dataframe_reader_iterdatapipe(self):
-        pass  # TODO: Generate a temp directory, use PyArrow to create Parquet file, then read it using the DataPipe
+
+        DTYPE = dt.Struct([dt.Field("Values", dt.int32)])
+
+        # Functional Test: Parquet
+        source_dp = FileLister(self.temp_dir.name)
+        parquet_df_dp = ParquetDFReader(source_dp, dtype=DTYPE)
+        expected_dfs = [
+            torcharrow.DataFrame([(i,) for i in range(10)], dtype=DTYPE),
+            torcharrow.DataFrame([(i,) for i in range(100)], dtype=DTYPE),
+        ]
+        for exp_df, act_df in zip(expected_dfs, list(parquet_df_dp)):
+            self._compare_dataframes(exp_df, act_df)
+
+        # __len__ Test: inherits length from the source_dp
+        with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
+            self.assertEqual(2, len(parquet_df_dp))
+
+        # Reset Test:
+        n_elements_before_reset = 1
+        res_before_reset, res_after_reset = reset_after_n_next_calls(parquet_df_dp, n_elements_before_reset)
+        for exp_df, act_df in zip(expected_dfs[:1], res_before_reset):
+            self._compare_dataframes(exp_df, act_df)
+        for exp_df, act_df in zip(expected_dfs, res_after_reset):
+            self._compare_dataframes(exp_df, act_df)
