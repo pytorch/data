@@ -5,7 +5,6 @@ import unittest
 import warnings
 
 from collections import defaultdict
-from functools import partial
 from typing import Dict
 
 import expecttest
