@@ -7,16 +7,14 @@ from torchdata.datapipes.iter import IterDataPipe
 
 try:
     import torcharrow
-    import torcharrow.dtypes
 except ImportError:
     torcharrow = None
-    torcharrow.dtypes = None
 
 T_co = TypeVar("T_co")
 
 
 @functional_datapipe("convert_to_dataframe")
-class DataFrameMakerIterDataPipe(IterDataPipe[torcharrow.IDataFrame[T_co]]):
+class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDataFrame[T_co]]
     r"""
     Iterable DataPipe that takes rows of data, batch a number of them together and create TorchArrow DataFrames.
     Note that there is a trade-off between having a large number of rows within a DataFrame and usage of memory.
@@ -33,7 +31,7 @@ class DataFrameMakerIterDataPipe(IterDataPipe[torcharrow.IDataFrame[T_co]]):
         self,
         source_dp: IterDataPipe[T_co],
         dataframe_size: int = 1000,  # or Page Size
-        dtype: Optional[torcharrow.dtypes.DType] = None,
+        dtype=None,  # Optional[torcharrow.dtypes.DType]
         columns: Optional[List[str]] = None,
         device: str = "",
     ):
