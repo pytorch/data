@@ -28,7 +28,7 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
     """
 
     def __new__(
-        self,
+        cls,
         source_dp: IterDataPipe[T_co],
         dataframe_size: int = 1000,  # or Page Size
         dtype=None,  # Optional[torcharrow.dtypes.DType]
