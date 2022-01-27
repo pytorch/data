@@ -8,17 +8,15 @@ from torchdata.datapipes.iter import IterDataPipe
 try:
     import pyarrow.parquet as parquet
     import torcharrow
-    import torcharrow.dtypes
 except ImportError:
     torcharrow = None
-    torcharrow.dtypes = None
     parquet = None
 
 T_co = TypeVar("T_co")
 
 
 @functional_datapipe("convert_to_dataframe")
-class DataFrameMakerIterDataPipe(IterDataPipe[torcharrow.IDataFrame[T_co]]):
+class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDataFrame[T_co]]
     r"""
     Iterable DataPipe that takes rows of data, batch a number of them together and create TorchArrow DataFrames.
     Note that there is a trade-off between having a large number of rows within a DataFrame and usage of memory.
@@ -35,7 +33,7 @@ class DataFrameMakerIterDataPipe(IterDataPipe[torcharrow.IDataFrame[T_co]]):
         cls,
         source_dp: IterDataPipe[T_co],
         dataframe_size: int = 1000,  # or Page Size
-        dtype: Optional[torcharrow.dtypes.DType] = None,
+        dtype=None,  # Optional[torcharrow.dtypes.DType]
         columns: Optional[List[str]] = None,
         device: str = "",
     ):
@@ -46,7 +44,7 @@ class DataFrameMakerIterDataPipe(IterDataPipe[torcharrow.IDataFrame[T_co]]):
 
 
 @functional_datapipe("load_parquet_as_df")
-class ParquetDFIterDataPipe(IterDataPipe):
+class ParquetDFIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDataFrame[T_co]]
     r"""
     Iterable DataPipe that takes in paths to Parquet files and return a TorchArrow DataFrame for each Parquet file.
 
@@ -63,7 +61,7 @@ class ParquetDFIterDataPipe(IterDataPipe):
         source_dp: IterDataPipe[str],
         columns: Optional[List[str]] = None,
         use_threads: bool = False,
-        dtype: Optional[torcharrow.dtypes.DType] = None,
+        dtype= None,  # Optional[torcharrow.dtypes.DType]
         device: str = "",
     ):
         table_dp = source_dp.map(partial(parquet.read_table, columns=columns, use_threads=use_threads))

@@ -13,7 +13,6 @@ try:
     import pyarrow.parquet as parquet
     import torcharrow
     import torcharrow.dtypes as dt
-
     HAS_ARROW = True
 except ImportError:
     HAS_ARROW = False
