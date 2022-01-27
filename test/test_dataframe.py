@@ -13,6 +13,7 @@ try:
     import pyarrow.parquet as parquet
     import torcharrow
     import torcharrow.dtypes as dt
+
     HAS_ARROW = True
 except ImportError:
     HAS_ARROW = False
@@ -24,7 +25,7 @@ class TestDataFrame(expecttest.TestCase):
         for exp, act in zip(expected_df, actual_df):
             self.assertEqual(exp, act)
 
-    def _write_df_as_parquet(self, df: torcharrow.IDataFrame, fname: str) -> None:
+    def _write_df_as_parquet(self, df, fname: str) -> None:
         table = df.to_arrow()
         parquet.write_table(table, os.path.join(self.temp_dir.name, fname))
 
@@ -93,7 +94,7 @@ class TestDataFrame(expecttest.TestCase):
 
         DTYPE = dt.Struct([dt.Field("Values", dt.int32)])
 
-        # Functional Test: Parquet
+        # Functional Test: read from Parquet files and output TorchArrow DataFrames
         source_dp = FileLister(self.temp_dir.name)
         parquet_df_dp = ParquetDFReader(source_dp, dtype=DTYPE)
         expected_dfs = [
