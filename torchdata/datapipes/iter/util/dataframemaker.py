@@ -46,7 +46,8 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
 @functional_datapipe("load_parquet_as_df")
 class ParquetDFIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDataFrame[T_co]]
     r"""
-    Iterable DataPipe that takes in paths to Parquet files and return a TorchArrow DataFrame for each Parquet file.
+    Iterable DataPipe that takes in paths to Parquet files and return a TorchArrow DataFrame for each row group
+    within a Parquet file.
 
     Args:
         source_dp: source DataPipe containing paths to the Parquet files
@@ -56,14 +57,24 @@ class ParquetDFIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDataFrame
         device: specify the device on which the DataFrame will be stored
     """
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         source_dp: IterDataPipe[str],
         columns: Optional[List[str]] = None,
         use_threads: bool = False,
         dtype=None,  # Optional[torcharrow.dtypes.DType]
         device: str = "",
     ):
-        table_dp = source_dp.map(partial(parquet.read_table, columns=columns, use_threads=use_threads))
-        df_dp = table_dp.map(torcharrow.from_arrow)
-        return df_dp
+        self.source_dp = source_dp
+        self.columns = columns
+        self.use_threads = use_threads
+        self.dtype = dtype
+        self.device = device
+
+    def __iter__(self):
+        for path in self.source_dp:
+            parquet_file = parquet.ParquetFile(path)
+            num_row_groups = parquet_file.num_row_groups
+            for i in range(num_row_groups):
+                row_group = parquet_file.read_row_group(i, columns=self.columns, use_threads=self.use_threads)
+                yield torcharrow.from_arrow(row_group)
