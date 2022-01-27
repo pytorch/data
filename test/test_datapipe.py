@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import io
+import itertools
 import unittest
 import warnings
 
@@ -565,6 +566,28 @@ class TestDataPipe(expecttest.TestCase):
         # __len__ Test: returns the number of batches
         with self.assertRaises(TypeError):
             len(batch_dp)
+
+    def test_flatmap_datapipe(self):
+        source_dp = IterableWrapper(list(range(20)))
+
+        def fn(e):
+            return [e, e * 10]
+
+        flatmapped_dp = source_dp.flatmap(fn)
+        expected_list = list(itertools.chain(*[(e, e * 10) for e in source_dp]))
+        flatmapped_dp_list = list(flatmapped_dp)
+        self.assertEqual(expected_list, flatmapped_dp_list)
+
+        # Reset Test: reset the DataPipe after reading part of it
+        n_elements_before_reset = 5
+        res_before_reset, res_after_reset = reset_after_n_next_calls(flatmapped_dp, n_elements_before_reset)
+
+        self.assertEqual(expected_list[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_list, res_after_reset)
+
+        # __len__ Test: length should be len(source_dp)*len(fn->out_shape) which we can't know
+        with self.assertRaisesRegex(TypeError, "length relies on the output of its function."):
+            len(flatmapped_dp)
 
 
 if __name__ == "__main__":
