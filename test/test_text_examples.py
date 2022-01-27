@@ -12,13 +12,7 @@ current = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(current)
 sys.path.insert(0, ROOT)
 
-from examples.text.ag_news import AG_NEWS
-from examples.text.amazonreviewpolarity import AmazonReviewPolarity
-from examples.text.imdb import IMDB
-from examples.text.squad1 import SQuAD1
-from examples.text.squad2 import SQuAD2
-
-from torchtext.experimental.datasets.sst2 import SST2
+from torchtext.datasets import AG_NEWS, AmazonReviewPolarity, IMDB, SQuAD1, SQuAD2, SST2
 
 
 # TODO(124): Replace the following tests with the corresponding tests in TorchText
