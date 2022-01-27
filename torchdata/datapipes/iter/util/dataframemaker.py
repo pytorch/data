@@ -61,7 +61,7 @@ class ParquetDFIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDataFrame
         source_dp: IterDataPipe[str],
         columns: Optional[List[str]] = None,
         use_threads: bool = False,
-        dtype= None,  # Optional[torcharrow.dtypes.DType]
+        dtype=None,  # Optional[torcharrow.dtypes.DType]
         device: str = "",
     ):
         table_dp = source_dp.map(partial(parquet.read_table, columns=columns, use_threads=use_threads))
