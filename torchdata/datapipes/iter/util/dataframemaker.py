@@ -5,7 +5,7 @@ from typing import List, Optional, TypeVar
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
-try:
+try:  # TODO: Create dependency on TorchArrow?
     import torcharrow
 except ImportError:
     torcharrow = None
@@ -13,7 +13,7 @@ except ImportError:
 T_co = TypeVar("T_co")
 
 
-@functional_datapipe("convert_to_dataframe")
+@functional_datapipe("dataframe")
 class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDataFrame[T_co]]
     r"""
     Iterable DataPipe that takes rows of data, batch a number of them together and create TorchArrow DataFrames.
@@ -35,6 +35,11 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
         columns: Optional[List[str]] = None,
         device: str = "",
     ):
+        if torcharrow is None:
+            raise ImportError(
+                "The library 'torcharrow' is necessary for this DataPipe but it is not available."
+                "Please visit https://github.com/facebookresearch/torcharrow/ to install it."
+            )
         # In this version, DF tracing is not available, which would allow DataPipe to run DataFrame operations
         batch_dp = source_dp.batch(dataframe_size)
         df_dp = batch_dp.map(partial(torcharrow.DataFrame, dtype=dtype, columns=columns, device=device))
