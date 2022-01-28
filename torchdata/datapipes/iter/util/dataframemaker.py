@@ -90,4 +90,4 @@ class ParquetDFLoaderIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDat
             for i in range(num_row_groups):
                 # TODO: More fine-grain control over the number of rows or row group per DataFrame
                 row_group = parquet_file.read_row_group(i, columns=self.columns, use_threads=self.use_threads)
-                yield torcharrow.from_arrow(row_group)
+                yield torcharrow.from_arrow(row_group, dtype=self.dtype)
