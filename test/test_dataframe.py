@@ -119,9 +119,15 @@ class TestDataFrame(expecttest.TestCase):
         datapipe3 = datapipe2.map(get_name)
         csv_dict_parser_dp = datapipe3.parse_csv_as_dict()
 
+        # Functional Test: Correctly generate TorchArrow DataFrame from CSV
         DTYPE = dt.Struct([dt.Field("key", dt.string), dt.Field("item", dt.string)])
         df_dp = csv_dict_parser_dp.dataframe(dtype=DTYPE, columns=["key", "item"])
         expected_dfs = [torcharrow.DataFrame([{"key": "a", "item": "1"}, {"key": "b", "item": "2"}], dtype=DTYPE)]
+        for exp_df, act_df in zip(expected_dfs, list(df_dp)):
+            self._compare_dataframes(exp_df, act_df)
+
+        # Functional: making sure DataPipe works even without `columns` input
+        df_dp = csv_dict_parser_dp.dataframe(dtype=DTYPE)
         for exp_df, act_df in zip(expected_dfs, list(df_dp)):
             self._compare_dataframes(exp_df, act_df)
 
