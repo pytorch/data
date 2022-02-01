@@ -42,10 +42,5 @@ map_dp = file_dp.map(get_name)
 csv_parser_dp = map_dp.parse_csv(delimiter="\t", skip_lines=1)
 columns_names = list(map_dp.parse_csv(delimiter="\t"))[0][1:]
 processed_dp = csv_parser_dp.map(row_pre_process)
-header_dp = processed_dp.header(1000)  # limit to 1000 rows to save time
-# TODO: The follow operation is very slow due to torcharrow.DataFrame
-#       It gives the following warning:
-#       "UserWarning: append for type NumericalColumnCpu is suported only with prototype implementation,
-#        which may result in degenerated performance"
-dfs = header_dp.dataframe(dataframe_size=1000, dtype=DTYPE)
+dfs = processed_dp.dataframe(dataframe_size=1000, dtype=DTYPE)
 print(list(dfs))
