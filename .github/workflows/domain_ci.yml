@@ -40,7 +40,7 @@ jobs:
         run: python setup.py install
 
       - name: Install test requirements
-        run: pip install pytest pytest-mock scipy iopath pycocotools
+        run: pip install pytest pytest-mock scipy iopath pycocotools h5py
 
       - name: Extract torchvision ref
         id: torchvision
