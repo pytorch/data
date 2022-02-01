@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from torch.utils.data import IterDataPipe
+
 from torch.utils.data.datapipes.iter import (
     Batcher,
     Collator,
@@ -15,15 +16,12 @@ from torch.utils.data.datapipes.iter import (
     Multiplexer,
     RoutedDecoder,
     Sampler,
+    ShardingFilter,
     Shuffler,
     StreamReader,
     UnBatcher,
     Zipper,
 )
-
-# TODO: import ShardingFilter directly from torch.utils.data.datapipes.iter as soon as it is exposed.
-#  https://github.com/pytorch/pytorch/pull/69844 was merged, but is not yet available in the nightly releases
-from torch.utils.data.datapipes.iter.grouping import ShardingFilterIterDataPipe as ShardingFilter
 from torchdata.datapipes.iter.load.fsspec import (
     FSSpecFileListerIterDataPipe as FSSpecFileLister,
     FSSpecFileOpenerIterDataPipe as FSSpecFileOpener,
