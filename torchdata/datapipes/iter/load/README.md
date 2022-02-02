@@ -14,7 +14,7 @@ make
 make install # may need sudo
 ```
 
-`ninja` and `pybind11` are also required to link PyThon implementation to C++ source code. 
+`ninja` and `pybind11` are also required to link PyThon implementation to C++ source code.
 
 ```bash
 conda install ninja pybind11
@@ -31,7 +31,7 @@ python setup.py install
 
 ## Using S3 IO datapies
 
-### S3FileLister 
+### S3FileLister
 
 `S3FileLister` accepts a list of S3 prefixes and iterates all matching s3 urls. The functional API is `list_file_by_s3`. Acceptable prefixes include `s3://bucket-name`, `s3://bucket-name/`, `s3://bucket-name/folder`, `s3://bucket-name/folder/`, and `s3://bucket-name/prefix`. You may also set `length`, `request_timeout_ms` (default 3000 ms in aws-sdk-cpp), and `region`. Note that:
 
