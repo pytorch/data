@@ -1,21 +1,6 @@
-torchdata.datapipes.utils package
-=================================
+Utility Functions
+===========================
 
-Submodules
-----------
+.. currentmodule:: torchdata.datapipes.util
 
-torchdata.datapipes.utils.common module
----------------------------------------
-
-.. automodule:: torchdata.datapipes.utils.common
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: torchdata.datapipes.utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
+Coming soon!

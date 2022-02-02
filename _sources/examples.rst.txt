@@ -1,13 +1,16 @@
-examples package
+Examples
 ================
 
-Subpackages
+.. currentmodule:: examples
+
+Vision
 -----------
 
-.. toctree::
-   :maxdepth: 4
+Text
+-----------
 
-   examples.vision
+Audio
+-----------
 
 Module contents
 ---------------

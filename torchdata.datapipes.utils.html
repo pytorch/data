@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>torchdata.datapipes.utils package &mdash; TorchData 0.0 documentation</title>
+  <title>Utility Functions &mdash; TorchData 0.0 documentation</title>
   
 
   
@@ -32,7 +32,8 @@
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="torchdata.datapipes.map.transform package" href="torchdata.datapipes.map.transform.html" />
+    <link rel="next" title="Examples" href="examples.html" />
+    <link rel="prev" title="Zipper" href="generated/torchdata.datapipes.map.Zipper.html" />
   <!-- Google Analytics -->
   
   <!-- End Google Analytics -->
@@ -213,21 +214,26 @@
               
             
             
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="modules.html">data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.load.html">torchdata.datapipes.iter.load package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.html">torchdata.datapipes.iter package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.transform.html">torchdata.datapipes.iter.transform package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.util.html">torchdata.datapipes.iter.util package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.load.html">torchdata.datapipes.map.load package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.html">torchdata.datapipes.map package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.transform.html">torchdata.datapipes.map.transform package</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="torchdata.datapipes.html">torchdata.datapipes package</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">torchdata.datapipes.utils package</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="torchdata.html">torchdata package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">examples package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.vision.html">examples.vision package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.html">Map-style DataPipes</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Utility Functions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/docs">PyTorch</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/audio">torchaudio</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/text">torchtext</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/vision">torchvision</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/elastic/">TorchElastic</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/serve">TorchServe</a></li>
+<li class="toctree-l1"><a class="reference external" href="http://pytorch.org/xla/">PyTorch on XLA Devices</a></li>
 </ul>
 
             
@@ -268,13 +274,7 @@
       </li>
 
         
-          <li><a href="modules.html">data</a> &gt;</li>
-        
-          <li><a href="torchdata.html">torchdata package</a> &gt;</li>
-        
-          <li><a href="torchdata.datapipes.html">torchdata.datapipes package</a> &gt;</li>
-        
-      <li>torchdata.datapipes.utils package</li>
+      <li>Utility Functions</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
@@ -306,28 +306,9 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="torchdata-datapipes-utils-package">
-<h1>torchdata.datapipes.utils package<a class="headerlink" href="#torchdata-datapipes-utils-package" title="Permalink to this headline">¶</a></h1>
-<section id="submodules">
-<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
-</section>
-<section id="module-torchdata.datapipes.utils.common">
-<span id="torchdata-datapipes-utils-common-module"></span><h2>torchdata.datapipes.utils.common module<a class="headerlink" href="#module-torchdata.datapipes.utils.common" title="Permalink to this headline">¶</a></h2>
-<dl class="py function">
-<dt class="sig sig-object py" id="torchdata.datapipes.utils.common.validate_pathname_binary_tuple">
-<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.utils.common.</span></span><span class="sig-name descname"><span class="pre">validate_pathname_binary_tuple</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">io.IOBase</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.utils.common.validate_pathname_binary_tuple" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</section>
-<section id="module-torchdata.datapipes.utils">
-<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-torchdata.datapipes.utils" title="Permalink to this headline">¶</a></h2>
-<dl class="py class">
-<dt class="sig sig-object py" id="torchdata.datapipes.utils.StreamWrapper">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.utils.</span></span><span class="sig-name descname"><span class="pre">StreamWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_obj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.utils.StreamWrapper" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-</dd></dl>
-
-</section>
+  <section id="utility-functions">
+<h1>Utility Functions<a class="headerlink" href="#utility-functions" title="Permalink to this headline">¶</a></h1>
+<p>Coming soon!</p>
 </section>
 
 
@@ -338,8 +319,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
+        <a href="examples.html" class="btn btn-neutral float-right" title="Examples" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
       
-        <a href="torchdata.datapipes.map.transform.html" class="btn btn-neutral" title="torchdata.datapipes.map.transform package" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+        <a href="generated/torchdata.datapipes.map.Zipper.html" class="btn btn-neutral" title="Zipper" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -371,12 +354,7 @@
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">torchdata.datapipes.utils package</a><ul>
-<li><a class="reference internal" href="#submodules">Submodules</a></li>
-<li><a class="reference internal" href="#module-torchdata.datapipes.utils.common">torchdata.datapipes.utils.common module</a></li>
-<li><a class="reference internal" href="#module-torchdata.datapipes.utils">Module contents</a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#">Utility Functions</a></li>
 </ul>
 
             </div>

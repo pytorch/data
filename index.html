@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Welcome to TorchData’s documentation! &mdash; TorchData 0.0 documentation</title>
+  <title>TorchData &mdash; TorchData 0.0 documentation</title>
   
 
   
@@ -32,7 +32,7 @@
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="data" href="modules.html" />
+    <link rel="next" title="Iterable-style DataPipes" href="torchdata.datapipes.iter.html" />
   <!-- Google Analytics -->
   
   <!-- End Google Analytics -->
@@ -213,21 +213,26 @@
               
             
             
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.load.html">torchdata.datapipes.iter.load package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.html">torchdata.datapipes.iter package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.transform.html">torchdata.datapipes.iter.transform package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.util.html">torchdata.datapipes.iter.util package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.load.html">torchdata.datapipes.map.load package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.html">torchdata.datapipes.map package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.transform.html">torchdata.datapipes.map.transform package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.html">torchdata.datapipes package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.utils.html">torchdata.datapipes.utils package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.html">torchdata package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">examples package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.vision.html">examples.vision package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.html">Map-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.utils.html">Utility Functions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/docs">PyTorch</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/audio">torchaudio</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/text">torchtext</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/vision">torchvision</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/elastic/">TorchElastic</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/serve">TorchServe</a></li>
+<li class="toctree-l1"><a class="reference external" href="http://pytorch.org/xla/">PyTorch on XLA Devices</a></li>
 </ul>
 
             
@@ -268,7 +273,7 @@
       </li>
 
         
-      <li>Welcome to TorchData’s documentation!</li>
+      <li>TorchData</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
@@ -300,111 +305,76 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="welcome-to-torchdata-s-documentation">
-<h1>Welcome to TorchData’s documentation!<a class="headerlink" href="#welcome-to-torchdata-s-documentation" title="Permalink to this headline">¶</a></h1>
+  <section id="torchdata">
+<h1>TorchData<a class="headerlink" href="#torchdata" title="Permalink to this headline">¶</a></h1>
+<p>This library is part of the <a class="reference external" href="http://pytorch.org/">PyTorch</a> project. PyTorch is an open source
+machine learning framework.</p>
+<p><code class="xref py py-mod docutils literal notranslate"><span class="pre">torchdata</span></code> is a prototype library of common modular data loading primitives for
+easily constructing flexible and performant data pipelines.</p>
+<p>Features described in this documentation are classified by release status:</p>
+<blockquote>
+<div><p><em>Stable:</em>  These features will be maintained long-term and there should generally
+be no major performance limitations or gaps in documentation.
+We also expect to maintain backwards compatibility (although
+breaking changes can happen and notice will be given one release ahead
+of time).</p>
+<p><em>Beta:</em>  Features are tagged as Beta because the API may change based on
+user feedback, because the performance needs to improve, or because
+coverage across operators is not yet complete. For Beta features, we are
+committing to seeing the feature through to the Stable classification.
+We are not, however, committing to backwards compatibility.</p>
+<p><em>Prototype:</em>  These features are typically not available as part of
+binary distributions like PyPI or Conda, except sometimes behind run-time
+flags, and are at an early stage for feedback and testing.</p>
+</div></blockquote>
 <div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">data</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="examples.html">examples package</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.html">torchdata package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.html">Iterable-style DataPipes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.html#load-datapipes">Load DataPipes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.html#transform-datapipes">Transform DataPipes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.html#utility-datapipes">Utility DataPipes</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.load.html">torchdata.datapipes.iter.load package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.load.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.load.html#module-torchdata.datapipes.iter.load.fsspec">torchdata.datapipes.iter.load.fsspec module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.load.html#module-torchdata.datapipes.iter.load.iopath">torchdata.datapipes.iter.load.iopath module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.load.html#module-torchdata.datapipes.iter.load.online">torchdata.datapipes.iter.load.online module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.load.html#module-torchdata.datapipes.iter.load">Module contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.html">Map-style DataPipes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.map.html#datapipes">DataPipes</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.html">torchdata.datapipes.iter package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.html#subpackages">Subpackages</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.html#module-torchdata.datapipes.iter">Module contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.utils.html">Utility Functions</a></li>
 </ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.transform.html">torchdata.datapipes.iter.transform package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.transform.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.transform.html#module-torchdata.datapipes.iter.transform.bucketbatcher">torchdata.datapipes.iter.transform.bucketbatcher module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.transform.html#module-torchdata.datapipes.iter.transform">Module contents</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.util.html">torchdata.datapipes.iter.util package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.cacheholder">torchdata.datapipes.iter.util.cacheholder module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.combining">torchdata.datapipes.iter.util.combining module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.cycler">torchdata.datapipes.iter.util.cycler module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.extractor">torchdata.datapipes.iter.util.extractor module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.hashchecker">torchdata.datapipes.iter.util.hashchecker module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.header">torchdata.datapipes.iter.util.header module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.indexadder">torchdata.datapipes.iter.util.indexadder module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.jsonparser">torchdata.datapipes.iter.util.jsonparser module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.paragraphaggregator">torchdata.datapipes.iter.util.paragraphaggregator module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.plain_text_reader">torchdata.datapipes.iter.util.plain_text_reader module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.rar_archive_loader">torchdata.datapipes.iter.util.rar_archive_loader module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.rows2columnar">torchdata.datapipes.iter.util.rows2columnar module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.samplemultiplexer">torchdata.datapipes.iter.util.samplemultiplexer module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.saver">torchdata.datapipes.iter.util.saver module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.tararchivereader">torchdata.datapipes.iter.util.tararchivereader module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.xzfilereader">torchdata.datapipes.iter.util.xzfilereader module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.ziparchivereader">torchdata.datapipes.iter.util.ziparchivereader module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util">Module contents</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.load.html">torchdata.datapipes.map.load package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.map.load.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.map.load.html#module-torchdata.datapipes.map.load.transform">torchdata.datapipes.map.load.transform module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.map.load.html#module-torchdata.datapipes.map.load">Module contents</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.html">torchdata.datapipes.map package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.map.html#subpackages">Subpackages</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.map.html#module-torchdata.datapipes.map">Module contents</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.transform.html">torchdata.datapipes.map.transform package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.map.transform.html#module-torchdata.datapipes.map.transform">Module contents</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.html">torchdata.datapipes package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.html#subpackages">Subpackages</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.html#module-torchdata.datapipes">Module contents</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.utils.html">torchdata.datapipes.utils package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.utils.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.utils.html#module-torchdata.datapipes.utils.common">torchdata.datapipes.utils.common module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.utils.html#module-torchdata.datapipes.utils">Module contents</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.html">torchdata package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.html#subpackages">Subpackages</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.html#module-torchdata">Module contents</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">examples package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="examples.html#subpackages">Subpackages</a></li>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#vision">Vision</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#text">Text</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#audio">Audio</a></li>
 <li class="toctree-l2"><a class="reference internal" href="examples.html#module-examples">Module contents</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="examples.vision.html">examples.vision package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="examples.vision.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples.vision.html#module-examples.vision.caltech101">examples.vision.caltech101 module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples.vision.html#module-examples.vision.caltech256">examples.vision.caltech256 module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples.vision.html#module-examples.vision.imagefolder">examples.vision.imagefolder module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples.vision.html#module-examples.vision">Module contents</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
 </ul>
 </div>
-</section>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/docs">PyTorch</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/audio">torchaudio</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/text">torchtext</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/vision">torchvision</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/elastic/">TorchElastic</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/serve">TorchServe</a></li>
+<li class="toctree-l1"><a class="reference external" href="http://pytorch.org/xla/">PyTorch on XLA Devices</a></li>
+</ul>
+</div>
 <section id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
 <li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
-<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
 </ul>
+</section>
 </section>
 
 
@@ -415,7 +385,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="modules.html" class="btn btn-neutral float-right" title="data" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.datapipes.iter.html" class="btn btn-neutral float-right" title="Iterable-style DataPipes" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
     </div>
@@ -448,8 +418,10 @@
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">Welcome to TorchData’s documentation!</a></li>
+<li><a class="reference internal" href="#">TorchData</a><ul>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
 </ul>
 
             </div>

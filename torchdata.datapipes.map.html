@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>torchdata.datapipes.map package &mdash; TorchData 0.0 documentation</title>
+  <title>Map-style DataPipes &mdash; TorchData 0.0 documentation</title>
   
 
   
@@ -32,8 +32,8 @@
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="torchdata.datapipes.map.load package" href="torchdata.datapipes.map.load.html" />
-    <link rel="prev" title="torchdata.datapipes.iter.util package" href="torchdata.datapipes.iter.util.html" />
+    <link rel="next" title="Batcher" href="generated/torchdata.datapipes.map.Batcher.html" />
+    <link rel="prev" title="Zipper" href="generated/torchdata.datapipes.iter.Zipper.html" />
   <!-- Google Analytics -->
   
   <!-- End Google Analytics -->
@@ -214,21 +214,26 @@
               
             
             
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="modules.html">data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.load.html">torchdata.datapipes.iter.load package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.html">torchdata.datapipes.iter package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.transform.html">torchdata.datapipes.iter.transform package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.util.html">torchdata.datapipes.iter.util package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.load.html">torchdata.datapipes.map.load package</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">torchdata.datapipes.map package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.transform.html">torchdata.datapipes.map.transform package</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="torchdata.datapipes.html">torchdata.datapipes package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.utils.html">torchdata.datapipes.utils package</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="torchdata.html">torchdata package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">examples package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.vision.html">examples.vision package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Map-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.utils.html">Utility Functions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/docs">PyTorch</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/audio">torchaudio</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/text">torchtext</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/vision">torchvision</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/elastic/">TorchElastic</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/serve">TorchServe</a></li>
+<li class="toctree-l1"><a class="reference external" href="http://pytorch.org/xla/">PyTorch on XLA Devices</a></li>
 </ul>
 
             
@@ -269,13 +274,7 @@
       </li>
 
         
-          <li><a href="modules.html">data</a> &gt;</li>
-        
-          <li><a href="torchdata.html">torchdata package</a> &gt;</li>
-        
-          <li><a href="torchdata.datapipes.html">torchdata.datapipes package</a> &gt;</li>
-        
-      <li>torchdata.datapipes.map package</li>
+      <li>Map-style DataPipes</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
@@ -307,27 +306,56 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="torchdata-datapipes-map-package">
-<h1>torchdata.datapipes.map package<a class="headerlink" href="#torchdata-datapipes-map-package" title="Permalink to this headline">¶</a></h1>
-<section id="subpackages">
-<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.load.html">torchdata.datapipes.map.load package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.map.load.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.map.load.html#module-torchdata.datapipes.map.load.transform">torchdata.datapipes.map.load.transform module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.map.load.html#module-torchdata.datapipes.map.load">Module contents</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.transform.html">torchdata.datapipes.map.transform package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.map.transform.html#module-torchdata.datapipes.map.transform">Module contents</a></li>
-</ul>
-</li>
-</ul>
+  <section id="map-style-datapipes">
+<h1>Map-style DataPipes<a class="headerlink" href="#map-style-datapipes" title="Permalink to this headline">¶</a></h1>
+<p>A map-style dataset is one that implements the <code class="docutils literal notranslate"><span class="pre">__getitem__()</span></code> and <code class="docutils literal notranslate"><span class="pre">__len__()</span></code> protocols, and represents a map
+from (possibly non-integral) indices/keys to data samples.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.map.MapDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.map.</span></span><span class="sig-name descname"><span class="pre">MapDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.map.MapDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<p>For example, such a dataset, when accessed with <code class="docutils literal notranslate"><span class="pre">mapdatapipe[idx]</span></code>, could read the <code class="docutils literal notranslate"><span class="pre">idx</span></code>-th image and its
+corresponding label from a folder on the disk.</p>
+<p>These DataPipes can be invoked in two ways, using the class constructor or applying their functional form onto
+an existing <cite>MapDataPipe</cite> (available to most but not all DataPipes).</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torchdata.datapipes.map</span> <span class="kn">import</span> <span class="n">SequenceWrapper</span><span class="p">,</span> <span class="n">Mapper</span>
+
+<span class="n">dp</span> <span class="o">=</span> <span class="n">SequenceWrapper</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+<span class="n">map_dp_1</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+<span class="nb">list</span><span class="p">(</span><span class="n">map_dp_1</span><span class="p">)</span>  <span class="c1"># [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]</span>
+<span class="n">map_dp_2</span> <span class="o">=</span> <span class="n">Mapper</span><span class="p">(</span><span class="n">dp</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+<span class="nb">list</span><span class="p">(</span><span class="n">map_dp_2</span><span class="p">)</span>  <span class="c1"># [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]</span>
+</pre></div>
 </div>
-</section>
-<section id="module-torchdata.datapipes.map">
-<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-torchdata.datapipes.map" title="Permalink to this headline">¶</a></h2>
+<section id="datapipes">
+<h2>DataPipes<a class="headerlink" href="#datapipes" title="Permalink to this headline">¶</a></h2>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.datapipes.map.Batcher.html#torchdata.datapipes.map.Batcher" title="torchdata.datapipes.map.Batcher"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Batcher</span></code></a></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">BatcherMapDataPipe</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/torchdata.datapipes.map.Concater.html#torchdata.datapipes.map.Concater" title="torchdata.datapipes.map.Concater"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Concater</span></code></a></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ConcaterMapDataPipe</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.datapipes.map.Mapper.html#torchdata.datapipes.map.Mapper" title="torchdata.datapipes.map.Mapper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapper</span></code></a></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">MapperMapDataPipe</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/torchdata.datapipes.map.SequenceWrapper.html#torchdata.datapipes.map.SequenceWrapper" title="torchdata.datapipes.map.SequenceWrapper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SequenceWrapper</span></code></a></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">SequenceWrapperMapDataPipe</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.datapipes.map.Shuffler.html#torchdata.datapipes.map.Shuffler" title="torchdata.datapipes.map.Shuffler"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Shuffler</span></code></a></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ShufflerMapDataPipe</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/torchdata.datapipes.map.Zipper.html#torchdata.datapipes.map.Zipper" title="torchdata.datapipes.map.Zipper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Zipper</span></code></a></p></td>
+<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ZipperMapDataPipe</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
 </section>
 </section>
 
@@ -339,10 +367,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="torchdata.datapipes.map.load.html" class="btn btn-neutral float-right" title="torchdata.datapipes.map.load package" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="generated/torchdata.datapipes.map.Batcher.html" class="btn btn-neutral float-right" title="Batcher" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.iter.util.html" class="btn btn-neutral" title="torchdata.datapipes.iter.util package" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="generated/torchdata.datapipes.iter.Zipper.html" class="btn btn-neutral" title="Zipper" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -374,9 +402,8 @@
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">torchdata.datapipes.map package</a><ul>
-<li><a class="reference internal" href="#subpackages">Subpackages</a></li>
-<li><a class="reference internal" href="#module-torchdata.datapipes.map">Module contents</a></li>
+<li><a class="reference internal" href="#">Map-style DataPipes</a><ul>
+<li><a class="reference internal" href="#datapipes">DataPipes</a></li>
 </ul>
 </li>
 </ul>
