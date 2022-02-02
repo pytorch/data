@@ -19,9 +19,9 @@ class FlatMapperIterDataPipe(IterDataPipe[DataChunk[T_co]]):
     Iterable DataPipe which applies a structure-changing function to an IterableDataPipe
     flattens to a single unnested IterableDataPipe.
 
-    Args:b
+    Args:
         datapipe: Iterable datapipe containing iterable datapipes to which the function is applied
-        fn: the function to be applied to each of the ``inner" datapipes
+        fn: the function to be applied to each of the "inner" datapipes
     """
 
     def __init__(self, datapipe, fn):

@@ -102,7 +102,7 @@ class GDriveReaderDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
 
 class OnlineReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
-    r""":class:
+    r"""
     Iterable DataPipe that takes file URLs (can be http URLs pointing to files or URLs to GDrive files), and
     yields tuples of file URL and IO stream.
 
