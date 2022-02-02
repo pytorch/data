@@ -26,11 +26,6 @@ PYBIND11_MODULE(_torchdata, m)
                  self->ListFiles(file_url, &filenames);
                  return filenames;
              })
-        .def("set_max_keys",
-             [](S3Handler *self, const int max_keys)
-             {
-                 self->SetMaxKeys(max_keys);
-             })
         .def("set_buffer_size",
              [](S3Handler *self, const uint64_t buffer_size)
              {
@@ -52,37 +47,21 @@ PYBIND11_MODULE(_torchdata, m)
                 return py::make_tuple(s3_handler.GetRequestTimeoutMs(),
                                       s3_handler.GetRegion(),
                                       s3_handler.GetLastMarker(),
-                                      s3_handler.GetMaxKeys(),
                                       s3_handler.GetUseMultiPartDownload(),
                                       s3_handler.GetBufferSize());
             },
             [](py::tuple t) { // __setstate__
-                if (t.size() != 6)
+                if (t.size() != 5)
                     throw std::runtime_error("Invalid state!");
 
                 /* Create a new C++ instance */
                 S3Handler s3_handler(t[0].cast<long>(), t[1].cast<std::string>());
 
                 /* Assign any additional state */
-                s3_handler.SetMaxKeys(t[4].cast<int>());
+                s3_handler.SetLastMarker(t[2].cast<std::string>());
+                s3_handler.SetMultiPartDownload(t[3].cast<bool>());
+                s3_handler.SetBufferSize(t[4].cast<int>());
 
                 return s3_handler;
             }));
-    // .def(py::pickle(
-    //     [](const Pickleable &p) { // __getstate__
-    //         /* Return a tuple that fully encodes the state of the object */
-    //         return py::make_tuple(p.value(), p.extra());
-    //     },
-    //     [](py::tuple t) { // __setstate__
-    //         if (t.size() != 2)
-    //             throw std::runtime_error("Invalid state!");
-
-    //         /* Create a new C++ instance */
-    //         Pickleable p(t[0].cast<std::string>());
-
-    //         /* Assign any additional state */
-    //         p.setExtra(t[1].cast<int>());
-
-    //         return p;
-    //     }));
 }

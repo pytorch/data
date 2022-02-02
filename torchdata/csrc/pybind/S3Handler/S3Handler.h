@@ -34,7 +34,6 @@ namespace torchdata
       std::shared_ptr<Aws::Transfer::TransferManager> transfer_manager_;
 
       Aws::String last_marker_;
-      int max_keys_;
       size_t buffer_size_;
       bool use_multi_part_download_;
 
@@ -52,7 +51,7 @@ namespace torchdata
       S3Handler(const long requestTimeoutMs, const std::string region);
       ~S3Handler();
 
-      void SetMaxKeys(const int max_keys) { this->max_keys_ = max_keys; }
+      void SetLastMarker(const Aws::String last_marker) { this->last_marker_ = last_marker; }
       void SetBufferSize(const uint64_t buffer_size) { this->buffer_size_ = buffer_size; }
       void SetMultiPartDownload(const bool multi_part_download) { this->use_multi_part_download_ = multi_part_download; }
       void ClearMarker();
@@ -60,7 +59,6 @@ namespace torchdata
       long GetRequestTimeoutMs() const { return s3_handler_cfg_->requestTimeoutMs; }
       Aws::String GetRegion() const { return s3_handler_cfg_->region; }
       Aws::String GetLastMarker() const { return last_marker_; }
-      int GetMaxKeys() const { return max_keys_; }
       bool GetUseMultiPartDownload() const { return use_multi_part_download_; }
       size_t GetBufferSize() const { return buffer_size_; }
 
