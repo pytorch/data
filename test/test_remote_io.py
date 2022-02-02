@@ -189,7 +189,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         # S3FileLister: prefixes + different region
         file_urls = ["s3://aft-vbi-pds/bin-images/111", "s3://aft-vbi-pds/bin-images/222", ]
         s3_lister_dp = S3FileLister(IterableWrapper(file_urls), region="us-east-1")
-        self.assertEqual(sum(1 for _ in s3_lister_dp), 2212, f'{input[0]} failed')
+        self.assertEqual(sum(1 for _ in s3_lister_dp), 2212, f'{input} failed')
 
         # S3FileLister: incorrect inputs
         input_list = [
@@ -204,9 +204,35 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
                 for _ in s3_lister_dp:
                     pass
 
-        # S3FileLoader: loader 
+        # S3FileLoader: loader
+        input = ["s3://charades-tar-shards/charades-video-0.tar",
+                 "s3://charades-tar-shards/charades-video-1.tar", ]  # multiple files
+        s3_loader_dp = S3FileLoader(input, region="us-west-2")
+        self.assertEqual(sum(1 for _ in s3_loader_dp), 2, f'{input} failed')
+
+        input = [["s3://aft-vbi-pds/bin-images/100730.jpg"], 1]
+        s3_loader_dp = S3FileLoader(input[0], region="us-east-1")
+        self.assertEqual(sum(1 for _ in s3_loader_dp), input[1], f'{input[0]} failed')
+
+        # S3FileLoader: incorrect inputs
+        input_list = [
+            [""],
+            ["ai2-public-datasets"],
+            ["s3://"],
+            ["s3:///bin-images"],
+            ["s3://ai2-public-datasets/bin-image"],
+        ]
+        for input in input_list:
+            with self.assertRaises(ValueError, msg=f"{input} should raise ValueError."):
+                s3_loader_dp = S3FileLoader(file_urls)
+                for _ in s3_loader_dp:
+                    pass
 
         # integration test
+        input = [["s3://charades-tar-shards/"], 10]
+        s3_lister_dp = S3FileLister(IterableWrapper(input[0]), region="us-west-2")
+        s3_loader_dp = S3FileLoader(s3_lister_dp, region="us-west-2")
+        self.assertEqual(sum(1 for _ in s3_loader_dp), input[1], f'{input[0]} failed')
 
 
 if __name__ == "__main__":
