@@ -2,6 +2,3 @@ Tutorial
 ================
 
 .. currentmodule:: examples
-
-
-
