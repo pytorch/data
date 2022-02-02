@@ -1,0 +1,1039 @@
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>torchdata.datapipes.iter package &mdash; TorchData 0.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="torchdata.datapipes.iter.load package" href="torchdata.datapipes.iter.load.html" />
+    <link rel="prev" title="torchdata.datapipes package" href="torchdata.datapipes.html" />
+  <!-- Google Analytics -->
+  
+  <!-- End Google Analytics -->
+  
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+  <!-- Preload the theme fonts -->
+
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+
+<!-- Preload the katex fonts -->
+
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size1-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size4-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size2-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size3-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Caligraphic-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css" integrity="sha384-vSIIfh2YWi9wW0r9iZe7RJPrKwp6bG+s9QZMoITbCckVJqGCCRhc+ccxNcdpHuYu" crossorigin="anonymous">
+</head>
+
+<div class="container-fluid header-holder tutorials-header" id="header-holder">
+  <div class="container">
+    <div class="header-container">
+      <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://pytorch.org/get-started">Get Started</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/blog/">Blog</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/tutorials">Tutorials</a>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="resource-option with-down-orange-arrow">
+                Docs
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/docs/stable/index.html">
+                  <span class="dropdown-title">PyTorch</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/audio/stable/index.html">
+                  <span class="dropdown-title">torchaudio</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/text/stable/index.html">
+                  <span class="dropdown-title">torchtext</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/vision/stable/index.html">
+                  <span class="dropdown-title">torchvision</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/elastic/">
+                  <span class="dropdown-title">TorchElastic</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/serve/">
+                  <span class="dropdown-title">TorchServe</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/xla">
+                  <span class="dropdown-title">PyTorch on XLA Devices</span>
+                  <p></p>
+                </a>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="resource-option with-down-arrow">
+                Resources
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/features">
+                  <span class="dropdown-title">About</span>
+                  <p>Learn about PyTorch’s features and capabilities</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/#community-module">
+                  <span class="dropdown-title">Community</span>
+                  <p>Join the PyTorch developer community to contribute, learn, and get your questions answered.</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources">
+                  <span class="dropdown-title">Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://discuss.pytorch.org/" target="_blank">
+                  <span class="dropdown-title">Forums</span>
+                  <p>A place to discuss PyTorch code, issues, install, research</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/hub">
+                  <span class="dropdown-title">Models (Beta)</span>
+                  <p>Discover, publish, and reuse pre-trained models</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+            <a href="https://github.com/pytorch/pytorch">GitHub</a>
+          </li>
+        </ul>
+      </div>
+
+      <a class="main-menu-open-button" href="#" data-behavior="open-mobile-menu"></a>
+    </div>
+  </div>
+</div>
+
+<body class="pytorch-body">
+
+   
+
+    
+
+    <div class="table-of-contents-link-wrapper">
+      <span>Table of Contents</span>
+      <a href="#" class="toggle-table-of-contents" data-behavior="toggle-table-of-contents"></a>
+    </div>
+
+    <nav data-toggle="wy-nav-shift" class="pytorch-left-menu" id="pytorch-left-menu">
+      <div class="pytorch-side-scroll">
+        <div class="pytorch-menu pytorch-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          <div class="pytorch-left-menu-search">
+            
+
+            
+              
+              
+            
+
+            
+
+
+  
+
+
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search Docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+            
+          </div>
+
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.load.html">torchdata.datapipes.iter.load package</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">torchdata.datapipes.iter package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.transform.html">torchdata.datapipes.iter.transform package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.util.html">torchdata.datapipes.iter.util package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.load.html">torchdata.datapipes.map.load package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.html">torchdata.datapipes.map package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.transform.html">torchdata.datapipes.map.transform package</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="torchdata.datapipes.html">torchdata.datapipes package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.utils.html">torchdata.datapipes.utils package</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="torchdata.html">torchdata package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">examples package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.vision.html">examples.vision package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <div class="pytorch-container">
+      <div class="pytorch-page-level-bar" id="pytorch-page-level-bar">
+        <div class="pytorch-breadcrumbs-wrapper">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="pytorch-breadcrumbs">
+    
+      <li>
+        <a href="index.html">
+          
+            Docs
+          
+        </a> &gt;
+      </li>
+
+        
+          <li><a href="modules.html">data</a> &gt;</li>
+        
+          <li><a href="torchdata.html">torchdata package</a> &gt;</li>
+        
+          <li><a href="torchdata.datapipes.html">torchdata.datapipes package</a> &gt;</li>
+        
+      <li>torchdata.datapipes.iter package</li>
+    
+    
+      <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="_sources/torchdata.datapipes.iter.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+</div>
+        </div>
+
+        <div class="pytorch-shortcuts-wrapper" id="pytorch-shortcuts-wrapper">
+          Shortcuts
+        </div>
+      </div>
+
+      <section data-toggle="wy-nav-shift" id="pytorch-content-wrap" class="pytorch-content-wrap">
+        <div class="pytorch-content-left">
+
+        
+          
+          <div class="rst-content">
+          
+            <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
+             <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
+              
+  <section id="torchdata-datapipes-iter-package">
+<h1>torchdata.datapipes.iter package<a class="headerlink" href="#torchdata-datapipes-iter-package" title="Permalink to this headline">¶</a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.load.html">torchdata.datapipes.iter.load package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.load.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.load.html#module-torchdata.datapipes.iter.load.fsspec">torchdata.datapipes.iter.load.fsspec module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.load.html#module-torchdata.datapipes.iter.load.iopath">torchdata.datapipes.iter.load.iopath module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.load.html#module-torchdata.datapipes.iter.load.online">torchdata.datapipes.iter.load.online module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.load.html#module-torchdata.datapipes.iter.load">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.transform.html">torchdata.datapipes.iter.transform package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.transform.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.transform.html#module-torchdata.datapipes.iter.transform.bucketbatcher">torchdata.datapipes.iter.transform.bucketbatcher module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.transform.html#module-torchdata.datapipes.iter.transform">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.util.html">torchdata.datapipes.iter.util package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.cacheholder">torchdata.datapipes.iter.util.cacheholder module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.combining">torchdata.datapipes.iter.util.combining module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.cycler">torchdata.datapipes.iter.util.cycler module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.extractor">torchdata.datapipes.iter.util.extractor module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.hashchecker">torchdata.datapipes.iter.util.hashchecker module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.header">torchdata.datapipes.iter.util.header module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.indexadder">torchdata.datapipes.iter.util.indexadder module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.jsonparser">torchdata.datapipes.iter.util.jsonparser module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.paragraphaggregator">torchdata.datapipes.iter.util.paragraphaggregator module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.plain_text_reader">torchdata.datapipes.iter.util.plain_text_reader module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.rar_archive_loader">torchdata.datapipes.iter.util.rar_archive_loader module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.rows2columnar">torchdata.datapipes.iter.util.rows2columnar module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.samplemultiplexer">torchdata.datapipes.iter.util.samplemultiplexer module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.saver">torchdata.datapipes.iter.util.saver module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.tararchivereader">torchdata.datapipes.iter.util.tararchivereader module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.xzfilereader">torchdata.datapipes.iter.util.xzfilereader module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util.ziparchivereader">torchdata.datapipes.iter.util.ziparchivereader module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.util.html#module-torchdata.datapipes.iter.util">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="module-torchdata.datapipes.iter">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-torchdata.datapipes.iter" title="Permalink to this headline">¶</a></h2>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Batcher">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Batcher</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Batcher" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.grouping.BatcherIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.BucketBatcher">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">BucketBatcher</span></span><a class="headerlink" href="#torchdata.datapipes.iter.BucketBatcher" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.transform.html#torchdata.datapipes.iter.transform.bucketbatcher.BucketBatcherIterDataPipe" title="torchdata.datapipes.iter.transform.bucketbatcher.BucketBatcherIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.transform.bucketbatcher.BucketBatcherIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.CSVDictParser">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">CSVDictParser</span></span><a class="headerlink" href="#torchdata.datapipes.iter.CSVDictParser" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.plain_text_reader.CSVDictParserIterDataPipe" title="torchdata.datapipes.iter.util.plain_text_reader.CSVDictParserIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.plain_text_reader.CSVDictParserIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.CSVParser">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">CSVParser</span></span><a class="headerlink" href="#torchdata.datapipes.iter.CSVParser" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.plain_text_reader.CSVParserIterDataPipe" title="torchdata.datapipes.iter.util.plain_text_reader.CSVParserIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.plain_text_reader.CSVParserIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Collator">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Collator</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Collator" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.callable.CollatorIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Concater">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Concater</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Concater" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.combining.ConcaterIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Cycler">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Cycler</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Cycler" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.cycler.CyclerIterDataPipe" title="torchdata.datapipes.iter.util.cycler.CyclerIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.cycler.CyclerIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Demultiplexer">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Demultiplexer</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Demultiplexer" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.combining.DemultiplexerIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.EndOnDiskCacheHolder">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">EndOnDiskCacheHolder</span></span><a class="headerlink" href="#torchdata.datapipes.iter.EndOnDiskCacheHolder" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.cacheholder.EndOnDiskCacheHolderIterDataPipe" title="torchdata.datapipes.iter.util.cacheholder.EndOnDiskCacheHolderIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.cacheholder.EndOnDiskCacheHolderIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Enumerator">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Enumerator</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Enumerator" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.indexadder.EnumeratorIterDataPipe" title="torchdata.datapipes.iter.util.indexadder.EnumeratorIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.indexadder.EnumeratorIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Extractor">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Extractor</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Extractor" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.extractor.ExtractorIterDataPipe" title="torchdata.datapipes.iter.util.extractor.ExtractorIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.extractor.ExtractorIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.FSSpecFileLister">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">FSSpecFileLister</span></span><a class="headerlink" href="#torchdata.datapipes.iter.FSSpecFileLister" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.load.html#torchdata.datapipes.iter.load.fsspec.FSSpecFileListerIterDataPipe" title="torchdata.datapipes.iter.load.fsspec.FSSpecFileListerIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.load.fsspec.FSSpecFileListerIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.FSSpecFileOpener">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">FSSpecFileOpener</span></span><a class="headerlink" href="#torchdata.datapipes.iter.FSSpecFileOpener" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.load.html#torchdata.datapipes.iter.load.fsspec.FSSpecFileOpenerIterDataPipe" title="torchdata.datapipes.iter.load.fsspec.FSSpecFileOpenerIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.load.fsspec.FSSpecFileOpenerIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.FSSpecSaver">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">FSSpecSaver</span></span><a class="headerlink" href="#torchdata.datapipes.iter.FSSpecSaver" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.load.html#torchdata.datapipes.iter.load.fsspec.FSSpecSaverIterDataPipe" title="torchdata.datapipes.iter.load.fsspec.FSSpecSaverIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.load.fsspec.FSSpecSaverIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.FileLister">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">FileLister</span></span><a class="headerlink" href="#torchdata.datapipes.iter.FileLister" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.filelister.FileListerIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.FileOpener">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">FileOpener</span></span><a class="headerlink" href="#torchdata.datapipes.iter.FileOpener" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.fileopener.FileOpenerIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Filter">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Filter</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.selecting.FilterIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Forker">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Forker</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Forker" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.combining.ForkerIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.GDriveReader">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">GDriveReader</span></span><a class="headerlink" href="#torchdata.datapipes.iter.GDriveReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.load.html#torchdata.datapipes.iter.load.online.GDriveReaderDataPipe" title="torchdata.datapipes.iter.load.online.GDriveReaderDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.load.online.GDriveReaderDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Grouper">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Grouper</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Grouper" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.grouping.GrouperIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.HashChecker">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">HashChecker</span></span><a class="headerlink" href="#torchdata.datapipes.iter.HashChecker" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.hashchecker.HashCheckerIterDataPipe" title="torchdata.datapipes.iter.util.hashchecker.HashCheckerIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.hashchecker.HashCheckerIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Header">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Header</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Header" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.header.HeaderIterDataPipe" title="torchdata.datapipes.iter.util.header.HeaderIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.header.HeaderIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.HttpReader">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">HttpReader</span></span><a class="headerlink" href="#torchdata.datapipes.iter.HttpReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.load.html#torchdata.datapipes.iter.load.online.HTTPReaderIterDataPipe" title="torchdata.datapipes.iter.load.online.HTTPReaderIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.load.online.HTTPReaderIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.InMemoryCacheHolder">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">InMemoryCacheHolder</span></span><a class="headerlink" href="#torchdata.datapipes.iter.InMemoryCacheHolder" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.cacheholder.InMemoryCacheHolderIterDataPipe" title="torchdata.datapipes.iter.util.cacheholder.InMemoryCacheHolderIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.cacheholder.InMemoryCacheHolderIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.IndexAdder">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">IndexAdder</span></span><a class="headerlink" href="#torchdata.datapipes.iter.IndexAdder" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.indexadder.IndexAdderIterDataPipe" title="torchdata.datapipes.iter.util.indexadder.IndexAdderIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.indexadder.IndexAdderIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.IoPathFileLister">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">IoPathFileLister</span></span><a class="headerlink" href="#torchdata.datapipes.iter.IoPathFileLister" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.load.html#torchdata.datapipes.iter.load.iopath.IoPathFileListerIterDataPipe" title="torchdata.datapipes.iter.load.iopath.IoPathFileListerIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.load.iopath.IoPathFileListerIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.IoPathFileOpener">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">IoPathFileOpener</span></span><a class="headerlink" href="#torchdata.datapipes.iter.IoPathFileOpener" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.load.html#torchdata.datapipes.iter.load.iopath.IoPathFileOpenerIterDataPipe" title="torchdata.datapipes.iter.load.iopath.IoPathFileOpenerIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.load.iopath.IoPathFileOpenerIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.IoPathSaver">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">IoPathSaver</span></span><a class="headerlink" href="#torchdata.datapipes.iter.IoPathSaver" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.load.html#torchdata.datapipes.iter.load.iopath.IoPathSaverIterDataPipe" title="torchdata.datapipes.iter.load.iopath.IoPathSaverIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.load.iopath.IoPathSaverIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.IterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">IterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.IterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.dataset.IterableDataset</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">torch.utils.data.dataset.T_co</span></code>]</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.IterDataPipe.functions">
+<span class="sig-name descname"><span class="pre">functions</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'_dataframes_as_tuples':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.dataframe.datapipes.DataFramesAsTuplesPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'_dataframes_concat':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.dataframe.datapipes.ConcatDataFramesPipe'&gt;,</span> <span class="pre">True),</span> <span class="pre">'_dataframes_filter':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.dataframe.datapipes.FilterDataFramesPipe'&gt;,</span> <span class="pre">True),</span> <span class="pre">'_dataframes_per_row':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.dataframe.datapipes.PerRowDataFramesPipe'&gt;,</span> <span class="pre">True),</span> <span class="pre">'_dataframes_shuffle':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.dataframe.datapipes.ShuffleDataFramesPipe'&gt;,</span> <span class="pre">True),</span> <span class="pre">'_to_dataframes_pipe':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.dataframe.datapipes.ExampleAggregateAsDataFrames'&gt;,</span> <span class="pre">True),</span> <span class="pre">'add_index':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.indexadder.IndexAdderIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'batch':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.iter.grouping.BatcherIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'bucketbatch':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.transform.bucketbatcher.BucketBatcherIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'check_hash':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.hashchecker.HashCheckerIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'collate':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.iter.callable.CollatorIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'concat':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.iter.combining.ConcaterIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'cycle':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.cycler.CyclerIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'demux':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.iter.combining.DemultiplexerIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'end_caching':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.cacheholder.EndOnDiskCacheHolderIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'enumerate':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.indexadder.EnumeratorIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'extract':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.extractor.ExtractorIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'filter':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.iter.selecting.FilterIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'fork':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.iter.combining.ForkerIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'groupby':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.iter.grouping.GrouperIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'header':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.header.HeaderIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'in_memory_cache':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.cacheholder.InMemoryCacheHolderIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'lines_to_paragraphs':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.paragraphaggregator.ParagraphAggregatorIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'load_from_rar':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.rar_archive_loader.RarArchiveLoaderIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'map':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.iter.callable.MapperIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'mux':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.iter.combining.MultiplexerIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'on_disk_cache':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.cacheholder.OnDiskCacheHolderIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'open_file_by_fsspec':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.load.fsspec.FSSpecFileOpenerIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'open_file_by_iopath':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.load.iopath.IoPathFileOpenerIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'parse_csv':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.plain_text_reader.CSVParserIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'parse_csv_as_dict':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.plain_text_reader.CSVDictParserIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'parse_json_files':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.jsonparser.JsonParserIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'read_from_tar':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.tararchivereader.TarArchiveReaderIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'read_from_xz':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.xzfilereader.XzFileReaderIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'read_from_zip':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.ziparchivereader.ZipArchiveReaderIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'readlines':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.plain_text_reader.LineReaderIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'routed_decode':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.iter.routeddecoder.RoutedDecoderIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'rows2columnar':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.rows2columnar.Rows2ColumnarIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'save_by_fsspec':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.load.fsspec.FSSpecSaverIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'save_by_iopath':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.load.iopath.IoPathSaverIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'save_to_disk':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.saver.SaverIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'sharding_filter':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.iter.grouping.ShardingFilterIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'shuffle':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.iter.combinatorics.ShufflerIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'trace_as_dataframe':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.dataframe.dataframes.DataFrameTracer'&gt;,</span> <span class="pre">False),</span> <span class="pre">'unbatch':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.iter.grouping.UnBatcherIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'zip':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torch.utils.data.datapipes.iter.combining.ZipperIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'zip_with_iter':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.combining.IterKeyZipperIterDataPipe'&gt;,</span> <span class="pre">False),</span> <span class="pre">'zip_with_map':</span> <span class="pre">functools.partial(&lt;function</span> <span class="pre">IterDataPipe.register_datapipe_as_function.&lt;locals&gt;.class_function&gt;,</span> <span class="pre">&lt;class</span> <span class="pre">'torchdata.datapipes.iter.util.combining.MapKeyZipperIterDataPipe'&gt;,</span> <span class="pre">False)}</span></em><a class="headerlink" href="#torchdata.datapipes.iter.IterDataPipe.functions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.IterDataPipe.getstate_hook">
+<span class="sig-name descname"><span class="pre">getstate_hook</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#torchdata.datapipes.iter.IterDataPipe.getstate_hook" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.IterDataPipe.reduce_ex_hook">
+<span class="sig-name descname"><span class="pre">reduce_ex_hook</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#torchdata.datapipes.iter.IterDataPipe.reduce_ex_hook" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.IterDataPipe.register_datapipe_as_function">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">register_datapipe_as_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">function_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cls_to_register</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enable_df_api_tracing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.IterDataPipe.register_datapipe_as_function" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.IterDataPipe.register_function">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">register_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">function_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">function</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.IterDataPipe.register_function" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.IterDataPipe.set_getstate_hook">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">set_getstate_hook</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hook_fn</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.IterDataPipe.set_getstate_hook" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.IterDataPipe.set_reduce_ex_hook">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">set_reduce_ex_hook</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hook_fn</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.IterDataPipe.set_reduce_ex_hook" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.IterDataPipe.type">
+<span class="sig-name descname"><span class="pre">type</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">typing.Generic[+T_co]</span></em><a class="headerlink" href="#torchdata.datapipes.iter.IterDataPipe.type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.IterKeyZipper">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">IterKeyZipper</span></span><a class="headerlink" href="#torchdata.datapipes.iter.IterKeyZipper" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.combining.IterKeyZipperIterDataPipe" title="torchdata.datapipes.iter.util.combining.IterKeyZipperIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.combining.IterKeyZipperIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.IterableWrapper">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">IterableWrapper</span></span><a class="headerlink" href="#torchdata.datapipes.iter.IterableWrapper" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.utils.IterableWrapperIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.JsonParser">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">JsonParser</span></span><a class="headerlink" href="#torchdata.datapipes.iter.JsonParser" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.jsonparser.JsonParserIterDataPipe" title="torchdata.datapipes.iter.util.jsonparser.JsonParserIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.jsonparser.JsonParserIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.LineReader">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">LineReader</span></span><a class="headerlink" href="#torchdata.datapipes.iter.LineReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.plain_text_reader.LineReaderIterDataPipe" title="torchdata.datapipes.iter.util.plain_text_reader.LineReaderIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.plain_text_reader.LineReaderIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.MapKeyZipper">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">MapKeyZipper</span></span><a class="headerlink" href="#torchdata.datapipes.iter.MapKeyZipper" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.combining.MapKeyZipperIterDataPipe" title="torchdata.datapipes.iter.util.combining.MapKeyZipperIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.combining.MapKeyZipperIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Mapper">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Mapper</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Mapper" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.callable.MapperIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Multiplexer">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Multiplexer</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Multiplexer" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.combining.MultiplexerIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.OnDiskCacheHolder">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">OnDiskCacheHolder</span></span><a class="headerlink" href="#torchdata.datapipes.iter.OnDiskCacheHolder" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.cacheholder.OnDiskCacheHolderIterDataPipe" title="torchdata.datapipes.iter.util.cacheholder.OnDiskCacheHolderIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.cacheholder.OnDiskCacheHolderIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.OnlineReader">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">OnlineReader</span></span><a class="headerlink" href="#torchdata.datapipes.iter.OnlineReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.load.html#torchdata.datapipes.iter.load.online.OnlineReaderIterDataPipe" title="torchdata.datapipes.iter.load.online.OnlineReaderIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.load.online.OnlineReaderIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.ParagraphAggregator">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">ParagraphAggregator</span></span><a class="headerlink" href="#torchdata.datapipes.iter.ParagraphAggregator" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.paragraphaggregator.ParagraphAggregatorIterDataPipe" title="torchdata.datapipes.iter.util.paragraphaggregator.ParagraphAggregatorIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.paragraphaggregator.ParagraphAggregatorIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.RarArchiveLoader">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">RarArchiveLoader</span></span><a class="headerlink" href="#torchdata.datapipes.iter.RarArchiveLoader" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.rar_archive_loader.RarArchiveLoaderIterDataPipe" title="torchdata.datapipes.iter.util.rar_archive_loader.RarArchiveLoaderIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.rar_archive_loader.RarArchiveLoaderIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.RoutedDecoder">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">RoutedDecoder</span></span><a class="headerlink" href="#torchdata.datapipes.iter.RoutedDecoder" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.routeddecoder.RoutedDecoderIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Rows2Columnar">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Rows2Columnar</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Rows2Columnar" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.rows2columnar.Rows2ColumnarIterDataPipe" title="torchdata.datapipes.iter.util.rows2columnar.Rows2ColumnarIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.rows2columnar.Rows2ColumnarIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.SampleMultiplexer">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">SampleMultiplexer</span></span><a class="headerlink" href="#torchdata.datapipes.iter.SampleMultiplexer" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.samplemultiplexer.SampleMultiplexerDataPipe" title="torchdata.datapipes.iter.util.samplemultiplexer.SampleMultiplexerDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.samplemultiplexer.SampleMultiplexerDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Sampler">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Sampler</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Sampler" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.combinatorics.SamplerIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Saver">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Saver</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Saver" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.saver.SaverIterDataPipe" title="torchdata.datapipes.iter.util.saver.SaverIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.saver.SaverIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.ShardingFilter">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">ShardingFilter</span></span><a class="headerlink" href="#torchdata.datapipes.iter.ShardingFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.grouping.ShardingFilterIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Shuffler">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Shuffler</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Shuffler" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.combinatorics.ShufflerIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.StreamReader">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">StreamReader</span></span><a class="headerlink" href="#torchdata.datapipes.iter.StreamReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.streamreader.StreamReaderIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.TarArchiveReader">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">TarArchiveReader</span></span><a class="headerlink" href="#torchdata.datapipes.iter.TarArchiveReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.tararchivereader.TarArchiveReaderIterDataPipe" title="torchdata.datapipes.iter.util.tararchivereader.TarArchiveReaderIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.tararchivereader.TarArchiveReaderIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.UnBatcher">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">UnBatcher</span></span><a class="headerlink" href="#torchdata.datapipes.iter.UnBatcher" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.grouping.UnBatcherIterDataPipe</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.XzFileReader">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">XzFileReader</span></span><a class="headerlink" href="#torchdata.datapipes.iter.XzFileReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.xzfilereader.XzFileReaderIterDataPipe" title="torchdata.datapipes.iter.util.xzfilereader.XzFileReaderIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.xzfilereader.XzFileReaderIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.ZipArchiveReader">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">ZipArchiveReader</span></span><a class="headerlink" href="#torchdata.datapipes.iter.ZipArchiveReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="torchdata.datapipes.iter.util.html#torchdata.datapipes.iter.util.ziparchivereader.ZipArchiveReaderIterDataPipe" title="torchdata.datapipes.iter.util.ziparchivereader.ZipArchiveReaderIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.ziparchivereader.ZipArchiveReaderIterDataPipe</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Zipper">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Zipper</span></span><a class="headerlink" href="#torchdata.datapipes.iter.Zipper" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.datapipes.iter.combining.ZipperIterDataPipe</span></code></p>
+</dd></dl>
+
+</section>
+</section>
+
+
+             </article>
+             
+            </div>
+            <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="torchdata.datapipes.iter.load.html" class="btn btn-neutral float-right" title="torchdata.datapipes.iter.load package" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
+      
+      
+        <a href="torchdata.datapipes.html" class="btn btn-neutral" title="torchdata.datapipes package" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
+  
+
+  
+
+    <hr>
+
+  
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2022, Meta.
+
+    </p>
+  </div>
+    
+      <div>
+        Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+      </div>
+     
+
+</footer>
+
+          </div>
+        </div>
+
+        <div class="pytorch-content-right" id="pytorch-content-right">
+          <div class="pytorch-right-menu" id="pytorch-right-menu">
+            <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
+              <ul>
+<li><a class="reference internal" href="#">torchdata.datapipes.iter package</a><ul>
+<li><a class="reference internal" href="#subpackages">Subpackages</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  
+
+
+  
+
+     
+       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+         <script src="_static/jquery.js"></script>
+         <script src="_static/underscore.js"></script>
+         <script src="_static/doctools.js"></script>
+     
+
+  
+
+  <script type="text/javascript" src="_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="_static/js/vendor/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+  <!-- Begin Footer -->
+
+  <div class="container-fluid docs-tutorials-resources" id="docs-tutorials-resources">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <h2>Docs</h2>
+          <p>Access comprehensive developer documentation for PyTorch</p>
+          <a class="with-right-arrow" href="https://pytorch.org/docs/stable/index.html">View Docs</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Tutorials</h2>
+          <p>Get in-depth tutorials for beginners and advanced developers</p>
+          <a class="with-right-arrow" href="https://pytorch.org/tutorials">View Tutorials</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Resources</h2>
+          <p>Find development resources and get your questions answered</p>
+          <a class="with-right-arrow" href="https://pytorch.org/resources">View Resources</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-logo-wrapper">
+        <a href="https://pytorch.org/" class="footer-logo"></a>
+      </div>
+
+      <div class="footer-links-wrapper">
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/">PyTorch</a></li>
+            <li><a href="https://pytorch.org/get-started">Get Started</a></li>
+            <li><a href="https://pytorch.org/features">Features</a></li>
+            <li><a href="https://pytorch.org/ecosystem">Ecosystem</a></li>
+            <li><a href="https://pytorch.org/blog/">Blog</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md">Contributing</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/resources">Resources</a></li>
+            <li><a href="https://pytorch.org/tutorials">Tutorials</a></li>
+            <li><a href="https://pytorch.org/docs/stable/index.html">Docs</a></li>
+            <li><a href="https://discuss.pytorch.org" target="_blank">Discuss</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/issues" target="_blank">Github Issues</a></li>
+            <li><a href="https://pytorch.org/assets/brand-guidelines/PyTorch-Brand-Guidelines.pdf" target="_blank">Brand Guidelines</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col follow-us-col">
+          <ul>
+            <li class="list-title">Stay Connected</li>
+            <li>
+              <div id="mc_embed_signup">
+                <form
+                  action="https://twitter.us14.list-manage.com/subscribe/post?u=75419c71fe0a935e53dfa4a3f&id=91d0dccd39"
+                  method="post"
+                  id="mc-embedded-subscribe-form"
+                  name="mc-embedded-subscribe-form"
+                  class="email-subscribe-form validate"
+                  target="_blank"
+                  novalidate>
+                  <div id="mc_embed_signup_scroll" class="email-subscribe-form-fields-wrapper">
+                    <div class="mc-field-group">
+                      <label for="mce-EMAIL" style="display:none;">Email Address</label>
+                      <input type="email" value="" name="EMAIL" class="required email" id="mce-EMAIL" placeholder="Email Address">
+                    </div>
+
+                    <div id="mce-responses" class="clear">
+                      <div class="response" id="mce-error-response" style="display:none"></div>
+                      <div class="response" id="mce-success-response" style="display:none"></div>
+                    </div>    <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+
+                    <div style="position: absolute; left: -5000px;" aria-hidden="true"><input type="text" name="b_75419c71fe0a935e53dfa4a3f_91d0dccd39" tabindex="-1" value=""></div>
+
+                    <div class="clear">
+                      <input type="submit" value="" name="subscribe" id="mc-embedded-subscribe" class="button email-subscribe-button">
+                    </div>
+                  </div>
+                </form>
+              </div>
+
+            </li>
+          </ul>
+
+          <div class="footer-social-icons">
+            <a href="https://www.facebook.com/pytorch" target="_blank" class="facebook"></a>
+            <a href="https://twitter.com/pytorch" target="_blank" class="twitter"></a>
+            <a href="https://www.youtube.com/pytorch" target="_blank" class="youtube"></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <div class="cookie-banner-wrapper">
+  <div class="container">
+    <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
+    <img class="close-button" src="_static/images/pytorch-x.svg">
+  </div>
+</div>
+
+  <!-- End Footer -->
+
+  <!-- Begin Mobile Menu -->
+
+  <div class="mobile-main-menu">
+    <div class="container-fluid">
+      <div class="container">
+        <div class="mobile-main-menu-header-container">
+          <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+          <a class="main-menu-close-button" href="#" data-behavior="close-mobile-menu"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-main-menu-links-container">
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://pytorch.org/get-started">Get Started</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/hub">PyTorch Hub</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/blog/">Blog</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/tutorials">Tutorials</a>
+          </li>
+
+          <li class="resources-mobile-menu-title">
+            Docs
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/docs/stable/index.html">PyTorch</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/audio/stable/index.html">torchaudio</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/text/stable/index.html">torchtext</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/vision/stable/index.html">torchvision</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/elastic/">TorchElastic</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/serve/">TorchServe</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/xla">PyTorch on XLA Devices</a>
+            </li>
+          </ul>
+
+          <li class="resources-mobile-menu-title">
+            Resources
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/resources">Developer Resources</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/features">About</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/hub">Models (Beta)</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/#community-module">Community</a>
+            </li>
+
+            <li>
+              <a href="https://discuss.pytorch.org/">Forums</a>
+            </li>
+          </ul>
+
+          <li>
+            <a href="https://github.com/pytorch/pytorch">Github</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Mobile Menu -->
+
+  <script type="text/javascript" src="_static/js/vendor/anchor.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      mobileMenu.bind();
+      mobileTOC.bind();
+      pytorchAnchors.bind();
+      sideMenus.bind();
+      scrollToAnchor.bind();
+      highlightNavigation.bind();
+      mainMenuDropdown.bind();
+      filterTags.bind();
+
+      // Add class to links that have code blocks, since we cannot create links in code blocks
+      $("article.pytorch-article a span.pre").each(function(e) {
+        $(this).closest("a").addClass("has-code");
+      });
+    })
+  </script>
+</body>
+</html>
