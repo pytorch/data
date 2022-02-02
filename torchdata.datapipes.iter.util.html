@@ -1,0 +1,1413 @@
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>torchdata.datapipes.iter.util package &mdash; TorchData 0.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="torchdata.datapipes.map package" href="torchdata.datapipes.map.html" />
+    <link rel="prev" title="torchdata.datapipes.iter.transform package" href="torchdata.datapipes.iter.transform.html" />
+  <!-- Google Analytics -->
+  
+  <!-- End Google Analytics -->
+  
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+  <!-- Preload the theme fonts -->
+
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+
+<!-- Preload the katex fonts -->
+
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size1-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size4-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size2-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size3-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Caligraphic-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css" integrity="sha384-vSIIfh2YWi9wW0r9iZe7RJPrKwp6bG+s9QZMoITbCckVJqGCCRhc+ccxNcdpHuYu" crossorigin="anonymous">
+</head>
+
+<div class="container-fluid header-holder tutorials-header" id="header-holder">
+  <div class="container">
+    <div class="header-container">
+      <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://pytorch.org/get-started">Get Started</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/blog/">Blog</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/tutorials">Tutorials</a>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="resource-option with-down-orange-arrow">
+                Docs
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/docs/stable/index.html">
+                  <span class="dropdown-title">PyTorch</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/audio/stable/index.html">
+                  <span class="dropdown-title">torchaudio</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/text/stable/index.html">
+                  <span class="dropdown-title">torchtext</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/vision/stable/index.html">
+                  <span class="dropdown-title">torchvision</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/elastic/">
+                  <span class="dropdown-title">TorchElastic</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/serve/">
+                  <span class="dropdown-title">TorchServe</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/xla">
+                  <span class="dropdown-title">PyTorch on XLA Devices</span>
+                  <p></p>
+                </a>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="resource-option with-down-arrow">
+                Resources
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/features">
+                  <span class="dropdown-title">About</span>
+                  <p>Learn about PyTorch’s features and capabilities</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/#community-module">
+                  <span class="dropdown-title">Community</span>
+                  <p>Join the PyTorch developer community to contribute, learn, and get your questions answered.</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources">
+                  <span class="dropdown-title">Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://discuss.pytorch.org/" target="_blank">
+                  <span class="dropdown-title">Forums</span>
+                  <p>A place to discuss PyTorch code, issues, install, research</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/hub">
+                  <span class="dropdown-title">Models (Beta)</span>
+                  <p>Discover, publish, and reuse pre-trained models</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+            <a href="https://github.com/pytorch/pytorch">GitHub</a>
+          </li>
+        </ul>
+      </div>
+
+      <a class="main-menu-open-button" href="#" data-behavior="open-mobile-menu"></a>
+    </div>
+  </div>
+</div>
+
+<body class="pytorch-body">
+
+   
+
+    
+
+    <div class="table-of-contents-link-wrapper">
+      <span>Table of Contents</span>
+      <a href="#" class="toggle-table-of-contents" data-behavior="toggle-table-of-contents"></a>
+    </div>
+
+    <nav data-toggle="wy-nav-shift" class="pytorch-left-menu" id="pytorch-left-menu">
+      <div class="pytorch-side-scroll">
+        <div class="pytorch-menu pytorch-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          <div class="pytorch-left-menu-search">
+            
+
+            
+              
+              
+            
+
+            
+
+
+  
+
+
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search Docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+            
+          </div>
+
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.load.html">torchdata.datapipes.iter.load package</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="torchdata.datapipes.iter.html">torchdata.datapipes.iter package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.transform.html">torchdata.datapipes.iter.transform package</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">torchdata.datapipes.iter.util package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.load.html">torchdata.datapipes.map.load package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.html">torchdata.datapipes.map package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.transform.html">torchdata.datapipes.map.transform package</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="torchdata.datapipes.html">torchdata.datapipes package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.utils.html">torchdata.datapipes.utils package</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="torchdata.html">torchdata package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">examples package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.vision.html">examples.vision package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <div class="pytorch-container">
+      <div class="pytorch-page-level-bar" id="pytorch-page-level-bar">
+        <div class="pytorch-breadcrumbs-wrapper">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="pytorch-breadcrumbs">
+    
+      <li>
+        <a href="index.html">
+          
+            Docs
+          
+        </a> &gt;
+      </li>
+
+        
+          <li><a href="modules.html">data</a> &gt;</li>
+        
+          <li><a href="torchdata.html">torchdata package</a> &gt;</li>
+        
+          <li><a href="torchdata.datapipes.html">torchdata.datapipes package</a> &gt;</li>
+        
+          <li><a href="torchdata.datapipes.iter.html">torchdata.datapipes.iter package</a> &gt;</li>
+        
+      <li>torchdata.datapipes.iter.util package</li>
+    
+    
+      <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="_sources/torchdata.datapipes.iter.util.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+</div>
+        </div>
+
+        <div class="pytorch-shortcuts-wrapper" id="pytorch-shortcuts-wrapper">
+          Shortcuts
+        </div>
+      </div>
+
+      <section data-toggle="wy-nav-shift" id="pytorch-content-wrap" class="pytorch-content-wrap">
+        <div class="pytorch-content-left">
+
+        
+          
+          <div class="rst-content">
+          
+            <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
+             <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
+              
+  <section id="torchdata-datapipes-iter-util-package">
+<h1>torchdata.datapipes.iter.util package<a class="headerlink" href="#torchdata-datapipes-iter-util-package" title="Permalink to this headline">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="module-torchdata.datapipes.iter.util.cacheholder">
+<span id="torchdata-datapipes-iter-util-cacheholder-module"></span><h2>torchdata.datapipes.iter.util.cacheholder module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.cacheholder" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.cacheholder.EndOnDiskCacheHolderIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.cacheholder.</span></span><span class="sig-name descname"><span class="pre">EndOnDiskCacheHolderIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'w'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepath_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">same_filepath_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_read</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.cacheholder.EndOnDiskCacheHolderIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.dataset.IterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.dataset.IterDataPipe</span></code></a></p>
+<p><cite>EndOnDiskCacheHolder</cite> is a IterDataPipe that indicates when the result of
+prior DataPipe will be saved local files specified by <cite>filepath_fn</cite>
+And, the result of source DataPipe is required to be a tuple of metadata and data,
+or a tuple of metadata and file handle.</p>
+<dl>
+<dt>Args:</dt><dd><p>datapipe: IterDataPipe with at least one <cite>OnDiskCacheHolder</cite> in the graph.
+mode: Mode in which cached files are opened for write the data. This is needed</p>
+<blockquote>
+<div><p>to be aligned with the type of data or file handle from <cite>datapipe</cite>.</p>
+</div></blockquote>
+<dl class="simple">
+<dt>filepath_fn: Optional function to extract filepath from the metadata from <cite>datapipe</cite>.</dt><dd><p>As default, it would directly use the metadata as file path.</p>
+</dd>
+</dl>
+<p>same_filepath_fn: Set to <cite>True</cite> to use same <cite>filepath_fn</cite> from the <cite>OnDiskCacheHolder</cite>.
+skip_read: Boolean value to skip reading the file handle from <cite>datapipe</cite>.</p>
+<blockquote>
+<div><p>As default, reading is enabled and reading function is created based on the <cite>mode</cite>.</p>
+</div></blockquote>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.cacheholder.EndOnDiskCacheHolderIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.cacheholder.EndOnDiskCacheHolderIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.cacheholder.InMemoryCacheHolderIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.cacheholder.</span></span><span class="sig-name descname"><span class="pre">InMemoryCacheHolderIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_dp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">abc.IterDataPipe[+</span> <span class="pre">T_co]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.cacheholder.InMemoryCacheHolderIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[+T_co]</span></code></p>
+<p>Iterable DataPipe that stores elements from the source DataPipe in memory, up to a size limit (if given).
+This cache is FIFO - once the cache is full, further elements will not be added to the cache
+until the previous ones are yielded and popped off the cache.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>source_dp: source DataPipe from which elements are read and stored in memory
+size: The maximum size (in megabytes) that this DataPipe can hold in memory. This defaults to unlimited.</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.cacheholder.InMemoryCacheHolderIterDataPipe.idx">
+<span class="sig-name descname"><span class="pre">idx</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#torchdata.datapipes.iter.util.cacheholder.InMemoryCacheHolderIterDataPipe.idx" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.cacheholder.InMemoryCacheHolderIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.cacheholder.InMemoryCacheHolderIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.cacheholder.InMemoryCacheHolderIterDataPipe.size">
+<span class="sig-name descname"><span class="pre">size</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#torchdata.datapipes.iter.util.cacheholder.InMemoryCacheHolderIterDataPipe.size" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.cacheholder.OnDiskCacheHolderIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.cacheholder.</span></span><span class="sig-name descname"><span class="pre">OnDiskCacheHolderIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.dataset.IterDataPipe"><span class="pre">torch.utils.data.dataset.IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepath_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hash_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hash_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'sha256'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_check_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.cacheholder.OnDiskCacheHolderIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.dataset.IterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.dataset.IterDataPipe</span></code></a></p>
+<p><cite>OnDiskCacheHolder</cite> is a IterDataPipe that caches output of multiple DataPipe operations
+to local files, which are normally performance bottleneck like download, decompress,
+and etc.</p>
+<p>Use <cite>.end_caching()</cite> to stop tracing the sequence of DataPipe operations and save result to local files.</p>
+<dl>
+<dt>Args:</dt><dd><p>source_datapipe: IterDataPipe
+filepath_fn: Given data from <cite>source_datapipe</cite>, returns file path(s) on local file system.</p>
+<blockquote>
+<div><p>Single file path, tuple or list of file paths is accepted as return type.
+And, generator function that yields file paths is also allowed.
+As default, data from <cite>source_datapipe</cite> is directly used to determine the existency of cache.</p>
+</div></blockquote>
+<dl class="simple">
+<dt>hash_dict: Dict mapping file names to their corresponding hashes. If hash_dict is specified,</dt><dd><p>the extra hash check will be attached before saving data to local file system. If the data
+doesn’t meet the hash, the pipeline will raise Error.</p>
+</dd>
+</dl>
+<p>hash_type: The type of hash function to apply
+extra_check_fn: Optional function to carry out extra validation on</p>
+<blockquote>
+<div><p>the given file path from <cite>filepath_fn</cite>.</p>
+</div></blockquote>
+</dd>
+<dt>Example:</dt><dd><p>url = IterableWrapper([”<a class="reference external" href="https://path/to/filename">https://path/to/filename</a>”, ])</p>
+<dl class="simple">
+<dt>def _filepath_fn(url):</dt><dd><p>temp_dir = tempfile.gettempdir()
+return os.path.join(temp_dir, os.path.basename(url))</p>
+</dd>
+</dl>
+<p>hash_dict = {“expected_filepaht”: expected_MD5_hash}</p>
+<p>cache_dp = url.on_disk_cache(filepath_fn=_filepath_fn, hash_dict=_hash_dict, hash_type=”md5”)
+cache_dp = HttpReader(cache_dp).end_caching(mode=”wb”. filepath_fn=_filepath_fn)</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.cacheholder.OnDiskCacheHolderIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.cacheholder.OnDiskCacheHolderIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util.combining">
+<span id="torchdata-datapipes-iter-util-combining-module"></span><h2>torchdata.datapipes.iter.util.combining module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.combining" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.combining.IterKeyZipperIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.combining.</span></span><span class="sig-name descname"><span class="pre">IterKeyZipperIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.dataset.IterDataPipe"><span class="pre">torch.utils.data.dataset.IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.dataset.IterDataPipe"><span class="pre">torch.utils.data.dataset.IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_key_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">merge_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.combining.IterKeyZipperIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[+T_co]</span></code></p>
+<p><a class="reference internal" href="#torchdata.datapipes.iter.util.combining.IterKeyZipperIterDataPipe" title="torchdata.datapipes.iter.util.combining.IterKeyZipperIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">IterKeyZipperIterDataPipe</span></code></a>.</p>
+<p>Iterable DataPipe to zip two IterDataPipes together based on the matching key.</p>
+<dl>
+<dt>Args:</dt><dd><p>source_datapipe: IterKeyZipper will yield data based on the order of this IterDataPipe
+ref_datapipe: Reference IterDataPipe to find matching key for <cite>source_datapipe</cite>
+key_fn: Callable to extract key of data from source_datapipe
+ref_key_fn: Callable to extract key of data from ref_datapipe.</p>
+<blockquote>
+<div><p>If it’s not specified, the <cite>key_fn</cite> would be applied to reference data</p>
+</div></blockquote>
+<dl class="simple">
+<dt>keep_key: Option to yield the matching key along with the items in a tuple,</dt><dd><p>resulting in (key, merge_fn(item1, item2))</p>
+</dd>
+<dt>buffer_size: The size of buffer used to hold key-data pair from reference DataPipe.</dt><dd><p>If it’s specified as None, the buffer size becomes infinite</p>
+</dd>
+<dt>merge_fn: Function that combines the item from source_iterdatapipe and the item from ref_datapipe,</dt><dd><p>by default a tuple is created</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.combining.IterKeyZipperIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.combining.IterKeyZipperIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.combining.MapKeyZipperIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.combining.</span></span><span class="sig-name descname"><span class="pre">MapKeyZipperIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_iterdatapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.dataset.IterDataPipe"><span class="pre">torch.utils.data.dataset.IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.utils.data.dataset.MapDataPipe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">merge_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.combining.MapKeyZipperIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[+T_co]</span></code></p>
+<p><a class="reference internal" href="#torchdata.datapipes.iter.util.combining.MapKeyZipperIterDataPipe" title="torchdata.datapipes.iter.util.combining.MapKeyZipperIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">MapKeyZipperIterDataPipe</span></code></a>.</p>
+<p>IterDataPipe that joins the items from the source IterDataPipe with items from a MapDataPipe. The
+matching is done by the key function, which maps an item from source IterDataPipe to
+a key that exists in MapDataPipe. The return value is created by the merge function, which returns
+a tuple of the two items by default.</p>
+<dl>
+<dt>Args:</dt><dd><p>source_iterdatapipe: IterDataPipe from which items are yield and will be combined with an item from map_datapipe
+map_datapipe: MapDataPipe that takes a key from key_fn, and returns an item
+key_fn: Function that maps each item from source_iterdatapipe to a key that exists in map_datapipe
+merge_fn: Function that combines the item from source_iterdatapipe and the item from map_datapipe,</p>
+<blockquote>
+<div><p>by default a tuple is created</p>
+</div></blockquote>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.combining.MapKeyZipperIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.combining.MapKeyZipperIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util.cycler">
+<span id="torchdata-datapipes-iter-util-cycler-module"></span><h2>torchdata.datapipes.iter.util.cycler module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.cycler" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.cycler.CyclerIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.cycler.</span></span><span class="sig-name descname"><span class="pre">CyclerIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">abc.IterDataPipe[+</span> <span class="pre">T_co]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">count</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.cycler.CyclerIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[+T_co]</span></code></p>
+<p>Cycle the specified input in perpetuity (by default), or for the specified number of times.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>source_datapipe: source DataPipe that will be cycled through
+count: the number of times to read through the source DataPipe (if <cite>None</cite>, it will cycle in perpetuity)</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.cycler.CyclerIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.cycler.CyclerIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util.extractor">
+<span id="torchdata-datapipes-iter-util-extractor-module"></span><h2>torchdata.datapipes.iter.util.extractor module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.extractor" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.extractor.CompressionType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.extractor.</span></span><span class="sig-name descname"><span class="pre">CompressionType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.extractor.CompressionType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
+<p>An enumeration.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.extractor.CompressionType.GZIP">
+<span class="sig-name descname"><span class="pre">GZIP</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'gzip'</span></em><a class="headerlink" href="#torchdata.datapipes.iter.util.extractor.CompressionType.GZIP" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.extractor.CompressionType.LZMA">
+<span class="sig-name descname"><span class="pre">LZMA</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'lzma'</span></em><a class="headerlink" href="#torchdata.datapipes.iter.util.extractor.CompressionType.LZMA" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.extractor.CompressionType.TAR">
+<span class="sig-name descname"><span class="pre">TAR</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'tar'</span></em><a class="headerlink" href="#torchdata.datapipes.iter.util.extractor.CompressionType.TAR" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.extractor.CompressionType.ZIP">
+<span class="sig-name descname"><span class="pre">ZIP</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'zip'</span></em><a class="headerlink" href="#torchdata.datapipes.iter.util.extractor.CompressionType.ZIP" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.extractor.ExtractorIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.extractor.</span></span><span class="sig-name descname"><span class="pre">ExtractorIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">abc.IterDataPipe</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">io.IOBase</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#torchdata.datapipes.iter.util.extractor.CompressionType" title="torchdata.datapipes.iter.util.extractor.CompressionType"><span class="pre">torchdata.datapipes.iter.util.extractor.CompressionType</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.extractor.ExtractorIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[typing.Tuple[str,</span> <span class="pre">torch.utils.data.datapipes.utils.common.StreamWrapper]]</span></code></p>
+<p>Iterable DataPipe that takes tuples of path and compressed stream of data, and return tuples of
+path and decompressed (extracted) stream of data. The input compression format can be specified
+or automatically detected based on the files’ file extensions.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>source_datapipe: IterDataPipe containing tuples of path and compressed stream of data
+file_type: Optional string or CompressionType that represents what compression format of the inputs</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.extractor.ExtractorIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.extractor.ExtractorIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.extractor.ExtractorIterDataPipe.types">
+<span class="sig-name descname"><span class="pre">types</span></span><a class="headerlink" href="#torchdata.datapipes.iter.util.extractor.ExtractorIterDataPipe.types" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#torchdata.datapipes.iter.util.extractor.CompressionType" title="torchdata.datapipes.iter.util.extractor.CompressionType"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.extractor.CompressionType</span></code></a></p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util.hashchecker">
+<span id="torchdata-datapipes-iter-util-hashchecker-module"></span><h2>torchdata.datapipes.iter.util.hashchecker module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.hashchecker" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.hashchecker.HashCheckerIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.hashchecker.</span></span><span class="sig-name descname"><span class="pre">HashCheckerIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">abc.IterDataPipe</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">io.IOBase</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hash_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hash_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'sha256'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rewind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.hashchecker.HashCheckerIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[typing.Tuple[str,</span> <span class="pre">typing.Union[str,</span> <span class="pre">bytes,</span> <span class="pre">bytearray,</span> <span class="pre">torch.utils.data.datapipes.utils.common.StreamWrapper]]]</span></code></p>
+<p>Iterable DataPipe that computes and checks the hash of each file, from an input
+DataPipe of tuples of file name and data (stream). If the hashes match the given hash
+in the dictionary, it yields a tuple of file name and data (stream). Otherwise, it raises an error.</p>
+<dl>
+<dt>Args:</dt><dd><p>source_datapipe: IterDataPipe with tuples of file name and data (stream)
+hash_dict: Dict that maps file names to their corresponding hashes
+hash_type: The type of hash function to apply
+rewind: Rewind the stream after using the stream to compute the hash (this</p>
+<blockquote>
+<div><p>does not work with non-seekable stream, e.g. HTTP)</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Usage: dp = dp.check_hash({‘train.py’:’0d8b94d9fa9fb1ad89b9e3da9e1521495dca558fc5213b0fd7fd7b71c23f9921’})</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.hashchecker.HashCheckerIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.hashchecker.HashCheckerIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util.header">
+<span id="torchdata-datapipes-iter-util-header-module"></span><h2>torchdata.datapipes.iter.util.header module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.header" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.header.HeaderIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.header.</span></span><span class="sig-name descname"><span class="pre">HeaderIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">abc.IterDataPipe[+</span> <span class="pre">T_co]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.header.HeaderIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[+T_co]</span></code></p>
+<p>Iterable DataPipe that yields elements from the source DataPipe from the start up to the given limit</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>source_datapipe: the DataPipe from which elements will be yielded
+limit: the number of elements to yield before stopping</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.header.HeaderIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.header.HeaderIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util.indexadder">
+<span id="torchdata-datapipes-iter-util-indexadder-module"></span><h2>torchdata.datapipes.iter.util.indexadder module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.indexadder" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.indexadder.EnumeratorIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.indexadder.</span></span><span class="sig-name descname"><span class="pre">EnumeratorIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">abc.IterDataPipe</span><span class="p"><span class="pre">[</span></span><span class="pre">K</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starting_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.indexadder.EnumeratorIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[typing.Tuple[int,</span> <span class="pre">~K]]</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">Enumerator</span></code>.</p>
+<p>Iterable DataPipe to add an index to an existing DataPipe through enumeration, with
+the index starting from 0 by default.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>source_datapipe: Iterable DataPipe being indexed
+starting_index: Index from which enumeration will start</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.indexadder.EnumeratorIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.indexadder.EnumeratorIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.indexadder.IndexAdderIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.indexadder.</span></span><span class="sig-name descname"><span class="pre">IndexAdderIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">abc.IterDataPipe</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'index'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.indexadder.IndexAdderIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[typing.Dict]</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">IndexAdder</span></code>.</p>
+<p>Iterable DataPipe to add an index to an existing datapipe. The row or batch
+must be of type dict otherwise a <cite>NotImplementedError</cite> is thrown. The index
+of the data is set to the <cite>index_name</cite> field provided.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>source_datapipe: Iterable DataPipe being indexed
+index_name: Name of the key to store data index</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.indexadder.IndexAdderIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.indexadder.IndexAdderIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util.jsonparser">
+<span id="torchdata-datapipes-iter-util-jsonparser-module"></span><h2>torchdata.datapipes.iter.util.jsonparser module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.jsonparser" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.jsonparser.JsonParserIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.jsonparser.</span></span><span class="sig-name descname"><span class="pre">JsonParserIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">abc.IterDataPipe</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">IO</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.jsonparser.JsonParserIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[typing.Tuple[str,</span> <span class="pre">typing.Dict]]</span></code></p>
+<p>Iterable DataPipe that reads from JSON data stream and yields a tuple of file name and JSON data</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>source_datapipe: a DataPipe with tuples of file name and JSON data stream
+kwargs: keyword arguments that will be passed through to <cite>json.loads</cite></p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.jsonparser.JsonParserIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.jsonparser.JsonParserIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util.paragraphaggregator">
+<span id="torchdata-datapipes-iter-util-paragraphaggregator-module"></span><h2>torchdata.datapipes.iter.util.paragraphaggregator module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.paragraphaggregator" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.paragraphaggregator.ParagraphAggregatorIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.paragraphaggregator.</span></span><span class="sig-name descname"><span class="pre">ParagraphAggregatorIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">source_datapipe:</span> <span class="pre">abc.IterDataPipe[typing.Tuple[str,</span> <span class="pre">+T_co]],</span> <span class="pre">joiner:</span> <span class="pre">typing.Callable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_line_join&gt;</span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.paragraphaggregator.ParagraphAggregatorIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[typing.Tuple[str,</span> <span class="pre">str]]</span></code></p>
+<p>Iterable DataPipe that aggregates lines of text from the same file into a single paragraph.
+Specifically, this accepts a DataPipe consisting of tuples of a file name and a line. For each tuple,
+it checks if the file name matches the file name from the previous tuple. If yes, it joins the current line
+with existing paragraph. If the file names do not match, the existing paragraph is yielded and a new
+paragraph starts.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>source_datapipe: a DataPipe with tuples of a file name and a line
+joiner: a function that joins a list of lines together</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.paragraphaggregator.ParagraphAggregatorIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.paragraphaggregator.ParagraphAggregatorIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util.plain_text_reader">
+<span id="torchdata-datapipes-iter-util-plain-text-reader-module"></span><h2>torchdata.datapipes.iter.util.plain_text_reader module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.plain_text_reader" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.plain_text_reader.CSVDictParserIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.plain_text_reader.</span></span><span class="sig-name descname"><span class="pre">CSVDictParserIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">abc.IterDataPipe</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">IO</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_lines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">encoding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'utf-8'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">errors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'ignore'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">fmtparams</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.plain_text_reader.CSVDictParserIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.plain_text_reader._CSVBaseParserIterDataPipe</span></code></p>
+<p>Iterable DataPipe that accepts a DataPipe consists of tuples of file name and CSV data stream.
+This reads and returns the contents within the CSV files one row at a time (as a Dict by default,
+depending on fmtparams).
+The first row of each file, unless skipped, will be used as the header; the contents of the header row
+will be used as keys for the Dicts generated from the remaining rows.</p>
+<dl>
+<dt>Args:</dt><dd><p>source_datapipe: source DataPipe with tuples of file name and CSV data stream
+skip_lines: number of lines to skip at the beginning of each file
+strip_newline: if True, the new line character will be stripped
+decode: if True, this will decode the contents of the file based on the specified encoding
+encoding: the character encoding of the files (default=’utf-8’)
+errors: the error handling scheme used while decoding
+return_path: if True, each line will return a tuple of path and contents, rather</p>
+<blockquote>
+<div><p>than just the contents</p>
+</div></blockquote>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.plain_text_reader.CSVDictParserIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.plain_text_reader.CSVDictParserIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.plain_text_reader.CSVParserIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.plain_text_reader.</span></span><span class="sig-name descname"><span class="pre">CSVParserIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">abc.IterDataPipe</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">IO</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_lines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">encoding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'utf-8'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">errors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'ignore'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">fmtparams</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.plain_text_reader.CSVParserIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.util.plain_text_reader._CSVBaseParserIterDataPipe</span></code></p>
+<p>Iterable DataPipe that accepts a DataPipe consists of tuples of file name and CSV data stream.
+This reads and returns the contents within the CSV files one row at a time (as a List
+by default, depending on fmtparams).</p>
+<dl>
+<dt>Args:</dt><dd><p>source_datapipe: source DataPipe with tuples of file name and CSV data stream
+skip_lines: number of lines to skip at the beginning of each file
+strip_newline: if True, the new line character will be stripped
+decode: if True, this will decode the contents of the file based on the specified encoding
+encoding: the character encoding of the files (default=’utf-8’)
+errors: the error handling scheme used while decoding
+return_path: if True, each line will return a tuple of path and contents, rather</p>
+<blockquote>
+<div><p>than just the contents</p>
+</div></blockquote>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.plain_text_reader.CSVParserIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.plain_text_reader.CSVParserIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.plain_text_reader.LineReaderIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.plain_text_reader.</span></span><span class="sig-name descname"><span class="pre">LineReaderIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">abc.IterDataPipe</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">IO</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_lines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_newline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">encoding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'utf-8'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">errors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'ignore'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.plain_text_reader.LineReaderIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[typing.Union[str,</span> <span class="pre">bytes,</span> <span class="pre">typing.Tuple[str,</span> <span class="pre">typing.Union[str,</span> <span class="pre">bytes]]]]</span></code></p>
+<p>Iterable DataPipe that accepts a DataPipe consisting of tuples of file name and string data stream,
+and for each line in the stream, it yields a tuple of file name and the line</p>
+<dl>
+<dt>Args:</dt><dd><p>source_datapipe: a DataPipe with tuples of file name and string data stream
+skip_lines: number of lines to skip at the beginning of each file
+strip_newline: if True, the new line character will be stripped
+decode: if True, this will decode the contents of the file based on the specified encoding
+encoding: the character encoding of the files (default=’utf-8’)
+errors: the error handling scheme used while decoding
+return_path: if True, each line will return a tuple of path and contents, rather</p>
+<blockquote>
+<div><p>than just the contents</p>
+</div></blockquote>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.plain_text_reader.LineReaderIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.plain_text_reader.LineReaderIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.plain_text_reader.PlainTextReaderHelper">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.plain_text_reader.</span></span><span class="sig-name descname"><span class="pre">PlainTextReaderHelper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_lines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_newline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">encoding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'utf-8'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">errors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'ignore'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.plain_text_reader.PlainTextReaderHelper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.plain_text_reader.PlainTextReaderHelper.decode">
+<span class="sig-name descname"><span class="pre">decode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stream</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.datapipes.iter.util.plain_text_reader.PlainTextReaderHelper.decode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.plain_text_reader.PlainTextReaderHelper.return_path">
+<span class="sig-name descname"><span class="pre">return_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stream</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">torchdata.datapipes.iter.util.plain_text_reader.D</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">torchdata.datapipes.iter.util.plain_text_reader.D</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">torchdata.datapipes.iter.util.plain_text_reader.D</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.datapipes.iter.util.plain_text_reader.PlainTextReaderHelper.return_path" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.plain_text_reader.PlainTextReaderHelper.skip_lines">
+<span class="sig-name descname"><span class="pre">skip_lines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">IO</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.datapipes.iter.util.plain_text_reader.PlainTextReaderHelper.skip_lines" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.plain_text_reader.PlainTextReaderHelper.strip_newline">
+<span class="sig-name descname"><span class="pre">strip_newline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stream</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.datapipes.iter.util.plain_text_reader.PlainTextReaderHelper.strip_newline" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util.rar_archive_loader">
+<span id="torchdata-datapipes-iter-util-rar-archive-loader-module"></span><h2>torchdata.datapipes.iter.util.rar_archive_loader module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.rar_archive_loader" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.rar_archive_loader.RarArchiveLoaderIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.rar_archive_loader.</span></span><span class="sig-name descname"><span class="pre">RarArchiveLoaderIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">abc.IterDataPipe</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">io.BufferedIOBase</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.rar_archive_loader.RarArchiveLoaderIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[typing.Tuple[str,</span> <span class="pre">io.BufferedIOBase]]</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.rar_archive_loader.RarArchiveLoaderIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.rar_archive_loader.RarArchiveLoaderIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.rar_archive_loader.RarfilePatcher">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.rar_archive_loader.</span></span><span class="sig-name descname"><span class="pre">RarfilePatcher</span></span><a class="headerlink" href="#torchdata.datapipes.iter.util.rar_archive_loader.RarfilePatcher" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.rar_archive_loader.RarfilePatcher.start">
+<span class="sig-name descname"><span class="pre">start</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.rar_archive_loader.RarfilePatcher.start" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.rar_archive_loader.RarfilePatcher.stop">
+<span class="sig-name descname"><span class="pre">stop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.rar_archive_loader.RarfilePatcher.stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util.rows2columnar">
+<span id="torchdata-datapipes-iter-util-rows2columnar-module"></span><h2>torchdata.datapipes.iter.util.rows2columnar module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.rows2columnar" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.rows2columnar.Rows2ColumnarIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.rows2columnar.</span></span><span class="sig-name descname"><span class="pre">Rows2ColumnarIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">abc.IterDataPipe</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.rows2columnar.Rows2ColumnarIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[typing.Dict]</span></code></p>
+<p>Iterable DataPipe that accepts an input DataPipe with batches of data, and each row
+within a batch must either be a Dict or a List. This DataPipe processes one batch
+at a time and yields a Dict for each batch, with column names as keys and lists of
+corresponding values from each row as values.</p>
+<p>Note: If column names are not given and each row is a Dict, the keys of that Dict will be used as column names.</p>
+<dl>
+<dt>Args:</dt><dd><dl class="simple">
+<dt>source_datapipe: a DataPipe where each item is a batch. Within each batch,</dt><dd><p>there are rows and each row is a List or Dict.</p>
+</dd>
+</dl>
+<p>column_names: a function that joins a list of lines together</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.rows2columnar.Rows2ColumnarIterDataPipe.column_names">
+<span class="sig-name descname"><span class="pre">column_names</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#torchdata.datapipes.iter.util.rows2columnar.Rows2ColumnarIterDataPipe.column_names" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.rows2columnar.Rows2ColumnarIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.rows2columnar.Rows2ColumnarIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util.samplemultiplexer">
+<span id="torchdata-datapipes-iter-util-samplemultiplexer-module"></span><h2>torchdata.datapipes.iter.util.samplemultiplexer module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.samplemultiplexer" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.samplemultiplexer.SampleMultiplexerDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.samplemultiplexer.</span></span><span class="sig-name descname"><span class="pre">SampleMultiplexerDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipes_to_weights_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict[abc.IterDataPipe[+</span> <span class="pre">T_co],</span> <span class="pre">float]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.samplemultiplexer.SampleMultiplexerDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[+T_co]</span></code></p>
+<p>IterDataPipe that takes a dict of (IterDataPipe, Weight), and yields items by sampling from these
+DataPipes with respect to their weights. When individual DataPipes are exhausted, it continues to sample from
+the remaining DataPipes according to their relative weights.
+If you wish to maintain the same ratio of weights indefinitely, you need to ensure that the
+inputs are never exhausted, by, for instance, applying cycle() to them.</p>
+<p>Sampling is controlled by the provided random seed. If you don’t provide it, the sampling
+will not be deterministic.</p>
+<dl>
+<dt>Args:</dt><dd><dl class="simple">
+<dt>pipes_to_weights_dict: a Dict of IterDataPipes and Weights. The total weight of</dt><dd><p>unexhausted DataPipes will be normalized to 1 for the purpose of sampling.</p>
+</dd>
+</dl>
+<p>seed: random seed to initialize the random number generator</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.samplemultiplexer.SampleMultiplexerDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.samplemultiplexer.SampleMultiplexerDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util.saver">
+<span id="torchdata-datapipes-iter-util-saver-module"></span><h2>torchdata.datapipes.iter.util.saver module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.saver" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.saver.SaverIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.saver.</span></span><span class="sig-name descname"><span class="pre">SaverIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">abc.IterDataPipe</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">bytes</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bytearray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'w'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepath_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.saver.SaverIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[str]</span></code></p>
+<p>Iterable DataPipe that takes in a DataPipe of tuples of metadata and data, saves the data
+to the target path (generated by the filepath_fn and metadata), and yields file path on local file system.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>source_datapipe: Iterable DataPipe with tuples of metadata and data
+mode: Mode in which the file will be opened for write the data (“w” by default)
+filepath_fn: Function that takes in metadata nad returns the target path of the new file</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.saver.SaverIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.saver.SaverIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util.tararchivereader">
+<span id="torchdata-datapipes-iter-util-tararchivereader-module"></span><h2>torchdata.datapipes.iter.util.tararchivereader module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.tararchivereader" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.tararchivereader.TarArchiveReaderIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.tararchivereader.</span></span><span class="sig-name descname"><span class="pre">TarArchiveReaderIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">io.BufferedIOBase</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'r:*'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.tararchivereader.TarArchiveReaderIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[typing.Tuple[str,</span> <span class="pre">io.BufferedIOBase]]</span></code></p>
+<p><a class="reference internal" href="#torchdata.datapipes.iter.util.tararchivereader.TarArchiveReaderIterDataPipe" title="torchdata.datapipes.iter.util.tararchivereader.TarArchiveReaderIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">TarArchiveReaderIterDataPipe</span></code></a>.</p>
+<p>Iterable DataPipe to extract tar binary streams from input iterable which contains tuples of path name and
+tar binary stream. This yields a tuple of path name and extracted binary stream.</p>
+<dl>
+<dt>Args:</dt><dd><p>datapipe: Iterable DataPipe that provides tuples of path name and tar binary stream
+mode: File mode used by <cite>tarfile.open</cite> to read file object.</p>
+<blockquote>
+<div><p>Mode has to be a string of the form ‘filemode[:compression]’</p>
+</div></blockquote>
+<p>length: a nominal length of the DataPipe</p>
+</dd>
+<dt>Note:</dt><dd><p>The opened file handles will be closed automatically if the default DecoderDataPipe
+is attached. Otherwise, user should be responsible to close file handles explicitly
+or let Python’s GC close them periodically.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.tararchivereader.TarArchiveReaderIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.tararchivereader.TarArchiveReaderIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util.xzfilereader">
+<span id="torchdata-datapipes-iter-util-xzfilereader-module"></span><h2>torchdata.datapipes.iter.util.xzfilereader module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.xzfilereader" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.xzfilereader.XzFileReaderIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.xzfilereader.</span></span><span class="sig-name descname"><span class="pre">XzFileReaderIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">io.BufferedIOBase</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.xzfilereader.XzFileReaderIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[typing.Tuple[str,</span> <span class="pre">io.BufferedIOBase]]</span></code></p>
+<p>Iterable DataPipe to uncompress xz (lzma) binary streams from an input iterable which contains tuples of
+path name and xy binary streams. This yields a tuple of path name and extracted binary stream.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>datapipe: Iterable DataPipe that provides tuples of path name and xy binary stream
+length: Nominal length of the DataPipe</p>
+</dd>
+<dt>Note:</dt><dd><p>The opened file handles will be closed automatically if the default DecoderDataPipe
+is attached. Otherwise, user should be responsible to close file handles explicitly
+or let Python’s GC close them periodically.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.xzfilereader.XzFileReaderIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.xzfilereader.XzFileReaderIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util.ziparchivereader">
+<span id="torchdata-datapipes-iter-util-ziparchivereader-module"></span><h2>torchdata.datapipes.iter.util.ziparchivereader module<a class="headerlink" href="#module-torchdata.datapipes.iter.util.ziparchivereader" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.ziparchivereader.ZipArchiveReaderIterDataPipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.util.ziparchivereader.</span></span><span class="sig-name descname"><span class="pre">ZipArchiveReaderIterDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">io.BufferedIOBase</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.ziparchivereader.ZipArchiveReaderIterDataPipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.IterDataPipe[typing.Tuple[str,</span> <span class="pre">io.BufferedIOBase]]</span></code></p>
+<p><a class="reference internal" href="#torchdata.datapipes.iter.util.ziparchivereader.ZipArchiveReaderIterDataPipe" title="torchdata.datapipes.iter.util.ziparchivereader.ZipArchiveReaderIterDataPipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">ZipArchiveReaderIterDataPipe</span></code></a>.</p>
+<p>Iterable DataPipe to extract zip binary streams from input iterable which contains a tuple of path name and
+zip binary stream. This yields a tuple of path name and extracted binary stream.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>datapipe: Iterable DataPipe that provides tuples of path name and zip binary stream
+length: Nominal length of the DataPipe</p>
+</dd>
+<dt>Note:</dt><dd><p>The opened file handles will be closed automatically if the default DecoderDataPipe
+is attached. Otherwise, user should be responsible to close file handles explicitly
+or let Python’s GC close them periodically. Due to how zipfiles implements its open() method,
+the data_stream variable below cannot be closed within the scope of this function.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.util.ziparchivereader.ZipArchiveReaderIterDataPipe.reinforce_type">
+<span class="sig-name descname"><span class="pre">reinforce_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.util.ziparchivereader.ZipArchiveReaderIterDataPipe.reinforce_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinforce the type for DataPipe instance. And the ‘expected_type’ is required
+to be a subtype of the original type hint to restrict the type requirement
+of DataPipe instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-torchdata.datapipes.iter.util">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-torchdata.datapipes.iter.util" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+
+
+             </article>
+             
+            </div>
+            <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="torchdata.datapipes.map.html" class="btn btn-neutral float-right" title="torchdata.datapipes.map package" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
+      
+      
+        <a href="torchdata.datapipes.iter.transform.html" class="btn btn-neutral" title="torchdata.datapipes.iter.transform package" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
+  
+
+  
+
+    <hr>
+
+  
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2022, Meta.
+
+    </p>
+  </div>
+    
+      <div>
+        Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+      </div>
+     
+
+</footer>
+
+          </div>
+        </div>
+
+        <div class="pytorch-content-right" id="pytorch-content-right">
+          <div class="pytorch-right-menu" id="pytorch-right-menu">
+            <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
+              <ul>
+<li><a class="reference internal" href="#">torchdata.datapipes.iter.util package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.cacheholder">torchdata.datapipes.iter.util.cacheholder module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.combining">torchdata.datapipes.iter.util.combining module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.cycler">torchdata.datapipes.iter.util.cycler module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.extractor">torchdata.datapipes.iter.util.extractor module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.hashchecker">torchdata.datapipes.iter.util.hashchecker module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.header">torchdata.datapipes.iter.util.header module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.indexadder">torchdata.datapipes.iter.util.indexadder module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.jsonparser">torchdata.datapipes.iter.util.jsonparser module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.paragraphaggregator">torchdata.datapipes.iter.util.paragraphaggregator module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.plain_text_reader">torchdata.datapipes.iter.util.plain_text_reader module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.rar_archive_loader">torchdata.datapipes.iter.util.rar_archive_loader module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.rows2columnar">torchdata.datapipes.iter.util.rows2columnar module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.samplemultiplexer">torchdata.datapipes.iter.util.samplemultiplexer module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.saver">torchdata.datapipes.iter.util.saver module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.tararchivereader">torchdata.datapipes.iter.util.tararchivereader module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.xzfilereader">torchdata.datapipes.iter.util.xzfilereader module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util.ziparchivereader">torchdata.datapipes.iter.util.ziparchivereader module</a></li>
+<li><a class="reference internal" href="#module-torchdata.datapipes.iter.util">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  
+
+
+  
+
+     
+       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+         <script src="_static/jquery.js"></script>
+         <script src="_static/underscore.js"></script>
+         <script src="_static/doctools.js"></script>
+     
+
+  
+
+  <script type="text/javascript" src="_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="_static/js/vendor/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+  <!-- Begin Footer -->
+
+  <div class="container-fluid docs-tutorials-resources" id="docs-tutorials-resources">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <h2>Docs</h2>
+          <p>Access comprehensive developer documentation for PyTorch</p>
+          <a class="with-right-arrow" href="https://pytorch.org/docs/stable/index.html">View Docs</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Tutorials</h2>
+          <p>Get in-depth tutorials for beginners and advanced developers</p>
+          <a class="with-right-arrow" href="https://pytorch.org/tutorials">View Tutorials</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Resources</h2>
+          <p>Find development resources and get your questions answered</p>
+          <a class="with-right-arrow" href="https://pytorch.org/resources">View Resources</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-logo-wrapper">
+        <a href="https://pytorch.org/" class="footer-logo"></a>
+      </div>
+
+      <div class="footer-links-wrapper">
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/">PyTorch</a></li>
+            <li><a href="https://pytorch.org/get-started">Get Started</a></li>
+            <li><a href="https://pytorch.org/features">Features</a></li>
+            <li><a href="https://pytorch.org/ecosystem">Ecosystem</a></li>
+            <li><a href="https://pytorch.org/blog/">Blog</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md">Contributing</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/resources">Resources</a></li>
+            <li><a href="https://pytorch.org/tutorials">Tutorials</a></li>
+            <li><a href="https://pytorch.org/docs/stable/index.html">Docs</a></li>
+            <li><a href="https://discuss.pytorch.org" target="_blank">Discuss</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/issues" target="_blank">Github Issues</a></li>
+            <li><a href="https://pytorch.org/assets/brand-guidelines/PyTorch-Brand-Guidelines.pdf" target="_blank">Brand Guidelines</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col follow-us-col">
+          <ul>
+            <li class="list-title">Stay Connected</li>
+            <li>
+              <div id="mc_embed_signup">
+                <form
+                  action="https://twitter.us14.list-manage.com/subscribe/post?u=75419c71fe0a935e53dfa4a3f&id=91d0dccd39"
+                  method="post"
+                  id="mc-embedded-subscribe-form"
+                  name="mc-embedded-subscribe-form"
+                  class="email-subscribe-form validate"
+                  target="_blank"
+                  novalidate>
+                  <div id="mc_embed_signup_scroll" class="email-subscribe-form-fields-wrapper">
+                    <div class="mc-field-group">
+                      <label for="mce-EMAIL" style="display:none;">Email Address</label>
+                      <input type="email" value="" name="EMAIL" class="required email" id="mce-EMAIL" placeholder="Email Address">
+                    </div>
+
+                    <div id="mce-responses" class="clear">
+                      <div class="response" id="mce-error-response" style="display:none"></div>
+                      <div class="response" id="mce-success-response" style="display:none"></div>
+                    </div>    <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+
+                    <div style="position: absolute; left: -5000px;" aria-hidden="true"><input type="text" name="b_75419c71fe0a935e53dfa4a3f_91d0dccd39" tabindex="-1" value=""></div>
+
+                    <div class="clear">
+                      <input type="submit" value="" name="subscribe" id="mc-embedded-subscribe" class="button email-subscribe-button">
+                    </div>
+                  </div>
+                </form>
+              </div>
+
+            </li>
+          </ul>
+
+          <div class="footer-social-icons">
+            <a href="https://www.facebook.com/pytorch" target="_blank" class="facebook"></a>
+            <a href="https://twitter.com/pytorch" target="_blank" class="twitter"></a>
+            <a href="https://www.youtube.com/pytorch" target="_blank" class="youtube"></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <div class="cookie-banner-wrapper">
+  <div class="container">
+    <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
+    <img class="close-button" src="_static/images/pytorch-x.svg">
+  </div>
+</div>
+
+  <!-- End Footer -->
+
+  <!-- Begin Mobile Menu -->
+
+  <div class="mobile-main-menu">
+    <div class="container-fluid">
+      <div class="container">
+        <div class="mobile-main-menu-header-container">
+          <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+          <a class="main-menu-close-button" href="#" data-behavior="close-mobile-menu"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-main-menu-links-container">
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://pytorch.org/get-started">Get Started</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/hub">PyTorch Hub</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/blog/">Blog</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/tutorials">Tutorials</a>
+          </li>
+
+          <li class="resources-mobile-menu-title">
+            Docs
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/docs/stable/index.html">PyTorch</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/audio/stable/index.html">torchaudio</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/text/stable/index.html">torchtext</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/vision/stable/index.html">torchvision</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/elastic/">TorchElastic</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/serve/">TorchServe</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/xla">PyTorch on XLA Devices</a>
+            </li>
+          </ul>
+
+          <li class="resources-mobile-menu-title">
+            Resources
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/resources">Developer Resources</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/features">About</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/hub">Models (Beta)</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/#community-module">Community</a>
+            </li>
+
+            <li>
+              <a href="https://discuss.pytorch.org/">Forums</a>
+            </li>
+          </ul>
+
+          <li>
+            <a href="https://github.com/pytorch/pytorch">Github</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Mobile Menu -->
+
+  <script type="text/javascript" src="_static/js/vendor/anchor.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      mobileMenu.bind();
+      mobileTOC.bind();
+      pytorchAnchors.bind();
+      sideMenus.bind();
+      scrollToAnchor.bind();
+      highlightNavigation.bind();
+      mainMenuDropdown.bind();
+      filterTags.bind();
+
+      // Add class to links that have code blocks, since we cannot create links in code blocks
+      $("article.pytorch-article a span.pre").each(function(e) {
+        $(this).closest("a").addClass("has-code");
+      });
+    })
+  </script>
+</body>
+</html>
