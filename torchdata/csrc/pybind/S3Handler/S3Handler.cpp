@@ -32,7 +32,6 @@ namespace torchdata
         static const size_t S3DefaultBufferSize = 128 * 1024 * 1024;                 // 128 MB
         static const uint64_t S3DefaultMultiPartDownloadChunkSize = 5 * 1024 * 1024; // 5 MB
         static const int executorPoolSize = 25;
-        static const int S3DefaultMaxKeys = 1000;
         static const std::string S3DefaultMarker = "";
 
         std::shared_ptr<Aws::Client::ClientConfiguration> setUpS3Config(const long requestTimeoutMs, const std::string region)
@@ -303,7 +302,6 @@ namespace torchdata
         S3Handler::s3_handler_cfg_ = setUpS3Config(requestTimeoutMs, region);
         InitializeS3Client();
 
-        max_keys_ = S3DefaultMaxKeys;
         last_marker_ = S3DefaultMarker;
     }
 
@@ -439,7 +437,6 @@ namespace torchdata
         Aws::S3::Model::ListObjectsRequest listObjectsRequest;
         listObjectsRequest.WithBucket(bucket)
             .WithPrefix(prefix)
-            .WithMaxKeys(max_keys_)
             .WithMarker(last_marker_);
 
         Aws::S3::Model::ListObjectsOutcome listObjectsOutcome =

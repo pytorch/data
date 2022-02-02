@@ -23,12 +23,10 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
         AWS_CPP_SDK is necessary to use the S3 DataPipe(s).
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], length: int = -1, request_timeout_ms=-1, region="", max_keys=None) -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], length: int = -1, request_timeout_ms=-1, region="") -> None:
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.length: int = length
         self.handler = torchdata._torchdata.S3Handler(request_timeout_ms, region)
-        if max_keys:
-            self.handler.set_max_keys(max_keys)
 
     def __iter__(self) -> Iterator[str]:
         for prefix in self.source_datapipe:
