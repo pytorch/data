@@ -17,11 +17,10 @@ class RarfilePatcher:
 
         unpatched_read = DirectReader._read
 
-        def patched_read(self, cnt):
-            whence = self._cur.add_size - self._cur_avail
-            self._fd.seek(self._inf.header_offset, whence)
-            if whence == 0:
-                self._cur = self._parser._parse_header(self._fd)
+        def patched_read(self, cnt=-1):
+            self._fd.seek(self._inf.header_offset, 0)
+            self._cur = self._parser._parse_header(self._fd)
+            self._cur_avail = self._cur.add_size
             return unpatched_read(self, cnt)
 
         self._patch = patch("rarfile.DirectReader._read", new=patched_read)
@@ -33,8 +32,25 @@ class RarfilePatcher:
         self._patch.stop()
 
 
+_PATCHED = False
+
+
 @functional_datapipe("load_from_rar")
 class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
+    r"""
+    Iterable DataPipe to extract rar binary streams from input iterable which contains tuples of path name and
+    rar binary stream. This yields a tuple of path name and extracted binary stream.
+
+    Args:
+        datapipe: Iterable DataPipe that provides tuples of path name and rar binary stream
+        length: Nominal length of the DataPipe
+
+    Note:
+        The nested RAR archive is not supported by this DataPipe
+        due to the limitation of the archive type. Please extract
+        outer RAR archive before reading the inner archive.
+    """
+
     def __init__(self, datapipe: IterDataPipe[Tuple[str, io.BufferedIOBase]], *, length: int = -1):
         try:
             import rarfile
@@ -53,16 +69,25 @@ class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
     def __iter__(self) -> Iterator[Tuple[str, io.BufferedIOBase]]:
         import rarfile
 
-        patcher = RarfilePatcher()
-        patcher.start()
+        global _PATCHED
+        if not _PATCHED:
+            patcher = RarfilePatcher()
+            patcher.start()
+            _PATCHED = True
 
         for data in self.datapipe:
             validate_pathname_binary_tuple(data)
             path, stream = data
+            if isinstance(stream, rarfile.RarExtFile) or (
+                isinstance(stream, StreamWrapper) and isinstance(stream.file_obj, rarfile.RarExtFile)
+            ):
+                raise ValueError(
+                    f"Nested RAR archive is not supported by {type(self).__name__}. Please extract outer archive first."
+                )
 
             rar = rarfile.RarFile(stream)
             for info in rar.infolist():
-                if info.filename.endswith("/"):
+                if info.is_dir():
                     continue
 
                 inner_path = os.path.join(path, info.filename)
