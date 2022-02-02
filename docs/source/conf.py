@@ -37,7 +37,7 @@ release = '0.0'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon']
+extensions = ['sphinx.ext.napoleon', 'sphinx.ext.autodoc', 'sphinx.ext.autosummary', "sphinx.ext.intersphinx"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -61,3 +61,35 @@ html_theme_path = [pytorch_sphinx_theme.get_html_theme_path()]
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+autosummary_generate = True
+
+
+signature_replacements = {'torch.utils.data.dataset.IterDataPipe': 'IterDataPipe',
+                          'abc.IterDataPipe': 'IterDataPipe',
+                          'torch.utils.data.dataset.MapDataPipe': 'MapDataPipe',
+                          'abc.MapDataPipe': 'MapDataPipe'}
+
+
+def process_signature(app, what, name, obj, options, signature, return_annotation):
+    """ Replacing long type annotations in signature with more succinct ones. """
+    if isinstance(signature, str):
+        for old, new in signature_replacements.items():
+            if old in signature:
+                signature = signature.replace(old, new)
+        return signature, return_annotation
+
+
+def setup(app):
+
+    # Overwrite class name to allow aliasing in documentation generation
+    import torchdata.datapipes.iter as iter
+    import torchdata.datapipes.map as map
+    for mod in (iter, map):
+        for name, obj in mod.__dict__.items():
+            if isinstance(obj, type):
+                obj.__name__ = name
+
+
+
+    app.connect('autodoc-process-signature', process_signature)
