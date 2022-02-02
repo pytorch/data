@@ -22,3 +22,12 @@ torchdata/version.py
 
 # setup script artifacts for Velox
 f4d-deps
+
+# sphinx documentation
+docs/build
+docs/source/generated
+# pytorch-sphinx-theme gets installed here
+docs/src
+# Temporary
+docs/backup
+docs/originally_generated
