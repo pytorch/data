@@ -136,7 +136,6 @@ class CriteoIterDataPipe(IterDataPipe):
         paths = IterableWrapper(paths)
         datapipe = IoPathFileOpener(paths, mode="r", pathmgr=PathManagerFactory().get(PATH_MANAGER_KEY))
         datapipe = CSVParser(datapipe, delimiter="\t")
-        # datapipe = ReadLinesFromCSV(datapipe, delimiter="\t")
         if self.row_mapper:
             datapipe = Mapper(datapipe, self.row_mapper)
         yield from datapipe
