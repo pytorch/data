@@ -8,8 +8,8 @@ from setuptools import Extension
 from setuptools.command.build_ext import build_ext
 
 __all__ = [
-    'get_ext_modules',
-    'CMakeBuild',
+    "get_ext_modules",
+    "CMakeBuild",
 ]
 
 _THIS_DIR = Path(__file__).parent.resolve()
@@ -20,15 +20,13 @@ def _get_build(var, default=False):
     if var not in os.environ:
         return default
 
-    val = os.environ.get(var, '0')
-    trues = ['1', 'true', 'TRUE', 'on', 'ON', 'yes', 'YES']
-    falses = ['0', 'false', 'FALSE', 'off', 'OFF', 'no', 'NO']
+    val = os.environ.get(var, "0")
+    trues = ["1", "true", "TRUE", "on", "ON", "yes", "YES"]
+    falses = ["0", "false", "FALSE", "off", "OFF", "no", "NO"]
     if val in trues:
         return True
     if val not in falses:
-        print(
-            f'WARNING: Unexpected environment variable value `{var}={val}`. '
-            f'Expected one of {trues + falses}')
+        print(f"WARNING: Unexpected environment variable value `{var}={val}`. " f"Expected one of {trues + falses}")
     return False
 
 
@@ -36,9 +34,7 @@ _BUILD_S3 = _get_build("BUILD_S3", False)
 
 
 def get_ext_modules():
-    return [
-        Extension(name='torchdata._torchdata', sources=[])
-    ]
+    return [Extension(name="torchdata._torchdata", sources=[])]
 
 
 # Based off of pybiind cmake_example
@@ -51,7 +47,7 @@ class CMakeBuild(build_ext):
         # we would like to prevent multiple calls to `cmake`.
         # Therefore, we call `cmake` only for `torchdata._torchdata`,
         # in case `ext_modules` contains more than one module.
-        if ext.name != 'torchdata._torchdata':
+        if ext.name != "torchdata._torchdata":
             return
 
         extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
@@ -72,26 +68,25 @@ class CMakeBuild(build_ext):
             f"-DBUILD_S3:BOOL={'ON' if _BUILD_S3 else 'OFF'}",
         ]
 
-        build_args = [
-            '--config', cfg
-        ]
+        build_args = ["--config", cfg]
 
-        if 'CMAKE_GENERATOR' not in os.environ or platform.system() == 'Windows':
+        if "CMAKE_GENERATOR" not in os.environ or platform.system() == "Windows":
             cmake_args += ["-GNinja"]
-        if platform.system() == 'Windows':
+        if platform.system() == "Windows":
             import sys
+
             python_version = sys.version_info
             cmake_args += [
                 "-DCMAKE_C_COMPILER=cl",
                 "-DCMAKE_CXX_COMPILER=cl",
                 f"-DPYTHON_VERSION={python_version.major}.{python_version.minor}",
-                '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}'.format(cfg.upper(), extdir),
+                f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}",
             ]
-            if sys.maxsize > 2**32:
-                cmake_args += ['-A', 'x64']
-            build_args += ['--', '/m']
+            if sys.maxsize > 2 ** 32:
+                cmake_args += ["-A", "x64"]
+            build_args += ["--", "/m"]
         else:
-            build_args += ['--', '-j2']
+            build_args += ["--", "-j2"]
 
         # Set CMAKE_BUILD_PARALLEL_LEVEL to control the parallel build level
         # across all generators.
@@ -100,9 +95,9 @@ class CMakeBuild(build_ext):
             # using -j in the build_ext call, not supported by pip or PyPA-build.
             if hasattr(self, "parallel") and self.parallel:
                 # CMake 3.12+ only.
-                build_args += ["-j{}".format(self.parallel)]
+                build_args += [f"-j{self.parallel}"]
 
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
-        subprocess.check_call(['cmake', str(_ROOT_DIR)] + cmake_args, cwd=self.build_temp)
-        subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
+        subprocess.check_call(["cmake", str(_ROOT_DIR)] + cmake_args, cwd=self.build_temp)
+        subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=self.build_temp)

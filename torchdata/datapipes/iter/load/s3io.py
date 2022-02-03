@@ -32,15 +32,14 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
         for prefix in self.source_datapipe:
             while True:
                 urls = self.handler.list_files(prefix)
-                for url in urls:
-                    yield url
+                yield from urls
                 if not urls:
                     break
             self.handler.clear_marker()
 
     def __len__(self) -> int:
         if self.length == -1:
-            raise TypeError("{} instance doesn't have valid length".format(type(self).__name__))
+            raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
         return self.length
 
 
@@ -59,7 +58,14 @@ class S3FileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         AWS_CPP_SDK is necessary to use the S3 DataPipe(s).
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], request_timeout_ms=-1, region="", buffer_size=None, multi_part_download=None) -> None:
+    def __init__(
+        self,
+        source_datapipe: IterDataPipe[str],
+        request_timeout_ms=-1,
+        region="",
+        buffer_size=None,
+        multi_part_download=None,
+    ) -> None:
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.handler = torchdata._torchdata.S3Handler(request_timeout_ms, region)
         if buffer_size:

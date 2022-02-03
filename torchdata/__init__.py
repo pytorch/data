@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from torchdata import _extension  # noqa: F401
+
 from . import datapipes
 
 try:
