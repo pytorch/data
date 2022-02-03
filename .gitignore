@@ -28,6 +28,3 @@ docs/build
 docs/source/generated
 # pytorch-sphinx-theme gets installed here
 docs/src
-# Temporary
-docs/backup
-docs/originally_generated

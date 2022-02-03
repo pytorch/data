@@ -97,6 +97,22 @@ assert batch['text'][0][0:8] == ['Wall', 'St.', 'Bears', 'Claw', 'Back', 'Into',
 $ pip install -e git+https://github.com/pytorch/data#egg=torchdata
 ```
 
+## Building the Documentation
+
+To build the documentation, you will need [Sphinx](http://www.sphinx-doc.org) and the PyTorch theme.
+
+```bash
+cd docs/
+pip install -r requirements.txt
+```
+
+You can then build the documentation by running `make <format>` from the `docs/` folder. Run `make` to get a list of all
+available output formats.
+
+```bash
+make html
+```
+
 ## What are DataPipes?
 
 Early on, we observed widespread confusion between the PyTorch `DataSets` which represented reusable loading tooling
