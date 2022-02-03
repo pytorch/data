@@ -8,7 +8,15 @@ import expecttest
 
 from _utils._common_utils_for_test import check_hash_fn, create_temp_dir
 
-from torchdata.datapipes.iter import EndOnDiskCacheHolder, FileOpener, HttpReader, IterableWrapper, OnDiskCacheHolder, S3FileLister, S3FileLoader
+from torchdata.datapipes.iter import (
+    EndOnDiskCacheHolder,
+    FileOpener,
+    HttpReader,
+    IterableWrapper,
+    OnDiskCacheHolder,
+    S3FileLister,
+    S3FileLoader,
+)
 
 
 class TestDataPipeRemoteIO(expecttest.TestCase):
@@ -169,27 +177,45 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             [["s3://ai2-public-datasets/charades"], 18],  # folder without '/'
             [["s3://ai2-public-datasets/charades/"], 18],  # folder without '/'
             [["s3://ai2-public-datasets/charad"], 18],  # prefix
-            [["s3://ai2-public-datasets/charades/Charades_v1",
-              "s3://ai2-public-datasets/charades/Charades_vu17", ], 12],  # prefixes
+            [
+                [
+                    "s3://ai2-public-datasets/charades/Charades_v1",
+                    "s3://ai2-public-datasets/charades/Charades_vu17",
+                ],
+                12,
+            ],  # prefixes
             [["s3://ai2-public-datasets/charades/Charades_v1.zip"], 1],  # single file
-            [["s3://ai2-public-datasets/charades/Charades_v1.zip",
-              "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
-              "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
-              "s3://ai2-public-datasets/charades/Charades_v1_480.zip", ], 4],  # multiple files
-            [["s3://ai2-public-datasets/charades/Charades_v1.zip",
-              "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
-              "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
-              "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
-              "s3://ai2-public-datasets/charades/Charades_vu17", ], 10],  # files + prefixes
+            [
+                [
+                    "s3://ai2-public-datasets/charades/Charades_v1.zip",
+                    "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
+                    "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
+                    "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
+                ],
+                4,
+            ],  # multiple files
+            [
+                [
+                    "s3://ai2-public-datasets/charades/Charades_v1.zip",
+                    "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
+                    "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
+                    "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
+                    "s3://ai2-public-datasets/charades/Charades_vu17",
+                ],
+                10,
+            ],  # files + prefixes
         ]
         for input in input_list:
             s3_lister_dp = S3FileLister(IterableWrapper(input[0]), region="us-west-2")
-            self.assertEqual(sum(1 for _ in s3_lister_dp), input[1], f'{input[0]} failed')
+            self.assertEqual(sum(1 for _ in s3_lister_dp), input[1], f"{input[0]} failed")
 
         # S3FileLister: prefixes + different region
-        file_urls = ["s3://aft-vbi-pds/bin-images/111", "s3://aft-vbi-pds/bin-images/222", ]
+        file_urls = [
+            "s3://aft-vbi-pds/bin-images/111",
+            "s3://aft-vbi-pds/bin-images/222",
+        ]
         s3_lister_dp = S3FileLister(IterableWrapper(file_urls), region="us-east-1")
-        self.assertEqual(sum(1 for _ in s3_lister_dp), 2212, f'{input} failed')
+        self.assertEqual(sum(1 for _ in s3_lister_dp), 2212, f"{input} failed")
 
         # S3FileLister: incorrect inputs
         input_list = [
@@ -205,14 +231,16 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
                     pass
 
         # S3FileLoader: loader
-        input = ["s3://charades-tar-shards/charades-video-0.tar",
-                 "s3://charades-tar-shards/charades-video-1.tar", ]  # multiple files
+        input = [
+            "s3://charades-tar-shards/charades-video-0.tar",
+            "s3://charades-tar-shards/charades-video-1.tar",
+        ]  # multiple files
         s3_loader_dp = S3FileLoader(input, region="us-west-2")
-        self.assertEqual(sum(1 for _ in s3_loader_dp), 2, f'{input} failed')
+        self.assertEqual(sum(1 for _ in s3_loader_dp), 2, f"{input} failed")
 
         input = [["s3://aft-vbi-pds/bin-images/100730.jpg"], 1]
         s3_loader_dp = S3FileLoader(input[0], region="us-east-1")
-        self.assertEqual(sum(1 for _ in s3_loader_dp), input[1], f'{input[0]} failed')
+        self.assertEqual(sum(1 for _ in s3_loader_dp), input[1], f"{input[0]} failed")
 
         # S3FileLoader: incorrect inputs
         input_list = [
@@ -232,7 +260,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         input = [["s3://charades-tar-shards/"], 10]
         s3_lister_dp = S3FileLister(IterableWrapper(input[0]), region="us-west-2")
         s3_loader_dp = S3FileLoader(s3_lister_dp, region="us-west-2")
-        self.assertEqual(sum(1 for _ in s3_loader_dp), input[1], f'{input[0]} failed')
+        self.assertEqual(sum(1 for _ in s3_loader_dp), input[1], f"{input[0]} failed")
 
 
 if __name__ == "__main__":
