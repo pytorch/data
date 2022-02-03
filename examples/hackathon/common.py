@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from typing import Callable, List, TypeVar
 
+T = TypeVar("T")
 
 # Criteo Data Set Parameters
 INT_FEATURE_COUNT = 13
@@ -15,18 +16,11 @@ DEFAULT_COLUMN_NAMES: List[str] = [
 ]
 
 
-T = TypeVar("T")
-
-
 def safe_cast(val: T, dest_type: Callable[[T], T], default: T) -> T:
+    """
+    Helper function to safely cast data with default as fallback.
+    """
     try:
         return dest_type(val)
     except ValueError:
         return default
-
-
-def safe_hex_to_int(num):
-    try:
-        return int(safe_cast(num, str, "0") or "0", 16)
-    except Exception:
-        return float("NaN")
