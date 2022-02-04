@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 # Copyright (c) Facebook, Inc. and its affiliates.
-<<<<<<< HEAD
 import argparse
-=======
 import distutils.command.clean
->>>>>>> 0ceac89 (new build flag, new extension import, new clean command)
 import os
 import shutil
 import subprocess
@@ -14,11 +11,9 @@ from datetime import date
 from pathlib import Path
 
 from setuptools import find_packages, setup
+from tools import setup_helpers
 from torchdata.datapipes.gen_pyi import gen_pyi
 
-
-
-from tools import setup_helpers
 
 ROOT_DIR = Path(__file__).parent.resolve()
 
@@ -74,8 +69,8 @@ class clean(distutils.command.clean.clean):
         # Run default behavior first
         distutils.command.clean.clean.run(self)
 
-        # Remove torchaudio extension
-        for path in (ROOT_DIR / "torchaudio").glob("**/*.so"):
+        # Remove torchdata extension
+        for path in (ROOT_DIR / "torchdata").glob("**/*.so"):
             print(f"removing '{path}'")
             path.unlink()
         # Remove build directory
