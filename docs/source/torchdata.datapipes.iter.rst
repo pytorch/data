@@ -121,6 +121,7 @@ These DataPipes provide utility functions (e.g. caching, CSV parsing, filtering)
     StreamReader
     TarArchiveReader
     UnBatcher
+    UnZipper
     XzFileReader
     ZipArchiveReader
     Zipper

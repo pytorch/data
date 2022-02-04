@@ -28,6 +28,7 @@ from torchdata.datapipes.iter import (
     ParagraphAggregator,
     Rows2Columnar,
     SampleMultiplexer,
+    UnZipper,
 )
 
 
@@ -567,7 +568,7 @@ class TestDataPipe(expecttest.TestCase):
         with self.assertRaises(TypeError):
             len(batch_dp)
 
-    def test_flatmap_datapipe(self):
+    def test_flatmap_iterdatapipe(self):
         source_dp = IterableWrapper(list(range(20)))
 
         def fn(e):
@@ -588,6 +589,87 @@ class TestDataPipe(expecttest.TestCase):
         # __len__ Test: length should be len(source_dp)*len(fn->out_shape) which we can't know
         with self.assertRaisesRegex(TypeError, "length relies on the output of its function."):
             len(flatmapped_dp)
+
+    def test_unzipper_iterdatapipe(self):
+        source_dp = IterableWrapper([(i, i + 10, i + 20) for i in range(10)])
+
+        # Functional Test: unzips each sequence, no `sequence_length` specified
+        dp1, dp2, dp3 = UnZipper(source_dp)
+        self.assertEqual(list(range(10)), list(dp1))
+        self.assertEqual(list(range(10, 20)), list(dp2))
+        self.assertEqual(list(range(20, 30)), list(dp3))
+
+        # Functional Test: unzips each sequence, with `sequence_length` specified
+        dp1, dp2, dp3 = source_dp.unzip(sequence_length=3)
+        self.assertEqual(list(range(10)), list(dp1))
+        self.assertEqual(list(range(10, 20)), list(dp2))
+        self.assertEqual(list(range(20, 30)), list(dp3))
+
+        source_dp = IterableWrapper([(i, i + 10) for i in range(10)])
+
+        # Functional Test: one child DataPipe yields all value first, but buffer_size = 5 being too small, raises error
+        dp1, dp2 = source_dp.unzip(buffer_size=5)
+        it1 = iter(dp1)
+        for _ in range(5):
+            next(it1)
+        with self.assertRaises(BufferError):
+            next(it1)
+        with self.assertRaises(BufferError):
+            list(dp2)
+
+        # Reset Test: reset the DataPipe after reading part of it
+        dp1, dp2 = source_dp.unzip()
+        i1, i2 = iter(dp1), iter(dp2)
+        output2 = []
+        for i, n2 in enumerate(i2):
+            output2.append(n2)
+            if i == 4:
+                i1 = iter(dp1)  # Doesn't reset because i1 hasn't been read
+        self.assertEqual(list(range(10, 20)), output2)
+
+        # Reset Test: DataPipe reset when some of it have been read
+        dp1, dp2 = source_dp.unzip(sequence_length=2)
+        i1, i2 = iter(dp1), iter(dp2)
+        output1, output2 = [], []
+        for i, (n1, n2) in enumerate(zip(i1, i2)):
+            output1.append(n1)
+            output2.append(n2)
+            if i == 4:
+                with warnings.catch_warnings(record=True) as wa:
+                    i1 = iter(dp1)  # Reset both all child DataPipe
+                    self.assertEqual(len(wa), 1)
+                    self.assertRegex(str(wa[0].message), r"Some child DataPipes are not exhausted")
+        self.assertEqual(list(range(5)) + list(range(10)), output1)
+        self.assertEqual(list(range(10, 15)) + list(range(10, 20)), output2)
+
+        # Reset Test: DataPipe reset, even when some other child DataPipes are not read
+        source_dp = IterableWrapper([(i, i + 10, i + 20) for i in range(10)])
+        dp1, dp2, dp3 = source_dp.unzip()
+        output1, output2 = list(dp1), list(dp2)
+        self.assertEqual(list(range(10)), output1)
+        self.assertEqual(list(range(10, 20)), output2)
+        with warnings.catch_warnings(record=True) as wa:
+            self.assertEqual(list(range(10)), list(dp1))  # Resets even though dp3 has not been read
+            self.assertEqual(len(wa), 1)
+            self.assertRegex(str(wa[0].message), r"Some child DataPipes are not exhausted")
+        output3 = []
+        for i, n3 in enumerate(dp3):
+            output3.append(n3)
+            if i == 4:
+                with warnings.catch_warnings(record=True) as wa:
+                    output1 = list(dp1)  # Resets even though dp3 is only partially read
+                    self.assertEqual(len(wa), 1)
+                    self.assertRegex(str(wa[0].message), r"Some child DataPipes are not exhausted")
+                self.assertEqual(list(range(20, 25)), output3)
+                self.assertEqual(list(range(10)), output1)
+                break
+        self.assertEqual(list(range(20, 30)), list(dp3))  # dp3 has to read from the start again
+
+        # __len__ Test: Each DataPipe inherits the source datapipe's length
+        dp1, dp2, dp3 = source_dp.unzip(sequence_length=3)
+        self.assertEqual(len(source_dp), len(dp1))
+        self.assertEqual(len(source_dp), len(dp2))
+        self.assertEqual(len(source_dp), len(dp3))
 
 
 if __name__ == "__main__":
