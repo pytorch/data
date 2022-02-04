@@ -61,8 +61,8 @@ class clean(distutils.command.clean.clean):
         # Run default behavior first
         distutils.command.clean.clean.run(self)
 
-        # Remove torchaudio extension
-        for path in (ROOT_DIR / "torchaudio").glob("**/*.so"):
+        # Remove torchdata extension
+        for path in (ROOT_DIR / "torchdata").glob("**/*.so"):
             print(f"removing '{path}'")
             path.unlink()
         # Remove build directory
@@ -75,6 +75,7 @@ class clean(distutils.command.clean.clean):
                 shutil.rmtree(str(path), ignore_errors=True)
 
 
+<<<<<<< HEAD
 if __name__ == "__main__":
     VERSION, SHA = _get_version()
     _export_version(VERSION, SHA)
@@ -108,9 +109,6 @@ if __name__ == "__main__":
         # Package Info
         packages=find_packages(exclude=["test*", "examples*"]),
         zip_safe=False,
-        extras_require={
-            "scipy": ["scipy"],
-        },
         ext_modules=setup_helpers.get_ext_modules(),
         cmdclass={
             "build_ext": setup_helpers.CMakeBuild,
