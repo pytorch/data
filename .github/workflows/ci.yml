@@ -46,6 +46,7 @@ jobs:
         run: |
           pip3 install -r requirements.txt
           pip3 install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
+          pip3 install cmake ninja
       - name: Install test requirements
         run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile
       - name: Build TorchData
