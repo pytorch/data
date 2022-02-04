@@ -50,6 +50,15 @@ jobs:
           pip3 install pybind11
       - name: Install test requirements
         run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile
+      - name: Install AWS-SDK-CPP for S3 IO datapipes
+        run: |
+          git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
+          cd aws-sdk-cpp/
+          mkdir sdk-build
+          cd sdk-build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer"
+          make
+          make install
       - name: Build TorchData
         env: BUILD_S3=1
         run: python setup.py develop
