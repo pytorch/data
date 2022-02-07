@@ -594,7 +594,7 @@ class TestDataPipe(expecttest.TestCase):
         source_dp = IterableWrapper([(i, i + 10, i + 20) for i in range(10)])
 
         # Functional Test: unzips each sequence, no `sequence_length` specified
-        dp1, dp2, dp3 = UnZipper(source_dp)
+        dp1, dp2, dp3 = UnZipper(source_dp, sequence_length=3)
         self.assertEqual(list(range(10)), list(dp1))
         self.assertEqual(list(range(10, 20)), list(dp2))
         self.assertEqual(list(range(20, 30)), list(dp3))
@@ -605,10 +605,22 @@ class TestDataPipe(expecttest.TestCase):
         self.assertEqual(list(range(10, 20)), list(dp2))
         self.assertEqual(list(range(20, 30)), list(dp3))
 
-        source_dp = IterableWrapper([(i, i + 10) for i in range(10)])
+        # Functional Test: skipping over specified values
+        dp2, dp3 = source_dp.unzip(sequence_length=3, columns_to_skip=[0])
+        self.assertEqual(list(range(10, 20)), list(dp2))
+        self.assertEqual(list(range(20, 30)), list(dp3))
+
+        (dp2,) = source_dp.unzip(sequence_length=3, columns_to_skip=[0, 2])
+        self.assertEqual(list(range(10, 20)), list(dp2))
+
+        source_dp = IterableWrapper([(i, i + 10, i + 20, i + 30) for i in range(10)])
+        dp2, dp3 = source_dp.unzip(sequence_length=4, columns_to_skip=[0, 3])
+        self.assertEqual(list(range(10, 20)), list(dp2))
+        self.assertEqual(list(range(20, 30)), list(dp3))
 
         # Functional Test: one child DataPipe yields all value first, but buffer_size = 5 being too small, raises error
-        dp1, dp2 = source_dp.unzip(buffer_size=5)
+        source_dp = IterableWrapper([(i, i + 10) for i in range(10)])
+        dp1, dp2 = source_dp.unzip(sequence_length=2, buffer_size=5)
         it1 = iter(dp1)
         for _ in range(5):
             next(it1)
@@ -618,7 +630,7 @@ class TestDataPipe(expecttest.TestCase):
             list(dp2)
 
         # Reset Test: reset the DataPipe after reading part of it
-        dp1, dp2 = source_dp.unzip()
+        dp1, dp2 = source_dp.unzip(sequence_length=2)
         i1, i2 = iter(dp1), iter(dp2)
         output2 = []
         for i, n2 in enumerate(i2):
@@ -644,7 +656,7 @@ class TestDataPipe(expecttest.TestCase):
 
         # Reset Test: DataPipe reset, even when some other child DataPipes are not read
         source_dp = IterableWrapper([(i, i + 10, i + 20) for i in range(10)])
-        dp1, dp2, dp3 = source_dp.unzip()
+        dp1, dp2, dp3 = source_dp.unzip(sequence_length=3)
         output1, output2 = list(dp1), list(dp2)
         self.assertEqual(list(range(10)), output1)
         self.assertEqual(list(range(10, 20)), output2)

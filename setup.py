@@ -54,7 +54,7 @@ setup(
     author_email="packages@pytorch.org",
     license="BSD",
     install_requires=["requests", pytorch_package_dep],
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     classifiers=[
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
