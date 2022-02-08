@@ -30,6 +30,7 @@ from torchdata.datapipes.iter import (
     SampleMultiplexer,
     UnZipper,
 )
+from torchdata.datapipes.map import MapDataPipe
 
 
 def test_torchdata_pytorch_consistency() -> None:
@@ -684,6 +685,35 @@ class TestDataPipe(expecttest.TestCase):
         self.assertEqual(len(source_dp), len(dp3))
 
         # TODO: Add testing for different stages of pickling for UnZipper
+
+    def test_itertomap_mapdatapipe(self):
+        source_dp = IterableWrapper(range(10))
+        map_dp = source_dp.to_map(lambda x: x + 1)
+        self.assertTrue(isinstance(map_dp, MapDataPipe))
+
+        # Lazy loading
+        self.assertTrue(map_dp._map is None)
+
+        # __len__ Test: Each DataPipe inherits the source datapipe's length
+        self.assertEqual(len(map_dp), 10)
+
+        # Functional Test
+        self.assertEqual(list(range(10)), list(map_dp[idx] for idx in range(1, 11)))
+        self.assertFalse(map_dp._map is None)
+
+        # No __len__ from prior DataPipe
+        no_len_dp = source_dp.filter(lambda x: x % 2 == 0)
+        map_dp = no_len_dp.to_map(lambda x: x + 2)
+        with warnings.catch_warnings(record=True) as wa:
+            length = len(map_dp)
+            self.assertEqual(length, 5)
+            self.assertEqual(len(wa), 1)
+            self.assertRegex(str(wa[0].message), r"Data from prior DataPipe")
+
+        # Duplicate Key Test
+        dup_map_dp = source_dp.to_map(lambda x: x % 2)
+        with self.assertRaisesRegex(KeyError, "Found duplicate key"):
+            _ = list(dup_map_dp)
 
 
 if __name__ == "__main__":
