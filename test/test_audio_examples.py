@@ -45,12 +45,18 @@ class TestAudioExamples(unittest.TestCase):
             pass
 
     @slowTest
-    def test_LibriSpeech(self) -> None:
+    def test_LibriSpeech_dev(self) -> None:
         root = self.temp_dir.name
-        for ds in ["dev-other", "train-clean-100"]:
-            self._test_helper(LibriSpeech, root, ds)
-            # With cache and DataLoader
-            self._test_DL_helper(LibriSpeech, root, ds)
+        self._test_helper(LibriSpeech, root, "dev-other")
+        # With cache and DataLoader
+        self._test_DL_helper(LibriSpeech, root, "dev-other")
+
+    @unittest.skipIf(True, "Dataset is too large to run on CI")
+    def test_LibriSpeech_train(self) -> None:
+        root = self.temp_dir.name
+        self._test_helper(LibriSpeech, root, "train-clean-100")
+        # With cache and DataLoader
+        self._test_DL_helper(LibriSpeech, root, "train-clean-100")
 
 
 if __name__ == "__main__":
