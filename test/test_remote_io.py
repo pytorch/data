@@ -137,6 +137,30 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             self.assertTrue(os.path.exists(expected_csv_path))
             self.assertEqual(expected_csv_path, csv_path)
 
+        # Cache decompressed archive but only check root directory
+        root_dir = "temp"
+
+        file_cache_dp = OnDiskCacheHolder(
+            tar_cache_dp, filepath_fn=lambda tar_path: os.path.join(os.path.dirname(tar_path), root_dir)
+        )
+        file_cache_dp = FileOpener(file_cache_dp, mode="rb").read_from_tar()
+        file_cache_dp = file_cache_dp.end_caching(
+            mode="wb",
+            filepath_fn=lambda file_path: os.path.join(self.temp_dir.name, root_dir, os.path.basename(file_path)),
+        )
+
+        cached_it = iter(file_cache_dp)
+        for i in range(3):
+            expected_csv_path = os.path.join(self.temp_dir.name, root_dir, f"{i}.csv")
+            # File doesn't exist on disk
+            self.assertFalse(os.path.exists(expected_csv_path))
+
+            csv_path = next(cached_it)
+
+            # File is cached to disk
+            self.assertTrue(os.path.exists(expected_csv_path))
+            self.assertEqual(expected_csv_path, csv_path)
+
 
 if __name__ == "__main__":
     unittest.main()
