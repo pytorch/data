@@ -94,4 +94,5 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
 
 
 # Register for functional API
+# See Issue https://github.com/pytorch/data/issues/200
 IterDataPipe.register_datapipe_as_function("to_map", IterToMapConverterMapDataPipe)
