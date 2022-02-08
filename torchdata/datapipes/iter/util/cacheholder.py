@@ -12,7 +12,7 @@ from torch.utils.data.datapipes.utils.common import check_lambda_fn, DILL_AVAILA
 
 from torch.utils.data.graph import traverse
 from torchdata.datapipes import functional_datapipe
-from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.iter import FileLister, IterDataPipe
 
 if DILL_AVAILABLE:
     import dill
@@ -255,6 +255,7 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
 
         _filepath_fn, _hash_dict, _hash_type, _ = OnDiskCacheHolderIterDataPipe._temp_dict[cache_holder]
         cached_dp = cache_holder._end_caching()
+        cached_dp = FileLister(cached_dp, recursive=True)
 
         if same_filepath_fn:
             filepath_fn = _filepath_fn
