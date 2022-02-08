@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-from typing import TypeVar
+from typing import Callable, TypeVar
 
-from torch.utils.data import DataChunk, functional_datapipe, IterDataPipe
+from torch.utils.data import functional_datapipe, IterDataPipe
 from torch.utils.data.datapipes.utils.common import check_lambda_fn, DILL_AVAILABLE
 
 if DILL_AVAILABLE:
@@ -13,18 +13,17 @@ T_co = TypeVar("T_co", covariant=True)
 
 
 @functional_datapipe("flatmap")
-class FlatMapperIterDataPipe(IterDataPipe[DataChunk[T_co]]):
-    r""":class:`FlatMapperIterDataPipe`.
-
-    Iterable DataPipe which applies a structure-changing function to an IterableDataPipe
-    flattens to a single unnested IterableDataPipe.
+class FlatMapperIterDataPipe(IterDataPipe[T_co]):
+    r"""
+    Applies a function over each item from the source DataPipe, then
+    flattens the outputs to a single, unnested IterDataPipe (functional name: ``flatmap``).
 
     Args:
-        datapipe: Iterable datapipe containing iterable datapipes to which the function is applied
-        fn: the function to be applied to each of the "inner" datapipes
+        datapipe: Source Iterable DataPipe
+        fn: the function to be applied to each element in the DataPipe
     """
 
-    def __init__(self, datapipe, fn):
+    def __init__(self, datapipe: IterDataPipe, fn: Callable):
         self.datapipe = datapipe
 
         check_lambda_fn(fn)
