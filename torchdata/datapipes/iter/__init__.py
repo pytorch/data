@@ -73,6 +73,7 @@ from torchdata.datapipes.iter.util.rows2columnar import Rows2ColumnarIterDataPip
 from torchdata.datapipes.iter.util.samplemultiplexer import SampleMultiplexerDataPipe as SampleMultiplexer
 from torchdata.datapipes.iter.util.saver import SaverIterDataPipe as Saver
 from torchdata.datapipes.iter.util.tararchivereader import TarArchiveReaderIterDataPipe as TarArchiveReader
+from torchdata.datapipes.iter.util.unzipper import UnZipperIterDataPipe as UnZipper
 from torchdata.datapipes.iter.util.xzfilereader import XzFileReaderIterDataPipe as XzFileReader
 from torchdata.datapipes.iter.util.ziparchivereader import ZipArchiveReaderIterDataPipe as ZipArchiveReader
 
@@ -134,6 +135,7 @@ __all__ = [
     "StreamReader",
     "TarArchiveReader",
     "UnBatcher",
+    "UnZipper",
     "XzFileReader",
     "ZipArchiveReader",
     "Zipper",
