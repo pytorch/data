@@ -18,13 +18,17 @@ T_co = TypeVar("T_co")
 @functional_datapipe("dataframe")
 class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDataFrame[T_co]]
     r"""
-    Iterable DataPipe that takes rows of data, batch a number of them together and create TorchArrow DataFrames.
-    Note that there is a trade-off between having a large number of rows within a DataFrame and usage of memory.
+    Takes rows of data, batches a number of them together and creates `TorchArrow`
+    DataFrames (functional name: ``dataframe``).
+
+    Note:
+        There is a trade-off between having a large number of rows within a DataFrame and usage of memory. Please
+        choose a value carefully.
 
     Args:
         source_dp: IterDataPipe containing rows of data
         dataframe_size: number of rows of data within each DataFrame
-        dtype: specify the TorchArrow dtype for the DataFrame
+        dtype: specify the `TorchArrow` dtype for the DataFrame
         columns: List of str that specifies the column names of the DataFrame
         device: specify the device on which the DataFrame will be stored
     """
@@ -51,14 +55,14 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
 @functional_datapipe("load_parquet_as_df")
 class ParquetDFLoaderIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDataFrame[T_co]]
     r"""
-    Iterable DataPipe that takes in paths to Parquet files and return a TorchArrow DataFrame for each row group
-    within a Parquet file.
+    Takes in paths to Parquet files and return a `TorchArrow` DataFrame for each row group
+    within a Parquet file (functional name: ``load_parquet_as_df``).
 
     Args:
         source_dp: source DataPipe containing paths to the Parquet files
-        columns: List of str that specifies the column names of the DataFrame
-        use_threads: if True, Parquet reader will perform multi-threaded column reads
-        dtype: specify the TorchArrow dtype for the DataFrame
+        columns: List of `str` that specifies the column names of the DataFrame
+        use_threads: if ``True``, Parquet reader will perform multi-threaded column reads
+        dtype: specify the `TorchArrow` dtype for the DataFrame
         device: specify the device on which the DataFrame will be stored
     """
 

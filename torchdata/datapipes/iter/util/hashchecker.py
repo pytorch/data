@@ -16,18 +16,19 @@ U = Union[D_type, StreamWrapper]
 @functional_datapipe("check_hash")
 class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, U]]):
     r"""
-    Iterable DataPipe that computes and checks the hash of each file, from an input
-    DataPipe of tuples of file name and data (stream). If the hashes match the given hash
-    in the dictionary, it yields a tuple of file name and data (stream). Otherwise, it raises an error.
+    Computes and checks the hash of each file, from an input DataPipe of tuples of file name and
+    data/stream (functional name: ``check_hash``). If the hashes match the given hash
+    in the dictionary, it yields a tuple of file name and data/stream. Otherwise, it will raise an error.
 
     Args:
-        source_datapipe: IterDataPipe with tuples of file name and data (stream)
-        hash_dict: Dict that maps file names to their corresponding hashes
+        source_datapipe: IterDataPipe with tuples of file name and data/stream
+        hash_dict: Dictionary that maps file names to their corresponding hashes
         hash_type: The type of hash function to apply
         rewind: Rewind the stream after using the stream to compute the hash (this
             does not work with non-seekable stream, e.g. HTTP)
 
-    Usage: dp = dp.check_hash({'train.py':'0d8b94d9fa9fb1ad89b9e3da9e1521495dca558fc5213b0fd7fd7b71c23f9921'})
+    Example:
+        >>> dp = dp.check_hash({'train.py':'0d8b94d9fa9fb1ad89b9e3da9e1521495dca558fc5213b0fd7fd7b71c23f9921'})
     """
 
     def __init__(

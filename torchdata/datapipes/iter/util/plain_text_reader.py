@@ -67,17 +67,17 @@ class PlainTextReaderHelper:
 @functional_datapipe("readlines")
 class LineReaderIterDataPipe(IterDataPipe[Union[Str_Or_Bytes, Tuple[str, Str_Or_Bytes]]]):
     r"""
-    Iterable DataPipe that accepts a DataPipe consisting of tuples of file name and string data stream,
-    and for each line in the stream, it yields a tuple of file name and the line
+    Accepts a DataPipe consisting of tuples of file name and string data stream, and for each line in the
+    stream, yields a tuple of file name and the line (functional name: ``readlines``).
 
     Args:
         source_datapipe: a DataPipe with tuples of file name and string data stream
         skip_lines: number of lines to skip at the beginning of each file
-        strip_newline: if True, the new line character will be stripped
-        decode: if True, this will decode the contents of the file based on the specified encoding
-        encoding: the character encoding of the files (default='utf-8')
+        strip_newline: if ``True``, the new line character will be stripped
+        decode: if ``True``, this will decode the contents of the file based on the specified ``encoding``
+        encoding: the character encoding of the files (`default='utf-8'`)
         errors: the error handling scheme used while decoding
-        return_path: if True, each line will return a tuple of path and contents, rather
+        return_path: if ``True``, each line will return a tuple of path and contents, rather
             than just the contents
     """
 
@@ -145,18 +145,18 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
 @functional_datapipe("parse_csv")
 class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
     r"""
-    Iterable DataPipe that accepts a DataPipe consists of tuples of file name and CSV data stream.
-    This reads and returns the contents within the CSV files one row at a time (as a List
-    by default, depending on fmtparams).
+    Accepts a DataPipe consists of tuples of file name and CSV data stream,
+    reads and returns the contents within the CSV files one row at a time (functional name: ``parse_csv``).
+    Each output is a `List` by default, but it depends on ``fmtparams``.
 
     Args:
         source_datapipe: source DataPipe with tuples of file name and CSV data stream
         skip_lines: number of lines to skip at the beginning of each file
-        strip_newline: if True, the new line character will be stripped
-        decode: if True, this will decode the contents of the file based on the specified encoding
-        encoding: the character encoding of the files (default='utf-8')
+        strip_newline: if ``True``, the new line character will be stripped
+        decode: if ``True``, this will decode the contents of the file based on the specified ``encoding``
+        encoding: the character encoding of the files (`default='utf-8'`)
         errors: the error handling scheme used while decoding
-        return_path: if True, each line will return a tuple of path and contents, rather
+        return_path: if ``True``, each line will return a tuple of path and contents, rather
             than just the contents
     """
 
@@ -186,20 +186,21 @@ class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
 @functional_datapipe("parse_csv_as_dict")
 class CSVDictParserIterDataPipe(_CSVBaseParserIterDataPipe):
     r"""
-    Iterable DataPipe that accepts a DataPipe consists of tuples of file name and CSV data stream.
-    This reads and returns the contents within the CSV files one row at a time (as a Dict by default,
-    depending on fmtparams).
-    The first row of each file, unless skipped, will be used as the header; the contents of the header row
-    will be used as keys for the Dicts generated from the remaining rows.
+    Accepts a DataPipe consists of tuples of file name and CSV data stream, reads and returns the contents
+    within the CSV files one row at a time (functional name: ``parse_csv_as_dict``).
+
+    Each output is a `Dict` by default, but it depends on ``fmtparams``. The first row of each file, unless skipped,
+    will be used as the header; the contents of the header row will be used as keys for the `Dict`s
+    generated from the remaining rows.
 
     Args:
         source_datapipe: source DataPipe with tuples of file name and CSV data stream
         skip_lines: number of lines to skip at the beginning of each file
-        strip_newline: if True, the new line character will be stripped
-        decode: if True, this will decode the contents of the file based on the specified encoding
-        encoding: the character encoding of the files (default='utf-8')
+        strip_newline: if ``True``, the new line character will be stripped
+        decode: if ``True``, this will decode the contents of the file based on the specified ``encoding``
+        encoding: the character encoding of the files (`default='utf-8'`)
         errors: the error handling scheme used while decoding
-        return_path: if True, each line will return a tuple of path and contents, rather
+        return_path: if ``True``, each line will return a tuple of path and contents, rather
             than just the contents
     """
 

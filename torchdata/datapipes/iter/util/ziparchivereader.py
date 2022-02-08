@@ -15,19 +15,18 @@ from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 
 @functional_datapipe("read_from_zip")
 class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
-    r""":class:`ZipArchiveReaderIterDataPipe`.
-
-    Iterable DataPipe to extract zip binary streams from input iterable which contains a tuple of path name and
-    zip binary stream. This yields a tuple of path name and extracted binary stream.
+    r"""
+    Opens/decompresses zip binary streams from an Iterable DataPipe which contains a tuple of path name and
+    zip binary stream, and yields a tuple of path name and extracted binary stream (functional name: ``read_from_zip``).
 
     Args:
         datapipe: Iterable DataPipe that provides tuples of path name and zip binary stream
         length: Nominal length of the DataPipe
 
     Note:
-        The opened file handles will be closed automatically if the default DecoderDataPipe
+        The opened file handles will be closed automatically if the default ``DecoderDataPipe``
         is attached. Otherwise, user should be responsible to close file handles explicitly
-        or let Python's GC close them periodically. Due to how zipfiles implements its open() method,
+        or let Python's GC close them periodically. Due to how `zipfiles` implements its ``open()`` method,
         the data_stream variable below cannot be closed within the scope of this function.
     """
 

@@ -10,17 +10,17 @@ T_co = TypeVar("T_co", covariant=True)
 
 class SampleMultiplexerDataPipe(IterDataPipe[T_co]):
     """
-    IterDataPipe that takes a dict of (IterDataPipe, Weight), and yields items by sampling from these
-    DataPipes with respect to their weights. When individual DataPipes are exhausted, it continues to sample from
+    Takes a `Dict` of (IterDataPipe, Weight), and yields items by sampling from these
+    DataPipes with respect to their weights. When individual DataPipes are exhausted, continues to sample from
     the remaining DataPipes according to their relative weights.
     If you wish to maintain the same ratio of weights indefinitely, you need to ensure that the
-    inputs are never exhausted, by, for instance, applying cycle() to them.
+    inputs are never exhausted, by, for instance, applying ``cycle`` to them.
 
-    Sampling is controlled by the provided random seed. If you don't provide it, the sampling
+    Sampling is controlled by the provided random ``seed``. If you don't provide it, the sampling
     will not be deterministic.
 
     Args:
-        pipes_to_weights_dict: a Dict of IterDataPipes and Weights. The total weight of
+        pipes_to_weights_dict: a `Dict` of IterDataPipes and Weights. The total weight of
             unexhausted DataPipes will be normalized to 1 for the purpose of sampling.
         seed: random seed to initialize the random number generator
     """
