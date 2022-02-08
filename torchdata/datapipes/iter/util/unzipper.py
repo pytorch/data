@@ -1,6 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from typing import Optional, Sequence, TypeVar
-from warnings import warn
 
 from torch.utils.data.datapipes.iter.combining import _ChildDataPipe, _ForkerIterDataPipe
 from torchdata.datapipes import functional_datapipe
@@ -44,8 +43,10 @@ class UnZipperIterDataPipe(IterDataPipe[T]):
             instance_ids = [i for i in range(sequence_length) if i not in skips]
 
         if len(instance_ids) == 0:
-            warn("You are filtering out all instances in UnZipperIterDataPipe.")
-            return []
+            raise RuntimeError(
+                "All instances are being filtered out in UnZipperIterDataPipe. Please check"
+                "the input `sequence_length` and `columns_to_skip`."
+            )
 
         # The implementation basically uses Forker but only yields a specific element within the sequence
         container = _UnZipperIterDataPipe(source_datapipe, sequence_length, buffer_size)

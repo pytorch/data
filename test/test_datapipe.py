@@ -683,6 +683,8 @@ class TestDataPipe(expecttest.TestCase):
         self.assertEqual(len(source_dp), len(dp2))
         self.assertEqual(len(source_dp), len(dp3))
 
+        # TODO: Add testing for different stages of pickling for UnZipper
+
 
 if __name__ == "__main__":
     unittest.main()

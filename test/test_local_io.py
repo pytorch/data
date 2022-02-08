@@ -592,13 +592,27 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
     def _write_test_rar_files(self):
         # `rarfile` can only read but not write .rar archives so we use to system utilities
-        subprocess.run(("rar", "a", os.path.join(self.temp_dir.name, "test_rar.rar"), *self.temp_files), check=True)
+        rar_archive_name = os.path.join(self.temp_dir.name, "test_rar")
+        subprocess.run(("rar", "a", rar_archive_name + ".rar", *self.temp_files), check=True)
+
+        # Nested RAR
+        subprocess.run(("rar", "a", rar_archive_name + "1.rar", self.temp_files[0]), check=True)
+        subprocess.run(("rar", "a", rar_archive_name + "2.rar", *self.temp_files[1:]), check=True)
+        subprocess.run(
+            ("rar", "a", rar_archive_name + "_nested.rar", rar_archive_name + "1.rar", rar_archive_name + "2.rar"),
+            check=True,
+        )
+
+        # Nested RAR in TAR
+        with tarfile.open(rar_archive_name + "_nested.tar", "w:tar") as tar:
+            tar.add(rar_archive_name + "1.rar")
+            tar.add(rar_archive_name + "2.rar")
 
     @skipIfNoRarTools
     def test_rar_archive_loader(self):
         self._write_test_rar_files()
 
-        datapipe1 = FileLister(self.temp_dir.name, "*.rar")
+        datapipe1 = IterableWrapper([os.path.join(self.temp_dir.name, "test_rar.rar")])
         datapipe2 = FileOpener(datapipe1, mode="b")
         rar_loader_dp = RarArchiveLoader(datapipe2)
 
@@ -611,7 +625,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         # Reset Test: reset the DataPipe after reading part of it
         rar_loader_dp = datapipe2.load_from_rar()
-        n_elements_before_reset = 1
+        n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(rar_loader_dp, n_elements_before_reset)
         # Check the results accumulated before reset
         self._unordered_compressed_files_comparison_helper(self.temp_files[:n_elements_before_reset], res_before_reset)
@@ -621,6 +635,28 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # __len__ Test: doesn't have valid length
         with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
             len(rar_loader_dp)
+
+        # Nested RAR
+        datapipe1 = IterableWrapper([os.path.join(self.temp_dir.name, "test_rar_nested.rar")])
+        datapipe2 = FileOpener(datapipe1, mode="b")
+        rar_loader_dp_1 = RarArchiveLoader(datapipe2)
+        rar_loader_dp_2 = RarArchiveLoader(rar_loader_dp_1)
+
+        with self.assertRaisesRegex(ValueError, "Nested RAR archive is not supported"):
+            list(rar_loader_dp_2)
+
+        # Nested RAR in TAR
+        datapipe1 = IterableWrapper([os.path.join(self.temp_dir.name, "test_rar_nested.tar")])
+        datapipe2 = FileOpener(datapipe1, mode="b")
+        tar_loader_dp = TarArchiveReader(datapipe2)
+        rar_loader_dp = RarArchiveLoader(tar_loader_dp)
+
+        # Functional Test: read extracted files before reaching the end of the rarfile
+        self._unordered_compressed_files_comparison_helper(self.temp_files, rar_loader_dp, check_length=False)
+
+        # Functional Test: read extracted files after reaching the end of the rarfile
+        data_refs = list(rar_loader_dp)
+        self._unordered_compressed_files_comparison_helper(self.temp_files, data_refs)
 
 
 if __name__ == "__main__":
