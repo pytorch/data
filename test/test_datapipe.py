@@ -689,7 +689,7 @@ class TestDataPipe(expecttest.TestCase):
     def test_itertomap_mapdatapipe(self):
         # Functional Test with None key_value_fn
         values = list(range(10))
-        keys = list("k" + str(i) for i in range(10))
+        keys = ["k" + str(i) for i in range(10)]
         source_dp = IterableWrapper(list(zip(keys, values)))
 
         map_dp = source_dp.to_map_datapipe()
@@ -702,7 +702,7 @@ class TestDataPipe(expecttest.TestCase):
         self.assertEqual(len(map_dp), 10)
 
         # Functional Test
-        self.assertEqual(list(range(10)), list(map_dp["k" + str(idx)] for idx in range(10)))
+        self.assertEqual(list(range(10)), [map_dp["k" + str(idx)] for idx in range(10)])
         self.assertFalse(map_dp._map is None)
 
         source_dp = IterableWrapper(range(10))
@@ -719,7 +719,7 @@ class TestDataPipe(expecttest.TestCase):
 
         # Functional Test with key_value_fn
         map_dp = source_dp.to_map_datapipe(lambda d: ("k" + str(d), d + 1))
-        self.assertEqual(list(range(1, 11)), list(map_dp["k" + str(idx)] for idx in range(10)))
+        self.assertEqual(list(range(1, 11)), [map_dp["k" + str(idx)] for idx in range(10)])
         self.assertFalse(map_dp._map is None)
 
         # No __len__ from prior DataPipe
