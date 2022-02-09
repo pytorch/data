@@ -30,7 +30,6 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="FlatMapper" href="torchdata.datapipes.iter.FlatMapper.html" />
@@ -314,14 +313,13 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.Filter">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_empty_batches</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.Filter" title="Permalink to this definition">¶</a></dt>
-<dd><p><code class="xref py py-class docutils literal notranslate"><span class="pre">FilterIterDataPipe</span></code>.</p>
-<p>Iterable DataPipe to filter elements from datapipe according to filter_fn.</p>
+<dd><p>Filter out elements from the source datapipe according to input <code class="docutils literal notranslate"><span class="pre">filter_fn</span></code> (functional name: <code class="docutils literal notranslate"><span class="pre">filter</span></code>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>datapipe</strong> – Iterable DataPipe being filtered</p></li>
 <li><p><strong>filter_fn</strong> – Customized function mapping an element to a boolean.</p></li>
-<li><p><strong>drop_empty_batches</strong> – By default, drops batch if it is empty after filtering instead of keeping an empty list</p></li>
+<li><p><strong>drop_empty_batches</strong> – By default, drops a batch if it is empty after filtering instead of keeping an empty list</p></li>
 </ul>
 </dd>
 </dl>

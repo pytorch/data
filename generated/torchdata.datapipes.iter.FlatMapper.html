@@ -30,7 +30,6 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Forker" href="torchdata.datapipes.iter.Forker.html" />
@@ -313,14 +312,15 @@
 <h1>FlatMapper<a class="headerlink" href="#flatmapper" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.FlatMapper">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">FlatMapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.FlatMapper" title="Permalink to this definition">¶</a></dt>
-<dd><p>Applies a function over each item from the source DataPipe, then
-flattens the outputs to a single, unnested IterDataPipe (functional name: <code class="docutils literal notranslate"><span class="pre">flatmap</span></code>).</p>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">FlatMapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.FlatMapper" title="Permalink to this definition">¶</a></dt>
+<dd><p><code class="xref py py-class docutils literal notranslate"><span class="pre">FlatMapperIterDataPipe</span></code>.</p>
+<p>Iterable DataPipe which applies a structure-changing function to an IterableDataPipe
+flattens to a single unnested IterableDataPipe.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>datapipe</strong> – Source Iterable DataPipe</p></li>
-<li><p><strong>fn</strong> – the function to be applied to each element in the DataPipe</p></li>
+<li><p><strong>datapipe</strong> – Iterable datapipe containing iterable datapipes to which the function is applied</p></li>
+<li><p><strong>fn</strong> – the function to be applied to each of the “inner” datapipes</p></li>
 </ul>
 </dd>
 </dl>

@@ -30,7 +30,6 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Grouper" href="torchdata.datapipes.iter.Grouper.html" />
@@ -314,8 +313,7 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.Forker">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Forker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_instances</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1000</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.Forker" title="Permalink to this definition">¶</a></dt>
-<dd><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ForkerIterDataPipe</span></code>.</p>
-<p>Iterable DataPipe to create multiple instances of the same Iterable DataPipe.</p>
+<dd><p>Create multiple instances of the same Iterable DataPipe (functional name: <code class="docutils literal notranslate"><span class="pre">fork</span></code>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -323,7 +321,7 @@
 <li><p><strong>num_instances</strong> – number of instances of the datapipe to create</p></li>
 <li><p><strong>buffer_size</strong> – this restricts how far ahead the leading child DataPipe
 can read relative to the slowest child DataPipe.
-Use -1 for the unlmited buffer</p></li>
+Defaults to <code class="docutils literal notranslate"><span class="pre">1000</span></code>. Use <code class="docutils literal notranslate"><span class="pre">-1</span></code> for the unlimited buffer.</p></li>
 </ul>
 </dd>
 </dl>

@@ -30,7 +30,6 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Shuffler" href="torchdata.datapipes.map.Shuffler.html" />
@@ -314,19 +313,18 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.map.SequenceWrapper">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.map.</span></span><span class="sig-name descname"><span class="pre">SequenceWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sequence</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deepcopy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.map.SequenceWrapper" title="Permalink to this definition">¶</a></dt>
-<dd><p><code class="xref py py-class docutils literal notranslate"><span class="pre">SequenceWrapperMapDataPipe</span></code>.</p>
-<p>Map DataPipe that wraps a sequence object.</p>
+<dd><p>Wraps a sequence object into a MapDataPipe.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>sequence</strong> – Sequence object to be wrapped into an IterDataPipe</p></li>
+<li><p><strong>sequence</strong> – Sequence object to be wrapped into an MapDataPipe</p></li>
 <li><p><strong>deepcopy</strong> – Option to deepcopy input sequence object</p></li>
 </ul>
 </dd>
 </dl>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>If <cite>deepcopy</cite> is set to False explicitly, users should ensure
+<p>If <code class="docutils literal notranslate"><span class="pre">deepcopy</span></code> is set to False explicitly, users should ensure
 that data pipeline doesn’t contain any in-place operations over
 the iterable instance, in order to prevent data inconsistency
 across iterations.</p>

@@ -30,7 +30,6 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="TarArchiveReader" href="torchdata.datapipes.iter.TarArchiveReader.html" />
@@ -314,15 +313,13 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.StreamReader">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">StreamReader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.StreamReader" title="Permalink to this definition">¶</a></dt>
-<dd><p><code class="xref py py-class docutils literal notranslate"><span class="pre">StreamReaderIterDataPipe</span></code></p>
-<p>Iterable DataPipe to load IO stream with label name,
-and to yield bytes with label name in a tuple</p>
+<dd><p>Given IO streams and their label names, yield bytes with label name in a tuple.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>datapipe</strong> – Iterable DataPipe provides url and byte stream</p></li>
+<li><p><strong>datapipe</strong> – Iterable DataPipe provides label/URL and byte stream</p></li>
 <li><p><strong>chunk</strong> – Number of bytes to be read from stream per iteration.
-If None, all bytes will be read util the EOF.</p></li>
+If <code class="docutils literal notranslate"><span class="pre">None</span></code>, all bytes will be read util the EOF.</p></li>
 </ul>
 </dd>
 </dl>

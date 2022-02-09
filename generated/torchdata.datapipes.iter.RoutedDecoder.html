@@ -30,7 +30,6 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Rows2Columnar" href="torchdata.datapipes.iter.Rows2Columnar.html" />
@@ -313,15 +312,14 @@
 <h1>RoutedDecoder<a class="headerlink" href="#routeddecoder" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.RoutedDecoder">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">RoutedDecoder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">datapipe:</span> <span class="pre">Iterable[Tuple[str,</span> <span class="pre">io.BufferedIOBase]],</span> <span class="pre">*handlers:</span> <span class="pre">Callable,</span> <span class="pre">key_fn:</span> <span class="pre">Callable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">extension_extract_fn&gt;</span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.RoutedDecoder" title="Permalink to this definition">¶</a></dt>
-<dd><p><code class="xref py py-class docutils literal notranslate"><span class="pre">RoutedDecoderIterDataPipe</span></code>.</p>
-<p>Iterable datapipe to decode binary streams from input DataPipe, yield pathname
-and decoded data in a tuple.</p>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">RoutedDecoder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">datapipe:</span> <span class="pre">typing.Iterable[typing.Tuple[str,</span> <span class="pre">io.BufferedIOBase]],</span> <span class="pre">*handlers:</span> <span class="pre">typing.Callable,</span> <span class="pre">key_fn:</span> <span class="pre">typing.Callable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">extension_extract_fn&gt;</span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.RoutedDecoder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decode binary streams from input DataPipe, yield pathname and decoded data
+in a tuple (functional name: <code class="docutils literal notranslate"><span class="pre">routed_decode</span></code>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>datapipe</strong> – Iterable datapipe that provides pathname and binary stream in tuples</p></li>
-<li><p><strong>handlers</strong> – Optional user defined decoder handlers. If None, basic and image decoder
+<li><p><strong>handlers</strong> – Optional user defined decoder handlers. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, basic and image decoder
 handlers will be set as default. If multiple handles are provided, the priority
 order follows the order of handlers (the first handler has the top priority)</p></li>
 <li><p><strong>key_fn</strong> – Function for decoder to extract key from pathname to dispatch handlers.
@@ -331,7 +329,7 @@ Default is set to extract file extension from pathname</p></li>
 </dl>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>When <cite>key_fn</cite> is specified returning anything other than extension, the default
+<p>When <code class="docutils literal notranslate"><span class="pre">key_fn</span></code> is specified returning anything other than extension, the default
 handler will not work and users need to specify custom handler. Custom handler
 could use regex to determine the eligibility to handle data.</p>
 </div>

@@ -30,7 +30,6 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="OnDiskCacheHolder" href="torchdata.datapipes.iter.OnDiskCacheHolder.html" />
@@ -314,10 +313,9 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.Multiplexer">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Multiplexer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">datapipes</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.Multiplexer" title="Permalink to this definition">¶</a></dt>
-<dd><p><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiplexerIterDataPipe</span></code>.</p>
-<p>Iterable DataPipe that yields one element at a time from each input Iterable DataPipe
-(i.e. one element from the 1st input DataPipe, then one element from the 2nd DataPipe in the next iteration,
-and so on). It skips over DataPipes that are exhausted, and ends when all input DataPipes are exhausted.</p>
+<dd><p>Yields one element at a time from each of the input Iterable DataPipes (functional name: <code class="docutils literal notranslate"><span class="pre">mux</span></code>). As in,
+one element from the 1st input DataPipe, then one element from the 2nd DataPipe in the next iteration,
+and so on. It skips over DataPipes that are exhausted, and ends when all input DataPipes are exhausted.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>datapipes</strong> – Iterable DataPipes that will take turn to yield their elements, until they are all exhausted</p>
