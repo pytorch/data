@@ -74,6 +74,7 @@ from torchdata.datapipes.iter.util.samplemultiplexer import SampleMultiplexerDat
 from torchdata.datapipes.iter.util.saver import SaverIterDataPipe as Saver
 from torchdata.datapipes.iter.util.tararchivereader import TarArchiveReaderIterDataPipe as TarArchiveReader
 from torchdata.datapipes.iter.util.unzipper import UnZipperIterDataPipe as UnZipper
+from torchdata.datapipes.iter.util.utils import IterToMapConverterMapDataPipe as IterToMapConverter
 from torchdata.datapipes.iter.util.xzfilereader import XzFileReaderIterDataPipe as XzFileReader
 from torchdata.datapipes.iter.util.ziparchivereader import ZipArchiveReaderIterDataPipe as ZipArchiveReader
 
@@ -114,6 +115,7 @@ __all__ = [
     "IoPathSaver",
     "IterDataPipe",
     "IterKeyZipper",
+    "IterToMapConverter",
     "IterableWrapper",
     "JsonParser",
     "LineReader",
