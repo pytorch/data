@@ -35,6 +35,7 @@ DataPipes
 
     Batcher
     Concater
+    IterToMapConverter
     Mapper
     SequenceWrapper
     Shuffler
