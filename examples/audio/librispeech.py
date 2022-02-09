@@ -1,4 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+import functools
 import os
 
 from pathlib import Path
@@ -43,6 +44,14 @@ def load_librispeech_item(data):
     )
 
 
+def decompress_filepath_fn(file_path, root_path):
+    file_path = os.path.normpath(file_path)
+    if file_path.endswith((AUDIO_EXT, TXT_EXT)):
+        return os.path.join(root_path, *file_path.split(os.sep)[-4:])
+    else:
+        return os.path.join(root_path, os.path.basename(file_path))
+
+
 def classify_file_fn(filepath):
     if filepath.endswith(AUDIO_EXT):
         return 0
@@ -51,13 +60,9 @@ def classify_file_fn(filepath):
     return None
 
 
-def read_txt_file_fn(text_file):
-    res = []
-    with open(text_file) as ft:
-        for line in ft:
-            fileid_text, transcript = line.strip().split(" ", 1)
-            res.append((fileid_text, transcript))
-    return res
+def text_split_fn(line):
+    fileid_text, transcript = line.strip().split(" ", 1)
+    return (fileid_text, transcript)
 
 
 def audio_key_fn(audio_file):
@@ -79,32 +84,32 @@ def LibriSpeech(root: Union[str, Path], url: str = URL, folder_in_archive: str =
 
     # Get string representation of 'root' in case Path object is passed
     root = os.fspath(root)
-    archive_name = os.path.basename(url)
-    checksum = _CHECKSUMS.get(archive_name, None)
-    tar_archive_path = os.path.join(root, archive_name)
 
-    basename = archive_name.split(".")[0]
-    archive_path = os.path.join(root, folder_in_archive, basename)
+    checksum_dict = {os.path.join(root, key): value for key, value in _CHECKSUMS.items()}
 
     url_dp = IterableWrapper([url])
 
     # Cache tar.gz archive
     cache_compressed_dp = url_dp.on_disk_cache(
-        filepath_fn=lambda x: tar_archive_path, hash_dict={tar_archive_path: checksum}, hash_type="sha256"
+        filepath_fn=lambda url: os.path.join(root, os.path.basename(url)),
+        hash_dict=checksum_dict,
+        hash_type="sha256",
     )
-    cache_compressed_dp = HttpReader(cache_compressed_dp).end_caching(mode="wb", same_filepath_fn=True)
+    cache_compressed_dp = HttpReader(cache_compressed_dp).end_caching(same_filepath_fn=True)
 
     # Cache decompressed archive into folder_in_archive
-    cache_decompressed_dp = cache_compressed_dp.on_disk_cache(filepath_fn=lambda x: archive_path)
+    cache_decompressed_dp = cache_compressed_dp.on_disk_cache(
+        filepath_fn=lambda tar_path: os.path.join(root, folder_in_archive, tar_path.split(".")[0])
+    )
     cache_decompressed_dp = FileOpener(cache_decompressed_dp, mode="b").read_from_tar()
     cache_decompressed_dp = cache_decompressed_dp.end_caching(
-        mode="wb", filepath_fn=lambda filepath: os.path.join(archive_path, os.path.basename(filepath))
+        filepath_fn=functools.partial(decompress_filepath_fn, root_path=os.path.join(root, folder_in_archive)),
     )
 
     audio_dp, txt_dp = cache_decompressed_dp.demux(2, classify_file_fn, drop_none=True, buffer_size=-1)
 
-    txt_dp = txt_dp.flatmap(read_txt_file_fn)
-    transcript_map_dp = txt_dp.to_map(key_fn=lambda x: x[0], value_fn=lambda x: x[1])
+    txt_dp = FileOpener(txt_dp, mode="t").readlines(return_path=False).map(text_split_fn)
+    transcript_map_dp = txt_dp.to_map_datapipe()
 
     audio_transcript_dp = audio_dp.zip_with_map(transcript_map_dp, key_fn=audio_key_fn)
 
