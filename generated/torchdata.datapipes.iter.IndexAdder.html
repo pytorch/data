@@ -314,9 +314,10 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.IndexAdder">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">IndexAdder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'index'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.IndexAdder" title="Permalink to this definition">¶</a></dt>
-<dd><p>Adds an index to an existing Iterable DataPipe with (functional name: <code class="docutils literal notranslate"><span class="pre">add_index</span></code>). The row or batch
-within the DataPipe must have the type <cite>Dict</cite>; otherwise, a <cite>NotImplementedError</cite> will be thrown. The index
-of the data is set to the provided <code class="docutils literal notranslate"><span class="pre">index_name</span></code>.</p>
+<dd><p><a class="reference internal" href="#torchdata.datapipes.iter.IndexAdder" title="torchdata.datapipes.iter.IndexAdder"><code class="xref py py-class docutils literal notranslate"><span class="pre">IndexAdder</span></code></a>.</p>
+<p>Iterable DataPipe to add an index to an existing datapipe. The row or batch
+must be of type dict otherwise a <cite>NotImplementedError</cite> is thrown. The index
+of the data is set to the <cite>index_name</cite> field provided.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">

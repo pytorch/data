@@ -314,37 +314,37 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.OnDiskCacheHolder">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">OnDiskCacheHolder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepath_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hash_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hash_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'sha256'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_check_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.OnDiskCacheHolder" title="Permalink to this definition">¶</a></dt>
-<dd><p>Caches the outputs of multiple DataPipe operations to local files, which are
-typically performance bottleneck such download, decompress, and etc (functional name: <code class="docutils literal notranslate"><span class="pre">on_disk_cache</span></code>).</p>
-<p>Must use <code class="docutils literal notranslate"><span class="pre">.end_caching()</span></code> to stop tracing the sequence of DataPipe operations and save the results to local files.</p>
+<dd><p><cite>OnDiskCacheHolder</cite> is a IterDataPipe that caches output of multiple DataPipe operations
+to local files, which are normally performance bottleneck like download, decompress,
+and etc.</p>
+<p>Use <cite>.end_caching()</cite> to stop tracing the sequence of DataPipe operations and save result to local files.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_datapipe</strong> – IterDataPipe</p></li>
-<li><p><strong>filepath_fn</strong> – Given data from <code class="docutils literal notranslate"><span class="pre">source_datapipe</span></code>, returns file path(s) on local file system.
+<li><p><strong>filepath_fn</strong> – Given data from <cite>source_datapipe</cite>, returns file path(s) on local file system.
 Single file path, tuple or list of file paths is accepted as return type.
 And, generator function that yields file paths is also allowed.
-As default, data from <code class="docutils literal notranslate"><span class="pre">source_datapipe</span></code> is directly used to determine the existency of cache.</p></li>
-<li><p><strong>hash_dict</strong> – A Dictionary mapping file names to their corresponding hashes. If <code class="docutils literal notranslate"><span class="pre">hash_dict</span></code> is specified,
+As default, data from <cite>source_datapipe</cite> is directly used to determine the existency of cache.</p></li>
+<li><p><strong>hash_dict</strong> – Dict mapping file names to their corresponding hashes. If hash_dict is specified,
 the extra hash check will be attached before saving data to local file system. If the data
-doesn’t meet the hash, the pipeline will raise an Error.</p></li>
+doesn’t meet the hash, the pipeline will raise Error.</p></li>
 <li><p><strong>hash_type</strong> – The type of hash function to apply</p></li>
 <li><p><strong>extra_check_fn</strong> – Optional function to carry out extra validation on
-the given file path from <code class="docutils literal notranslate"><span class="pre">filepath_fn</span></code>.</p></li>
+the given file path from <cite>filepath_fn</cite>.</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">url</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([</span><span class="s2">&quot;https://path/to/filename&quot;</span><span class="p">,</span> <span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">_filepath_fn</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">temp_dir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">gettempdir</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">temp_dir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">url</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">hash_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;expected_filepaht&quot;</span><span class="p">:</span> <span class="n">expected_MD5_hash</span><span class="p">}</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">cache_dp</span> <span class="o">=</span> <span class="n">url</span><span class="o">.</span><span class="n">on_disk_cache</span><span class="p">(</span><span class="n">filepath_fn</span><span class="o">=</span><span class="n">_filepath_fn</span><span class="p">,</span> <span class="n">hash_dict</span><span class="o">=</span><span class="n">_hash_dict</span><span class="p">,</span> <span class="n">hash_type</span><span class="o">=</span><span class="s2">&quot;md5&quot;</span><span class="p">)</span>
-<span class="go">You must call ``.end_caching`` at a later point to stop tracing and save the results to local files.</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">cache_dp</span> <span class="o">=</span> <span class="n">HttpReader</span><span class="p">(</span><span class="n">cache_dp</span><span class="p">)</span><span class="o">.</span><span class="n">end_caching</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;wb&quot;</span><span class="o">.</span> <span class="n">filepath_fn</span><span class="o">=</span><span class="n">_filepath_fn</span><span class="p">)</span>
-</pre></div>
-</div>
+<p>url = IterableWrapper([”<a class="reference external" href="https://path/to/filename">https://path/to/filename</a>”, ])</p>
+<dl class="simple">
+<dt>def _filepath_fn(url):</dt><dd><p>temp_dir = tempfile.gettempdir()
+return os.path.join(temp_dir, os.path.basename(url))</p>
+</dd>
+</dl>
+<p>hash_dict = {“expected_filepaht”: expected_MD5_hash}</p>
+<p>cache_dp = url.on_disk_cache(filepath_fn=_filepath_fn, hash_dict=_hash_dict, hash_type=”md5”)
+cache_dp = HttpReader(cache_dp).end_caching(mode=”wb”. filepath_fn=_filepath_fn)</p>
 </dd></dl>
 
 </section>

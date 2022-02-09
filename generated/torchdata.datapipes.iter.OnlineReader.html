@@ -314,13 +314,13 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.OnlineReader">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">OnlineReader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.OnlineReader" title="Permalink to this definition">¶</a></dt>
-<dd><p>Takes file URLs (can be HTTP URLs pointing to files or URLs to GDrive files), and
+<dd><p>Iterable DataPipe that takes file URLs (can be http URLs pointing to files or URLs to GDrive files), and
 yields tuples of file URL and IO stream.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_datapipe</strong> – a DataPipe that contains URLs</p></li>
-<li><p><strong>timeout</strong> – timeout in seconds for HTTP request</p></li>
+<li><p><strong>timeout</strong> – timeout in seconds for http request</p></li>
 </ul>
 </dd>
 </dl>

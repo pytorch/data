@@ -314,7 +314,7 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.ParagraphAggregator">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">ParagraphAggregator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">source_datapipe:</span> <span class="pre">IterDataPipe[Tuple[str,</span> <span class="pre">torchdata.datapipes.iter.util.paragraphaggregator.T_co]],</span> <span class="pre">joiner:</span> <span class="pre">Callable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_line_join&gt;</span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.ParagraphAggregator" title="Permalink to this definition">¶</a></dt>
-<dd><p>Aggregates lines of text from the same file into a single paragraph (functional name: <code class="docutils literal notranslate"><span class="pre">lines_to_paragraphs</span></code>).
+<dd><p>Iterable DataPipe that aggregates lines of text from the same file into a single paragraph.
 Specifically, this accepts a DataPipe consisting of tuples of a file name and a line. For each tuple,
 it checks if the file name matches the file name from the previous tuple. If yes, it joins the current line
 with existing paragraph. If the file names do not match, the existing paragraph is yielded and a new
