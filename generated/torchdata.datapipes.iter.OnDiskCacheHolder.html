@@ -343,7 +343,7 @@ return os.path.join(temp_dir, os.path.basename(url))</p>
 </dl>
 <p>hash_dict = {“expected_filepaht”: expected_MD5_hash}</p>
 <p>cache_dp = url.on_disk_cache(filepath_fn=_filepath_fn, hash_dict=_hash_dict, hash_type=”md5”)
-cache_dp = HttpReader(cache_dp).end_caching(filepath_fn=_filepath_fn)</p>
+cache_dp = HttpReader(cache_dp).end_caching(mode=”wb”. filepath_fn=_filepath_fn)</p>
 </dd></dl>
 
 </section>
