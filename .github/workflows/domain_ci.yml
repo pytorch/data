@@ -131,10 +131,10 @@ jobs:
       - name: Install test requirements
         run: pip install dill expecttest numpy pytest
 
-      - name: Run torchtext example datasets tests
+      - name: Run torchaudio example datasets tests
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run: pytest --no-header -v test/test_audio_examples.py
-      - name: Run torchtext example datasets (including slow tests)
+      - name: Run torchaudio example datasets (including slow tests)
         if: ${{ contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run: pytest --no-header -v test/test_audio_examples.py
         env:
