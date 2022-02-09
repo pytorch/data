@@ -314,13 +314,12 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.FSSpecFileLister">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">FSSpecFileLister</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">root</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">masks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.FSSpecFileLister" title="Permalink to this definition">¶</a></dt>
-<dd><p><code class="xref py py-class docutils literal notranslate"><span class="pre">FSSpecFileListerIterDataPipe</span></code>.</p>
-<p>Iterable DataPipe to list the contents of the directory at the provided <cite>root</cite> pathname or url,
-and yields the full pathname or url for each file within the directory.</p>
+<dd><p>Lists the contents of the directory at the provided <code class="docutils literal notranslate"><span class="pre">root</span></code> pathname or URL,
+and yields the full pathname or URL for each file within the directory.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>root</strong> – The root fsspec path directory to list files from</p></li>
+<li><p><strong>root</strong> – The root <cite>fsspec</cite> path directory to list files from</p></li>
 <li><p><strong>masks</strong> – Unix style filter string or string list for filtering file name(s)</p></li>
 </ul>
 </dd>
