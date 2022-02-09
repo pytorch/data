@@ -687,8 +687,12 @@ class TestDataPipe(expecttest.TestCase):
         # TODO: Add testing for different stages of pickling for UnZipper
 
     def test_itertomap_mapdatapipe(self):
-        source_dp = IterableWrapper(range(10))
-        map_dp = source_dp.to_map(lambda x: x + 1)
+        # Functional Test with None key_value_fn
+        values = list(range(10))
+        keys = list("k" + str(i) for i in range(10))
+        source_dp = IterableWrapper(list(zip(keys, values)))
+
+        map_dp = source_dp.to_map_datapipe()
         self.assertTrue(isinstance(map_dp, MapDataPipe))
 
         # Lazy loading
@@ -698,12 +702,29 @@ class TestDataPipe(expecttest.TestCase):
         self.assertEqual(len(map_dp), 10)
 
         # Functional Test
-        self.assertEqual(list(range(10)), list(map_dp[idx] for idx in range(1, 11)))
+        self.assertEqual(list(range(10)), list(map_dp["k" + str(idx)] for idx in range(10)))
+        self.assertFalse(map_dp._map is None)
+
+        source_dp = IterableWrapper(range(10))
+
+        # TypeError test for invalid data type
+        map_dp = source_dp.to_map_datapipe()
+        with self.assertRaisesRegex(TypeError, "Cannot convert dictionary update element"):
+            _ = list(map_dp)
+
+        # ValueError test for wrong length
+        map_dp = source_dp.to_map_datapipe(lambda d: (d,))
+        with self.assertRaisesRegex(ValueError, "dictionary update sequence element has length"):
+            _ = list(map_dp)
+
+        # Functional Test with key_value_fn
+        map_dp = source_dp.to_map_datapipe(lambda d: ("k" + str(d), d + 1))
+        self.assertEqual(list(range(1, 11)), list(map_dp["k" + str(idx)] for idx in range(10)))
         self.assertFalse(map_dp._map is None)
 
         # No __len__ from prior DataPipe
         no_len_dp = source_dp.filter(lambda x: x % 2 == 0)
-        map_dp = no_len_dp.to_map(lambda x: x + 2)
+        map_dp = no_len_dp.to_map_datapipe(lambda x: (x, x + 2))
         with warnings.catch_warnings(record=True) as wa:
             length = len(map_dp)
             self.assertEqual(length, 5)
@@ -711,9 +732,11 @@ class TestDataPipe(expecttest.TestCase):
             self.assertRegex(str(wa[0].message), r"Data from prior DataPipe")
 
         # Duplicate Key Test
-        dup_map_dp = source_dp.to_map(lambda x: x % 2)
-        with self.assertRaisesRegex(KeyError, "Found duplicate key"):
-            _ = list(dup_map_dp)
+        dup_map_dp = source_dp.to_map_datapipe(lambda x: (x % 1, x))
+        with warnings.catch_warnings(record=True) as wa:
+            dup_map_dp._load_map()
+            self.assertEqual(len(wa), 1)
+            self.assertRegex(str(wa[0].message), r"Found duplicate key")
 
 
 if __name__ == "__main__":
