@@ -18,9 +18,12 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
     Applies a function over each item from the source DataPipe, then
     flattens the outputs to a single, unnested IterDataPipe (functional name: ``flatmap``).
 
+    Note:
+        The output from ``fn`` must be a Sequence. Otherwise, an error will be raised.
+
     Args:
-        datapipe: Source Iterable DataPipe
-        fn: the function to be applied to each element in the DataPipe
+        datapipe: Source IterDataPipe
+        fn: the function to be applied to each element in the DataPipe, the output must be a Sequence
     """
 
     def __init__(self, datapipe: IterDataPipe, fn: Callable):
