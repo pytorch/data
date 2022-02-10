@@ -26,24 +26,6 @@ AUDIO_EXT = ".flac"
 TXT_EXT = ".trans.txt"
 
 
-def load_librispeech_item(data):
-    audio_file, transcript = data
-    audio_filename = os.path.splitext(os.path.basename(audio_file))[0]
-    speaker_id, chapter_id, utterance_id = audio_filename.split("-")
-
-    # Load audio
-    waveform, sample_rate = torchaudio.load(audio_file)
-
-    return (
-        waveform,
-        sample_rate,
-        transcript,
-        int(speaker_id),
-        int(chapter_id),
-        int(utterance_id),
-    )
-
-
 def decompress_filepath_fn(file_path, root_path):
     file_path = os.path.normpath(file_path)
     if file_path.endswith((AUDIO_EXT, TXT_EXT)):
@@ -68,6 +50,24 @@ def text_split_fn(line):
 def audio_key_fn(audio_file):
     audio_filename = os.path.splitext(os.path.basename(audio_file))[0]
     return audio_filename
+
+
+def load_librispeech_item(data):
+    audio_file, transcript = data
+    audio_filename = os.path.splitext(os.path.basename(audio_file))[0]
+    speaker_id, chapter_id, utterance_id = audio_filename.split("-")
+
+    # Load audio
+    waveform, sample_rate = torchaudio.load(audio_file)
+
+    return (
+        waveform,
+        sample_rate,
+        transcript,
+        int(speaker_id),
+        int(chapter_id),
+        int(utterance_id),
+    )
 
 
 def LibriSpeech(root: Union[str, Path], url: str = URL, folder_in_archive: str = FOLDER_IN_ARCHIVE):

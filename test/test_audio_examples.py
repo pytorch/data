@@ -39,7 +39,7 @@ class TestAudioExamples(unittest.TestCase):
             batch_size=8,
             num_workers=4,
             collate_fn=TestAudioExamples._collate_fn,
-            multiprocessing_context="spawn",
+            multiprocessing_context="fork",  # Using Fork her because `torchaudio.load` doesn't work well with spawn
         )
         for _ in dl:
             pass
