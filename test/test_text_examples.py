@@ -1,16 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-import os
-import sys
 import unittest
 
 import torch.multiprocessing as mp
 
 from torch.testing._internal.common_utils import slowTest
 from torch.utils.data import DataLoader
-
-current = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(current)
-sys.path.insert(0, ROOT)
 
 from torchtext.datasets import AG_NEWS, AmazonReviewPolarity, IMDB, SQuAD1, SQuAD2, SST2
 
