@@ -314,9 +314,8 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.ZipArchiveReader">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">ZipArchiveReader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">io.BufferedIOBase</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.ZipArchiveReader" title="Permalink to this definition">¶</a></dt>
-<dd><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ZipArchiveReaderIterDataPipe</span></code>.</p>
-<p>Iterable DataPipe to extract zip binary streams from input iterable which contains a tuple of path name and
-zip binary stream. This yields a tuple of path name and extracted binary stream.</p>
+<dd><p>Opens/decompresses zip binary streams from an Iterable DataPipe which contains a tuple of path name and
+zip binary stream, and yields a tuple of path name and extracted binary stream (functional name: <code class="docutils literal notranslate"><span class="pre">read_from_zip</span></code>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -327,9 +326,9 @@ zip binary stream. This yields a tuple of path name and extracted binary stream.
 </dl>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The opened file handles will be closed automatically if the default DecoderDataPipe
+<p>The opened file handles will be closed automatically if the default <code class="docutils literal notranslate"><span class="pre">DecoderDataPipe</span></code>
 is attached. Otherwise, user should be responsible to close file handles explicitly
-or let Python’s GC close them periodically. Due to how zipfiles implements its open() method,
+or let Python’s GC close them periodically. Due to how <cite>zipfiles</cite> implements its <code class="docutils literal notranslate"><span class="pre">open()</span></code> method,
 the data_stream variable below cannot be closed within the scope of this function.</p>
 </div>
 </dd></dl>
