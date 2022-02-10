@@ -33,7 +33,8 @@
   <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="Examples" href="examples.html" />
+    <link rel="next" title="Examples" href="examples.html" />
+    <link rel="prev" title="StreamWrapper" href="generated/torchdata.datapipes.utils.StreamWrapper.html" />
   <!-- Google Analytics -->
   
   <!-- End Google Analytics -->
@@ -222,8 +223,8 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
 <ul>
@@ -308,6 +309,142 @@
               
   <section id="tutorial">
 <h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<section id="implementing-a-custom-datapipe">
+<h2>Implementing a Custom DataPipe<a class="headerlink" href="#implementing-a-custom-datapipe" title="Permalink to this headline">¶</a></h2>
+<p>As a guiding example, let’s implement an <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> that applies a callable to the input iterator. For
+<code class="docutils literal notranslate"><span class="pre">MapDataPipe</span></code>, take a look at the
+<a class="reference external" href="https://github.com/pytorch/pytorch/tree/master/torch/utils/data/datapipes/map">map</a>
+folder for examples, and follow the steps below for the <code class="docutils literal notranslate"><span class="pre">__getitem__</span></code> method instead of  the <code class="docutils literal notranslate"><span class="pre">__iter__</span></code> method.</p>
+<section id="naming">
+<h3>Naming<a class="headerlink" href="#naming" title="Permalink to this headline">¶</a></h3>
+<p>The naming convention for <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> is “Operation”-er, followed by <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> or <code class="docutils literal notranslate"><span class="pre">MapDataPipe</span></code>, as each
+DataPipe is essentially a container to apply an operation to data yielded from a source <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code>. For succinctness,
+we alias to just “Operation-er” in <strong>init</strong> files. For our <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> example, we’ll name the module
+<code class="docutils literal notranslate"><span class="pre">MapperIterDataPipe</span></code> and alias it as <code class="docutils literal notranslate"><span class="pre">iter.Mapper</span></code> under <code class="docutils literal notranslate"><span class="pre">torchdata.datapipes</span></code>.</p>
+</section>
+<section id="constructor">
+<h3>Constructor<a class="headerlink" href="#constructor" title="Permalink to this headline">¶</a></h3>
+<p>DataSets are now generally constructed as stacks of <code class="docutils literal notranslate"><span class="pre">DataPipes</span></code>, so each <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> typically takes a
+source <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> as its first argument.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterDataPipe</span>
+
+<span class="k">class</span> <span class="nc">MapperIterDataPipe</span><span class="p">(</span><span class="n">IterDataPipe</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_dp</span><span class="p">:</span> <span class="n">IterDataPipe</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source_dp</span> <span class="o">=</span> <span class="n">source_dp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fn</span> <span class="o">=</span> <span class="n">fn</span>
+</pre></div>
+</div>
+<p>Note:</p>
+<ul class="simple">
+<li><p>Avoid loading data from the source DataPipe in <code class="docutils literal notranslate"><span class="pre">__init__</span></code> function, in order to support lazy data loading and save
+memory.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> instance holds data in memory, please be ware of the in-place modification of data. When second
+iterator is created from the instance, the data may have already changed. Please take <code class="docutils literal notranslate"><span class="pre">IterableWrapper</span></code>
+<a class="reference external" href="https://github.com/pytorch/pytorch/blob/master/torch/utils/data/datapipes/iter/utils.py">class</a>
+as reference to <code class="docutils literal notranslate"><span class="pre">deepcopy</span></code> data for each iterator.</p></li>
+<li><p>Avoid variables names that are taken by the functional names of existing DataPipes. For instance, <code class="docutils literal notranslate"><span class="pre">.filter</span></code> is
+is functional name that can be used to invoke <code class="docutils literal notranslate"><span class="pre">FilterIterDataPipe</span></code>. Having a variable named <code class="docutils literal notranslate"><span class="pre">filter</span></code> inside
+another <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> can lead to confusion.</p></li>
+</ul>
+</section>
+<section id="iterator">
+<h3>Iterator<a class="headerlink" href="#iterator" title="Permalink to this headline">¶</a></h3>
+<p>For <code class="docutils literal notranslate"><span class="pre">IterDataPipes</span></code>, an <code class="docutils literal notranslate"><span class="pre">__iter__</span></code> function is needed to consume data from the source <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> then
+apply the operation over the data before <code class="docutils literal notranslate"><span class="pre">yield</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MapperIterDataPipe</span><span class="p">(</span><span class="n">IterDataPipe</span><span class="p">):</span>
+    <span class="c1"># ... See __init__() defined above</span>
+
+    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dp</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">fn</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="length">
+<h3>Length<a class="headerlink" href="#length" title="Permalink to this headline">¶</a></h3>
+<p>In many cases, as in our <code class="docutils literal notranslate"><span class="pre">MapperIterDataPipe</span></code> example, the <code class="docutils literal notranslate"><span class="pre">__len__</span></code> method of a DataPipe returns the length of the
+source DataPipe.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MapperIterDataPipe</span><span class="p">(</span><span class="n">IterDataPipe</span><span class="p">):</span>
+    <span class="c1"># ... See __iter__() defined above</span>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dp</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>However, note that <code class="docutils literal notranslate"><span class="pre">__len__</span></code> is optional for <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> and often inadvisable. For <code class="docutils literal notranslate"><span class="pre">CSVParserIterDataPipe</span></code>
+in the using DataPipes section below, <code class="docutils literal notranslate"><span class="pre">__len__</span></code> is not implemented because the number of rows in each file
+is unknown before loading it. In some special cases, <code class="docutils literal notranslate"><span class="pre">__len__</span></code> can be made to either return an integer or raise
+an Error depending on the input. In those cases, the Error must be a <code class="docutils literal notranslate"><span class="pre">TypeError</span></code> to support Python’s
+build-in functions like <code class="docutils literal notranslate"><span class="pre">list(dp)</span></code>.</p>
+</section>
+<section id="registering-datapipes-with-the-functional-api">
+<h3>Registering DataPipes with the functional API<a class="headerlink" href="#registering-datapipes-with-the-functional-api" title="Permalink to this headline">¶</a></h3>
+<p>Each DataPipe can be registered to support functional invocation using the decorator <code class="docutils literal notranslate"><span class="pre">functional_datapipe</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@functional_datapipe</span><span class="p">(</span><span class="s2">&quot;map&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">MapperIterDataPipe</span><span class="p">(</span><span class="n">IterDataPipe</span><span class="p">):</span>
+   <span class="c1"># ...</span>
+</pre></div>
+</div>
+<p>The stack of DataPipes can then be constructed in functional form:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch.utils.data.datapipes</span> <span class="kn">as</span> <span class="nn">dp</span>
+
+<span class="n">datapipes1</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">FileOpener</span><span class="p">([</span><span class="s1">&#39;a.file&#39;</span><span class="p">,</span> <span class="s1">&#39;b.file&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">fn</span><span class="o">=</span><span class="n">decoder</span><span class="p">)</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span><span class="o">.</span><span class="n">batch</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">datapipes2</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">FileOpener</span><span class="p">([</span><span class="s1">&#39;a.file&#39;</span><span class="p">,</span> <span class="s1">&#39;b.file&#39;</span><span class="p">])</span>
+<span class="n">datapipes2</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">Mapper</span><span class="p">(</span><span class="n">datapipes2</span><span class="p">,</span> <span class="n">fn</span><span class="o">=</span><span class="n">decoder</span><span class="p">)</span>
+<span class="n">datapipes2</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">Shuffler</span><span class="p">(</span><span class="n">datapipes2</span><span class="p">)</span>
+<span class="n">datapipes2</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">Batcher</span><span class="p">(</span><span class="n">datapipes2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In the above example, <code class="docutils literal notranslate"><span class="pre">datapipes1</span></code> and <code class="docutils literal notranslate"><span class="pre">datapipes2</span></code> represent the exact same stack of <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code>s.</p>
+</section>
+</section>
+<section id="using-datapipes">
+<h2>Using DataPipes<a class="headerlink" href="#using-datapipes" title="Permalink to this headline">¶</a></h2>
+<p>For a complete example, suppose that we want to load data from CSV files with the following steps:</p>
+<ul class="simple">
+<li><p>List all CSV files in a directory</p></li>
+<li><p>Load CSV files</p></li>
+<li><p>Parse CSV file and yield rows</p></li>
+</ul>
+<p>To support the above pipeline, <code class="docutils literal notranslate"><span class="pre">CSVParser</span></code> is registered with the functional name <code class="docutils literal notranslate"><span class="pre">parse_csv</span></code> to consume
+file streams, parse the CSV contents, and return one parsed line at a time.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@functional_datapipe</span><span class="p">(</span><span class="s2">&quot;parse_csv&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">CSVParserIterDataPipe</span><span class="p">(</span><span class="n">IterDataPipe</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dp</span><span class="p">,</span> <span class="o">**</span><span class="n">fmtparams</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dp</span> <span class="o">=</span> <span class="n">dp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fmtparams</span> <span class="o">=</span> <span class="n">fmtparams</span>
+
+    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Str_Or_Bytes</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Str_Or_Bytes</span><span class="p">]]]:</span>
+        <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="nb">file</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_datapipe</span><span class="p">:</span>
+            <span class="n">stream</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_helper</span><span class="o">.</span><span class="n">skip_lines</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+            <span class="n">stream</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_helper</span><span class="o">.</span><span class="n">strip_newline</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span>
+            <span class="n">stream</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_helper</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span>
+            <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">_helper</span><span class="o">.</span><span class="n">return_path</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>  <span class="c1"># Returns 1 line at a time as List[str or bytes]</span>
+</pre></div>
+</div>
+<p>Then, the pipeline can be assembled as the following:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch.utils.data.datapipes</span> <span class="kn">as</span> <span class="nn">dp</span>
+
+<span class="n">FOLDER</span> <span class="o">=</span> <span class="s1">&#39;path/2/csv/folder&#39;</span>
+<span class="n">datapipe</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">FileLister</span><span class="p">([</span><span class="n">FOLDER</span><span class="p">])</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">fn</span><span class="o">=</span><span class="k">lambda</span> <span class="n">filename</span><span class="p">:</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.csv&#39;</span><span class="p">))</span>
+<span class="n">datapipe</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">FileOpener</span><span class="p">(</span><span class="n">datapipe</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;rt&#39;</span><span class="p">)</span>
+<span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">parse_csv</span><span class="p">(</span><span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datapipe</span><span class="p">:</span> <span class="c1"># Start loading data</span>
+     <span class="k">pass</span>
+</pre></div>
+</div>
+</section>
+<section id="working-with-dataloader">
+<h2>Working with DataLoader<a class="headerlink" href="#working-with-dataloader" title="Permalink to this headline">¶</a></h2>
+<section id="single-process-data-loading">
+<h3>Single-Process Data Loading<a class="headerlink" href="#single-process-data-loading" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="multi-process-data-loading">
+<h3>Multi-Process Data Loading<a class="headerlink" href="#multi-process-data-loading" title="Permalink to this headline">¶</a></h3>
+</section>
+</section>
 </section>
 
 
@@ -318,8 +455,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
+        <a href="examples.html" class="btn btn-neutral float-right" title="Examples" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
       
-        <a href="examples.html" class="btn btn-neutral" title="Examples" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+        <a href="generated/torchdata.datapipes.utils.StreamWrapper.html" class="btn btn-neutral" title="StreamWrapper" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -351,7 +490,23 @@
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">Tutorial</a></li>
+<li><a class="reference internal" href="#">Tutorial</a><ul>
+<li><a class="reference internal" href="#implementing-a-custom-datapipe">Implementing a Custom DataPipe</a><ul>
+<li><a class="reference internal" href="#naming">Naming</a></li>
+<li><a class="reference internal" href="#constructor">Constructor</a></li>
+<li><a class="reference internal" href="#iterator">Iterator</a></li>
+<li><a class="reference internal" href="#length">Length</a></li>
+<li><a class="reference internal" href="#registering-datapipes-with-the-functional-api">Registering DataPipes with the functional API</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#using-datapipes">Using DataPipes</a></li>
+<li><a class="reference internal" href="#working-with-dataloader">Working with DataLoader</a><ul>
+<li><a class="reference internal" href="#single-process-data-loading">Single-Process Data Loading</a></li>
+<li><a class="reference internal" href="#multi-process-data-loading">Multi-Process Data Loading</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 
             </div>
