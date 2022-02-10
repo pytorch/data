@@ -46,8 +46,7 @@ jobs:
         run: |
           pip3 install -r requirements.txt
           pip3 install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
-          pip3 install cmake ninja
-          pip3 install pybind11
+          pip3 install cmake ninja pybind11
           echo "/home/runner/.local/bin" >> $GITHUB_PATH
       - name: Install test requirements
         run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile
@@ -62,7 +61,6 @@ jobs:
           make install
       - name: Build TorchData
         run: python setup.py develop
-        env:
         env:
           BUILD_S3: 1
       - name: Run DataPipes tests with pytest
