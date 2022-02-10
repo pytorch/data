@@ -10,11 +10,12 @@ T_co = TypeVar("T_co", covariant=True)
 @functional_datapipe("cycle")
 class CyclerIterDataPipe(IterDataPipe[T_co]):
     """
-    Cycle the specified input in perpetuity (by default), or for the specified number of times.
+    Cycles the specified input in perpetuity by default, or for the specified number
+    of times (functional name: ``cycle``).
 
     Args:
         source_datapipe: source DataPipe that will be cycled through
-        count: the number of times to read through the source DataPipe (if `None`, it will cycle in perpetuity)
+        count: the number of times to read through ``source_datapipe` (if ``None``, it will cycle in perpetuity)
     """
 
     def __init__(self, source_datapipe: IterDataPipe[T_co], count: Optional[int] = None) -> None:

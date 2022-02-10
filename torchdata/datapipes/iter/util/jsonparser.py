@@ -9,11 +9,11 @@ from torchdata.datapipes.iter import IterDataPipe
 @functional_datapipe("parse_json_files")
 class JsonParserIterDataPipe(IterDataPipe[Tuple[str, Dict]]):
     r"""
-    Iterable DataPipe that reads from JSON data stream and yields a tuple of file name and JSON data
+    Reads from JSON data streams and yields a tuple of file name and JSON data (functional name: ``parse_json_files``).
 
     Args:
         source_datapipe: a DataPipe with tuples of file name and JSON data stream
-        kwargs: keyword arguments that will be passed through to `json.loads`
+        kwargs: keyword arguments that will be passed through to ``json.loads``
     """
 
     def __init__(self, source_datapipe: IterDataPipe[Tuple[str, IO]], **kwargs) -> None:

@@ -18,18 +18,17 @@ def _in_batch_shuffle_fn(data: DataChunk):
 
 @functional_datapipe("bucketbatch")
 class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
-    r""":class:`BucketBatcherIterDataPipe`.
-
-    Iterable DataPipe to create mini-batches of data from sorted bucket. An outer
-    dimension will be added as `batch_size` if `drop_last` is set to `True`,
-    or `length % batch_size` for the last batch if `drop_last` is set to `False`.
+    r"""
+    Creates mini-batches of data from sorted bucket (functional name: ``bucketbatch``). An outer
+    dimension will be added as ``batch_size`` if ``drop_last`` is set to ``True``,
+    or ``length % batch_size`` for the last batch if ``drop_last`` is set to ``False``.
 
     Args:
         datapipe: Iterable DataPipe being batched
         batch_size: The size of each batch
         drop_last: Option to drop the last batch if it's not full
-        batch_num: Number of batches within a bucket (i.e. bucket_size = batch_size * batch_num)
-        bucket_num: Number of buckets to consist a pool for shuffling (i.e. pool_size = bucket_size * bucket_num)
+        batch_num: Number of batches within a bucket (i.e. `bucket_size = batch_size * batch_num`)
+        bucket_num: Number of buckets to consist a pool for shuffling (i.e. `pool_size = bucket_size * bucket_num`)
         sort_key: Callable to specify the comparison key for sorting within bucket
         in_batch_shuffle: Option to do in-batch shuffle or buffer shuffle
     """

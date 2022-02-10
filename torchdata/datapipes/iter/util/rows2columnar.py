@@ -9,16 +9,18 @@ from torchdata.datapipes.iter import IterDataPipe
 @functional_datapipe("rows2columnar")
 class Rows2ColumnarIterDataPipe(IterDataPipe[Dict]):
     r"""
-    Iterable DataPipe that accepts an input DataPipe with batches of data, and each row
-    within a batch must either be a Dict or a List. This DataPipe processes one batch
-    at a time and yields a Dict for each batch, with column names as keys and lists of
-    corresponding values from each row as values.
+    Accepts an input DataPipe with batches of data, and processes one batch
+    at a time and yields a Dict for each batch, with ``column_names`` as keys and lists of
+    corresponding values from each row as values (functional name: ``rows2columnar``).
 
-    Note: If column names are not given and each row is a Dict, the keys of that Dict will be used as column names.
+    Within the input DataPipe, each row within a batch must either be a `Dict` or a `List`
+
+    Note:
+        If ``column_names`` are not given and each row is a `Dict`, the keys of that Dict will be used as column names.
 
     Args:
         source_datapipe: a DataPipe where each item is a batch. Within each batch,
-            there are rows and each row is a List or Dict.
+            there are rows and each row is a `List` or `Dict`
         column_names: a function that joins a list of lines together
     """
     column_names: List[str]

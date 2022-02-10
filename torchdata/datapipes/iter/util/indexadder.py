@@ -9,10 +9,9 @@ K = TypeVar("K")
 
 @functional_datapipe("enumerate")
 class EnumeratorIterDataPipe(IterDataPipe[Tuple[int, K]]):
-    r""":class:`Enumerator`.
-
-    Iterable DataPipe to add an index to an existing DataPipe through enumeration, with
-    the index starting from 0 by default.
+    r"""
+    Adds an index to an existing DataPipe through enumeration, with
+    the index starting from 0 by default (functional name: ``enumerate``).
 
     Args:
         source_datapipe: Iterable DataPipe being indexed
@@ -32,11 +31,10 @@ class EnumeratorIterDataPipe(IterDataPipe[Tuple[int, K]]):
 
 @functional_datapipe("add_index")
 class IndexAdderIterDataPipe(IterDataPipe[Dict]):
-    r""":class:`IndexAdder`.
-
-    Iterable DataPipe to add an index to an existing datapipe. The row or batch
-    must be of type dict otherwise a `NotImplementedError` is thrown. The index
-    of the data is set to the `index_name` field provided.
+    r"""
+    Adds an index to an existing Iterable DataPipe with (functional name: ``add_index``). The row or batch
+    within the DataPipe must have the type `Dict`; otherwise, a `NotImplementedError` will be thrown. The index
+    of the data is set to the provided ``index_name``.
 
     Args:
         source_datapipe: Iterable DataPipe being indexed

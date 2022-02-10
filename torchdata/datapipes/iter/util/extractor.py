@@ -25,13 +25,13 @@ class CompressionType(Enum):
 @functional_datapipe("extract")
 class ExtractorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
-    Iterable DataPipe that takes tuples of path and compressed stream of data, and return tuples of
-    path and decompressed (extracted) stream of data. The input compression format can be specified
+    Takes tuples of path and compressed stream of data, and returns tuples of
+    path and decompressed stream of data (functional name: ``extract``). The input compression format can be specified
     or automatically detected based on the files' file extensions.
 
     Args:
         source_datapipe: IterDataPipe containing tuples of path and compressed stream of data
-        file_type: Optional string or CompressionType that represents what compression format of the inputs
+        file_type: Optional `string` or ``CompressionType`` that represents what compression format of the inputs
     """
 
     types = CompressionType

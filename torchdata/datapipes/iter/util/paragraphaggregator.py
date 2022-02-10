@@ -6,7 +6,6 @@ from torchdata.datapipes.iter import IterDataPipe
 
 
 T_co = TypeVar("T_co", covariant=True)
-K_co = TypeVar("K_co", covariant=True)
 
 
 def _default_line_join(lines: List[str]) -> str:
@@ -16,7 +15,7 @@ def _default_line_join(lines: List[str]) -> str:
 @functional_datapipe("lines_to_paragraphs")
 class ParagraphAggregatorIterDataPipe(IterDataPipe[Tuple[str, str]]):
     r"""
-    Iterable DataPipe that aggregates lines of text from the same file into a single paragraph.
+    Aggregates lines of text from the same file into a single paragraph (functional name: ``lines_to_paragraphs``).
     Specifically, this accepts a DataPipe consisting of tuples of a file name and a line. For each tuple,
     it checks if the file name matches the file name from the previous tuple. If yes, it joins the current line
     with existing paragraph. If the file names do not match, the existing paragraph is yielded and a new

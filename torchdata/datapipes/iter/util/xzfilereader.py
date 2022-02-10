@@ -14,15 +14,16 @@ from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 @functional_datapipe("read_from_xz")
 class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     r"""
-    Iterable DataPipe to uncompress xz (lzma) binary streams from an input iterable which contains tuples of
-    path name and xy binary streams. This yields a tuple of path name and extracted binary stream.
+    Decompresses xz (lzma) binary streams from an Iterable DataPipe which contains tuples of
+    path name and xy binary streams, and yields a tuple of path name and extracted binary
+    stream (functional name: ``read_from_xz``).
 
     Args:
         datapipe: Iterable DataPipe that provides tuples of path name and xy binary stream
         length: Nominal length of the DataPipe
 
     Note:
-        The opened file handles will be closed automatically if the default DecoderDataPipe
+        The opened file handles will be closed automatically if the default ``DecoderDataPipe``
         is attached. Otherwise, user should be responsible to close file handles explicitly
         or let Python's GC close them periodically.
     """

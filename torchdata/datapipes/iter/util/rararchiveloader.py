@@ -38,17 +38,17 @@ _PATCHED = False
 @functional_datapipe("load_from_rar")
 class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
     r"""
-    Iterable DataPipe to extract rar binary streams from input iterable which contains tuples of path name and
-    rar binary stream. This yields a tuple of path name and extracted binary stream.
-
-    Args:
-        datapipe: Iterable DataPipe that provides tuples of path name and rar binary stream
-        length: Nominal length of the DataPipe
+    Decompresses rar binary streams from input Iterable Datapipes which contains tuples of path name and rar
+    binary stream, and yields  a tuple of path name and extracted binary stream (functional name: ``load_from_rar``).
 
     Note:
         The nested RAR archive is not supported by this DataPipe
         due to the limitation of the archive type. Please extract
         outer RAR archive before reading the inner archive.
+
+    Args:
+        datapipe: Iterable DataPipe that provides tuples of path name and rar binary stream
+        length: Nominal length of the DataPipe
     """
 
     def __init__(self, datapipe: IterDataPipe[Tuple[str, io.BufferedIOBase]], *, length: int = -1):

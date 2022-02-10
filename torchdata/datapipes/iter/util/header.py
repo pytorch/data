@@ -11,7 +11,7 @@ T_co = TypeVar("T_co", covariant=True)
 @functional_datapipe("header")
 class HeaderIterDataPipe(IterDataPipe[T_co]):
     r"""
-    Iterable DataPipe that yields elements from the source DataPipe from the start up to the given limit
+    Yields elements from the source DataPipe from the start, up to the specfied limit (functional name: ``header``).
 
     Args:
         source_datapipe: the DataPipe from which elements will be yielded
