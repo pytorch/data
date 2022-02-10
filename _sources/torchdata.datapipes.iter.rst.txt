@@ -101,7 +101,6 @@ These DataPipes provide utility functions (e.g. caching, CSV parsing, filtering)
     InMemoryCacheHolder
     IndexAdder
     IoPathSaver
-    IterDataPipe
     IterKeyZipper
     IterableWrapper
     JsonParser

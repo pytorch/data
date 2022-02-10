@@ -30,6 +30,7 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Mapper" href="torchdata.datapipes.iter.Mapper.html" />
@@ -313,19 +314,19 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.MapKeyZipper">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">MapKeyZipper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_iterdatapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">merge_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.MapKeyZipper" title="Permalink to this definition">¶</a></dt>
-<dd><p><code class="xref py py-class docutils literal notranslate"><span class="pre">MapKeyZipperIterDataPipe</span></code>.</p>
-<p>IterDataPipe that joins the items from the source IterDataPipe with items from a MapDataPipe. The
-matching is done by the key function, which maps an item from source IterDataPipe to
-a key that exists in MapDataPipe. The return value is created by the merge function, which returns
+<dd><p>Joins the items from the source IterDataPipe with items from a MapDataPipe (functional name: <code class="docutils literal notranslate"><span class="pre">zip_with_map</span></code>).
+The matching is done by the provided <code class="docutils literal notranslate"><span class="pre">key_fn</span></code>, which maps an item from <code class="docutils literal notranslate"><span class="pre">source_iterdatapipe</span></code> to
+a key that should exist in the <code class="docutils literal notranslate"><span class="pre">map_datapipe</span></code>. The return value is created by the <code class="docutils literal notranslate"><span class="pre">merge_fn</span></code>, which returns
 a tuple of the two items by default.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>source_iterdatapipe</strong> – IterDataPipe from which items are yield and will be combined with an item from map_datapipe</p></li>
-<li><p><strong>map_datapipe</strong> – MapDataPipe that takes a key from key_fn, and returns an item</p></li>
-<li><p><strong>key_fn</strong> – Function that maps each item from source_iterdatapipe to a key that exists in map_datapipe</p></li>
-<li><p><strong>merge_fn</strong> – Function that combines the item from source_iterdatapipe and the item from map_datapipe,
-by default a tuple is created</p></li>
+<li><p><strong>source_iterdatapipe</strong> – IterDataPipe from which items are yield and will be combined with an item
+from <code class="docutils literal notranslate"><span class="pre">map_datapipe</span></code></p></li>
+<li><p><strong>map_datapipe</strong> – MapDataPipe that takes a key from <code class="docutils literal notranslate"><span class="pre">key_fn</span></code>, and returns an item</p></li>
+<li><p><strong>key_fn</strong> – Function that maps each item from <code class="docutils literal notranslate"><span class="pre">source_iterdatapipe</span></code> to a key that exists in <code class="docutils literal notranslate"><span class="pre">map_datapipe</span></code></p></li>
+<li><p><strong>merge_fn</strong> – Function that combines the item from <code class="docutils literal notranslate"><span class="pre">source_iterdatapipe</span></code> and the matching item
+from <code class="docutils literal notranslate"><span class="pre">map_datapipe</span></code>, by default a tuple is created</p></li>
 </ul>
 </dd>
 </dl>

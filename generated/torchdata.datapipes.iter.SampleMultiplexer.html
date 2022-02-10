@@ -30,6 +30,7 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Sampler" href="torchdata.datapipes.iter.Sampler.html" />
@@ -313,17 +314,17 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.SampleMultiplexer">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">SampleMultiplexer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipes_to_weights_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">torchdata.datapipes.iter.util.samplemultiplexer.T_co</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.SampleMultiplexer" title="Permalink to this definition">¶</a></dt>
-<dd><p>IterDataPipe that takes a dict of (IterDataPipe, Weight), and yields items by sampling from these
-DataPipes with respect to their weights. When individual DataPipes are exhausted, it continues to sample from
+<dd><p>Takes a <cite>Dict</cite> of (IterDataPipe, Weight), and yields items by sampling from these
+DataPipes with respect to their weights. When individual DataPipes are exhausted, continues to sample from
 the remaining DataPipes according to their relative weights.
 If you wish to maintain the same ratio of weights indefinitely, you need to ensure that the
-inputs are never exhausted, by, for instance, applying cycle() to them.</p>
-<p>Sampling is controlled by the provided random seed. If you don’t provide it, the sampling
+inputs are never exhausted, by, for instance, applying <code class="docutils literal notranslate"><span class="pre">cycle</span></code> to them.</p>
+<p>Sampling is controlled by the provided random <code class="docutils literal notranslate"><span class="pre">seed</span></code>. If you don’t provide it, the sampling
 will not be deterministic.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>pipes_to_weights_dict</strong> – a Dict of IterDataPipes and Weights. The total weight of
+<li><p><strong>pipes_to_weights_dict</strong> – a <cite>Dict</cite> of IterDataPipes and Weights. The total weight of
 unexhausted DataPipes will be normalized to 1 for the purpose of sampling.</p></li>
 <li><p><strong>seed</strong> – random seed to initialize the random number generator</p></li>
 </ul>
