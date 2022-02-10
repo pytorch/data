@@ -43,8 +43,8 @@ Features described in this documentation are classified by release status:
    :maxdepth: 2
    :caption: Tutorial and Examples:
 
-   examples.rst
    tutorial.rst
+   examples.rst
 
 
 .. toctree::
