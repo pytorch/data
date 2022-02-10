@@ -12,7 +12,7 @@ from torch.utils.data.datapipes.utils.common import check_lambda_fn, DILL_AVAILA
 
 from torch.utils.data.graph import traverse
 from torchdata.datapipes import functional_datapipe
-from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.iter import FileLister, IterDataPipe
 
 if DILL_AVAILABLE:
     import dill
@@ -135,7 +135,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         hash_dict = {"expected_filepaht": expected_MD5_hash}
 
         cache_dp = url.on_disk_cache(filepath_fn=_filepath_fn, hash_dict=_hash_dict, hash_type="md5")
-        cache_dp = HttpReader(cache_dp).end_caching(mode="wb". filepath_fn=_filepath_fn)
+        cache_dp = HttpReader(cache_dp).end_caching(filepath_fn=_filepath_fn)
     """
 
     _temp_dict: Dict = {}
@@ -234,6 +234,7 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
         datapipe: IterDataPipe with at least one `OnDiskCacheHolder` in the graph.
         mode: Mode in which cached files are opened for write the data. This is needed
             to be aligned with the type of data or file handle from `datapipe`.
+            ``"wb"`` is used by default.
         filepath_fn: Optional function to extract filepath from the metadata from `datapipe`.
             As default, it would directly use the metadata as file path.
         same_filepath_fn: Set to `True` to use same `filepath_fn` from the `OnDiskCacheHolder`.
@@ -241,7 +242,7 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
             As default, reading is enabled and reading function is created based on the `mode`.
     """
 
-    def __new__(cls, datapipe, mode="w", filepath_fn=None, *, same_filepath_fn=False, skip_read=False):
+    def __new__(cls, datapipe, mode="wb", filepath_fn=None, *, same_filepath_fn=False, skip_read=False):
         if filepath_fn is not None and same_filepath_fn:
             raise ValueError("`filepath_fn` is mutually exclusive with `same_filepath_fn`")
 
@@ -255,16 +256,17 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
 
         _filepath_fn, _hash_dict, _hash_type, _ = OnDiskCacheHolderIterDataPipe._temp_dict[cache_holder]
         cached_dp = cache_holder._end_caching()
+        cached_dp = FileLister(cached_dp, recursive=True)
 
         if same_filepath_fn:
             filepath_fn = _filepath_fn
 
         todo_dp = datapipe
         if not skip_read:
-            if "b" in mode:
-                todo_dp = todo_dp.map(fn=_read_bytes, input_col=1)
-            else:
+            if "t" in mode:
                 todo_dp = todo_dp.map(fn=_read_str, input_col=1)
+            else:
+                todo_dp = todo_dp.map(fn=_read_bytes, input_col=1)
 
         if filepath_fn is not None:
             todo_dp = todo_dp.map(fn=filepath_fn, input_col=0)
