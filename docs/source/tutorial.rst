@@ -95,7 +95,7 @@ The stack of DataPipes can then be constructed in functional form:
 
 .. code:: python
 
-    import torch.utils.data.datapipes as dp
+    import torchdata.datapipes as dp
 
     datapipes1 = dp.iter.FileOpener(['a.file', 'b.file']).map(fn=decoder).shuffle().batch(2)
     datapipes2 = dp.iter.FileOpener(['a.file', 'b.file'])
@@ -136,24 +136,78 @@ Then, the pipeline can be assembled as the following:
 
 .. code:: python
 
-    import torch.utils.data.datapipes as dp
+    import torchdata.datapipes as dp
 
     FOLDER = 'path/2/csv/folder'
-    datapipe = dp.iter.FileLister([FOLDER]).filter(fn=lambda filename: filename.endswith('.csv'))
+    datapipe = dp.iter.FileLister([FOLDER]).filter(filter_fn=lambda filename: filename.endswith('.csv'))
     datapipe = dp.iter.FileOpener(datapipe, mode='rt')
     datapipe = datapipe.parse_csv(delimiter=',')
 
-    for d in datapipe: # Start loading data
+    for d in datapipe: # Iterating through the data
          pass
 
 
 Working with DataLoader
 ---------------------------------------------
 
+In this section, we will demonstrate how you can use DataPipe with ``DataLoader``.
+For the most part, you should be able to use it just by passing ``dataset=datapipe`` as an input arugment
+into the ``DataLoader``. For detailed documentation related to ``DataLoader``,
+please visit `this page <https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading>`_.
 
-Single-Process Data Loading
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+For this example, we will first have a helper function that generates some CSV files with random label and data.
 
-Multi-Process Data Loading
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. code:: python
+
+    import csv
+    import random
+
+    def generate_csv(file_label, num_rows: int = 5000, num_features: int = 20) -> None:
+        fieldnames = ['label'] + [f'c{i}' for i in range(num_features)]
+        writer = csv.DictWriter(open(f"sample_data{file_label}.csv", "w"), fieldnames=fieldnames)
+        writer.writerow({col: col for col in fieldnames})  # writing the header row
+        for i in range(num_rows):
+            row_data = {col: random.random() for col in fieldnames}
+            row_data['label'] = random.randint(0, 9)
+            writer.writerow(row_data)
+
+Next, we will build our DataPipes to read and parse through the generated CSV files:
+
+.. code:: python
+
+    import numpy as np
+    import torchdata.datapipes as dp
+
+    def build_datapipes(root_dir="."):
+        datapipe = dp.iter.FileLister(root_dir)
+        datapipe = datapipe.filter(filter_fn=lambda filename: "sample_data" in filename and filename.endswith(".csv"))
+        datapipe = dp.iter.FileOpener(datapipe, mode='rt')
+        datapipe = datapipe.parse_csv(delimiter=",", skip_lines=1)
+        datapipe = datapipe.map(lambda row: {"label": np.array(row[0], np.int32),
+                                             "data": np.array(row[1:], dtype=np.float64)})
+        return datapipe
+
+Lastly, we will put everything together in ``'__main__'`` and pass the DataPipe into the DataLoader.
+
+.. code:: python
+
+    from torch.utils.data import DataLoader
+
+    if __name__ == '__main__':
+        num_files_to_generate = 3
+        for i in range(num_files_to_generate):
+            generate_csv(file_label=i)
+        datapipe = build_datapipes()
+        dl = DataLoader(dataset=datapipe, batch_size=50, shuffle=True)
+        first = next(iter(dl))
+        labels, features = first['label'], first['data']
+        print(f"Labels batch shape: {labels.size()}")
+        print(f"Feature batch shape: {features.size()}")
+
+The following statements will be printed to show the shapes of a single batch of labels and features.
+
+.. code::
+
+    Labels batch shape: 50
+    Feature batch shape: torch.Size([50, 20])

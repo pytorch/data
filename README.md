@@ -232,7 +232,7 @@ class MapperIterDataPipe(IterDataPipe):
 The stack of DataPipes can then be constructed in functional form:
 
 ```py
->>> import torch.utils.data.datapipes as dp
+>>> import torchdata.datapipes as dp
 >>> datapipes1 = dp.iter.FileOpener(['a.file', 'b.file']).map(fn=decoder).shuffle().batch(2)
 
 >>> datapipes2 = dp.iter.FileOpener(['a.file', 'b.file'])
@@ -270,10 +270,10 @@ class CSVParserIterDataPipe(IterDataPipe):
 Then, the pipeline can be assembled as follows:
 
 ```py
->>> import torch.utils.data.datapipes as dp
+>>> import torchdata.datapipes as dp
 
 >>> FOLDER = 'path/2/csv/folder'
->>> datapipe = dp.iter.FileLister([FOLDER]).filter(fn=lambda filename: filename.endswith('.csv'))
+>>> datapipe = dp.iter.FileLister([FOLDER]).filter(filter_fn=lambda filename: filename.endswith('.csv'))
 >>> datapipe = dp.iter.FileOpener(datapipe, mode='rt')
 >>> datapipe = datapipe.parse_csv(delimiter=',')
 
