@@ -30,6 +30,7 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="SampleMultiplexer" href="torchdata.datapipes.iter.SampleMultiplexer.html" />
@@ -313,16 +314,19 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.Rows2Columnar">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Rows2Columnar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.Rows2Columnar" title="Permalink to this definition">¶</a></dt>
-<dd><p>Iterable DataPipe that accepts an input DataPipe with batches of data, and each row
-within a batch must either be a Dict or a List. This DataPipe processes one batch
-at a time and yields a Dict for each batch, with column names as keys and lists of
-corresponding values from each row as values.</p>
-<p>Note: If column names are not given and each row is a Dict, the keys of that Dict will be used as column names.</p>
+<dd><p>Accepts an input DataPipe with batches of data, and processes one batch
+at a time and yields a Dict for each batch, with <code class="docutils literal notranslate"><span class="pre">column_names</span></code> as keys and lists of
+corresponding values from each row as values (functional name: <code class="docutils literal notranslate"><span class="pre">rows2columnar</span></code>).</p>
+<p>Within the input DataPipe, each row within a batch must either be a <cite>Dict</cite> or a <cite>List</cite></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">column_names</span></code> are not given and each row is a <cite>Dict</cite>, the keys of that Dict will be used as column names.</p>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_datapipe</strong> – a DataPipe where each item is a batch. Within each batch,
-there are rows and each row is a List or Dict.</p></li>
+there are rows and each row is a <cite>List</cite> or <cite>Dict</cite></p></li>
 <li><p><strong>column_names</strong> – a function that joins a list of lines together</p></li>
 </ul>
 </dd>

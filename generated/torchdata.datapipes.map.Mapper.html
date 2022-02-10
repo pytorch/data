@@ -30,6 +30,7 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="SequenceWrapper" href="torchdata.datapipes.map.SequenceWrapper.html" />
@@ -312,7 +313,7 @@
 <h1>Mapper<a class="headerlink" href="#mapper" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.map.Mapper">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.map.</span></span><span class="sig-name descname"><span class="pre">Mapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe:</span> <span class="pre">MapDataPipe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn:</span> <span class="pre">typing.Callable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">default_fn&gt;</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.map.Mapper" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.map.</span></span><span class="sig-name descname"><span class="pre">Mapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe:</span> <span class="pre">MapDataPipe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn:</span> <span class="pre">Callable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">default_fn&gt;</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.map.Mapper" title="Permalink to this definition">¶</a></dt>
 <dd><p>Apply the input function over each item from the source DataPipe (functional name: <code class="docutils literal notranslate"><span class="pre">map</span></code>).
 The function can be any regular Python function or partial object. Lambda
 function is not recommended as it is not supported by pickle.</p>

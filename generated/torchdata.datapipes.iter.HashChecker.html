@@ -30,6 +30,7 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Header" href="torchdata.datapipes.iter.Header.html" />
@@ -313,21 +314,24 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.HashChecker">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">HashChecker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">io.IOBase</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hash_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hash_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'sha256'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rewind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.HashChecker" title="Permalink to this definition">¶</a></dt>
-<dd><p>Iterable DataPipe that computes and checks the hash of each file, from an input
-DataPipe of tuples of file name and data (stream). If the hashes match the given hash
-in the dictionary, it yields a tuple of file name and data (stream). Otherwise, it raises an error.</p>
+<dd><p>Computes and checks the hash of each file, from an input DataPipe of tuples of file name and
+data/stream (functional name: <code class="docutils literal notranslate"><span class="pre">check_hash</span></code>). If the hashes match the given hash
+in the dictionary, it yields a tuple of file name and data/stream. Otherwise, it will raise an error.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>source_datapipe</strong> – IterDataPipe with tuples of file name and data (stream)</p></li>
-<li><p><strong>hash_dict</strong> – Dict that maps file names to their corresponding hashes</p></li>
+<li><p><strong>source_datapipe</strong> – IterDataPipe with tuples of file name and data/stream</p></li>
+<li><p><strong>hash_dict</strong> – Dictionary that maps file names to their corresponding hashes</p></li>
 <li><p><strong>hash_type</strong> – The type of hash function to apply</p></li>
 <li><p><strong>rewind</strong> – Rewind the stream after using the stream to compute the hash (this
 does not work with non-seekable stream, e.g. HTTP)</p></li>
 </ul>
 </dd>
 </dl>
-<p>Usage: dp = dp.check_hash({‘train.py’:’0d8b94d9fa9fb1ad89b9e3da9e1521495dca558fc5213b0fd7fd7b71c23f9921’})</p>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">check_hash</span><span class="p">({</span><span class="s1">&#39;train.py&#39;</span><span class="p">:</span><span class="s1">&#39;0d8b94d9fa9fb1ad89b9e3da9e1521495dca558fc5213b0fd7fd7b71c23f9921&#39;</span><span class="p">})</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>
