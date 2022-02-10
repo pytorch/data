@@ -96,3 +96,44 @@ jobs:
         run: pytest --no-header -v test/test_text_examples.py
         env:
           PYTORCH_TEST_WITH_SLOW: 1
+
+  torchaudio:
+    if: ${{ github.repository_owner == 'pytorch' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          # - macos-latest
+          - ubuntu-latest
+          # - windows-latest
+        python-version:
+          # - 3.7
+          # - 3.8
+          - 3.9
+    steps:
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install torch and torchaudio from nightlies
+        run: pip install --pre torch torchaudio -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
+
+      - name: Check out torchdata repository
+        uses: actions/checkout@v2
+
+      - name: Install torchdata
+        run: python setup.py install
+
+      - name: Install test requirements
+        run: pip install dill expecttest numpy pytest
+
+      - name: Run torchtext example datasets tests
+        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+        run: pytest --no-header -v test/test_audio_examples.py
+      - name: Run torchtext example datasets (including slow tests)
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+        run: pytest --no-header -v test/test_audio_examples.py
+        env:
+          PYTORCH_TEST_WITH_SLOW: 1
