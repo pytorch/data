@@ -30,7 +30,6 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="DataFrameMaker" href="torchdata.datapipes.iter.DataFrameMaker.html" />
@@ -223,8 +222,8 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../tutorial.html">Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial.html">Tutorial</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
 <ul>
@@ -314,13 +313,12 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.Cycler">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Cycler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">torchdata.datapipes.iter.util.cycler.T_co</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">count</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.Cycler" title="Permalink to this definition">¶</a></dt>
-<dd><p>Cycles the specified input in perpetuity by default, or for the specified number
-of times (functional name: <code class="docutils literal notranslate"><span class="pre">cycle</span></code>).</p>
+<dd><p>Cycle the specified input in perpetuity (by default), or for the specified number of times.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_datapipe</strong> – source DataPipe that will be cycled through</p></li>
-<li><p><strong>count</strong> – the number of times to read through <code class="docutils literal notranslate"><span class="pre">source_datapipe`</span> <span class="pre">(if</span> <span class="pre">``None</span></code>, it will cycle in perpetuity)</p></li>
+<li><p><strong>count</strong> – the number of times to read through the source DataPipe (if <cite>None</cite>, it will cycle in perpetuity)</p></li>
 </ul>
 </dd>
 </dl>

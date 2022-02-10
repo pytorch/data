@@ -14,7 +14,6 @@ This is an updated version of ``IterableDataset`` in ``torch``.
 
 .. autoclass:: IterDataPipe
 
-
 We have three types of Iterable DataPipes:
 
 1. Load - help you interact with the file systems or online databases (e.g. FileOpener, GDriveReader)
@@ -22,6 +21,19 @@ We have three types of Iterable DataPipes:
 2. Transform - transform elements within DataPipes (e.g. batching, shuffling)
 
 3. Utility - utility functions (e.g. caching, CSV parsing, filtering)
+
+These DataPipes can be invoked in two ways, using the class constructor or applying their functional form onto
+an existing `IterDataPipe` (available to most but not all DataPipes).
+
+.. code:: python
+
+    import torchdata.datapipes.iter import IterableWrapper, Mapper
+
+    dp = IterableWrapper(range(10))
+    map_dp_1 = Mapper(dp, lambda x: x + 1)  # Using class constructor
+    map_dp_2 = dp.map(lambda x: x + 1)  # Using functional form
+    list(map_dp_1)  # [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    list(map_dp_2)  # [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 Load DataPipes
 -------------------------
@@ -89,6 +101,7 @@ These DataPipes provide utility functions (e.g. caching, CSV parsing, filtering)
     InMemoryCacheHolder
     IndexAdder
     IoPathSaver
+    IterDataPipe
     IterKeyZipper
     IterableWrapper
     JsonParser

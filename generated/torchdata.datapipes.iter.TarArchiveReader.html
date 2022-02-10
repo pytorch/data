@@ -30,7 +30,6 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="UnBatcher" href="torchdata.datapipes.iter.UnBatcher.html" />
@@ -223,8 +222,8 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../tutorial.html">Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial.html">Tutorial</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
 <ul>
@@ -314,21 +313,22 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.TarArchiveReader">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">TarArchiveReader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">io.BufferedIOBase</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'r:*'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.TarArchiveReader" title="Permalink to this definition">¶</a></dt>
-<dd><p>Opens/decompresses tar binary streams from an Iterable DataPipe which contains tuples of path name and
-tar binary stream, and yields a tuple of path name and extracted binary stream (functional name: <code class="docutils literal notranslate"><span class="pre">read_from_tar</span></code>).</p>
+<dd><p><code class="xref py py-class docutils literal notranslate"><span class="pre">TarArchiveReaderIterDataPipe</span></code>.</p>
+<p>Iterable DataPipe to extract tar binary streams from input iterable which contains tuples of path name and
+tar binary stream. This yields a tuple of path name and extracted binary stream.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>datapipe</strong> – Iterable DataPipe that provides tuples of path name and tar binary stream</p></li>
 <li><p><strong>mode</strong> – File mode used by <cite>tarfile.open</cite> to read file object.
-Mode has to be a string of the form <cite>‘filemode[:compression]’</cite></p></li>
+Mode has to be a string of the form ‘filemode[:compression]’</p></li>
 <li><p><strong>length</strong> – a nominal length of the DataPipe</p></li>
 </ul>
 </dd>
 </dl>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The opened file handles will be closed automatically if the default <code class="docutils literal notranslate"><span class="pre">DecoderDataPipe</span></code>
+<p>The opened file handles will be closed automatically if the default DecoderDataPipe
 is attached. Otherwise, user should be responsible to close file handles explicitly
 or let Python’s GC close them periodically.</p>
 </div>

@@ -30,7 +30,6 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="OnlineReader" href="torchdata.datapipes.iter.OnlineReader.html" />
@@ -223,8 +222,8 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../tutorial.html">Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial.html">Tutorial</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
 <ul>
@@ -314,21 +313,22 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.IoPathFileOpener">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">IoPathFileOpener</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'r'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pathmgr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.IoPathFileOpener" title="Permalink to this definition">¶</a></dt>
-<dd><p>Opens files from input datapipe which contains pathnames or URLs,
-and yields a tuple of pathname and opened file stream (functional name: <code class="docutils literal notranslate"><span class="pre">open_file_by_iopath</span></code>).</p>
+<dd><p><code class="xref py py-class docutils literal notranslate"><span class="pre">IoPathFileOpenerIterDataPipe</span></code>.</p>
+<p>Iterable DataPipe to open files from input datapipe which contains pathnames or URLs,
+and yields a tuple of pathname and opened file stream.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>source_datapipe</strong> – Iterable DataPipe that provides the pathnames or URLs</p></li>
-<li><p><strong>mode</strong> – An optional string that specifies the mode in which the file is opened (<code class="docutils literal notranslate"><span class="pre">&quot;r&quot;</span></code> by default)</p></li>
-<li><p><strong>pathmgr</strong> – Custom <code class="docutils literal notranslate"><span class="pre">iopath.PathManager</span></code>. If not specified, a default <code class="docutils literal notranslate"><span class="pre">PathManager</span></code> is created.</p></li>
+<li><p><strong>source_datapipe</strong> – Iterable DataPipe that provides the pathnames or urls</p></li>
+<li><p><strong>mode</strong> – An optional string that specifies the mode in which the file is opened (‘r’ by default)</p></li>
+<li><p><strong>pathmgr</strong> – Custom iopath PathManager. If not specified, a default PathManager is created.</p></li>
 </ul>
 </dd>
 </dl>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Default <code class="docutils literal notranslate"><span class="pre">PathManager</span></code> currently supports local file path, normal HTTP URL and OneDrive URL.
-S3 URL is supported only with <cite>iopath</cite>&gt;=0.1.9.</p>
+<p>Default PathManager currently supports local file path, normal HTTP url and OneDrive url.
+S3 url is supported only with <cite>iopath</cite>&gt;=0.1.9.</p>
 </div>
 </dd></dl>
 

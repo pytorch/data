@@ -30,7 +30,6 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Demultiplexer" href="torchdata.datapipes.iter.Demultiplexer.html" />
@@ -223,8 +222,8 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../tutorial.html">Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial.html">Tutorial</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
 <ul>
@@ -314,19 +313,14 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.DataFrameMaker">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">DataFrameMaker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_dp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">torchdata.datapipes.iter.util.dataframemaker.T_co</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataframe_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.DataFrameMaker" title="Permalink to this definition">¶</a></dt>
-<dd><p>Takes rows of data, batches a number of them together and creates <cite>TorchArrow</cite>
-DataFrames (functional name: <code class="docutils literal notranslate"><span class="pre">dataframe</span></code>).</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>There is a trade-off between having a large number of rows within a DataFrame and usage of memory. Please
-choose a value carefully.</p>
-</div>
+<dd><p>Iterable DataPipe that takes rows of data, batch a number of them together and create TorchArrow DataFrames.
+Note that there is a trade-off between having a large number of rows within a DataFrame and usage of memory.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_dp</strong> – IterDataPipe containing rows of data</p></li>
 <li><p><strong>dataframe_size</strong> – number of rows of data within each DataFrame</p></li>
-<li><p><strong>dtype</strong> – specify the <cite>TorchArrow</cite> dtype for the DataFrame</p></li>
+<li><p><strong>dtype</strong> – specify the TorchArrow dtype for the DataFrame</p></li>
 <li><p><strong>columns</strong> – List of str that specifies the column names of the DataFrame</p></li>
 <li><p><strong>device</strong> – specify the device on which the DataFrame will be stored</p></li>
 </ul>
