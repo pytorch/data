@@ -28,7 +28,7 @@ class SaverIterDataPipe(IterDataPipe[str]):
         filepath_fn: Optional[Callable] = None,
     ):
         self.source_datapipe: IterDataPipe[Tuple[Any, U]] = source_datapipe
-        self.mode: str = mode
+        self.mode: str = mode if "w" in mode else "w" + mode
         self.fn: Optional[Callable] = filepath_fn
 
     def __iter__(self) -> Iterator[str]:
