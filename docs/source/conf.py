@@ -63,8 +63,9 @@ html_theme_path = [pytorch_sphinx_theme.get_html_theme_path()]
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 
-autosummary_generate = True
-
+html_css_files = [
+    "css/custom.css",
+]
 
 signature_replacements = {
     "torch.utils.data.dataset.IterDataPipe": "IterDataPipe",

@@ -3,6 +3,6 @@
 .. currentmodule:: {{ module }}
 
 
-{{ name | underline}}
+{{ name | underline }}
 
 .. autoclass:: {{ name }}
