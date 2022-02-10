@@ -30,6 +30,7 @@ from torchdata.datapipes.iter import (
     SampleMultiplexer,
     UnZipper,
 )
+from torchdata.datapipes.map import MapDataPipe
 
 
 def test_torchdata_pytorch_consistency() -> None:
@@ -684,6 +685,58 @@ class TestDataPipe(expecttest.TestCase):
         self.assertEqual(len(source_dp), len(dp3))
 
         # TODO: Add testing for different stages of pickling for UnZipper
+
+    def test_itertomap_mapdatapipe(self):
+        # Functional Test with None key_value_fn
+        values = list(range(10))
+        keys = ["k" + str(i) for i in range(10)]
+        source_dp = IterableWrapper(list(zip(keys, values)))
+
+        map_dp = source_dp.to_map_datapipe()
+        self.assertTrue(isinstance(map_dp, MapDataPipe))
+
+        # Lazy loading
+        self.assertTrue(map_dp._map is None)
+
+        # __len__ Test: Each DataPipe inherits the source datapipe's length
+        self.assertEqual(len(map_dp), 10)
+
+        # Functional Test
+        self.assertEqual(list(range(10)), [map_dp["k" + str(idx)] for idx in range(10)])
+        self.assertFalse(map_dp._map is None)
+
+        source_dp = IterableWrapper(range(10))
+
+        # TypeError test for invalid data type
+        map_dp = source_dp.to_map_datapipe()
+        with self.assertRaisesRegex(TypeError, "Cannot convert dictionary update element"):
+            _ = list(map_dp)
+
+        # ValueError test for wrong length
+        map_dp = source_dp.to_map_datapipe(lambda d: (d,))
+        with self.assertRaisesRegex(ValueError, "dictionary update sequence element has length"):
+            _ = list(map_dp)
+
+        # Functional Test with key_value_fn
+        map_dp = source_dp.to_map_datapipe(lambda d: ("k" + str(d), d + 1))
+        self.assertEqual(list(range(1, 11)), [map_dp["k" + str(idx)] for idx in range(10)])
+        self.assertFalse(map_dp._map is None)
+
+        # No __len__ from prior DataPipe
+        no_len_dp = source_dp.filter(lambda x: x % 2 == 0)
+        map_dp = no_len_dp.to_map_datapipe(lambda x: (x, x + 2))
+        with warnings.catch_warnings(record=True) as wa:
+            length = len(map_dp)
+            self.assertEqual(length, 5)
+            self.assertEqual(len(wa), 1)
+            self.assertRegex(str(wa[0].message), r"Data from prior DataPipe")
+
+        # Duplicate Key Test
+        dup_map_dp = source_dp.to_map_datapipe(lambda x: (x % 1, x))
+        with warnings.catch_warnings(record=True) as wa:
+            dup_map_dp._load_map()
+            self.assertEqual(len(wa), 1)
+            self.assertRegex(str(wa[0].message), r"Found duplicate key")
 
 
 if __name__ == "__main__":
