@@ -20,13 +20,6 @@ to load the data   .
 Text
 -----------
 
-CC-100
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-`CC-100 : Monolingual Datasets from Web Crawl Data <http://data.statmt.org/cc-100/>`_ is a corpus comprises of
-monolingual data for 100+ languages and also includes data for romanized languages. You can find the DataPipe
-implementation in `this Jupyter Notebook <https://github.com/pytorch/data/blob/main/examples/text/CC100.ipynb>`_.
-
-
 IMDB
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 This is a `large movie review dataset <http://ai.stanford.edu/~amaas/data/sentiment/>`_ for binary sentiment
