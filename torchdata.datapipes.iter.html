@@ -223,8 +223,8 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
 <ul>
@@ -326,17 +326,6 @@ a remote server, or even logs generated in real time.</p>
 <li><p>Transform - transform elements within DataPipes (e.g. batching, shuffling)</p></li>
 <li><p>Utility - utility functions (e.g. caching, CSV parsing, filtering)</p></li>
 </ol>
-<p>These DataPipes can be invoked in two ways, using the class constructor or applying their functional form onto
-an existing <cite>IterDataPipe</cite> (available to most but not all DataPipes).</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torchdata.datapipes.iter</span> <span class="nn">import</span> <span class="nn">IterableWrapper</span><span class="o">,</span> <span class="nn">Mapper</span>
-
-<span class="n">dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
-<span class="n">map_dp_1</span> <span class="o">=</span> <span class="n">Mapper</span><span class="p">(</span><span class="n">dp</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Using class constructor</span>
-<span class="n">map_dp_2</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Using functional form</span>
-<span class="nb">list</span><span class="p">(</span><span class="n">map_dp_1</span><span class="p">)</span>  <span class="c1"># [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]</span>
-<span class="nb">list</span><span class="p">(</span><span class="n">map_dp_2</span><span class="p">)</span>  <span class="c1"># [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]</span>
-</pre></div>
-</div>
 <section id="load-datapipes">
 <h2>Load DataPipes<a class="headerlink" href="#load-datapipes" title="Permalink to this headline">¶</a></h2>
 <p>These DataPipes help you interact with the file systems or online databases (e.g. FileOpener, GDriveReader).</p>
