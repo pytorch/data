@@ -308,62 +308,17 @@
               
   <section id="examples">
 <h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h1>
-<p>In this section, you will find the data loading implementations (using DataPipes) of various
-popular datasets across different research domains.</p>
-<section id="audio">
-<h2>Audio<a class="headerlink" href="#audio" title="Permalink to this headline">¶</a></h2>
-<section id="librispeech">
-<h3>LibriSpeech<a class="headerlink" href="#librispeech" title="Permalink to this headline">¶</a></h3>
-<p><a class="reference external" href="https://www.openslr.org/12/">LibriSpeech dataset</a> is corpus of approximately 1000 hours of 16kHz read
-English speech. Here is the
-<a class="reference external" href="https://github.com/pytorch/data/blob/main/examples/audio/librispeech.py">DataPipe implementation of LibriSpeech</a>
-to load the data   .</p>
-</section>
+<section id="vision">
+<h2>Vision<a class="headerlink" href="#vision" title="Permalink to this headline">¶</a></h2>
 </section>
 <section id="text">
 <h2>Text<a class="headerlink" href="#text" title="Permalink to this headline">¶</a></h2>
-<section id="cc-100">
-<h3>CC-100<a class="headerlink" href="#cc-100" title="Permalink to this headline">¶</a></h3>
-<p><a class="reference external" href="http://data.statmt.org/cc-100/">CC-100 : Monolingual Datasets from Web Crawl Data</a> is a corpus comprises of
-monolingual data for 100+ languages and also includes data for romanized languages. You can find the DataPipe
-implementation in <a class="reference external" href="https://github.com/pytorch/data/blob/main/examples/text/CC100.ipynb">this Jupyter Notebook</a>.</p>
 </section>
-<section id="imdb">
-<h3>IMDB<a class="headerlink" href="#imdb" title="Permalink to this headline">¶</a></h3>
-<p>This is a <a class="reference external" href="http://ai.stanford.edu/~amaas/data/sentiment/">large movie review dataset</a> for binary sentiment
-classification containing 25,000 highly polar movie reviews for training and 25,00 for testing. Here is the
-<a class="reference external" href="https://github.com/pytorch/data/blob/main/examples/text/imdb.py">DataPipe implementation to load the data</a>.</p>
+<section id="audio">
+<h2>Audio<a class="headerlink" href="#audio" title="Permalink to this headline">¶</a></h2>
 </section>
-<section id="squad">
-<h3>SQuAD<a class="headerlink" href="#squad" title="Permalink to this headline">¶</a></h3>
-<p><a class="reference external" href="https://rajpurkar.github.io/SQuAD-explorer/">SQuAD (Stanford Question Answering Dataset)</a> is a dataset for
-reading comprehension. It consists of a list of questions by crowdworkers on a set of Wikipedia articles. Here are the
-DataPipe implementations for <a class="reference external" href="https://github.com/pytorch/data/blob/main/examples/text/squad1.py">version 1.1</a>
-is here and <a class="reference external" href="https://github.com/pytorch/data/blob/main/examples/text/squad2.py">version 2.0</a>.</p>
-</section>
-</section>
-<section id="vision">
-<h2>Vision<a class="headerlink" href="#vision" title="Permalink to this headline">¶</a></h2>
-<section id="caltech-101">
-<h3>Caltech 101<a class="headerlink" href="#caltech-101" title="Permalink to this headline">¶</a></h3>
-<p>The <a class="reference external" href="http://www.vision.caltech.edu/Image_Datasets/Caltech101/">Caltech 101 dataset</a> contains pictures of objects
-belonging to 101 categories. Here is the
-<a class="reference external" href="https://github.com/pytorch/data/blob/main/examples/vision/caltech101.py">DataPipe implementation of Caltech 101</a>.</p>
-</section>
-<section id="caltech-256">
-<h3>Caltech 256<a class="headerlink" href="#caltech-256" title="Permalink to this headline">¶</a></h3>
-<p>The <a class="reference external" href="http://www.vision.caltech.edu/Image_Datasets/Caltech256/">Caltech 256 dataset</a> contains 30607 images
-from 256 categories. Here is the
-<a class="reference external" href="https://github.com/pytorch/data/blob/main/examples/vision/caltech256.py">DataPipe implementation of Caltech 256</a>.</p>
-</section>
-<section id="additional-data-sets-in-torchvision">
-<h3>Additional Data Sets in TorchVision<a class="headerlink" href="#additional-data-sets-in-torchvision" title="Permalink to this headline">¶</a></h3>
-<p>In another domain library <a class="reference external" href="https://github.com/pytorch/vision">TorchVision</a>, you will find some of the most
-popular datasets in the computer vision field implemented as loadable datasets using DataPipes. You can find
-all of those <a class="reference external" href="https://github.com/pytorch/vision/tree/main/torchvision/prototype/datasets/_builtin">datasets here</a>.</p>
-<p>Note that these implementations are currently in the prototype phase, but they should be fully supported
-in the coming months. Nonetheless, they demonstrate the different ways DataPipes can be used for data loading.</p>
-</section>
+<section id="module-examples">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-examples" title="Permalink to this headline">¶</a></h2>
 </section>
 </section>
 
@@ -409,22 +364,10 @@ in the coming months. Nonetheless, they demonstrate the different ways DataPipes
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
 <li><a class="reference internal" href="#">Examples</a><ul>
-<li><a class="reference internal" href="#audio">Audio</a><ul>
-<li><a class="reference internal" href="#librispeech">LibriSpeech</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#text">Text</a><ul>
-<li><a class="reference internal" href="#cc-100">CC-100</a></li>
-<li><a class="reference internal" href="#imdb">IMDB</a></li>
-<li><a class="reference internal" href="#squad">SQuAD</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#vision">Vision</a><ul>
-<li><a class="reference internal" href="#caltech-101">Caltech 101</a></li>
-<li><a class="reference internal" href="#caltech-256">Caltech 256</a></li>
-<li><a class="reference internal" href="#additional-data-sets-in-torchvision">Additional Data Sets in TorchVision</a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#vision">Vision</a></li>
+<li><a class="reference internal" href="#text">Text</a></li>
+<li><a class="reference internal" href="#audio">Audio</a></li>
+<li><a class="reference internal" href="#module-examples">Module contents</a></li>
 </ul>
 </li>
 </ul>
