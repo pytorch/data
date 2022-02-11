@@ -211,3 +211,5 @@ The following statements will be printed to show the shapes of a single batch of
 
     Labels batch shape: 50
     Feature batch shape: torch.Size([50, 20])
+
+You can find more DataPipe implementation examples for various research domains `on this page <torchexamples.html>`_.
