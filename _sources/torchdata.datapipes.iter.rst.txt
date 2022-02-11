@@ -17,16 +17,31 @@ This is an updated version of ``IterableDataset`` in ``torch``.
 
 We have three types of Iterable DataPipes:
 
-1. Load - help you interact with the file systems or online databases (e.g. FileOpener, GDriveReader)
+1. IO - DESCRIPTION
 
-2. Transform - transform elements within DataPipes (e.g. batching, shuffling)
+2. Archive - DESCRIPTION
 
-3. Utility - utility functions (e.g. caching, CSV parsing, filtering)
+3. Mapping - DESCRIPTION
 
-Load DataPipes
+4. Selecting - DESCRIPTION
+
+5. Augmenting - DESCRIPTION
+
+6. Combinatorial - DESCRIPTION
+
+7. Text - DESCRIPTION
+
+8. Grouping - DESCRIPTION
+
+9. Combining/Splitting -DESCRIPTION
+
+10. Others - DESCRIPTION
+
+IO DataPipes
 -------------------------
 
-These DataPipes help you interact with the file systems or online databases (e.g. FileOpener, GDriveReader).
+These DataPipes help interacting with the file systems or online databases (e.g. downloading, opening,
+saving files, and listing the files in directories).
 
 .. autosummary::
     :nosignatures:
@@ -42,11 +57,28 @@ These DataPipes help you interact with the file systems or online databases (e.g
     HttpReader
     IoPathFileLister
     IoPathFileOpener
+    IoPathSaver
     OnlineReader
     ParquetDataFrameLoader
+    Saver
 
+Archive DataPipes
+-------------------------
 
-Transform DataPipes
+These DataPipes help opening and decompressing archive files.
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated/
+    :template: datapipe.rst
+
+    Extractor
+    RarArchiveLoader
+    TarArchiveReader
+    XzFileReader
+    ZipArchiveReader
+
+Mapping DataPipes
 -------------------------
 
 These DataPipes transform elements within DataPipes (e.g. batching, shuffling).
@@ -56,14 +88,50 @@ These DataPipes transform elements within DataPipes (e.g. batching, shuffling).
     :toctree: generated/
     :template: datapipe.rst
 
-    Batcher
-    BucketBatcher
-    Shuffler
+    FlatMapper
+    Mapper
 
-Utility DataPipes
+Selecting DataPipes
 -------------------------
 
-These DataPipes provide utility functions (e.g. caching, CSV parsing, filtering).
+These DataPipes helps you select specific samples.
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated/
+    :template: datapipe.rst
+
+    Filter
+    Header
+
+Augmenting DataPipes
+-----------------------------
+These DataPipes help to augment your samples.
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated/
+    :template: datapipe.rst
+
+    Cycler
+    Enumerator
+    IndexAdder
+
+Combinatorial DataPipes
+-----------------------------
+These DataPipes help to perform combinatorial operations.
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated/
+    :template: datapipe.rst
+
+    Sampler
+    Shuffler
+
+Text DataPipes
+-----------------------------
+These DataPipes help you parse and read text files.
 
 .. autosummary::
     :nosignatures:
@@ -72,43 +140,60 @@ These DataPipes provide utility functions (e.g. caching, CSV parsing, filtering)
 
     CSVDictParser
     CSVParser
-    Collator
-    Concater
-    Cycler
-    DataFrameMaker
-    Demultiplexer
-    EndOnDiskCacheHolder
-    Enumerator
-    Extractor
-    Filter
-    FlatMapper
-    Forker
-    Grouper
-    HashChecker
-    Header
-    InMemoryCacheHolder
-    IndexAdder
-    IoPathSaver
-    IterKeyZipper
-    IterableWrapper
     JsonParser
     LineReader
-    MapKeyZipper
-    Mapper
-    Multiplexer
-    OnDiskCacheHolder
     ParagraphAggregator
-    RarArchiveLoader
     RoutedDecoder
     Rows2Columnar
-    SampleMultiplexer
-    Sampler
-    Saver
-    ShardingFilter
     StreamReader
-    TarArchiveReader
+
+Grouping DataPipes
+-----------------------------
+These DataPipes have you group samples within a DataPipe.
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated/
+    :template: datapipe.rst
+
+    Batcher
+    BucketBatcher
+    Collator
+    Grouper
     UnBatcher
+
+Combining/Spliting DataPipes
+-----------------------------
+These tend to involve multiple DataPipes and help combining them or spliting one to many.
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated/
+    :template: datapipe.rst
+
+    Concater
+    Demultiplexer
+    Forker
+    IterKeyZipper
+    MapKeyZipper
+    Multiplexer
+    SampleMultiplexer
     UnZipper
-    XzFileReader
-    ZipArchiveReader
     Zipper
+
+Other DataPipes
+-------------------------
+A miscellaneous set of DataPipes with different functionalities.
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated/
+    :template: datapipe.rst
+
+    DataFrameMaker
+    EndOnDiskCacheHolder
+    HashChecker
+    InMemoryCacheHolder
+    IterableWrapper
+    OnDiskCacheHolder
+    ShardingFilter
