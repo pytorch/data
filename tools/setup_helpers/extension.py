@@ -1,4 +1,5 @@
 import os
+import sys
 import platform
 import subprocess
 from pathlib import Path
@@ -67,6 +68,7 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}",
             f"-DCMAKE_INSTALL_PREFIX={extdir}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
+            f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-DCMAKE_CXX_FLAGS=-fPIC",
             f"-DBUILD_S3:BOOL={'ON' if _BUILD_S3 else 'OFF'}",
         ]
@@ -76,8 +78,6 @@ class CMakeBuild(build_ext):
         if "CMAKE_GENERATOR" not in os.environ or platform.system() == "Windows":
             cmake_args += ["-GNinja"]
         if platform.system() == "Windows":
-            import sys
-
             python_version = sys.version_info
             cmake_args += [
                 "-DCMAKE_C_COMPILER=cl",
