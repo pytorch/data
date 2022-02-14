@@ -34,7 +34,10 @@ _BUILD_S3 = _get_build("BUILD_S3", False)
 
 
 def get_ext_modules():
-    return [Extension(name="torchdata._torchdata", sources=[])]
+    if _BUILD_S3:
+        return [Extension(name="torchdata._torchdata", sources=[])]
+    else:
+        return []
 
 
 # Based off of pybiind cmake_example
