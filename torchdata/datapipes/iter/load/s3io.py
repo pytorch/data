@@ -24,6 +24,11 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
     """
 
     def __init__(self, source_datapipe: IterDataPipe[str], length: int = -1, request_timeout_ms=-1, region="") -> None:
+        if not hasattr(torchdata, '_torchdata') or not hasattr(torchdata._torchdata, 'S3Handler'):
+            raise ModuleNotFoundError(
+                "Torchdata must be built with BUILD_S3=1 to use this datapipe."
+            )
+
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.length: int = length
         self.handler = torchdata._torchdata.S3Handler(request_timeout_ms, region)
