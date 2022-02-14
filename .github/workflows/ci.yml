@@ -35,7 +35,7 @@ jobs:
         run: |
           sudo add-apt-repository multiverse
           sudo apt update
-          sudo apt install rar unrar curl
+          sudo apt install rar unrar libssl-dev libcurl4-openssl-dev zlib1g-dev
       - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
