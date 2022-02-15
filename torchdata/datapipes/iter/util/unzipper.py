@@ -49,7 +49,7 @@ class UnZipperIterDataPipe(IterDataPipe[T]):
             )
 
         # The implementation basically uses Forker but only yields a specific element within the sequence
-        container = _UnZipperIterDataPipe(source_datapipe, sequence_length, buffer_size)
+        container = _UnZipperIterDataPipe(source_datapipe, sequence_length, buffer_size)  # type: ignore[arg-type]
         return [_ChildDataPipe(container, i) for i in instance_ids]
 
 

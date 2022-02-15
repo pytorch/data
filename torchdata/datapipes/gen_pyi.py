@@ -8,6 +8,8 @@ def get_lines_base_file(base_file_path: str, to_skip: Optional[Set[str]] = None)
     with open(base_file_path) as f:
         lines = f.readlines()
         res = []
+        if to_skip is None:
+            return lines
         for line in lines:
             for skip_line in to_skip:
                 if skip_line not in line:
