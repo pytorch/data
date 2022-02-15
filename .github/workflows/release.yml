@@ -1,0 +1,80 @@
+name: Push Test Release
+
+on:
+  # [ Note: Manually Trigger the Workflow ]
+  # 1. Go to Actions under pytorch/data repo
+  # 2. In the left sidebar, click the workflow you want to run
+  # 3. Above the list of workflow runs, select Run workflow
+  # 4. Use the Branch dropdown to select the release/* branch
+  # 5. Click Run workflow
+  workflow_dispatch:
+  # TODO: Automatically trigger test/official release
+  # push
+  #   branches:
+  #     - release/*
+  # schedule
+  #   - cron: 30 23 * * *
+
+jobs:
+  # Build, Test and Upload
+  build_test_upload:
+    if: github.repository == 'pytorch/data'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      # TODO: Turn the matrix on after cpp landed
+      matrix:
+        os:
+          # - macos-latest
+          - ubuntu-latest
+          # - windows-latest
+        python-version:
+          # - 3.7
+          # - 3.8
+          - 3.9
+    steps:
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Check out source repository
+        uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          pip3 install -r requirements.txt
+          # TODO: Detect test or official release
+          pip3 install --pre torch -f https://download.pytorch.org/whl/test/cpu/torch_test.html
+      - name: Build TorchData Wheel
+        run: |
+          pip3 install wheel
+          python setup.py bdist_wheel --release
+      - name: Install TorchData
+        run: pip3 install dist/torchdata*.whl
+      - name: Install test requirements
+        run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile
+      - name: Run DataPipes tests with pytest
+        run:
+          pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py
+          --ignore=test/test_audio_examples.py
+      - name: Push TorchData Binary to PyTorch Storage
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.PYTORCH_BINARY_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY }}
+        run: |
+          pip3 install --user awscli
+          set -x
+          for pkg in dist/torchdata*.whl; do
+              aws s3 cp "$pkg" "s3://pytorch/whl/test/cpu" --acl public-read
+          done
+      # TODO: Official Release to PyPI and Conda
+      # - name: Push TorchData Binary to PYPI
+      #   env:
+      #     PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      #   run: |
+      #     echo $PYPI_TOKEN
+      #   run: |
+      #     pip3 install twine
+      #     python -m twine upload
+      #       --username __token__ \
+      #       --password "$PYPI_TOKEN" \
+      #       dist/torchdata*.whl
