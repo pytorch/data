@@ -31,9 +31,12 @@ def _init_extension():
         return
 
     _load_lib("libtorchdata")
-    # This import is for initializing the methods registered via PyBind11
-    # This has to happen after the base library is loaded
-    from torchdata import _torchdata  # noqa
+    try:
+        # This import is for initializing the methods registered via PyBind11
+        # This has to happen after the base library is loaded
+        from torchdata import _torchdata  # noqa
+    except ImportError as e:
+        warnings.warn(f"torchdata C++ extension unable to load: {e}")
 
 
 _init_extension()
