@@ -3,12 +3,12 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    types: [opened, synchronize, reopened, labeled]
-    branches:
-      - main
-      # For PR created by ghstack
-      - gh/*/*/base
+  # pull_request:
+  #   types: [opened, synchronize, reopened, labeled]
+  #   branches:
+  #     - main
+  #     # For PR created by ghstack
+  #     - gh/*/*/base
 
 jobs:
   test:

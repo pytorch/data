@@ -1,0 +1,38 @@
+name: Test Release Version
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  compare_two_versions:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Setup Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - name: Check out source repository
+        uses: actions/checkout@v2
+        with:
+          # ref: main
+          fetch-depth: 2
+      - name: Get S3 Version
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.PYTORCH_BINARY_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY }}
+        run: |
+          pip3 install --user awscli
+          mkdir s3
+          aws s3 cp s3://pytorch/whl/test/torchdata-0.3.0-py3-none-any.whl s3/
+          echo "=====Wheel Version on S3====="
+          python get_version_from_whl.py s3
+      - name: Get Test Channel Version
+        run: |
+          mkdir test_channel
+          curl https://download.pytorch.org/whl/test/torchdata-0.3.0-py3-none-any.whl --output test_channel/torchdata-0.3.0-py3-none-any.whl
+          echo "=====Wheel Version on Test====="
+          python get_version_from_whl.py test_channel
