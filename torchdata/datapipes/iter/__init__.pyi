@@ -143,7 +143,7 @@ __all__ = [
 # Please keep this list sorted
 assert __all__ == sorted(__all__)
 
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union
 
 from torch.utils.data import DataChunk, IterableDataset
 from torch.utils.data._typing import _DataPipeMeta
@@ -185,13 +185,9 @@ class IterDataPipe(IterableDataset[T_co], metaclass=_DataPipeMeta):
     # Functional form of 'BatcherIterDataPipe'
     def batch(self, batch_size: int, drop_last: bool = False, wrapper_class=DataChunk) -> IterDataPipe: ...
     # Functional form of 'CollatorIterDataPipe'
-    def collate(
-        self, collate_fn: Callable = ..., fn_args: Optional[Tuple] = None, fn_kwargs: Optional[Dict] = None
-    ) -> IterDataPipe: ...
+    def collate(self, collate_fn: Callable = ...) -> IterDataPipe: ...
     # Functional form of 'ConcaterIterDataPipe'
     def concat(self, *datapipes: IterDataPipe) -> IterDataPipe: ...
-    # Functional form of 'RoutedDecoderIterDataPipe'
-    def decode(self, *handlers: Callable, key_fn: Callable = ...) -> IterDataPipe: ...
     # Functional form of 'DemultiplexerIterDataPipe'
     def demux(
         self,
@@ -201,13 +197,7 @@ class IterDataPipe(IterableDataset[T_co], metaclass=_DataPipeMeta):
         buffer_size: int = 1000,
     ) -> List[IterDataPipe]: ...
     # Functional form of 'FilterIterDataPipe'
-    def filter(
-        self,
-        filter_fn: Callable,
-        fn_args: Optional[Tuple] = None,
-        fn_kwargs: Optional[Dict] = None,
-        drop_empty_batches: bool = True,
-    ) -> IterDataPipe: ...
+    def filter(self, filter_fn: Callable, drop_empty_batches: bool = True) -> IterDataPipe: ...
     # Functional form of 'ForkerIterDataPipe'
     def fork(self, num_instances: int, buffer_size: int = 1000) -> List[IterDataPipe]: ...
     # Functional form of 'GrouperIterDataPipe'
@@ -217,22 +207,15 @@ class IterDataPipe(IterableDataset[T_co], metaclass=_DataPipeMeta):
         *,
         buffer_size: int = 10000,
         group_size: Optional[int] = None,
-        unbatch_level: int = 0,
         guaranteed_group_size: Optional[int] = None,
         drop_remaining: bool = False,
     ) -> IterDataPipe: ...
     # Functional form of 'MapperIterDataPipe'
-    def map(
-        self,
-        fn: Callable,
-        input_col=None,
-        output_col=None,
-        *,
-        fn_args: Optional[Tuple] = None,
-        fn_kwargs: Optional[Dict] = None,
-    ) -> IterDataPipe: ...
+    def map(self, fn: Callable, input_col=None, output_col=None) -> IterDataPipe: ...
     # Functional form of 'MultiplexerIterDataPipe'
     def mux(self, *datapipes) -> IterDataPipe: ...
+    # Functional form of 'RoutedDecoderIterDataPipe'
+    def routed_decode(self, *handlers: Callable, key_fn: Callable = ...) -> IterDataPipe: ...
     # Functional form of 'ShardingFilterIterDataPipe'
     def sharding_filter(self) -> IterDataPipe: ...
     # Functional form of 'ShufflerIterDataPipe'

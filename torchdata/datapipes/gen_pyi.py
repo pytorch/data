@@ -1,6 +1,7 @@
 import pathlib
 from typing import Dict, List, Optional, Set
 
+import torch.utils.data.gen_pyi as core_gen_pyi
 from torch.utils.data.gen_pyi import FileManager, get_method_definitions
 
 
@@ -21,6 +22,16 @@ def main() -> None:
 
     iter_init_base = get_lines_base_file("iter/__init__.py", {"from torch.utils.data import IterDataPipe"})
 
+    # Core Definitions
+    core_iter_method_definitions = get_method_definitions(
+        core_gen_pyi.iterDP_file_path,
+        core_gen_pyi.iterDP_files_to_exclude,
+        core_gen_pyi.iterDP_deprecated_files,
+        "IterDataPipe",
+        core_gen_pyi.iterDP_method_to_special_output_type,
+    )
+
+    # TorchData Definitions
     iterDP_file_paths: List[str] = ["iter/load", "iter/transform", "iter/util"]
     iterDP_files_to_exclude: Set[str] = {"__init__.py"}
     iterDP_deprecated_files: Set[str] = set()
@@ -31,7 +42,7 @@ def main() -> None:
         "unzip": "List[IterDataPipe]",
     }
 
-    iter_method_definitions = get_method_definitions(
+    td_iter_method_definitions = get_method_definitions(
         iterDP_file_paths,
         iterDP_files_to_exclude,
         iterDP_deprecated_files,
@@ -39,6 +50,8 @@ def main() -> None:
         iterDP_method_to_special_output_type,
         root=str(pathlib.Path(__file__).parent.resolve()),
     )
+
+    iter_method_definitions = core_iter_method_definitions + td_iter_method_definitions
 
     fm = FileManager(install_dir=".", template_dir=".", dry_run=False)
     fm.write_with_template(
