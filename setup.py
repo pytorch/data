@@ -74,7 +74,6 @@ class clean(distutils.command.clean.clean):
                 shutil.rmtree(str(path), ignore_errors=True)
 
 
-<<<<<<< HEAD
 if __name__ == "__main__":
     VERSION, SHA = _get_version()
     _export_version(VERSION, SHA)
