@@ -27,8 +27,8 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
 
     Args:
         source_dp: IterDataPipe containing rows of data
-        dataframe_size: number of rows of data within each DataFrame
-        dtype: specify the `TorchArrow` dtype for the DataFrame
+        dataframe_size: number of rows of data within each DataFrame, page size can be option
+        dtype: specify the `TorchArrow` dtype for the DataFrame, use ``torcharrow.dtypes.DType``
         columns: List of str that specifies the column names of the DataFrame
         device: specify the device on which the DataFrame will be stored
     """
@@ -36,8 +36,8 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
     def __new__(
         cls,
         source_dp: IterDataPipe[T_co],
-        dataframe_size: int = 1000,  # or Page Size
-        dtype=None,  # Optional[torcharrow.dtypes.DType]
+        dataframe_size: int = 1000,
+        dtype=None,
         columns: Optional[List[str]] = None,
         device: str = "",
     ):
@@ -62,14 +62,14 @@ class ParquetDFLoaderIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDat
         source_dp: source DataPipe containing paths to the Parquet files
         columns: List of `str` that specifies the column names of the DataFrame
         use_threads: if ``True``, Parquet reader will perform multi-threaded column reads
-        dtype: specify the `TorchArrow` dtype for the DataFrame
+        dtype: specify the `TorchArrow` dtype for the DataFrame, use ``torcharrow.dtypes.DType``
         device: specify the device on which the DataFrame will be stored
     """
 
     def __init__(
         self,
         source_dp: IterDataPipe[str],
-        dtype=None,  # Optional[torcharrow.dtypes.DType]
+        dtype=None,
         columns: Optional[List[str]] = None,
         device: str = "",
         use_threads: bool = False,
