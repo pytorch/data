@@ -1,20 +1,23 @@
 import pathlib
-from typing import Dict, List, Set
+from typing import Dict, List, Optional, Set
 
-from tools.codegen.gen import FileManager
-
-from torch.utils.data.gen_pyi import get_method_definitions
+from torch.utils.data.gen_pyi import FileManager, get_method_definitions
 
 
-def get_lines_base_file(base_file_path: str):
+def get_lines_base_file(base_file_path: str, to_skip: Optional[Set[str]] = None):
     with open(base_file_path) as f:
         lines = f.readlines()
-        return list(lines)
+        res = []
+        for line in lines:
+            for skip_line in to_skip:
+                if skip_line not in line:
+                    res.append(line)
+        return res
 
 
 def main() -> None:
 
-    iter_init_base = get_lines_base_file("iter/__init__.py")
+    iter_init_base = get_lines_base_file("iter/__init__.py", {"from torch.utils.data import IterDataPipe"})
 
     iterDP_file_paths: List[str] = ["iter/load", "iter/transform", "iter/util"]
     iterDP_files_to_exclude: Set[str] = {"__init__.py"}

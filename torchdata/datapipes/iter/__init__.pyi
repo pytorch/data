@@ -1,5 +1,4 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-from torch.utils.data import IterDataPipe
 
 from torch.utils.data.datapipes.iter import (
     Batcher,
