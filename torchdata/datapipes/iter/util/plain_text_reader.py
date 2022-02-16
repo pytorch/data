@@ -190,7 +190,7 @@ class CSVDictParserIterDataPipe(_CSVBaseParserIterDataPipe):
     within the CSV files one row at a time (functional name: ``parse_csv_as_dict``).
 
     Each output is a `Dict` by default, but it depends on ``fmtparams``. The first row of each file, unless skipped,
-    will be used as the header; the contents of the header row will be used as keys for the `Dict`s
+    will be used as the header; the contents of the header row will be used as keys for the `Dict`\s
     generated from the remaining rows.
 
     Args:
