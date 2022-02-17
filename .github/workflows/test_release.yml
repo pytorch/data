@@ -7,13 +7,13 @@ on:
   # 3. Above the list of workflow runs, select Run workflow
   # 4. Use the Branch dropdown to select the release/* branch
   # 5. Click Run workflow
-  # workflow_dispatch:
+  workflow_dispatch:
   # Automatically trigger test/official release
   # Requred Feature of GHA: Run schedule on specific branch
   # Otherwise, all changes for release need to be landed into main branch
   # See: https://github.community/t/scheduled-builds-of-non-default-branch/16306
-  schedule:
-    - cron: 30 23 * * *
+  # schedule:
+  #   - cron: 30 23 * * *
 
 # [ Note: Workflow/Job Level ENV ]
 # Workflow/Job level env doesn't work even though document indicates this feature
@@ -26,6 +26,6 @@ jobs:
   build_test_upload:
     uses: ./.github/workflows/_build_test_upload.yml
     with:
-      branch: "release/0.3.0"
+      branch: ""
       pip_path: https://download.pytorch.org/whl/test/cpu/torch_test.html
       pre_dev_release: true
