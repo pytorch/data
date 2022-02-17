@@ -26,6 +26,6 @@ jobs:
   build_test_upload:
     uses: ./.github/workflows/_build_test_upload.yml
     with:
-      branch: ""
+      branch: "release/0.3.0"
       pip_path: https://download.pytorch.org/whl/test/cpu/torch_test.html
       pre_dev_release: true
