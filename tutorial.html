@@ -309,9 +309,116 @@
               
   <section id="tutorial">
 <h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<section id="using-datapipes">
+<h2>Using DataPipes<a class="headerlink" href="#using-datapipes" title="Permalink to this headline">¶</a></h2>
+<p>Suppose that we want to load data from CSV files with the following steps:</p>
+<ul class="simple">
+<li><p>List all CSV files in a directory</p></li>
+<li><p>Load CSV files</p></li>
+<li><p>Parse CSV file and yield rows</p></li>
+</ul>
+<p>There are a few <a class="reference external" href="torchdata.datapipes.iter.html">built-in DataPipes</a> that can help us with the above operations.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">FileLister</span></code> - <a class="reference external" href="generated/torchdata.datapipes.iter.FileLister.html">lists out files in a directory</a></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Filter</span></code> - <a class="reference external" href="generated/torchdata.datapipes.iter.Filter.html">filters the elements in DataPipe based on a given
+function</a></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FileOpener</span></code> - <a class="reference external" href="generated/torchdata.datapipes.iter.FileOpener.html">consumes file paths and returns opened file
+streams</a></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CSVParser</span></code> - <a class="reference external" href="generated/torchdata.datapipes.iter.CSVParser.html">consumes file streams, parses the CSV contents, and returns one parsed line at a
+time</a></p></li>
+</ul>
+<p>As an example, the source code for <code class="docutils literal notranslate"><span class="pre">CSVParser</span></code> looks something like this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@functional_datapipe</span><span class="p">(</span><span class="s2">&quot;parse_csv&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">CSVParserIterDataPipe</span><span class="p">(</span><span class="n">IterDataPipe</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dp</span><span class="p">,</span> <span class="o">**</span><span class="n">fmtparams</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dp</span> <span class="o">=</span> <span class="n">dp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fmtparams</span> <span class="o">=</span> <span class="n">fmtparams</span>
+
+    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Str_Or_Bytes</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Str_Or_Bytes</span><span class="p">]]]:</span>
+        <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="nb">file</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_datapipe</span><span class="p">:</span>
+            <span class="n">stream</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_helper</span><span class="o">.</span><span class="n">skip_lines</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+            <span class="n">stream</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_helper</span><span class="o">.</span><span class="n">strip_newline</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span>
+            <span class="n">stream</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_helper</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span>
+            <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">_helper</span><span class="o">.</span><span class="n">return_path</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>  <span class="c1"># Returns 1 line at a time as List[str or bytes]</span>
+</pre></div>
+</div>
+<p>As mentioned in a different section, DataPipes can be invoked using their functional forms (recommended) or their
+class constructors. A pipeline can be assembled as the following:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torchdata.datapipes</span> <span class="kn">as</span> <span class="nn">dp</span>
+
+<span class="n">FOLDER</span> <span class="o">=</span> <span class="s1">&#39;path/2/csv/folder&#39;</span>
+<span class="n">datapipe</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">FileLister</span><span class="p">([</span><span class="n">FOLDER</span><span class="p">])</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">filter_fn</span><span class="o">=</span><span class="k">lambda</span> <span class="n">filename</span><span class="p">:</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.csv&#39;</span><span class="p">))</span>
+<span class="n">datapipe</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">FileOpener</span><span class="p">(</span><span class="n">datapipe</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;rt&#39;</span><span class="p">)</span>
+<span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">parse_csv</span><span class="p">(</span><span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datapipe</span><span class="p">:</span> <span class="c1"># Iterating through the data</span>
+     <span class="k">pass</span>
+</pre></div>
+</div>
+<p>You can find the full list of built-in <a class="reference external" href="torchdata.datapipes.iter.html">IterDataPipes here</a> and
+<a class="reference external" href="torchdata.datapipes.map.html">MapDataPipes here</a>.</p>
+</section>
+<section id="working-with-dataloader">
+<h2>Working with DataLoader<a class="headerlink" href="#working-with-dataloader" title="Permalink to this headline">¶</a></h2>
+<p>In this section, we will demonstrate how you can use DataPipe with <code class="docutils literal notranslate"><span class="pre">DataLoader</span></code>.
+For the most part, you should be able to use it just by passing <code class="docutils literal notranslate"><span class="pre">dataset=datapipe</span></code> as an input arugment
+into the <code class="docutils literal notranslate"><span class="pre">DataLoader</span></code>. For detailed documentation related to <code class="docutils literal notranslate"><span class="pre">DataLoader</span></code>,
+please visit <a class="reference external" href="https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading">this page</a>.</p>
+<p>For this example, we will first have a helper function that generates some CSV files with random label and data.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">import</span> <span class="nn">random</span>
+
+<span class="k">def</span> <span class="nf">generate_csv</span><span class="p">(</span><span class="n">file_label</span><span class="p">,</span> <span class="n">num_rows</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5000</span><span class="p">,</span> <span class="n">num_features</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="n">fieldnames</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;label&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">f</span><span class="s1">&#39;c{i}&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_features</span><span class="p">)]</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictWriter</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;sample_data{file_label}.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">),</span> <span class="n">fieldnames</span><span class="o">=</span><span class="n">fieldnames</span><span class="p">)</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">({</span><span class="n">col</span><span class="p">:</span> <span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">fieldnames</span><span class="p">})</span>  <span class="c1"># writing the header row</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_rows</span><span class="p">):</span>
+        <span class="n">row_data</span> <span class="o">=</span> <span class="p">{</span><span class="n">col</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">fieldnames</span><span class="p">}</span>
+        <span class="n">row_data</span><span class="p">[</span><span class="s1">&#39;label&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">9</span><span class="p">)</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row_data</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Next, we will build our DataPipes to read and parse through the generated CSV files:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torchdata.datapipes</span> <span class="kn">as</span> <span class="nn">dp</span>
+
+<span class="k">def</span> <span class="nf">build_datapipes</span><span class="p">(</span><span class="n">root_dir</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">):</span>
+    <span class="n">datapipe</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">FileLister</span><span class="p">(</span><span class="n">root_dir</span><span class="p">)</span>
+    <span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">filter_fn</span><span class="o">=</span><span class="k">lambda</span> <span class="n">filename</span><span class="p">:</span> <span class="s2">&quot;sample_data&quot;</span> <span class="ow">in</span> <span class="n">filename</span> <span class="ow">and</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.csv&quot;</span><span class="p">))</span>
+    <span class="n">datapipe</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">FileOpener</span><span class="p">(</span><span class="n">datapipe</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;rt&#39;</span><span class="p">)</span>
+    <span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">parse_csv</span><span class="p">(</span><span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">skip_lines</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span>
+                                         <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)})</span>
+    <span class="k">return</span> <span class="n">datapipe</span>
+</pre></div>
+</div>
+<p>Lastly, we will put everything together in <code class="docutils literal notranslate"><span class="pre">'__main__'</span></code> and pass the DataPipe into the DataLoader.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch.utils.data</span> <span class="kn">import</span> <span class="n">DataLoader</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">num_files_to_generate</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_files_to_generate</span><span class="p">):</span>
+        <span class="n">generate_csv</span><span class="p">(</span><span class="n">file_label</span><span class="o">=</span><span class="n">i</span><span class="p">)</span>
+    <span class="n">datapipe</span> <span class="o">=</span> <span class="n">build_datapipes</span><span class="p">()</span>
+    <span class="n">dl</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">datapipe</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">first</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">dl</span><span class="p">))</span>
+    <span class="n">labels</span><span class="p">,</span> <span class="n">features</span> <span class="o">=</span> <span class="n">first</span><span class="p">[</span><span class="s1">&#39;label&#39;</span><span class="p">],</span> <span class="n">first</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Labels batch shape: {labels.size()}&quot;</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Feature batch shape: {features.size()}&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The following statements will be printed to show the shapes of a single batch of labels and features.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Labels</span> <span class="n">batch</span> <span class="n">shape</span><span class="p">:</span> <span class="mi">50</span>
+<span class="n">Feature</span> <span class="n">batch</span> <span class="n">shape</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Size</span><span class="p">([</span><span class="mi">50</span><span class="p">,</span> <span class="mi">20</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>You can find more DataPipe implementation examples for various research domains <a class="reference external" href="torchexamples.html">on this page</a>.</p>
+</section>
 <section id="implementing-a-custom-datapipe">
 <h2>Implementing a Custom DataPipe<a class="headerlink" href="#implementing-a-custom-datapipe" title="Permalink to this headline">¶</a></h2>
-<p>As a guiding example, let’s implement an <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> that applies a callable to the input iterator. For
+<p>Currently, we already have a large number of built-in DataPipes and we expect them to cover most necessary
+data processing operations. If none of them supports your need, you can create your own custom DataPipe.</p>
+<p>As a guiding example, let us implement an <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> that applies a callable to the input iterator. For
 <code class="docutils literal notranslate"><span class="pre">MapDataPipe</span></code>, take a look at the
 <a class="reference external" href="https://github.com/pytorch/pytorch/tree/master/torch/utils/data/datapipes/map">map</a>
 folder for examples, and follow the steps below for the <code class="docutils literal notranslate"><span class="pre">__getitem__</span></code> method instead of  the <code class="docutils literal notranslate"><span class="pre">__iter__</span></code> method.</p>
@@ -325,7 +432,7 @@ we alias to just “Operation-er” in <strong>init</strong> files. For our <cod
 <section id="constructor">
 <h3>Constructor<a class="headerlink" href="#constructor" title="Permalink to this headline">¶</a></h3>
 <p>DataSets are now generally constructed as stacks of <code class="docutils literal notranslate"><span class="pre">DataPipes</span></code>, so each <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> typically takes a
-source <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> as its first argument.</p>
+source <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> as its first argument. Here is a simplified version of <cite>Mapper</cite> as an example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterDataPipe</span>
 
 <span class="k">class</span> <span class="nc">MapperIterDataPipe</span><span class="p">(</span><span class="n">IterDataPipe</span><span class="p">):</span>
@@ -386,111 +493,21 @@ build-in functions like <code class="docutils literal notranslate"><span class="
    <span class="c1"># ...</span>
 </pre></div>
 </div>
-<p>The stack of DataPipes can then be constructed in functional form:</p>
+<p>The stack of DataPipes can then be constructed using their functional forms (recommended) or class constructors:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torchdata.datapipes</span> <span class="kn">as</span> <span class="nn">dp</span>
 
+<span class="c1"># Using functional form (recommended)</span>
 <span class="n">datapipes1</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">FileOpener</span><span class="p">([</span><span class="s1">&#39;a.file&#39;</span><span class="p">,</span> <span class="s1">&#39;b.file&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">fn</span><span class="o">=</span><span class="n">decoder</span><span class="p">)</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span><span class="o">.</span><span class="n">batch</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="c1"># Using class constructors</span>
 <span class="n">datapipes2</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">FileOpener</span><span class="p">([</span><span class="s1">&#39;a.file&#39;</span><span class="p">,</span> <span class="s1">&#39;b.file&#39;</span><span class="p">])</span>
 <span class="n">datapipes2</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">Mapper</span><span class="p">(</span><span class="n">datapipes2</span><span class="p">,</span> <span class="n">fn</span><span class="o">=</span><span class="n">decoder</span><span class="p">)</span>
 <span class="n">datapipes2</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">Shuffler</span><span class="p">(</span><span class="n">datapipes2</span><span class="p">)</span>
 <span class="n">datapipes2</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">Batcher</span><span class="p">(</span><span class="n">datapipes2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>In the above example, <code class="docutils literal notranslate"><span class="pre">datapipes1</span></code> and <code class="docutils literal notranslate"><span class="pre">datapipes2</span></code> represent the exact same stack of <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code>s.</p>
+<p>In the above example, <code class="docutils literal notranslate"><span class="pre">datapipes1</span></code> and <code class="docutils literal notranslate"><span class="pre">datapipes2</span></code> represent the exact same stack of <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code>s. We
+recommend using the functional form of DataPipes.</p>
 </section>
-</section>
-<section id="using-datapipes">
-<h2>Using DataPipes<a class="headerlink" href="#using-datapipes" title="Permalink to this headline">¶</a></h2>
-<p>For a complete example, suppose that we want to load data from CSV files with the following steps:</p>
-<ul class="simple">
-<li><p>List all CSV files in a directory</p></li>
-<li><p>Load CSV files</p></li>
-<li><p>Parse CSV file and yield rows</p></li>
-</ul>
-<p>To support the above pipeline, <code class="docutils literal notranslate"><span class="pre">CSVParser</span></code> is registered with the functional name <code class="docutils literal notranslate"><span class="pre">parse_csv</span></code> to consume
-file streams, parse the CSV contents, and return one parsed line at a time.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@functional_datapipe</span><span class="p">(</span><span class="s2">&quot;parse_csv&quot;</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">CSVParserIterDataPipe</span><span class="p">(</span><span class="n">IterDataPipe</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dp</span><span class="p">,</span> <span class="o">**</span><span class="n">fmtparams</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="bp">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dp</span> <span class="o">=</span> <span class="n">dp</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fmtparams</span> <span class="o">=</span> <span class="n">fmtparams</span>
-
-    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Str_Or_Bytes</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Str_Or_Bytes</span><span class="p">]]]:</span>
-        <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="nb">file</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_datapipe</span><span class="p">:</span>
-            <span class="n">stream</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_helper</span><span class="o">.</span><span class="n">skip_lines</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
-            <span class="n">stream</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_helper</span><span class="o">.</span><span class="n">strip_newline</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span>
-            <span class="n">stream</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_helper</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span>
-            <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">_helper</span><span class="o">.</span><span class="n">return_path</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>  <span class="c1"># Returns 1 line at a time as List[str or bytes]</span>
-</pre></div>
-</div>
-<p>Then, the pipeline can be assembled as the following:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torchdata.datapipes</span> <span class="kn">as</span> <span class="nn">dp</span>
-
-<span class="n">FOLDER</span> <span class="o">=</span> <span class="s1">&#39;path/2/csv/folder&#39;</span>
-<span class="n">datapipe</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">FileLister</span><span class="p">([</span><span class="n">FOLDER</span><span class="p">])</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">filter_fn</span><span class="o">=</span><span class="k">lambda</span> <span class="n">filename</span><span class="p">:</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.csv&#39;</span><span class="p">))</span>
-<span class="n">datapipe</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">FileOpener</span><span class="p">(</span><span class="n">datapipe</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;rt&#39;</span><span class="p">)</span>
-<span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">parse_csv</span><span class="p">(</span><span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
-
-<span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datapipe</span><span class="p">:</span> <span class="c1"># Iterating through the data</span>
-     <span class="k">pass</span>
-</pre></div>
-</div>
-</section>
-<section id="working-with-dataloader">
-<h2>Working with DataLoader<a class="headerlink" href="#working-with-dataloader" title="Permalink to this headline">¶</a></h2>
-<p>In this section, we will demonstrate how you can use DataPipe with <code class="docutils literal notranslate"><span class="pre">DataLoader</span></code>.
-For the most part, you should be able to use it just by passing <code class="docutils literal notranslate"><span class="pre">dataset=datapipe</span></code> as an input arugment
-into the <code class="docutils literal notranslate"><span class="pre">DataLoader</span></code>. For detailed documentation related to <code class="docutils literal notranslate"><span class="pre">DataLoader</span></code>,
-please visit <a class="reference external" href="https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading">this page</a>.</p>
-<p>For this example, we will first have a helper function that generates some CSV files with random label and data.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">csv</span>
-<span class="kn">import</span> <span class="nn">random</span>
-
-<span class="k">def</span> <span class="nf">generate_csv</span><span class="p">(</span><span class="n">file_label</span><span class="p">,</span> <span class="n">num_rows</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5000</span><span class="p">,</span> <span class="n">num_features</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="bp">None</span><span class="p">:</span>
-    <span class="n">fieldnames</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;label&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">f</span><span class="s1">&#39;c{i}&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_features</span><span class="p">)]</span>
-    <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictWriter</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;sample_data{file_label}.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">),</span> <span class="n">fieldnames</span><span class="o">=</span><span class="n">fieldnames</span><span class="p">)</span>
-    <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">({</span><span class="n">col</span><span class="p">:</span> <span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">fieldnames</span><span class="p">})</span>  <span class="c1"># writing the header row</span>
-    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_rows</span><span class="p">):</span>
-        <span class="n">row_data</span> <span class="o">=</span> <span class="p">{</span><span class="n">col</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">fieldnames</span><span class="p">}</span>
-        <span class="n">row_data</span><span class="p">[</span><span class="s1">&#39;label&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">9</span><span class="p">)</span>
-        <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row_data</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>Next, we will build our DataPipes to read and parse through the generated CSV files:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">torchdata.datapipes</span> <span class="kn">as</span> <span class="nn">dp</span>
-
-<span class="k">def</span> <span class="nf">build_datapipes</span><span class="p">(</span><span class="n">root_dir</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">):</span>
-    <span class="n">datapipe</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">FileLister</span><span class="p">(</span><span class="n">root_dir</span><span class="p">)</span>
-    <span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">filter_fn</span><span class="o">=</span><span class="k">lambda</span> <span class="n">filename</span><span class="p">:</span> <span class="s2">&quot;sample_data&quot;</span> <span class="ow">in</span> <span class="n">filename</span> <span class="ow">and</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.csv&quot;</span><span class="p">))</span>
-    <span class="n">datapipe</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">FileOpener</span><span class="p">(</span><span class="n">datapipe</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;rt&#39;</span><span class="p">)</span>
-    <span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">parse_csv</span><span class="p">(</span><span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">skip_lines</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-    <span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span>
-                                         <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)})</span>
-    <span class="k">return</span> <span class="n">datapipe</span>
-</pre></div>
-</div>
-<p>Lastly, we will put everything together in <code class="docutils literal notranslate"><span class="pre">'__main__'</span></code> and pass the DataPipe into the DataLoader.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch.utils.data</span> <span class="kn">import</span> <span class="n">DataLoader</span>
-
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
-    <span class="n">num_files_to_generate</span> <span class="o">=</span> <span class="mi">3</span>
-    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_files_to_generate</span><span class="p">):</span>
-        <span class="n">generate_csv</span><span class="p">(</span><span class="n">file_label</span><span class="o">=</span><span class="n">i</span><span class="p">)</span>
-    <span class="n">datapipe</span> <span class="o">=</span> <span class="n">build_datapipes</span><span class="p">()</span>
-    <span class="n">dl</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">datapipe</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-    <span class="n">first</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">dl</span><span class="p">))</span>
-    <span class="n">labels</span><span class="p">,</span> <span class="n">features</span> <span class="o">=</span> <span class="n">first</span><span class="p">[</span><span class="s1">&#39;label&#39;</span><span class="p">],</span> <span class="n">first</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]</span>
-    <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Labels batch shape: {labels.size()}&quot;</span><span class="p">)</span>
-    <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Feature batch shape: {features.size()}&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>The following statements will be printed to show the shapes of a single batch of labels and features.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Labels</span> <span class="n">batch</span> <span class="n">shape</span><span class="p">:</span> <span class="mi">50</span>
-<span class="n">Feature</span> <span class="n">batch</span> <span class="n">shape</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Size</span><span class="p">([</span><span class="mi">50</span><span class="p">,</span> <span class="mi">20</span><span class="p">])</span>
-</pre></div>
-</div>
-<p>You can find more DataPipe implementation examples for various research domains <a class="reference external" href="torchexamples.html">on this page</a>.</p>
 </section>
 </section>
 
@@ -538,6 +555,8 @@ please visit <a class="reference external" href="https://pytorch.org/docs/stable
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
 <li><a class="reference internal" href="#">Tutorial</a><ul>
+<li><a class="reference internal" href="#using-datapipes">Using DataPipes</a></li>
+<li><a class="reference internal" href="#working-with-dataloader">Working with DataLoader</a></li>
 <li><a class="reference internal" href="#implementing-a-custom-datapipe">Implementing a Custom DataPipe</a><ul>
 <li><a class="reference internal" href="#naming">Naming</a></li>
 <li><a class="reference internal" href="#constructor">Constructor</a></li>
@@ -546,8 +565,6 @@ please visit <a class="reference external" href="https://pytorch.org/docs/stable
 <li><a class="reference internal" href="#registering-datapipes-with-the-functional-api">Registering DataPipes with the functional API</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#using-datapipes">Using DataPipes</a></li>
-<li><a class="reference internal" href="#working-with-dataloader">Working with DataLoader</a></li>
 </ul>
 </li>
 </ul>
