@@ -60,8 +60,7 @@ Features described in this documentation are classified by release status:
    PyTorch on XLA Devices <http://pytorch.org/xla/>
 
 
-Indices and tables
+Indices
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
