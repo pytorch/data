@@ -53,7 +53,10 @@ from torchdata.datapipes.iter.util.dataframemaker import (
     DataFrameMakerIterDataPipe as DataFrameMaker,
     ParquetDFLoaderIterDataPipe as ParquetDataFrameLoader,
 )
-from torchdata.datapipes.iter.util.extractor import ExtractorIterDataPipe as Extractor
+from torchdata.datapipes.iter.util.decompressor import (
+    DecompressorIterDataPipe as Decompressor,
+    ExtractorIterDataPipe as Extractor,
+)
 from torchdata.datapipes.iter.util.hashchecker import HashCheckerIterDataPipe as HashChecker
 from torchdata.datapipes.iter.util.header import HeaderIterDataPipe as Header
 from torchdata.datapipes.iter.util.indexadder import (
@@ -71,10 +74,19 @@ from torchdata.datapipes.iter.util.rararchiveloader import RarArchiveLoaderIterD
 from torchdata.datapipes.iter.util.rows2columnar import Rows2ColumnarIterDataPipe as Rows2Columnar
 from torchdata.datapipes.iter.util.samplemultiplexer import SampleMultiplexerDataPipe as SampleMultiplexer
 from torchdata.datapipes.iter.util.saver import SaverIterDataPipe as Saver
-from torchdata.datapipes.iter.util.tararchivereader import TarArchiveReaderIterDataPipe as TarArchiveReader
+from torchdata.datapipes.iter.util.tararchiveloader import (
+    TarArchiveLoaderIterDataPipe as TarArchiveLoader,
+    TarArchiveReaderIterDataPipe as TarArchiveReader,
+)
 from torchdata.datapipes.iter.util.unzipper import UnZipperIterDataPipe as UnZipper
-from torchdata.datapipes.iter.util.xzfilereader import XzFileReaderIterDataPipe as XzFileReader
-from torchdata.datapipes.iter.util.ziparchivereader import ZipArchiveReaderIterDataPipe as ZipArchiveReader
+from torchdata.datapipes.iter.util.xzfileloader import (
+    XzFileLoaderIterDataPipe as XzFileLoader,
+    XzFileReaderIterDataPipe as XzFileReader,
+)
+from torchdata.datapipes.iter.util.ziparchiveloader import (
+    ZipArchiveLoaderIterDataPipe as ZipArchiveLoader,
+    ZipArchiveReaderIterDataPipe as ZipArchiveReader,
+)
 
 ###############################################################################
 # Reference From PyTorch Core
@@ -89,6 +101,7 @@ __all__ = [
     "Concater",
     "Cycler",
     "DataFrameMaker",
+    "Decompressor",
     "Demultiplexer",
     "EndOnDiskCacheHolder",
     "Enumerator",
@@ -132,10 +145,13 @@ __all__ = [
     "ShardingFilter",
     "Shuffler",
     "StreamReader",
+    "TarArchiveLoader",
     "TarArchiveReader",
     "UnBatcher",
     "UnZipper",
+    "XzFileLoader",
     "XzFileReader",
+    "ZipArchiveLoader",
     "ZipArchiveReader",
     "Zipper",
 ]
@@ -244,12 +260,12 @@ class IterDataPipe(IterableDataset[T_co], metaclass=_DataPipeMeta):
     def dataframe(
         self, dataframe_size: int = 1000, dtype=None, columns: Optional[List[str]] = None, device: str = ""
     ) -> torcharrow.DataFrame: ...
+    # Functional form of 'DecompressorIterDataPipe'
+    def decompress(self, file_type: Optional[Union[str, CompressionType]] = None) -> IterDataPipe: ...
     # Functional form of 'EndOnDiskCacheHolderIterDataPipe'
     def end_caching(self, mode="wb", filepath_fn=None, *, same_filepath_fn=False, skip_read=False) -> IterDataPipe: ...
     # Functional form of 'EnumeratorIterDataPipe'
     def enumerate(self, starting_index: int = 0) -> IterDataPipe: ...
-    # Functional form of 'ExtractorIterDataPipe'
-    def extract(self, file_type: Optional[Union[str, CompressionType]] = None) -> IterDataPipe: ...
     # Functional form of 'FlatMapperIterDataPipe'
     def flatmap(self, fn: Callable) -> IterDataPipe: ...
     # Functional form of 'HeaderIterDataPipe'
@@ -260,6 +276,12 @@ class IterDataPipe(IterableDataset[T_co], metaclass=_DataPipeMeta):
     def lines_to_paragraphs(self, joiner: Callable = ...) -> IterDataPipe: ...
     # Functional form of 'RarArchiveLoaderIterDataPipe'
     def load_from_rar(self, *, length: int = -1) -> IterDataPipe: ...
+    # Functional form of 'TarArchiveLoaderIterDataPipe'
+    def load_from_tar(self, mode: str = "r:*", length: int = -1) -> IterDataPipe: ...
+    # Functional form of 'XzFileLoaderIterDataPipe'
+    def load_from_xz(self, length: int = -1) -> IterDataPipe: ...
+    # Functional form of 'ZipArchiveLoaderIterDataPipe'
+    def load_from_zip(self, length: int = -1) -> IterDataPipe: ...
     # Functional form of 'ParquetDFLoaderIterDataPipe'
     def load_parquet_as_df(
         self, dtype=None, columns: Optional[List[str]] = None, device: str = "", use_threads: bool = False
@@ -300,12 +322,6 @@ class IterDataPipe(IterableDataset[T_co], metaclass=_DataPipeMeta):
     ) -> IterDataPipe: ...
     # Functional form of 'JsonParserIterDataPipe'
     def parse_json_files(self, **kwargs) -> IterDataPipe: ...
-    # Functional form of 'TarArchiveReaderIterDataPipe'
-    def read_from_tar(self, mode: str = "r:*", length: int = -1) -> IterDataPipe: ...
-    # Functional form of 'XzFileReaderIterDataPipe'
-    def read_from_xz(self, length: int = -1) -> IterDataPipe: ...
-    # Functional form of 'ZipArchiveReaderIterDataPipe'
-    def read_from_zip(self, length: int = -1) -> IterDataPipe: ...
     # Functional form of 'LineReaderIterDataPipe'
     def readlines(
         self,

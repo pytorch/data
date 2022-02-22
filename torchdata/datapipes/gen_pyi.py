@@ -40,7 +40,12 @@ def main() -> None:
         "dataframe": "torcharrow.DataFrame",
         "end_caching": "IterDataPipe",
         "unzip": "List[IterDataPipe]",
+        "read_from_tar": "IterDataPipe",
+        "read_from_xz": "IterDataPipe",
+        "read_from_zip": "IterDataPipe",
+        "extract": "IterDataPipe",
     }
+    method_name_exlusion: Set[str] = {"def extract", "read_from_tar", "read_from_xz", "read_from_zip"}
 
     td_iter_method_definitions = get_method_definitions(
         iterDP_file_paths,
@@ -50,6 +55,10 @@ def main() -> None:
         iterDP_method_to_special_output_type,
         root=str(pathlib.Path(__file__).parent.resolve()),
     )
+
+    td_iter_method_definitions = [
+        s for s in td_iter_method_definitions if all(ex not in s for ex in method_name_exlusion)
+    ]
 
     iter_method_definitions = core_iter_method_definitions + td_iter_method_definitions
 

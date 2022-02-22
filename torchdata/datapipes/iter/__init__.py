@@ -54,7 +54,10 @@ from torchdata.datapipes.iter.util.dataframemaker import (
     DataFrameMakerIterDataPipe as DataFrameMaker,
     ParquetDFLoaderIterDataPipe as ParquetDataFrameLoader,
 )
-from torchdata.datapipes.iter.util.extractor import ExtractorIterDataPipe as Extractor
+from torchdata.datapipes.iter.util.decompressor import (
+    DecompressorIterDataPipe as Decompressor,
+    ExtractorIterDataPipe as Extractor,
+)
 from torchdata.datapipes.iter.util.hashchecker import HashCheckerIterDataPipe as HashChecker
 from torchdata.datapipes.iter.util.header import HeaderIterDataPipe as Header
 from torchdata.datapipes.iter.util.indexadder import (
@@ -72,10 +75,19 @@ from torchdata.datapipes.iter.util.rararchiveloader import RarArchiveLoaderIterD
 from torchdata.datapipes.iter.util.rows2columnar import Rows2ColumnarIterDataPipe as Rows2Columnar
 from torchdata.datapipes.iter.util.samplemultiplexer import SampleMultiplexerDataPipe as SampleMultiplexer
 from torchdata.datapipes.iter.util.saver import SaverIterDataPipe as Saver
-from torchdata.datapipes.iter.util.tararchivereader import TarArchiveReaderIterDataPipe as TarArchiveReader
+from torchdata.datapipes.iter.util.tararchiveloader import (
+    TarArchiveLoaderIterDataPipe as TarArchiveLoader,
+    TarArchiveReaderIterDataPipe as TarArchiveReader,
+)
 from torchdata.datapipes.iter.util.unzipper import UnZipperIterDataPipe as UnZipper
-from torchdata.datapipes.iter.util.xzfilereader import XzFileReaderIterDataPipe as XzFileReader
-from torchdata.datapipes.iter.util.ziparchivereader import ZipArchiveReaderIterDataPipe as ZipArchiveReader
+from torchdata.datapipes.iter.util.xzfileloader import (
+    XzFileLoaderIterDataPipe as XzFileLoader,
+    XzFileReaderIterDataPipe as XzFileReader,
+)
+from torchdata.datapipes.iter.util.ziparchiveloader import (
+    ZipArchiveLoaderIterDataPipe as ZipArchiveLoader,
+    ZipArchiveReaderIterDataPipe as ZipArchiveReader,
+)
 
 ###############################################################################
 # Reference From PyTorch Core
@@ -90,6 +102,7 @@ __all__ = [
     "Concater",
     "Cycler",
     "DataFrameMaker",
+    "Decompressor",
     "Demultiplexer",
     "EndOnDiskCacheHolder",
     "Enumerator",
@@ -133,10 +146,13 @@ __all__ = [
     "ShardingFilter",
     "Shuffler",
     "StreamReader",
+    "TarArchiveLoader",
     "TarArchiveReader",
     "UnBatcher",
     "UnZipper",
+    "XzFileLoader",
     "XzFileReader",
+    "ZipArchiveLoader",
     "ZipArchiveReader",
     "Zipper",
 ]

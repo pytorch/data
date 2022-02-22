@@ -12,11 +12,11 @@ from torchdata.datapipes.utils import StreamWrapper
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 
 
-@functional_datapipe("read_from_tar")
-class TarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
+@functional_datapipe("load_from_tar")
+class TarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     r"""
     Opens/decompresses tar binary streams from an Iterable DataPipe which contains tuples of path name and
-    tar binary stream, and yields a tuple of path name and extracted binary stream (functional name: ``read_from_tar``).
+    tar binary stream, and yields a tuple of path name and extracted binary stream (functional name: ``load_from_tar``).
 
     Args:
         datapipe: Iterable DataPipe that provides tuples of path name and tar binary stream
@@ -60,3 +60,13 @@ class TarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         if self.length == -1:
             raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
         return self.length
+
+
+@functional_datapipe("read_from_tar")
+class TarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
+    r"""
+    Please use ``TarArchiveLoader`` or ``.load_from_tar`` instead.
+    """
+
+    def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], mode: str = "r:*", length: int = -1) -> None:
+        return TarArchiveLoaderIterDataPipe(datapipe, mode, length)
