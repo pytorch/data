@@ -50,9 +50,9 @@ These DataPipes help opening and decompressing archive files of different format
 
     Extractor
     RarArchiveLoader
-    TarArchiveReader
-    XzFileReader
-    ZipArchiveReader
+    TarArchiveLoader
+    XzFileLoader
+    ZipArchiveLoader
 
 Augmenting DataPipes
 -----------------------------
