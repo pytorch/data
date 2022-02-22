@@ -11,12 +11,12 @@ from torchdata.datapipes.utils import StreamWrapper
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 
 
-@functional_datapipe("read_from_xz")
-class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
+@functional_datapipe("load_from_xz")
+class XzFileLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     r"""
     Decompresses xz (lzma) binary streams from an Iterable DataPipe which contains tuples of
     path name and xy binary streams, and yields a tuple of path name and extracted binary
-    stream (functional name: ``read_from_xz``).
+    stream (functional name: ``load_from_xz``).
 
     Args:
         datapipe: Iterable DataPipe that provides tuples of path name and xy binary stream
@@ -49,3 +49,13 @@ class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         if self.length == -1:
             raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
         return self.length
+
+
+@functional_datapipe("read_from_xz")
+class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
+    r"""
+    Please use ``XzFileLoader`` or ``.load_from_xz`` instead.
+    """
+
+    def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1):
+        return XzFileLoaderIterDataPipe(datapipe, length)
