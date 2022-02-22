@@ -69,5 +69,5 @@ class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     Please use ``ZipArchiveLoader`` or ``.load_from_zip`` instead.
     """
 
-    def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1) -> None:
+    def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1):
         return ZipArchiveLoaderIterDataPipe(datapipe, length)

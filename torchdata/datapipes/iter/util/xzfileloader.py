@@ -57,5 +57,5 @@ class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     Please use ``XzFileLoader`` or ``.load_from_xz`` instead.
     """
 
-    def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1) -> None:
+    def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1):
         return XzFileLoaderIterDataPipe(datapipe, length)

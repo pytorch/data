@@ -68,5 +68,5 @@ class TarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     Please use ``TarArchiveLoader`` or ``.load_from_tar`` instead.
     """
 
-    def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], mode: str = "r:*", length: int = -1) -> None:
+    def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], mode: str = "r:*", length: int = -1):
         return TarArchiveLoaderIterDataPipe(datapipe, mode, length)

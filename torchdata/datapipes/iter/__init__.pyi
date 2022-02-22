@@ -172,7 +172,7 @@ from torchdata.datapipes.map import MapDataPipe
 # Note that, for mypy, .pyi file takes precedent over .py file, such that we must define the interface for other
 # classes/objects here, even though we are not injecting extra code into them at the moment.
 
-from .util.extractor import CompressionType
+from .util.decompressor import CompressionType
 
 try:
     import torcharrow
