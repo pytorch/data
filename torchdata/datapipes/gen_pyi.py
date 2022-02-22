@@ -24,6 +24,8 @@ def get_lines_base_file(base_file_path: str, to_skip: Optional[Set[str]] = None)
 
 def main() -> None:
 
+    raise RuntimeError("This file is not meant to be ran by users in this release.")
+
     iter_init_base = get_lines_base_file(
         "iter/__init__.py",
         {"from torch.utils.data import IterDataPipe", "# Copyright (c) Facebook, Inc. and its affiliates."},
