@@ -51,7 +51,7 @@ jobs:
       - name: Install test requirements
         run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile
       - name: Install AWS-SDK-CPP on Windows for S3 IO datapipes
-        if: ${{ matrix.os }} == 'windows-latest'
+        if: matrix.os == 'windows-latest'
         run: |
           git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
           mkdir sdk_build
@@ -60,7 +60,7 @@ jobs:
           msbuild ALL_BUILD.vcxproj -p:Configuration=Release
           msbuild INSTALL.vcxproj -p:Configuration=Release
       - name: Install AWS-SDK-CPP on Non-Windows for S3 IO datapipes
-        if: ${{ matrix.os }} != 'windows-latest'
+        if: matrix.os != 'windows-latest'
         run: |
           git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
           cd aws-sdk-cpp/
