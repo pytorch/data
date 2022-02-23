@@ -1,3 +1,4 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
 import pathlib
 from typing import Dict, List, Optional, Set
 
@@ -12,15 +13,21 @@ def get_lines_base_file(base_file_path: str, to_skip: Optional[Set[str]] = None)
         if to_skip is None:
             return lines
         for line in lines:
+            skip_flag = False
             for skip_line in to_skip:
-                if skip_line not in line:
-                    res.append(line)
+                if skip_line in line:
+                    skip_flag = True
+            if not skip_flag:
+                res.append(line)
         return res
 
 
 def main() -> None:
 
-    iter_init_base = get_lines_base_file("iter/__init__.py", {"from torch.utils.data import IterDataPipe"})
+    iter_init_base = get_lines_base_file(
+        "iter/__init__.py",
+        {"from torch.utils.data import IterDataPipe", "# Copyright (c) Facebook, Inc. and its affiliates."},
+    )
 
     # Core Definitions
     core_iter_method_definitions = get_method_definitions(

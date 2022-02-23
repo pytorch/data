@@ -100,7 +100,7 @@ jobs:
           pip3 install --user awscli
           set -x
           for pkg in dist/torchdata*.whl; do
-              aws s3 cp "$pkg" S3_PATH --acl public-read
+              aws s3 cp "$pkg" "$S3_PATH" --acl public-read
           done
       - name: Push Official Wheel to PYPI
         if: ${{ ! inputs.pre_dev_release }}
