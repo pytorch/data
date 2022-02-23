@@ -28,6 +28,15 @@ class TarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         The opened file handles will be closed automatically if the default ``DecoderDataPipe``
         is attached. Otherwise, user should be responsible to close file handles explicitly
         or let Python's GC close them periodically.
+
+    Example:
+        >>> from torchdata.datapipes.iter import FileLister, FileOpener
+        >>> datapipe1 = FileLister(".", "*.tar")
+        >>> datapipe2 = FileOpener(datapipe1, mode="b")
+        >>> tar_loader_dp = datapipe2.load_from_tar()
+        >>> for _, stream in tar_loader_dp:
+        >>>     print(stream.read())
+        b'0123456789abcdef'
     """
 
     def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], mode: str = "r:*", length: int = -1) -> None:
