@@ -13,11 +13,11 @@ from torchdata.datapipes.utils import StreamWrapper
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 
 
-@functional_datapipe("read_from_zip")
-class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
+@functional_datapipe("load_from_zip")
+class ZipArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     r"""
     Opens/decompresses zip binary streams from an Iterable DataPipe which contains a tuple of path name and
-    zip binary stream, and yields a tuple of path name and extracted binary stream (functional name: ``read_from_zip``).
+    zip binary stream, and yields a tuple of path name and extracted binary stream (functional name: ``load_from_zip``).
 
     Args:
         datapipe: Iterable DataPipe that provides tuples of path name and zip binary stream
@@ -61,3 +61,13 @@ class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         if self.length == -1:
             raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
         return self.length
+
+
+@functional_datapipe("read_from_zip")
+class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
+    r"""
+    Please use ``ZipArchiveLoader`` or ``.load_from_zip`` instead.
+    """
+
+    def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1):
+        return ZipArchiveLoaderIterDataPipe(datapipe, length)

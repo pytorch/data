@@ -101,7 +101,7 @@ def LibriSpeech(root: Union[str, Path], url: str = URL, folder_in_archive: str =
     cache_decompressed_dp = cache_compressed_dp.on_disk_cache(
         filepath_fn=lambda tar_path: os.path.join(root, folder_in_archive, tar_path.split(".")[0])
     )
-    cache_decompressed_dp = FileOpener(cache_decompressed_dp, mode="b").read_from_tar()
+    cache_decompressed_dp = FileOpener(cache_decompressed_dp, mode="b").load_from_tar()
     cache_decompressed_dp = cache_decompressed_dp.end_caching(
         filepath_fn=functools.partial(decompress_filepath_fn, root_path=os.path.join(root, folder_in_archive)),
     )
