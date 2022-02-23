@@ -225,7 +225,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             ["s3:///bin-images"],
         ]
         for input in input_list:
-            with self.assertRaises(ValueError, msg=f"{input} should raise ValueError."):
+            with self.assertRaises(BaseException, msg=f"{input} should raise an exception."):
                 s3_lister_dp = S3FileLister(IterableWrapper(file_urls))
                 for _ in s3_lister_dp:
                     pass
