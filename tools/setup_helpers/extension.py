@@ -77,6 +77,8 @@ class CMakeBuild(build_ext):
             f"-DBUILD_S3:BOOL={'ON' if _BUILD_S3 else 'OFF'}",
         ]
 
+        print(sys.executable)
+
         build_args = ["--config", cfg]
 
         if _PYTHON_SPECIFIC_VERSION:
