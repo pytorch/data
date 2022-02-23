@@ -19,3 +19,6 @@ jobs:
       branch: ""
       pip_path: https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
       pre_dev_release: true
+    secrets:
+      PYTORCH_BINARY_AWS_ACCESS_KEY_ID: ${{ secrets.PYTORCH_BINARY_AWS_ACCESS_KEY_ID }}
+      PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY: ${{ secrets.PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY }}
