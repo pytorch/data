@@ -83,7 +83,7 @@ jobs:
         run: python setup.py develop
         env:
           BUILD_S3: 1
-          PYTHON_ROOT_DIR: pythonlocaltion
+          PYTHON_ROOT_DIR: $pythonlocaltion
       - name: Run DataPipes tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run:
