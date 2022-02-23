@@ -76,8 +76,9 @@ jobs:
           make
           sudo make install
       - name: Build TorchData
-        run: python setup.py develop
+        run: python$PYTHON_VERSION setup.py develop
         env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
           BUILD_S3: 1
       - name: Run DataPipes tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
