@@ -32,6 +32,7 @@ def _get_build(var, default=False):
 
 
 _BUILD_S3 = _get_build("BUILD_S3", False)
+_PYTHON_SPECIFIC_VERSION = os.environ.get("PYTHON_SPECIFIC_VERSION", None)
 
 
 def get_ext_modules():
@@ -77,6 +78,11 @@ class CMakeBuild(build_ext):
         ]
 
         build_args = ["--config", cfg]
+
+        if _PYTHON_SPECIFIC_VERSION:
+            cmake_args += [
+                f"-DPYBIND11_PYTHON_VERSION={_PYTHON_SPECIFIC_VERSION}",
+            ]
 
         if "CMAKE_GENERATOR" not in os.environ or platform.system() == "Windows":
             cmake_args += ["-GNinja"]

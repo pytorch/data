@@ -64,7 +64,7 @@ jobs:
           git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
           mkdir sdk_build
           cd sdk_build
-          cmake ..\aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer"
+          cmake ..\aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DAUTORUN_UNIT_TESTS=OFF
           msbuild ALL_BUILD.vcxproj -p:Configuration=Release
           msbuild INSTALL.vcxproj -p:Configuration=Release
       - name: Install AWS-SDK-CPP on Non-Windows for S3 IO datapipes
@@ -74,7 +74,7 @@ jobs:
           cd aws-sdk-cpp/
           mkdir sdk-build
           cd sdk-build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer"
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DAUTORUN_UNIT_TESTS=OFF
           make
           sudo make install
       - name: Build TorchData
