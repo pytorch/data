@@ -32,7 +32,7 @@ def _get_build(var, default=False):
 
 
 _BUILD_S3 = _get_build("BUILD_S3", False)
-_PYTHON_ROOT_DIR = os.environ.get("PYTHON_ROOT_DIR", None)
+_BUILD_PYTHON_VERSION = os.environ.get("BUILD_PYTHON_VERSION", None)
 
 
 def get_ext_modules():
@@ -70,18 +70,15 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_INSTALL_PREFIX={extdir}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
-            f"-DPYTHON_INCLUDE_DIRS={sys.executable}",
-            f"-DPYTHON_LIBRARIES={sys.executable}",
-            "-DPYBIND11_FINDPYTHON=ON",
             "-DCMAKE_CXX_FLAGS=-fPIC",
             f"-DBUILD_S3:BOOL={'ON' if _BUILD_S3 else 'OFF'}",
         ]
 
         build_args = ["--config", cfg]
 
-        if _PYTHON_ROOT_DIR:
+        if _BUILD_PYTHON_VERSION:
             cmake_args += [
-                f"-DPython3_ROOT_DIR={_PYTHON_ROOT_DIR}",
+                f"-DBUILD_PYTHON_VERSION={_BUILD_PYTHON_VERSION}",
             ]
 
         if "CMAKE_GENERATOR" not in os.environ or platform.system() == "Windows":
