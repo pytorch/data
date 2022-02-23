@@ -56,6 +56,7 @@ jobs:
       - name: Install AWS-SDK-CPP on Windows for S3 IO datapipes
         if: matrix.os == 'windows-latest'
         run: |
+          reg add HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /d 1 /f
           git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
           mkdir sdk_build
           cd sdk_build
