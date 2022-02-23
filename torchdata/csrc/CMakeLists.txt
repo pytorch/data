@@ -1,5 +1,6 @@
 if(BUILD_S3)
   message(STATUS "Building S3 IO functionality")
+  find_package(Python3 COMPONENTS Interpreter Development)
   find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
   find_package(pybind11 REQUIRED)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
