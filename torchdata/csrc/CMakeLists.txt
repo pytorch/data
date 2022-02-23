@@ -1,5 +1,8 @@
 if(BUILD_S3)
   message(STATUS "Building S3 IO functionality")
+  include(CMakeDependentOption)
+  cmake_dependent_option(PYBIND11_FINDPYTHON "Force new FindPython" OFF
+                         "NOT CMAKE_VERSION VERSION_LESS 3.12" OFF)
   find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
   find_package(pybind11 REQUIRED)
   find_package(Python3 COMPONENTS Interpreter Development)
