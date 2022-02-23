@@ -58,7 +58,7 @@ jobs:
           cd sdk-build
           cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer"
           make
-          sudo make install
+          make install
       - name: Build TorchData
         run: python setup.py develop
         env:
