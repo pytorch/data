@@ -47,6 +47,10 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
     Note:
         Default ``PathManager`` currently supports local file path, normal HTTP URL and OneDrive URL.
         S3 URL is supported only with ``iopath``>=0.1.9.
+
+    Example:
+        >>> from torchdata.datapipes.iter import IoPathFileLister
+        >>> datapipe = IoPathFileLister(root=S3URL)
     """
 
     def __init__(
@@ -93,6 +97,11 @@ class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Note:
         Default ``PathManager`` currently supports local file path, normal HTTP URL and OneDrive URL.
         S3 URL is supported only with `iopath`>=0.1.9.
+
+    Example:
+        >>> from torchdata.datapipes.iter import IoPathFileLister
+        >>> datapipe = IoPathFileLister(root=S3URL)
+        >>> file_dp = datapipe.open_file_by_iopath()
     """
 
     def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r", pathmgr=None) -> None:
@@ -135,6 +144,15 @@ class IoPathSaverIterDataPipe(IterDataPipe[str]):
     Note:
         Default ``PathManager`` currently supports local file path, normal HTTP URL and OneDrive URL.
         S3 URL is supported only with `iopath`>=0.1.9.
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> def filepath_fn(name: str) -> str:
+        >>>     return S3URL + name
+        >>> name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
+        >>> source_dp = IterableWrapper(sorted(name_to_data.items()))
+        >>> iopath_saver_dp = source_dp.save_by_iopath(filepath_fn=filepath_fn, mode="wb")
+        >>> res_file_paths = list(iopath_saver_dp)
     """
 
     def __init__(
