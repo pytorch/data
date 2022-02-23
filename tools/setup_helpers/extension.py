@@ -71,6 +71,7 @@ class CMakeBuild(build_ext):
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DPYTHON_INCLUDE_DIRS={sys.executable}",
             f"-DPYTHON_LIBRARIES={sys.executable}",
+            "-DPYBIND11_FINDPYTHON=ON",
             "-DCMAKE_CXX_FLAGS=-fPIC",
             f"-DBUILD_S3:BOOL={'ON' if _BUILD_S3 else 'OFF'}",
         ]

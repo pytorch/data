@@ -1,8 +1,8 @@
 if(BUILD_S3)
   message(STATUS "Building S3 IO functionality")
-  find_package(Python3 COMPONENTS Interpreter Development)
   find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
   find_package(pybind11 REQUIRED)
+  find_package(Python3 COMPONENTS Interpreter Development)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
   set(SOURCES "pybind/S3Handler/S3Handler.cpp" )
