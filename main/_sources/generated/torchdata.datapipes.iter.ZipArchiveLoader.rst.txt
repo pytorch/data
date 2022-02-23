@@ -3,7 +3,7 @@
 .. currentmodule:: torchdata.datapipes.iter
 
 
-ZipArchiveReader
+ZipArchiveLoader
 ================
 
-.. autoclass:: ZipArchiveReader
+.. autoclass:: ZipArchiveLoader

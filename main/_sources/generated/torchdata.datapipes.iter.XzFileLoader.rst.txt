@@ -3,7 +3,7 @@
 .. currentmodule:: torchdata.datapipes.iter
 
 
-TarArchiveReader
-================
+XzFileLoader
+============
 
-.. autoclass:: TarArchiveReader
+.. autoclass:: XzFileLoader
