@@ -235,7 +235,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         ]
         for input in input_list:
             with self.assertRaises(ValueError, msg=f"{input} should raise ValueError."):
-                s3_lister_dp = S3FileLister(IterableWrapper(input))
+                s3_lister_dp = S3FileLister(IterableWrapper(input), region="us-east-1")
                 for _ in s3_lister_dp:
                     pass
 
@@ -261,7 +261,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         ]
         for input in input_list:
             with self.assertRaises(ValueError, msg=f"{input} should raise ValueError."):
-                s3_loader_dp = S3FileLoader(file_urls)
+                s3_loader_dp = S3FileLoader(input, region="us-east-1")
                 for _ in s3_loader_dp:
                     pass
 
