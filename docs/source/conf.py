@@ -95,6 +95,8 @@ signature_replacements = {
     "torch.utils.data.datapipes.map.grouping.T": "T",
     "torch.utils.data.datapipes.map.combining.T_co": "T_co",
     "torch.utils.data.datapipes.map.combinatorics.T_co": "T_co",
+    "torchdata.datapipes.iter.util.cycler.T_co": "T_co",
+    "torchdata.datapipes.iter.util.paragraphaggregator.T_co": "T_co",
     "typing.": "",
 }
 

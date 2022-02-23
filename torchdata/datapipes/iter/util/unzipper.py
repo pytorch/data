@@ -27,6 +27,17 @@ class UnZipperIterDataPipe(IterDataPipe[T]):
             to the slowest child DataPipe. Use -1 for the unlimited buffer.
         columns_to_skip: optional indices of columns that the DataPipe should skip (each index should be
             an integer from 0 to sequence_length - 1)
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> source_dp = IterableWrapper([(i, i + 10, i + 20) for i in range(3)])
+        >>> dp1, dp2, dp3 = source_dp.unzip(sequence_length=3)
+        >>> list(dp1)
+        [0, 1, 2]
+        >>> list(dp2)
+        [10, 11, 12]
+        >>> list(dp3)
+        [20, 21, 22]
     """
 
     def __new__(

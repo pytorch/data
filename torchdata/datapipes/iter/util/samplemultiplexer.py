@@ -23,6 +23,15 @@ class SampleMultiplexerDataPipe(IterDataPipe[T_co]):
         pipes_to_weights_dict: a `Dict` of IterDataPipes and Weights. The total weight of
             unexhausted DataPipes will be normalized to 1 for the purpose of sampling.
         seed: random seed to initialize the random number generator
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper, SampleMultiplexer
+        >>> source_dp1 = IterableWrapper([0] * 10)
+        >>> source_dp2 = IterableWrapper([1] * 10)
+        >>> d = {source_dp1: 99999999, source_dp2: 0.0000001}
+        >>> sample_mul_dp = SampleMultiplexer(pipes_to_weights_dict=d, seed=0)
+        >>> list(sample_mul_dp)
+        [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
     """
 
     def __init__(

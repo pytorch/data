@@ -31,6 +31,21 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
         dtype: specify the `TorchArrow` dtype for the DataFrame, use ``torcharrow.dtypes.DType``
         columns: List of str that specifies the column names of the DataFrame
         device: specify the device on which the DataFrame will be stored
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> import torcharrow.dtypes as dt
+        >>> source_data = [(i,) for i in range(3)]
+        >>> source_dp = IterableWrapper(source_data)
+        >>> DTYPE = dt.Struct([dt.Field("Values", dt.int32)])
+        >>> df_dp = source_dp.dataframe(dtype=DTYPE)
+        >>> list(df_dp)[0]
+          index    Values
+        -------  --------
+              0         0
+              1         1
+              2         2
+        dtype: Struct([Field('Values', int32)]), count: 3, null_count: 0
     """
 
     def __new__(
@@ -64,6 +79,20 @@ class ParquetDFLoaderIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDat
         use_threads: if ``True``, Parquet reader will perform multi-threaded column reads
         dtype: specify the `TorchArrow` dtype for the DataFrame, use ``torcharrow.dtypes.DType``
         device: specify the device on which the DataFrame will be stored
+
+    Example:
+        >>> from torchdata.datapipes.iter import FileLister
+        >>> import torcharrow.dtypes as dt
+        >>> DTYPE = dt.Struct([dt.Field("Values", dt.int32)])
+        >>> source_dp = FileLister(".", masks="df*.parquet")
+        >>> parquet_df_dp = source_dp.load_parquet_as_df(dtype=DTYPE)
+        >>> list(parquet_df_dp)[0]
+          index    Values
+        -------  --------
+              0         0
+              1         1
+              2         2
+        dtype: Struct([Field('Values', int32)]), count: 3, null_count: 0
     """
 
     def __init__(
