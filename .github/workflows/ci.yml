@@ -43,7 +43,7 @@ jobs:
       - name: Display Python version
         run: |
           python --version
-          echo pythonlocation
+          echo $pythonlocation
       - name: Setup msbuild on Windows
         if: matrix.os == 'windows-latest'
         uses: microsoft/setup-msbuild@v1.1
@@ -83,7 +83,7 @@ jobs:
         run: python setup.py develop
         env:
           BUILD_S3: 1
-          PYTHON_ROOT_DIR: $pythonlocaltion
+          BUILD_PYTHON_VERSION: ${{ matrix.python-version }}
       - name: Run DataPipes tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run:
