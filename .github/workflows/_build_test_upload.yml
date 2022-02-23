@@ -12,6 +12,15 @@ on:
       pre_dev_release:
         required: true
         type: boolean
+    secrets:
+      PYTORCH_BINARY_AWS_ACCESS_KEY_ID:
+        required: false
+      PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY:
+        required: false
+      PYPI_TOKEN:
+        required: false
+      CONDA_PYTORCHBOT_TOKEN:
+        required: false
 
 jobs:
   build_test_upload:
