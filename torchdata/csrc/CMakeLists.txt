@@ -1,6 +1,5 @@
 if(BUILD_S3)
   message(STATUS "Building S3 IO functionality")
-  list(APPEND CMAKE_PREFIX_PATH "C:\\Program Files (x86)\\aws-cpp-sdk-all")
   find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
   find_package(pybind11 REQUIRED)
   if(BUILD_PYTHON_VERSION)
