@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Dependenciesgit
+      - name: Install Dependencies
         run: |
           echo `python3 --version`
           sudo apt-get install -y python-setuptools
