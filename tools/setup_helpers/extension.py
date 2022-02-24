@@ -61,6 +61,9 @@ class CMakeBuild(build_ext):
         if not extdir.endswith(os.path.sep):
             extdir += os.path.sep
 
+        if platform.system() == "Windows":
+            extdir += ";C:\\Program Files (x86)\\aws-cpp-sdk-all"
+
         debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
         cfg = "Debug" if debug else "Release"
 
