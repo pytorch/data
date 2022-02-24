@@ -31,7 +31,7 @@ copyright = "2021 - Present, Torch Contributors"
 author = "Torch Contributors"
 
 # The short X.Y version
-version = "0.3.0"
+version = "0.3.0 (beta)"
 
 # The full version, including alpha/beta/rc tags
 release = torchdata.__version__
