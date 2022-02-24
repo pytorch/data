@@ -65,14 +65,11 @@ jobs:
       - name: Install AWS-SDK-CPP on Windows for S3 IO datapipes
         if: matrix.os == 'windows-latest'
         run: |
-          mkdir cmake
-          cd cmake
-          git clone --branch 1.8.x --recurse-submodules https://github.com/aws/aws-sdk-cpp
-          mkdir sdk_build
-          cd sdk_build
-          cmake ..\aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DAUTORUN_UNIT_TESTS=OFF -DBUILD_SHARED_LIBS=ON -DFORCE_SHARED_CRT=OFF
-          msbuild ALL_BUILD.vcxproj -p:Configuration=Release
-          msbuild INSTALL.vcxproj -p:Configuration=Release
+          git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
+          cd aws-sdk-cpp
+          cmake -S . -B build -DBUILD_ONLY="s3;transfer" -DENABLE_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+          cmake --install build --config Release
       - name: Install AWS-SDK-CPP on Non-Windows for S3 IO datapipes
         if: matrix.os != 'windows-latest'
         run: |
