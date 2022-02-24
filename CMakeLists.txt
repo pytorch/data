@@ -56,6 +56,8 @@ endif()
 # Options
 option(BUILD_S3 "Build s3 io functionality" OFF)
 
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 find_package(Torch REQUIRED)
 
 add_subdirectory(torchdata/csrc)
