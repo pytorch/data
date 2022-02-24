@@ -47,6 +47,11 @@ jobs:
       - name: Setup msbuild on Windows
         if: matrix.os == 'windows-latest'
         uses: microsoft/setup-msbuild@v1.1
+      - name: Set up Visual Studio shell
+        if: matrix.os == 'windows-latest'
+        uses: egor-tensin/vs-shell@v2
+        with:
+          arch: x64
       - name: Check out source repository
         uses: actions/checkout@v2
       - name: Install dependencies
@@ -57,9 +62,6 @@ jobs:
           echo "/home/runner/.local/bin" >> $GITHUB_PATH
       - name: Install test requirements
         run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile
-      - name: Allow Long Names for Windows
-        if: matrix.os == 'windows-latest'
-        run: reg add HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /d 1 /f
       - name: Install AWS-SDK-CPP on Windows for S3 IO datapipes
         if: matrix.os == 'windows-latest'
         run: |
