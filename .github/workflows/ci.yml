@@ -67,7 +67,7 @@ jobs:
         run: |
           mkdir cmake
           cd cmake
-          git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
+          git clone --branch 1.8.x --recurse-submodules https://github.com/aws/aws-sdk-cpp
           mkdir sdk_build
           cd sdk_build
           cmake ..\aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DAUTORUN_UNIT_TESTS=OFF -DBUILD_SHARED_LIBS=ON -DFORCE_SHARED_CRT=OFF
