@@ -85,8 +85,6 @@ class CMakeBuild(build_ext):
         if "CMAKE_GENERATOR" not in os.environ or platform.system() == "Windows":
             cmake_args += ["-GNinja"]
         if platform.system() == "Windows":
-            import sys
-
             python_version = sys.version_info
             cmake_args += [
                 "-DCMAKE_C_COMPILER=cl",
