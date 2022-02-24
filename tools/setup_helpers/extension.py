@@ -81,44 +81,18 @@ class CMakeBuild(build_ext):
                 f"-DBUILD_PYTHON_VERSION={_BUILD_PYTHON_VERSION}",
             ]
 
-        # CMake lets you override the generator - we need to check this.
-        # Can be set with Conda-Build, for example.
-        cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
+        # Default to Ninja
+        if "CMAKE_GENERATOR" not in os.environ or platform.system() == "Windows":
+            cmake_args += ["-GNinja"]
+        if platform.system() == "Windows":
+            import sys
 
-        if self.compiler.compiler_type != "msvc":
-            # Using Ninja-build since it a) is available as a wheel and b)
-            # multithreads automatically. MSVC would require all variables be
-            # exported for Ninja to pick it up, which is a little tricky to do.
-            # Users can override the generator with CMAKE_GENERATOR in CMake
-            # 3.15+.
-            if not cmake_generator:
-                try:
-                    import ninja  # noqa: F401
-
-                    cmake_args += ["-GNinja"]
-                except ImportError:
-                    pass
-
-        else:
-
-            # Single config generators are handled "normally"
-            single_config = any(x in cmake_generator for x in {"NMake", "Ninja"})
-
-            # CMake allows an arch-in-generator style for backward compatibility
-            contains_arch = any(x in cmake_generator for x in {"ARM", "Win64"})
-
-            # Specify the arch if using MSVC generator, but only if it doesn't
-            # contain a backward-compatibility arch spec already in the
-            # generator name.
-            if not single_config and not contains_arch:
-                cmake_args += ["-A", PLAT_TO_CMAKE[self.plat_name]]
-
-            # Multi-config generators have a different way to specify configs
-            if not single_config:
-                cmake_args += [
-                    f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}"
-                ]
-                build_args += ["--config", cfg]
+            python_version = sys.version_info
+            cmake_args += [
+                "-DCMAKE_C_COMPILER=cl",
+                "-DCMAKE_CXX_COMPILER=cl",
+                f"-DPYTHON_VERSION={python_version.major}.{python_version.minor}",
+            ]
         
         # Set CMAKE_BUILD_PARALLEL_LEVEL to control the parallel build level
         # across all generators.
