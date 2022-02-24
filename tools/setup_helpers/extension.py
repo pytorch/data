@@ -64,10 +64,12 @@ class CMakeBuild(build_ext):
         debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
         cfg = "Debug" if debug else "Release"
 
+        sdk_dir = "C:\\Program Files (x86)\\aws-cpp-sdk-all"
+
         cmake_args = [
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
             f"-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}",
-            f"-DCMAKE_INSTALL_PREFIX={extdir}",
+            f"-DCMAKE_INSTALL_PREFIX={sdk_dir}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-DCMAKE_CXX_FLAGS=-fPIC",
