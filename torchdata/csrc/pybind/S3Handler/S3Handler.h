@@ -1,12 +1,4 @@
-#ifndef TORCHDATA_S3_IO_H
-#define TORCHDATA_S3_IO_H
-
-#include <aws/core/utils/StringUtils.h>
-#include <aws/core/utils/threading/Executor.h>
-#include <aws/s3/S3Client.h>
-#include <aws/transfer/TransferManager.h>
-
-#include <mutex>
+#include "precompile.h"
 
 namespace torchdata
 {
@@ -67,5 +59,3 @@ namespace torchdata
                      std::vector<std::string> *filenames);
    };
 } // namespace torchdata
-
-#endif // TORCHDATA_S3_IO_H

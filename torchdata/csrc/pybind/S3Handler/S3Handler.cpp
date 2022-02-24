@@ -1,30 +1,5 @@
 #include "S3Handler.h"
 
-#include <aws/core/auth/AWSAuthSigner.h>
-#include <aws/core/Aws.h>
-#include <aws/core/config/AWSProfileConfigLoader.h>
-#include <aws/core/http/Scheme.h>
-#include <aws/core/utils/FileSystemUtils.h>
-#include <aws/core/utils/StringUtils.h>
-#include <aws/core/utils/logging/AWSLogging.h>
-#include <aws/core/utils/logging/LogSystemInterface.h>
-#include <aws/core/utils/memory/AWSMemory.h>
-#include <aws/core/utils/memory/stl/AWSStreamFwd.h>
-#include <aws/core/utils/stream/PreallocatedStreamBuf.h>
-#include <aws/core/utils/threading/Executor.h>
-#include <aws/crt/auth/Sigv4Signing.h>
-#include <aws/s3/S3Client.h>
-#include <aws/s3/S3Errors.h>
-#include <aws/s3/model/CompletedPart.h>
-#include <aws/s3/model/GetObjectRequest.h>
-#include <aws/s3/model/HeadBucketRequest.h>
-#include <aws/s3/model/HeadObjectRequest.h>
-#include <aws/s3/model/ListObjectsRequest.h>
-#include <aws/transfer/TransferManager.h>
-
-#include <fstream>
-#include <string>
-
 namespace torchdata
 {
     namespace
@@ -380,11 +355,12 @@ namespace torchdata
         if (headObjectOutcome.IsSuccess())
         {
             return headObjectOutcome.GetResult().GetContentLength();
+        } else {
+            Aws::String const &error_aws = headObjectOutcome.GetError().GetMessage();
+            std::string error_str(error_aws.c_str(), error_aws.size());
+            throw std::invalid_argument(error_str);
+            return 0;
         }
-        Aws::String const &error_aws = headObjectOutcome.GetError().GetMessage();
-        std::string error_str(error_aws.c_str(), error_aws.size());
-        throw std::invalid_argument(error_str);
-        return 0;
     }
 
     void S3Handler::ClearMarker() { last_marker_ = S3DefaultMarker; }
