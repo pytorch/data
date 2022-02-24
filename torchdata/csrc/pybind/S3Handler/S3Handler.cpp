@@ -1,5 +1,8 @@
 #include "S3Handler.h"
 
+#undef GetMessage
+#undef GetObject
+
 namespace torchdata
 {
     namespace
