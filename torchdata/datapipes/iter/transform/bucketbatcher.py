@@ -23,14 +23,33 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
     dimension will be added as ``batch_size`` if ``drop_last`` is set to ``True``,
     or ``length % batch_size`` for the last batch if ``drop_last`` is set to ``False``.
 
+    The purpose of this DataPipe is to batch samples with some similarity according to the sorting function
+    being passed. For an example in the text domain, it may be batching examples with similar number of tokens
+    to minimize padding and to increase throughput.
+
     Args:
         datapipe: Iterable DataPipe being batched
         batch_size: The size of each batch
         drop_last: Option to drop the last batch if it's not full
         batch_num: Number of batches within a bucket (i.e. `bucket_size = batch_size * batch_num`)
         bucket_num: Number of buckets to consist a pool for shuffling (i.e. `pool_size = bucket_size * bucket_num`)
-        sort_key: Callable to specify the comparison key for sorting within bucket
-        in_batch_shuffle: Option to do in-batch shuffle or buffer shuffle
+        sort_key: Callable to sort a bucket (list)
+        in_batch_shuffle: iF True, do in-batch shuffle; if False, buffer shuffle
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> source_dp = IterableWrapper(range(10))
+        >>> batch_dp = source_dp.bucketbatch(batch_size=3, drop_last=True)
+        >>> list(batch_dp)
+        [[5, 6, 7], [9, 0, 1], [4, 3, 2]]
+        >>> def sort_bucket(bucket):
+        >>>     return sorted(bucket)
+        >>> batch_dp = source_dp.bucketbatch(
+        >>>     batch_size=3, drop_last=True, batch_num=100,
+        >>>     bucket_num=1, in_batch_shuffle=False, sort_key=sort_bucket
+        >>> )
+        >>> list(batch_dp)
+        [[3, 4, 5], [6, 7, 8], [0, 1, 2]]
     """
     datapipe: IterDataPipe[T_co]
     batch_size: int
@@ -71,7 +90,7 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         datapipe = datapipe.batch(batch_size, drop_last=drop_last)
         # Shuffle the batched data
         if sort_key is not None:
-            # In-batch shuffle each bucket seems not that useful
+            # In-batch shuffle each bucket seems not that useful, it seems misleading since .batch is called prior.
             if in_batch_shuffle:
                 datapipe = datapipe.batch(batch_size=bucket_num, drop_last=False).map(fn=_in_batch_shuffle_fn).unbatch()
             else:

@@ -49,6 +49,15 @@ class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
     Args:
         datapipe: Iterable DataPipe that provides tuples of path name and rar binary stream
         length: Nominal length of the DataPipe
+
+    Example:
+        >>> from torchdata.datapipes.iter import FileLister, FileOpener
+        >>> datapipe1 = FileLister(".", "*.rar")
+        >>> datapipe2 = FileOpener(datapipe1, mode="b")
+        >>> rar_loader_dp = datapipe2.load_from_rar()
+        >>> for _, stream in rar_loader_dp:
+        >>>     print(stream.read())
+        b'0123456789abcdef'
     """
 
     def __init__(self, datapipe: IterDataPipe[Tuple[str, io.BufferedIOBase]], *, length: int = -1):

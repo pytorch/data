@@ -24,6 +24,15 @@ class ParagraphAggregatorIterDataPipe(IterDataPipe[Tuple[str, str]]):
     Args:
         source_datapipe: a DataPipe with tuples of a file name and a line
         joiner: a function that joins a list of lines together
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> source_dp = IterableWrapper(
+        >>>                 [("file1", "Line1"), ("file1", "Line2"), ("file2", "Line2,1"), ("file2", "Line2,2"), ("file2", "Line2,3")]
+        >>>             )
+        >>> para_agg_dp = source_dp.lines_to_paragraphs(joiner=lambda ls: " ".join(ls))
+        >>> list(para_agg_dp)
+        [('file1', 'Line1 Line2'), ('file2', 'Line2,1 Line2,2 Line2,3')]
     """
 
     def __init__(self, source_datapipe: IterDataPipe[Tuple[str, T_co]], joiner: Callable = _default_line_join) -> None:

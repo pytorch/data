@@ -28,7 +28,19 @@ class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, U]]):
             does not work with non-seekable stream, e.g. HTTP)
 
     Example:
-        >>> dp = dp.check_hash({'train.py':'0d8b94d9fa9fb1ad89b9e3da9e1521495dca558fc5213b0fd7fd7b71c23f9921'})
+        >>> from torchdata.datapipes.iter import IterableWrapper, HttpReader
+        >>> file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
+        >>> expected_MD5_hash = "bb9675028dd39d2dd2bf71002b93e66c"
+        >>> http_reader_dp = HttpReader(IterableWrapper([file_url]))
+        >>> # An exception is only raised when the hash doesn't match, otherwise (path, stream) is returned
+        >>> check_hash_dp = http_reader_dp.check_hash({file_url: expected_MD5_hash}, "md5", rewind=False)
+        >>> reader_dp = check_hash_dp.readlines()
+        >>> it = iter(reader_dp)
+        >>> path, line = next(it)
+        >>> path
+        https://raw.githubusercontent.com/pytorch/data/main/LICENSE
+        >>> line
+        b'BSD 3-Clause License'
     """
 
     def __init__(

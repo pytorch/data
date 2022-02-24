@@ -28,6 +28,15 @@ class ZipArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         is attached. Otherwise, user should be responsible to close file handles explicitly
         or let Python's GC close them periodically. Due to how `zipfiles` implements its ``open()`` method,
         the data_stream variable below cannot be closed within the scope of this function.
+
+    Example:
+        >>> from torchdata.datapipes.iter import FileLister, FileOpener
+        >>> datapipe1 = FileLister(".", "*.zip")
+        >>> datapipe2 = FileOpener(datapipe1, mode="b")
+        >>> zip_loader_dp = datapipe2.load_from_zip()
+        >>> for _, stream in zip_loader_dp:
+        >>>     print(stream.read())
+        b'0123456789abcdef'
     """
 
     def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1) -> None:

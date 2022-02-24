@@ -24,6 +24,15 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
     Args:
         datapipe: Source IterDataPipe
         fn: the function to be applied to each element in the DataPipe, the output must be a Sequence
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> def fn(e):
+        >>>     return [e, e * 10]
+        >>> source_dp = IterableWrapper(list(range(5)))
+        >>> flatmapped_dp = source_dp.flatmap(fn)
+        >>> list(flatmapped_dp)
+        [0, 0, 1, 10, 2, 20, 3, 30, 4, 40]
     """
 
     def __init__(self, datapipe: IterDataPipe, fn: Callable):
