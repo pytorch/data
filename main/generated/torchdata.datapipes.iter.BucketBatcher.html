@@ -123,8 +123,12 @@
                   <span class="dropdown-title">torchvision</span>
                   <p></p>
                 </a>
-                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/elastic/">
-                  <span class="dropdown-title">TorchElastic</span>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchrec">
+                  <span class="dropdown-title">TorchRec</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/data">
+                  <span class="dropdown-title">TorchData</span>
                   <p></p>
                 </a>
                 <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/serve/">
@@ -196,7 +200,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.3.0a0+ebee4ca ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.3.0a0+2cf1f20 ) &#x25BC</a>
     </div>
     
 
@@ -322,6 +326,9 @@
 <dd><p>Creates mini-batches of data from sorted bucket (functional name: <code class="docutils literal notranslate"><span class="pre">bucketbatch</span></code>). An outer
 dimension will be added as <code class="docutils literal notranslate"><span class="pre">batch_size</span></code> if <code class="docutils literal notranslate"><span class="pre">drop_last</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>,
 or <code class="docutils literal notranslate"><span class="pre">length</span> <span class="pre">%</span> <span class="pre">batch_size</span></code> for the last batch if <code class="docutils literal notranslate"><span class="pre">drop_last</span></code> is set to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>The purpose of this DataPipe is to batch samples with some similarity according to the sorting function
+being passed. For an example in the text domain, it may be batching examples with similar number of tokens
+to minimize padding and to increase throughput.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -330,11 +337,27 @@ or <code class="docutils literal notranslate"><span class="pre">length</span> <s
 <li><p><strong>drop_last</strong> – Option to drop the last batch if it’s not full</p></li>
 <li><p><strong>batch_num</strong> – Number of batches within a bucket (i.e. <cite>bucket_size = batch_size * batch_num</cite>)</p></li>
 <li><p><strong>bucket_num</strong> – Number of buckets to consist a pool for shuffling (i.e. <cite>pool_size = bucket_size * bucket_num</cite>)</p></li>
-<li><p><strong>sort_key</strong> – Callable to specify the comparison key for sorting within bucket</p></li>
-<li><p><strong>in_batch_shuffle</strong> – Option to do in-batch shuffle or buffer shuffle</p></li>
+<li><p><strong>sort_key</strong> – Callable to sort a bucket (list)</p></li>
+<li><p><strong>in_batch_shuffle</strong> – iF True, do in-batch shuffle; if False, buffer shuffle</p></li>
 </ul>
 </dd>
 </dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="k">import</span> <span class="n">IterableWrapper</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">source_dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch_dp</span> <span class="o">=</span> <span class="n">source_dp</span><span class="o">.</span><span class="n">bucketbatch</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">drop_last</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">batch_dp</span><span class="p">)</span>
+<span class="go">[[5, 6, 7], [9, 0, 1], [4, 3, 2]]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">sort_bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">bucket</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch_dp</span> <span class="o">=</span> <span class="n">source_dp</span><span class="o">.</span><span class="n">bucketbatch</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">batch_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">drop_last</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">batch_num</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">bucket_num</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">in_batch_shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sort_key</span><span class="o">=</span><span class="n">sort_bucket</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">batch_dp</span><span class="p">)</span>
+<span class="go">[[3, 4, 5], [6, 7, 8], [0, 1, 2]]</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>

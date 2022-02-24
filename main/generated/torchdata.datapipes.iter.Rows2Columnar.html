@@ -123,8 +123,12 @@
                   <span class="dropdown-title">torchvision</span>
                   <p></p>
                 </a>
-                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/elastic/">
-                  <span class="dropdown-title">TorchElastic</span>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchrec">
+                  <span class="dropdown-title">TorchRec</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/data">
+                  <span class="dropdown-title">TorchData</span>
                   <p></p>
                 </a>
                 <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/serve/">
@@ -196,7 +200,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.3.0a0+ebee4ca ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.3.0a0+2cf1f20 ) &#x25BC</a>
     </div>
     
 
@@ -332,10 +336,31 @@ corresponding values from each row as values (functional name: <code class="docu
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_datapipe</strong> – a DataPipe where each item is a batch. Within each batch,
 there are rows and each row is a <cite>List</cite> or <cite>Dict</cite></p></li>
-<li><p><strong>column_names</strong> – a function that joins a list of lines together</p></li>
+<li><p><strong>column_names</strong> – if each element in a batch contains <cite>Dict</cite>, <code class="docutils literal notranslate"><span class="pre">column_names</span></code> act as a filter for matching keys;
+otherwise, these are used as keys to for the generated <cite>Dict</cite> of each batch</p></li>
 </ul>
 </dd>
 </dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Each element in a batch is a `Dict`</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="k">import</span> <span class="n">IterableWrapper</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([[{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}],</span> <span class="p">[{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="mi">200</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="mi">100</span><span class="p">}]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">row2col_dp</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">rows2columnar</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">row2col_dp</span><span class="p">)</span>
+<span class="go">[defaultdict(&lt;class &#39;list&#39;&gt;, {&#39;a&#39;: [1, 1], &#39;b&#39;: [2]}),</span>
+<span class="go"> defaultdict(&lt;class &#39;list&#39;&gt;, {&#39;a&#39;: [1, 100], &#39;b&#39;: [200, 2], &#39;c&#39;: [3]})]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">row2col_dp</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">rows2columnar</span><span class="p">(</span><span class="n">column_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">row2col_dp</span><span class="p">)</span>
+<span class="go">[defaultdict(&lt;class &#39;list&#39;&gt;, {&#39;a&#39;: [1, 1]}),</span>
+<span class="go"> defaultdict(&lt;class &#39;list&#39;&gt;, {&#39;a&#39;: [1, 100]})]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Each element in a batch is a `List`</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">]]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">row2col_dp</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">rows2columnar</span><span class="p">(</span><span class="n">column_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;1st_in_batch&quot;</span><span class="p">,</span> <span class="s2">&quot;2nd_in_batch&quot;</span><span class="p">,</span> <span class="s2">&quot;3rd_in_batch&quot;</span><span class="p">,</span> <span class="s2">&quot;4th_in_batch&quot;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">row2col_dp</span><span class="p">)</span>
+<span class="go">[defaultdict(&lt;class &#39;list&#39;&gt;, {&#39;1st_in_batch&#39;: [0, 4], &#39;2nd_in_batch&#39;: [1, 5],</span>
+<span class="go">                              &#39;3rd_in_batch&#39;: [2, 6], &#39;4th_in_batch&#39;: [3, 7]})]</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>

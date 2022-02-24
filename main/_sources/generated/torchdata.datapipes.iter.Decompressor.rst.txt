@@ -3,7 +3,7 @@
 .. currentmodule:: torchdata.datapipes.iter
 
 
-Extractor
-=========
+Decompressor
+============
 
-.. autoclass:: Extractor
+.. autoclass:: Decompressor

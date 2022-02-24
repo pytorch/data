@@ -123,8 +123,12 @@
                   <span class="dropdown-title">torchvision</span>
                   <p></p>
                 </a>
-                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/elastic/">
-                  <span class="dropdown-title">TorchElastic</span>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchrec">
+                  <span class="dropdown-title">TorchRec</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/data">
+                  <span class="dropdown-title">TorchData</span>
                   <p></p>
                 </a>
                 <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/serve/">
@@ -196,7 +200,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.3.0a0+ebee4ca ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.3.0a0+2cf1f20 ) &#x25BC</a>
     </div>
     
 
@@ -337,6 +341,22 @@ choose a value carefully.</p>
 </ul>
 </dd>
 </dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="k">import</span> <span class="n">IterableWrapper</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torcharrow.dtypes</span> <span class="k">as</span> <span class="nn">dt</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">source_data</span> <span class="o">=</span> <span class="p">[(</span><span class="n">i</span><span class="p">,)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">source_dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="n">source_data</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">DTYPE</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">Struct</span><span class="p">([</span><span class="n">dt</span><span class="o">.</span><span class="n">Field</span><span class="p">(</span><span class="s2">&quot;Values&quot;</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">int32</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df_dp</span> <span class="o">=</span> <span class="n">source_dp</span><span class="o">.</span><span class="n">dataframe</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">df_dp</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="go">  index    Values</span>
+<span class="go">-------  --------</span>
+<span class="go">      0         0</span>
+<span class="go">      1         1</span>
+<span class="go">      2         2</span>
+<span class="go">dtype: Struct([Field(&#39;Values&#39;, int32)]), count: 3, null_count: 0</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>

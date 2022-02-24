@@ -34,7 +34,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="TarArchiveLoader" href="torchdata.datapipes.iter.TarArchiveLoader.html" />
-    <link rel="prev" title="Extractor" href="torchdata.datapipes.iter.Extractor.html" />
+    <link rel="prev" title="Decompressor" href="torchdata.datapipes.iter.Decompressor.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -123,8 +123,12 @@
                   <span class="dropdown-title">torchvision</span>
                   <p></p>
                 </a>
-                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/elastic/">
-                  <span class="dropdown-title">TorchElastic</span>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchrec">
+                  <span class="dropdown-title">TorchRec</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/data">
+                  <span class="dropdown-title">TorchData</span>
                   <p></p>
                 </a>
                 <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/serve/">
@@ -196,7 +200,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.3.0a0+ebee4ca ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.3.0a0+2cf1f20 ) &#x25BC</a>
     </div>
     
 
@@ -335,6 +339,16 @@ outer RAR archive before reading the inner archive.</p>
 </ul>
 </dd>
 </dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="k">import</span> <span class="n">FileLister</span><span class="p">,</span> <span class="n">FileOpener</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">datapipe1</span> <span class="o">=</span> <span class="n">FileLister</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;*.rar&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">datapipe2</span> <span class="o">=</span> <span class="n">FileOpener</span><span class="p">(</span><span class="n">datapipe1</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;b&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rar_loader_dp</span> <span class="o">=</span> <span class="n">datapipe2</span><span class="o">.</span><span class="n">load_from_rar</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">stream</span> <span class="ow">in</span> <span class="n">rar_loader_dp</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="nb">print</span><span class="p">(</span><span class="n">stream</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+<span class="go">b&#39;0123456789abcdef&#39;</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>
@@ -350,7 +364,7 @@ outer RAR archive before reading the inner archive.</p>
         <a href="torchdata.datapipes.iter.TarArchiveLoader.html" class="btn btn-neutral float-right" title="TarArchiveLoader" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.iter.Extractor.html" class="btn btn-neutral" title="Extractor" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="torchdata.datapipes.iter.Decompressor.html" class="btn btn-neutral" title="Decompressor" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
