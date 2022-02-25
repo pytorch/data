@@ -22,16 +22,25 @@ class CompressionType(Enum):
     ZIP = "zip"
 
 
-@functional_datapipe("extract")
-class ExtractorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
+@functional_datapipe("decompress")
+class DecompressorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
     Takes tuples of path and compressed stream of data, and returns tuples of
-    path and decompressed stream of data (functional name: ``extract``). The input compression format can be specified
+    path and decompressed stream of data (functional name: ``decompress``). The input compression format can be specified
     or automatically detected based on the files' file extensions.
 
     Args:
         source_datapipe: IterDataPipe containing tuples of path and compressed stream of data
         file_type: Optional `string` or ``CompressionType`` that represents what compression format of the inputs
+
+    Example:
+        >>> from torchdata.datapipes.iter import FileLister, FileOpener
+        >>> tar_file_dp = FileLister(self.temp_dir.name, "*.tar")
+        >>> tar_load_dp = FileOpener(tar_file_dp, mode="b")
+        >>> tar_decompress_dp = Decompressor(tar_load_dp, file_type="tar")
+        >>> for _, stream in tar_decompress_dp:
+        >>>     print(stream.read())
+        b'0123456789abcdef'
     """
 
     types = CompressionType
@@ -79,3 +88,15 @@ class ExtractorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
             file_type = self._detect_compression_type(path)
             decompressor = self._DECOMPRESSORS[file_type]
             yield path, StreamWrapper(decompressor(file))
+
+
+@functional_datapipe("extract")
+class ExtractorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
+    r"""
+    Please use ``Decompressor`` or ``.decompress`` instead.
+    """
+
+    def __new__(
+        cls, source_datapipe: IterDataPipe[Tuple[str, IOBase]], file_type: Optional[Union[str, CompressionType]] = None
+    ):
+        return DecompressorIterDataPipe(source_datapipe, file_type)

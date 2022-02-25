@@ -36,6 +36,10 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
     Args:
         root: The root `fsspec` path directory to list files from
         masks: Unix style filter string or string list for filtering file name(s)
+
+    Example:
+        >>> from torchdata.datapipes.iter import FSSpecFileLister
+        >>> datapipe = FSSpecFileLister(root=dir_path)
     """
 
     def __init__(
@@ -82,6 +86,11 @@ class FSSpecFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Args:
         source_datapipe: Iterable DataPipe that provides the pathnames or URLs
         mode: An optional string that specifies the mode in which the file is opened (``"r"`` by default)
+
+    Example:
+        >>> from torchdata.datapipes.iter import FSSpecFileLister
+        >>> datapipe = FSSpecFileLister(root=dir_path)
+        >>> file_dp = datapipe.open_file_by_fsspec()
     """
 
     def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r") -> None:
@@ -111,6 +120,15 @@ class FSSpecSaverIterDataPipe(IterDataPipe[str]):
         source_datapipe: Iterable DataPipe with tuples of metadata and data
         mode: Mode in which the file will be opened for write the data (``"w"`` by default)
         filepath_fn: Function that takes in metadata and returns the target path of the new file
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> def filepath_fn(name: str) -> str:
+        >>>     return dir_path + name
+        >>> name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
+        >>> source_dp = IterableWrapper(sorted(name_to_data.items()))
+        >>> fsspec_saver_dp = source_dp.save_by_fsspec(filepath_fn=filepath_fn, mode="wb")
+        >>> res_file_paths = list(fsspec_saver_dp)
     """
 
     def __init__(

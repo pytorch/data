@@ -43,7 +43,7 @@ def IMDB(root, split):
     cache_dp = FileOpener(cache_dp, mode="b")
 
     # stack TAR extractor on top of load files data pipe
-    extracted_files = cache_dp.read_from_tar()
+    extracted_files = cache_dp.load_from_tar()
 
     # filter the files as applicable to create dataset for given split (train or test)
     filter_files = extracted_files.filter(

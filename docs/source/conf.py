@@ -14,6 +14,7 @@ import os
 import sys
 
 import pytorch_sphinx_theme
+import torchdata
 
 # sys.path.insert(0, os.path.abspath('.'))
 
@@ -26,11 +27,14 @@ print(target_dir)
 # -- Project information -----------------------------------------------------
 
 project = "TorchData"
-copyright = "2022, Meta"
-author = "Meta"
+copyright = "2021 - Present, Torch Contributors"
+author = "Torch Contributors"
+
+# The short X.Y version
+version = "main (" + torchdata.__version__ + " )"
 
 # The full version, including alpha/beta/rc tags
-release = "0.0"
+release = "main"
 
 
 # -- General configuration ---------------------------------------------------
@@ -58,6 +62,15 @@ exclude_patterns = []
 html_theme = "pytorch_sphinx_theme"
 html_theme_path = [pytorch_sphinx_theme.get_html_theme_path()]
 
+html_theme_options = {
+    "collapse_navigation": False,
+    "display_version": True,
+    "logo_only": True,
+    "pytorch_project": "docs",
+    "navigation_with_keys": True,
+    "analytics_id": "UA-117752657-2",
+}
+
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
@@ -82,6 +95,8 @@ signature_replacements = {
     "torch.utils.data.datapipes.map.grouping.T": "T",
     "torch.utils.data.datapipes.map.combining.T_co": "T_co",
     "torch.utils.data.datapipes.map.combinatorics.T_co": "T_co",
+    "torchdata.datapipes.iter.util.cycler.T_co": "T_co",
+    "torchdata.datapipes.iter.util.paragraphaggregator.T_co": "T_co",
     "typing.": "",
 }
 

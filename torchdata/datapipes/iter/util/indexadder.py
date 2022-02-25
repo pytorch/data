@@ -16,6 +16,13 @@ class EnumeratorIterDataPipe(IterDataPipe[Tuple[int, K]]):
     Args:
         source_datapipe: Iterable DataPipe being indexed
         starting_index: Index from which enumeration will start
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> dp = IterableWrapper(['a', 'b', 'c'])
+        >>> enum_dp = dp.enumerate()
+        >>> list(enum_dp)
+        [(0, 'a'), (1, 'b'), (2, 'c')]
     """
 
     def __init__(self, source_datapipe: IterDataPipe[K], starting_index: int = 0) -> None:
@@ -37,8 +44,15 @@ class IndexAdderIterDataPipe(IterDataPipe[Dict]):
     of the data is set to the provided ``index_name``.
 
     Args:
-        source_datapipe: Iterable DataPipe being indexed
+        source_datapipe: Iterable DataPipe being indexed, its row/batch must be of type `Dict`
         index_name: Name of the key to store data index
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> dp = IterableWrapper([{'a': 1, 'b': 2}, {'c': 3, 'a': 1}])
+        >>> index_dp = dp.add_index("order")
+        >>> list(index_dp)
+        [{'a': 1, 'b': 2, 'order': 0}, {'c': 3, 'a': 1, 'order': 1}]
     """
 
     def __init__(self, source_datapipe: IterDataPipe[Dict], index_name: str = "index") -> None:

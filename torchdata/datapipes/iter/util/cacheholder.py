@@ -32,6 +32,13 @@ class InMemoryCacheHolderIterDataPipe(IterDataPipe[T_co]):
     Args:
         source_dp: source DataPipe from which elements are read and stored in memory
         size: The maximum size (in megabytes) that this DataPipe can hold in memory. This defaults to unlimited.
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> source_dp = IterableWrapper(range(10))
+        >>> cache_dp = source_dp.in_memory_cache(size=5)
+        >>> list(cache_dp)
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     """
     size: Optional[int] = None
     idx: int
@@ -125,13 +132,14 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
             the given file path from ``filepath_fn``.
 
     Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper, HttpReader
         >>> url = IterableWrapper(["https://path/to/filename", ])
         >>> def _filepath_fn(url):
         >>>     temp_dir = tempfile.gettempdir()
         >>>     return os.path.join(temp_dir, os.path.basename(url))
         >>> hash_dict = {"expected_filepath": expected_MD5_hash}
         >>> cache_dp = url.on_disk_cache(filepath_fn=_filepath_fn, hash_dict=_hash_dict, hash_type="md5")
-        You must call ``.end_caching`` at a later point to stop tracing and save the results to local files.
+        >>> # You must call ``.end_caching`` at a later point to stop tracing and save the results to local files.
         >>> cache_dp = HttpReader(cache_dp).end_caching(mode="wb". filepath_fn=_filepath_fn)
     """
 
@@ -235,6 +243,18 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
         same_filepath_fn: Set to ``True`` to use same ``filepath_fn`` from the ``OnDiskCacheHolder``.
         skip_read: Boolean value to skip reading the file handle from ``datapipe``.
             By default, reading is enabled and reading function is created based on the ``mode``.
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper, HttpReader
+        >>> url = IterableWrapper(["https://path/to/filename", ])
+        >>> def _filepath_fn(url):
+        >>>     temp_dir = tempfile.gettempdir()
+        >>>     return os.path.join(temp_dir, os.path.basename(url))
+        >>> hash_dict = {"expected_filepath": expected_MD5_hash}
+        >>> # You must call ``.on_disk_cache`` at some point before ``.end_caching``
+        >>> cache_dp = url.on_disk_cache(filepath_fn=_filepath_fn, hash_dict=_hash_dict, hash_type="md5")
+        >>> # You must call ``.end_caching`` at a later point to stop tracing and save the results to local files.
+        >>> cache_dp = HttpReader(cache_dp).end_caching(mode="wb". filepath_fn=_filepath_fn)
     """
 
     def __new__(cls, datapipe, mode="wb", filepath_fn=None, *, same_filepath_fn=False, skip_read=False):

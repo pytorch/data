@@ -14,31 +14,110 @@ This is an updated version of ``IterableDataset`` in ``torch``.
 
 .. autoclass:: IterDataPipe
 
-We have three types of Iterable DataPipes:
 
-1. Load - help you interact with the file systems or online databases (e.g. FileOpener, GDriveReader)
+We have different types of Iterable DataPipes:
 
-2. Transform - transform elements within DataPipes (e.g. batching, shuffling)
+1. Archive - open and decompress archive files of different formats.
 
-3. Utility - utility functions (e.g. caching, CSV parsing, filtering)
+2. Augmenting - augment your samples (e.g. adding index, or cycle through indefinitely).
 
-These DataPipes can be invoked in two ways, using the class constructor or applying their functional form onto
-an existing `IterDataPipe` (available to most but not all DataPipes).
+3. Combinatorial - perform combinatorial operations (e.g. sampling, shuffling).
 
-.. code:: python
+4. Combining/Splitting - interact with multiple DataPipes by combining them or splitting one to many.
 
-    import torchdata.datapipes.iter import IterableWrapper, Mapper
+5. Grouping - group samples within a DataPipe
 
-    dp = IterableWrapper(range(10))
-    map_dp_1 = Mapper(dp, lambda x: x + 1)  # Using class constructor
-    map_dp_2 = dp.map(lambda x: x + 1)  # Using functional form
-    list(map_dp_1)  # [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    list(map_dp_2)  # [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+6. IO - interacting with the file systems or remote server (e.g. downloading, opening,
+   saving files, and listing the files in directories).
 
-Load DataPipes
+7. Mapping - apply the a given function to each element in the DataPipe.
+
+8. Others - perform miscellaneous set of operations.
+
+9. Selecting - select specific samples within a DataPipe.
+
+10. Text - parse, read, and transform text files and data
+
+Archive DataPipes
 -------------------------
 
-These DataPipes help you interact with the file systems or online databases (e.g. FileOpener, GDriveReader).
+These DataPipes help opening and decompressing archive files of different formats.
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated/
+    :template: datapipe.rst
+
+    Decompressor
+    RarArchiveLoader
+    TarArchiveLoader
+    XzFileLoader
+    ZipArchiveLoader
+
+Augmenting DataPipes
+-----------------------------
+These DataPipes help to augment your samples.
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated/
+    :template: datapipe.rst
+
+    Cycler
+    Enumerator
+    IndexAdder
+
+Combinatorial DataPipes
+-----------------------------
+These DataPipes help to perform combinatorial operations.
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated/
+    :template: datapipe.rst
+
+    Sampler
+    Shuffler
+
+Combining/Spliting DataPipes
+-----------------------------
+These tend to involve multiple DataPipes, combining them or splitting one to many.
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated/
+    :template: datapipe.rst
+
+    Concater
+    Demultiplexer
+    Forker
+    IterKeyZipper
+    MapKeyZipper
+    Multiplexer
+    SampleMultiplexer
+    UnZipper
+    Zipper
+
+Grouping DataPipes
+-----------------------------
+These DataPipes have you group samples within a DataPipe.
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated/
+    :template: datapipe.rst
+
+    Batcher
+    BucketBatcher
+    Collator
+    Grouper
+    UnBatcher
+
+IO DataPipes
+-------------------------
+
+These DataPipes help interacting with the file systems or remote server (e.g. downloading, opening,
+saving files, and listing the files in directories).
 
 .. autosummary::
     :nosignatures:
@@ -54,28 +133,57 @@ These DataPipes help you interact with the file systems or online databases (e.g
     HttpReader
     IoPathFileLister
     IoPathFileOpener
+    IoPathSaver
     OnlineReader
     ParquetDataFrameLoader
+    Saver
 
-
-Transform DataPipes
+Mapping DataPipes
 -------------------------
 
-These DataPipes transform elements within DataPipes (e.g. batching, shuffling).
+These DataPipes apply the a given function to each element in the DataPipe.
 
 .. autosummary::
     :nosignatures:
     :toctree: generated/
     :template: datapipe.rst
 
-    Batcher
-    BucketBatcher
-    Shuffler
+    FlatMapper
+    Mapper
 
-Utility DataPipes
+Other DataPipes
+-------------------------
+A miscellaneous set of DataPipes with different functionalities.
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated/
+    :template: datapipe.rst
+
+    DataFrameMaker
+    EndOnDiskCacheHolder
+    HashChecker
+    InMemoryCacheHolder
+    IterableWrapper
+    OnDiskCacheHolder
+    ShardingFilter
+
+Selecting DataPipes
 -------------------------
 
-These DataPipes provide utility functions (e.g. caching, CSV parsing, filtering).
+These DataPipes helps you select specific samples within a DataPipe.
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated/
+    :template: datapipe.rst
+
+    Filter
+    Header
+
+Text DataPipes
+-----------------------------
+These DataPipes help you parse, read, and transform text files and data.
 
 .. autosummary::
     :nosignatures:
@@ -84,43 +192,9 @@ These DataPipes provide utility functions (e.g. caching, CSV parsing, filtering)
 
     CSVDictParser
     CSVParser
-    Collator
-    Concater
-    Cycler
-    DataFrameMaker
-    Demultiplexer
-    EndOnDiskCacheHolder
-    Enumerator
-    Extractor
-    Filter
-    FlatMapper
-    Forker
-    Grouper
-    HashChecker
-    Header
-    InMemoryCacheHolder
-    IndexAdder
-    IoPathSaver
-    IterKeyZipper
-    IterableWrapper
     JsonParser
     LineReader
-    MapKeyZipper
-    Mapper
-    Multiplexer
-    OnDiskCacheHolder
     ParagraphAggregator
-    RarArchiveLoader
     RoutedDecoder
     Rows2Columnar
-    SampleMultiplexer
-    Sampler
-    Saver
-    ShardingFilter
     StreamReader
-    TarArchiveReader
-    UnBatcher
-    UnZipper
-    XzFileReader
-    ZipArchiveReader
-    Zipper

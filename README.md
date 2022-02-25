@@ -160,7 +160,7 @@ folder for examples, and follow the steps below for the `__getitem__` method ins
 #### Naming
 
 The naming convention for `DataPipe`s is "Operation"-er, followed by `IterDataPipe` or `MapDataPipe`, as each DataPipe
-is essentially a container to apply an operation to data yielded from a source DataPipe. For succintness, we alias to
+is essentially a container to apply an operation to data yielded from a source DataPipe. For succinctness, we alias to
 just "Operation-er" in **init** files. For our `IterDataPipe` example, we'll name the module `MapperIterDataPipe` and
 alias it as `iter.Mapper` under `datapipes`.
 
@@ -232,7 +232,7 @@ class MapperIterDataPipe(IterDataPipe):
 The stack of DataPipes can then be constructed in functional form:
 
 ```py
->>> import torch.utils.data.datapipes as dp
+>>> import torchdata.datapipes as dp
 >>> datapipes1 = dp.iter.FileOpener(['a.file', 'b.file']).map(fn=decoder).shuffle().batch(2)
 
 >>> datapipes2 = dp.iter.FileOpener(['a.file', 'b.file'])
@@ -251,11 +251,10 @@ For a complete example, suppose we want to load data from CSV files with the fol
 - Load csv files
 - Parse csv file and yield rows
 
-To support the above pipeline, `CSVParser` is registered as `parse_csv_files` to consume file streams and expand them as
-rows.
+To support the above pipeline, `CSVParser` is registered as `parse_csv` to consume file streams and expand them as rows.
 
 ```py
-@functional_datapipe("parse_csv_files")
+@functional_datapipe("parse_csv")
 class CSVParserIterDataPipe(IterDataPipe):
     def __init__(self, dp, **fmtparams) -> None:
         self.dp = dp
@@ -271,12 +270,12 @@ class CSVParserIterDataPipe(IterDataPipe):
 Then, the pipeline can be assembled as follows:
 
 ```py
->>> import torch.utils.data.datapipes as dp
+>>> import torchdata.datapipes as dp
 
 >>> FOLDER = 'path/2/csv/folder'
->>> datapipe = dp.iter.FileLister([FOLDER]).filter(fn=lambda filename: filename.endswith('.csv'))
+>>> datapipe = dp.iter.FileLister([FOLDER]).filter(filter_fn=lambda filename: filename.endswith('.csv'))
 >>> datapipe = dp.iter.FileOpener(datapipe, mode='rt')
->>> datapipe = datapipe.parse_csv_files(delimiter=' ')
+>>> datapipe = datapipe.parse_csv(delimiter=',')
 
 >>> for d in datapipe: # Start loading data
 ...     pass

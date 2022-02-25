@@ -21,7 +21,27 @@ class Rows2ColumnarIterDataPipe(IterDataPipe[Dict]):
     Args:
         source_datapipe: a DataPipe where each item is a batch. Within each batch,
             there are rows and each row is a `List` or `Dict`
-        column_names: a function that joins a list of lines together
+        column_names: if each element in a batch contains `Dict`, ``column_names`` act as a filter for matching keys;
+            otherwise, these are used as keys to for the generated `Dict` of each batch
+
+    Example:
+        >>> # Each element in a batch is a `Dict`
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> dp = IterableWrapper([[{'a': 1}, {'b': 2, 'a': 1}], [{'a': 1, 'b': 200}, {'b': 2, 'c': 3, 'a': 100}]])
+        >>> row2col_dp = dp.rows2columnar()
+        >>> list(row2col_dp)
+        [defaultdict(<class 'list'>, {'a': [1, 1], 'b': [2]}),
+         defaultdict(<class 'list'>, {'a': [1, 100], 'b': [200, 2], 'c': [3]})]
+        >>> row2col_dp = dp.rows2columnar(column_names=['a'])
+        >>> list(row2col_dp)
+        [defaultdict(<class 'list'>, {'a': [1, 1]}),
+         defaultdict(<class 'list'>, {'a': [1, 100]})]
+        >>> # Each element in a batch is a `List`
+        >>> dp = IterableWrapper([[[0, 1, 2, 3], [4, 5, 6, 7]]])
+        >>> row2col_dp = dp.rows2columnar(column_names=["1st_in_batch", "2nd_in_batch", "3rd_in_batch", "4th_in_batch"])
+        >>> list(row2col_dp)
+        [defaultdict(<class 'list'>, {'1st_in_batch': [0, 4], '2nd_in_batch': [1, 5],
+                                      '3rd_in_batch': [2, 6], '4th_in_batch': [3, 7]})]
     """
     column_names: List[str]
 

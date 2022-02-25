@@ -16,6 +16,13 @@ class HeaderIterDataPipe(IterDataPipe[T_co]):
     Args:
         source_datapipe: the DataPipe from which elements will be yielded
         limit: the number of elements to yield before stopping
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> dp = IterableWrapper(range(10))
+        >>> header_dp = dp.header(3)
+        >>> list(header_dp)
+        [0, 1, 2]
     """
 
     def __init__(self, source_datapipe: IterDataPipe[T_co], limit: int = 10) -> None:
