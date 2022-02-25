@@ -122,3 +122,53 @@ jobs:
             --password "$PYPI_TOKEN" \
             dist/torchdata*.whl
       # TODO: Upload Nightly/Official Wheel to Conda
+  # Build Doc only for nightly and RC release
+  build_docs:
+    if: ${{ inputs.pre_dev_release }}
+    needs: build_test_upload
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ inputs.branch }}
+      - name: Install Dependencies
+        run: |
+          echo `python3 --version`
+          sudo apt-get install -y python-setuptools
+          python3 -m pip install --upgrade pip
+          python3 -m pip install setuptools
+          python3 -m pip install matplotlib
+          sudo apt-get install -y yarn
+      - name: Install Torch
+        run: |
+          pip3 install numpy
+          pip3 install --pre torch -f ${{ inputs.pip_path }}
+          python setup.py install --release
+      - name: Check env
+        run: echo `which spinx-build`
+      - name: Build the docset
+        run: |
+          cd ./docs
+          pip install -r requirements.txt
+          make html
+          cd ..
+      - name: Export Target Folder
+        run: |
+          target_folder=${{ inputs.branch }}
+          echo $target_folder
+          if [[ $target_folder == release/* ]]; then
+            target_folder=${target_folder:8}
+          fi
+          echo "TARGET_FOLDER=$target_folder" >> $GITHUB_ENV
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4.2.5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh-pages # The branch the action should deploy to.
+          folder: docs/build/html # The folder the action should deploy.
+          target-folder: ${{ env.TARGET_FOLDER }} # The destination folder the action should deploy to.
