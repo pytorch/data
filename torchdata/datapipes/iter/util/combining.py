@@ -30,6 +30,18 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
             If it's specified as ``None``, the buffer size is set as infinite.
         merge_fn: Function that combines the item from ``source_datapipe`` and the item from ``ref_datapipe``,
             by default a tuple is created
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> from operator import itemgetter
+        >>> def merge_fn(t1, t2):
+        >>>     return t1[1] + t2[1]
+        >>> dp1 = IterableWrapper([('a', 100), ('b', 200), ('c', 300)])
+        >>> dp2 = IterableWrapper([('a', 1), ('b', 2), ('c', 3), ('d', 4)])
+        >>> res_dp = dp1.zip_with_iter(dp2, key_fn=itemgetter(0),
+        >>>                            ref_key_fn=itemgetter(0), keep_key=True, merge_fn=merge_fn)
+        >>> list(res_dp)
+        [('a', 101), ('b', 202), ('c', 303)]
     """
 
     def __init__(
@@ -105,6 +117,18 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
         key_fn: Function that maps each item from ``source_iterdatapipe`` to a key that exists in ``map_datapipe``
         merge_fn: Function that combines the item from ``source_iterdatapipe`` and the matching item
             from ``map_datapipe``, by default a tuple is created
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> from torchdata.datapipes.map import SequenceWrapper
+        >>> from operator import itemgetter
+        >>> def merge_fn(tuple_from_iter, value_from_map):
+        >>>     return tuple_from_iter[0], tuple_from_iter[1] + value_from_map
+        >>> dp1 = IterableWrapper([('a', 1), ('b', 2), ('c', 3)])
+        >>> mapdp = SequenceWrapper({'a': 100, 'b': 200, 'c': 300, 'd': 400})
+        >>> res_dp = dp1.zip_with_map(map_datapipe=mapdp, key_fn=itemgetter(0), merge_fn=merge_fn)
+        >>> list(res_dp)
+        [('a', 101), ('b', 202), ('c', 303)]
     """
 
     def __init__(

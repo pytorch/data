@@ -113,7 +113,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         file_cache_dp = FileOpener(file_cache_dp, mode="rb")
 
         # Functional API
-        file_cache_dp = file_cache_dp.read_from_tar()
+        file_cache_dp = file_cache_dp.load_from_tar()
 
         def _csv_filepath_fn(csv_path):
             return os.path.join(self.temp_dir.name, "csv", os.path.basename(csv_path))
@@ -143,7 +143,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         file_cache_dp = OnDiskCacheHolder(
             tar_cache_dp, filepath_fn=lambda tar_path: os.path.join(os.path.dirname(tar_path), root_dir)
         )
-        file_cache_dp = FileOpener(file_cache_dp, mode="rb").read_from_tar()
+        file_cache_dp = FileOpener(file_cache_dp, mode="rb").load_from_tar()
         file_cache_dp = file_cache_dp.end_caching(
             mode="wb",
             filepath_fn=lambda file_path: os.path.join(self.temp_dir.name, root_dir, os.path.basename(file_path)),

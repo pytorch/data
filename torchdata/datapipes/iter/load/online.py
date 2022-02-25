@@ -33,6 +33,18 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Args:
         source_datapipe: a DataPipe that contains URLs
         timeout: timeout in seconds for HTTP request
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper, HttpReader
+        >>> file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
+        >>> http_reader_dp = HttpReader(IterableWrapper([file_url]))
+        >>> reader_dp = http_reader_dp.readlines()
+        >>> it = iter(reader_dp)
+        >>> path, line = next(it)
+        >>> path
+        https://raw.githubusercontent.com/pytorch/data/main/LICENSE
+        >>> line
+        b'BSD 3-Clause License'
     """
 
     def __init__(self, source_datapipe: IterDataPipe[str], timeout: Optional[float] = None) -> None:
@@ -85,6 +97,18 @@ class GDriveReaderDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Args:
         source_datapipe: a DataPipe that contains URLs to GDrive files
         timeout: timeout in seconds for HTTP request
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper, GDriveReader
+        >>> gdrive_file_url = "https://drive.google.com/uc?export=download&id=SomeIDToAGDriveFile"
+        >>> gdrive_reader_dp = GDriveReader(IterableWrapper([gdrive_file_url]))
+        >>> reader_dp = gdrive_reader_dp.readlines()
+        >>> it = iter(reader_dp)
+        >>> path, line = next(it)
+        >>> path
+        https://drive.google.com/uc?export=download&id=SomeIDToAGDriveFile
+        >>> line
+        <First line from the GDrive File>
     """
     source_datapipe: IterDataPipe[str]
 
@@ -108,6 +132,18 @@ class OnlineReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Args:
         source_datapipe: a DataPipe that contains URLs
         timeout: timeout in seconds for HTTP request
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper, OnlineReader
+        >>> file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
+        >>> online_reader_dp = OnlineReader(IterableWrapper([file_url]))
+        >>> reader_dp = online_reader_dp.readlines()
+        >>> it = iter(reader_dp)
+        >>> path, line = next(it)
+        >>> path
+        https://raw.githubusercontent.com/pytorch/data/main/LICENSE
+        >>> line
+        b'BSD 3-Clause License'
     """
     source_datapipe: IterDataPipe[str]
 

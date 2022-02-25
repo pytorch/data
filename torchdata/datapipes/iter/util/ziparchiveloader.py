@@ -13,11 +13,11 @@ from torchdata.datapipes.utils import StreamWrapper
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 
 
-@functional_datapipe("read_from_zip")
-class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
+@functional_datapipe("load_from_zip")
+class ZipArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     r"""
     Opens/decompresses zip binary streams from an Iterable DataPipe which contains a tuple of path name and
-    zip binary stream, and yields a tuple of path name and extracted binary stream (functional name: ``read_from_zip``).
+    zip binary stream, and yields a tuple of path name and extracted binary stream (functional name: ``load_from_zip``).
 
     Args:
         datapipe: Iterable DataPipe that provides tuples of path name and zip binary stream
@@ -28,6 +28,15 @@ class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         is attached. Otherwise, user should be responsible to close file handles explicitly
         or let Python's GC close them periodically. Due to how `zipfiles` implements its ``open()`` method,
         the data_stream variable below cannot be closed within the scope of this function.
+
+    Example:
+        >>> from torchdata.datapipes.iter import FileLister, FileOpener
+        >>> datapipe1 = FileLister(".", "*.zip")
+        >>> datapipe2 = FileOpener(datapipe1, mode="b")
+        >>> zip_loader_dp = datapipe2.load_from_zip()
+        >>> for _, stream in zip_loader_dp:
+        >>>     print(stream.read())
+        b'0123456789abcdef'
     """
 
     def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1) -> None:
@@ -61,3 +70,13 @@ class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         if self.length == -1:
             raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
         return self.length
+
+
+@functional_datapipe("read_from_zip")
+class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
+    r"""
+    Please use ``ZipArchiveLoader`` or ``.load_from_zip`` instead.
+    """
+
+    def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1):
+        return ZipArchiveLoaderIterDataPipe(datapipe, length)

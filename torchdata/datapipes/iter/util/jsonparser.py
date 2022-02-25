@@ -14,6 +14,18 @@ class JsonParserIterDataPipe(IterDataPipe[Tuple[str, Dict]]):
     Args:
         source_datapipe: a DataPipe with tuples of file name and JSON data stream
         kwargs: keyword arguments that will be passed through to ``json.loads``
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper, FileOpener
+        >>> import os
+        >>> def get_name(path_and_stream):
+        >>>     return os.path.basename(path_and_stream[0]), path_and_stream[1]
+        >>> datapipe1 = IterableWrapper(["empty.json", "1.json", "2.json"])
+        >>> datapipe2 = FileOpener(datapipe1, mode="b")
+        >>> datapipe3 = datapipe2.map(get_name)
+        >>> json_dp = datapipe3.parse_json_files()
+        >>> list(json_dp)
+        [('1.json', ['foo', {'bar': ['baz', None, 1.0, 2]}]), ('2.json', {'__complex__': True, 'real': 1, 'imag': 2})]
     """
 
     def __init__(self, source_datapipe: IterDataPipe[Tuple[str, IO]], **kwargs) -> None:

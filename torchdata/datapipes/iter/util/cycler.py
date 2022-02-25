@@ -16,6 +16,13 @@ class CyclerIterDataPipe(IterDataPipe[T_co]):
     Args:
         source_datapipe: source DataPipe that will be cycled through
         count: the number of times to read through ``source_datapipe` (if ``None``, it will cycle in perpetuity)
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> dp = IterableWrapper(range(3))
+        >>> dp = dp.cycle(2)
+        >>> list(dp)
+        [0, 1, 2, 0, 1, 2]
     """
 
     def __init__(self, source_datapipe: IterDataPipe[T_co], count: Optional[int] = None) -> None:
