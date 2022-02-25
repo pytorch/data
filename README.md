@@ -37,6 +37,17 @@ Over many years of feedback and organic community usage of the PyTorch DataLoade
 
 ## Installation
 
+### Version Compatibility
+
+The following is the corresponding `torchdata` versions and supported Python versions.
++-------------------------+-------------------------+-------------------------+
+| `torch`                 | `torchdata`             | `python`                |
++=========================+=========================+=========================+
+| `main` / `nightly`      | `main` / `nightly`      | `>=3.7`, `<=3.10`       |
++-------------------------+-------------------------+-------------------------+
+| `1.11.0`                | `0.3.0`                 | `>=3.7`, `<=3.10`       |
++-------------------------+-------------------------+-------------------------+
+
 ### Colab
 
 Follow the instructions
@@ -59,24 +70,18 @@ python -m venv torchdata-env
 source torchdata-env/bin/activate
 ```
 
-Next, install one of the following following PyTorch nightly binaries.
-
-```
-# For CUDA 10.2
-pip install --pre torch -f https://download.pytorch.org/whl/nightly/cu102/torch_nightly.html
-# For CUDA 11.3
-pip install --pre torch -f https://download.pytorch.org/whl/nightly/cu113/torch_nightly.html
-# For CPU-only build
-pip install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
-```
-
-If you already have a nightly of PyTorch installed and wanted to upgrade it (recommended!), append `--upgrade` to one of
-those commands.
-
 Install torchdata:
 
+Using pip:
+
 ```
-pip install --user "git+https://github.com/pytorch/data.git"
+pip install torchdata
+```
+
+Using conda:
+
+```
+conda install -c pytorch torchdata
 ```
 
 Run a quick sanity check in python:

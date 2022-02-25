@@ -12,7 +12,6 @@ repos:
     hooks:
       - id: prettier
         types_or:
-          - markdown
           - toml
           - yaml
 
