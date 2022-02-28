@@ -16,6 +16,5 @@ jobs:
       branch: ""
       pip_path: ""
       pre_dev_release: false
-      pytorch_version: ""
     secrets:
       PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
