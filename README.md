@@ -104,7 +104,7 @@ Early on, we observed widespread confusion between the PyTorch `DataSets` which 
 (e.g. [TorchVision's `ImageFolder`](https://github.com/pytorch/vision/blob/main/torchvision/datasets/folder.py#L272)),
 and those that represented pre-built iterators/accessors over actual data corpora (e.g. TorchVision's
 [ImageNet](https://github.com/pytorch/vision/blob/main/torchvision/datasets/imagenet.py#L21)). This led to an
-unfortunate pattern of siloed inheritence of data tooling rather than composition.
+unfortunate pattern of siloed inheritance of data tooling rather than composition.
 
 `DataPipe` is simply a renaming and repurposing of the PyTorch `DataSet` for composed usage. A `DataPipe` takes in some
 access function over Python data structures, `__iter__` for `IterDataPipes` and `__getitem__` for `MapDataPipes`, and
@@ -130,7 +130,7 @@ class JsonParserIterDataPipe(IterDataPipe):
 ```
 
 You can see in this example how DataPipes can be easily chained together to compose graphs of transformations that
-reproduce sohpisticated data pipelines, with streamed operation as a first-class citizen.
+reproduce sophisticated data pipelines, with streamed operation as a first-class citizen.
 
 Under this naming convention, `DataSet` simply refers to a graph of `DataPipes`, and a dataset module like `ImageNet`
 can be rebuilt as a factory function returning the requisite composed `DataPipes`. Note that the vast majority of
