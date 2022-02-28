@@ -4,19 +4,19 @@
 [**What are DataPipes?**](#what-are-datapipes) | [**Prototype Usage and Feedback**](#prototype-usage-and-feedback) |
 [**Contributing**](#contributing) | [**Future Plans**](#future-plans)
 
-**This library is currently in the Beta phase and currently does not have a stable release. The API may change based on
+**This library is currently in the Beta stage and currently does not have a stable release. The API may change based on
 user feedback or performance. We are committed to bring this library to stable release, but future changes may not be
-completely backward compatible. If you install from source or use the nightly version of this library, use it with the
-PyTorch nightly binaries. If you have suggestions on the API or use cases you'd like to be covered, please open a GitHub
-issue. We'd love to hear thoughts and feedback.**
+completely backward compatible. If you install from source or use the nightly version of this library, use it along with
+the PyTorch nightly binaries. If you have suggestions on the API or use cases you'd like to be covered, please open a
+GitHub issue. We'd love to hear thoughts and feedback.**
 
 `torchdata` is a library of common modular data loading primitives for easily constructing flexible and performant data
 pipelines.
 
 It aims to provide composable Iterable-style and Map-style building blocks called [`DataPipes`](#what-are-datapipes)
-that work well out of the box with the PyTorch's `DataLoader`. It contains functionality to reproduce several datasets
-in TorchVision and TorchText, namely including loading, parsing, caching, and several other utilities (e.g. hash
-checking). We will continue to expand and harden this set of API based on user feedback.
+that work well out of the box with the PyTorch's `DataLoader`. It contains functionality to reproduce many different
+datasets in TorchVision and TorchText, namely including loading, parsing, caching, and several other utilities (e.g.
+hash checking). We will continue to expand and harden this set of API based on user feedback.
 
 To understand the basic structure of `DataPipes`, please see [What are DataPipes?](#what-are-datapipes) below, and to
 see how `DataPipes` can be practically composed into datasets, please see our [`examples/`](examples/) directory.
@@ -165,7 +165,7 @@ shuffled/batched more than once. You should choose one or the other.
 Q: How is multiprocessing handled with DataPipes?
 
 A: Multi-process data loading is still handed by DataLoader, see the
-[documentation here for details](https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading).
+[DataLoader documentation for more details](https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading).
 
 Q: What is the upcoming plan for DataLoader?
 
@@ -177,22 +177,6 @@ the current/old version of DataLoader should still be available and you can use 
 ## Contributing
 
 We welcome PRs! See the [CONTRIBUTING](CONTRIBUTING.md) file.
-
-## Building the Documentation
-
-To build the documentation, you will need [Sphinx](http://www.sphinx-doc.org) and the PyTorch theme.
-
-```bash
-cd docs/
-pip install -r requirements.txt
-```
-
-You can then build the documentation by running `make <format>` from the `docs/` folder. Run `make` to get a list of all
-available output formats.
-
-```bash
-make html
-```
 
 ## Beta Usage and Feedback
 
