@@ -59,18 +59,6 @@ def get_parser():
     return parser
 
 
-pytorch_package_dep = "torch"
-if os.getenv("PYTORCH_VERSION"):
-    pytorch_package_dep += "==" + os.getenv("PYTORCH_VERSION")
-
-
-requirements = [
-    "urllib3 >= 1.25",
-    "requests",
-    pytorch_package_dep,
-]
-
-
 if __name__ == "__main__":
     args, unknown = get_parser().parse_known_args()
 
@@ -78,6 +66,12 @@ if __name__ == "__main__":
     _export_version(VERSION, SHA)
 
     print("-- Building version " + VERSION)
+
+    pytorch_package_version = os.getenv("PYTORCH_VERSION")
+
+    pytorch_package_dep = "torch"
+    if pytorch_package_version:
+        pytorch_package_dep += "==" + pytorch_package_version
 
     sys.argv = [sys.argv[0]] + unknown
     setup(
@@ -89,7 +83,7 @@ if __name__ == "__main__":
         author="PyTorch Team",
         author_email="packages@pytorch.org",
         license="BSD",
-        install_requires=requirements,
+        install_requires=["requests", pytorch_package_dep],
         python_requires=">=3.7",
         classifiers=[
             "Intended Audience :: Developers",
@@ -100,7 +94,6 @@ if __name__ == "__main__":
             "Programming Language :: Python :: 3.7",
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",
-            "Programming Language :: Python :: 3.10",
             "Programming Language :: Python :: Implementation :: CPython",
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
