@@ -12,6 +12,9 @@ on:
       pre_dev_release:
         required: true
         type: boolean
+      pytorch_version:
+        required: true
+        type: string
     secrets:
       PYTORCH_BINARY_AWS_ACCESS_KEY_ID:
         required: false
@@ -24,7 +27,10 @@ on:
 
 jobs:
   build_test_upload:
-    if: github.repository == 'pytorch/data' && inputs.branch != ''
+    if: |
+      github.repository == 'pytorch/data' &&
+      ( github.ref_name == 'main' || startsWith(github.ref_name, 'release/') || github.ref_type == 'tag' ) &&
+      inputs.branch != ''
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -81,10 +87,19 @@ jobs:
         if: |
           ! inputs.pre_dev_release ||
             steps.release_commit.outputs.hash != steps.source_commit.outputs.hash
+        env:
+          PYTORCH_VERSION: ${{ inputs.pytorch_version }}
         run: |
           pip3 install wheel
           python setup.py bdist_wheel --release
           pip3 install dist/torchdata*.whl
+      - name: Validate TorchData Wheel
+        run: |
+          pip3 install pkginfo
+          for pkg in dist/torchdata*.whl; do
+              echo "PkgInfo of $pkg:"
+              pkginfo $pkg
+          done
       - name: Install test requirements
         if: |
           ! inputs.pre_dev_release ||
@@ -122,9 +137,7 @@ jobs:
             --password "$PYPI_TOKEN" \
             dist/torchdata*.whl
       # TODO: Upload Nightly/Official Wheel to Conda
-  # Build Doc only for nightly and RC release
   build_docs:
-    if: ${{ inputs.pre_dev_release }}
     needs: build_test_upload
     runs-on: ubuntu-latest
     steps:
@@ -160,9 +173,10 @@ jobs:
       - name: Export Target Folder
         run: |
           target_folder=${{ inputs.branch }}
-          echo $target_folder
           if [[ $target_folder == release/* ]]; then
             target_folder=${target_folder:8}
+          elif [[ $target_folder == tags/* ]]; then
+            target_folder=${target_folder:5}
           fi
           echo "TARGET_FOLDER=$target_folder" >> $GITHUB_ENV
       - name: Deploy
