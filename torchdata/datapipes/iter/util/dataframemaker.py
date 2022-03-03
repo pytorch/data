@@ -12,11 +12,6 @@ except ImportError:
     torcharrow = None
     parquet = None
 
-if DILL_AVAILABLE:
-    import dill
-
-    dill.extend(use_dill=False)
-
 T_co = TypeVar("T_co")
 
 
