@@ -158,7 +158,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.OnDiskCacheHolder, (), {}),
             (iterdp.OnlineReader, (), {}),
             (iterdp.ParagraphAggregator, (), {}),
-            # (iterdp.ParquetDataFrameLoader, (), {"dtype": DTYPE}),
+            (iterdp.ParquetDataFrameLoader, (), {"dtype": DTYPE}),
             (iterdp.RarArchiveLoader, (), {}),
             (iterdp.Rows2Columnar, (), {}),
             (iterdp.SampleMultiplexer, (), {}),
