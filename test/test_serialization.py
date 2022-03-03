@@ -6,12 +6,12 @@ import warnings
 from functools import partial
 from io import StringIO
 from operator import itemgetter
-from typing import Any, Dict, List, Tuple, Type
+from typing import List
 
 import expecttest
 import torchdata.datapipes.iter as iterdp
 from _utils._common_utils_for_test import create_temp_dir, create_temp_files
-from torch.utils.data._utils.serialization import DILL_AVAILABLE
+from torch.utils.data.datapipes.utils.common import DILL_AVAILABLE
 from torchdata.datapipes.iter import IterableWrapper
 from torchdata.datapipes.map import SequenceWrapper
 
@@ -130,7 +130,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         self._serialization_test_helper(dp2)
 
     def test_serializable(self):
-        picklable_datapipes: List[Tuple[Type[iterdp.IterDataPipe], Tuple, Dict[str, Any]]] = [
+        picklable_datapipes: List = [
             (iterdp.BucketBatcher, (5,), {}),
             (iterdp.CSVDictParser, (), {}),
             (iterdp.CSVParser, (), {}),
@@ -248,7 +248,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         ref_idp = IterableWrapper(range(10))
         ref_mdp = SequenceWrapper(range(10))
 
-        unpicklable_datapipes: List[Tuple[Type[iterdp.IterDataPipe], Tuple, Dict[str, Any]]] = [
+        unpicklable_datapipes: List = [
             (iterdp.FlatMapper, (lambda x: [x, x],), {}),
             (iterdp.IterKeyZipper, (ref_idp, lambda x: x, lambda x: x, True, 100, lambda x, y: (x, y)), {}),
             (iterdp.MapKeyZipper, (ref_mdp, lambda x: x, lambda x, y: (x, y)), {}),
