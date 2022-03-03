@@ -1,7 +1,7 @@
 import os
-import sys
 import platform
 import subprocess
+import sys
 from pathlib import Path
 
 import torch
@@ -93,7 +93,7 @@ class CMakeBuild(build_ext):
                 "-DCMAKE_CXX_COMPILER=cl",
                 f"-DPYTHON_VERSION={python_version.major}.{python_version.minor}",
             ]
-        
+
         # Set CMAKE_BUILD_PARALLEL_LEVEL to control the parallel build level
         # across all generators.
         if "CMAKE_BUILD_PARALLEL_LEVEL" not in os.environ:
