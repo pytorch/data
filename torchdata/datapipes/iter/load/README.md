@@ -61,9 +61,9 @@ from torchdata.datapipes.iter import S3FileLister, S3FileLoader
 
 s3_prefixes = ['s3://bucket-name/folder/', ...]
 dp_s3_urls = S3FileLister(s3_prefixes)
-dp_s3_files = S3FileLoader(s3_urls) # outputs in (url, BytesIO)
+dp_s3_files = S3FileLoader(s3_urls) # outputs in (url, StreamWrapper(BytesIO))
 # more datapipes to convert loaded bytes, e.g.
-datapipe = StreamWrapper(dp_s3_files).parse_csv_files(delimiter=' ')
+datapipe = StreamWrapper(dp_s3_files).parse_csv(delimiter=' ')
 
 for d in datapipe: # Start loading data
     pass
