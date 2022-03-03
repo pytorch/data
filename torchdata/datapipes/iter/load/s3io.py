@@ -11,7 +11,7 @@ from torchdata.datapipes.utils import StreamWrapper
 class S3FileListerIterDataPipe(IterDataPipe[str]):
     r""":class:`S3FileListerIterDataPipe`.
 
-    Iterable DataPipe that lists URLs with the given prefixes.
+    Iterable DataPipe that lists URLs with the given prefixes (functional name: ``list_file_by_s3``).
 
     Args:
         source_datapipe: a DataPipe that contains URLs/URL prefixes to s3 files
@@ -21,6 +21,16 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
 
     Note:
         AWS_CPP_SDK is necessary to use the S3 DataPipe(s).
+
+    Example:
+        >>> from torchdata.datapipes.iter import S3FileLister, S3FileLoader
+        >>> s3_prefixes = ['s3://bucket-name/folder/', ...]
+        >>> dp_s3_urls = S3FileLister(s3_prefixes)
+        >>> dp_s3_files = S3FileLoader(s3_urls) # outputs in (url, StreamWrapper(BytesIO))
+        >>> # more datapipes to convert loaded bytes, e.g.
+        >>> datapipe = dp_s3_files.parse_csv(delimiter=' ')
+        >>> for d in datapipe: # Start loading data
+        ...     pass
     """
 
     def __init__(self, source_datapipe: IterDataPipe[str], length: int = -1, request_timeout_ms=-1, region="") -> None:
@@ -50,7 +60,7 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
 class S3FileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r""":class:`S3FileListerIterDataPipe`.
 
-    Iterable DataPipe that loads S3 files given S3 URLs.
+    Iterable DataPipe that loads S3 files given S3 URLs (functional name: ``load_file_by_s3``).
 
     Args:
         source_datapipe: a DataPipe that contains URLs to s3 files
@@ -59,6 +69,16 @@ class S3FileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     Note:
         AWS_CPP_SDK is necessary to use the S3 DataPipe(s).
+
+    Example:
+        >>> from torchdata.datapipes.iter import S3FileLister, S3FileLoader
+        >>> s3_prefixes = ['s3://bucket-name/folder/', ...]
+        >>> dp_s3_urls = S3FileLister(s3_prefixes)
+        >>> dp_s3_files = S3FileLoader(s3_urls) # outputs in (url, StreamWrapper(BytesIO))
+        >>> # more datapipes to convert loaded bytes, e.g.
+        >>> datapipe = dp_s3_files.parse_csv(delimiter=' ')
+        >>> for d in datapipe: # Start loading data
+        ...     pass
     """
 
     def __init__(
