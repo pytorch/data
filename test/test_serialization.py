@@ -280,8 +280,11 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                         datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
                         self.assertEqual(len(wa), 1)
                         self.assertRegex(str(wa[0].message), r"^Lambda function is not supported for pickle")
-                        with self.assertRaises(AttributeError):
+                        if isinstance(datapipe, iterdp.OnDiskCacheHolder):
                             _ = pickle.dumps(datapipe)
+                        else:
+                            with self.assertRaises(AttributeError):
+                                _ = pickle.dumps(datapipe)
                 except Exception as e:
                     print(f"{dpipe} is failing.")
                     raise e
