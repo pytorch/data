@@ -31,10 +31,17 @@ except ImportError:
     iopath = None
 
 try:
-    import rarfile
-except ImportError:
-    rarfile = None
+    import subprocess
 
+    import rarfile
+
+    try:
+        rarfile.tool_setup()
+        subprocess.run(("rar", "-?"), check=True)
+    except (rarfile.RarCannotExec, subprocess.CalledProcessError):
+        rarfile = None
+except (ModuleNotFoundError, FileNotFoundError):
+    rarfile = None
 
 try:
     import torcharrow
