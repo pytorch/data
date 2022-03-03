@@ -29,6 +29,9 @@ jobs:
           - 3.7
           - 3.8
           - 3.9
+        with-s3:
+          - 1
+          - 0
     steps:
       - name: Setup additional system libraries
         if: startsWith( matrix.os, 'ubuntu' )
@@ -41,10 +44,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Setup msbuild on Windows
-        if: matrix.os == 'windows-latest'
+        if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
         uses: microsoft/setup-msbuild@v1.1
       - name: Set up Visual Studio shell
-        if: matrix.os == 'windows-latest'
+        if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
         uses: egor-tensin/vs-shell@v2
         with:
           arch: x64
@@ -59,7 +62,7 @@ jobs:
       - name: Install test requirements
         run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile
       - name: Install AWS-SDK-CPP on Windows for S3 IO datapipes
-        if: matrix.os == 'windows-latest'
+        if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
         run: |
           git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
           cd aws-sdk-cpp
@@ -67,7 +70,7 @@ jobs:
           cmake --build build --config Release
           cmake --install build --config Release
       - name: Install AWS-SDK-CPP on Non-Windows for S3 IO datapipes
-        if: matrix.os != 'windows-latest'
+        if: matrix.with-s3 == 1 && matrix.os != 'windows-latest'
         run: |
           git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
           cd aws-sdk-cpp/
@@ -79,7 +82,7 @@ jobs:
       - name: Build TorchData
         run: python setup.py develop
         env:
-          BUILD_S3: 1
+          BUILD_S3: ${{ matrix.with-s3 }}
           BUILD_PYTHON_VERSION: ${{ matrix.python-version }}
       - name: Run DataPipes tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
