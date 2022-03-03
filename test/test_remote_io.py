@@ -176,7 +176,9 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             s3_lister_dp = S3FileLister(IterableWrapper(file_urls))
             s3_loader_dp = S3FileLoader(IterableWrapper(file_urls))
         except ModuleNotFoundError:
-            warnings.warn("S3 IO datapipes or C++ extension '_torchdata' isn't built in the current 'torchdata' package")
+            warnings.warn(
+                "S3 IO datapipes or C++ extension '_torchdata' isn't built in the current 'torchdata' package"
+            )
             return
 
         # S3FileLister: different inputs
