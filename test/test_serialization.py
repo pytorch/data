@@ -226,21 +226,25 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         dp_compare_children = {iterdp.UnZipper}
 
         for dpipe, dp_args, dp_kwargs in picklable_datapipes:
-            if dpipe in custom_input:
-                input_dp = custom_input[dpipe]
-            else:
-                input_dp = IterableWrapper(range(10))
-            if dpipe in dp_skip_comparison:  # Merely make sure they are picklable and loadable (no value comparison)
-                datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
-                serialized_dp = pickle.dumps(datapipe)
-                _ = pickle.loads(serialized_dp)
-            elif dpipe in dp_compare_children:  # DataPipes that have children
-                dp1, dp2 = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
-                self._serialization_test_for_dp_with_children(dp1, dp2)
-            else:  # Single DataPipe that requires comparison
-                datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
-                is_dataframe = issubclass(dpipe, (iterdp.DataFrameMaker, iterdp.ParquetDataFrameLoader))
-                self._serialization_test_for_single_dp(datapipe, is_dataframe=is_dataframe)
+            try:
+                if dpipe in custom_input:
+                    input_dp = custom_input[dpipe]
+                else:
+                    input_dp = IterableWrapper(range(10))
+                if dpipe in dp_skip_comparison:  # Mke sure they are picklable and loadable (no value comparison)
+                    datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
+                    serialized_dp = pickle.dumps(datapipe)
+                    _ = pickle.loads(serialized_dp)
+                elif dpipe in dp_compare_children:  # DataPipes that have children
+                    dp1, dp2 = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
+                    self._serialization_test_for_dp_with_children(dp1, dp2)
+                else:  # Single DataPipe that requires comparison
+                    datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
+                    is_dataframe = issubclass(dpipe, (iterdp.DataFrameMaker, iterdp.ParquetDataFrameLoader))
+                    self._serialization_test_for_single_dp(datapipe, is_dataframe=is_dataframe)
+            except Exception as e:
+                print(f"{dpipe} is failing.")
+                raise e
 
     def test_serializable_with_dill(self):
         """Only for DataPipes that take in a function as argument"""
@@ -250,29 +254,37 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
 
         unpicklable_datapipes: List = [
             (iterdp.FlatMapper, (lambda x: [x, x],), {}),
-            (iterdp.IterKeyZipper, (ref_idp, lambda x: x, lambda x: x, True, 100, lambda x, y: (x, y)), {}),
-            (iterdp.MapKeyZipper, (ref_mdp, lambda x: x, lambda x, y: (x, y)), {}),
+            (iterdp.IterKeyZipper, (ref_idp, lambda x: x, None, True, 100), {}),
+            (iterdp.MapKeyZipper, (ref_mdp, lambda x: x), {}),
             (iterdp.OnDiskCacheHolder, (lambda x: x,), {}),
             (iterdp.ParagraphAggregator, (lambda x: x,), {}),
         ]
         dp_skip_comparison = {iterdp.OnDiskCacheHolder, iterdp.ParagraphAggregator}
         if DILL_AVAILABLE:
             for dpipe, dp_args, dp_kwargs in unpicklable_datapipes:
-                if dpipe in dp_skip_comparison:  # Merely make sure they are picklable/loadable (no value comparison)
-                    datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
-                    serialized_dp = dill.dumps(datapipe)
-                    _ = dill.loads(serialized_dp)
-                else:
-                    datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
-                    self._serialization_test_for_single_dp(datapipe)
+                try:
+                    if dpipe in dp_skip_comparison:  # Make sure they are picklable/loadable (no value comparison)
+                        datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
+                        serialized_dp = dill.dumps(datapipe)
+                        _ = dill.loads(serialized_dp)
+                    else:
+                        datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
+                        self._serialization_test_for_single_dp(datapipe)
+                except Exception as e:
+                    print(f"{dpipe} is failing.")
+                    raise e
         else:
             for dpipe, dp_args, dp_kwargs in unpicklable_datapipes:
-                with warnings.catch_warnings(record=True) as wa:
-                    datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
-                    self.assertEqual(len(wa), 1)
-                    self.assertRegex(str(wa[0].message), r"^Lambda function is not supported for pickle")
-                    with self.assertRaises(AttributeError):
-                        _ = pickle.dumps(datapipe)
+                try:
+                    with warnings.catch_warnings(record=True) as wa:
+                        datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
+                        self.assertEqual(len(wa), 1)
+                        self.assertRegex(str(wa[0].message), r"^Lambda function is not supported for pickle")
+                        with self.assertRaises(AttributeError):
+                            _ = pickle.dumps(datapipe)
+                except Exception as e:
+                    print(f"{dpipe} is failing.")
+                    raise e
 
 
 class TestMapDataPipeSerialization(expecttest.TestCase):
