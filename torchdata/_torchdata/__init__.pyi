@@ -2,7 +2,6 @@
 
 from typing import List, Tuple
 
-
 # TODO: Add pyi generate script
 class S3Handler:
     def __init__(self, request_timeout_ms: int, region: str) -> None: ...
