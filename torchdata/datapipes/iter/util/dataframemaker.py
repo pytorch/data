@@ -2,7 +2,7 @@
 from functools import partial
 from typing import List, Optional, TypeVar
 
-from torch.utils.data._utils.serialization import DILL_AVAILABLE
+from torch.utils.data.datapipes.utils.common import DILL_AVAILABLE
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
