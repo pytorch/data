@@ -138,80 +138,115 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
 
     def test_serializable(self):
         picklable_datapipes: List = [
-            (iterdp.BucketBatcher, (5,), {}),
-            (iterdp.CSVDictParser, (), {}),
-            (iterdp.CSVParser, (), {}),
-            (iterdp.Cycler, (2,), {}),
-            (iterdp.DataFrameMaker, (), {"dtype": DTYPE}),
-            (iterdp.Decompressor, (), {}),
-            (iterdp.Enumerator, (2,), {}),
-            (iterdp.FlatMapper, (_fake_fn_ls,), {}),
-            (iterdp.FSSpecFileLister, (), {}),
-            (iterdp.FSSpecFileOpener, (), {}),
-            (iterdp.FSSpecSaver, (), {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)}),
-            (iterdp.GDriveReader, (), {}),
-            (iterdp.HashChecker, ({},), {}),
-            (iterdp.Header, (3,), {}),
-            (iterdp.HttpReader, (), {}),
-            (iterdp.InMemoryCacheHolder, (), {}),
-            (iterdp.IndexAdder, ("label",), {}),
-            (iterdp.IoPathFileLister, (), {}),
-            (iterdp.IoPathFileOpener, (), {}),
-            (iterdp.IoPathSaver, (), {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)}),
-            (iterdp.IterKeyZipper, (IterableWrapper([("a", 1), ("b", 2), ("c", 3)]), itemgetter(0), itemgetter(0)), {}),
-            (iterdp.JsonParser, (), {}),
-            (iterdp.LineReader, (), {}),
-            (iterdp.MapKeyZipper, (SequenceWrapper({"a": 100, "b": 200, "c": 300}), itemgetter(0)), {}),
-            (iterdp.OnDiskCacheHolder, (), {}),
-            (iterdp.OnlineReader, (), {}),
-            (iterdp.ParagraphAggregator, (), {}),
-            (iterdp.ParquetDataFrameLoader, (), {"dtype": DTYPE}),
-            (iterdp.RarArchiveLoader, (), {}),
-            (iterdp.Rows2Columnar, (), {}),
-            (iterdp.SampleMultiplexer, (), {}),
-            (iterdp.Saver, (), {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)}),
-            (iterdp.TarArchiveLoader, (), {}),
-            (iterdp.UnZipper, (), {"sequence_length": 2}),
-            (iterdp.XzFileLoader, (), {}),
-            (iterdp.ZipArchiveLoader, (), {}),
+            (iterdp.BucketBatcher, IterableWrapper([0, 0, 0, 0, 0, 0, 0]), (5,), {}),
+            (
+                iterdp.CSVDictParser,
+                IterableWrapper(
+                    [("f1", StringIO("Label,1,1\nLabel,2,2\nLabel,3,3")), ("f2", StringIO("L,1,1\r\nL,2,2\r\nL,3,3"))]
+                ),
+                (),
+                {},
+            ),
+            (
+                iterdp.CSVParser,
+                IterableWrapper(
+                    [("f1", StringIO("Label,1,1\nLabel,2,2\nLabel,3,3")), ("f2", StringIO("L,1,1\r\nL,2,2\r\nL,3,3"))]
+                ),
+                (),
+                {},
+            ),
+            (iterdp.Cycler, None, (2,), {}),
+            (iterdp.DataFrameMaker, IterableWrapper([(i,) for i in range(3)]), (), {"dtype": DTYPE}),
+            (iterdp.Decompressor, None, (), {}),
+            (iterdp.Enumerator, None, (2,), {}),
+            (iterdp.FlatMapper, None, (_fake_fn_ls,), {}),
+            (iterdp.FSSpecFileLister, ".", (), {}),
+            (iterdp.FSSpecFileOpener, None, (), {}),
+            (
+                iterdp.FSSpecSaver,
+                IterableWrapper([("1.txt", b"DATA1"), ("2.txt", b"DATA2"), ("3.txt", b"DATA3")]),
+                (),
+                {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)},
+            ),
+            (iterdp.GDriveReader, None, (), {}),
+            (iterdp.HashChecker, None, ({},), {}),
+            (iterdp.Header, None, (3,), {}),
+            (iterdp.HttpReader, None, (), {}),
+            (iterdp.InMemoryCacheHolder, None, (), {}),
+            (iterdp.IndexAdder, IterableWrapper([{"a": 1, "b": 2}, {"c": 3, "a": 1}]), ("label",), {}),
+            (iterdp.IoPathFileLister, ".", (), {}),
+            (iterdp.IoPathFileOpener, None, (), {}),
+            (
+                iterdp.IoPathSaver,
+                IterableWrapper([("1.txt", b"DATA1"), ("2.txt", b"DATA2"), ("3.txt", b"DATA3")]),
+                (),
+                {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)},
+            ),
+            (
+                iterdp.IterKeyZipper,
+                IterableWrapper([("a", 100), ("b", 200), ("c", 300)]),
+                (IterableWrapper([("a", 1), ("b", 2), ("c", 3)]), itemgetter(0), itemgetter(0)),
+                {},
+            ),
+            (
+                iterdp.JsonParser,
+                IterableWrapper(
+                    [
+                        ("1.json", StringIO('["fo", {"ba":["baz", null, 1.0, 2]}]')),
+                        ("2.json", StringIO('{"__cx__": true, "r": 1, "i": 2}')),
+                    ]
+                ),
+                (),
+                {},
+            ),
+            (
+                iterdp.LineReader,
+                IterableWrapper(
+                    [("file1", StringIO("Line1\nLine2")), ("file2", StringIO("Line2,1\r\nLine2,2\r\nLine2,3"))]
+                ),
+                (),
+                {},
+            ),
+            (
+                iterdp.MapKeyZipper,
+                IterableWrapper([("a", 1), ("b", 2), ("c", 3)]),
+                (SequenceWrapper({"a": 100, "b": 200, "c": 300}), itemgetter(0)),
+                {},
+            ),
+            (iterdp.OnDiskCacheHolder, None, (), {}),
+            (iterdp.OnlineReader, None, (), {}),
+            (
+                iterdp.ParagraphAggregator,
+                IterableWrapper([("f1", "L1"), ("f1", "L2"), ("f2", "21"), ("f2", "22")]),
+                (),
+                {},
+            ),
+            (iterdp.ParquetDataFrameLoader, None, (), {"dtype": DTYPE}),
+            (iterdp.RarArchiveLoader, None, (), {}),
+            (
+                iterdp.Rows2Columnar,
+                IterableWrapper([[{"a": 1}, {"b": 2, "a": 1}], [{"a": 1, "b": 200}, {"c": 3}]]),
+                (),
+                {},
+            ),
+            (iterdp.SampleMultiplexer, {IterableWrapper([0] * 10): 0.5, IterableWrapper([1] * 10): 0.5}, (), {}),
+            (
+                iterdp.Saver,
+                IterableWrapper([("1.txt", b"DATA1"), ("2.txt", b"DATA2"), ("3.txt", b"DATA3")]),
+                (),
+                {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)},
+            ),
+            (iterdp.TarArchiveLoader, None, (), {}),
+            (iterdp.UnZipper, IterableWrapper([(i, i + 10) for i in range(10)]), (), {"sequence_length": 2}),
+            (iterdp.XzFileLoader, None, (), {}),
+            (iterdp.ZipArchiveLoader, None, (), {}),
         ]
 
         picklable_datapipes = _filter_by_module_availability(picklable_datapipes)
 
-        # Custom input_dp for when `IterableWrapper(range(10))` does not work for the DataPipe being tested
-        custom_input = {
-            iterdp.BucketBatcher: IterableWrapper([0, 0, 0, 0, 0, 0, 0]),
-            iterdp.CSVDictParser: IterableWrapper(
-                [("f1", StringIO("Label,1,1\nLabel,2,2\nLabel,3,3")), ("f2", StringIO("L,1,1\r\nL,2,2\r\nL,3,3"))]
-            ),
-            iterdp.CSVParser: IterableWrapper(
-                [("f1", StringIO("Label,1,1\nLabel,2,2\nLabel,3,3")), ("f2", StringIO("L,1,1\r\nL,2,2\r\nL,3,3"))]
-            ),
-            iterdp.DataFrameMaker: IterableWrapper([(i,) for i in range(3)]),
-            iterdp.FSSpecFileLister: ".",
-            iterdp.FSSpecSaver: IterableWrapper([("1.txt", b"DATA1"), ("2.txt", b"DATA2"), ("3.txt", b"DATA3")]),
-            iterdp.IndexAdder: IterableWrapper([{"a": 1, "b": 2}, {"c": 3, "a": 1}]),
-            iterdp.IoPathFileLister: ".",
-            iterdp.IoPathSaver: IterableWrapper([("1.txt", b"DATA1"), ("2.txt", b"DATA2"), ("3.txt", b"DATA3")]),
-            iterdp.IterKeyZipper: IterableWrapper([("a", 100), ("b", 200), ("c", 300)]),
-            iterdp.JsonParser: IterableWrapper(
-                [
-                    ("1.json", StringIO('["fo", {"ba":["baz", null, 1.0, 2]}]')),
-                    ("2.json", StringIO('{"__cx__": true, "r": 1, "i": 2}')),
-                ]
-            ),
-            iterdp.LineReader: IterableWrapper(
-                [("file1", StringIO("Line1\nLine2")), ("file2", StringIO("Line2,1\r\nLine2,2\r\nLine2,3"))]
-            ),
-            iterdp.MapKeyZipper: IterableWrapper([("a", 1), ("b", 2), ("c", 3)]),
-            iterdp.ParagraphAggregator: IterableWrapper([("f1", "L1"), ("f1", "L2"), ("f2", "21"), ("f2", "22")]),
-            iterdp.Rows2Columnar: IterableWrapper([[{"a": 1}, {"b": 2, "a": 1}], [{"a": 1, "b": 200}, {"c": 3}]]),
-            iterdp.SampleMultiplexer: {IterableWrapper([0] * 10): 0.5, IterableWrapper([1] * 10): 0.5},
-            iterdp.Saver: IterableWrapper([("1.txt", b"DATA1"), ("2.txt", b"DATA2"), ("3.txt", b"DATA3")]),
-            iterdp.UnZipper: IterableWrapper([(i, i + 10) for i in range(10)]),
-        }
-
         # Skipping value comparison for these DataPipes
+        # Most of them return streams not comparable by `self.assertEqual`
+        # Others are similar to caching where the outputs depend on other DataPipes
         dp_skip_comparison = {
             iterdp.Decompressor,
             iterdp.FileOpener,
@@ -232,23 +267,21 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         # These DataPipes produce multiple DataPipes as outputs and those should be compared
         dp_compare_children = {iterdp.UnZipper}
 
-        for dpipe, dp_args, dp_kwargs in picklable_datapipes:
+        for dpipe, custom_input, dp_args, dp_kwargs in picklable_datapipes:
             try:
                 # Creating input (usually a DataPipe) for the specific dpipe being tested
-                if dpipe in custom_input:
-                    input_for_dp = custom_input[dpipe]
-                else:
-                    input_for_dp = IterableWrapper(range(10))
+                if custom_input is None:
+                    custom_input = IterableWrapper(range(10))
 
                 if dpipe in dp_skip_comparison:  # Mke sure they are picklable and loadable (no value comparison)
-                    datapipe = dpipe(input_for_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
+                    datapipe = dpipe(custom_input, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
                     serialized_dp = pickle.dumps(datapipe)
                     _ = pickle.loads(serialized_dp)
                 elif dpipe in dp_compare_children:  # DataPipes that have children
-                    dp1, dp2 = dpipe(input_for_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
+                    dp1, dp2 = dpipe(custom_input, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
                     self._serialization_test_for_dp_with_children(dp1, dp2)
                 else:  # Single DataPipe that requires comparison
-                    datapipe = dpipe(input_for_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
+                    datapipe = dpipe(custom_input, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
                     is_dataframe = issubclass(dpipe, (iterdp.DataFrameMaker, iterdp.ParquetDataFrameLoader))
                     self._serialization_test_for_single_dp(datapipe, is_dataframe=is_dataframe)
             except Exception as e:
