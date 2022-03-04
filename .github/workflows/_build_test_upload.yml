@@ -201,7 +201,7 @@ jobs:
           else
             S3_PATH=s3://pytorch/whl/test/
           fi
-          pip3 install --user awscli
+          pip3 install awscli
           set -x
           for pkg in dist/torchdata*.whl; do
             aws s3 cp "$pkg" "$S3_PATH" --acl public-read
