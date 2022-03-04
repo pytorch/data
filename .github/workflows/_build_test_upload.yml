@@ -6,9 +6,6 @@ on:
       branch:
         required: true
         type: string
-      pip_path:
-        required: true
-        type: string
       pre_dev_release:
         required: true
         type: boolean
@@ -26,11 +23,38 @@ on:
         required: false
 
 jobs:
-  build_test_upload:
+  get_release_type:
     if: |
       github.repository == 'pytorch/data' &&
       ( github.ref_name == 'main' || startsWith(github.ref_name, 'release/') || github.ref_type == 'tag' ) &&
       inputs.branch != ''
+    runs-on: ubuntu-latest
+    outputs:
+      type: ${{ steps.get_release_type.outputs.type }}
+    steps:
+      - name: Get Release Type
+        run: |
+          if [[ ${{ inputs.branch }} == release/* ]]; then
+            if [[ ${{ inputs.pre_dev_release }} == true ]]; then
+              RELEASE_TYPE=test
+            else
+              RELEASE_TYPE=official
+            fi
+          elif [[ ${{ inputs.branch }} == main ]] && [[ ${{ inputs.pre_dev_release }} == true ]]; then
+            RELEASE_TYPE=nightly
+          else
+            echo "Invalid combination of inputs!"
+            echo "  branch: ${{ inputs.branch }}"
+            echo "  pre_dev_release: ${{ inputs.pre_dev_release }}"
+            exit 1
+          fi
+          echo "Release Type: $RELEASE_TYPE"
+          echo "::set-output name=type::$RELEASE_TYPE"
+        id: get_release_type
+
+  build_test:
+    if: ${{ needs.get_release_type.outputs.type }}
+    needs: get_release_type
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -49,26 +73,33 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install Pre-release/Development-release PyTorch
-        if: inputs.pre_dev_release
+      - name: Install Pre-release/Nightly-release/Official-release PyTorch
         run: |
           pip3 install numpy
-          pip3 install --pre torch -f ${{ inputs.pip_path }}
-      - name: Install Official PyTorch
-        if: ${{ ! inputs.pre_dev_release }}
-        run: |
-          pip3 install numpy
-          pip3 install torch torchdata -f ${{ inputs.pip_path }}
-      - name: Check out source repository
+          # Add version requirement to PyTorch except nightly release
+          if [[ ${{ inputs.pytorch_version }} ]]; then
+            PYTORCH_VERSION=torch==${{ inputs.pytorch_version }}
+          else
+            PYTORCH_VERSION=torch
+          fi
+          # Use test channel for official release
+          PIP_CHANNEL=${{ needs.get_release_type.outputs.type }}
+          if [[ $PIP_CHANNEL == 'official' ]]; then
+            PIP_CHANNEL='test'
+          fi
+          pip3 install --pre "$PYTORCH_VERSION" -f "https://download.pytorch.org/whl/$PIP_CHANNEL/cpu/torch_$PIP_CHANNEL.html"
+      - name: Checkout Source Repository
         uses: actions/checkout@v2
         with:
           ref: ${{ inputs.branch }}
       - name: Get Hash of the Last Commit from Release
-        if: inputs.pre_dev_release
+        if: |
+          needs.get_release_type.outputs.type == 'nightly' ||
+          needs.get_release_type.outputs.type == 'test'
         run: |
           pip3 install -r requirements.txt
           # Using --no-deps here to make sure correct version of PyTorch Core
-          pip3 install --pre torchdata -f ${{ inputs.pip_path }} --no-deps
+          pip3 install --pre torchdata -f "https://download.pytorch.org/whl/${{ needs.get_release_type.outputs.type }}/cpu/torch_${{ needs.get_release_type.outputs.type }}.html" --no-deps
           pushd ~
           RELEASE_COMMIT=$(python -c 'import torchdata; print(torchdata.version.git_version)')
           echo "::set-output name=hash::$RELEASE_COMMIT"
@@ -76,58 +107,109 @@ jobs:
           pip3 uninstall -y torchdata
         id: release_commit
       - name: Get Hash of the Last Commit from Source
-        if: ${{ inputs.pre_dev_release }}
+        if: |
+          needs.get_release_type.outputs.type == 'nightly' ||
+          needs.get_release_type.outputs.type == 'test'
         run: |
           SOURCE_COMMIT=$(git rev-parse HEAD)
           echo "::set-output name=hash::$SOURCE_COMMIT"
         id: source_commit
+      - name: Check if Build New TorchData Wheel
+        run: |
+          if [[ ${{ needs.get_release_type.outputs.type }} == 'official' || ( ${{ steps.release_commit.outputs.hash }} != ${{ steps.source_commit.outputs.hash }} ) ]]; then
+            echo 1 > torchdata_${{ matrix.os }}_${{ matrix.python-version }}_whl.txt
+            echo "::set-output name=value::true"
+          else
+            echo 0 > torchdata_${{ matrix.os }}_${{ matrix.python-version }}_whl.txt
+            echo "::set-output name=value::false"
+          fi
+        id: trigger_build
       # The following steps for pre-release will be skipped if the last commit
       # from branch is the same as the last commit in release wheel
       - name: Build and Install TorchData Wheel
-        if: |
-          ! inputs.pre_dev_release ||
-            steps.release_commit.outputs.hash != steps.source_commit.outputs.hash
+        if: steps.trigger_build.outputs.value == 'true'
         env:
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
         run: |
           pip3 install wheel
-          python setup.py bdist_wheel --release
+          if [[ ${{ needs.get_release_type.outputs.type }} == 'nightly' ]]; then
+            python setup.py bdist_wheel --nightly
+          else
+            python setup.py bdist_wheel --release
+          fi
           pip3 install dist/torchdata*.whl
       - name: Validate TorchData Wheel
+        if: steps.trigger_build.outputs.value == 'true'
         run: |
           pip3 install pkginfo
           for pkg in dist/torchdata*.whl; do
               echo "PkgInfo of $pkg:"
               pkginfo $pkg
           done
-      - name: Install test requirements
-        if: |
-          ! inputs.pre_dev_release ||
-            steps.release_commit.outputs.hash != steps.source_commit.outputs.hash
+      - name: Install Test Requirements
+        if: steps.trigger_build.outputs.value == 'true'
         run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile
-      - name: Run DataPipes tests with pytest
-        if: |
-          ! inputs.pre_dev_release ||
-            steps.release_commit.outputs.hash != steps.source_commit.outputs.hash
+      - name: Run DataPipes Tests with pytest
+        if: steps.trigger_build.outputs.value == 'true'
         run:
           pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py
           --ignore=test/test_audio_examples.py
-      - name: Upload Wheel to S3 Storage
+      - name: Upload Wheel and Flag File to Github # Flag File is used to prevent no-file error for download-artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: torchdata-artifact
+          path: |
+            dist/torchdata*.whl
+            torchdata_*_whl.txt
+
+  upload_wheel:
+    needs: [get_release_type, build_test]
+    runs-on: ubuntu-latest
+    container: continuumio/miniconda3
+    steps:
+      - name: Download Wheels from Github
+        uses: actions/download-artifact@v2
+        with:
+          name: torchdata-artifact
+      - name: Determine if Uploading is needed
+        run: |
+          upload=false
+          for txt in torchdata_*_whl.txt; do
+            v=`cat $txt`
+            if [ $v -eq 1 ]; then
+              upload=true
+              break
+            fi
+          done
+          echo "::set-output name=value::$upload"
+        id: trigger_upload
+      - name: Display All TorchData Wheels
+        if: steps.trigger_upload.outputs.value == 'true'
+        run: ls -lh
+        working-directory: dist
+      - name: Upload Wheels to S3 Storage (Nightly or RC)
         if: |
-          inputs.pre_dev_release &&
-            (steps.release_commit.outputs.hash != steps.source_commit.outputs.hash)
+          steps.trigger_upload.outputs.value == 'true' &&
+          ( needs.get_release_type.outputs.type == 'nightly' ||
+          needs.get_release_type.outputs.type == 'test' )
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.PYTORCH_BINARY_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY }}
         run: |
-          [[ ${{ inputs.branch }} == 'main' ]] && S3_PATH=s3://pytorch/whl/nightly/ || S3_PATH=s3://pytorch/whl/test/
-          pip3 install --user awscli
+          if [[ ${{ inputs.branch }} == 'main' ]]; then
+            S3_PATH=s3://pytorch/whl/nightly/
+          else
+            S3_PATH=s3://pytorch/whl/test/
+          fi
+          pip3 install awscli
           set -x
           for pkg in dist/torchdata*.whl; do
-              aws s3 cp "$pkg" "$S3_PATH" --acl public-read
+            aws s3 cp "$pkg" "$S3_PATH" --acl public-read
           done
-      - name: Push Official Wheel to PYPI
-        if: ${{ ! inputs.pre_dev_release }}
+      - name: Upload Official Wheels to PYPI
+        if: |
+          steps.trigger_upload.outputs.value == 'true' &&
+          needs.get_release_type.outputs.type == 'official'
         env:
           PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
         run: |
@@ -136,9 +218,25 @@ jobs:
             --username __token__ \
             --password "$PYPI_TOKEN" \
             dist/torchdata*.whl
-      # TODO: Upload Nightly/Official Wheel to Conda
+      - name: Upload Wheels to Conda (Nightly or Official)
+        if: |
+          steps.trigger_upload.outputs.value == 'true' &&
+          ( needs.get_release_type.outputs.type == 'nightly' ||
+          needs.get_release_type.outputs.type == 'official' )
+        env:
+          CONDA_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_PYTORCHBOT_TOKEN }}
+        run: |
+          conda install -yq anaconda-client
+          if [ ${{ needs.get_release_type.outputs.type }} == nightly ]; then
+            CONDA_CHANNEL=pytorch-nightly
+          else
+            CONDA_CHANNEL=pytorch
+          fi
+          set -x
+          # anaconda -t "${CONDA_PYTORCHBOT_TOKEN}" upload dist/*tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
+
   build_docs:
-    needs: build_test_upload
+    needs: [get_release_type, build_test]
     runs-on: ubuntu-latest
     steps:
       - name: Setup Python 3.8
@@ -157,11 +255,26 @@ jobs:
           python3 -m pip install setuptools
           python3 -m pip install matplotlib
           sudo apt-get install -y yarn
-      - name: Install Torch
+      - name: Install Pre-release/Nightly-release/Official-release PyTorch
         run: |
           pip3 install numpy
-          pip3 install --pre torch -f ${{ inputs.pip_path }}
-          python setup.py install --release
+          # Add version requirement to PyTorch except nightly release
+          if [[ ${{ inputs.pytorch_version }} ]]; then
+            PYTORCH_VERSION=torch==${{ inputs.pytorch_version }}
+          else
+            PYTORCH_VERSION=torch
+          fi
+          # Use test channel for official release
+          PIP_CHANNEL=${{ needs.get_release_type.outputs.type }}
+          if [[ $PIP_CHANNEL == 'official' ]]; then
+            PIP_CHANNEL='test'
+          fi
+          pip3 install --pre "$PYTORCH_VERSION" -f "https://download.pytorch.org/whl/$PIP_CHANNEL/cpu/torch_$PIP_CHANNEL.html"
+          if [[ ${{ needs.get_release_type.outputs.type }} == 'nightly' ]]; then
+            python setup.py install --nightly
+          else
+            python setup.py install --release
+          fi
       - name: Check env
         run: echo `which spinx-build`
       - name: Build the docset
@@ -172,17 +285,18 @@ jobs:
           cd ..
       - name: Export Target Folder
         run: |
-          target_folder=${{ inputs.branch }}
-          if [[ $target_folder == release/* ]]; then
-            target_folder=${target_folder:8}
-          elif [[ $target_folder == tags/* ]]; then
-            target_folder=${target_folder:5}
+          TARGET_FOLDER=${{ inputs.branch }}
+          if [[ $TARGET_FOLDER == release/* ]]; then
+            TARGET_FOLDER=${TARGET_FOLDER:8}
+          elif [[ $TARGET_FOLDER == tags/* ]]; then
+            TARGET_FOLDER=${TARGET_FOLDER:5}
           fi
-          echo "TARGET_FOLDER=$target_folder" >> $GITHUB_ENV
+          echo "::set-output name=value::$TARGET_FOLDER"
+        id: target_folder
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4.2.5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages # The branch the action should deploy to.
           folder: docs/build/html # The folder the action should deploy.
-          target-folder: ${{ env.TARGET_FOLDER }} # The destination folder the action should deploy to.
+          target-folder: ${{ steps.target_folder.outputs.value }} # The destination folder the action should deploy to.
