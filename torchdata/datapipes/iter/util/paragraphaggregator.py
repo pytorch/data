@@ -1,6 +1,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 from typing import Callable, Iterator, List, Tuple, TypeVar
 
+from torch.utils.data.datapipes.utils.common import check_lambda_fn
+
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
@@ -37,6 +39,7 @@ class ParagraphAggregatorIterDataPipe(IterDataPipe[Tuple[str, str]]):
 
     def __init__(self, source_datapipe: IterDataPipe[Tuple[str, T_co]], joiner: Callable = _default_line_join) -> None:
         self.source_datapipe: IterDataPipe[Tuple[str, T_co]] = source_datapipe
+        check_lambda_fn(joiner)
         self.joiner: Callable = joiner
 
     def __iter__(self) -> Iterator[Tuple[str, str]]:
