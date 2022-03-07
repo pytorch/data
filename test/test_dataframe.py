@@ -163,3 +163,7 @@ class TestDataFrame(expecttest.TestCase):
             self._compare_dataframes(exp_df, act_df)
         for exp_df, act_df in zip(expected_dfs, res_after_reset):
             self._compare_dataframes(exp_df, act_df)
+
+
+if __name__ == "__main__":
+    unittest.main()

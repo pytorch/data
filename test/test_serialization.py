@@ -221,7 +221,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (),
                 {},
             ),
-            # (iterdp.ParquetDataFrameLoader, None, (), {"dtype": DTYPE}),
+            (iterdp.ParquetDataFrameLoader, None, (), {"dtype": DTYPE}),
             (iterdp.RarArchiveLoader, None, (), {}),
             (
                 iterdp.Rows2Columnar,
