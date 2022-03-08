@@ -70,7 +70,7 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
             )
         # In this version, DF tracing is not available, which would allow DataPipe to run DataFrame operations
         batch_dp = source_dp.batch(dataframe_size)
-        df_dp = batch_dp.map(partial(torcharrow.DataFrame, dtype=dtype, columns=columns, device=device))
+        df_dp = batch_dp.map(partial(torcharrow.dataframe, dtype=dtype, columns=columns, device=device))
         return df_dp
 
 
