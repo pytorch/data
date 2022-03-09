@@ -2,6 +2,8 @@
 from functools import partial
 from typing import List, Optional, TypeVar
 
+from torch.utils.data.datapipes.utils.common import DILL_AVAILABLE
+
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
@@ -11,6 +13,11 @@ try:  # TODO: Create dependency on TorchArrow?
 except ImportError:
     torcharrow = None
     parquet = None
+
+if DILL_AVAILABLE:
+    import dill
+
+    dill.extend(use_dill=False)
 
 T_co = TypeVar("T_co")
 
@@ -63,7 +70,7 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
             )
         # In this version, DF tracing is not available, which would allow DataPipe to run DataFrame operations
         batch_dp = source_dp.batch(dataframe_size)
-        df_dp = batch_dp.map(partial(torcharrow.DataFrame, dtype=dtype, columns=columns, device=device))
+        df_dp = batch_dp.map(partial(torcharrow.dataframe, dtype=dtype, columns=columns, device=device))
         return df_dp
 
 
@@ -124,3 +131,21 @@ class ParquetDFLoaderIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDat
                 # TODO: More fine-grain control over the number of rows or row group per DataFrame
                 row_group = parquet_file.read_row_group(i, columns=self.columns, use_threads=self.use_threads)
                 yield torcharrow.from_arrow(row_group, dtype=self.dtype)
+
+    def __getstate__(self):
+        if IterDataPipe.getstate_hook is not None:
+            return IterDataPipe.getstate_hook(self)
+
+        if DILL_AVAILABLE:
+            dill_dtype = dill.dumps(self.dtype)
+        else:
+            dill_dtype = self.dtype
+        state = (self.source_dp, dill_dtype, self.columns, self.device, self.use_threads)
+        return state
+
+    def __setstate__(self, state):
+        (self.source_dp, dill_dtype, self.columns, self.device, self.use_threads) = state
+        if DILL_AVAILABLE:
+            self.dtype = dill.loads(dill_dtype)  # type: ignore[assignment]
+        else:
+            self.dtype = dill_dtype  # type: ignore[assignment]
