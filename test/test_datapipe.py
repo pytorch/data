@@ -329,6 +329,24 @@ class TestDataPipe(expecttest.TestCase):
             pass
         self.assertEqual(20, len(header_dp))
 
+    def test_limiter_iterdatapipe(self) -> None:
+        # Functional Test: ensure the limit is enforced
+        source_dp = IterableWrapper(range(20))
+        limiter_dp = source_dp.limit(5)
+        self.assertEqual(list(range(5)), list(limiter_dp))
+
+        # Functional Test: still works when the limit is greater than the length of the source
+        limiter_dp = source_dp.limit(30)
+        self.assertEqual(list(range(20)), list(limiter_dp))
+
+        # __len__ Test: returns the limit when it is less than the length of source
+        limiter_dp = source_dp.limit(5)
+        self.assertEqual(5, len(limiter_dp))
+
+        # __len__ Test: returns the length of source when it is less than the limit
+        limiter_dp = source_dp.limit(30)
+        self.assertEqual(20, len(limiter_dp))
+
     def test_enumerator_iterdatapipe(self) -> None:
         letters = "abcde"
         source_dp = IterableWrapper(letters)
