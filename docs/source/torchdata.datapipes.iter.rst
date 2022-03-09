@@ -180,6 +180,7 @@ These DataPipes helps you select specific samples within a DataPipe.
 
     Filter
     Header
+    Limiter
 
 Text DataPipes
 -----------------------------

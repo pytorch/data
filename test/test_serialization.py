@@ -199,6 +199,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (),
                 {},
             ),
+            (iterdp.Limiter, None, (5,), {}),
             (
                 iterdp.LineReader,
                 IterableWrapper(
