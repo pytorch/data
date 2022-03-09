@@ -20,6 +20,15 @@ to load the data.
 Text
 -----------
 
+Amazon Review Polarity
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The Amazon reviews dataset contains reviews from Amazon. Its purpose is to train text/sentiment classification models.
+In our DataPipe
+`implementation of the dataset <https://github.com/pytorch/data/blob/main/examples/text/amazonreviewpolarity.py>`_,
+we described every step with detailed comments to help you understand what each DataPipe is doing. We recommend
+having a look at this example.
+
+
 IMDB
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 This is a `large movie review dataset <http://ai.stanford.edu/~amaas/data/sentiment/>`_ for binary sentiment
@@ -64,3 +73,14 @@ those `vision datasets here <https://github.com/pytorch/vision/tree/main/torchvi
 
 Note that these implementations are currently in the prototype phase, but they should be fully supported
 in the coming months. Nonetheless, they demonstrate the different ways DataPipes can be used for data loading.
+
+
+Recommender System
+---------------------------------
+
+Criteo 1TB Click Logs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The `Criteo dataset <https://ailab.criteo.com/download-criteo-1tb-click-logs-dataset>`_ contains feature values
+and click feedback for millions of display advertisements. It aims to benchmark algorithms for
+click through rate (CTR) prediction. You can find a prototype stage implementation of the
+`dataset with DataPipes in TorchRec <https://github.com/pytorch/torchrec/blob/main/torchrec/datasets/criteo.py>`_.

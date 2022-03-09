@@ -27,8 +27,8 @@ jobs:
     uses: ./.github/workflows/_build_test_upload.yml
     with:
       branch: ""
-      pip_path: https://download.pytorch.org/whl/test/cpu/torch_test.html
       pre_dev_release: true
+      pytorch_version: ""
     secrets:
       PYTORCH_BINARY_AWS_ACCESS_KEY_ID: ${{ secrets.PYTORCH_BINARY_AWS_ACCESS_KEY_ID }}
       PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY: ${{ secrets.PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY }}
