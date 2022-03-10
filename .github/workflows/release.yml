@@ -13,9 +13,9 @@ jobs:
   build_test_upload:
     uses: ./.github/workflows/_build_test_upload.yml
     with:
-      branch: ""
+      branch: "release/0.3.0"
       pre_dev_release: false
-      pytorch_version: ""
+      pytorch_version: "1.11.0"
     secrets:
       PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
       CONDA_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_PYTORCHBOT_TOKEN }}
