@@ -9,6 +9,8 @@ from datetime import date
 from pathlib import Path
 
 from setuptools import find_packages, setup
+from torchdata.datapipes.gen_pyi import gen_pyi
+
 
 ROOT_DIR = Path(__file__).parent.resolve()
 
@@ -108,3 +110,4 @@ if __name__ == "__main__":
         packages=find_packages(exclude=["test*", "examples*"]),
         zip_safe=False,
     )
+    gen_pyi()

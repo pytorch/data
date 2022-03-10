@@ -1,5 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+import os
 import pathlib
+from pathlib import Path
 from typing import Dict, List, Optional, Set
 
 import torch.utils.data.gen_pyi as core_gen_pyi
@@ -22,10 +24,12 @@ def get_lines_base_file(base_file_path: str, to_skip: Optional[Set[str]] = None)
         return res
 
 
-def main() -> None:
+def gen_pyi() -> None:
+    ROOT_DIR = Path(__file__).parent.resolve()
+    print(f"Generating DataPipe Python interface file in {ROOT_DIR}")
 
     iter_init_base = get_lines_base_file(
-        "iter/__init__.py",
+        os.path.join(ROOT_DIR, "iter/__init__.py"),
         {"from torch.utils.data import IterDataPipe", "# Copyright (c) Facebook, Inc. and its affiliates."},
     )
 
@@ -76,7 +80,3 @@ def main() -> None:
         env_callable=lambda: {"init_base": iter_init_base, "IterDataPipeMethods": iter_method_definitions},
     )
     # TODO: Add map_method_definitions when there are MapDataPipes defined in this library
-
-
-if __name__ == "__main__":
-    main()  # TODO: Run this script automatically within the build and CI process
