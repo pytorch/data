@@ -82,12 +82,14 @@ jobs:
           else
             PYTORCH_VERSION=torch
           fi
-          # Use test channel for official release
+
           PIP_CHANNEL=${{ needs.get_release_type.outputs.type }}
+
           if [[ $PIP_CHANNEL == 'official' ]]; then
-            PIP_CHANNEL='test'
+            pip3 install "$PYTORCH_VERSION"
+          else
+            pip3 install --pre "$PYTORCH_VERSION" -f "https://download.pytorch.org/whl/$PIP_CHANNEL/cpu/torch_$PIP_CHANNEL.html"
           fi
-          pip3 install --pre "$PYTORCH_VERSION" -f "https://download.pytorch.org/whl/$PIP_CHANNEL/cpu/torch_$PIP_CHANNEL.html"
       - name: Checkout Source Repository
         uses: actions/checkout@v2
         with:
