@@ -48,21 +48,21 @@ Follow the instructions
 First, set up an environment. We will be installing a nightly PyTorch binary as well as torchdata. If you're using
 conda, create a conda environment:
 
-```
+```bash
 conda create --name torchdata
 conda activate torchdata
 ```
 
 If you wish to use `venv` instead:
 
-```
+```bash
 python -m venv torchdata-env
 source torchdata-env/bin/activate
 ```
 
 Next, install one of the following following PyTorch nightly binaries.
 
-```
+```bash
 # For CUDA 10.2
 pip install --pre torch -f https://download.pytorch.org/whl/nightly/cu102/torch_nightly.html
 # For CUDA 11.3
@@ -76,7 +76,7 @@ those commands.
 
 Install torchdata:
 
-```
+```bash
 pip install --user "git+https://github.com/pytorch/data.git"
 ```
 
@@ -95,7 +95,7 @@ assert batch['text'][0][0:8] == ['Wall', 'St.', 'Bears', 'Claw', 'Back', 'Into',
 ### From source
 
 ```bash
-$ pip install -e git+https://github.com/pytorch/data#egg=torchdata
+pip install -e git+https://github.com/pytorch/data#egg=torchdata
 ```
 
 ## What are DataPipes?
