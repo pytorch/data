@@ -82,12 +82,14 @@ jobs:
           else
             PYTORCH_VERSION=torch
           fi
-          # Use test channel for official release
+
           PIP_CHANNEL=${{ needs.get_release_type.outputs.type }}
+
           if [[ $PIP_CHANNEL == 'official' ]]; then
-            PIP_CHANNEL='test'
+            pip3 install "$PYTORCH_VERSION"
+          else
+            pip3 install --pre "$PYTORCH_VERSION" -f "https://download.pytorch.org/whl/$PIP_CHANNEL/cpu/torch_$PIP_CHANNEL.html"
           fi
-          pip3 install --pre "$PYTORCH_VERSION" -f "https://download.pytorch.org/whl/$PIP_CHANNEL/cpu/torch_$PIP_CHANNEL.html"
       - name: Checkout Source Repository
         uses: actions/checkout@v2
         with:
@@ -214,7 +216,7 @@ jobs:
           PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
         run: |
           pip3 install twine
-          python -m twine upload
+          python -m twine upload \
             --username __token__ \
             --password "$PYPI_TOKEN" \
             dist/torchdata*.whl
@@ -264,12 +266,15 @@ jobs:
           else
             PYTORCH_VERSION=torch
           fi
-          # Use test channel for official release
+
           PIP_CHANNEL=${{ needs.get_release_type.outputs.type }}
+
           if [[ $PIP_CHANNEL == 'official' ]]; then
-            PIP_CHANNEL='test'
+            pip3 install "$PYTORCH_VERSION"
+          else
+            pip3 install --pre "$PYTORCH_VERSION" -f "https://download.pytorch.org/whl/$PIP_CHANNEL/cpu/torch_$PIP_CHANNEL.html"
           fi
-          pip3 install --pre "$PYTORCH_VERSION" -f "https://download.pytorch.org/whl/$PIP_CHANNEL/cpu/torch_$PIP_CHANNEL.html"
+
           if [[ ${{ needs.get_release_type.outputs.type }} == 'nightly' ]]; then
             python setup.py install --nightly
           else
