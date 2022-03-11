@@ -38,7 +38,11 @@ from torchdata.datapipes.iter.load.online import (
     HTTPReaderIterDataPipe as HttpReader,
     OnlineReaderIterDataPipe as OnlineReader,
 )
-from torchdata.datapipes.iter.transform.bucketbatcher import BucketBatcherIterDataPipe as BucketBatcher
+from torchdata.datapipes.iter.transform.bucketbatcher import (
+    BucketBatcherIterDataPipe as BucketBatcher,
+    InBatchShufflerIterDataPipe as InBatchShuffler,
+    MaxTokenBucketizerIterDataPipe as MaxTokenBucketizer,
+)
 from torchdata.datapipes.iter.transform.flatmap import FlatMapperIterDataPipe as FlatMapper
 from torchdata.datapipes.iter.util.cacheholder import (
     EndOnDiskCacheHolderIterDataPipe as EndOnDiskCacheHolder,
@@ -120,6 +124,7 @@ __all__ = [
     "HashChecker",
     "Header",
     "HttpReader",
+    "InBatchShuffler",
     "InMemoryCacheHolder",
     "IndexAdder",
     "IoPathFileLister",
@@ -132,6 +137,7 @@ __all__ = [
     "LineReader",
     "MapKeyZipper",
     "Mapper",
+    "MaxTokenBucketizer",
     "Multiplexer",
     "OnDiskCacheHolder",
     "OnlineReader",
