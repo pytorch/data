@@ -18,6 +18,7 @@ from torchdata.datapipes.iter import (
     BucketBatcher,
     Cycler,
     Header,
+    InBatchShuffler,
     IndexAdder,
     InMemoryCacheHolder,
     IterableWrapper,
@@ -25,6 +26,7 @@ from torchdata.datapipes.iter import (
     IterKeyZipper,
     LineReader,
     MapKeyZipper,
+    MaxTokenBucketizer,
     ParagraphAggregator,
     Rows2Columnar,
     SampleMultiplexer,
@@ -516,6 +518,29 @@ class TestDataPipe(expecttest.TestCase):
         # __len__ Test: returns the sum of the lengths of the sources
         self.assertEqual(20, len(sample_mul_dp))
 
+    def test_in_batch_shuffler_iterdatapipe(self) -> None:
+        source_dp = IterableWrapper(range(10)).batch(3)
+
+        # Functional Test: drop last reduces length
+        filtered_dp = source_dp.in_batch_shuffle()
+        for ret_batch, exp_batch in zip(filtered_dp, source_dp):
+            ret_batch.sort()
+            self.assertEqual(ret_batch, exp_batch)
+
+        # Reset Test:
+        n_elements_before_reset = 2
+        res_before_reset, res_after_reset = reset_after_n_next_calls(filtered_dp, n_elements_before_reset)
+        self.assertEqual(n_elements_before_reset, len(res_before_reset))
+        for ret_batch, exp_batch in zip(res_before_reset, source_dp):
+            ret_batch.sort()
+            self.assertEqual(ret_batch, exp_batch)
+        for ret_batch, exp_batch in zip(res_after_reset, source_dp):
+            ret_batch.sort()
+            self.assertEqual(ret_batch, exp_batch)
+
+        # __len__ Test: returns the number of batches
+        self.assertEqual(4, len(filtered_dp))
+
     def test_bucket_batcher_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(10))
 
@@ -564,6 +589,56 @@ class TestDataPipe(expecttest.TestCase):
         self.assertEqual(6, len([item for batch in res_before_reset for item in batch]))
         self.assertEqual(3, len(res_after_reset))
         self.assertEqual(9, len([item for batch in res_after_reset for item in batch]))
+
+        # __len__ Test: returns the number of batches
+        with self.assertRaises(TypeError):
+            len(batch_dp)
+
+    def test_max_token_bucketizer_iterdatapipe(self) -> None:
+        source_data = ["1" * d for d in range(1, 6)] + ["2" * d for d in range(1, 6)]
+        source_dp = IterableWrapper(source_data)
+
+        # Functional Test: Invalid arguments
+        with self.assertRaisesRegex(ValueError, "``min_len`` should be larger than 0"):
+            source_dp.max_token_bucketize(max_token_count=2, min_len=-1)
+
+        with self.assertRaisesRegex(ValueError, "``min_len`` should be larger than 0"):
+            source_dp.max_token_bucketize(max_token_count=2, min_len=3, max_len=2)
+
+        with self.assertRaises(ValueError, msg="``max_token_count`` must be equal to or greater than ``max_len``."):
+            source_dp.max_token_bucketize(max_token_count=2, max_len=3)
+
+        # Functional Test: Filter out min_len
+        batch_dp = source_dp.max_token_bucketize(max_token_count=5, min_len=2, buffer_size=10)
+        exp_batch = [["11", "22"], ["111"], ["222"], ["1111"], ["2222"], ["11111"], ["22222"]]
+        self.assertEqual(list(batch_dp), exp_batch)
+
+        # Functional Test: Filter out max_len
+        batch_dp = source_dp.max_token_bucketize(max_token_count=5, max_len=4, buffer_size=10)
+        exp_batch = [["1", "2", "11"], ["22", "111"], ["222"], ["1111"], ["2222"]]
+        self.assertEqual(list(batch_dp), exp_batch)
+
+        def _custom_len_fn(token):
+            return len(token) + 1
+
+        # Functional Test: Custom length function
+        batch_dp = source_dp.max_token_bucketize(max_token_count=7, len_fn=_custom_len_fn, buffer_size=10)
+        exp_batch = [["1", "2", "11"], ["22", "111"], ["222"], ["1111"], ["2222"], ["11111"], ["22222"]]
+        self.assertEqual(list(batch_dp), exp_batch)
+
+        # Functional Test: Small buffer
+        batch_dp = source_dp.max_token_bucketize(max_token_count=10, buffer_size=4)
+        exp_batch = [["1", "11", "2", "22", "111"], ["222", "1111"], ["2222", "11111"], ["22222"]]
+        self.assertEqual(list(batch_dp), exp_batch)
+
+        # Reset Test:
+        batch_dp = MaxTokenBucketizer(source_dp, max_token_count=5, buffer_size=10)
+        n_elements_before_reset = 2
+        res_before_reset, res_after_reset = reset_after_n_next_calls(batch_dp, n_elements_before_reset)
+        exp_before_reset = [["1", "2", "11"], ["22", "111"]]
+        exp_after_reset = [["1", "2", "11"], ["22", "111"], ["222"], ["1111"], ["2222"], ["11111"], ["22222"]]
+        self.assertEqual(res_before_reset, exp_before_reset)
+        self.assertEqual(res_after_reset, exp_after_reset)
 
         # __len__ Test: returns the number of batches
         with self.assertRaises(TypeError):

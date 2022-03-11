@@ -172,6 +172,8 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.HashChecker, None, ({},), {}),
             (iterdp.Header, None, (3,), {}),
             (iterdp.HttpReader, None, (), {}),
+            # TODO (ejguan): Deterministic serialization is required
+            #  (iterdp.InBatchShuffler, IterableWrapper(range(10)).batch(3), (), {}),
             (iterdp.InMemoryCacheHolder, None, (), {}),
             (iterdp.IndexAdder, IterableWrapper([{"a": 1, "b": 2}, {"c": 3, "a": 1}]), ("label",), {}),
             (iterdp.IoPathFileLister, ".", (), {}),
@@ -205,6 +207,12 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                     [("file1", StringIO("Line1\nLine2")), ("file2", StringIO("Line2,1\r\nLine2,2\r\nLine2,3"))]
                 ),
                 (),
+                {},
+            ),
+            (
+                iterdp.MaxTokenBucketizer,
+                IterableWrapper(["1", "22", "1", "4444", "333", "1", "22", "22", "333"]),
+                (4,),
                 {},
             ),
             (
