@@ -76,6 +76,7 @@ These DataPipes help to perform combinatorial operations.
     :toctree: generated/
     :template: datapipe.rst
 
+    InBatchShuffler
     Sampler
     Shuffler
 
@@ -111,6 +112,7 @@ These DataPipes have you group samples within a DataPipe.
     BucketBatcher
     Collator
     Grouper
+    MaxTokenBucketizer
     UnBatcher
 
 IO DataPipes

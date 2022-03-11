@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>BucketBatcher &mdash; TorchData main documentation</title>
+  <title>MaxTokenBucketizer &mdash; TorchData main documentation</title>
   
 
   
@@ -33,8 +33,8 @@
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Collator" href="torchdata.datapipes.iter.Collator.html" />
-    <link rel="prev" title="Batcher" href="torchdata.datapipes.iter.Batcher.html" />
+    <link rel="next" title="UnBatcher" href="torchdata.datapipes.iter.UnBatcher.html" />
+    <link rel="prev" title="Grouper" href="torchdata.datapipes.iter.Grouper.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -286,13 +286,13 @@
         
           <li><a href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a> &gt;</li>
         
-      <li>BucketBatcher</li>
+      <li>MaxTokenBucketizer</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/generated/torchdata.datapipes.iter.BucketBatcher.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/generated/torchdata.datapipes.iter.MaxTokenBucketizer.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -318,44 +318,42 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="bucketbatcher">
-<h1>BucketBatcher<a class="headerlink" href="#bucketbatcher" title="Permalink to this headline">¶</a></h1>
+  <section id="maxtokenbucketizer">
+<h1>MaxTokenBucketizer<a class="headerlink" href="#maxtokenbucketizer" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="torchdata.datapipes.iter.BucketBatcher">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">BucketBatcher</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T_co</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_last</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_num</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket_num</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">in_batch_shuffle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.BucketBatcher" title="Permalink to this definition">¶</a></dt>
-<dd><p>Creates mini-batches of data from sorted bucket (functional name: <code class="docutils literal notranslate"><span class="pre">bucketbatch</span></code>). An outer
-dimension will be added as <code class="docutils literal notranslate"><span class="pre">batch_size</span></code> if <code class="docutils literal notranslate"><span class="pre">drop_last</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>,
-or <code class="docutils literal notranslate"><span class="pre">length</span> <span class="pre">%</span> <span class="pre">batch_size</span></code> for the last batch if <code class="docutils literal notranslate"><span class="pre">drop_last</span></code> is set to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
-<p>The purpose of this DataPipe is to batch samples with some similarity according to the sorting function
-being passed. For an example in the text domain, it may be batching examples with similar number of tokens
-to minimize padding and to increase throughput.</p>
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.MaxTokenBucketizer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">MaxTokenBucketizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">datapipe:</span> <span class="pre">IterDataPipe[T_co],</span> <span class="pre">max_token_count:</span> <span class="pre">int,</span> <span class="pre">len_fn:</span> <span class="pre">Callable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_len_fn&gt;,</span> <span class="pre">min_len:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">0,</span> <span class="pre">max_len:</span> <span class="pre">Optional[int]</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">buffer_size:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">1000</span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.MaxTokenBucketizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates mini-batches of data from a min-heap with limited size, and the total length of samples
+returned by <code class="docutils literal notranslate"><span class="pre">len_fn</span></code> within each batch will be limited by <code class="docutils literal notranslate"><span class="pre">max_token_count</span></code>.
+(functional name: <code class="docutils literal notranslate"><span class="pre">max_token_bucketize</span></code>). If <code class="docutils literal notranslate"><span class="pre">min_len</span></code> or <code class="docutils literal notranslate"><span class="pre">max_len</span></code> is set, the samples with
+length that is out of <code class="docutils literal notranslate"><span class="pre">[min_len,</span> <span class="pre">max_len]</span></code> will be filtered out.</p>
+<p>The purpose of this DataPipe is to batch samples with similar length according to <code class="docutils literal notranslate"><span class="pre">len_fn</span></code>.
+Min-heap is used here to make sure the samples are sorted incrementally based on the length. And,
+the total length of samples in each batch is guaranteed to be smaller than <code class="docutils literal notranslate"><span class="pre">max_token_count</span></code>.
+For an example in the audio domain, it may be batching samples with similar length. Then, given the
+<code class="docutils literal notranslate"><span class="pre">max_token_count</span></code>, each batch may be concatenated to a Tensor with the same size and minimum padding.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>datapipe</strong> – Iterable DataPipe being batched</p></li>
-<li><p><strong>batch_size</strong> – The size of each batch</p></li>
-<li><p><strong>drop_last</strong> – Option to drop the last batch if it’s not full</p></li>
-<li><p><strong>batch_num</strong> – Number of batches within a bucket (i.e. <cite>bucket_size = batch_size * batch_num</cite>)</p></li>
-<li><p><strong>bucket_num</strong> – Number of buckets to consist a pool for shuffling (i.e. <cite>pool_size = bucket_size * bucket_num</cite>)</p></li>
-<li><p><strong>sort_key</strong> – Callable to sort a bucket (list)</p></li>
-<li><p><strong>in_batch_shuffle</strong> – iF True, do in-batch shuffle; if False, buffer shuffle</p></li>
+<li><p><strong>max_token_count</strong> – Maximum length of total length of data in each batch</p></li>
+<li><p><strong>len_fn</strong> – Function to be applied to each element to get lengths. <code class="docutils literal notranslate"><span class="pre">len(data)</span></code> is used by default.</p></li>
+<li><p><strong>min_len</strong> – Optional minimum length to be included into each batch</p></li>
+<li><p><strong>max_len</strong> – Optional maximum length to be included into each batch.</p></li>
+<li><p><strong>buffer_size</strong> – This restricts how many tokens are taken from prior DataPipe to bucketize</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Example</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="k">import</span> <span class="n">IterableWrapper</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">source_dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">batch_dp</span> <span class="o">=</span> <span class="n">source_dp</span><span class="o">.</span><span class="n">bucketbatch</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">drop_last</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">source_dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([</span><span class="s1">&#39;1&#39;</span><span class="p">,</span> <span class="s1">&#39;11&#39;</span><span class="p">,</span> <span class="s1">&#39;1&#39;</span><span class="p">,</span> <span class="s1">&#39;1111&#39;</span><span class="p">,</span> <span class="s1">&#39;111&#39;</span><span class="p">,</span> <span class="s1">&#39;1&#39;</span><span class="p">,</span> <span class="s1">&#39;11&#39;</span><span class="p">,</span> <span class="s1">&#39;11&#39;</span><span class="p">,</span> <span class="s1">&#39;111&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Using default len_fn to sort samples based on length (string length in this case)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch_dp</span> <span class="o">=</span> <span class="n">source_dp</span><span class="o">.</span><span class="n">max_token_bucketize</span><span class="p">(</span><span class="n">max_token_count</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">batch_dp</span><span class="p">)</span>
-<span class="go">[[5, 6, 7], [9, 0, 1], [4, 3, 2]]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">sort_bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">):</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">bucket</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">batch_dp</span> <span class="o">=</span> <span class="n">source_dp</span><span class="o">.</span><span class="n">bucketbatch</span><span class="p">(</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">batch_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">drop_last</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">batch_num</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">bucket_num</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">in_batch_shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sort_key</span><span class="o">=</span><span class="n">sort_bucket</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="p">)</span>
+<span class="go">[[&#39;1&#39;, &#39;1&#39;, &#39;1&#39;, &#39;11&#39;], [&#39;11&#39;, &#39;11&#39;], [&#39;111&#39;], [&#39;111&#39;], [&#39;1111&#39;]]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch_dp</span> <span class="o">=</span> <span class="n">source_dp</span><span class="o">.</span><span class="n">max_token_bucketize</span><span class="p">(</span><span class="n">max_token_count</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">batch_dp</span><span class="p">)</span>
-<span class="go">[[3, 4, 5], [6, 7, 8], [0, 1, 2]]</span>
+<span class="go">[[&#39;1&#39;, &#39;1&#39;, &#39;1&#39;], [&#39;11&#39;, &#39;11&#39;], [&#39;11&#39;], [&#39;111&#39;], [&#39;111&#39;], [&#39;1111&#39;]]</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -370,10 +368,10 @@ to minimize padding and to increase throughput.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="torchdata.datapipes.iter.Collator.html" class="btn btn-neutral float-right" title="Collator" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.datapipes.iter.UnBatcher.html" class="btn btn-neutral float-right" title="UnBatcher" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.iter.Batcher.html" class="btn btn-neutral" title="Batcher" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="torchdata.datapipes.iter.Grouper.html" class="btn btn-neutral" title="Grouper" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -405,7 +403,7 @@ to minimize padding and to increase throughput.</p>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">BucketBatcher</a></li>
+<li><a class="reference internal" href="#">MaxTokenBucketizer</a></li>
 </ul>
 
             </div>
