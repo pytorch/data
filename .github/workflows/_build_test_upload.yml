@@ -26,8 +26,11 @@ jobs:
   get_release_type:
     if: |
       github.repository == 'pytorch/data' &&
-      ( github.ref_name == 'main' || startsWith(github.ref_name, 'release/') || github.ref_type == 'tag' ) &&
       inputs.branch != ''
+    # if: |
+    #   github.repository == 'pytorch/data' &&
+    #   ( github.ref_name == 'main' || startsWith(github.ref_name, 'release/') || github.ref_type == 'tag' ) &&
+    #   inputs.branch != ''
     runs-on: ubuntu-latest
     outputs:
       type: ${{ steps.get_release_type.outputs.type }}
@@ -52,7 +55,7 @@ jobs:
           echo "::set-output name=type::$RELEASE_TYPE"
         id: get_release_type
 
-  build_test:
+  wheel_build_test:
     if: ${{ needs.get_release_type.outputs.type }}
     needs: get_release_type
     runs-on: ${{ matrix.os }}
@@ -164,16 +167,18 @@ jobs:
             dist/torchdata*.whl
             torchdata_*_whl.txt
 
-  upload_wheel:
-    needs: [get_release_type, build_test]
+  wheel_upload:
+    needs: [get_release_type, wheel_build_test]
     runs-on: ubuntu-latest
     container: continuumio/miniconda3
+    outputs:
+      upload: ${{ steps.trigger_upload.outputs.value }}
     steps:
       - name: Download Wheels from Github
         uses: actions/download-artifact@v2
         with:
           name: torchdata-artifact
-      - name: Determine if Uploading is needed
+      - name: Determine if Wheel Uploading is needed
         run: |
           upload=false
           for txt in torchdata_*_whl.txt; do
@@ -190,10 +195,7 @@ jobs:
         run: ls -lh
         working-directory: dist
       - name: Upload Wheels to S3 Storage (Nightly or RC)
-        if: |
-          steps.trigger_upload.outputs.value == 'true' &&
-          ( needs.get_release_type.outputs.type == 'nightly' ||
-          needs.get_release_type.outputs.type == 'test' )
+        if: steps.trigger_upload.outputs.value == 'true'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.PYTORCH_BINARY_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY }}
@@ -205,9 +207,9 @@ jobs:
           fi
           pip3 install awscli
           set -x
-          for pkg in dist/torchdata*.whl; do
-            aws s3 cp "$pkg" "$S3_PATH" --acl public-read
-          done
+          # for pkg in dist/torchdata*.whl; do
+          #   aws s3 cp "$pkg" "$S3_PATH" --acl public-read
+          # done
       - name: Upload Official Wheels to PYPI
         if: |
           steps.trigger_upload.outputs.value == 'true' &&
@@ -216,29 +218,113 @@ jobs:
           PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
         run: |
           pip3 install twine
-          python -m twine upload \
-            --username __token__ \
-            --password "$PYPI_TOKEN" \
-            dist/torchdata*.whl
-      - name: Upload Wheels to Conda (Nightly or Official)
-        if: |
-          steps.trigger_upload.outputs.value == 'true' &&
-          ( needs.get_release_type.outputs.type == 'nightly' ||
-          needs.get_release_type.outputs.type == 'official' )
+          # python -m twine upload \
+          #   --username __token__ \
+          #   --password "$PYPI_TOKEN" \
+          #   dist/torchdata*.whl
+
+  conda_build_test:
+    if: |
+      needs.get_release_type.outputs.type == 'nightly' ||
+      needs.get_release_type.outputs.type == 'official'
+    needs: get_release_type
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+        python-version:
+          - 3.7
+          - 3.8
+          - 3.9
+          - "3.10"
+    steps:
+      - name: Create Conda Env
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: conda_build_env
+      - name: Set Upload Channel
+        shell: bash -l {0}
+        run: |
+          if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
+            echo "::set-output name=path::test"
+          else
+            echo "::set-output name=path::nightly"
+          fi
+        id: upload_channel
+      - name: Checkout Source Repository
+        uses: actions/checkout@v2
+        with:
+          ref: conda_release
+      - name: Build TorchData for Conda
+        shell: bash -l {0}
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+          PYTORCH_VERSION: ${{ inputs.pytorch_version }}
+          UPLOAD_CHANNEL: ${{ steps.upload_channel.outputs.path }}
+        run: |
+          conda activate conda_build_env
+          conda install -yq conda-build -c conda-forge
+          if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
+            packaging/build_conda.sh release
+          else
+            packaging/build_conda.sh nightly
+          fi
+      - name: Upload Conda Package to Github
+        uses: actions/upload-artifact@v2
+        with:
+          name: torchdata-artifact
+          path: conda-bld/*/torchdata-*.tar.bz2
+
+  conda_upload:
+    if: |
+      needs.get_release_type.outputs.type == 'nightly' ||
+      needs.get_release_type.outputs.type == 'official'
+    needs: [get_release_type, conda_build_test]
+    runs-on: ubuntu-latest
+    container: continuumio/miniconda3
+    outputs:
+      upload: ${{ steps.trigger_upload.outputs.value }}
+    steps:
+      - name: Download Wheels from Github
+        uses: actions/download-artifact@v2
+        with:
+          name: torchdata-artifact
+      - name: Determine if Conda Uploading is needed
+        run: |
+          upload=false
+          for pkg in ./*/torchdata-*.tar.bz2; do
+            upload=true
+            break
+          done
+          echo "::set-output name=value::$upload"
+        id: trigger_upload
+      - name: Display All TorchData Conda Package
+        if: steps.trigger_upload.outputs.value == 'true'
+        run: ls -lh ./*/torchdata-*.tar.bz2
+      - name: Build & Upload Wheels to Conda (Nightly or Official)
+        if: steps.trigger_upload.outputs.value == 'true'
         env:
           CONDA_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_PYTORCHBOT_TOKEN }}
         run: |
           conda install -yq anaconda-client
-          if [ ${{ needs.get_release_type.outputs.type }} == nightly ]; then
+          if [[ ${{ needs.get_release_type.outputs.type }} == 'nightly' ]]; then
             CONDA_CHANNEL=pytorch-nightly
           else
             CONDA_CHANNEL=pytorch
           fi
           set -x
-          # anaconda -t "${CONDA_PYTORCHBOT_TOKEN}" upload dist/*tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
+          anaconda -t "${CONDA_PYTORCHBOT_TOKEN}" upload ./*/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
 
   build_docs:
-    needs: [get_release_type, build_test]
+    if: |
+      needs.wheel_upload.outputs.upload == 'true' ||
+      needs.conda_upload.outputs.upload == 'true'
+    needs: [get_release_type, wheel_upload, conda_upload]
     runs-on: ubuntu-latest
     steps:
       - name: Setup Python 3.8
@@ -298,10 +384,10 @@ jobs:
           fi
           echo "::set-output name=value::$TARGET_FOLDER"
         id: target_folder
-      - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4.2.5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: gh-pages # The branch the action should deploy to.
-          folder: docs/build/html # The folder the action should deploy.
-          target-folder: ${{ steps.target_folder.outputs.value }} # The destination folder the action should deploy to.
+      # - name: Deploy
+      #   uses: JamesIves/github-pages-deploy-action@v4.2.5
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     branch: gh-pages # The branch the action should deploy to.
+      #     folder: docs/build/html # The folder the action should deploy.
+      #     target-folder: ${{ steps.target_folder.outputs.value }} # The destination folder the action should deploy to.

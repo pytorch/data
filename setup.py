@@ -14,7 +14,9 @@ ROOT_DIR = Path(__file__).parent.resolve()
 
 
 def _get_version(nightly=False, release=False):
-    version = "0.3.0a0"
+    with open(os.path.join(ROOT_DIR, "version.txt")) as f:
+        version = f.readline().strip()
+
     sha = "Unknown"
     try:
         sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=str(ROOT_DIR)).decode("ascii").strip()

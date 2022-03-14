@@ -1,0 +1,46 @@
+package:
+  name: torchdata
+  version: "{{ environ.get('BUILD_VERSION') }}"
+
+source:
+  path: "{{ environ.get('SOURCE_ROOT_DIR') }}"
+
+requirements:
+  host:
+    - python
+    - setuptools
+    - cpuonly
+    {{ environ.get('CONDA_PYTORCH_BUILD_CONSTRAINT') }}
+  run:
+    - python
+    - urllib3>=1.25
+    - requests
+    - cpuonly
+    {{ environ.get('CONDA_PYTORCH_CONSTRAINT') }}
+
+build:
+  string: py{{py}}
+  script_env:
+    - BUILD_VERSION
+
+test:
+  imports:
+    - torchdata
+    - torchdata.datapipes
+  source_files:
+    - test
+  requires:
+    - pytest
+    - expecttest
+    - fsspec
+    - numpy
+    # The following packages are not on the default conda channel
+    # - iopath
+    # - rarfile
+
+about:
+  home: https://github.com/pytorch/data
+  license: BSD
+  license_file: LICENSE
+  summary: "Common modular data loading primitives for easily constructing flexible and performant data pipelines for PyTorch users"
+  doc_url: https://pytorch.org/data
