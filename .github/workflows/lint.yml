@@ -44,7 +44,8 @@ jobs:
       - name: Install PyTorch
         run: |
           set -eux
-          python -m pip install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html --user
+          # python -m pip install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html --user
+          python -m pip install torch==1.11.0
       - name: Install dependencies
         run: |
           set -eux

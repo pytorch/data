@@ -8,14 +8,17 @@ on:
   # 4. Use the Branch dropdown to select the release/* branch
   # 5. Click Run workflow
   workflow_dispatch:
+  pull_request:
 
 jobs:
   build_test_upload:
     uses: ./.github/workflows/_build_test_upload.yml
     with:
-      branch: "release/0.3.0"
+      branch: "v0.3.0"
       pre_dev_release: false
       pytorch_version: "1.11.0"
     secrets:
+      PYTORCH_BINARY_AWS_ACCESS_KEY_ID: ${{ secrets.PYTORCH_BINARY_AWS_ACCESS_KEY_ID }}
+      PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY: ${{ secrets.PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY }}
       PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
       CONDA_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_PYTORCHBOT_TOKEN }}
