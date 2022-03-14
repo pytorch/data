@@ -27,7 +27,7 @@ rather than torchdata to preserve BC functional parity within torch.
 
 ## Why composable data loading?
 
-Over many years of feedback and organic community usage of the PyTorch `DataLoader` and `Datasets`, we've found that:
+Over many years of feedback and organic community usage of the PyTorch `DataLoader` and `Dataset`, we've found that:
 
 1. The original `DataLoader` bundled too many features together, making them difficult to extend, manipulate, or replace.
    This has created a proliferation of use-case specific `DataLoader` variants in the community rather than an ecosystem
@@ -103,7 +103,7 @@ python setup.py install
 
 ## What are DataPipes?
 
-Early on, we observed widespread confusion between the PyTorch `Datasets` which represented reusable loading tooling
+Early on, we observed widespread confusion between the PyTorch `Dataset` which represented reusable loading tooling
 (e.g. [TorchVision's `ImageFolder`](https://github.com/pytorch/vision/blob/main/torchvision/datasets/folder.py#L272)),
 and those that represented pre-built iterators/accessors over actual data corpora (e.g. TorchVision's
 [ImageNet](https://github.com/pytorch/vision/blob/main/torchvision/datasets/imagenet.py#L21)). This led to an
@@ -148,7 +148,7 @@ It covers three topics: [using DataPipes](https://pytorch.org/data/main/tutorial
 
 ## Usage Examples
 
-There are several data loading implementations of popular datasets across different research domains that use DataPipes.
+There are several data loading implementations of popular datasets across different research domains that use `DataPipes`.
 You can find a few [selected examples here](https://pytorch.org/data/main/examples.html).
 
 ## Frequently Asked Questions (FAQ)
