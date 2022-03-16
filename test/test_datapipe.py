@@ -546,13 +546,13 @@ class TestDataPipe(expecttest.TestCase):
 
         # Functional Test: drop last reduces length
         batch_dp = source_dp.bucketbatch(
-            batch_size=3, drop_last=True, batch_num=100, bucket_num=1, in_batch_shuffle=True
+            batch_size=3, drop_last=True, batch_num=100, bucket_num=1, use_in_batch_shuffle=True
         )
         self.assertEqual(9, len(list(batch_dp.unbatch())))
 
         # Functional Test: drop last is False preserves length
         batch_dp = source_dp.bucketbatch(
-            batch_size=3, drop_last=False, batch_num=100, bucket_num=1, in_batch_shuffle=False
+            batch_size=3, drop_last=False, batch_num=100, bucket_num=1, use_in_batch_shuffle=False
         )
         self.assertEqual(10, len(list(batch_dp.unbatch())))
 
@@ -561,15 +561,15 @@ class TestDataPipe(expecttest.TestCase):
 
         # Functional Test: using sort_key, with in_batch_shuffle
         batch_dp = source_dp.bucketbatch(
-            batch_size=3, drop_last=True, batch_num=100, bucket_num=1, in_batch_shuffle=True, sort_key=_return_self
+            batch_size=3, drop_last=True, batch_num=100, bucket_num=1, use_in_batch_shuffle=True, sort_key=_return_self
         )
         # bucket_num = 1 means there will be no shuffling if a sort key is given
         self.assertEqual([[0, 1, 2], [3, 4, 5], [6, 7, 8]], list(batch_dp))
         self.assertEqual(9, len(list(batch_dp.unbatch())))
 
-        # Functional Test: using sort_key, without in_batch_shuffle
+        # Functional Test: using sort_key, without use_in_batch_shuffle
         batch_dp = source_dp.bucketbatch(
-            batch_size=3, drop_last=True, batch_num=100, bucket_num=2, in_batch_shuffle=False, sort_key=_return_self
+            batch_size=3, drop_last=True, batch_num=100, bucket_num=2, use_in_batch_shuffle=False, sort_key=_return_self
         )
         self.assertEqual(9, len(list(batch_dp.unbatch())))
 
@@ -580,7 +580,7 @@ class TestDataPipe(expecttest.TestCase):
             drop_last=True,
             batch_num=100,
             bucket_num=2,
-            in_batch_shuffle=False,
+            use_in_batch_shuffle=False,
             sort_key=_return_self,
         )
         n_elements_before_reset = 2
