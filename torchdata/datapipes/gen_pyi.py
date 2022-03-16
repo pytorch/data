@@ -4,8 +4,8 @@ import pathlib
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-import torch.utils.data.gen_pyi as core_gen_pyi
-from torch.utils.data.gen_pyi import gen_from_template, get_method_definitions
+import torch.utils.data.datapipes.gen_pyi as core_gen_pyi
+from torch.utils.data.datapipes.gen_pyi import gen_from_template, get_method_definitions
 
 
 def get_lines_base_file(base_file_path: str, to_skip: Optional[Set[str]] = None):
