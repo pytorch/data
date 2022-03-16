@@ -125,7 +125,7 @@ jobs:
       - name: Check out torchdata repository
         uses: actions/checkout@v2
 
-      - name: Install mssing dependency
+      - name: Install missing dependency
         run: pip install requests
 
       - name: Install torchdata
