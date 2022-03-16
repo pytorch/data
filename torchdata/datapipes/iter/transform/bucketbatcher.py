@@ -211,7 +211,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
             if len(buffer) == self.buffer_size:
                 length, token = heapq.heappop(buffer)
                 if batch_size + length > self.max_token_count:
-                    yield batch
+                    yield DataChunk(batch)
                     batch = []
                     batch_size = 0
                 batch.append(token)
@@ -219,10 +219,10 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         while buffer:
             length, token = heapq.heappop(buffer)
             if batch_size + length > self.max_token_count:
-                yield batch
+                yield DataChunk(batch)
                 batch = []
                 batch_size = 0
             batch.append(token)
             batch_size += length
         if batch:
-            yield batch
+            yield DataChunk(batch)
