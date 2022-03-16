@@ -125,6 +125,9 @@ jobs:
       - name: Check out torchdata repository
         uses: actions/checkout@v2
 
+      - name: Install mssing dependency
+        run: pip install requests
+
       - name: Install torchdata
         run: python setup.py install
 
