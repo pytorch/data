@@ -27,11 +27,11 @@ rather than torchdata to preserve BC functional parity within torch.
 
 ## Why composable data loading?
 
-Over many years of feedback and organic community usage of the PyTorch DataLoader and DataSets, we've found that:
+Over many years of feedback and organic community usage of the PyTorch `DataLoader` and `Dataset`, we've found that:
 
-1. The original DataLoader bundled too many features together, making them difficult to extend, manipulate, or replace.
-   This has created a proliferation of use-case specific DataLoader variants in the community rather than an ecosystem
-   of interoperable elements.
+1. The original `DataLoader` bundled too many features together, making them difficult to extend, manipulate, or
+   replace. This has created a proliferation of use-case specific `DataLoader` variants in the community rather than an
+   ecosystem of interoperable elements.
 2. Many libraries, including each of the PyTorch domain libraries, have rewritten the same data loading utilities over
    and over again. We can save OSS maintainers time and effort rewriting, debugging, and maintaining these table-stakes
    elements.
@@ -103,13 +103,13 @@ python setup.py install
 
 ## What are DataPipes?
 
-Early on, we observed widespread confusion between the PyTorch `DataSets` which represented reusable loading tooling
+Early on, we observed widespread confusion between the PyTorch `Dataset` which represented reusable loading tooling
 (e.g. [TorchVision's `ImageFolder`](https://github.com/pytorch/vision/blob/main/torchvision/datasets/folder.py#L272)),
 and those that represented pre-built iterators/accessors over actual data corpora (e.g. TorchVision's
 [ImageNet](https://github.com/pytorch/vision/blob/main/torchvision/datasets/imagenet.py#L21)). This led to an
 unfortunate pattern of siloed inheritance of data tooling rather than composition.
 
-`DataPipe` is simply a renaming and repurposing of the PyTorch `DataSet` for composed usage. A `DataPipe` takes in some
+`DataPipe` is simply a renaming and repurposing of the PyTorch `Dataset` for composed usage. A `DataPipe` takes in some
 access function over Python data structures, `__iter__` for `IterDataPipes` and `__getitem__` for `MapDataPipes`, and
 returns a new access function with a slight transformation applied. For example, take a look at this `JsonParser`, which
 accepts an IterDataPipe over file names and raw streams, and produces a new iterator over the filenames and deserialized
@@ -135,7 +135,7 @@ class JsonParserIterDataPipe(IterDataPipe):
 You can see in this example how DataPipes can be easily chained together to compose graphs of transformations that
 reproduce sophisticated data pipelines, with streamed operation as a first-class citizen.
 
-Under this naming convention, `DataSet` simply refers to a graph of `DataPipes`, and a dataset module like `ImageNet`
+Under this naming convention, `Dataset` simply refers to a graph of `DataPipes`, and a dataset module like `ImageNet`
 can be rebuilt as a factory function returning the requisite composed `DataPipes`. Note that the vast majority of
 initial support is focused on `IterDataPipes`, while more `MapDataPipes` support will come later.
 
@@ -148,8 +148,8 @@ It covers three topics: [using DataPipes](https://pytorch.org/data/main/tutorial
 
 ## Usage Examples
 
-There are several data loading implementations of popular datasets across different research domains that use DataPipes.
-You can find a few [selected examples here](https://pytorch.org/data/main/examples.html).
+There are several data loading implementations of popular datasets across different research domains that use
+`DataPipes`. You can find a few [selected examples here](https://pytorch.org/data/main/examples.html).
 
 ## Frequently Asked Questions (FAQ)
 
