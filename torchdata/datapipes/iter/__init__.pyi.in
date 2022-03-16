@@ -11,7 +11,7 @@ ${init_base}
 from .util.decompressor import CompressionType
 from torchdata.datapipes.map import MapDataPipe
 from torch.utils.data import DataChunk, IterableDataset
-from torch.utils.data._typing import _DataPipeMeta
+from torch.utils.data.datapipes._typing import _DataPipeMeta
 
 from typing import Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union
 
