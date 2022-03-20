@@ -1,4 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+import bz2
 import warnings
 from io import BufferedIOBase
 from typing import Iterable, Iterator, Tuple

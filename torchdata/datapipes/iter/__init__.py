@@ -101,6 +101,7 @@ from torchdata.datapipes.iter.util.ziparchiveloader import (
 __all__ = [
     "Batcher",
     "BucketBatcher",
+    "Bz2FileLoader",
     "CSVDictParser",
     "CSVParser",
     "Collator",
@@ -162,7 +163,6 @@ __all__ = [
     "ZipArchiveLoader",
     "ZipArchiveReader",
     "Zipper",
-    "Bz2FileLoader",
 ]
 
 # Please keep this list sorted

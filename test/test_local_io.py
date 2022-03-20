@@ -1,4 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+import bz2
 import hashlib
 import itertools
 import lzma
@@ -428,8 +429,8 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             fname = os.path.basename(path)
             temp_bz2file_pathname = os.path.join(self.temp_dir.name, f"{fname}.bz2")
             with open(path) as f:
-                with bz2.open(temp_bz2file_pathname, "w") as bz2:
-                    bz2.write(f.read().encode("utf-8"))
+                with bz2.open(temp_bz2file_pathname, "w") as f_bz2:
+                    f_bz2.write(f.read().encode("utf-8"))
 
     def test_bz2_archive_reader_iterdatapipe(self):
         self._write_test_bz2_files()
@@ -476,6 +477,12 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             expected_file = xz_file_name[:-3]
             with open(expected_file, "rb") as f:
                 self.assertEqual(f.read(), xz_stream.read())
+
+    def _decompressor_bz2_test_helper(self, bz2_decompress_dp):
+        for bz2_file_name, bz2_stream in bz2_decompress_dp:
+            expected_file = bz2_file_name.rsplit(".", 1)[0]
+            with open(expected_file, "rb") as f:
+                self.assertEqual(f.read(), bz2_stream.read())
 
     def _write_single_gz_file(self):
         import gzip
@@ -531,7 +538,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         bz2_file_dp = FileLister(self.temp_dir.name, "*.bz2")
         bz2_load_dp = FileOpener(bz2_file_dp, mode="b")
         bz2_decompress_dp = Decompressor(bz2_load_dp, file_type="bz2")
-        self._decompressor_xz_test_helper(bz2_decompress_dp)
+        self._decompressor_bz2_test_helper(bz2_decompress_dp)
 
         # Functional Test: work without file type as input for .tar files
         tar_decompress_dp = Decompressor(tar_load_dp, file_type=None)
@@ -544,6 +551,10 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Functional Test: work without file type as input for .tar.gz files
         tar_gz_decompress_dp = Decompressor(tar_gz_load_dp, file_type=None)
         self._decompressor_tar_test_helper(self.temp_files, tar_gz_decompress_dp)
+
+        # Functional Test: work without file type as input for .bz2 files
+        bz2_decompress_dp = Decompressor(bz2_load_dp, file_type=None)
+        self._decompressor_bz2_test_helper(bz2_decompress_dp)
 
         # Functional Test: Compression Type is works for both upper and lower case strings
         tar_decompress_dp = Decompressor(tar_load_dp, file_type="TAr")
