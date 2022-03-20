@@ -31,7 +31,7 @@ class Bz2FileLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         >>> from torchdata.datapipes.iter import FileLister, FileOpener
         >>> datapipe1 = FileLister(".", "*.bz2")
         >>> datapipe2 = FileOpener(datapipe1, mode="b")
-        >>> bz2_loader_dp = datapipe2.load_from_xz()
+        >>> bz2_loader_dp = datapipe2.load_from_bz2()
         >>> for _, stream in bz2_loader_dp:
         >>>     print(stream.read())
         b'0123456789abcdef'

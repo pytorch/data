@@ -53,6 +53,7 @@ These DataPipes help opening and decompressing archive files of different format
     TarArchiveLoader
     XzFileLoader
     ZipArchiveLoader
+    Bz2FileLoader
 
 Augmenting DataPipes
 -----------------------------
