@@ -21,7 +21,7 @@ class CompressionType(Enum):
     LZMA = "lzma"
     TAR = "tar"
     ZIP = "zip"
-    BZIP2 = "bzip2"
+    BZIP2 = "bz2"
 
 
 @functional_datapipe("decompress")
