@@ -44,6 +44,7 @@ from torchdata.datapipes.iter.transform.bucketbatcher import (
     MaxTokenBucketizerIterDataPipe as MaxTokenBucketizer,
 )
 from torchdata.datapipes.iter.transform.flatmap import FlatMapperIterDataPipe as FlatMapper
+from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
 from torchdata.datapipes.iter.util.cacheholder import (
     EndOnDiskCacheHolderIterDataPipe as EndOnDiskCacheHolder,
     InMemoryCacheHolderIterDataPipe as InMemoryCacheHolder,
@@ -161,6 +162,7 @@ __all__ = [
     "ZipArchiveLoader",
     "ZipArchiveReader",
     "Zipper",
+    "Bz2FileLoader",
 ]
 
 # Please keep this list sorted
