@@ -1,4 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+import bz2
 import gzip
 import lzma
 import os
@@ -20,6 +21,7 @@ class CompressionType(Enum):
     LZMA = "lzma"
     TAR = "tar"
     ZIP = "zip"
+    BZIP2 = "bzip2"
 
 
 @functional_datapipe("decompress")
@@ -50,6 +52,7 @@ class DecompressorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         types.LZMA: lambda file: lzma.LZMAFile(file),
         types.TAR: lambda file: tarfile.open(fileobj=file, mode="r:*"),
         types.ZIP: lambda file: zipfile.ZipFile(file=file),
+        types.BZIP2: lambda file: bz2.BZ2File(filename=file),
     }
 
     def __init__(
@@ -77,6 +80,8 @@ class DecompressorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
             return self.types.GZIP
         elif ext == ".zip":
             return self.types.ZIP
+        elif ext == ".bz2":
+            return self.types.BZIP2
         else:
             raise RuntimeError(
                 f"File at {path} has file extension {ext}, which does not match what are supported by"
