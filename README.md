@@ -1,7 +1,7 @@
 # TorchData
 
 [**Why torchdata?**](#why-composable-data-loading) | [**Install guide**](#installation) |
-[**What are DataPipes?**](#what-are-datapipes) | [**Prototype Usage and Feedback**](#prototype-usage-and-feedback) |
+[**What are DataPipes?**](#what-are-datapipes) | [**Beta Usage and Feedback**](#beta-usage-and-feedback) |
 [**Contributing**](#contributing) | [**Future Plans**](#future-plans)
 
 **This library is currently in the Beta stage and currently does not have a stable release. The API may change based on
