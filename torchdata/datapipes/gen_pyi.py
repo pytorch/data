@@ -1,9 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+import os
 import pathlib
+from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-import torch.utils.data.gen_pyi as core_gen_pyi
-from torch.utils.data.gen_pyi import FileManager, get_method_definitions
+import torch.utils.data.datapipes.gen_pyi as core_gen_pyi
+from torch.utils.data.datapipes.gen_pyi import gen_from_template, get_method_definitions
 
 
 def get_lines_base_file(base_file_path: str, to_skip: Optional[Set[str]] = None):
@@ -18,14 +20,17 @@ def get_lines_base_file(base_file_path: str, to_skip: Optional[Set[str]] = None)
                 if skip_line in line:
                     skip_flag = True
             if not skip_flag:
+                line = line.replace("\n", "")
                 res.append(line)
         return res
 
 
-def main() -> None:
+def gen_pyi() -> None:
+    ROOT_DIR = Path(__file__).parent.resolve()
+    print(f"Generating DataPipe Python interface file in {ROOT_DIR}")
 
     iter_init_base = get_lines_base_file(
-        "iter/__init__.py",
+        os.path.join(ROOT_DIR, "iter/__init__.py"),
         {"from torch.utils.data import IterDataPipe", "# Copyright (c) Facebook, Inc. and its affiliates."},
     )
 
@@ -69,14 +74,16 @@ def main() -> None:
 
     iter_method_definitions = core_iter_method_definitions + td_iter_method_definitions
 
-    fm = FileManager(install_dir=".", template_dir=".", dry_run=False)
-    fm.write_with_template(
-        filename="iter/__init__.pyi",
-        template_fn="iter/__init__.pyi.in",
-        env_callable=lambda: {"init_base": iter_init_base, "IterDataPipeMethods": iter_method_definitions},
+    replacements = [("${init_base}", iter_init_base, 0), ("${IterDataPipeMethods}", iter_method_definitions, 4)]
+
+    gen_from_template(
+        dir=str(ROOT_DIR),
+        template_name="iter/__init__.pyi.in",
+        output_name="iter/__init__.pyi",
+        replacements=replacements,
     )
     # TODO: Add map_method_definitions when there are MapDataPipes defined in this library
 
 
 if __name__ == "__main__":
-    main()  # TODO: Run this script automatically within the build and CI process
+    gen_pyi()

@@ -3,6 +3,7 @@ dist/*
 torchdata.egg-info/*
 
 torchdata/version.py
+torchdata/datapipes/iter/__init__.pyi
 
 # Editor temporaries
 *.swn
