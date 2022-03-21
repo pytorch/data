@@ -139,6 +139,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
     def test_serializable(self):
         picklable_datapipes: List = [
             (iterdp.BucketBatcher, IterableWrapper([0, 0, 0, 0, 0, 0, 0]), (5,), {}),
+            (iterdp.Bz2FileLoader, None, (), {}),
             (
                 iterdp.CSVDictParser,
                 IterableWrapper(
@@ -256,6 +257,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         # Most of them return streams not comparable by `self.assertEqual`
         # Others are similar to caching where the outputs depend on other DataPipes
         dp_skip_comparison = {
+            iterdp.Bz2FileLoader,
             iterdp.Decompressor,
             iterdp.FileOpener,
             iterdp.FSSpecFileOpener,
