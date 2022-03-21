@@ -48,12 +48,12 @@ These DataPipes help opening and decompressing archive files of different format
     :toctree: generated/
     :template: datapipe.rst
 
+    Bz2FileLoader
     Decompressor
     RarArchiveLoader
     TarArchiveLoader
     XzFileLoader
     ZipArchiveLoader
-    Bz2FileLoader
 
 Augmenting DataPipes
 -----------------------------
