@@ -2,7 +2,7 @@ name: Push Nightly Release
 
 on:
   schedule:
-    - cron: 30 23 * * *
+    - cron: 00 12 * * *
 
 jobs:
   build_test_upload:
@@ -14,4 +14,4 @@ jobs:
     secrets:
       PYTORCH_BINARY_AWS_ACCESS_KEY_ID: ${{ secrets.PYTORCH_BINARY_AWS_ACCESS_KEY_ID }}
       PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY: ${{ secrets.PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY }}
-      CONDA_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_PYTORCHBOT_TOKEN }}
+      CONDA_NIGHTLY_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_NIGHTLY_PYTORCHBOT_TOKEN }}
