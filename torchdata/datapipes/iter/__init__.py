@@ -44,6 +44,7 @@ from torchdata.datapipes.iter.transform.bucketbatcher import (
     MaxTokenBucketizerIterDataPipe as MaxTokenBucketizer,
 )
 from torchdata.datapipes.iter.transform.flatmap import FlatMapperIterDataPipe as FlatMapper
+from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
 from torchdata.datapipes.iter.util.cacheholder import (
     EndOnDiskCacheHolderIterDataPipe as EndOnDiskCacheHolder,
     InMemoryCacheHolderIterDataPipe as InMemoryCacheHolder,
@@ -100,6 +101,7 @@ from torchdata.datapipes.iter.util.ziparchiveloader import (
 __all__ = [
     "Batcher",
     "BucketBatcher",
+    "Bz2FileLoader",
     "CSVDictParser",
     "CSVParser",
     "Collator",
