@@ -20,7 +20,9 @@ on:
       PYPI_TOKEN:
         required: false
       CONDA_PYTORCHBOT_TOKEN:
-        required: true
+        required: false
+      CONDA_NIGHTLY_PYTORCHBOT_TOKEN:
+        required: false
 
 jobs:
   get_release_type:
@@ -236,7 +238,11 @@ jobs:
             CONDA_CHANNEL=pytorch-${{ needs.get_release_type.outputs.type }}
           fi
           set -x
-          anaconda -t "${CONDA_PYTORCHBOT_TOKEN}" upload ./*/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
+          if [[ ${{ needs.get_release_type.outputs.type }} == 'nightly' ]]; then
+            anaconda -t "${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}" upload ./*/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
+          else
+            anaconda -t "${CONDA_PYTORCHBOT_TOKEN}" upload ./*/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
+          fi
 
   build_docs:
     if: always() && ( needs.wheel_upload.outputs.upload == 'true' || needs.conda_upload.outputs.upload == 'true' )
