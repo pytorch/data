@@ -1,24 +1,17 @@
 name: Push Nightly Release
 
 on:
-  # [ Note: Manually Trigger the Workflow ]
-  # 1. Go to Actions under pytorch/data repo
-  # 2. In the left sidebar, click the workflow you want to run
-  # 3. Above the list of workflow runs, select Run workflow
-  # 4. Use the Branch dropdown to select the release/* branch
-  # 5. Click Run workflow
-  workflow_dispatch:
-  # TODO: Automatically trigger nightly release
-  # schedule:
-  #   - cron: 30 23 * * *
+  schedule:
+    - cron: 30 23 * * *
 
 jobs:
   build_test_upload:
     uses: ./.github/workflows/_build_test_upload.yml
     with:
-      branch: ""
+      branch: "main"
       pre_dev_release: true
       pytorch_version: ""
     secrets:
       PYTORCH_BINARY_AWS_ACCESS_KEY_ID: ${{ secrets.PYTORCH_BINARY_AWS_ACCESS_KEY_ID }}
       PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY: ${{ secrets.PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY }}
+      CONDA_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_PYTORCHBOT_TOKEN }}

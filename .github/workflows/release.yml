@@ -17,5 +17,7 @@ jobs:
       pre_dev_release: false
       pytorch_version: ""
     secrets:
+      PYTORCH_BINARY_AWS_ACCESS_KEY_ID: ${{ secrets.PYTORCH_BINARY_AWS_ACCESS_KEY_ID }}
+      PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY: ${{ secrets.PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY }}
       PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
       CONDA_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_PYTORCHBOT_TOKEN }}
