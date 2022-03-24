@@ -20,6 +20,8 @@ def _load_lib(lib: str):
     # In this case, we expect that `libtorchdata` is available somewhere
     # in the search path of dynamic loading mechanism, and importing `_torchdata`,
     # which depends on `libtorchdata` and dynamic loader will handle it for us.
+    print("[Extension] _torchdata path: ", path)
+    print("[Extension] _torchdata path exists: ", path.exists())
     if path.exists():
         torch.ops.load_library(path)
         torch.classes.load_library(path)
