@@ -61,7 +61,7 @@ define_library(
 ################################################################################
 # _torchdata.so
 ################################################################################
-if (BUILD_TORCHAUDIO_PYTHON_EXTENSION)
+if (BUILD_TORCHDATA_PYTHON_EXTENSION)
   # See https://github.com/pytorch/pytorch/issues/38122
   find_library(TORCH_PYTHON_LIBRARY torch_python PATHS "${TORCH_INSTALL_PREFIX}/lib")
   if (WIN32)
@@ -116,10 +116,10 @@ if (BUILD_TORCHAUDIO_PYTHON_EXTENSION)
   # END OF CUSTOMIZATION LOGICS
   #----------------------------------------------------------------------------#
   define_extension(
-    _torchaudio
+    _torchdata
     "${EXTENSION_SOURCES}"
-    libtorchaudio
-    "${LIBTORCHAUDIO_COMPILE_DEFINITIONS}"
+    libtorchdata
+    "${LIBTORCHDATA_COMPILE_DEFINITIONS}"
     )
 endif()
 

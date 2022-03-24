@@ -37,8 +37,8 @@ _BUILD_S3 = _get_build("BUILD_S3", False)
 
 def get_ext_modules():
     modules = [
-        Extension(name="torchaudio.lib.libtorchaudio", sources=[]),
-        Extension(name="torchaudio._torchaudio", sources=[]),
+        Extension(name="torchdata.lib.libtorchdata", sources=[]),
+        Extension(name="torchdata._torchdata", sources=[]),
     ]
     return modules
 
