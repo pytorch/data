@@ -17,8 +17,7 @@ if(NOT CMAKE_VERSION VERSION_LESS 3.15.0)
 endif()
 
 project(torchdata)
-enable_language(C)
-enable_language(CXX)
+
 
 # check and set CMAKE_CXX_STANDARD
 string(FIND "${CMAKE_CXX_FLAGS}" "-std=c++" env_cxx_standard)
@@ -30,13 +29,6 @@ endif()
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_C_STANDARD 11)
-
-# https://developercommunity.visualstudio.com/t/VS-16100-isnt-compatible-with-CUDA-11/1433342
-if(MSVC)
-  if(USE_CUDA)
-    set(CMAKE_CXX_STANDARD 17)
-  endif()
-endif()
 
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -56,6 +48,7 @@ if(APPLE)
 endif()
 
 # Options
+option(BUILD_TORCHAUDIO_PYTHON_EXTENSION "Build Python extension" OFF)
 option(BUILD_S3 "Build s3 io functionality" OFF)
 
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/cmake")
