@@ -28,4 +28,5 @@ DataPipes
     Mapper
     SequenceWrapper
     Shuffler
+    UnZipper
     Zipper
