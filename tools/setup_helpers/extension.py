@@ -37,7 +37,11 @@ _BUILD_PYTHON_VERSION = os.environ.get("BUILD_PYTHON_VERSION", None)
 
 def get_ext_modules():
     if _BUILD_S3:
-        return [Extension(name="torchdata._torchdata", sources=[])]
+        modules = [
+            Extension(name="torchdata.lib.libtorchdata", sources=[]),
+            Extension(name="torchdata._torchdata", sources=[]),
+        ]
+        return modules
     else:
         return []
 
