@@ -12,6 +12,7 @@ if DILL_AVAILABLE:
     dill.extend(use_dill=False)
 
 
+# @functional_datapipe("to_map_datapipe")  # This line must be kept for .pyi signature parser
 class IterToMapConverterMapDataPipe(MapDataPipe):
     r"""
     Lazily load data from ``IterDataPipe`` to construct a ``MapDataPipe`` with

@@ -56,6 +56,7 @@ def gen_pyi() -> None:
         "read_from_xz": "IterDataPipe",
         "read_from_zip": "IterDataPipe",
         "extract": "IterDataPipe",
+        "to_map_datapipe": "MapDataPipe",
     }
     method_name_exlusion: Set[str] = {"def extract", "read_from_tar", "read_from_xz", "read_from_zip"}
 
@@ -74,15 +75,14 @@ def gen_pyi() -> None:
 
     iter_method_definitions = core_iter_method_definitions + td_iter_method_definitions
 
-    replacements = [("${init_base}", iter_init_base, 0), ("${IterDataPipeMethods}", iter_method_definitions, 4)]
+    iter_replacements = [("${init_base}", iter_init_base, 0), ("${IterDataPipeMethods}", iter_method_definitions, 4)]
 
     gen_from_template(
         dir=str(ROOT_DIR),
         template_name="iter/__init__.pyi.in",
         output_name="iter/__init__.pyi",
-        replacements=replacements,
+        replacements=iter_replacements,
     )
-    # TODO: Add map_method_definitions when there are MapDataPipes defined in this library
 
 
 if __name__ == "__main__":
