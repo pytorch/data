@@ -22,8 +22,8 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - macos-latest
-          - ubuntu-latest
+          # - macos-latest
+          # - ubuntu-latest
           - windows-latest
         python-version:
           - 3.7
@@ -31,7 +31,7 @@ jobs:
           - 3.9
         with-s3:
           - 1
-          - 0
+          # - 0
     steps:
       - name: Setup additional system libraries
         if: startsWith( matrix.os, 'ubuntu' )
