@@ -17,6 +17,8 @@ if(NOT CMAKE_VERSION VERSION_LESS 3.15.0)
 endif()
 
 project(torchdata)
+enable_language(C)
+enable_language(CXX)
 
 # check and set CMAKE_CXX_STANDARD
 string(FIND "${CMAKE_CXX_FLAGS}" "-std=c++" env_cxx_standard)
