@@ -53,7 +53,6 @@ jobs:
         id: get_release_type
 
   wheel_build_test:
-    if: ${{ needs.get_release_type.outputs.type }}
     needs: get_release_type
     runs-on: ${{ matrix.os }}
     strategy:
@@ -107,7 +106,7 @@ jobs:
           path: dist/torchdata*.whl
 
   wheel_upload:
-    if: always() && ${{ needs.get_release_type.outputs.type }}
+    if: always()
     needs: [get_release_type, wheel_build_test]
     runs-on: ubuntu-latest
     outputs:
@@ -160,7 +159,6 @@ jobs:
             dist/torchdata*.whl
 
   conda_build_test:
-    if: ${{ needs.get_release_type.outputs.type }}
     needs: get_release_type
     runs-on: ${{ matrix.os }}
     strategy:
@@ -201,7 +199,7 @@ jobs:
           path: conda-bld/*/torchdata-*.tar.bz2
 
   conda_upload:
-    if: always() && ${{ needs.get_release_type.outputs.type }}
+    if: always()
     needs: [get_release_type, conda_build_test]
     runs-on: ubuntu-latest
     container: continuumio/miniconda3
