@@ -22,12 +22,23 @@ set(
 # START OF CUSTOMIZATION LOGICS
 #------------------------------------------------------------------------------#
 if(BUILD_S3)
+  message(STATUS "Setting up S3 IO building specifications")
   find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
   list(
     APPEND
     LIBTORCHDATA_LINK_LIBRARIES
     ${AWSSDK_LINK_LIBRARIES}
     ${AWSSDK_PLATFORM_DEPS}
+    )
+  list(
+    APPEND
+    pybind/S3Handler/pybind.cpp
+    pybind/S3Handler/S3Handler.cpp
+    )
+  list(
+    APPEND
+    LIBTORCHDATA_COMPILE_DEFINITIONS
+    INCLUDE_S3_IO
     )
 endif()
 #------------------------------------------------------------------------------#
@@ -58,70 +69,70 @@ define_library(
   )
 
 
-################################################################################
-# _torchdata.so
-################################################################################
-if (BUILD_TORCHDATA_PYTHON_EXTENSION)
-  # See https://github.com/pytorch/pytorch/issues/38122
-  find_library(TORCH_PYTHON_LIBRARY torch_python PATHS "${TORCH_INSTALL_PREFIX}/lib")
-  if (WIN32)
-    find_package(Python3 ${PYTHON_VERSION} EXACT COMPONENTS Development)
-    set(ADDITIONAL_ITEMS Python3::Python)
-  endif()
-  function(define_extension name sources libraries definitions)
-    add_library(${name} SHARED ${sources})
-    target_compile_definitions(${name} PRIVATE "${definitions}")
-    target_include_directories(
-      ${name} PRIVATE ${PROJECT_SOURCE_DIR} ${Python_INCLUDE_DIR})
-    target_link_libraries(
-      ${name}
-      ${libraries}
-      ${TORCH_PYTHON_LIBRARY}
-      ${ADDITIONAL_ITEMS}
-      )
-    set_target_properties(${name} PROPERTIES PREFIX "")
-    if (MSVC)
-      set_target_properties(${name} PROPERTIES SUFFIX ".pyd")
-    endif(MSVC)
-    if (APPLE)
-      # https://github.com/facebookarchive/caffe2/issues/854#issuecomment-364538485
-      # https://github.com/pytorch/pytorch/commit/73f6715f4725a0723d8171d3131e09ac7abf0666
-      set_target_properties(${name} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
-    endif()
-    install(
-      TARGETS ${name}
-      LIBRARY DESTINATION .
-      RUNTIME DESTINATION .  # For Windows
-      )
-  endfunction()
+# ################################################################################
+# # _torchdata.so
+# ################################################################################
+# if (BUILD_TORCHDATA_PYTHON_EXTENSION)
+#   # See https://github.com/pytorch/pytorch/issues/38122
+#   find_library(TORCH_PYTHON_LIBRARY torch_python PATHS "${TORCH_INSTALL_PREFIX}/lib")
+#   if (WIN32)
+#     find_package(Python3 ${PYTHON_VERSION} EXACT COMPONENTS Development)
+#     set(ADDITIONAL_ITEMS Python3::Python)
+#   endif()
+#   function(define_extension name sources libraries definitions)
+#     add_library(${name} SHARED ${sources})
+#     target_compile_definitions(${name} PRIVATE "${definitions}")
+#     target_include_directories(
+#       ${name} PRIVATE ${PROJECT_SOURCE_DIR} ${Python_INCLUDE_DIR})
+#     target_link_libraries(
+#       ${name}
+#       ${libraries}
+#       ${TORCH_PYTHON_LIBRARY}
+#       ${ADDITIONAL_ITEMS}
+#       )
+#     set_target_properties(${name} PROPERTIES PREFIX "")
+#     if (MSVC)
+#       set_target_properties(${name} PROPERTIES SUFFIX ".pyd")
+#     endif(MSVC)
+#     if (APPLE)
+#       # https://github.com/facebookarchive/caffe2/issues/854#issuecomment-364538485
+#       # https://github.com/pytorch/pytorch/commit/73f6715f4725a0723d8171d3131e09ac7abf0666
+#       set_target_properties(${name} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
+#     endif()
+#     install(
+#       TARGETS ${name}
+#       LIBRARY DESTINATION .
+#       RUNTIME DESTINATION .  # For Windows
+#       )
+#   endfunction()
 
-  set(
-    EXTENSION_SOURCES
-    pybind/pybind.cpp
-    )
-  #----------------------------------------------------------------------------#
-  # START OF CUSTOMIZATION LOGICS
-  #----------------------------------------------------------------------------#
-  if(BUILD_S3)
-    message(STATUS "Setting up S3 IO building specifications")
-    find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
+#   set(
+#     EXTENSION_SOURCES
+#     pybind/pybind.cpp
+#     )
+#   #----------------------------------------------------------------------------#
+#   # START OF CUSTOMIZATION LOGICS
+#   #----------------------------------------------------------------------------#
+#   if(BUILD_S3)
+#     message(STATUS "Setting up S3 IO building specifications")
+#     find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
 
-    list(
-      APPEND
-      EXTENSION_SOURCES
-      pybind/S3Handler/S3Handler.cpp
-      )
-  endif()
-  #----------------------------------------------------------------------------#
-  # END OF CUSTOMIZATION LOGICS
-  #----------------------------------------------------------------------------#
-  define_extension(
-    _torchdata
-    "${EXTENSION_SOURCES}"
-    libtorchdata
-    "${LIBTORCHDATA_COMPILE_DEFINITIONS}"
-    )
-endif()
+#     list(
+#       APPEND
+#       EXTENSION_SOURCES
+#       pybind/S3Handler/S3Handler.cpp
+#       )
+#   endif()
+#   #----------------------------------------------------------------------------#
+#   # END OF CUSTOMIZATION LOGICS
+#   #----------------------------------------------------------------------------#
+#   define_extension(
+#     _torchdata
+#     "${EXTENSION_SOURCES}"
+#     libtorchdata
+#     "${LIBTORCHDATA_COMPILE_DEFINITIONS}"
+#     )
+# endif()
 
 # if(BUILD_S3)
   # message(STATUS "Building S3 IO functionality")

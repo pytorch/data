@@ -4,12 +4,15 @@
 #include <string>
 #include <vector>
 
+#ifdef INCLUDE_S3_IO
 #include "S3Handler.h"
+#endif
 
 namespace py = pybind11;
 using torchdata::S3Handler;
 PYBIND11_MODULE(_torchdata, m)
 {
+#ifdef INCLUDE_S3_IO
     py::class_<S3Handler>(m, "S3Handler")
         .def(py::init<const long, const std::string &>())
         .def("s3_read",
@@ -64,4 +67,5 @@ PYBIND11_MODULE(_torchdata, m)
 
                 return s3_handler;
             }));
+#endif
 }
