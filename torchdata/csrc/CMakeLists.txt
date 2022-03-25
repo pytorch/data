@@ -1,3 +1,10 @@
+# See https://github.com/pytorch/pytorch/issues/38122
+find_library(TORCH_PYTHON_LIBRARY torch_python PATHS "${TORCH_INSTALL_PREFIX}/lib")
+if (WIN32)
+  find_package(Python3 ${PYTHON_VERSION} EXACT COMPONENTS Development)
+  set(ADDITIONAL_ITEMS Python3::Python)
+endif()
+
 ################################################################################
 # libtorchdata
 ################################################################################
@@ -48,6 +55,11 @@ function (define_library name source include_dirs link_libraries compile_defs)
     RUNTIME DESTINATION lib  # For Windows
     )
 endfunction()
+
+message(STATUS "LIBTORCHDATA_SOURCES: ${LIBTORCHDATA_SOURCES}")
+message(STATUS "LIBTORCHDATA_INCLUDE_DIRS: ${LIBTORCHDATA_INCLUDE_DIRS}")
+message(STATUS "LIBTORCHDATA_LINK_LIBRARIES: ${LIBTORCHDATA_LINK_LIBRARIES}")
+message(STATUS "LIBTORCHDATA_COMPILE_DEFINITIONS: ${LIBTORCHDATA_COMPILE_DEFINITIONS}")
 
 define_library(
   libtorchdata
