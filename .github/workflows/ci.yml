@@ -61,24 +61,24 @@ jobs:
           echo "/home/runner/.local/bin" >> $GITHUB_PATH
       - name: Install test requirements
         run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile
-      - name: Install AWS-SDK-CPP on Windows for S3 IO datapipes
-        if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
-        run: |
-          git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
-          cd aws-sdk-cpp
-          cmake -S . -B build -GNinja -DBUILD_ONLY="s3;transfer" -DENABLE_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --config Release
-          cmake --install build --config Release
-      - name: Install AWS-SDK-CPP on Non-Windows for S3 IO datapipes
-        if: matrix.with-s3 == 1 && matrix.os != 'windows-latest'
-        run: |
-          git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
-          cd aws-sdk-cpp/
-          mkdir sdk-build
-          cd sdk-build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DENABLE_TESTING=OFF
-          make
-          sudo make install
+      # - name: Install AWS-SDK-CPP on Windows for S3 IO datapipes
+      #   if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
+      #   run: |
+      #     git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
+      #     cd aws-sdk-cpp
+      #     cmake -S . -B build -GNinja -DBUILD_ONLY="s3;transfer" -DENABLE_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
+      #     cmake --build build --config Release
+      #     cmake --install build --config Release
+      # - name: Install AWS-SDK-CPP on Non-Windows for S3 IO datapipes
+      #   if: matrix.with-s3 == 1 && matrix.os != 'windows-latest'
+      #   run: |
+      #     git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
+      #     cd aws-sdk-cpp/
+      #     mkdir sdk-build
+      #     cd sdk-build
+      #     cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DENABLE_TESTING=OFF
+      #     make
+      #     sudo make install
       - name: Build TorchData
         run: python setup.py develop
         env:
