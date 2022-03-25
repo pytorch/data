@@ -84,6 +84,7 @@ jobs:
         env:
           BUILD_S3: ${{ matrix.with-s3 }}
           BUILD_PYTHON_VERSION: ${{ matrix.python-version }}
+          BUILD_TORCHDATA_PYTHON_EXTENSION: TRUE
       - name: Run DataPipes tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run:
