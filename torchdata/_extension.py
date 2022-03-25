@@ -60,4 +60,4 @@ def _init_extension():
     torch.classes.load_library(ext_specs.origin)
 
 
-# _init_extension()
+_init_extension()
