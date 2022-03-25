@@ -19,7 +19,8 @@ except ImportError:
     import operator
     from functools import reduce
 
-    prod = partial(reduce, operator.mul, initializer=1)
+    def prod(xs):
+        return reduce(operator.mul, xs, 1)
 
 try:
     import google.protobuf as _protobuf

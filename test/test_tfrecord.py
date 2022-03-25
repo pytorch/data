@@ -9,7 +9,7 @@ import numpy as np
 
 import torch
 
-from _utils._common_utils_for_test import create_temp_dir, reset_after_n_next_calls
+from _utils._common_utils_for_test import reset_after_n_next_calls
 from torchdata.datapipes.iter import (
     FileLister,
     FileOpener,
@@ -20,91 +20,22 @@ from torchdata.datapipes.iter import (
     TFRecordLoader,
 )
 
-try:
-    import tensorflow as tf
-
-    HAS_TF = True
-except ImportError:
-    HAS_TF = False
-skipIfNoTF = unittest.skipIf(not HAS_TF, "no tensorflow")
-
-
-def create_temp_tfrecord_files(temp_dir: str):
-    with tf.io.TFRecordWriter(os.path.join(temp_dir, "example.tfrecord")) as writer:
-        for _ in range(4):
-            x = tf.random.uniform(
-                [
-                    10,
-                ]
-            )
-
-            record_bytes = tf.train.Example(
-                features=tf.train.Features(
-                    feature={
-                        "x_float": tf.train.Feature(float_list=tf.train.FloatList(value=x)),
-                        "x_int": tf.train.Feature(int64_list=tf.train.Int64List(value=tf.cast(x * 10, "int64"))),
-                        "x_byte": tf.train.Feature(bytes_list=tf.train.BytesList(value=[b"test str"])),
-                    }
-                )
-            ).SerializeToString()
-            writer.write(record_bytes)
-
-    with tf.io.TFRecordWriter(os.path.join(temp_dir, "sequence_example.tfrecord")) as writer:
-        for _ in range(4):
-            x = tf.random.uniform(
-                [
-                    10,
-                ]
-            )
-            rep = int(
-                tf.random.uniform(
-                    [
-                        1,
-                    ]
-                ).numpy()[0]
-                * 10
-                + 1
-            )
-
-            record_bytes = tf.train.SequenceExample(
-                context=tf.train.Features(
-                    feature={
-                        "x_float": tf.train.Feature(float_list=tf.train.FloatList(value=x)),
-                        "x_int": tf.train.Feature(int64_list=tf.train.Int64List(value=tf.cast(x * 10, "int64"))),
-                        "x_byte": tf.train.Feature(bytes_list=tf.train.BytesList(value=[b"test str"])),
-                    }
-                ),
-                feature_lists=tf.train.FeatureLists(
-                    feature_list={
-                        "x_float_seq": tf.train.FeatureList(
-                            feature=[tf.train.Feature(float_list=tf.train.FloatList(value=x))] * rep
-                        ),
-                        "x_int_seq": tf.train.FeatureList(
-                            feature=[tf.train.Feature(int64_list=tf.train.Int64List(value=tf.cast(x * 10, "int64")))]
-                            * rep
-                        ),
-                        "x_byte_seq": tf.train.FeatureList(
-                            feature=[tf.train.Feature(bytes_list=tf.train.BytesList(value=[b"test str"]))] * rep
-                        ),
-                    }
-                ),
-            ).SerializeToString()
-            writer.write(record_bytes)
-
 
 class TestDataPipeTFRecord(expecttest.TestCase):
     def setUp(self):
-        self.temp_dir = create_temp_dir()
-        self.temp_files = create_temp_tfrecord_files(self.temp_dir.name)
-
-    def tearDown(self):
-        try:
-            self.temp_dir.cleanup()
-        except Exception as e:
-            warnings.warn(f"TestDataPipeTFRecord was not able to cleanup temp dir due to {e}")
+        self.temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'fakedata', 'tfrecord')
 
     def assertArrayEqual(self, arr1, arr2):
         np.testing.assert_array_equal(arr1, arr2)
+
+    def _ground_truth_data(self):
+        for i in range(4):
+            x = torch.range(i * 10, (i + 1) * 10)
+            yield {
+                "x_float": x,
+                "x_int": (x * 10).long(),
+                "x_byte": [b"test str"],
+            }
 
     @skipIfNoTF
     @torch.no_grad()
@@ -117,15 +48,7 @@ class TestDataPipeTFRecord(expecttest.TestCase):
         tfrecord_parser = datapipe2.load_from_tfrecord()
         result = list(tfrecord_parser)
         self.assertEqual(len(result), 4)
-        decode_fn = partial(
-            tf.io.parse_single_example,
-            features={
-                "x_float": tf.io.FixedLenFeature([10], tf.float32),
-                "x_int": tf.io.FixedLenFeature([10], tf.int64),
-                "x_byte": tf.io.FixedLenFeature([], tf.string),
-            },
-        )
-        expected_res = final_expected_res = list(tf.data.TFRecordDataset([filename]).map(decode_fn))
+        expected_res = final_expected_res = list(self._ground_truth_data())
         for true_data, loaded_data in zip(expected_res, result):
             self.assertSetEqual(set(true_data.keys()), set(loaded_data.keys()))
             for key in ["x_float", "x_int"]:
@@ -151,6 +74,11 @@ class TestDataPipeTFRecord(expecttest.TestCase):
                 "x_byte": tf.io.FixedLenFeature([], tf.string),
             },
         )
+        expected_res = [{
+            "x_float": x["x_float"].reshape(5, 2),
+            "x_int": x["x_int"].reshape(5, 2),
+            "x_byte": x["x_byte"],
+        } for x in self._ground_truth_data()]
         expected_res = list(tf.data.TFRecordDataset([filename]).map(decode_fn))
         for true_data, loaded_data in zip(expected_res, result):
             self.assertSetEqual(set(true_data.keys()), set(loaded_data.keys()))
@@ -168,13 +96,9 @@ class TestDataPipeTFRecord(expecttest.TestCase):
         )
         result = list(tfrecord_parser)
         self.assertEqual(len(result), 4)
-        decode_fn = partial(
-            tf.io.parse_single_example,
-            features={
-                "x_float": tf.io.FixedLenFeature([10], tf.float32),
-            },
-        )
-        expected_res = list(tf.data.TFRecordDataset([filename]).map(decode_fn))
+        expected_res = [{
+            "x_float": x["x_float"],
+        } for x in self._ground_truth_data()]
         for true_data, loaded_data in zip(expected_res, result):
             self.assertSetEqual(set(true_data.keys()), set(loaded_data.keys()))
             self.assertArrayEqual(true_data["x_float"].numpy(), loaded_data["x_float"].float().numpy())
