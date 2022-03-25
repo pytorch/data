@@ -82,8 +82,8 @@ class TarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], mode: str = "r:*", length: int = -1):
         deprecation_warning(
             cls.__name__,
-            deprecation_version="0.5",
-            removal_version="0.7",
+            deprecation_version="0.4",
+            removal_version="0.6",
             old_functional_name="read_from_tar",
             new_class_name="TarArchiveLoader",
             new_functional_name="load_from_tar",
