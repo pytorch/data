@@ -80,6 +80,7 @@ class CMakeBuild(build_ext):
             "-DCMAKE_VERBOSE_MAKEFILE=ON",
             f"-DPython_INCLUDE_DIR={distutils.sysconfig.get_python_inc()}",
             f"-DBUILD_S3:BOOL={'ON' if _BUILD_S3 else 'OFF'}",
+            "-DBUILD_TORCHDATA_PYTHON_EXTENSION:BOOL=ON",
         ]
         build_args = ["--target", "install"]
 
