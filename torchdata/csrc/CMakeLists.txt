@@ -1,15 +1,9 @@
-# See https://github.com/pytorch/pytorch/issues/38122
-find_library(TORCH_PYTHON_LIBRARY torch_python PATHS "${TORCH_INSTALL_PREFIX}/lib")
-if (WIN32)
-  find_package(Python3 ${PYTHON_VERSION} EXACT COMPONENTS Development)
-  set(ADDITIONAL_ITEMS Python3::Python)
-endif()
-
 ################################################################################
 # libtorchdata
 ################################################################################
 set(
   LIBTORCHDATA_SOURCES
+  utils.cpp
   )
 
 set(
@@ -35,6 +29,11 @@ if(BUILD_S3)
     LIBTORCHDATA_LINK_LIBRARIES
     ${AWSSDK_LINK_LIBRARIES}
     ${AWSSDK_PLATFORM_DEPS}
+    )
+  list(
+    APPEND
+    LIBTORCHDATA_COMPILE_DEFINITIONS
+    INCLUDE_S3_IO
     )
 endif()
 #------------------------------------------------------------------------------#
