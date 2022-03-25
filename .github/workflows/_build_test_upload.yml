@@ -228,6 +228,7 @@ jobs:
         shell: bash
         env:
           CONDA_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_PYTORCHBOT_TOKEN }}
+          CONDA_NIGHTLY_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_NIGHTLY_PYTORCHBOT_TOKEN }}
         run: |
           conda install -yq anaconda-client
           if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
