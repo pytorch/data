@@ -150,7 +150,7 @@ jobs:
           done
       - name: Install Test Requirements
         if: steps.trigger_build.outputs.value == 'true'
-        run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile tensorflow
+        run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile protobuf
       - name: Run DataPipes Tests with pytest
         if: steps.trigger_build.outputs.value == 'true'
         run:
