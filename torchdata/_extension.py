@@ -5,7 +5,7 @@ from pathlib import Path
 import torch
 from torchdata._internal import module_utils as _mod_utils  # noqa: F401
 
-_LIB_DIR = Path(__file__).parent / "lib"
+_LIB_DIR = Path(__file__).parent
 
 
 def _get_lib_path(lib: str):
