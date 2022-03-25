@@ -9,7 +9,7 @@ from pathlib import Path
 
 from setuptools import find_packages, setup
 from tools import setup_helpers
-from torchdata.datapipes.gen_pyi import gen_pyi
+# from torchdata.datapipes.gen_pyi import gen_pyi
 
 ROOT_DIR = Path(__file__).parent.resolve()
 
@@ -113,4 +113,4 @@ if __name__ == "__main__":
             "clean": clean,
         },
     )
-    gen_pyi()
+    # gen_pyi()

@@ -23,13 +23,7 @@ set(
 # START OF CUSTOMIZATION LOGICS
 #------------------------------------------------------------------------------#
 if(BUILD_S3)
-  find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
-  list(
-    APPEND
-    LIBTORCHDATA_LINK_LIBRARIES
-    ${AWSSDK_LINK_LIBRARIES}
-    ${AWSSDK_PLATFORM_DEPS}
-    )
+  # find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
   list(
     APPEND
     LIBTORCHDATA_COMPILE_DEFINITIONS
@@ -40,6 +34,7 @@ endif()
 # END OF CUSTOMIZATION LOGICS
 #------------------------------------------------------------------------------#
 function (define_library name source include_dirs link_libraries compile_defs)
+  message(STATUS "[LIBTORCHDATA] Defining library")
   add_library(${name} SHARED ${source})
   target_include_directories(${name} PRIVATE ${include_dirs})
   target_link_libraries(${name} ${link_libraries})
@@ -73,12 +68,14 @@ define_library(
 # _torchdata.so
 ################################################################################
 if (BUILD_TORCHDATA_PYTHON_EXTENSION)
+  message(STATUS "Building torchdata python extension")
   # See https://github.com/pytorch/pytorch/issues/38122
   find_library(TORCH_PYTHON_LIBRARY torch_python PATHS "${TORCH_INSTALL_PREFIX}/lib")
   if (WIN32)
     find_package(Python3 ${PYTHON_VERSION} EXACT COMPONENTS Development)
     set(ADDITIONAL_ITEMS Python3::Python)
   endif()
+
   function(define_extension name sources libraries definitions)
     add_library(${name} SHARED ${sources})
     target_compile_definitions(${name} PRIVATE "${definitions}")
@@ -110,26 +107,62 @@ if (BUILD_TORCHDATA_PYTHON_EXTENSION)
     EXTENSION_SOURCES
     pybind/pybind.cpp
     )
+  set(
+    EXTENSION_LINK_LIBRARIES
+    libtorchdata
+  )
   #----------------------------------------------------------------------------#
   # START OF CUSTOMIZATION LOGICS
   #----------------------------------------------------------------------------#
   if(BUILD_S3)
-    message(STATUS "Setting up S3 IO building specifications")
-    find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
+    # message(STATUS "Setting up S3 IO building specifications")
+    # find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
+    # find_package(pybind11 REQUIRED)
+    # set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-    list(
-      APPEND
-      EXTENSION_SOURCES
-      pybind/S3Handler/S3Handler.cpp
-      )
+    # list(
+    #   APPEND
+    #   EXTENSION_SOURCES
+    #   pybind/S3Handler/S3Handler.cpp
+    #   )
+    # list(
+    #   APPEND
+    #   EXTENSION_LINK_LIBRARIES
+    #   ${AWSSDK_LINK_LIBRARIES}
+    #   ${AWSSDK_PLATFORM_DEPS}
+    #   )
   endif()
   #----------------------------------------------------------------------------#
   # END OF CUSTOMIZATION LOGICS
   #----------------------------------------------------------------------------#
+
+  message(STATUS "EXTENSION_SOURCES: ${EXTENSION_SOURCES}")
+  message(STATUS "EXTENSION_LINK_LIBRARIES: ${EXTENSION_LINK_LIBRARIES}")
+  message(STATUS "LIBTORCHDATA_COMPILE_DEFINITIONS: ${LIBTORCHDATA_COMPILE_DEFINITIONS}")
+
+  # pybind11_add_module(_torchdata ${EXTENSION_SOURCES})
+  # # add_library(_torchdata SHARED ${EXTENSION_SOURCES})
+  # target_compile_definitions(_torchdata PRIVATE ${LIBTORCHDATA_COMPILE_DEFINITIONS})
+  # target_link_libraries(_torchdata PRIVATE ${EXTENSION_LINK_LIBRARIES} ${TORCH_PYTHON_LIBRARY} ${ADDITIONAL_ITEMS})
+  # set_target_properties(_torchdata PROPERTIES PREFIX "")
+  # if (MSVC)
+  #   set_target_properties(_torchdata PROPERTIES SUFFIX ".pyd")
+  # endif(MSVC)
+  # if (APPLE)
+  #   # https://github.com/facebookarchive/caffe2/issues/854#issuecomment-364538485
+  #   # https://github.com/pytorch/pytorch/commit/73f6715f4725a0723d8171d3131e09ac7abf0666
+  #   set_target_properties(_torchdata PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
+  # endif()
+  # install(
+  #   TARGETS _torchdata
+  #   LIBRARY DESTINATION .
+  #   RUNTIME DESTINATION .  # For Windows
+  #   )
+
   define_extension(
     _torchdata
     "${EXTENSION_SOURCES}"
-    libtorchdata
+    "${EXTENSION_LINK_LIBRARIES}"
     "${LIBTORCHDATA_COMPILE_DEFINITIONS}"
     )
 endif()
