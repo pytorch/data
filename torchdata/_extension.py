@@ -32,6 +32,8 @@ def _init_extension():
         warnings.warn("torchdata C++ extension is not available.")
         return
 
+    print("[Extension] torch path: ", torch.__file__)
+
     _load_lib("_torchdata")
     # This import is for initializing the methods registered via PyBind11
     # This has to happen after the base library is loaded

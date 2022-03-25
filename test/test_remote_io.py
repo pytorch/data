@@ -18,6 +18,7 @@ from torchdata.datapipes.iter import (
     S3FileLoader,
 )
 
+import torchdata
 
 class TestDataPipeRemoteIO(expecttest.TestCase):
     def setUp(self):
@@ -170,6 +171,8 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             self.assertEqual(expected_csv_path, csv_path)
 
     def test_s3_io_iterdatapipe(self):
+        print("[Extension] torchdata path: ", torchdata.__file__)
+
         # sanity test
         file_urls = ["s3://ai2-public-datasets"]
         try:
