@@ -27,19 +27,37 @@ def _load_lib(lib: str):
         torch.classes.load_library(path)
 
 
+# def _init_extension():
+#     if not _mod_utils.is_module_available("torchdata._torchdata"):
+#         warnings.warn("torchdata C++ extension is not available.")
+#         return
+
+#     import torchdata
+#     print("[Extension] torch path: ", torch.__file__)
+#     print("[Extension] torchdata path: ", torchdata.__file__)
+
+#     _load_lib("_torchdata")
+#     # This import is for initializing the methods registered via PyBind11
+#     # This has to happen after the base library is loaded
+#     from torchdata import _torchdata  # noqa
+
+
 def _init_extension():
-    if not _mod_utils.is_module_available("torchdata._torchdata"):
-        warnings.warn("torchdata C++ extension is not available.")
-        return
+    import importlib
+    import os
 
-    import torchdata
-    print("[Extension] torch path: ", torch.__file__)
-    print("[Extension] torchdata path: ", torchdata.__file__)
+    import torch
 
-    _load_lib("_torchdata")
-    # This import is for initializing the methods registered via PyBind11
-    # This has to happen after the base library is loaded
-    from torchdata import _torchdata  # noqa
+    # load the custom_op_library and register the custom ops
+    lib_dir = os.path.dirname(__file__)
+    loader_details = (importlib.machinery.ExtensionFileLoader, importlib.machinery.EXTENSION_SUFFIXES)
+
+    extfinder = importlib.machinery.FileFinder(lib_dir, loader_details)
+    ext_specs = extfinder.find_spec("_torchdata")
+    if ext_specs is None:
+        raise ImportError("torchdata C++ Extension is not found.")
+    torch.ops.load_library(ext_specs.origin)
+    torch.classes.load_library(ext_specs.origin)
 
 
 _init_extension()
