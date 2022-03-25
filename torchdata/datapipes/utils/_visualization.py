@@ -1,7 +1,7 @@
 import itertools
 from collections import defaultdict
 
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from torch.utils.data.datapipes.iter.combining import _ChildDataPipe, IterDataPipe
 from torch.utils.data.graph import traverse
@@ -147,6 +147,7 @@ def to_graph(dp) -> "graphviz.Digraph":
     graph = graphviz.Digraph(node_attr=node_attr, graph_attr=dict(size="12,12"))
 
     for node in to_nodes(dp):
+        fillcolor: Optional[str]
         if not node.parents:
             fillcolor = "lightblue"
         elif not node.childs:
