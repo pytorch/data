@@ -3,6 +3,8 @@ import warnings
 from functools import wraps
 from typing import Optional
 
+import torch
+
 
 def is_module_available(*modules: str) -> bool:
     r"""Returns if a top-level module with :attr:`name` exists *without**
@@ -60,5 +62,27 @@ def deprecated(direction: str, version: Optional[str] = None):
             return func(*args, **kwargs)
 
         return wrapped
+
+    return decorator
+
+
+def is_s3_io_available():
+    return is_module_available("torchdata._torchdata") and torch.ops.torchdata.is_s3_io_available()
+
+
+def requires_s3_io():
+    if is_s3_io_available():
+
+        def decorator(func):
+            return func
+
+    else:
+
+        def decorator(func):
+            @wraps(func)
+            def wrapped(*args, **kwargs):
+                raise RuntimeError(f"{func.__module__}.{func.__name__} requires S3 IO")
+
+            return wrapped
 
     return decorator

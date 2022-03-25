@@ -2,11 +2,15 @@ from io import BytesIO
 from typing import Iterator, Tuple
 
 import torchdata
+from torchdata._internal import (
+    module_utils as _mod_utils,
+)
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
 
 
+@_mod_utils.requires_s3_io()
 @functional_datapipe("list_file_by_s3")
 class S3FileListerIterDataPipe(IterDataPipe[str]):
     r""":class:`S3FileListerIterDataPipe`.
@@ -56,6 +60,7 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
         return self.length
 
 
+@_mod_utils.requires_s3_io()
 @functional_datapipe("load_file_by_s3")
 class S3FileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r""":class:`S3FileListerIterDataPipe`.

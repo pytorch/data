@@ -47,7 +47,6 @@ def _load_lib(lib: str) -> bool:
     """
     path = _get_lib_path(lib)
     if not path.exists():
-        warnings.warn(f"{path} doesn't exist when trying to import {lib}")
         return False
     torch.ops.load_library(path)
     torch.classes.load_library(path)
@@ -60,12 +59,9 @@ def _init_extension():
         return
 
     _load_lib("libtorchdata")
-    try:
-        # This import is for initializing the methods registered via PyBind11
-        # This has to happen after the base library is loaded
-        from torchdata import _torchdata  # noqa
-    except ImportError as error:
-        warnings.warn(f"torchdata C++ extension unable to load: {error}")
+    # This import is for initializing the methods registered via PyBind11
+    # This has to happen after the base library is loaded
+    from torchdata import _torchdata  # noqa
 
 
 _init_extension()
