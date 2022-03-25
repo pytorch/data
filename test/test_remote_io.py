@@ -171,8 +171,6 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             self.assertEqual(expected_csv_path, csv_path)
 
     def test_s3_io_iterdatapipe(self):
-        print("[Extension] torchdata path: ", torchdata.__file__)
-
         # sanity test
         file_urls = ["s3://ai2-public-datasets"]
         try:
@@ -278,4 +276,5 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
 
 
 if __name__ == "__main__":
+    print("[Extension] torchdata path: ", torchdata.__file__)
     unittest.main()
