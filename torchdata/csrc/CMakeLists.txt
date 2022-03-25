@@ -115,22 +115,22 @@ if (BUILD_TORCHDATA_PYTHON_EXTENSION)
   # START OF CUSTOMIZATION LOGICS
   #----------------------------------------------------------------------------#
   if(BUILD_S3)
-    # message(STATUS "Setting up S3 IO building specifications")
-    # find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
-    # find_package(pybind11 REQUIRED)
-    # set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    message(STATUS "Setting up S3 IO building specifications")
+    find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
+    find_package(pybind11 REQUIRED)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-    # list(
-    #   APPEND
-    #   EXTENSION_SOURCES
-    #   pybind/S3Handler/S3Handler.cpp
-    #   )
-    # list(
-    #   APPEND
-    #   EXTENSION_LINK_LIBRARIES
-    #   ${AWSSDK_LINK_LIBRARIES}
-    #   ${AWSSDK_PLATFORM_DEPS}
-    #   )
+    list(
+      APPEND
+      EXTENSION_SOURCES
+      pybind/S3Handler/S3Handler.cpp
+      )
+    list(
+      APPEND
+      EXTENSION_LINK_LIBRARIES
+      ${AWSSDK_LINK_LIBRARIES}
+      ${AWSSDK_PLATFORM_DEPS}
+      )
   endif()
   #----------------------------------------------------------------------------#
   # END OF CUSTOMIZATION LOGICS
