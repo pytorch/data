@@ -273,6 +273,7 @@ namespace torchdata
         }
 
         Aws::SDKOptions options;
+        options.loggingOptions.logLevel = Utils::Logging::LogLevel::Trace;
         Aws::InitAPI(options);
         S3Handler::s3_handler_cfg_ = setUpS3Config(requestTimeoutMs, region);
         InitializeS3Client();
