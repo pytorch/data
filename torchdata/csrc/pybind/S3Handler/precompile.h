@@ -5,6 +5,8 @@
 #include <string>
 #include <mutex>
 
+#include <torch/extension.h>
+
 #include <aws/core/auth/AWSAuthSigner.h>
 #include <aws/core/Aws.h>
 #include <aws/core/config/AWSProfileConfigLoader.h>

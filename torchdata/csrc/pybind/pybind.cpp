@@ -6,9 +6,6 @@
 using torchdata::S3Handler;
 #endif
 
-// #ifdef INCLUDE_S3_IO
-// namespace py = pybind11;
-// #endif
 PYBIND11_MODULE(_torchdata, m)
 {
 #ifdef INCLUDE_S3_IO
