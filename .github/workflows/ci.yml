@@ -57,8 +57,15 @@ jobs:
         run: |
           pip3 install -r requirements.txt
           pip3 install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
-          pip3 install cmake ninja pybind11
+          pip3 install cmake ninja
           echo "/home/runner/.local/bin" >> $GITHUB_PATH
+      - name: Install pybind11
+        shell: bash
+        run: |
+          pip3 install pybind11
+          PYBIND11_PATH=`pybind11-config --cmakedir`
+          echo "::set-output name=path::$PYBIND11_PATH"
+        id: install_pybind11
       - name: Install AWS-SDK-CPP on Windows for S3 IO datapipes
         if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
         run: |
@@ -78,10 +85,11 @@ jobs:
           make
           sudo make install
       - name: Build TorchData
-        run: pybind11_DIR=`pybind11-config --cmakedir` python setup.py develop
+        run: python setup.py develop
         env:
           BUILD_S3: ${{ matrix.with-s3 }}
           BUILD_PYTHON_VERSION: ${{ matrix.python-version }}
+          pybind11_DIR: ${{ steps.install_pybind11.outputs.path  }}
       - name: Find extension
         shell: bash
         run: ls -al torchdata/_torchdata*

@@ -49,6 +49,13 @@ def get_ext_modules():
 
 
 class CMakeBuild(build_ext):
+    def run(self):
+        try:
+            subprocess.check_output(["cmake", "--version"])
+        except OSError:
+            raise RuntimeError("CMake is not available.") from None
+        super().run()
+
     def build_extension(self, ext):
         # Because the following `cmake` command will build all of `ext_modules`` at the same time,
         # we would like to prevent multiple calls to `cmake`.
@@ -66,11 +73,8 @@ class CMakeBuild(build_ext):
         debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
         cfg = "Debug" if debug else "Release"
 
-        sdk_dir = "C:\\Program Files (x86)\\aws-cpp-sdk-all"
-
         cmake_args = [
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
-            f"-DCMAKE_INSTALL_PREFIX={sdk_dir}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DPython_INCLUDE_DIR={distutils.sysconfig.get_python_inc()}",
