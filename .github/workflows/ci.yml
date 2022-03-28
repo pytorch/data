@@ -71,7 +71,8 @@ jobs:
         run: |
           git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
           cd aws-sdk-cpp
-          cmake -S . -B build -GNinja -DBUILD_ONLY="s3;transfer" -DENABLE_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
+          mkdir sdk-lib
+          cmake -S . -B build -GNinja -DBUILD_ONLY="s3;transfer" -DENABLE_TESTING=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./sdk-lib
           cmake --build build --config Release
           cmake --install build --config Release
       - name: Install AWS-SDK-CPP on Non-Windows for S3 IO datapipes
@@ -79,9 +80,9 @@ jobs:
         run: |
           git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
           cd aws-sdk-cpp/
-          mkdir sdk-build
+          mkdir sdk-build sdk-lib
           cd sdk-build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DENABLE_TESTING=OFF
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DENABLE_TESTING=OFF -DCMAKE_INSTALL_PREFIX=./sdk-lib
           make
           sudo make install
       - name: Build TorchData
@@ -90,7 +91,9 @@ jobs:
           BUILD_S3: ${{ matrix.with-s3 }}
           BUILD_PYTHON_VERSION: ${{ matrix.python-version }}
           pybind11_DIR: ${{ steps.install_pybind11.outputs.path  }}
+          AWSSDK_DIR: ./aws-sdk-cpp/sdk-lib
       - name: Find extension
+        if: ${{ matrix.with-s3 }}
         shell: bash
         run: ls -al torchdata/_torchdata*
       - name: Install test requirements

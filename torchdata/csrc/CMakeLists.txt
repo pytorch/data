@@ -14,7 +14,8 @@ if(BUILD_S3)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
   add_library(_torchdata SHARED "pybind/S3Handler/S3Handler.cpp")
-	target_include_directories(_torchdata PRIVATE ${PROJECT_SOURCE_DIR} ${Python_INCLUDE_DIR})
+	# target_include_directories(_torchdata PRIVATE ${PROJECT_SOURCE_DIR} ${Python_INCLUDE_DIR})
+	target_include_directories(_torchdata PRIVATE ${PROJECT_SOURCE_DIR})
 
   message(STATUS "All linked libs: ${AWSSDK_LINK_LIBRARIES}")
   target_link_libraries(_torchdata PRIVATE ${AWSSDK_LINK_LIBRARIES} ${AWSSDK_PLATFORM_DEPS} Python3::Python)
