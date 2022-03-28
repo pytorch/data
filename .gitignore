@@ -17,6 +17,24 @@ torchdata/datapipes/iter/__init__.pyi
 # macOS dir files
 .DS_Store
 
+## General
+
+*/*.so*
+*/**/*.so*
+torchdata/*.so*
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.cuo
+*.obj
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
 # Compiled python
 *.pyc
 *.pyd
