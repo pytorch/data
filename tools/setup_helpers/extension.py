@@ -1,3 +1,4 @@
+import distutils.sysconfig
 import os
 import platform
 import subprocess
@@ -47,10 +48,6 @@ def get_ext_modules():
         return []
 
 
-# Based off of pybiind cmake_example
-# https://github.com/pybind/cmake_example/blob/2440893c60ed2578fb127dc16e6b348fa0be92c1/setup.py
-# and torchaudio CMakeBuild()
-# https://github.com/pytorch/audio/blob/ece03edc3fc28a1ce2c28ef438d2898ed0a78d3f/tools/setup_helpers/extension.py#L65
 class CMakeBuild(build_ext):
     def build_extension(self, ext):
         # Because the following `cmake` command will build all of `ext_modules`` at the same time,
@@ -76,6 +73,7 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_INSTALL_PREFIX={sdk_dir}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
+            f"-DPython_INCLUDE_DIR={distutils.sysconfig.get_python_inc()}",
             "-DCMAKE_CXX_FLAGS=-fPIC",
             f"-DBUILD_S3:BOOL={'ON' if _BUILD_S3 else 'OFF'}",
         ]
@@ -109,5 +107,6 @@ class CMakeBuild(build_ext):
 
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
+
         subprocess.check_call(["cmake", str(_ROOT_DIR)] + cmake_args, cwd=self.build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=self.build_temp)
