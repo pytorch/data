@@ -56,6 +56,4 @@ endif()
 # Options
 option(BUILD_S3 "Build s3 io functionality" OFF)
 
-find_package(Torch REQUIRED)
-
 add_subdirectory(torchdata/csrc)
