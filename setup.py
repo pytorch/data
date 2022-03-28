@@ -9,6 +9,7 @@ from pathlib import Path
 
 from setuptools import find_packages, setup
 from tools import setup_helpers
+
 # from torchdata.datapipes.gen_pyi import gen_pyi
 
 ROOT_DIR = Path(__file__).parent.resolve()
@@ -104,7 +105,7 @@ if __name__ == "__main__":
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
         # Package Info
-        packages=find_packages(exclude=["test*", "examples*"]),
+        packages=find_packages(exclude=["test*", "examples*", "tools*"]),
         zip_safe=False,
         # C++ Extension Modules
         ext_modules=setup_helpers.get_ext_modules(),

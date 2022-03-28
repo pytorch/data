@@ -4,14 +4,19 @@ import subprocess
 import sys
 from pathlib import Path
 
-import torch
-from setuptools import Extension
 from setuptools.command.build_ext import build_ext
+
+try:
+    from pybind11.setup_helpers import Pybind11Extension
+except ImportError:
+    from setuptools import Extension as Pybind11Extension
+
 
 __all__ = [
     "get_ext_modules",
     "CMakeBuild",
 ]
+
 
 _THIS_DIR = Path(__file__).parent.resolve()
 _ROOT_DIR = _THIS_DIR.parent.parent.resolve()
@@ -37,7 +42,7 @@ _BUILD_PYTHON_VERSION = os.environ.get("BUILD_PYTHON_VERSION", None)
 
 def get_ext_modules():
     if _BUILD_S3:
-        return [Extension(name="torchdata._torchdata", sources=[])]
+        return [Pybind11Extension(name="torchdata._torchdata", sources=[])]
     else:
         return []
 
@@ -68,7 +73,6 @@ class CMakeBuild(build_ext):
 
         cmake_args = [
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
-            f"-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}",
             f"-DCMAKE_INSTALL_PREFIX={sdk_dir}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",

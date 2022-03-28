@@ -1,8 +1,6 @@
 import os
-import warnings
 from pathlib import Path
 
-import torch
 from torchdata._internal import module_utils as _mod_utils  # noqa: F401
 
 _LIB_DIR = Path(__file__).parent
@@ -46,8 +44,6 @@ def _init_extension():
     import importlib
     import os
 
-    import torch
-
     # load the custom_op_library and register the custom ops
     lib_dir = os.path.dirname(__file__)
 
@@ -80,8 +76,8 @@ def _init_extension():
     ext_specs = extfinder.find_spec("_torchdata")
     if ext_specs is None:
         raise ImportError("torchdata C++ Extension is not found.")
-    torch.ops.load_library(ext_specs.origin)
-    torch.classes.load_library(ext_specs.origin)
+
+    from torchdata import _torchdata  # noqa
 
 
 _init_extension()
