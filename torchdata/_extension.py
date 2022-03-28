@@ -74,10 +74,8 @@ def _init_extension():
 
     extfinder = importlib.machinery.FileFinder(lib_dir, loader_details)
     ext_specs = extfinder.find_spec("_torchdata")
-    if ext_specs is None:
-        raise ImportError("torchdata C++ Extension is not found.")
-
-    from torchdata import _torchdata  # noqa
+    if ext_specs is not None:
+        from torchdata import _torchdata
 
 
 _init_extension()
