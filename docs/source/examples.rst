@@ -84,3 +84,22 @@ The `Criteo dataset <https://ailab.criteo.com/download-criteo-1tb-click-logs-dat
 and click feedback for millions of display advertisements. It aims to benchmark algorithms for
 click through rate (CTR) prediction. You can find a prototype stage implementation of the
 `dataset with DataPipes in TorchRec <https://github.com/pytorch/torchrec/blob/main/torchrec/datasets/criteo.py>`_.
+
+Graphs, Meshes and Point Clouds
+-------------------------------
+
+MoleculeNet
+^^^^^^^^^^^
+`MoleculeNet <https://moleculenet.org/>`_ is a benchmark specially designed for testing machine learning methods of
+molecular properties. You can find an implementation of the
+`HIV dataset with DataPipes in PyTorch Geometric <https://github.com/pyg-team/pytorch_geometric/blob/master/examples/datapipe.py>`_,
+which includes converting SMILES strings into molecular graph representations.
+
+Princeton ModelNet
+^^^^^^^^^^^^^^^^^^
+
+The Princeton ModelNet project provides a comprehensive and clean collection of 3D CAD models across various object types.
+You can find an implementation of the
+`ModelNet10 dataset with DataPipes in PyTorch Geometric <https://github.com/pyg-team/pytorch_geometric/blob/master/examples/datapipe.py>`_,
+which includes reading in meshes via `meshio <https://github.com/nschloe/meshio>`_, and sampling of points from object surfaces and dynamic
+graph generation via `PyG's functional transformations <https://pytorch-geometric.readthedocs.io/en/latest/modules/transforms.html>`_.
