@@ -6,6 +6,21 @@ from torch.utils.data import IterDataPipe, MapDataPipe
 
 # @functional_datapipe("to_iter_datapipe")  # This line must be kept for .pyi signature parser
 class MapToIterConverterIterDataPipe(IterDataPipe):
+    """
+    Convert a ``MapDataPipe`` to an ``IterDataPipe`` (functional name: ``to_iter_datapipe``). It uses ``indices`` to
+    iterate through the ``MapDataPipe``, defaults to ``range(len(mapdatapipe))`` if not given.
+
+    Args:
+        datapipe: source MapDataPipe with data
+        indices: optional list of indices that will dictate how the datapipe will be iterated over
+
+    Example:
+        >>> from torchdata.datapipes.map import SequenceWrapper
+        >>> source_dp = SequenceWrapper(range(10))
+        >>> iter_dp = source_dp.to_iter_datapipe()
+        >>> list(iter_dp)
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    """
 
     # Note that ``indices`` has ``Optional[List]`` instead of ``Optional[Iterable]`` as type because a generator
     # can be passed in as an iterable, which will complicate the serialization process as we will have
