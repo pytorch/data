@@ -2,6 +2,7 @@ if(BUILD_S3)
 
   message(STATUS "Building S3 IO functionality")
 
+  list(APPEND CMAKE_PREFIX_PATH ${AWSSDK_DIR})
   find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
   find_package(pybind11 REQUIRED)
 
@@ -13,12 +14,23 @@ if(BUILD_S3)
 
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-  add_library(_torchdata SHARED "pybind/S3Handler/S3Handler.cpp")
-	# target_include_directories(_torchdata PRIVATE ${PROJECT_SOURCE_DIR} ${Python_INCLUDE_DIR})
-	target_include_directories(_torchdata PRIVATE ${PROJECT_SOURCE_DIR})
+  set(
+    EXTENSION_SOURCES
+    pybind/pybind.cpp
+    pybind/S3Handler/S3Handler.cpp
+  )
 
-  message(STATUS "All linked libs: ${AWSSDK_LINK_LIBRARIES}")
-  target_link_libraries(_torchdata PRIVATE ${AWSSDK_LINK_LIBRARIES} ${AWSSDK_PLATFORM_DEPS} Python3::Python)
+  pybind11_add_module(_torchdata SHARED ${EXTENSION_SOURCES})
+
+  target_include_directories(_torchdata PRIVATE ${PROJECT_SOURCE_DIR} ${Python_INCLUDE_DIR})
+
+  message(STATUS "AWSSDK linked libs: ${AWSSDK_LINK_LIBRARIES}")
+  target_link_libraries(
+    _torchdata
+    PRIVATE
+    ${AWSSDK_LINK_LIBRARIES}
+    ${Python_LIBRARIES}
+    )
 
   set_target_properties(_torchdata PROPERTIES PREFIX "")
   if (MSVC)
@@ -27,11 +39,5 @@ if(BUILD_S3)
   if (APPLE)
     set_target_properties(_torchdata PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
   endif(APPLE)
-
-  install(
-    TARGETS _torchdata
-    LIBRARY DESTINATION .
-    RUNTIME DESTINATION . # For Windows
-    )
 
 endif()

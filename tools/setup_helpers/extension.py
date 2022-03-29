@@ -38,6 +38,7 @@ def _get_build(var, default=False):
 
 
 _BUILD_S3 = _get_build("BUILD_S3", False)
+_AWSSDK_DIR = os.environ.get("AWSSDK_DIR", None)
 _BUILD_PYTHON_VERSION = os.environ.get("BUILD_PYTHON_VERSION", None)
 
 
@@ -74,11 +75,11 @@ class CMakeBuild(build_ext):
         cfg = "Debug" if debug else "Release"
 
         cmake_args = [
-            f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
+            f"-DCMAKE_BUILD_TYPE={cfg}",
+            f"-DCMAKE_INSTALL_PREFIX={extdir}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
-            f"-DPYTHON_EXECUTABLE={sys.executable}",
+            f"-DCMAKE_RUNTIME_OUTPUT_DIRECTORY={extdir}",  # For Windows
             f"-DPython_INCLUDE_DIR={distutils.sysconfig.get_python_inc()}",
-            "-DCMAKE_CXX_FLAGS=-fPIC",
             f"-DBUILD_S3:BOOL={'ON' if _BUILD_S3 else 'OFF'}",
         ]
 
@@ -87,6 +88,11 @@ class CMakeBuild(build_ext):
         if _BUILD_PYTHON_VERSION:
             cmake_args += [
                 f"-DBUILD_PYTHON_VERSION={_BUILD_PYTHON_VERSION}",
+            ]
+
+        if _AWSSDK_DIR:
+            cmake_args += [
+                f"-DAWSSDK_DIR={_AWSSDK_DIR}",
             ]
 
         # Default to Ninja
