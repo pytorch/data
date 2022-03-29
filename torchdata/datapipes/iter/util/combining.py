@@ -56,7 +56,7 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
         key_fns: Union[Callable[[D], K], Sequence[Callable[[D], K]]] = (),
         source_datapipe: Optional[IterDataPipe[D]] = None,
         ref_datapipe: Optional[IterDataPipe[D]] = None,
-        key_fn: Callable[[D], K],
+        key_fn: Optional[Callable[[D], K]] = None,
         ref_key_fn: Optional[Callable[[D], K]] = None,
         keep_key: bool = False,
         buffer_size: Optional[int] = 10000,
