@@ -6,6 +6,10 @@ from torch.utils.data import IterDataPipe, MapDataPipe
 
 # @functional_datapipe("to_iter_datapipe")  # This line must be kept for .pyi signature parser
 class MapToIterConverterIterDataPipe(IterDataPipe):
+
+    # Note that ``indices`` has ``Optional[List]`` instead of ``Optional[Iterable]`` as type because a generator
+    # can be passed in as an iterable, which will complicate the serialization process as we will have
+    # to materialize ``indices`` and store it.
     def __init__(self, datapipe: MapDataPipe, indices: Optional[List] = None):
         if not isinstance(datapipe, MapDataPipe):
             raise TypeError(f"MapToIterConverter can only apply on MapDataPipe, but found {type(datapipe)}")
