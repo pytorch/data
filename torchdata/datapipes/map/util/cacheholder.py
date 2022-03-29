@@ -1,5 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-from typing import Callable, List, Optional, TypeVar
+from typing import Callable, List, Optional, Set, TypeVar
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.map import MapDataPipe
@@ -11,10 +11,10 @@ T_co = TypeVar("T_co", covariant=True)
 def list_cache(size: int) -> List:
     cache = [None] * size
     try:
-        from numpy import array
+        from numpy import array  # type: ignore[import]
 
-        cache = array(cache)
-    except (ImportError, ModuleNotFoundError):
+        cache = array(cache)  # type: ignore[assignment]
+    except ImportError:
         pass
     return cache
 
@@ -23,6 +23,9 @@ def list_cache(size: int) -> List:
 class InMemoryCacheHolderMapDataPipe(MapDataPipe[T_co]):
     r"""
     Stores elements from the source DataPipe in memory (functional name: ``in_memory_cache``).
+
+    The default ``cache_fn`` attempts to use ``numpy.array`` as cache, and use ``List`` if that is not available.
+    Another useful option may be ``multiprocessing.Array`` to cache data in shared memory.
 
     Args:
         source_dp: source DataPipe from which elements are read and stored in memory
@@ -43,11 +46,12 @@ class InMemoryCacheHolderMapDataPipe(MapDataPipe[T_co]):
         self.cache = cache_fn(len(source_dp))
         if not (hasattr(self.cache, "__getitem__") and hasattr(self.cache, "__setitem__")):
             raise TypeError("The output of `cache_fn` must be an object with  both '__getitem__' and '__setitem__.")
-        self.index_cached = set()
+        self.index_cached: Set = set()
 
     def __getitem__(self, index) -> T_co:
         if index not in self.index_cached:
             self.cache[index] = self.source_dp[index]
+            self.index_cached.add(index)
         return self.cache[index]
 
     def __len__(self) -> int:
