@@ -20,7 +20,9 @@ on:
       PYPI_TOKEN:
         required: false
       CONDA_PYTORCHBOT_TOKEN:
-        required: true
+        required: false
+      CONDA_NIGHTLY_PYTORCHBOT_TOKEN:
+        required: false
 
 jobs:
   get_release_type:
@@ -51,7 +53,6 @@ jobs:
         id: get_release_type
 
   wheel_build_test:
-    if: ${{ needs.get_release_type.outputs.type }}
     needs: get_release_type
     runs-on: ${{ matrix.os }}
     strategy:
@@ -105,7 +106,7 @@ jobs:
           path: dist/torchdata*.whl
 
   wheel_upload:
-    if: always() && ${{ needs.get_release_type.outputs.type }}
+    if: always()
     needs: [get_release_type, wheel_build_test]
     runs-on: ubuntu-latest
     outputs:
@@ -158,7 +159,6 @@ jobs:
             dist/torchdata*.whl
 
   conda_build_test:
-    if: ${{ needs.get_release_type.outputs.type }}
     needs: get_release_type
     runs-on: ${{ matrix.os }}
     strategy:
@@ -199,7 +199,7 @@ jobs:
           path: conda-bld/*/torchdata-*.tar.bz2
 
   conda_upload:
-    if: always() && ${{ needs.get_release_type.outputs.type }}
+    if: always()
     needs: [get_release_type, conda_build_test]
     runs-on: ubuntu-latest
     container: continuumio/miniconda3
@@ -228,15 +228,45 @@ jobs:
         shell: bash
         env:
           CONDA_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_PYTORCHBOT_TOKEN }}
+          CONDA_NIGHTLY_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_NIGHTLY_PYTORCHBOT_TOKEN }}
         run: |
           conda install -yq anaconda-client
+          conda install -c conda-forge -yq jq
+
           if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
             CONDA_CHANNEL=pytorch
           else
             CONDA_CHANNEL=pytorch-${{ needs.get_release_type.outputs.type }}
           fi
-          set -x
-          anaconda -t "${CONDA_PYTORCHBOT_TOKEN}" upload ./*/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
+
+          if [[ ${{ needs.get_release_type.outputs.type }} == 'nightly' ]]; then
+            # Loop over all platforms [win-64, osx-64, linux-64]
+            for subdir in $(find . -type f -name '*torchdata*.tar.bz2' | sed -r 's|/[^/]+$||' | uniq | cut -f2 -d/) ; do
+              version=""
+              # Find existing conda packages on pytorch nightly
+              for val in $(conda search --json torchdata --channel=$CONDA_CHANNEL --subdir=$subdir | jq -r '.[][] | .version, .build'); do
+                if [[ -z $version ]]; then
+                  version=$val
+                else
+                  build=$val
+                  # Check if a new conda package built based on the same Python version and platform exists
+                  for new_package in ./$subdir/torchdata-*-$build.tar.bz2; do
+                    if [[ -f "$new_package" ]]; then
+                      echo "Removing $CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
+                      anaconda -t "${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}" remove "$CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
+                      break
+                    fi
+                  done
+                  version=""
+                  build=""
+                fi
+              done
+              # Upload new conda packages per subdir
+              anaconda -t "${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}" upload ./$subdir/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
+            done
+          else
+            anaconda -t "${CONDA_PYTORCHBOT_TOKEN}" upload ./*/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
+          fi
 
   build_docs:
     if: always() && ( needs.wheel_upload.outputs.upload == 'true' || needs.conda_upload.outputs.upload == 'true' )

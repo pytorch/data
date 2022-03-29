@@ -168,7 +168,7 @@ Note:
   as reference to ``deepcopy`` data for each iterator.
 
 - Avoid variables names that are taken by the functional names of existing DataPipes. For instance, ``.filter`` is
-  is functional name that can be used to invoke ``FilterIterDataPipe``. Having a variable named ``filter`` inside
+  the functional name that can be used to invoke ``FilterIterDataPipe``. Having a variable named ``filter`` inside
   another ``IterDataPipe`` can lead to confusion.
 
 
