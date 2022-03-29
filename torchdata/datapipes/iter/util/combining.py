@@ -62,6 +62,25 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
         buffer_size: Optional[int] = 10000,
         merge_fn: Optional[Callable] = None,
     ) -> None:
+        # TODO: This block is needed, since previously one was able to pass in everything as positional parameters
+        #  rather than only the datapipes. It can be replaced by a simple isinstance check together with the other
+        #  deprecated parameters.
+        try:
+            idx = next(idx for idx, obj in enumerate(datapipes) if not isinstance(obj, IterDataPipe))
+        except StopIteration:
+            idx = len(datapipes)
+        datapipes, other_params = datapipes[:idx], datapipes[idx:]
+        if len(other_params) > 0:
+            key_fn = other_params[0]
+        if len(other_params) > 1:
+            ref_key_fn = other_params[1]
+        if len(other_params) > 2:
+            keep_key = other_params[2]
+        if len(other_params) > 3:
+            buffer_size = other_params[3]
+        if len(other_params) > 4:
+            merge_fn = other_params[4]
+
         if source_datapipe is not None:
             if not datapipes:
                 warnings.warn(
@@ -90,10 +109,6 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
 
         if len(datapipes) < 2:
             raise ValueError(f"IterKeyZipper needs at least two datapipes to draw from, but got {len(datapipes)}.")
-
-        for idx, dp in enumerate(datapipes, 1):
-            if not isinstance(dp, IterDataPipe):
-                raise TypeError(f"datapipes must be a IterDataPipe's, but got {type(dp)} as {idx}. input instead.")
         self.datapipes = datapipes
 
         if key_fn is not None:
@@ -123,6 +138,8 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
 
         if not isinstance(key_fns, collections.abc.Sequence):
             key_fns = [key_fns] * len(datapipes)
+        elif len(key_fns) == 1:
+            key_fns = key_fns * len(datapipes)
         elif len(key_fns) != len(datapipes):
             raise ValueError(
                 f"The number of datapipes and key functions mismatches: {len(datapipes)} != {len(key_fns)}"

@@ -306,7 +306,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
 
         unpicklable_datapipes: List = [
             (iterdp.FlatMapper, (lambda x: [x, x],), {}),
-            (iterdp.IterKeyZipper, (ref_idp, lambda x: x, None, True, 100), {}),
+            (iterdp.IterKeyZipper, (ref_idp,), dict(key_fns=lambda x: x, keep_key=True, buffer_size=100)),
             (iterdp.MapKeyZipper, (ref_mdp, lambda x: x), {}),
             (iterdp.OnDiskCacheHolder, (lambda x: x,), {}),
             (iterdp.ParagraphAggregator, (lambda x: x,), {}),
