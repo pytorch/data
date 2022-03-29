@@ -52,9 +52,11 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
     def __init__(
         self,
         *datapipes: IterDataPipe[D],
+        # TODO: remove the default value as soon as key_fn and ref_key_fn are removed
+        key_fns: Union[Callable[[D], K], Sequence[Callable[[D], K]]] = (),
         source_datapipe: Optional[IterDataPipe[D]] = None,
         ref_datapipe: Optional[IterDataPipe[D]] = None,
-        key_fn: Union[Callable[[D], K], Sequence[Callable[[D], K]]],
+        key_fn: Callable[[D], K],
         ref_key_fn: Optional[Callable[[D], K]] = None,
         keep_key: bool = False,
         buffer_size: Optional[int] = 10000,
@@ -94,29 +96,41 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
                 raise TypeError(f"datapipes must be a IterDataPipe's, but got {type(dp)} as {idx}. input instead.")
         self.datapipes = datapipes
 
+        if key_fn is not None:
+            if len(datapipes) > 2:
+                raise ValueError("Parameter `key_fn` cannot be passed if more than two datapipes are passed.")
+
+            warnings.warn(
+                "Parameter `key_fn` is deprecated since 0.4 and will be removed in 0.6. "
+                "Please pass it as first item in `key_fns` like `IterKeyZipper(..., key_fn=(key_fn,))`."
+            )
+            key_fns = (key_fn,)
+
         if ref_key_fn is not None:
             if len(datapipes) > 2:
                 raise ValueError("Parameter `ref_key_fn` cannot be passed if more than two datapipes are passed.")
 
-            if isinstance(key_fn, collections.abc.Sequence):
-                if len(key_fn) != 1:
-                    raise ValueError("Parameter `ref_key_fn` cannot be passed if more than one `key_fn` is passed.")
-                key_fn = key_fn[0]
+            if isinstance(key_fns, collections.abc.Sequence):
+                if len(key_fns) != 1:
+                    raise ValueError("Parameter `ref_key_fn` cannot be passed if `len(key_fns) > 1`.")
+                key_fn = key_fns[0]
 
             warnings.warn(
                 "Parameter `ref_key_fn` is deprecated since 0.4 and will be removed in 0.6. "
-                "Please pass a sequence to `key_fn` like `IterKeyZipper(..., key_fn=(key_fn, ref_key_fm))`."
+                "Please pass it as second item in `key_fns` like `IterKeyZipper(..., key_fn=(key_fn, ref_key_fn))`."
             )
-            key_fn = (key_fn, ref_key_fn)
+            key_fns = (key_fn, ref_key_fn)
 
-        if not isinstance(key_fn, collections.abc.Sequence):
-            key_fn = [key_fn] * len(datapipes)
-        elif len(key_fn) != len(datapipes):
-            raise ValueError(f"The number of datapipes and key functions mismatches: {len(datapipes)} != {len(key_fn)}")
+        if not isinstance(key_fns, collections.abc.Sequence):
+            key_fns = [key_fns] * len(datapipes)
+        elif len(key_fns) != len(datapipes):
+            raise ValueError(
+                f"The number of datapipes and key functions mismatches: {len(datapipes)} != {len(key_fns)}"
+            )
 
-        for fn in key_fn:
+        for fn in key_fns:
             check_lambda_fn(fn)
-        self.key_fn = key_fn
+        self.key_fns = key_fns
 
         self.keep_key = keep_key
         if merge_fn is not None:
@@ -131,9 +145,9 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
         child_dps = [iter(dp) for dp in self.datapipes[1:]]
         warn_once_flag = True
         for parent_data in self.datapipes[0]:
-            parent_key = self.key_fn[0](parent_data)
+            parent_key = self.key_fns[0](parent_data)
             child_datas = []
-            for buffer, dp, key_fn in zip(buffers, child_dps, self.key_fn[1:]):
+            for buffer, dp, key_fn in zip(buffers, child_dps, self.key_fns[1:]):
                 while parent_key not in buffer:
                     try:
                         child_data = next(dp)

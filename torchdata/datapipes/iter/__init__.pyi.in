@@ -22,6 +22,9 @@ except ImportError:
 
 T_co = TypeVar("T_co", covariant=True)
 
+D = TypeVar("D")
+K = TypeVar("K")
+
 class IterDataPipe(IterableDataset[T_co], metaclass=_DataPipeMeta):
     functions: Dict[str, Callable] = ...
     reduce_ex_hook: Optional[Callable] = ...
