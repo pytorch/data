@@ -2,20 +2,18 @@
 import unittest
 
 import expecttest
-from torchdata.datapipes.map import SequenceWrapper, UnZipper
+from torchdata.datapipes.map import MapDataPipe, SequenceWrapper, UnZipper
 
 
 class TestMapDataPipe(expecttest.TestCase):
     def test_unzipper_mapdatapipe(self) -> None:
-        # Functional Test:
-        # source_dp = SequenceWrapper([(i, i) for i in range(10)])
-        # dp1, dp2 = source_dp.unzip(sequence_length)
-        # source_dp = SequenceWrapper({'a': 1, 'b': 2, 'c': 3, 'd': 4})
-
         source_dp = SequenceWrapper([(i, i + 10, i + 20) for i in range(10)])
 
         # Functional Test: unzips each sequence, no `sequence_length` specified
-        dp1, dp2, dp3 = UnZipper(source_dp, sequence_length=3)
+        dp1: MapDataPipe
+        dp2: MapDataPipe
+        dp3: MapDataPipe
+        dp1, dp2, dp3 = UnZipper(source_dp, sequence_length=3)  # type: ignore[misc]
         self.assertEqual(list(range(10)), list(dp1))
         self.assertEqual(list(range(10, 20)), list(dp2))
         self.assertEqual(list(range(20, 30)), list(dp3))
