@@ -2,7 +2,7 @@
 import collections.abc
 import warnings
 from collections import OrderedDict
-from typing import Callable, Iterator, List, Optional, OrderedDict as OrderedDictType, Sequence, TypeVar, Union
+from typing import Callable, cast, Iterator, List, Optional, OrderedDict as OrderedDictType, Sequence, TypeVar, Union
 
 from torch.utils.data import functional_datapipe, IterDataPipe, MapDataPipe
 from torch.utils.data.datapipes.utils.common import check_lambda_fn
@@ -49,10 +49,10 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
         [('a', 101), ('b', 202), ('c', 303)]
     """
 
+    # TODO: remove the default value of key_fns as soon as key_fn and ref_key_fn are removed
     def __init__(
         self,
         *datapipes: IterDataPipe[D],
-        # TODO: remove the default value as soon as key_fn and ref_key_fn are removed
         key_fns: Union[Callable[[D], K], Sequence[Callable[[D], K]]] = (),
         source_datapipe: Optional[IterDataPipe[D]] = None,
         ref_datapipe: Optional[IterDataPipe[D]] = None,
@@ -71,15 +71,15 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
             idx = len(datapipes)
         datapipes, other_params = datapipes[:idx], datapipes[idx:]
         if len(other_params) > 0:
-            key_fn = other_params[0]
+            key_fn = cast(Optional[Callable[[D], K]], other_params[0])
         if len(other_params) > 1:
-            ref_key_fn = other_params[1]
+            ref_key_fn = cast(Optional[Callable[[D], K]], other_params[1])
         if len(other_params) > 2:
-            keep_key = other_params[2]
+            keep_key = cast(bool, other_params[2])
         if len(other_params) > 3:
-            buffer_size = other_params[3]
+            buffer_size = cast(Optional[int], other_params[3])
         if len(other_params) > 4:
-            merge_fn = other_params[4]
+            merge_fn = cast(Callable, other_params[4])
 
         if source_datapipe is not None:
             if not datapipes:
@@ -119,7 +119,7 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
                 "Parameter `key_fn` is deprecated since 0.4 and will be removed in 0.6. "
                 "Please pass it as first item in `key_fns` like `IterKeyZipper(..., key_fn=(key_fn,))`."
             )
-            key_fns = (key_fn,)
+            key_fns = [key_fn]
 
         if ref_key_fn is not None:
             if len(datapipes) > 2:
@@ -134,12 +134,12 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
                 "Parameter `ref_key_fn` is deprecated since 0.4 and will be removed in 0.6. "
                 "Please pass it as second item in `key_fns` like `IterKeyZipper(..., key_fn=(key_fn, ref_key_fn))`."
             )
-            key_fns = (key_fn, ref_key_fn)
+            key_fns = cast(List[Callable[[D], K]], [key_fn, ref_key_fn])
 
         if not isinstance(key_fns, collections.abc.Sequence):
             key_fns = [key_fns] * len(datapipes)
         elif len(key_fns) == 1:
-            key_fns = key_fns * len(datapipes)
+            key_fns = list(key_fns) * len(datapipes)
         elif len(key_fns) != len(datapipes):
             raise ValueError(
                 f"The number of datapipes and key functions mismatches: {len(datapipes)} != {len(key_fns)}"
