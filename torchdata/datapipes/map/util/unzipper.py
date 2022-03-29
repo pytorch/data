@@ -63,10 +63,10 @@ class _UnZipperMapDataPipe(MapDataPipe[T]):
         self.main_datapipe = main_datapipe
         self.instance_id = instance_id
 
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> T:
         return self.main_datapipe[index][self.instance_id]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.main_datapipe)
 
 
