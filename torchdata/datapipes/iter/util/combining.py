@@ -1,12 +1,16 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+import collections.abc
 import warnings
 from collections import OrderedDict
-from typing import Callable, Iterator, Optional, TypeVar
+from typing import Callable, Iterator, List, Optional, OrderedDict as OrderedDictType, Sequence, TypeVar, Union
 
 from torch.utils.data import functional_datapipe, IterDataPipe, MapDataPipe
 from torch.utils.data.datapipes.utils.common import check_lambda_fn
 
 T_co = TypeVar("T_co", covariant=True)
+
+D = TypeVar("D")
+K = TypeVar("K")
 
 
 @functional_datapipe("zip_with_iter")
@@ -47,65 +51,126 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
 
     def __init__(
         self,
-        source_datapipe: IterDataPipe,
-        ref_datapipe: IterDataPipe,
-        key_fn: Callable,
-        ref_key_fn: Optional[Callable] = None,
+        *datapipes: IterDataPipe[D],
+        source_datapipe: Optional[IterDataPipe[D]] = None,
+        ref_datapipe: Optional[IterDataPipe[D]] = None,
+        key_fn: Union[Callable[[D], K], Sequence[Callable[[D], K]]],
+        ref_key_fn: Optional[Callable[[D], K]] = None,
         keep_key: bool = False,
-        buffer_size: int = 10000,
+        buffer_size: Optional[int] = 10000,
         merge_fn: Optional[Callable] = None,
     ) -> None:
-        if not isinstance(ref_datapipe, IterDataPipe):
-            raise TypeError(f"ref_datapipe must be a IterDataPipe, but its type is {type(ref_datapipe)} instead.")
-        self.source_datapipe = source_datapipe
-        self.ref_datapipe = ref_datapipe
-        check_lambda_fn(key_fn)
-        self.key_fn = key_fn
+        if source_datapipe is not None:
+            if not datapipes:
+                warnings.warn(
+                    "Passing `source_datapipe` as keyword argument is deprecated since 0.4 and will be removed in 0.6. "
+                    "Please pass it as first positional argument instead."
+                )
+                datapipes = (source_datapipe,)
+            else:
+                raise TypeError(
+                    "Parameter `source_datapipe` cannot be passed as keyword argument "
+                    "if other datapipes are passed positionally."
+                )
+
+        if ref_datapipe is not None:
+            if len(datapipes) == 1:
+                warnings.warn(
+                    "Passing `ref_datapipe` as keyword argument is deprecated since 0.4 and will be removed in 0.6. "
+                    "Please pass it as second positional argument instead."
+                )
+                datapipes = (datapipes[0], ref_datapipe)
+            else:
+                raise TypeError(
+                    "Parameter `source_datapipe` cannot be passed as keyword argument "
+                    "if more than one other datapipe is passed positionally."
+                )
+
+        if len(datapipes) < 2:
+            raise ValueError(f"IterKeyZipper needs at least two datapipes to draw from, but got {len(datapipes)}.")
+
+        for idx, dp in enumerate(datapipes, 1):
+            if not isinstance(dp, IterDataPipe):
+                raise TypeError(f"datapipes must be a IterDataPipe's, but got {type(dp)} as {idx}. input instead.")
+        self.datapipes = datapipes
+
         if ref_key_fn is not None:
-            check_lambda_fn(ref_key_fn)
-        self.ref_key_fn = key_fn if ref_key_fn is None else ref_key_fn
+            if len(datapipes) > 2:
+                raise ValueError("Parameter `ref_key_fn` cannot be passed if more than two datapipes are passed.")
+
+            if isinstance(key_fn, collections.abc.Sequence):
+                if len(key_fn) != 1:
+                    raise ValueError("Parameter `ref_key_fn` cannot be passed if more than one `key_fn` is passed.")
+                key_fn = key_fn[0]
+
+            warnings.warn(
+                "Parameter `ref_key_fn` is deprecated since 0.4 and will be removed in 0.6. "
+                "Please pass a sequence to `key_fn` like `IterKeyZipper(..., key_fn=(key_fn, ref_key_fm))`."
+            )
+            key_fn = (key_fn, ref_key_fn)
+
+        if not isinstance(key_fn, collections.abc.Sequence):
+            key_fn = [key_fn] * len(datapipes)
+        elif len(key_fn) != len(datapipes):
+            raise ValueError(f"The number of datapipes and key functions mismatches: {len(datapipes)} != {len(key_fn)}")
+
+        for fn in key_fn:
+            check_lambda_fn(fn)
+        self.key_fn = key_fn
+
         self.keep_key = keep_key
         if merge_fn is not None:
             check_lambda_fn(merge_fn)
         self.merge_fn = merge_fn
         if buffer_size is not None and buffer_size <= 0:
             raise ValueError("'buffer_size' is required to be either None or a positive integer.")
-        self.buffer_size: int = buffer_size
+        self.buffer_size = buffer_size
 
     def __iter__(self) -> Iterator:
-        buffer: OrderedDict = OrderedDict()
-        ref_it = iter(self.ref_datapipe)
+        buffers: List[OrderedDictType[K, D]] = [OrderedDict() for _ in range(len(self.datapipes) - 1)]  # type: ignore[valid-type]
+        child_dps = [iter(dp) for dp in self.datapipes[1:]]
         warn_once_flag = True
-        for data in self.source_datapipe:
-            key = self.key_fn(data)
-            while key not in buffer:
-                try:
-                    ref_data = next(ref_it)
-                except StopIteration:
-                    raise BufferError(
-                        f"No matching key can be found from reference DataPipe for the data {data}. "
-                        "Please consider increasing the buffer size."
-                    )
-                ref_key = self.ref_key_fn(ref_data)
-                if ref_key in buffer:
-                    raise ValueError("Duplicate key is found in reference DataPipe")
-                if self.buffer_size is not None and len(buffer) > self.buffer_size:
-                    if warn_once_flag:
-                        warn_once_flag = False
-                        warnings.warn(
-                            "Buffer reaches the upper limit, so reference key-data pair begins to "
-                            "be removed from buffer in FIFO order. Please consider increase buffer size."
+        for parent_data in self.datapipes[0]:
+            parent_key = self.key_fn[0](parent_data)
+            child_datas = []
+            for buffer, dp, key_fn in zip(buffers, child_dps, self.key_fn[1:]):
+                while parent_key not in buffer:
+                    try:
+                        child_data = next(dp)
+                    except StopIteration:
+                        raise BufferError(
+                            f"No matching key can be found from reference DataPipe for the data {parent_data}. "
+                            "Please consider increasing the buffer size."
                         )
-                    buffer.popitem(last=False)
-                buffer[ref_key] = ref_data
-            res = self.merge_fn(data, buffer.pop(key)) if self.merge_fn else (data, buffer.pop(key))
+
+                    child_key = key_fn(child_data)
+                    if child_key in buffer:
+                        raise ValueError("Duplicate key is found in reference DataPipe")
+
+                    if self.buffer_size is not None and len(buffer) > self.buffer_size:
+                        if warn_once_flag:
+                            warn_once_flag = False
+                            warnings.warn(
+                                "Buffer reaches the upper limit, so reference key-data pair begins to "
+                                "be removed from buffer in FIFO order. Please consider increase buffer size."
+                            )
+                        buffer.popitem(last=False)
+
+                    buffer[child_key] = child_data
+
+                child_datas.append(buffer.pop(parent_key))
+
+            data = (parent_data, *child_datas)
+            if self.merge_fn:
+                data = self.merge_fn(*data)
+
             if self.keep_key:
-                yield key, res
+                yield parent_key, data
             else:
-                yield res
+                yield data
 
     def __len__(self) -> int:
-        return len(self.source_datapipe)
+        return len(self.datapipes[0])
 
 
 @functional_datapipe("zip_with_map")
