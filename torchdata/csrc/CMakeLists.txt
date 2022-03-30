@@ -28,13 +28,13 @@ if(BUILD_S3)
     LIBTORCHDATA_COMPILE_DEFINITIONS
     INCLUDE_S3_IO
     )
-  find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
-  list(
-    APPEND
-    LIBTORCHDATA_LINK_LIBRARIES
-    ${AWSSDK_LINK_LIBRARIES}
-    ${AWSSDK_PLATFORM_DEPS}
-    )
+  # find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
+  # list(
+  #   APPEND
+  #   LIBTORCHDATA_LINK_LIBRARIES
+  #   ${AWSSDK_LINK_LIBRARIES}
+  #   ${AWSSDK_PLATFORM_DEPS}
+  #   )
 endif()
 #------------------------------------------------------------------------------#
 # END OF CUSTOMIZATION LOGICS
@@ -99,6 +99,8 @@ if (BUILD_TORCHDATA_PYTHON_EXTENSION)
       )
     # pybind11_extension(${name})
     # pybind11_strip(${name})
+    # set_target_properties(${name} PROPERTIES CXX_VISIBILITY_PRESET "hidden")
+    # set_target_properties(${name} PROPERTIES CUDA_VISIBILITY_PRESET "hidden")
     set_target_properties(${name} PROPERTIES PREFIX "")
     if (MSVC)
       set_target_properties(${name} PROPERTIES SUFFIX ".pyd")
@@ -130,9 +132,8 @@ if (BUILD_TORCHDATA_PYTHON_EXTENSION)
   #----------------------------------------------------------------------------#
   if(BUILD_S3)
     message(STATUS "Setting up S3 IO building specifications")
-    # find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
+    find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
     # find_package(pybind11 REQUIRED)
-    find_package(pybind11 REQUIRED)
     list(
       APPEND
       EXTENSION_SOURCES
@@ -141,18 +142,20 @@ if (BUILD_TORCHDATA_PYTHON_EXTENSION)
     list(
       APPEND
       EXTENSION_LINK_LIBRARIES
-      pybind11::headers
-      pybind11::embed
+      # pybind11::headers
+      # pybind11::embed
+      # pybind11::lto
+      # pybind11::module
       ${AWSSDK_LINK_LIBRARIES}
       ${AWSSDK_PLATFORM_DEPS}
       )
-      if(MSVC)
-        list(
-          APPEND
-          EXTENSION_LINK_LIBRARIES
-          pybind11::windows_extras
-        )
-      endif()
+      # if(MSVC)
+      #   list(
+      #     APPEND
+      #     EXTENSION_LINK_LIBRARIES
+      #     pybind11::windows_extras
+      #   )
+      # endif()
     endif()
   #----------------------------------------------------------------------------#
   # END OF CUSTOMIZATION LOGICS
