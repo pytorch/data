@@ -2,7 +2,6 @@ import importlib
 import os
 from pathlib import Path
 
-from torchdata._internal import module_utils as _mod_utils  # noqa: F401
 
 _LIB_DIR = Path(__file__).parent
 
@@ -10,6 +9,7 @@ _LIB_DIR = Path(__file__).parent
 def _init_extension():
     # load the pybind11 extension
     lib_dir = os.path.dirname(__file__)
+    print("Lib dir", lib_dir)
 
     if os.name == "nt":
         import ctypes
@@ -23,8 +23,10 @@ def _init_extension():
             kernel32.AddDllDirectory.restype = ctypes.c_void_p
 
         if sys.version_info >= (3, 8):
+            print("Add all dll directory")
             os.add_dll_directory(lib_dir)
         elif with_load_library_flags:
+            print("Kernel 32 add dll directory")
             res = kernel32.AddDllDirectory(lib_dir)
             if res is None:
                 err = ctypes.WinError(ctypes.get_last_error())
@@ -37,8 +39,11 @@ def _init_extension():
 
     extfinder = importlib.machinery.FileFinder(lib_dir, loader_details)
     ext_specs = extfinder.find_spec("_torchdata")
-    if ext_specs is not None:
-        from torchdata import _torchdata
+
+    if ext_specs is None:
+        return
+
+    from torchdata import _torchdata
 
 
 _init_extension()

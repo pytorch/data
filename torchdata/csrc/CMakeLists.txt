@@ -15,7 +15,7 @@ if(BUILD_S3)
 
   list(APPEND CMAKE_PREFIX_PATH ${AWSSDK_DIR})
   find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
-  find_package(pybind11 REQUIRED)
+  find_package(pybind11 CONFIG REQUIRED)
 
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -25,17 +25,21 @@ if(BUILD_S3)
     pybind/S3Handler/S3Handler.cpp
   )
 
-  add_library(_torchdata SHARED ${EXTENSION_SOURCES})
+  add_library(_torchdata MODULE ${EXTENSION_SOURCES})
 
   target_include_directories(_torchdata PRIVATE ${PROJECT_SOURCE_DIR} ${Python_INCLUDE_DIR} {pybind11_INCLUDE_DIRS})
 
   message(STATUS "AWSSDK linked libs: ${AWSSDK_LINK_LIBRARIES}")
   target_link_libraries(
     _torchdata
+    PUBLIC
+    pybind11::module
+    )
+  target_link_libraries(
+    _torchdata
     PRIVATE
     ${AWSSDK_LINK_LIBRARIES}
     ${Python_LIBRARIES}
-    pybind11::module
     ${ADDITIONAL_ITEMS}
     )
 
