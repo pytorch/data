@@ -65,6 +65,16 @@ The `Caltech 256 dataset <http://www.vision.caltech.edu/Image_Datasets/Caltech25
 from 256 categories. Here is the
 `DataPipe implementation of Caltech 256 <https://github.com/pytorch/data/blob/main/examples/vision/caltech256.py>`_.
 
+CamVid - Semantic Segmentation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The `Cambridge-driving Labeled Video Database (CamVid)` dataset 
+<http://mi.eng.cam.ac.uk/research/projects/VideoRec/CamVid/>`_ is a collection of videos with object class semantic 
+labels, complete with metadata. The database provides ground truth labels that associate each pixel with one of 32 
+semantic classes. Here is the
+`DataPipe implementation of CamVid 
+<https://github.com/tcapelle/data/blob/main/examples/notebooks/01_Camvid_segmentation_with_datapipes.ipynb>`_.
+
+
 Additional Datasets in TorchVision
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 In a separate PyTorch domain library `TorchVision <https://github.com/pytorch/vision>`_, you will find some of the most
@@ -103,3 +113,13 @@ You can find an implementation of the
 `ModelNet10 dataset with DataPipes in PyTorch Geometric <https://github.com/pyg-team/pytorch_geometric/blob/master/examples/datapipe.py>`_,
 which includes reading in meshes via `meshio <https://github.com/nschloe/meshio>`_, and sampling of points from object surfaces and dynamic
 graph generation via `PyG's functional transformations <https://pytorch-geometric.readthedocs.io/en/latest/modules/transforms.html>`_.
+
+Timeseries
+---------------------------------
+
+A custom DataPipe for Timeseries rolling window
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Implementing a rolling window custom `DataPipe` for timeseries forecasting tasks.
+Here is the
+`DataPipe implementation of a rolling window 
+<https://github.com/tcapelle/data/blob/main/examples/notebooks/02_Custom_timeseries_datapipe.ipynb>`_.
