@@ -120,3 +120,10 @@ class CMakeBuild(build_ext):
 
         subprocess.check_call(["cmake", str(_ROOT_DIR)] + cmake_args, cwd=self.build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=self.build_temp)
+
+    def get_ext_filename(self, fullname):
+        ext_filename = super().get_ext_filename(fullname)
+        ext_filename_parts = ext_filename.split(".")
+        without_abi = ext_filename_parts[:-2] + ext_filename_parts[-1:]
+        ext_filename = ".".join(without_abi)
+        return ext_filename

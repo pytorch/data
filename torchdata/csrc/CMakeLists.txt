@@ -20,9 +20,9 @@ if(BUILD_S3)
     pybind/S3Handler/S3Handler.cpp
   )
 
-  pybind11_add_module(_torchdata SHARED ${EXTENSION_SOURCES})
+  add_library(_torchdata SHARED ${EXTENSION_SOURCES})
 
-  target_include_directories(_torchdata PRIVATE ${PROJECT_SOURCE_DIR} ${Python_INCLUDE_DIR})
+  target_include_directories(_torchdata PRIVATE ${PROJECT_SOURCE_DIR} ${Python_INCLUDE_DIR} {pybind11_INCLUDE_DIRS})
 
   message(STATUS "AWSSDK linked libs: ${AWSSDK_LINK_LIBRARIES}")
   target_link_libraries(
@@ -30,6 +30,7 @@ if(BUILD_S3)
     PRIVATE
     ${AWSSDK_LINK_LIBRARIES}
     ${Python_LIBRARIES}
+    pybind11::module
     )
 
   set_target_properties(_torchdata PROPERTIES PREFIX "")

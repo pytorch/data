@@ -59,21 +59,20 @@ jobs:
           pip3 install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
           pip3 install cmake ninja pybind11
           echo "/home/runner/.local/bin" >> $GITHUB_PATH
-      # - name: Get Date
-      #   if: matrix.with-s3 == 1
-      #   id: get_date
-      #   shell: bash
-      #   run: echo "::set-output name=date::$(date "+%Y%m%d")"
-      # - name: Uses cache for AWS-SDK-CPP
-      #   if: matrix.with-s3 == 1
-      #   id: aws_sdk_cache
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: $GITHUB_WORKSPACE/aws-sdk-cpp/sdk-lib
-      #     key: ${{ matrix.os }}-${{ matrix.python-version }}-${{ steps.get_date.outputs.date }}
+      - name: Get Date
+        if: matrix.with-s3 == 1
+        id: get_date
+        shell: bash
+        run: echo "::set-output name=date::$(date "+%Y%m%d")"
+      - name: Uses cache for AWS-SDK-CPP
+        if: matrix.with-s3 == 1
+        id: aws_sdk_cache
+        uses: actions/cache@v3
+        with:
+          path: $GITHUB_WORKSPACE/aws-sdk-cpp/sdk-lib
+          key: ${{ matrix.os }}-${{ matrix.python-version }}-${{ steps.get_date.outputs.date }}
       - name: Install AWS-SDK-CPP on Windows for S3 IO datapipes
-        # if: matrix.with-s3 == 1 && matrix.os == 'windows-latest' && steps.aws_sdk_cache.outputs.cache-hit != 'true'
-        if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
+        if: matrix.with-s3 == 1 && matrix.os == 'windows-latest' && steps.aws_sdk_cache.outputs.cache-hit != 'true'
         run: |
           git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
           cd aws-sdk-cpp
@@ -82,8 +81,7 @@ jobs:
           cmake --build build --config Release
           cmake --install build --config Release
       - name: Install AWS-SDK-CPP on Non-Windows for S3 IO datapipes
-        # if: matrix.with-s3 == 1 && matrix.os != 'windows-latest' && steps.aws_sdk_cache.outputs.cache-hit != 'true'
-        if: matrix.with-s3 == 1 && matrix.os != 'windows-latest'
+        if: matrix.with-s3 == 1 && matrix.os != 'windows-latest' && steps.aws_sdk_cache.outputs.cache-hit != 'true'
         run: |
           git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
           cd aws-sdk-cpp/
@@ -120,7 +118,7 @@ jobs:
           ls -al torchdata
           if [[ ${{ matrix.os }} == 'windows-latest' ]]; then
             ls -aR build
-            find . -name _torchdata.cp${{ matrix.python-version }}-win_amd64.pyd
+            cat torchdata/_torchdata.pyd
           else
             ls -al build/lib.*/torchdata
           fi

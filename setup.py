@@ -61,9 +61,14 @@ class clean(distutils.command.clean.clean):
         distutils.command.clean.clean.run(self)
 
         # Remove torchdata extension
-        for path in (ROOT_DIR / "torchdata").glob("**/*.so"):
-            print(f"removing '{path}'")
-            path.unlink()
+        def remove_extension(pattern):
+            for path in (ROOT_DIR / "torchdata").glob(pattern):
+                print(f"removing '{path}'")
+                path.unlink()
+
+        remove_extension("**/*.so")
+        remove_extension("**/*.pyd")
+
         # Remove build directory
         build_dirs = [
             ROOT_DIR / "build",
