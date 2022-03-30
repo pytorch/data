@@ -39,7 +39,6 @@ def _get_build(var, default=False):
 
 _BUILD_S3 = _get_build("BUILD_S3", False)
 _AWSSDK_DIR = os.environ.get("AWSSDK_DIR", None)
-_BUILD_PYTHON_VERSION = os.environ.get("BUILD_PYTHON_VERSION", None)
 
 
 def get_ext_modules():
@@ -84,11 +83,6 @@ class CMakeBuild(build_ext):
         ]
 
         build_args = ["--config", cfg]
-
-        if _BUILD_PYTHON_VERSION:
-            cmake_args += [
-                f"-DBUILD_PYTHON_VERSION={_BUILD_PYTHON_VERSION}",
-            ]
 
         if _AWSSDK_DIR:
             cmake_args += [

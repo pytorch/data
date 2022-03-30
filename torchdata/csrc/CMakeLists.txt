@@ -2,15 +2,20 @@ if(BUILD_S3)
 
   message(STATUS "Building S3 IO functionality")
 
-  list(APPEND CMAKE_PREFIX_PATH ${AWSSDK_DIR})
-  find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
-  find_package(pybind11 REQUIRED)
+  # To make the right CPython is built with on GitHub Actions,
+  # see https://github.com/actions/setup-python/issues/121#issuecomment-1014500503
+  set(Python_FIND_FRAMEWORK "LAST")
 
-  if(BUILD_PYTHON_VERSION)
-    find_package(Python3 ${BUILD_PYTHON_VERSION} EXACT COMPONENTS Interpreter Development)
+  if (WIN32)
+      find_package(Python3 ${PYTHON_VERSION} EXACT COMPONENTS Interpreter Development)
+    set(ADDITIONAL_ITEMS Python3::Python)
   else()
     find_package(Python3 COMPONENTS Interpreter Development)
   endif()
+
+  list(APPEND CMAKE_PREFIX_PATH ${AWSSDK_DIR})
+  find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
+  find_package(pybind11 REQUIRED)
 
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -31,6 +36,7 @@ if(BUILD_S3)
     ${AWSSDK_LINK_LIBRARIES}
     ${Python_LIBRARIES}
     pybind11::module
+    ${ADDITIONAL_ITEMS}
     )
 
   set_target_properties(_torchdata PROPERTIES PREFIX "")
