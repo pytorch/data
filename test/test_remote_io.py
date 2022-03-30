@@ -6,6 +6,8 @@ import warnings
 
 import expecttest
 
+import torchdata
+
 from _utils._common_utils_for_test import check_hash_fn, create_temp_dir
 
 from torchdata.datapipes.iter import (
@@ -18,7 +20,6 @@ from torchdata.datapipes.iter import (
     S3FileLoader,
 )
 
-import torchdata
 
 class TestDataPipeRemoteIO(expecttest.TestCase):
     def setUp(self):
