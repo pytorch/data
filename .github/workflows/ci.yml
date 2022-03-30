@@ -59,8 +59,6 @@ jobs:
           pip3 install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
           pip3 install cmake ninja pybind11 pybind11-global
           echo "/home/runner/.local/bin" >> $GITHUB_PATH
-      - name: Install test requirements
-        run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile
       - name: Install AWS-SDK-CPP on Windows for S3 IO datapipes
         if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
         run: |
@@ -84,6 +82,8 @@ jobs:
         env:
           BUILD_S3: ${{ matrix.with-s3 }}
           BUILD_PYTHON_VERSION: ${{ matrix.python-version }}
+      - name: Install test requirements
+        run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile
       - name: Run DataPipes tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run:
