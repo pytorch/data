@@ -199,7 +199,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.4.0a0+99dc849 ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.4.0a0+71a16a3 ) &#x25BC</a>
     </div>
     
 
@@ -392,6 +392,24 @@ click through rate (CTR) prediction. You can find a prototype stage implementati
 <a class="reference external" href="https://github.com/pytorch/torchrec/blob/main/torchrec/datasets/criteo.py">dataset with DataPipes in TorchRec</a>.</p>
 </section>
 </section>
+<section id="graphs-meshes-and-point-clouds">
+<h2>Graphs, Meshes and Point Clouds<a class="headerlink" href="#graphs-meshes-and-point-clouds" title="Permalink to this headline">¶</a></h2>
+<section id="moleculenet">
+<h3>MoleculeNet<a class="headerlink" href="#moleculenet" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference external" href="https://moleculenet.org/">MoleculeNet</a> is a benchmark specially designed for testing machine learning methods of
+molecular properties. You can find an implementation of the
+<a class="reference external" href="https://github.com/pyg-team/pytorch_geometric/blob/master/examples/datapipe.py">HIV dataset with DataPipes in PyTorch Geometric</a>,
+which includes converting SMILES strings into molecular graph representations.</p>
+</section>
+<section id="princeton-modelnet">
+<h3>Princeton ModelNet<a class="headerlink" href="#princeton-modelnet" title="Permalink to this headline">¶</a></h3>
+<p>The Princeton ModelNet project provides a comprehensive and clean collection of 3D CAD models across various object types.
+You can find an implementation of the
+<a class="reference external" href="https://github.com/pyg-team/pytorch_geometric/blob/master/examples/datapipe.py">ModelNet10 dataset with DataPipes in PyTorch Geometric</a>,
+which includes reading in meshes via <a class="reference external" href="https://github.com/nschloe/meshio">meshio</a>, and sampling of points from object surfaces and dynamic
+graph generation via <a class="reference external" href="https://pytorch-geometric.readthedocs.io/en/latest/modules/transforms.html">PyG’s functional transformations</a>.</p>
+</section>
+</section>
 </section>
 
 
@@ -455,6 +473,11 @@ click through rate (CTR) prediction. You can find a prototype stage implementati
 </li>
 <li><a class="reference internal" href="#recommender-system">Recommender System</a><ul>
 <li><a class="reference internal" href="#criteo-1tb-click-logs">Criteo 1TB Click Logs</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#graphs-meshes-and-point-clouds">Graphs, Meshes and Point Clouds</a><ul>
+<li><a class="reference internal" href="#moleculenet">MoleculeNet</a></li>
+<li><a class="reference internal" href="#princeton-modelnet">Princeton ModelNet</a></li>
 </ul>
 </li>
 </ul>
