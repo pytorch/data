@@ -32,12 +32,8 @@ if(BUILD_S3)
   message(STATUS "AWSSDK linked libs: ${AWSSDK_LINK_LIBRARIES}")
   target_link_libraries(
     _torchdata
-    PUBLIC
-    pybind11::module
-    )
-  target_link_libraries(
-    _torchdata
     PRIVATE
+    pybind11::module
     ${AWSSDK_LINK_LIBRARIES}
     ${Python_LIBRARIES}
     ${ADDITIONAL_ITEMS}

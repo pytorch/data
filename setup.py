@@ -110,7 +110,7 @@ if __name__ == "__main__":
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
         # Package Info
-        packages=find_packages(exclude=["test*", "examples*", "torchdata.csrc*", "tools*"]),
+        packages=find_packages(exclude=["test*", "examples*", "torchdata.csrc*", "build*", "tools*"]),
         zip_safe=False,
         # C++ Extension Modules
         ext_modules=setup_helpers.get_ext_modules(),

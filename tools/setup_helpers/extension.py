@@ -84,7 +84,7 @@ class CMakeBuild(build_ext):
 
         build_args = ["--config", cfg]
 
-        if _AWSSDK_DIR:
+        if _BUILD_S3 and _AWSSDK_DIR:
             cmake_args += [
                 f"-DAWSSDK_DIR={_AWSSDK_DIR}",
             ]

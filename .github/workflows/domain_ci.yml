@@ -4,12 +4,12 @@ on:
     branches:
       - main
       - release/*
-  # pull_request:
-  #   branches:
-  #     - main
-  #     # For PR created by ghstack
-  #     - gh/*/*/base
-  #     - release/*
+  pull_request:
+    branches:
+      - main
+      # For PR created by ghstack
+      - gh/*/*/base
+      - release/*
 
 jobs:
   torchvision:
