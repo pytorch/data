@@ -72,20 +72,21 @@ jobs:
           echo "::set-output name=awssdk::$AWSSDK_PATH"
           echo "::set-output name=pybind11::$PYBIND11_PATH"
         id: export_path
-      - name: Get Date
-        if: matrix.with-s3 == 1
-        id: get_date
-        shell: bash
-        run: echo "::set-output name=date::$(date "+%Y%m%d")"
-      - name: Uses cache for AWS-SDK-CPP
-        if: matrix.with-s3 == 1
-        id: aws_sdk_cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ steps.export_path.outputs.awssdk }}
-          key: ${{ matrix.os }}-${{ matrix.python-version }}-${{ steps.get_date.outputs.date }}
+      # - name: Get Date
+      #   if: matrix.with-s3 == 1
+      #   id: get_date
+      #   shell: bash
+      #   run: echo "::set-output name=date::$(date "+%Y%m%d")"
+      # - name: Uses cache for AWS-SDK-CPP
+      #   if: matrix.with-s3 == 1
+      #   id: aws_sdk_cache
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: ${{ steps.export_path.outputs.awssdk }}
+      #     key: ${{ matrix.os }}-${{ matrix.python-version }}-${{ steps.get_date.outputs.date }}
       - name: Install AWS-SDK-CPP on Windows for S3 IO datapipes
-        if: matrix.with-s3 == 1 && matrix.os == 'windows-latest' && steps.aws_sdk_cache.outputs.cache-hit != 'true'
+        # if: matrix.with-s3 == 1 && matrix.os == 'windows-latest' && steps.aws_sdk_cache.outputs.cache-hit != 'true'
+        if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
         run: |
           git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
           cd aws-sdk-cpp
@@ -94,7 +95,8 @@ jobs:
           cmake --build build --config Release
           cmake --install build --config Release
       - name: Install AWS-SDK-CPP on Non-Windows for S3 IO datapipes
-        if: matrix.with-s3 == 1 && matrix.os != 'windows-latest' && steps.aws_sdk_cache.outputs.cache-hit != 'true'
+        # if: matrix.with-s3 == 1 && matrix.os != 'windows-latest' && steps.aws_sdk_cache.outputs.cache-hit != 'true'
+        if: matrix.with-s3 == 1 && matrix.os != 'windows-latest'
         run: |
           git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
           cd aws-sdk-cpp/
