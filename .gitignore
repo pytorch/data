@@ -1,6 +1,6 @@
 build/*
 dist/*
-torchdata.egg-info/*
+*.egg-info/*
 
 torchdata/version.py
 torchdata/datapipes/iter/__init__.pyi

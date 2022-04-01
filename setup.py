@@ -4,13 +4,14 @@ import distutils.command.clean
 import os
 import shutil
 import subprocess
+import sys
 
 from pathlib import Path
 
 from setuptools import find_packages, setup
-from tools import setup_helpers
 
-# from torchdata.datapipes.gen_pyi import gen_pyi
+from tools import setup_helpers
+from tools.gen_pyi import gen_pyi
 
 ROOT_DIR = Path(__file__).parent.resolve()
 
@@ -85,6 +86,11 @@ if __name__ == "__main__":
 
     print("-- Building version " + VERSION)
 
+    if sys.argv[1] != "clean":
+        gen_pyi()
+        # TODO: Fix #343
+        os.chdir(ROOT_DIR)
+
     setup(
         # Metadata
         name="torchdata",
@@ -109,8 +115,13 @@ if __name__ == "__main__":
             "Programming Language :: Python :: Implementation :: CPython",
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
+        package_data={
+            "torchdata": [
+                "datapipes/iter/*.pyi",
+            ],
+        },
         # Package Info
-        packages=find_packages(exclude=["test*", "examples*", "torchdata.csrc*", "build*", "tools*"]),
+        packages=find_packages(exclude=["test*", "examples*", "tools*", "torchdata.csrc*", "build*"]),
         zip_safe=False,
         # C++ Extension Modules
         ext_modules=setup_helpers.get_ext_modules(),
@@ -119,4 +130,3 @@ if __name__ == "__main__":
             "clean": clean,
         },
     )
-    # gen_pyi()
