@@ -10,6 +10,7 @@ git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
 cd aws-sdk-cpp/
 mkdir sdk-build
 cd sdk-build
+# need to add flag -DBUILD_SHARED_LIBS=OFF for static linking on Windows
 cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer"
 make
 make install # may need sudo
