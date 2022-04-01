@@ -2,11 +2,12 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import os
 import subprocess
+import sys
 
 from pathlib import Path
 
 from setuptools import find_packages, setup
-from torchdata.datapipes.gen_pyi import gen_pyi
+from tools.gen_pyi import gen_pyi
 
 
 ROOT_DIR = Path(__file__).parent.resolve()
@@ -58,6 +59,11 @@ if __name__ == "__main__":
 
     print("-- Building version " + VERSION)
 
+    if sys.argv[1] != "clean":
+        gen_pyi()
+        # TODO: Fix #343
+        os.chdir(str(ROOT_DIR))
+
     setup(
         # Metadata
         name="torchdata",
@@ -82,8 +88,12 @@ if __name__ == "__main__":
             "Programming Language :: Python :: Implementation :: CPython",
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
+        package_data={
+            "torchdata": [
+                "datapipes/iter/*.pyi",
+            ],
+        },
         # Package Info
-        packages=find_packages(exclude=["test*", "examples*"]),
+        packages=find_packages(exclude=["test*", "examples*", "tools*"]),
         zip_safe=False,
     )
-    gen_pyi()
