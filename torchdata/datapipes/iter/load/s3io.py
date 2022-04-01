@@ -12,6 +12,14 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
     r""":class:`S3FileListerIterDataPipe`.
 
     Iterable DataPipe that lists URLs with the given prefixes (functional name: ``list_file_by_s3``).
+    Acceptable prefixes include `s3://bucket-name`, `s3://bucket-name/`, `s3://bucket-name/folder`,
+    `s3://bucket-name/folder/`, and `s3://bucket-name/prefix`. You may also set `length`, `request_timeout_ms` (default 3000
+    ms in aws-sdk-cpp), and `region`. Note that:
+
+    1. Input **must** be a list and direct S3 URLs are skipped.
+    2. `length` is `-1` by default, and any call to `__len__()` is invalid, because the length is unknown until all files
+    are iterated.
+    3. `request_timeout_ms` and `region` will overwrite settings in the configuration file or environment variables.
 
     Args:
         source_datapipe: a DataPipe that contains URLs/URL prefixes to s3 files
@@ -61,6 +69,12 @@ class S3FileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r""":class:`S3FileListerIterDataPipe`.
 
     Iterable DataPipe that loads S3 files given S3 URLs (functional name: ``load_file_by_s3``).
+    `S3FileLoader` iterates all given S3 URLs in `BytesIO` format with `(url, BytesIO)` tuples.
+    You may also set `request_timeout_ms` (default 3000 ms in aws-sdk-cpp), `region`,
+    `buffer_size` (default 120Mb), and `multi_part_download` (default to use multi-part downloading). Note that:
+
+    1. Input **must** be a list and S3 URLs must be valid.
+    2. `request_timeout_ms` and `region` will overwrite settings in the configuration file or environment variables.
 
     Args:
         source_datapipe: a DataPipe that contains URLs to s3 files
