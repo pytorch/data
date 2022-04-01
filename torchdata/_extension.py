@@ -16,7 +16,7 @@ def _init_extension():
 
     loader_details = (importlib.machinery.ExtensionFileLoader, importlib.machinery.EXTENSION_SUFFIXES)
 
-    extfinder = importlib.machinery.FileFinder(lib_dir, loader_details)
+    extfinder = importlib.machinery.FileFinder(lib_dir, loader_details)  # type: ignore[arg-type]
     ext_specs = extfinder.find_spec("_torchdata")
 
     if ext_specs is None:
