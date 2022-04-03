@@ -178,7 +178,7 @@ jobs:
           python setup.py install
 
       - name: Install test requirements
-        run: pip install dill expecttest numpy
+        run: pip install dill expecttest numpy pytest
 
       - name: Run torcharrow example datasets tests
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
