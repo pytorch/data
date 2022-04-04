@@ -2,11 +2,11 @@
 #define TORCHDATA_S3_IO_H
 
 #include <fstream>
-#include <string>
 #include <mutex>
+#include <string>
 
-#include <aws/core/auth/AWSAuthSigner.h>
 #include <aws/core/Aws.h>
+#include <aws/core/auth/AWSAuthSigner.h>
 #include <aws/core/config/AWSProfileConfigLoader.h>
 #include <aws/core/http/Scheme.h>
 #include <aws/core/utils/FileSystemUtils.h>
