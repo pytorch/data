@@ -38,6 +38,10 @@ from torchdata.datapipes.iter.load.online import (
     HTTPReaderIterDataPipe as HttpReader,
     OnlineReaderIterDataPipe as OnlineReader,
 )
+from torchdata.datapipes.iter.load.s3io import (
+    S3FileListerIterDataPipe as S3FileLister,
+    S3FileLoaderIterDataPipe as S3FileLoader,
+)
 from torchdata.datapipes.iter.transform.bucketbatcher import (
     BucketBatcherIterDataPipe as BucketBatcher,
     InBatchShufflerIterDataPipe as InBatchShuffler,
@@ -148,6 +152,8 @@ __all__ = [
     "RarArchiveLoader",
     "RoutedDecoder",
     "Rows2Columnar",
+    "S3FileLister",
+    "S3FileLoader",
     "SampleMultiplexer",
     "Sampler",
     "Saver",

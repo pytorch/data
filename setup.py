@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 # Copyright (c) Facebook, Inc. and its affiliates.
+import distutils.command.clean
 import os
+import shutil
 import subprocess
+import sys
 
 from pathlib import Path
 
 from setuptools import find_packages, setup
-from torchdata.datapipes.gen_pyi import gen_pyi
 
+from tools import setup_helpers
+from tools.gen_pyi import gen_pyi
 
 ROOT_DIR = Path(__file__).parent.resolve()
 
@@ -52,11 +56,40 @@ requirements = [
 ]
 
 
+class clean(distutils.command.clean.clean):
+    def run(self):
+        # Run default behavior first
+        distutils.command.clean.clean.run(self)
+
+        # Remove torchdata extension
+        def remove_extension(pattern):
+            for path in (ROOT_DIR / "torchdata").glob(pattern):
+                print(f"removing extension '{path}'")
+                path.unlink()
+
+        for ext in ["so", "dylib", "pyd"]:
+            remove_extension("**/*." + ext)
+
+        # Remove build directory
+        build_dirs = [
+            ROOT_DIR / "build",
+        ]
+        for path in build_dirs:
+            if path.exists():
+                print(f"removing '{path}' (and everything under it)")
+                shutil.rmtree(str(path), ignore_errors=True)
+
+
 if __name__ == "__main__":
     VERSION, SHA = _get_version()
     _export_version(VERSION, SHA)
 
     print("-- Building version " + VERSION)
+
+    if sys.argv[1] != "clean":
+        gen_pyi()
+        # TODO: Fix #343
+        os.chdir(ROOT_DIR)
 
     setup(
         # Metadata
@@ -82,8 +115,18 @@ if __name__ == "__main__":
             "Programming Language :: Python :: Implementation :: CPython",
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
+        package_data={
+            "torchdata": [
+                "datapipes/iter/*.pyi",
+            ],
+        },
         # Package Info
-        packages=find_packages(exclude=["test*", "examples*"]),
+        packages=find_packages(exclude=["test*", "examples*", "tools*", "torchdata.csrc*", "build*"]),
         zip_safe=False,
+        # C++ Extension Modules
+        ext_modules=setup_helpers.get_ext_modules(),
+        cmdclass={
+            "build_ext": setup_helpers.CMakeBuild,
+            "clean": clean,
+        },
     )
-    gen_pyi()
