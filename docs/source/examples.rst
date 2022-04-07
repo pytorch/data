@@ -71,8 +71,7 @@ The `Cambridge-driving Labeled Video Database (CamVid) <http://mi.eng.cam.ac.uk/
 labels, complete with metadata. The database provides ground truth labels that associate each pixel with one of 32 
 semantic classes. Here is the
 `DataPipe implementation of CamVid 
-<https://github.com/tcapelle/data/blob/main/examples/notebooks/01_Camvid_segmentation_with_datapipes.ipynb>`_.
-
+<https://github.com/tcapelle/torchdata/blob/main/01_Camvid_segmentation_with_datapipes.ipynb>`_.
 
 Additional Datasets in TorchVision
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -121,4 +120,4 @@ A custom DataPipe for Timeseries rolling window
 Implementing a rolling window custom `DataPipe` for timeseries forecasting tasks.
 Here is the
 `DataPipe implementation of a rolling window 
-<https://github.com/tcapelle/data/blob/main/examples/notebooks/02_Custom_timeseries_datapipe.ipynb>`_.
+<https://github.com/tcapelle/torchdata/blob/main/02_Custom_timeseries_datapipe.ipynb>`_.
