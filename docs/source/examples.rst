@@ -67,8 +67,7 @@ from 256 categories. Here is the
 
 CamVid - Semantic Segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The `Cambridge-driving Labeled Video Database (CamVid)` dataset 
-<http://mi.eng.cam.ac.uk/research/projects/VideoRec/CamVid/>`_ is a collection of videos with object class semantic 
+The `Cambridge-driving Labeled Video Database (CamVid) <http://mi.eng.cam.ac.uk/research/projects/VideoRec/CamVid/>`_ is a collection of videos with object class semantic 
 labels, complete with metadata. The database provides ground truth labels that associate each pixel with one of 32 
 semantic classes. Here is the
 `DataPipe implementation of CamVid 
