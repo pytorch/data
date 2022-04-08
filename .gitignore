@@ -1,6 +1,7 @@
 build/*
 dist/*
 *.egg-info/*
+conda-bld/*
 
 torchdata/version.py
 torchdata/datapipes/iter/__init__.pyi
