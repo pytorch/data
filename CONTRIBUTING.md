@@ -12,7 +12,7 @@ Your contributions may fall into the following categories:
   - Report issues that you're facing
   - Give a :+1: on issues that others reported and that are relevant to you
 
-- Answering questions on the issue tracke, investigating bugs are very valuable contributions to the project.
+- Answering questions on the issue tracker, investigating bugs are very valuable contributions to the project.
 
 - You would like to improve the documentation. This is no less important than improving the library itself! If you find
   a typo in the documentation, do not hesitate to submit a GitHub pull request.
@@ -32,6 +32,9 @@ Your contributions may fall into the following categories:
 We use GitHub issues to track public bugs. Please follow the existing templates if possible and ensure that the
 description is clear and has sufficient instructions to be able to reproduce the issue.
 
+For question related to the usage of this library, please post a question on the
+[PyTorch forum, under the "data" category](https://discuss.pytorch.org/c/data/37).
+
 ## Development installation
 
 ### Install PyTorch Nightly
@@ -40,7 +43,7 @@ description is clear and has sufficient instructions to be able to reproduce the
 conda install pytorch -c pytorch-nightly
 # or with pip (see https://pytorch.org/get-started/locally/)
 # pip install numpy
-# pip install --pre torch -f https://download.pytorch.org/whl/nightly/cu102/torch_nightly.html
+# pip install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
 ```
 
 ### Install TorchData
@@ -90,6 +93,7 @@ When adding a new DataPipe, there are few things that need to be done to ensure 
 3. Import - import the DataPipe in the correct `__init__.py` file.
 4. Interface - if the DataPipe has a functional form, make sure that is generated properly by `gen_pyi.py` into the
    relevant interface file.
+   - You can re-generate the pyi files by re-running `python setup.py develop`, then you can examine the new outputs.
 
 ## Contributor License Agreement ("CLA")
 
