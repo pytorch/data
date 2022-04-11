@@ -253,7 +253,7 @@ jobs:
                   for new_package in ./$subdir/torchdata-*-$build.tar.bz2; do
                     if [[ -f "$new_package" ]]; then
                       echo "Removing $CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
-                      anaconda -t "${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}" remove "$CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
+                      anaconda -t "${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}" remove -f "$CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
                       break
                     fi
                   done
