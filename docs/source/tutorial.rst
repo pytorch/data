@@ -74,7 +74,7 @@ For this example, we will first have a helper function that generates some CSV f
     def generate_csv(file_label, num_rows: int = 5000, num_features: int = 20) -> None:
         fieldnames = ['label'] + [f'c{i}' for i in range(num_features)]
         writer = csv.DictWriter(open(f"sample_data{file_label}.csv", "w"), fieldnames=fieldnames)
-        writer.writerow({col: col for col in fieldnames})  # writing the header row
+        writer.writeheader()
         for i in range(num_rows):
             row_data = {col: random.random() for col in fieldnames}
             row_data['label'] = random.randint(0, 9)
