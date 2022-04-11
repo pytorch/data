@@ -167,7 +167,7 @@ shuffled/batched more than once. You should choose one or the other.
 
 Q: How is multiprocessing handled with DataPipes?
 
-A: Multi-process data loading is still handed by DataLoader, see the
+A: Multi-process data loading is still handled by DataLoader, see the
 [DataLoader documentation for more details](https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading).
 
 Q: What is the upcoming plan for DataLoader?
