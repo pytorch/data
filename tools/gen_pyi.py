@@ -1,6 +1,10 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os
-import pathlib
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
@@ -26,12 +30,12 @@ def get_lines_base_file(base_file_path: str, to_skip: Optional[Set[str]] = None)
 
 
 def gen_pyi() -> None:
-    ROOT_DIR = Path(__file__).parent.resolve()
-    print(f"Generating DataPipe Python interface file in {ROOT_DIR}")
+    DATAPIPE_DIR = Path(__file__).parent.parent.resolve() / "torchdata" / "datapipes"
+    print(f"Generating DataPipe Python interface file in {DATAPIPE_DIR}")
 
     # Base __init__ file
     iter_init_base = get_lines_base_file(
-        os.path.join(ROOT_DIR, "iter/__init__.py"),
+        os.path.join(DATAPIPE_DIR, "iter/__init__.py"),
         {"from torch.utils.data import IterDataPipe", "# Copyright (c) Facebook, Inc. and its affiliates."},
     )
 
@@ -82,7 +86,7 @@ def gen_pyi() -> None:
         iterDP_deprecated_files,
         "IterDataPipe",
         iterDP_method_to_special_output_type,
-        root=str(pathlib.Path(__file__).parent.resolve()),
+        root=str(DATAPIPE_DIR),
     )
 
     td_iter_method_definitions = [
@@ -94,7 +98,7 @@ def gen_pyi() -> None:
     iter_replacements = [("${init_base}", iter_init_base, 0), ("${IterDataPipeMethods}", iter_method_definitions, 4)]
 
     gen_from_template(
-        dir=str(ROOT_DIR),
+        dir=str(DATAPIPE_DIR),
         template_name="iter/__init__.pyi.in",
         output_name="iter/__init__.pyi",
         replacements=iter_replacements,
