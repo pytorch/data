@@ -86,5 +86,12 @@ class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     """
 
     def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1):
-        deprecation_warning(type(cls).__name__, new_name="ZipArchiveLoader")
+        deprecation_warning(
+            cls.__name__,
+            deprecation_version="0.4",
+            removal_version="0.6",
+            old_functional_name="read_from_zip",
+            new_class_name="ZipArchiveLoader",
+            new_functional_name="load_from_zip",
+        )
         return ZipArchiveLoaderIterDataPipe(datapipe, length)
