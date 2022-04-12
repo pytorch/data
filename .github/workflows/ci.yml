@@ -93,7 +93,7 @@ jobs:
           sudo make install
       - name: Build TorchData
         run: |
-          python setup.py develop
+          python setup.py install
         env:
           BUILD_S3: ${{ matrix.with-s3 }}
           pybind11_DIR: ${{ steps.export_path.outputs.pybind11 }}
