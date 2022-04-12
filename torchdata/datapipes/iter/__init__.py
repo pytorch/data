@@ -113,8 +113,8 @@ from torchdata.datapipes.iter.util.ziparchiveloader import (
 )
 
 __all__ = [
-    "Batcher",
     "BatchMapper",
+    "Batcher",
     "BucketBatcher",
     "Bz2FileLoader",
     "CSVDictParser",

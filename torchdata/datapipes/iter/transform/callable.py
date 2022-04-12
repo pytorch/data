@@ -71,7 +71,7 @@ class BatchMapperIterDataPipe(IterDataPipe[T_co]):
             return self.fn(batch)
 
         if isinstance(self.input_col, (list, tuple)):
-            args = [(data[idx] for idx in self.input_col) for data in batch]
+            args = [[data[idx] for idx in self.input_col] for data in batch]
         else:
             args = [data[self.input_col] for data in batch]
         return self.fn(args)
@@ -82,7 +82,7 @@ class BatchMapperIterDataPipe(IterDataPipe[T_co]):
             batch.append(d)
             if len(batch) == self.batch_size:
                 yield from self._apply_fn(batch)
-            batch = []
+                batch = []
         if batch:
             yield from self._apply_fn(batch)
 
