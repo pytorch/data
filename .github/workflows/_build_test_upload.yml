@@ -26,10 +26,7 @@ on:
 
 jobs:
   get_release_type:
-    if: |
-      github.repository == 'pytorch/data' &&
-      ( github.ref_name == 'main' || startsWith(github.ref_name, 'release/') || github.ref_type == 'tag' ) &&
-      inputs.branch != ''
+    if: inputs.branch != ''
     runs-on: ubuntu-latest
     outputs:
       type: ${{ steps.get_release_type.outputs.type }}
@@ -106,7 +103,7 @@ jobs:
           path: dist/torchdata*.whl
 
   wheel_upload:
-    if: always()
+    if: always() && inputs.branch != ''
     needs: [get_release_type, wheel_build_test]
     runs-on: ubuntu-latest
     outputs:
@@ -199,7 +196,7 @@ jobs:
           path: conda-bld/*/torchdata-*.tar.bz2
 
   conda_upload:
-    if: always()
+    if: always() && inputs.branch != ''
     needs: [get_release_type, conda_build_test]
     runs-on: ubuntu-latest
     container: continuumio/miniconda3
@@ -269,7 +266,9 @@ jobs:
           fi
 
   build_docs:
-    if: always() && ( needs.wheel_upload.outputs.upload == 'true' || needs.conda_upload.outputs.upload == 'true' )
+    if: |
+      always() && inputs.branch != '' &&
+      ( needs.wheel_upload.outputs.upload == 'true' || needs.conda_upload.outputs.upload == 'true' )
     needs: [get_release_type, wheel_upload, conda_upload]
     runs-on: ubuntu-latest
     steps:
