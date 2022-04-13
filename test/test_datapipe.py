@@ -674,7 +674,7 @@ class TestDataPipe(expecttest.TestCase):
         self.assertEqual(list(range(10)), list(less_batch_mapped_dp))
 
         # Functional Test: Specify input_col
-        source_dp = IterableWrapper(list((d - 1, d, d + 1) for d in range(20)))
+        source_dp = IterableWrapper([(d - 1, d, d + 1) for d in range(20)])
 
         batch_mapped_input_1_dp = source_dp.map_batches(fn, batch_size=9, input_col=0)
         self.assertEqual(list(range(20)), list(batch_mapped_input_1_dp))
@@ -683,7 +683,7 @@ class TestDataPipe(expecttest.TestCase):
             return [(d1, d2 - 1) for d1, d2 in batch]
 
         batch_mapped_input_2_dp = source_dp.map_batches(fn_2_cols, batch_size=9, input_col=[1, 2])
-        self.assertEqual(list((d, d) for d in range(20)), list(batch_mapped_input_2_dp))
+        self.assertEqual([(d, d) for d in range(20)], list(batch_mapped_input_2_dp))
 
         # __len__ Test: length should be determined by ``fn`` which we can't know
         with self.assertRaisesRegex(TypeError, "length relies on the output of its function."):
