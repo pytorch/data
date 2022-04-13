@@ -38,6 +38,7 @@ def create_tfrecord_files(path: str):
         print("We will not generate tfrecord files.")
         return
 
+    os.makedirs(path, exist_ok=True)
     with tf.io.TFRecordWriter(os.path.join(path, "example.tfrecord")) as writer:
         for i in range(4):
             x = tf.range(i * 10, (i + 1) * 10)
