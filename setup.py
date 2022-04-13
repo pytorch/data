@@ -16,7 +16,6 @@ from pathlib import Path
 from setuptools import find_packages, setup
 
 from tools import setup_helpers
-from tools.gen_pyi import gen_pyi
 
 ROOT_DIR = Path(__file__).parent.resolve()
 
@@ -92,9 +91,9 @@ if __name__ == "__main__":
     print("-- Building version " + VERSION)
 
     if sys.argv[1] != "clean":
+        from tools.gen_pyi import gen_pyi
+
         gen_pyi()
-        # TODO: Fix #343
-        os.chdir(ROOT_DIR)
 
     setup(
         # Metadata
