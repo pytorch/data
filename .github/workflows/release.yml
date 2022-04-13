@@ -11,6 +11,7 @@ on:
 
 jobs:
   build_test_upload:
+    if: github.repository == 'pytorch/data' && github.ref_type == 'tag'
     uses: ./.github/workflows/_build_test_upload.yml
     with:
       branch: ""
