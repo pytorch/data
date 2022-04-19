@@ -115,15 +115,25 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
     datapipe: IterDataPipe
     fn: Callable
 
-    def __init__(self, datapipe: IterDataPipe, fn: Callable) -> None:
+    def __init__(self, datapipe: IterDataPipe, fn: Callable, input_col=None) -> None:
         self.datapipe = datapipe
 
         check_lambda_fn(fn)
         self.fn = fn  # type: ignore[assignment]
+        self.input_col = input_col
+
+    def _apply_fn(self, data):
+        if self.input_col is None:
+            return self.fn(data)
+        elif isinstance(self.input_col, (list, tuple)):
+            args = tuple(data[col] for col in self.input_col)
+            return self.fn(*args)
+        else:
+            return self.fn(data[self.input_col])
 
     def __iter__(self) -> Iterator[T_co]:
-        for e in self.datapipe:
-            yield from self.fn(e)
+        for d in self.datapipe:
+            yield from self._apply_fn(d)
 
     def __len__(self) -> int:
         raise TypeError(f"{type(self).__name__}'s length relies on the output of its function.")
