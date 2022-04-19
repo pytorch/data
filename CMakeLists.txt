@@ -60,6 +60,14 @@ if(APPLE)
 endif()
 
 # Options
+option(USE_SYSTEM_PYBIND11 "Use system-provided PyBind11." OFF)
+if(USE_SYSTEM_LIBS)
+  set(USE_SYSTEM_PYBIND11 ON)
+endif()
+
 option(BUILD_S3 "Build s3 io functionality" OFF)
 
+if(BUILD_S3)
+include(third_party/CMakeLists.txt)
 add_subdirectory(torchdata/csrc)
+endif()
