@@ -222,6 +222,10 @@ class TFRecordLoaderIterDataPipe(IterDataPipe[Example]):
         self.spec = spec
 
     def __iter__(self) -> Iterator[Example]:
+        # We assume that the "example.proto" and "feature.proto"
+        # stays the same for future TensorFlow versions.
+        # If it changed, newer TensorFlow versions would
+        # not be able to load older tfrecord datasets.
         from .protobuf_template import _tfrecord_example_pb2 as example_pb2
 
         for data in self.datapipe:
