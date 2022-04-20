@@ -18,9 +18,11 @@ from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils.common import validate_pathname_binary_tuple
 
 try:
-    from math import prod
+    from math import prod  # type: ignore
 except ImportError:
-    # polyfill for older python
+    # Implementation for older Python
+    # NOTE: this is not supported by mypy yet
+    # https://github.com/python/mypy/issues/1393
     import operator
     from functools import reduce
 
@@ -217,7 +219,7 @@ class TFRecordLoaderIterDataPipe(IterDataPipe[Example]):
     """
 
     def __init__(
-        self, datapipe: Iterable[Tuple[str, BufferedIOBase]], spec: ExampleSpec = None, length: int = -1
+        self, datapipe: Iterable[Tuple[str, BufferedIOBase]], spec: Optional[ExampleSpec] = None, length: int = -1
     ) -> None:
         super().__init__()
         _assert_protobuf()
@@ -238,8 +240,8 @@ class TFRecordLoaderIterDataPipe(IterDataPipe[Example]):
             pathname, data_stream = data
             try:
                 for example_bytes in iterate_tfrecord_file(data_stream):
-                    example = example_pb2.SequenceExample()
-                    example.ParseFromString(example_bytes)
+                    example = example_pb2.SequenceExample()  # type: ignore
+                    example.ParseFromString(example_bytes)  # type: ignore
                     yield parse_tfrecord_sequence_example(example, self.spec)
             except RuntimeError as e:
                 warnings.warn(f"Unable to read from corrupted tfrecord stream {pathname} due to: {e}, abort!")
