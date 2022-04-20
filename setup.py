@@ -24,7 +24,7 @@ ROOT_DIR = Path(__file__).parent.resolve()
 # Parameters parsed from environment
 ################################################################################
 RUN_BUILD_DEP = True
-for i, arg in enumerate(sys.argv):
+for _, arg in enumerate(sys.argv):
     if arg in ["clean", "egg_info", "sdist"]:
         RUN_BUILD_DEP = False
 
