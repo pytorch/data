@@ -1,6 +1,13 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
-from torch.utils.data import IterDataPipe
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
 
+###############################################################################
+# Reference From PyTorch Core
+###############################################################################
+from torch.utils.data import IterDataPipe
 from torch.utils.data.datapipes.iter import (
     Batcher,
     Collator,
@@ -22,6 +29,10 @@ from torch.utils.data.datapipes.iter import (
     UnBatcher,
     Zipper,
 )
+
+###############################################################################
+# TorchData
+###############################################################################
 from torchdata.datapipes.iter.load.fsspec import (
     FSSpecFileListerIterDataPipe as FSSpecFileLister,
     FSSpecFileOpenerIterDataPipe as FSSpecFileOpener,
@@ -38,12 +49,20 @@ from torchdata.datapipes.iter.load.online import (
     HTTPReaderIterDataPipe as HttpReader,
     OnlineReaderIterDataPipe as OnlineReader,
 )
+from torchdata.datapipes.iter.load.s3io import (
+    S3FileListerIterDataPipe as S3FileLister,
+    S3FileLoaderIterDataPipe as S3FileLoader,
+)
 from torchdata.datapipes.iter.transform.bucketbatcher import (
     BucketBatcherIterDataPipe as BucketBatcher,
     InBatchShufflerIterDataPipe as InBatchShuffler,
     MaxTokenBucketizerIterDataPipe as MaxTokenBucketizer,
 )
-from torchdata.datapipes.iter.transform.flatmap import FlatMapperIterDataPipe as FlatMapper
+from torchdata.datapipes.iter.transform.callable import (
+    BatchMapperIterDataPipe as BatchMapper,
+    FlatMapperIterDataPipe as FlatMapper,
+)
+from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
 from torchdata.datapipes.iter.util.cacheholder import (
     EndOnDiskCacheHolderIterDataPipe as EndOnDiskCacheHolder,
     InMemoryCacheHolderIterDataPipe as InMemoryCacheHolder,
@@ -94,13 +113,11 @@ from torchdata.datapipes.iter.util.ziparchiveloader import (
     ZipArchiveReaderIterDataPipe as ZipArchiveReader,
 )
 
-###############################################################################
-# Reference From PyTorch Core
-###############################################################################
-
 __all__ = [
+    "BatchMapper",
     "Batcher",
     "BucketBatcher",
+    "Bz2FileLoader",
     "CSVDictParser",
     "CSVParser",
     "Collator",
@@ -147,6 +164,8 @@ __all__ = [
     "RarArchiveLoader",
     "RoutedDecoder",
     "Rows2Columnar",
+    "S3FileLister",
+    "S3FileLoader",
     "SampleMultiplexer",
     "Sampler",
     "Saver",

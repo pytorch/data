@@ -1,7 +1,7 @@
 # TorchData
 
 [**Why torchdata?**](#why-composable-data-loading) | [**Install guide**](#installation) |
-[**What are DataPipes?**](#what-are-datapipes) | [**Prototype Usage and Feedback**](#prototype-usage-and-feedback) |
+[**What are DataPipes?**](#what-are-datapipes) | [**Beta Usage and Feedback**](#beta-usage-and-feedback) |
 [**Contributing**](#contributing) | [**Future Plans**](#future-plans)
 
 **This library is currently in the Beta stage and currently does not have a stable release. The API may change based on
@@ -167,7 +167,7 @@ shuffled/batched more than once. You should choose one or the other.
 
 Q: How is multiprocessing handled with DataPipes?
 
-A: Multi-process data loading is still handed by DataLoader, see the
+A: Multi-process data loading is still handled by DataLoader, see the
 [DataLoader documentation for more details](https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading).
 
 Q: What is the upcoming plan for DataLoader?

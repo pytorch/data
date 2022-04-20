@@ -48,6 +48,7 @@ These DataPipes help opening and decompressing archive files of different format
     :toctree: generated/
     :template: datapipe.rst
 
+    Bz2FileLoader
     Decompressor
     RarArchiveLoader
     TarArchiveLoader
@@ -150,6 +151,7 @@ These DataPipes apply the a given function to each element in the DataPipe.
     :toctree: generated/
     :template: datapipe.rst
 
+    BatchMapper
     FlatMapper
     Mapper
 

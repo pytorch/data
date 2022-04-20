@@ -1,4 +1,10 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
+import bz2
 import hashlib
 import itertools
 import lzma
@@ -15,6 +21,7 @@ import expecttest
 
 from _utils._common_utils_for_test import create_temp_dir, create_temp_files, get_name, reset_after_n_next_calls
 from torchdata.datapipes.iter import (
+    Bz2FileLoader,
     CSVDictParser,
     CSVParser,
     Decompressor,
@@ -422,6 +429,45 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
             len(xz_loader_dp)
 
+    def _write_test_bz2_files(self):
+        for path in self.temp_files:
+            fname = os.path.basename(path)
+            temp_bz2file_pathname = os.path.join(self.temp_dir.name, f"{fname}.bz2")
+            with open(path) as f:
+                with bz2.open(temp_bz2file_pathname, "w") as f_bz2:
+                    f_bz2.write(f.read().encode("utf-8"))
+
+    def test_bz2_archive_reader_iterdatapipe(self):
+        self._write_test_bz2_files()
+        filelist_dp = FileLister(self.temp_dir.name, "*.bz2")
+        fileopen_dp = FileOpener(filelist_dp, mode="b")
+        bz2_loader_dp = Bz2FileLoader(fileopen_dp)
+
+        # Functional Test: Read extracted files before reaching the end of the bz2file
+        self._unordered_compressed_files_comparison_helper(self.temp_files, bz2_loader_dp, check_length=False)
+
+        # Functional Test: Read extracted files after reaching the end of the bz2file
+        data_refs = list(bz2_loader_dp)
+        self._unordered_compressed_files_comparison_helper(self.temp_files, data_refs)
+
+        # Reset Test: reset the DataPipe after reading part of it
+        bz2_loader_dp = fileopen_dp.load_from_bz2()
+        n_elements_before_reset = 1
+        res_before_reset, res_after_reset = reset_after_n_next_calls(bz2_loader_dp, n_elements_before_reset)
+        # Check result accumulated before reset
+        self.assertEqual(n_elements_before_reset, len(res_before_reset))
+        self._unordered_compressed_files_comparison_helper(self.temp_files, res_before_reset, check_length=False)
+        # Check result accumulated after reset
+        self._unordered_compressed_files_comparison_helper(self.temp_files, res_after_reset)
+
+        # Reset Test: Ensure the order is consistent between iterations
+        for r1, r2 in zip(bz2_loader_dp, bz2_loader_dp):
+            self.assertEqual(r1[0], r2[0])
+
+        # __len__ Test: doesn't have valid length
+        with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
+            len(bz2_loader_dp)
+
     def _decompressor_tar_test_helper(self, expected_files, tar_decompress_dp):
         for _file, child_obj in tar_decompress_dp:
             for expected_file, tarinfo in zip(expected_files, child_obj):
@@ -437,6 +483,12 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             with open(expected_file, "rb") as f:
                 self.assertEqual(f.read(), xz_stream.read())
 
+    def _decompressor_bz2_test_helper(self, bz2_decompress_dp):
+        for bz2_file_name, bz2_stream in bz2_decompress_dp:
+            expected_file = bz2_file_name.rsplit(".", 1)[0]
+            with open(expected_file, "rb") as f:
+                self.assertEqual(f.read(), bz2_stream.read())
+
     def _write_single_gz_file(self):
         import gzip
 
@@ -450,6 +502,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self._write_single_gz_file()
         self._write_test_zip_files()
         self._write_test_xz_files()
+        self._write_test_bz2_files()
 
         # Functional Test: work with .tar files
         tar_file_dp = FileLister(self.temp_dir.name, "*.tar")
@@ -486,6 +539,12 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         xz_decompress_dp = Decompressor(xz_load_dp, file_type="lzma")
         self._decompressor_xz_test_helper(xz_decompress_dp)
 
+        # Functional Test: work with .bz2 files
+        bz2_file_dp = FileLister(self.temp_dir.name, "*.bz2")
+        bz2_load_dp = FileOpener(bz2_file_dp, mode="b")
+        bz2_decompress_dp = Decompressor(bz2_load_dp, file_type="bz2")
+        self._decompressor_bz2_test_helper(bz2_decompress_dp)
+
         # Functional Test: work without file type as input for .tar files
         tar_decompress_dp = Decompressor(tar_load_dp, file_type=None)
         self._decompressor_tar_test_helper(self.temp_files, tar_decompress_dp)
@@ -497,6 +556,10 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Functional Test: work without file type as input for .tar.gz files
         tar_gz_decompress_dp = Decompressor(tar_gz_load_dp, file_type=None)
         self._decompressor_tar_test_helper(self.temp_files, tar_gz_decompress_dp)
+
+        # Functional Test: work without file type as input for .bz2 files
+        bz2_decompress_dp = Decompressor(bz2_load_dp, file_type=None)
+        self._decompressor_bz2_test_helper(bz2_decompress_dp)
 
         # Functional Test: Compression Type is works for both upper and lower case strings
         tar_decompress_dp = Decompressor(tar_load_dp, file_type="TAr")

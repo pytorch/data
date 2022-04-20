@@ -1,4 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os
 import tarfile
 import warnings
@@ -80,5 +85,12 @@ class TarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     """
 
     def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], mode: str = "r:*", length: int = -1):
-        deprecation_warning(type(cls).__name__, new_name="TarArchiveLoader")
+        deprecation_warning(
+            cls.__name__,
+            deprecation_version="0.4",
+            removal_version="0.6",
+            old_functional_name="read_from_tar",
+            new_class_name="TarArchiveLoader",
+            new_functional_name="load_from_tar",
+        )
         return TarArchiveLoaderIterDataPipe(datapipe, mode, length)

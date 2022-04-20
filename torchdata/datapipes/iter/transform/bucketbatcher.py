@@ -1,13 +1,16 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import heapq
 import random
 
 from functools import partial
 from typing import Callable, Iterator, List, Optional, TypeVar
 
-from torch.utils.data import DataChunk
-
-from torchdata.datapipes import functional_datapipe
+from torchdata.datapipes import DataChunk, functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
 T_co = TypeVar("T_co", covariant=True)
@@ -62,7 +65,7 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         batch_num: Number of batches within a bucket (i.e. `bucket_size = batch_size * batch_num`)
         bucket_num: Number of buckets to consist a pool for shuffling (i.e. `pool_size = bucket_size * bucket_num`)
         sort_key: Callable to sort a bucket (list)
-        in_batch_shuffle: iF True, do in-batch shuffle; if False, buffer shuffle
+        use_in_batch_shuffle: if True, do in-batch shuffle; if False, buffer shuffle
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
@@ -74,7 +77,7 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         >>>     return sorted(bucket)
         >>> batch_dp = source_dp.bucketbatch(
         >>>     batch_size=3, drop_last=True, batch_num=100,
-        >>>     bucket_num=1, in_batch_shuffle=False, sort_key=sort_bucket
+        >>>     bucket_num=1, use_in_batch_shuffle=False, sort_key=sort_bucket
         >>> )
         >>> list(batch_dp)
         [[3, 4, 5], [6, 7, 8], [0, 1, 2]]
@@ -85,7 +88,7 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
     batch_num: int
     bucket_num: int
     sort_key: Optional[Callable]
-    in_batch_shuffle: bool
+    use_in_batch_shuffle: bool
 
     def __new__(
         cls,
@@ -95,7 +98,7 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         batch_num: int = 100,
         bucket_num: int = 1,
         sort_key: Optional[Callable] = None,
-        in_batch_shuffle: bool = True,
+        use_in_batch_shuffle: bool = True,
     ):
         assert batch_size > 0, "Batch size is required to be larger than 0!"
         assert batch_num > 0, "Number of batches is required to be larger than 0!"
@@ -106,7 +109,7 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
 
         # Shuffle by pool_size
         if bucket_num > 1 or sort_key is None:
-            if in_batch_shuffle:
+            if use_in_batch_shuffle:
                 datapipe = datapipe.batch(batch_size=pool_size, drop_last=False).in_batch_shuffle().unbatch()
             else:
                 datapipe = datapipe.shuffle(buffer_size=pool_size)
@@ -118,7 +121,7 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         # Shuffle the batched data
         if sort_key is not None:
             # In-batch shuffle each bucket seems not that useful, it seems misleading since .batch is called prior.
-            if in_batch_shuffle:
+            if use_in_batch_shuffle:
                 datapipe = datapipe.batch(batch_size=bucket_num, drop_last=False).in_batch_shuffle().unbatch()
             else:
                 datapipe = datapipe.shuffle(buffer_size=bucket_size)

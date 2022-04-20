@@ -1,4 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os
 import pickle
 import unittest
@@ -52,6 +57,10 @@ except ImportError:
     torcharrow = None
     dt = None
     DTYPE = None
+
+
+def _fake_batch_fn(batch):
+    return [d + 1 for d in batch]
 
 
 def _fake_fn_ls(x):
@@ -138,7 +147,9 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
 
     def test_serializable(self):
         picklable_datapipes: List = [
+            (iterdp.BatchMapper, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), (_fake_batch_fn, 2, 1), {}),
             (iterdp.BucketBatcher, IterableWrapper([0, 0, 0, 0, 0, 0, 0]), (5,), {}),
+            (iterdp.Bz2FileLoader, None, (), {}),
             (
                 iterdp.CSVDictParser,
                 IterableWrapper(
@@ -256,6 +267,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         # Most of them return streams not comparable by `self.assertEqual`
         # Others are similar to caching where the outputs depend on other DataPipes
         dp_skip_comparison = {
+            iterdp.Bz2FileLoader,
             iterdp.Decompressor,
             iterdp.FileOpener,
             iterdp.FSSpecFileOpener,
@@ -303,6 +315,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         ref_mdp = SequenceWrapper(range(10))
 
         unpicklable_datapipes: List = [
+            (iterdp.BatchMapper, (lambda batch: [d + 1 for d in batch], 2), {}),
             (iterdp.FlatMapper, (lambda x: [x, x],), {}),
             (iterdp.IterKeyZipper, (ref_idp, lambda x: x, None, True, 100), {}),
             (iterdp.MapKeyZipper, (ref_mdp, lambda x: x), {}),

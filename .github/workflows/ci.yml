@@ -29,27 +29,77 @@ jobs:
           - 3.7
           - 3.8
           - 3.9
+        with-s3:
+          - 1
+          - 0
     steps:
       - name: Setup additional system libraries
         if: startsWith( matrix.os, 'ubuntu' )
         run: |
           sudo add-apt-repository multiverse
           sudo apt update
-          sudo apt install rar unrar
+          sudo apt install rar unrar libssl-dev libcurl4-openssl-dev zlib1g-dev
       - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Setup msbuild on Windows
+        if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
+        uses: microsoft/setup-msbuild@v1.1
+      - name: Set up Visual Studio shell
+        if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
+        uses: egor-tensin/vs-shell@v2
+        with:
+          arch: x64
       - name: Check out source repository
         uses: actions/checkout@v2
       - name: Install dependencies
         run: |
           pip3 install -r requirements.txt
           pip3 install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
+          pip3 install cmake ninja pybind11
+          echo "/home/runner/.local/bin" >> $GITHUB_PATH
+      - name: Export AWS-SDK-CPP & PYBIND11
+        if: matrix.with-s3 == 1
+        shell: bash
+        run: |
+          if [[ ${{ matrix.os }} == 'windows-latest' ]]; then
+            AWSSDK_PATH="$GITHUB_WORKSPACE\\aws-sdk-cpp\\sdk-lib"
+          else
+            AWSSDK_PATH="$GITHUB_WORKSPACE/aws-sdk-cpp/sdk-lib"
+          fi
+          PYBIND11_PATH=`pybind11-config --cmakedir`
+          echo "::set-output name=awssdk::$AWSSDK_PATH"
+          echo "::set-output name=pybind11::$PYBIND11_PATH"
+        id: export_path
+      - name: Install AWS-SDK-CPP on Windows for S3 IO datapipes
+        if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
+        run: |
+          git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
+          cd aws-sdk-cpp
+          mkdir sdk-lib
+          cmake -S . -B build -GNinja -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=sdk-lib
+          cmake --build build --config Release
+          cmake --install build --config Release
+      - name: Install AWS-SDK-CPP on Non-Windows for S3 IO datapipes
+        if: matrix.with-s3 == 1 && matrix.os != 'windows-latest'
+        run: |
+          git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
+          cd aws-sdk-cpp/
+          mkdir sdk-build sdk-lib
+          cd sdk-build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DENABLE_TESTING=OFF -DCMAKE_INSTALL_PREFIX=../sdk-lib
+          make
+          sudo make install
+      - name: Build TorchData
+        run: |
+          python setup.py install
+        env:
+          BUILD_S3: ${{ matrix.with-s3 }}
+          pybind11_DIR: ${{ steps.export_path.outputs.pybind11 }}
+          AWSSDK_DIR: ${{ steps.export_path.outputs.awssdk }}
       - name: Install test requirements
         run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile protobuf
-      - name: Build TorchData
-        run: python setup.py develop
       - name: Run DataPipes tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run:

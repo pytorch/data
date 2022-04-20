@@ -1,4 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os
 import sys
 import warnings
@@ -81,5 +86,12 @@ class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     """
 
     def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1):
-        deprecation_warning(type(cls).__name__, new_name="ZipArchiveLoader")
+        deprecation_warning(
+            cls.__name__,
+            deprecation_version="0.4",
+            removal_version="0.6",
+            old_functional_name="read_from_zip",
+            new_class_name="ZipArchiveLoader",
+            new_functional_name="load_from_zip",
+        )
         return ZipArchiveLoaderIterDataPipe(datapipe, length)
