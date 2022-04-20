@@ -22,6 +22,7 @@ except ImportError:
     def prod(xs):
         return reduce(operator.mul, xs, 1)
 
+
 try:
     import google.protobuf as _protobuf
 
@@ -221,7 +222,7 @@ class TFRecordLoaderIterDataPipe(IterDataPipe[Example]):
         self.spec = spec
 
     def __iter__(self) -> Iterator[Example]:
-        from . import _tfrecord_example_pb2 as example_pb2
+        from .protobuf_template import _tfrecord_example_pb2 as example_pb2
 
         for data in self.datapipe:
             validate_pathname_binary_tuple(data)
