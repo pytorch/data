@@ -13,7 +13,7 @@ from collections import deque
 from functools import partial
 from typing import Callable, Deque, Dict, Iterator, Optional, TypeVar
 
-from torch.utils.data.datapipes.utils.common import check_lambda_fn, DILL_AVAILABLE
+from torch.utils.data.datapipes.utils.common import _check_lambda_fn, DILL_AVAILABLE
 
 from torch.utils.data.graph import traverse
 from torchdata.datapipes import functional_datapipe
@@ -160,7 +160,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     ):
         self.source_datapipe = source_datapipe
 
-        check_lambda_fn(filepath_fn)
+        _check_lambda_fn(filepath_fn)
         filepath_fn = _generator_to_list(filepath_fn) if inspect.isgeneratorfunction(filepath_fn) else filepath_fn
 
         if hash_dict is not None and hash_type not in ("sha256", "md5"):

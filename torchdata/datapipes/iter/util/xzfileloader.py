@@ -9,7 +9,7 @@ import warnings
 from io import BufferedIOBase
 from typing import Iterable, Iterator, Tuple
 
-from torch.utils.data.datapipes.utils.common import deprecation_warning
+from torch.utils.data.datapipes.utils.common import _deprecation_warning
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -74,7 +74,7 @@ class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     """
 
     def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1):
-        deprecation_warning(
+        _deprecation_warning(
             cls.__name__,
             deprecation_version="0.4",
             removal_version="0.6",
