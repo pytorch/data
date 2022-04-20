@@ -1,4 +1,8 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
 import os
 import unittest
 import warnings
@@ -23,7 +27,7 @@ from torchdata.datapipes.iter import (
 
 class TestDataPipeTFRecord(expecttest.TestCase):
     def setUp(self):
-        self.temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '_fakedata', 'tfrecord')
+        self.temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_fakedata", "tfrecord")
 
     def assertArrayEqual(self, arr1, arr2):
         np.testing.assert_array_equal(arr1, arr2)
@@ -36,21 +40,16 @@ class TestDataPipeTFRecord(expecttest.TestCase):
                 "x_int": (x * 10).long(),
                 "x_byte": [b"test str"],
             }
-            
+
     def _ground_truth_seq_data(self):
         for i in range(4):
             x = torch.range(i * 10, (i + 1) * 10 - 1)
             rep = 2 * i + 3
-            yield {
-                "x_float": x,
-                "x_int": (x * 10).long(),
-                "x_byte": [b"test str"],
-            }, {
+            yield {"x_float": x, "x_int": (x * 10).long(), "x_byte": [b"test str"]}, {
                 "x_float_seq": [x] * rep,
                 "x_int_seq": [(x * 10).long()] * rep,
                 "x_byte_seq": [[b"test str"]] * rep,
             }
-
 
     @torch.no_grad()
     def test_tfrecord_loader_example_iterdatapipe(self):
@@ -80,11 +79,14 @@ class TestDataPipeTFRecord(expecttest.TestCase):
         )
         result = list(tfrecord_parser)
         self.assertEqual(len(result), 4)
-        expected_res = [{
-            "x_float": x["x_float"].reshape(5, 2),
-            "x_int": x["x_int"].reshape(5, 2),
-            "x_byte": x["x_byte"][0],
-        } for x in self._ground_truth_data()]
+        expected_res = [
+            {
+                "x_float": x["x_float"].reshape(5, 2),
+                "x_int": x["x_int"].reshape(5, 2),
+                "x_byte": x["x_byte"][0],
+            }
+            for x in self._ground_truth_data()
+        ]
         for true_data, loaded_data in zip(expected_res, result):
             self.assertSetEqual(set(true_data.keys()), set(loaded_data.keys()))
             self.assertArrayEqual(true_data["x_float"].numpy(), loaded_data["x_float"].float().numpy())
@@ -101,9 +103,12 @@ class TestDataPipeTFRecord(expecttest.TestCase):
         )
         result = list(tfrecord_parser)
         self.assertEqual(len(result), 4)
-        expected_res = [{
-            "x_float": x["x_float"],
-        } for x in self._ground_truth_data()]
+        expected_res = [
+            {
+                "x_float": x["x_float"],
+            }
+            for x in self._ground_truth_data()
+        ]
         for true_data, loaded_data in zip(expected_res, result):
             self.assertSetEqual(set(true_data.keys()), set(loaded_data.keys()))
             self.assertArrayEqual(true_data["x_float"].numpy(), loaded_data["x_float"].float().numpy())
@@ -177,15 +182,21 @@ class TestDataPipeTFRecord(expecttest.TestCase):
         result = list(tfrecord_parser)
         self.assertEqual(len(result), 4)
 
-        expected_res = [({
-            "x_float": x["x_float"].reshape(5, 2),
-            "x_int": x["x_int"].reshape(5, 2),
-            "x_byte": x["x_byte"][0],
-        }, {
-            "x_float_seq": [y.reshape(5, 2).numpy() for y in z["x_float_seq"]],
-            "x_int_seq": [y.reshape(5, 2).numpy() for y in z["x_int_seq"]],
-            "x_byte_seq": [y[0] for y in z["x_byte_seq"]],
-        }) for x, z in self._ground_truth_seq_data()]
+        expected_res = [
+            (
+                {
+                    "x_float": x["x_float"].reshape(5, 2),
+                    "x_int": x["x_int"].reshape(5, 2),
+                    "x_byte": x["x_byte"][0],
+                },
+                {
+                    "x_float_seq": [y.reshape(5, 2).numpy() for y in z["x_float_seq"]],
+                    "x_int_seq": [y.reshape(5, 2).numpy() for y in z["x_int_seq"]],
+                    "x_byte_seq": [y[0] for y in z["x_byte_seq"]],
+                },
+            )
+            for x, z in self._ground_truth_seq_data()
+        ]
         for (true_data_ctx, true_data_seq), loaded_data in zip(expected_res, result):
             self.assertSetEqual(set(true_data_ctx.keys()).union(true_data_seq.keys()), set(loaded_data.keys()))
             for key in ["x_float", "x_int"]:
@@ -207,9 +218,12 @@ class TestDataPipeTFRecord(expecttest.TestCase):
         )
         result = list(tfrecord_parser)
         self.assertEqual(len(result), 4)
-        expected_res = [{
-            "x_float": x["x_float"],
-        } for x, z in self._ground_truth_seq_data()]
+        expected_res = [
+            {
+                "x_float": x["x_float"],
+            }
+            for x, z in self._ground_truth_seq_data()
+        ]
         for true_data, loaded_data in zip(expected_res, result):
             self.assertSetEqual(set(true_data.keys()), set(loaded_data.keys()))
             self.assertArrayEqual(true_data["x_float"].numpy(), loaded_data["x_float"].float().numpy())
