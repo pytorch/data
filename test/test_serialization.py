@@ -256,6 +256,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)},
             ),
             (iterdp.TarArchiveLoader, None, (), {}),
+            (iterdp.TFRecordLoader, None, (), {}),
             (iterdp.UnZipper, IterableWrapper([(i, i + 10) for i in range(10)]), (), {"sequence_length": 2}),
             (iterdp.XzFileLoader, None, (), {}),
             (iterdp.ZipArchiveLoader, None, (), {}),
@@ -281,6 +282,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             iterdp.SampleMultiplexer,
             iterdp.RarArchiveLoader,
             iterdp.TarArchiveLoader,
+            iterdp.TFRecordLoader,
             iterdp.XzFileLoader,
             iterdp.ZipArchiveLoader,
         }
