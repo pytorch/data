@@ -16,8 +16,11 @@ def pathsplit(p):
 @functional_datapipe("webdataset")
 class WebDatasetIterDataPipe(IterDataPipe[Dict]):
     r"""
-    Iterable DataPipe that accepts stream of (path, data) tuples and aggregates them into
-    a single dictionary based on the basenames of the paths (WebDataset file convention).
+    Iterable DataPipe that accepts stream of (path, data) tuples (usually,
+    representing the pathnames and files of a tar archive) and aggregates
+    consecutive items with the same basename into a single dictionary, using the
+    extensions as keys (WebDataset file convention). Any text after the first
+    "." in the filename is used as an a key/extension.
 
     File names that do not have an extension are ignored.
 
