@@ -111,6 +111,7 @@ from torchdata.datapipes.iter.util.ziparchiveloader import (
     ZipArchiveLoaderIterDataPipe as ZipArchiveLoader,
     ZipArchiveReaderIterDataPipe as ZipArchiveReader,
 )
+from torchdata.datapipes.iter.util.webdataset import WebDatasetIterDataPipe as WebDataset
 
 __all__ = [
     "BatchMapper",
@@ -175,6 +176,7 @@ __all__ = [
     "TarArchiveReader",
     "UnBatcher",
     "UnZipper",
+    "WebDataset",
     "XzFileLoader",
     "XzFileReader",
     "ZipArchiveLoader",
