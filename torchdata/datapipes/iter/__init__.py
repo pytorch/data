@@ -103,6 +103,7 @@ from torchdata.datapipes.iter.util.tararchiveloader import (
     TarArchiveReaderIterDataPipe as TarArchiveReader,
 )
 from torchdata.datapipes.iter.util.unzipper import UnZipperIterDataPipe as UnZipper
+from torchdata.datapipes.iter.util.webdataset import WebDatasetIterDataPipe as WebDataset
 from torchdata.datapipes.iter.util.xzfileloader import (
     XzFileLoaderIterDataPipe as XzFileLoader,
     XzFileReaderIterDataPipe as XzFileReader,
@@ -111,7 +112,6 @@ from torchdata.datapipes.iter.util.ziparchiveloader import (
     ZipArchiveLoaderIterDataPipe as ZipArchiveLoader,
     ZipArchiveReaderIterDataPipe as ZipArchiveReader,
 )
-from torchdata.datapipes.iter.util.webdataset import WebDatasetIterDataPipe as WebDataset
 
 __all__ = [
     "BatchMapper",

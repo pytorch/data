@@ -912,5 +912,6 @@ class TestDataPipe(expecttest.TestCase):
         assert items[0][".txt"] == "text0"
         assert items[9][".bin"] == "bin9"
 
+
 if __name__ == "__main__":
     unittest.main()
