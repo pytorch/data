@@ -13,11 +13,6 @@ from pathlib import Path
 
 from setuptools.command.build_ext import build_ext
 
-try:
-    from pybind11.setup_helpers import Pybind11Extension
-except ImportError:
-    from setuptools import Extension as Pybind11Extension
-
 
 __all__ = [
     "get_ext_modules",
@@ -45,6 +40,17 @@ def _get_build(var, default=False):
 
 _BUILD_S3 = _get_build("BUILD_S3", False)
 _AWSSDK_DIR = os.environ.get("AWSSDK_DIR", None)
+_USE_SYSTEM_PYBIND11 = _get_build("USE_SYSTEM_PYBIND11", False)
+_USE_SYSTEM_LIBS = _get_build("USE_SYSTEM_LIBS", False)
+
+
+try:
+    # Use the pybind11 from third_party
+    if not (_USE_SYSTEM_PYBIND11 or _USE_SYSTEM_LIBS):
+        sys.path.insert(0, str(_ROOT_DIR / "third_party/pybind11/"))
+    from pybind11.setup_helpers import Pybind11Extension
+except ImportError:
+    from setuptools import Extension as Pybind11Extension
 
 
 def get_ext_modules():
@@ -86,6 +92,8 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_RUNTIME_OUTPUT_DIRECTORY={extdir}",  # For Windows
             f"-DPython_INCLUDE_DIR={distutils.sysconfig.get_python_inc()}",
             f"-DBUILD_S3:BOOL={'ON' if _BUILD_S3 else 'OFF'}",
+            f"-DUSE_SYSTEM_PYBIND11:BOOL={'ON' if _USE_SYSTEM_PYBIND11 else 'OFF'}",
+            f"-DUSE_SYSTEM_LIBS:BOOL={'ON' if _USE_SYSTEM_LIBS else 'OFF'}",
         ]
 
         build_args = ["--config", cfg]
