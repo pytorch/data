@@ -96,7 +96,7 @@ jobs:
           BUILD_S3: ${{ matrix.with-s3 }}
           AWSSDK_DIR: ${{ steps.export_path.outputs.awssdk }}
       - name: Install test requirements
-        run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile
+        run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile protobuf
       - name: Run DataPipes tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run:

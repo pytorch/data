@@ -102,6 +102,7 @@ from torchdata.datapipes.iter.util.tararchiveloader import (
     TarArchiveLoaderIterDataPipe as TarArchiveLoader,
     TarArchiveReaderIterDataPipe as TarArchiveReader,
 )
+from torchdata.datapipes.iter.util.tfrecordloader import TFRecordLoaderIterDataPipe as TFRecordLoader
 from torchdata.datapipes.iter.util.unzipper import UnZipperIterDataPipe as UnZipper
 from torchdata.datapipes.iter.util.xzfileloader import (
     XzFileLoaderIterDataPipe as XzFileLoader,
@@ -171,6 +172,7 @@ __all__ = [
     "ShardingFilter",
     "Shuffler",
     "StreamReader",
+    "TFRecordLoader",
     "TarArchiveLoader",
     "TarArchiveReader",
     "UnBatcher",
