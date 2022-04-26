@@ -888,8 +888,8 @@ class TestDataPipe(expecttest.TestCase):
         self.assertEqual(
             # expected grouped output
             [
-                {".jpg": b"1", ".cls": b"2"},
-                {".jpg": b"3", ".cls": b"4"},
+                {".jpg": b"1", ".cls": b"2", "__key__": "/path/to/file1"},
+                {".jpg": b"3", ".cls": b"4", "__key__": "/path/to/file2"},
             ],
             list(web_dataset),
         )

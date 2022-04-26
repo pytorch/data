@@ -258,6 +258,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.TarArchiveLoader, None, (), {}),
             (iterdp.TFRecordLoader, None, (), {}),
             (iterdp.UnZipper, IterableWrapper([(i, i + 10) for i in range(10)]), (), {"sequence_length": 2}),
+            (iterdp.WebDataset, IterableWrapper([("foo.txt", b"1"), ("bar.txt", b"2")]), (), {}),
             (iterdp.XzFileLoader, None, (), {}),
             (iterdp.ZipArchiveLoader, None, (), {}),
         ]

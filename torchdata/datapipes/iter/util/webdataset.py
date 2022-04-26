@@ -61,10 +61,10 @@ class WebDatasetIterDataPipe(IterDataPipe[Dict]):
                 continue
             if prefix != current:
                 if current != "":
-                    sample["__key__"] = current
                     yield sample
                 sample = {}
                 current = prefix
+                sample["__key__"] = current
             sample[suffix] = data
         if sample != {}:
             yield sample
