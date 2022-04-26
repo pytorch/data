@@ -6,7 +6,21 @@ from torchdata.datapipes.iter import IterDataPipe
 
 
 def pathsplit(p):
-    """Split a path into the basename and the extensions."""
+    """Split a path into a WebDataset prefix and suffix.
+
+    The prefix is used for grouping files into samples,
+    the suffix is used as key in the output dictionary.
+    The suffix consists of all components after the last
+    "." in the filename.
+
+    In torchdata, the prefix consists of the .tar file
+    path followed by the file name inside the archive.
+
+    Any backslash in the prefix is replaced by a forward
+    slash to make Windows prefixes consistent with POSIX
+    paths.
+    """
+
     # convert Windows pathnames to UNIX pathnames, otherwise
     # we get an inconsistent mix of the Windows path to the tar
     # file followed by the POSIX path inside that tar file
