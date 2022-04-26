@@ -24,6 +24,7 @@ DataPipes
 
     Batcher
     Concater
+    InMemoryCacheHolder
     IterToMapConverter
     Mapper
     SequenceWrapper
