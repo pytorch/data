@@ -16,11 +16,12 @@ def pathsplit(p):
 @functional_datapipe("webdataset")
 class WebDatasetIterDataPipe(IterDataPipe[Dict]):
     r"""
-    Iterable DataPipe that accepts stream of (path, data) tuples (usually,
-    representing the pathnames and files of a tar archive) and aggregates
-    consecutive items with the same basename into a single dictionary, using the
-    extensions as keys (WebDataset file convention). Any text after the first
-    "." in the filename is used as an a key/extension.
+    Iterable DataPipe that accepts stream of (path, data) tuples, usually,
+    representing the pathnames and files of a tar archive (functional name:
+    ``webdataset''). This aggregates consecutive items with the same basename
+    into a single dictionary, using the extensions as keys (WebDataset file
+    convention). Any text after the first "." in the filename is used as
+    a key/extension.
 
     File names that do not have an extension are ignored.
 
@@ -55,9 +56,12 @@ class WebDatasetIterDataPipe(IterDataPipe[Dict]):
             assert isinstance(path, str), path
             prefix, suffix = pathsplit(path)
             if suffix == "":
+                # files with empty suffixes can be used for metadata
+                # they cannot be used for data since they wouldn't have a key
                 continue
             if prefix != current:
                 if current != "":
+                    sample["__key__"] = current
                     yield sample
                 sample = {}
                 current = prefix
