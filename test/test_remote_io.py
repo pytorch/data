@@ -58,9 +58,28 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         self.assertTrue(io.BufferedReader, type(stream))
 
         # __len__ Test: returns the length of source DataPipe
-        source_dp = IterableWrapper([file_url])
-        http_dp = HttpReader(source_dp)
-        self.assertEqual(1, len(http_dp))
+        self.assertEqual(1, len(http_reader_dp))
+
+        if os.name == "nt":
+            try:
+                import winreg
+            except ImportError:
+                return
+            internetSettings = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Internet Settings",
+                0,
+                winreg.KEY_SET_VALUE,
+            )
+
+            def _set_winreg_key(name, value):
+                _, reg_type = winreg.QueryValueEx(internetSettings, name)
+                winreg.SetValueEx(internetSettings, name, 0, reg_type, value)
+
+            _set_winreg_key("ProxyEnable", 1)
+            _set_winreg_key("ProxyServer", "127.0.0.1:8080")
+
+            _ = list(http_reader_dp)
 
     def test_on_disk_cache_holder_iterdatapipe(self):
         tar_file_url = "https://raw.githubusercontent.com/pytorch/data/main/test/_fakedata/csv.tar.gz"
