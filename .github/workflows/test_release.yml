@@ -24,6 +24,7 @@ on:
 
 jobs:
   build_test_upload:
+    if: github.repository == 'pytorch/data' && startsWith(github.ref_name, 'release/')
     uses: ./.github/workflows/_build_test_upload.yml
     with:
       branch: ""
