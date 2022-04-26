@@ -7,7 +7,7 @@
 from typing import Callable, Iterator, List, TypeVar
 
 from torch.utils.data import functional_datapipe, IterDataPipe
-from torch.utils.data.datapipes.utils.common import check_lambda_fn
+from torch.utils.data.datapipes.utils.common import _check_lambda_fn
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -59,7 +59,7 @@ class BatchMapperIterDataPipe(IterDataPipe[T_co]):
     ) -> None:
         self.datapipe = datapipe
 
-        check_lambda_fn(fn)
+        _check_lambda_fn(fn)
         self.fn = fn  # type: ignore[assignment]
 
         assert batch_size > 0, "Batch size is required to be larger than 0!"
@@ -118,7 +118,7 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
     def __init__(self, datapipe: IterDataPipe, fn: Callable, input_col=None) -> None:
         self.datapipe = datapipe
 
-        check_lambda_fn(fn)
+        _check_lambda_fn(fn)
         self.fn = fn  # type: ignore[assignment]
         self.input_col = input_col
 

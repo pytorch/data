@@ -91,7 +91,7 @@ jobs:
               pkginfo $pkg
           done
       - name: Install Test Requirements
-        run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile
+        run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile protobuf
       - name: Run DataPipes Tests with pytest
         run:
           pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py
