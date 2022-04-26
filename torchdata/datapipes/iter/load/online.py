@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 import requests
 from requests.exceptions import HTTPError, RequestException
 
+from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
 
@@ -31,9 +32,11 @@ def _get_response_from_http(url: str, *, timeout: Optional[float]) -> Tuple[str,
         raise
 
 
+@functional_datapipe("read_from_http")
 class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
-    Takes file URLs (HTTP URLs pointing to files), and yields tuples of file URL and IO stream.
+    Takes file URLs (HTTP URLs pointing to files), and yields tuples of file URL and
+    IO stream (functional name: ``read_from_http``).
 
     Args:
         source_datapipe: a DataPipe that contains URLs
@@ -66,6 +69,7 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
 def _get_response_from_google_drive(url: str, *, timeout: Optional[float]) -> Tuple[str, StreamWrapper]:
     confirm_token = None
+
     with requests.Session() as session:
         if timeout is None:
             response = session.get(url, stream=True)
@@ -92,12 +96,15 @@ def _get_response_from_google_drive(url: str, *, timeout: Optional[float]) -> Tu
         filename = re.findall('filename="(.+)"', response.headers["content-disposition"])
         if filename is None:
             raise RuntimeError("Filename could not be autodetected")
+
     return filename[0], StreamWrapper(response.raw)
 
 
+@functional_datapipe("read_from_gdrive")
 class GDriveReaderDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
-    Takes URLs pointing at GDrive files, and yields tuples of file name and IO stream.
+    Takes URLs pointing at GDrive files, and yields tuples of file name and
+    IO stream (functional name: ``read_from_gdrive``).
 
     Args:
         source_datapipe: a DataPipe that contains URLs to GDrive files
@@ -129,10 +136,11 @@ class GDriveReaderDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         return len(self.source_datapipe)
 
 
+@functional_datapipe("read_from_remote")
 class OnlineReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
     Takes file URLs (can be HTTP URLs pointing to files or URLs to GDrive files), and
-    yields tuples of file URL and IO stream.
+    yields tuples of file URL and IO stream (functional name: ``read_from_remote``).
 
     Args:
         source_datapipe: a DataPipe that contains URLs
