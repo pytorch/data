@@ -1,5 +1,5 @@
-import re
-from typing import Dict, Iterator, List, Union
+import os
+from typing import Any, Dict, Iterator, List, Union
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -7,10 +7,11 @@ from torchdata.datapipes.iter import IterDataPipe
 
 def pathsplit(p):
     """Split a path into the basename and the extensions."""
-    if "." not in p:
+    dirname, filename = os.path.split(p)
+    if "." not in filename:
         return p, ""
-    prefix, suffix = re.search(r"^(.*?)(\.[^/]*)$", p).groups()
-    return prefix, suffix
+    base, ext = filename.split(".", 1)
+    return os.path.join(dirname, base), "." + ext
 
 
 @functional_datapipe("webdataset")
@@ -50,7 +51,7 @@ class WebDatasetIterDataPipe(IterDataPipe[Dict]):
         self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
 
     def __iter__(self) -> Iterator[Dict]:
-        sample = {}
+        sample: Dict[str, Any] = {}
         current = ""
         for path, data in self.source_datapipe:
             assert isinstance(path, str), path
