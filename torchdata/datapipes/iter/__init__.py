@@ -4,8 +4,10 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+###############################################################################
+# Reference From PyTorch Core
+###############################################################################
 from torch.utils.data import IterDataPipe
-
 from torch.utils.data.datapipes.iter import (
     Batcher,
     Collator,
@@ -27,6 +29,10 @@ from torch.utils.data.datapipes.iter import (
     UnBatcher,
     Zipper,
 )
+
+###############################################################################
+# TorchData
+###############################################################################
 from torchdata.datapipes.iter.load.fsspec import (
     FSSpecFileListerIterDataPipe as FSSpecFileLister,
     FSSpecFileOpenerIterDataPipe as FSSpecFileOpener,
@@ -52,7 +58,10 @@ from torchdata.datapipes.iter.transform.bucketbatcher import (
     InBatchShufflerIterDataPipe as InBatchShuffler,
     MaxTokenBucketizerIterDataPipe as MaxTokenBucketizer,
 )
-from torchdata.datapipes.iter.transform.flatmap import FlatMapperIterDataPipe as FlatMapper
+from torchdata.datapipes.iter.transform.callable import (
+    BatchMapperIterDataPipe as BatchMapper,
+    FlatMapperIterDataPipe as FlatMapper,
+)
 from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
 from torchdata.datapipes.iter.util.cacheholder import (
     EndOnDiskCacheHolderIterDataPipe as EndOnDiskCacheHolder,
@@ -93,6 +102,7 @@ from torchdata.datapipes.iter.util.tararchiveloader import (
     TarArchiveLoaderIterDataPipe as TarArchiveLoader,
     TarArchiveReaderIterDataPipe as TarArchiveReader,
 )
+from torchdata.datapipes.iter.util.tfrecordloader import TFRecordLoaderIterDataPipe as TFRecordLoader
 from torchdata.datapipes.iter.util.unzipper import UnZipperIterDataPipe as UnZipper
 from torchdata.datapipes.iter.util.xzfileloader import (
     XzFileLoaderIterDataPipe as XzFileLoader,
@@ -104,11 +114,8 @@ from torchdata.datapipes.iter.util.ziparchiveloader import (
 )
 from torchdata.datapipes.map.util.converter import MapToIterConverterIterDataPipe as MapToIterConverter
 
-###############################################################################
-# Reference From PyTorch Core
-###############################################################################
-
 __all__ = [
+    "BatchMapper",
     "Batcher",
     "BucketBatcher",
     "Bz2FileLoader",
@@ -167,6 +174,7 @@ __all__ = [
     "ShardingFilter",
     "Shuffler",
     "StreamReader",
+    "TFRecordLoader",
     "TarArchiveLoader",
     "TarArchiveReader",
     "UnBatcher",

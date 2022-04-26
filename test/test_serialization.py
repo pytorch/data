@@ -15,6 +15,7 @@ from typing import List
 
 import expecttest
 import torchdata.datapipes.iter as iterdp
+import torchdata.datapipes.map as mapdp
 from _utils._common_utils_for_test import create_temp_dir, create_temp_files
 from torch.utils.data.datapipes.utils.common import DILL_AVAILABLE
 from torchdata.datapipes.iter import IterableWrapper
@@ -57,6 +58,10 @@ except ImportError:
     torcharrow = None
     dt = None
     DTYPE = None
+
+
+def _fake_batch_fn(batch):
+    return [d + 1 for d in batch]
 
 
 def _fake_fn_ls(x):
@@ -143,6 +148,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
 
     def test_serializable(self):
         picklable_datapipes: List = [
+            (iterdp.BatchMapper, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), (_fake_batch_fn, 2, 1), {}),
             (iterdp.BucketBatcher, IterableWrapper([0, 0, 0, 0, 0, 0, 0]), (5,), {}),
             (iterdp.Bz2FileLoader, None, (), {}),
             (
@@ -215,6 +221,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (),
                 {},
             ),
+            (iterdp.MapToIterConverter, SequenceWrapper(range(10)), (), {}),
             (
                 iterdp.MaxTokenBucketizer,
                 IterableWrapper(["1", "22", "1", "4444", "333", "1", "22", "22", "333"]),
@@ -251,6 +258,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)},
             ),
             (iterdp.TarArchiveLoader, None, (), {}),
+            (iterdp.TFRecordLoader, None, (), {}),
             (iterdp.UnZipper, IterableWrapper([(i, i + 10) for i in range(10)]), (), {"sequence_length": 2}),
             (iterdp.XzFileLoader, None, (), {}),
             (iterdp.ZipArchiveLoader, None, (), {}),
@@ -276,6 +284,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             iterdp.SampleMultiplexer,
             iterdp.RarArchiveLoader,
             iterdp.TarArchiveLoader,
+            iterdp.TFRecordLoader,
             iterdp.XzFileLoader,
             iterdp.ZipArchiveLoader,
         }
@@ -310,6 +319,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         ref_mdp = SequenceWrapper(range(10))
 
         unpicklable_datapipes: List = [
+            (iterdp.BatchMapper, (lambda batch: [d + 1 for d in batch], 2), {}),
             (iterdp.FlatMapper, (lambda x: [x, x],), {}),
             (iterdp.IterKeyZipper, (ref_idp, lambda x: x, None, True, 100), {}),
             (iterdp.MapKeyZipper, (ref_mdp, lambda x: x), {}),
@@ -350,8 +360,48 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
 
 
 class TestMapDataPipeSerialization(expecttest.TestCase):
+    def _serialization_test_helper(self, datapipe):
+        serialized_dp = pickle.dumps(datapipe)
+        deserialized_dp = pickle.loads(serialized_dp)
+        try:
+            self.assertEqual(list(datapipe), list(deserialized_dp))
+        except AssertionError as e:
+            print(f"{datapipe} is failing.")
+            raise e
+
+    def _serialization_test_for_dp_with_children(self, dp1, dp2):
+        self._serialization_test_helper(dp1)
+        self._serialization_test_helper(dp2)
+
     def test_serializable(self):
-        pass
+        picklable_datapipes: List = [
+            (mapdp.IterToMapConverter, IterableWrapper([(i, i) for i in range(10)]), (), {}),
+            (mapdp.UnZipper, SequenceWrapper([(i, i + 10) for i in range(10)]), (), {"sequence_length": 2}),
+        ]
+
+        dp_skip_comparison = set()
+        # These DataPipes produce multiple DataPipes as outputs and those should be compared
+        dp_compare_children = {mapdp.UnZipper}
+
+        for dpipe, custom_input, dp_args, dp_kwargs in picklable_datapipes:
+            try:
+                # Creating input (usually a DataPipe) for the specific dpipe being tested
+                if custom_input is None:
+                    custom_input = SequenceWrapper(range(10))
+
+                if dpipe in dp_skip_comparison:  # Mke sure they are picklable and loadable (no value comparison)
+                    datapipe = dpipe(custom_input, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
+                    serialized_dp = pickle.dumps(datapipe)
+                    _ = pickle.loads(serialized_dp)
+                elif dpipe in dp_compare_children:  # DataPipes that have children
+                    dp1, dp2 = dpipe(custom_input, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
+                    self._serialization_test_for_dp_with_children(dp1, dp2)
+                else:  # Single DataPipe that requires comparison
+                    datapipe = dpipe(custom_input, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
+                    self._serialization_test_helper(datapipe)
+            except Exception as e:
+                print(f"{dpipe} is failing.")
+                raise e
 
     def test_serializable_with_dill(self):
         """Only for DataPipes that take in a function as argument"""
