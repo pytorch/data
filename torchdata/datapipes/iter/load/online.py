@@ -20,15 +20,16 @@ from torchdata.datapipes.utils import StreamWrapper
 
 # TODO: Remove this helper function when https://bugs.python.org/issue42627 is resolved
 def _get_proxies() -> Optional[Dict[str, str]]:
-    #  import os
-    #  if os.name == "nt":
-    #      proxies = urllib.request.getproxies()
-    #      address = proxies.get("https")
-    #      # The default proxy type of Windows is HTTP
-    #      if address and address.startswith("https"):
-    #          address = "http" + address[5:]
-    #          proxies["https"] = address
-    #          return proxies
+    import os
+
+    if os.name == "nt":
+        proxies = urllib.request.getproxies()
+        address = proxies.get("https")
+        # The default proxy type of Windows is HTTP
+        if address and address.startswith("https"):
+            address = "http" + address[5:]
+            proxies["https"] = address
+            return proxies
     return None
 
 
