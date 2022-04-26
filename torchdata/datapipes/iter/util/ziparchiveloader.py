@@ -11,7 +11,7 @@ import zipfile
 from io import BufferedIOBase
 from typing import cast, IO, Iterable, Iterator, Tuple
 
-from torch.utils.data.datapipes.utils.common import deprecation_warning
+from torch.utils.data.datapipes.utils.common import _deprecation_warning
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -86,5 +86,12 @@ class ZipArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     """
 
     def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1):
-        deprecation_warning(type(cls).__name__, new_name="ZipArchiveLoader")
+        _deprecation_warning(
+            cls.__name__,
+            deprecation_version="0.4",
+            removal_version="0.6",
+            old_functional_name="read_from_zip",
+            new_class_name="ZipArchiveLoader",
+            new_functional_name="load_from_zip",
+        )
         return ZipArchiveLoaderIterDataPipe(datapipe, length)

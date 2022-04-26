@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 if(BUILD_S3)
-
   message(STATUS "Building S3 IO functionality")
 
   # To make the right CPython is built with on GitHub Actions,
@@ -21,7 +20,6 @@ if(BUILD_S3)
 
   list(APPEND CMAKE_PREFIX_PATH ${AWSSDK_DIR})
   find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
-  find_package(pybind11 CONFIG REQUIRED)
 
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -33,13 +31,13 @@ if(BUILD_S3)
 
   add_library(_torchdata MODULE ${EXTENSION_SOURCES})
 
-  target_include_directories(_torchdata PRIVATE ${PROJECT_SOURCE_DIR} ${Python_INCLUDE_DIR} {pybind11_INCLUDE_DIRS})
+  target_include_directories(_torchdata PRIVATE ${PROJECT_SOURCE_DIR} ${Python_INCLUDE_DIR} ${pybind11_INCLUDE_DIRS})
+
 
   message(STATUS "AWSSDK linked libs: ${AWSSDK_LINK_LIBRARIES}")
   target_link_libraries(
     _torchdata
     PRIVATE
-    pybind11::module
     ${AWSSDK_LINK_LIBRARIES}
     ${Python_LIBRARIES}
     ${ADDITIONAL_ITEMS}
