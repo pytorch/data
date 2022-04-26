@@ -1,4 +1,4 @@
-import os
+import re
 from typing import Any, Dict, Iterator, List, Union
 
 from torchdata.datapipes import functional_datapipe
@@ -7,11 +7,16 @@ from torchdata.datapipes.iter import IterDataPipe
 
 def pathsplit(p):
     """Split a path into the basename and the extensions."""
-    dirname, filename = os.path.split(p)
-    if "." not in filename:
+    if "." not in p:
         return p, ""
-    base, ext = filename.split(".", 1)
-    return os.path.join(dirname, base), "." + ext
+    # convert Windows pathnames to UNIX pathnames, otherwise
+    # we get an inconsistent mix of the Windows path to the tar
+    # file followed by the POSIX path inside that tar file
+    p = re.sub(r"[\\]", "/", p)
+    # we need to use a regular expression because os.path is
+    # platform specific, but tar files always contain POSIX paths
+    prefix, suffix = re.search(r"^(.*?)(\.[^/]*)$", p).groups()
+    return prefix, suffix
 
 
 @functional_datapipe("webdataset")
