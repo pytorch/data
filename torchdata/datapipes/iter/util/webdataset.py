@@ -7,15 +7,18 @@ from torchdata.datapipes.iter import IterDataPipe
 
 def pathsplit(p):
     """Split a path into the basename and the extensions."""
-    if "." not in p:
-        return p, ""
     # convert Windows pathnames to UNIX pathnames, otherwise
     # we get an inconsistent mix of the Windows path to the tar
     # file followed by the POSIX path inside that tar file
-    p = re.sub(r"[\\]", "/", p)
+    p = p.replace("\\", "/")
+    if "." not in p:
+        return p, ""
     # we need to use a regular expression because os.path is
     # platform specific, but tar files always contain POSIX paths
-    prefix, suffix = re.search(r"^(.*?)(\.[^/]*)$", p).groups()
+    match = re.search(r"^(.*?)(\.[^/]*)$", p)
+    if not match:
+        return p, ""
+    prefix, suffix = match.groups()
     return prefix, suffix
 
 
