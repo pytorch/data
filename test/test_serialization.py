@@ -59,6 +59,10 @@ except ImportError:
     DTYPE = None
 
 
+def _fake_batch_fn(batch):
+    return [d + 1 for d in batch]
+
+
 def _fake_fn_ls(x):
     return [x, x]
 
@@ -143,6 +147,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
 
     def test_serializable(self):
         picklable_datapipes: List = [
+            (iterdp.BatchMapper, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), (_fake_batch_fn, 2, 1), {}),
             (iterdp.BucketBatcher, IterableWrapper([0, 0, 0, 0, 0, 0, 0]), (5,), {}),
             (iterdp.Bz2FileLoader, None, (), {}),
             (
@@ -251,6 +256,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)},
             ),
             (iterdp.TarArchiveLoader, None, (), {}),
+            (iterdp.TFRecordLoader, None, (), {}),
             (iterdp.UnZipper, IterableWrapper([(i, i + 10) for i in range(10)]), (), {"sequence_length": 2}),
             (iterdp.XzFileLoader, None, (), {}),
             (iterdp.ZipArchiveLoader, None, (), {}),
@@ -276,6 +282,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             iterdp.SampleMultiplexer,
             iterdp.RarArchiveLoader,
             iterdp.TarArchiveLoader,
+            iterdp.TFRecordLoader,
             iterdp.XzFileLoader,
             iterdp.ZipArchiveLoader,
         }
@@ -310,6 +317,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         ref_mdp = SequenceWrapper(range(10))
 
         unpicklable_datapipes: List = [
+            (iterdp.BatchMapper, (lambda batch: [d + 1 for d in batch], 2), {}),
             (iterdp.FlatMapper, (lambda x: [x, x],), {}),
             (iterdp.IterKeyZipper, (ref_idp, lambda x: x, None, True, 100), {}),
             (iterdp.MapKeyZipper, (ref_mdp, lambda x: x), {}),
