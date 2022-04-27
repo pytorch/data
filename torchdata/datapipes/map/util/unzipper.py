@@ -1,14 +1,20 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 from typing import Optional, Sequence, TypeVar
 
-from torch.utils.data.datapipes.datapipe import MapDataPipe
+from torchdata.datapipes import functional_datapipe
+from torchdata.datapipes.map import MapDataPipe
 
 
 T = TypeVar("T")
 
 
-# @functional_datapipe("unzip")  # This line must be kept for .pyi signature parser
-class UnZipperMapDataPipe:
+@functional_datapipe("unzip")
+class UnZipperMapDataPipe(MapDataPipe):
     """
     Takes in a DataPipe of Sequences, unpacks each Sequence, and return the elements in separate DataPipes
     based on their position in the Sequence (functional name: ``unzip``). The number of instances produced
@@ -68,6 +74,3 @@ class _UnZipperMapDataPipe(MapDataPipe[T]):
 
     def __len__(self) -> int:
         return len(self.main_datapipe)
-
-
-MapDataPipe.register_datapipe_as_function("unzip", UnZipperMapDataPipe)
