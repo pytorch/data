@@ -24,8 +24,8 @@ DataPipes
 
     Batcher
     Concater
-    IterToMapConverter
     Mapper
+    MapToIterConverter
     SequenceWrapper
     Shuffler
     UnZipper
