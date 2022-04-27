@@ -5,10 +5,12 @@
 # LICENSE file in the root directory of this source tree.
 
 import re
-from typing import Iterator, Optional, Tuple
-from urllib.parse import urlparse
+import urllib
+
+from typing import Dict, Iterator, Optional, Tuple
 
 import requests
+
 from requests.exceptions import HTTPError, RequestException
 
 from torchdata.datapipes import functional_datapipe
@@ -16,13 +18,29 @@ from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
 
 
+# TODO: Remove this helper function when https://bugs.python.org/issue42627 is resolved
+def _get_proxies() -> Optional[Dict[str, str]]:
+    import os
+
+    if os.name == "nt":
+        proxies = urllib.request.getproxies()
+        address = proxies.get("https")
+        # The default proxy type of Windows is HTTP
+        if address and address.startswith("https"):
+            address = "http" + address[5:]
+            proxies["https"] = address
+            return proxies
+    return None
+
+
 def _get_response_from_http(url: str, *, timeout: Optional[float]) -> Tuple[str, StreamWrapper]:
     try:
         with requests.Session() as session:
+            proxies = _get_proxies()
             if timeout is None:
-                r = session.get(url, stream=True)
+                r = session.get(url, stream=True, proxies=proxies)
             else:
-                r = session.get(url, timeout=timeout, stream=True)
+                r = session.get(url, timeout=timeout, stream=True, proxies=proxies)
         return url, StreamWrapper(r.raw)
     except HTTPError as e:
         raise Exception(f"Could not get the file. [HTTP Error] {e.response}.")
@@ -166,7 +184,7 @@ class OnlineReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for url in self.source_datapipe:
-            parts = urlparse(url)
+            parts = urllib.parse.urlparse(url)
 
             if re.match(r"(drive|docs)[.]google[.]com", parts.netloc):
                 yield _get_response_from_google_drive(url, timeout=self.timeout)
