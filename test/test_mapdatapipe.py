@@ -69,11 +69,6 @@ class TestMapDataPipe(expecttest.TestCase):
         self.assertTrue(id(source) == id(cache) for source, cache in zip(source_dp, res1))
         self.assertTrue(id(source) == id(cache) for source, cache in zip(source_dp, res2))
 
-        # Functional Test: Ensure the DataPipe works with custom cache object and non-numeric data
-        source_dp = SequenceWrapper([str(i) for i in range(10)])
-        cache_dp2 = source_dp.in_memory_cache([None] * len(source_dp))
-        self.assertEqual([str(i) for i in range(10)], list(cache_dp2))
-
         # __len__ Test: inherits length from source_dp
         self.assertEqual(10, len(cache_dp))
 
