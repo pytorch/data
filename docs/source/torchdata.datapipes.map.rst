@@ -25,8 +25,8 @@ DataPipes
     Batcher
     Concater
     InMemoryCacheHolder
-    IterToMapConverter
     Mapper
+    MapToIterConverter
     SequenceWrapper
     Shuffler
     UnZipper
