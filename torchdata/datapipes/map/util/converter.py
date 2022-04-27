@@ -1,4 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 from typing import List, Optional
 
 from torch.utils.data import IterDataPipe, MapDataPipe
@@ -36,7 +41,7 @@ class MapToIterConverterIterDataPipe(IterDataPipe):
             yield self.datapipe[idx]
 
     def __len__(self):
-        return len(self.datapipe)
+        return len(self.indices)
 
 
 MapDataPipe.register_datapipe_as_function("to_iter_datapipe", MapToIterConverterIterDataPipe)
