@@ -43,6 +43,8 @@ class InMemoryCacheHolderMapDataPipe(MapDataPipe[T_co]):
         if index not in self.cache:
             self.cache[index] = self.source_dp[index]  # type: ignore[index]
         return self.cache[index]  # type: ignore[index]
+        # We can potentially remove `self.source_dp` to save memory once `len(self.cache) == len(self.source_dp)`
+        # Be careful about how that may interact with and graph traversal and other features
 
     def __len__(self) -> int:
         return len(self.source_dp)
