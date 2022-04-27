@@ -36,21 +36,6 @@ def create_files(folder, suffix, data, encoding=False):
         archive.add(folder)
 
 
-def add_data_to_tar(archive, name, value):
-    if isinstance(value, str):
-        value = value.encode()
-    info = tarfile.TarInfo(name)
-    info.size = len(value)
-    archive.addfile(info, io.BytesIO(value))
-
-
-def create_wds_tar(dest):
-    with tarfile.open(dest, mode="w") as archive:
-        for i in range(10):
-            add_data_to_tar(archive, f"data/{i}.txt", f"text{i}")
-            add_data_to_tar(archive, f"data/{i}.bin", f"bin{i}")
-
-
 def create_tfrecord_files(path: str):
     try:
         import tensorflow as tf
@@ -106,7 +91,6 @@ def create_tfrecord_files(path: str):
 
 
 if __name__ == "__main__":
-    create_wds_tar("wds.tar")
     for args in FILES:
         create_files(*args)
     create_tfrecord_files("tfrecord")

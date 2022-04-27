@@ -6,6 +6,8 @@
 
 import io
 import itertools
+import os
+import tarfile
 import unittest
 import warnings
 
@@ -13,6 +15,7 @@ from collections import defaultdict
 from typing import Dict
 
 import expecttest
+import pytest
 import torch.utils.data.datapipes.iter
 
 import torchdata
@@ -22,6 +25,8 @@ from torch.utils.data.datapipes.map import SequenceWrapper
 from torchdata.datapipes.iter import (
     BucketBatcher,
     Cycler,
+    FileLister,
+    FileOpener,
     Header,
     InBatchShuffler,
     IndexAdder,
@@ -895,7 +900,23 @@ class TestDataPipe(expecttest.TestCase):
         )
 
     def test_webdataset2(self) -> None:
-        from torchdata.datapipes.iter import FileLister, FileOpener
+        tmpdir = str(self.tmpdir)
+
+        def add_data_to_tar(archive, name, value):
+            if isinstance(value, str):
+                value = value.encode()
+            info = tarfile.TarInfo(name)
+            info.size = len(value)
+            archive.addfile(info, io.BytesIO(value))
+
+        def create_wds_tar(dest):
+            with tarfile.open(dest, mode="w") as archive:
+                for i in range(10):
+                    add_data_to_tar(archive, f"data/{i}.txt", f"text{i}")
+                    add_data_to_tar(archive, f"data/{i}.bin", f"bin{i}")
+
+        dest = os.path.join(tmpdir, "wds.tar")
+        create_wds_tar(dest)
 
         def decode(item):
             key, value = item
@@ -904,13 +925,17 @@ class TestDataPipe(expecttest.TestCase):
             if key.endswith(".bin"):
                 return key, value.read().decode("utf-8")
 
-        datapipe1 = FileLister("test/_fakedata", "wds*.tar")
+        datapipe1 = FileLister(tmpdir, "wds*.tar")
         datapipe2 = FileOpener(datapipe1, mode="b")
         dataset = datapipe2.load_from_tar().map(decode).webdataset()
         items = list(dataset)
         assert len(items) == 10
         assert items[0][".txt"] == "text0"
         assert items[9][".bin"] == "bin9"
+
+    @pytest.fixture(autouse=True)
+    def initdir(self, tmpdir):
+        self.tmpdir = tmpdir
 
 
 if __name__ == "__main__":
