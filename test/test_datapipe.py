@@ -36,7 +36,6 @@ from torchdata.datapipes.iter import (
     Rows2Columnar,
     SampleMultiplexer,
     UnZipper,
-    WebDataset,
 )
 from torchdata.datapipes.map import MapDataPipe
 
@@ -871,46 +870,6 @@ class TestDataPipe(expecttest.TestCase):
             dup_map_dp._load_map()
             self.assertEqual(len(wa), 1)
             self.assertRegex(str(wa[0].message), r"Found duplicate key")
-
-    def test_webdataset(self) -> None:
-        # Functional Test: groups samples correctly
-        source_dp = IterableWrapper(
-            # simulated tar file content
-            [
-                ("/path/to/file1.jpg", b"1"),
-                ("/path/to/_something_", b"nothing"),
-                ("/path/to/file1.cls", b"2"),
-                ("/path/to/file2.jpg", b"3"),
-                ("/path/to/file2.cls", b"4"),
-            ]
-        )
-        web_dataset = WebDataset(source_dp)
-        self.assertEqual(
-            # expected grouped output
-            [
-                {".jpg": b"1", ".cls": b"2", "__key__": "/path/to/file1"},
-                {".jpg": b"3", ".cls": b"4", "__key__": "/path/to/file2"},
-            ],
-            list(web_dataset),
-        )
-
-    def test_webdataset2(self) -> None:
-        from torchdata.datapipes.iter import FileLister, FileOpener
-
-        def decode(item):
-            key, value = item
-            if key.endswith(".txt"):
-                return key, value.read().decode("utf-8")
-            if key.endswith(".bin"):
-                return key, value.read().decode("utf-8")
-
-        datapipe1 = FileLister("test/_fakedata", "wds*.tar")
-        datapipe2 = FileOpener(datapipe1, mode="b")
-        dataset = datapipe2.load_from_tar().map(decode).webdataset()
-        items = list(dataset)
-        assert len(items) == 10
-        assert items[0][".txt"] == "text0"
-        assert items[9][".bin"] == "bin9"
 
 
 if __name__ == "__main__":
