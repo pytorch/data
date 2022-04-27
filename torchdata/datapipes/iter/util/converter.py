@@ -68,6 +68,12 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
             self._load_map()
         return self._map[index]  # type: ignore[index]
 
+    def __iter__(self):
+        if self._map is None:
+            self._load_map()
+        else:
+            yield from self._map.values()
+
     def __len__(self):
         if self._length > -1:
             return self._length
