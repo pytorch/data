@@ -64,15 +64,12 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
             self._map[key] = value
 
     def __getitem__(self, index):
-        if self._map is None:
-            self._load_map()
-        return self._map[index]  # type: ignore[index]
-
-    def __iter__(self):
-        if self._map is None:
-            self._load_map()
-        else:
-            yield from self._map.values()
+        try:
+            if self._map is None:
+                self._load_map()
+            return self._map[index]  # type: ignore[index]
+        except KeyError:
+            raise IndexError(f"Index {index} is valid for IterToMapConverter.")
 
     def __len__(self):
         if self._length > -1:
