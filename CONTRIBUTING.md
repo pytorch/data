@@ -82,14 +82,24 @@ conda install -c conda-forge pre-commit
 To check and in most cases fix the code format, stage all your changes (`git add`) and run `pre-commit run`. To perform
 the checks automatically before every `git commit`, you can install them with `pre-commit install`.
 
-### Adding a New DataPipe
+### Adding a new DataPipe
 
 When adding a new DataPipe, there are few things that need to be done to ensure it is working and documented properly.
 
 1. Testing - please add unit tests to ensure that the DataPipe is functioning properly. Here are the
    [test requirements](https://github.com/pytorch/data/issues/106) that we have.
+   - One test that is commonly missed is the serialization test. Please add the new DataPipe to
+     [`test_serialization.py`](https://github.com/pytorch/data/blob/main/test/test_serialization.py).
+   - If your test requires interacting with files in the file system (e.g. opening a `csv` or `tar` file, we prefer
+     those files to be generated during the test (see `test_local_io.py`). If the file is on a remote server, see
+     `test_remote_io.py`.
 2. Documentation - ensure that the DataPipe has docstring, usage example, and that it is added to the right category of
    the right RST file to be rendered.
+   - If your DataPipe has a functional form (i.e. `@functional_datapipe(...)`), include at the
+     [end of the first sentence](https://github.com/pytorch/data/blob/main/torchdata/datapipes/iter/util/combining.py#L119)
+     of your docstring. This will make sure it correctly shows up in the
+     [summary table](https://pytorch.org/data/beta/torchdata.datapipes.iter.html#archive-datapipes) of our
+     documentation.
 3. Import - import the DataPipe in the correct `__init__.py` file.
 4. Interface - if the DataPipe has a functional form, make sure that is generated properly by `gen_pyi.py` into the
    relevant interface file.
