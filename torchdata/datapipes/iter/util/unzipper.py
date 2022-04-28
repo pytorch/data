@@ -18,8 +18,8 @@ T = TypeVar("T")
 class UnZipperIterDataPipe(IterDataPipe[T]):
     r"""
     Takes in a DataPipe of Sequences, unpacks each Sequence, and return the elements in separate DataPipes
-    based on their position in the Sequence. The number of instances produced equals to the sequence legnth
-    minus the number of columns to skip (functional name: ``unzip``).
+    based on their position in the Sequence (functional name: ``unzip``). The number of instances produced equals to
+    the sequence length minus the number of columns to skip.
 
     Note:
         Each sequence within the DataPipe should have the same length, specified by
