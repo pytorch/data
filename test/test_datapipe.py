@@ -6,7 +6,6 @@
 
 import io
 import itertools
-import os
 import tarfile
 import unittest
 import warnings
