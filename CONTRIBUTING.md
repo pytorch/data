@@ -98,7 +98,7 @@ When adding a new DataPipe, there are few things that need to be done to ensure 
    - If your DataPipe has a functional form (i.e. `@functional_datapipe(...)`), include at the
      [end of the first sentence](https://github.com/pytorch/data/blob/main/torchdata/datapipes/iter/util/combining.py#L119)
      of your docstring. This will make sure it correctly shows up in the
-     [summary table](https://pytorch.org/data/beta/torchdata.datapipes.iter.html#archive-datapipes) of our
+     [summary table](https://pytorch.org/data/main/torchdata.datapipes.iter.html#archive-datapipes) of our
      documentation.
 3. Import - import the DataPipe in the correct `__init__.py` file.
 4. Interface - if the DataPipe has a functional form, make sure that is generated properly by `gen_pyi.py` into the
