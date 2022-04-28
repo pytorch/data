@@ -6,6 +6,7 @@
 
 import bz2
 import hashlib
+import io
 import itertools
 import lzma
 import os
@@ -36,6 +37,7 @@ from torchdata.datapipes.iter import (
     RarArchiveLoader,
     Saver,
     TarArchiveLoader,
+    WebDataset,
     XzFileLoader,
     ZipArchiveLoader,
 )
@@ -720,6 +722,61 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Functional Test: read extracted files after reaching the end of the rarfile
         data_refs = list(rar_loader_dp)
         self._unordered_compressed_files_comparison_helper(self.temp_files, data_refs)
+
+    def _add_data_to_wds_tar(self, archive, name, value):
+        if isinstance(value, str):
+            value = value.encode()
+        info = tarfile.TarInfo(name)
+        info.size = len(value)
+        archive.addfile(info, io.BytesIO(value))
+
+    def _create_wds_tar(self, dest, nsamples):
+        with tarfile.open(dest, mode="w") as archive:
+            for i in range(nsamples):
+                self._add_data_to_wds_tar(archive, f"data/{i}.txt", f"text{i}")
+                self._add_data_to_wds_tar(archive, f"data/{i}.bin", f"bin{i}")
+
+    def test_webdataset(self) -> None:
+        # Functional Test: groups samples correctly
+        source_dp = IterableWrapper(
+            # simulated tar file content
+            [
+                ("/path/to/file1.jpg", b"1"),
+                ("/path/to/_something_", b"nothing"),
+                ("/path/to/file1.cls", b"2"),
+                ("/path/to/file2.jpg", b"3"),
+                ("/path/to/file2.cls", b"4"),
+            ]
+        )
+        web_dataset = WebDataset(source_dp)
+        self.assertEqual(
+            # expected grouped output
+            [
+                {".jpg": b"1", ".cls": b"2", "__key__": "/path/to/file1"},
+                {".jpg": b"3", ".cls": b"4", "__key__": "/path/to/file2"},
+            ],
+            list(web_dataset),
+        )
+
+    def test_webdataset2(self) -> None:
+        # Setup
+        nsamples = 10
+        self._create_wds_tar(os.path.join(self.temp_dir.name, "wds.tar"), nsamples)
+
+        def decode(item):
+            key, value = item
+            if key.endswith(".txt"):
+                return key, value.read().decode("utf-8")
+            if key.endswith(".bin"):
+                return key, value.read().decode("utf-8")
+
+        datapipe1 = FileLister(self.temp_dir.name, "wds*.tar")
+        datapipe2 = FileOpener(datapipe1, mode="b")
+        dataset = datapipe2.load_from_tar().map(decode).webdataset()
+        items = list(dataset)
+        assert len(items) == nsamples
+        assert items[0][".txt"] == "text0"
+        assert items[9][".bin"] == "bin9"
 
 
 if __name__ == "__main__":

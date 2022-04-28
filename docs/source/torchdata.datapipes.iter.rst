@@ -52,6 +52,7 @@ These DataPipes help opening and decompressing archive files of different format
     Decompressor
     RarArchiveLoader
     TarArchiveLoader
+    WebDataset
     XzFileLoader
     ZipArchiveLoader
 
