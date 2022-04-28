@@ -730,16 +730,13 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         info.size = len(value)
         archive.addfile(info, io.BytesIO(value))
 
-    def _create_wds_tar(self, dest):
+    def _create_wds_tar(self, dest, nsamples):
         with tarfile.open(dest, mode="w") as archive:
-            for i in range(10):
+            for i in range(nsamples):
                 self._add_data_to_wds_tar(archive, f"data/{i}.txt", f"text{i}")
                 self._add_data_to_wds_tar(archive, f"data/{i}.bin", f"bin{i}")
 
     def test_webdataset(self) -> None:
-        # Setup
-        self._create_wds_tar(os.path.join(self.temp_dir.name, "wds.tar"))
-
         # Functional Test: groups samples correctly
         source_dp = IterableWrapper(
             # simulated tar file content
@@ -763,7 +760,8 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
     def test_webdataset2(self) -> None:
         # Setup
-        self._create_wds_tar(os.path.join(self.temp_dir.name, "wds.tar"))
+        nsamples = 10
+        self._create_wds_tar(os.path.join(self.temp_dir.name, "wds.tar"), nsamples)
 
         def decode(item):
             key, value = item
@@ -776,7 +774,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         datapipe2 = FileOpener(datapipe1, mode="b")
         dataset = datapipe2.load_from_tar().map(decode).webdataset()
         items = list(dataset)
-        assert len(items) == 10
+        assert len(items) == nsamples
         assert items[0][".txt"] == "text0"
         assert items[9][".bin"] == "bin9"
 
