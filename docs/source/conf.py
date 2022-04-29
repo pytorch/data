@@ -56,7 +56,12 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = [
+    "generated/torchdata.datapipes.iter.Extractor.rst",
+    "generated/torchdata.datapipes.iter.TarArchiveReader.rst",
+    "generated/torchdata.datapipes.iter.XzFileReader.rst",
+    "generated/torchdata.datapipes.iter.ZipArchiveReader.rst",
+]
 
 
 # -- Options for HTML output -------------------------------------------------
