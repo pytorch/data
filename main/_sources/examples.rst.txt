@@ -4,7 +4,8 @@ Examples
 .. currentmodule:: examples
 
 In this section, you will find the data loading implementations (using DataPipes) of various
-popular datasets across different research domains.
+popular datasets across different research domains. Some of the examples are implements by the PyTorch team and the
+implementation codes are maintained within PyTorch libraries. Others are created by members of the PyTorch community.
 
 Audio
 -----------
@@ -65,13 +66,14 @@ The `Caltech 256 dataset <http://www.vision.caltech.edu/Image_Datasets/Caltech25
 from 256 categories. Here is the
 `DataPipe implementation of Caltech 256 <https://github.com/pytorch/data/blob/main/examples/vision/caltech256.py>`_.
 
-CamVid - Semantic Segmentation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+CamVid - Semantic Segmentation (community example)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The `Cambridge-driving Labeled Video Database (CamVid) <http://mi.eng.cam.ac.uk/research/projects/VideoRec/CamVid/>`_ is a collection of videos with object class semantic 
 labels, complete with metadata. The database provides ground truth labels that associate each pixel with one of 32 
-semantic classes. Here is the
+semantic classes. Here is a
 `DataPipe implementation of CamVid 
-<https://github.com/tcapelle/torchdata/blob/main/01_Camvid_segmentation_with_datapipes.ipynb>`_.
+<https://github.com/tcapelle/torchdata/blob/main/01_Camvid_segmentation_with_datapipes.ipynb>`_
+created by our community.
 
 Additional Datasets in TorchVision
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -96,15 +98,15 @@ click through rate (CTR) prediction. You can find a prototype stage implementati
 Graphs, Meshes and Point Clouds
 -------------------------------
 
-MoleculeNet
-^^^^^^^^^^^
+MoleculeNet (community example)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 `MoleculeNet <https://moleculenet.org/>`_ is a benchmark specially designed for testing machine learning methods of
 molecular properties. You can find an implementation of the
 `HIV dataset with DataPipes in PyTorch Geometric <https://github.com/pyg-team/pytorch_geometric/blob/master/examples/datapipe.py>`_,
 which includes converting SMILES strings into molecular graph representations.
 
-Princeton ModelNet
-^^^^^^^^^^^^^^^^^^
+Princeton ModelNet (community example)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The Princeton ModelNet project provides a comprehensive and clean collection of 3D CAD models across various object types.
 You can find an implementation of the
@@ -115,8 +117,8 @@ graph generation via `PyG's functional transformations <https://pytorch-geometri
 Timeseries
 ---------------------------------
 
-A custom DataPipe for Timeseries rolling window
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Custom DataPipe for Timeseries rolling window (community example)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Implementing a rolling window custom `DataPipe` for timeseries forecasting tasks.
 Here is the
 `DataPipe implementation of a rolling window 

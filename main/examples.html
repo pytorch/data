@@ -203,7 +203,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.4.0a0+b6ade8f ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.4.0a0+1171ec2 ) &#x25BC</a>
     </div>
     
 
@@ -322,7 +322,8 @@
   <section id="examples">
 <h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h1>
 <p>In this section, you will find the data loading implementations (using DataPipes) of various
-popular datasets across different research domains.</p>
+popular datasets across different research domains. Some of the examples are implements by the PyTorch team and the
+implementation codes are maintained within PyTorch libraries. Others are created by members of the PyTorch community.</p>
 <section id="audio">
 <h2>Audio<a class="headerlink" href="#audio" title="Permalink to this headline">¶</a></h2>
 <section id="librispeech">
@@ -377,12 +378,13 @@ belonging to 101 categories. Here is the
 from 256 categories. Here is the
 <a class="reference external" href="https://github.com/pytorch/data/blob/main/examples/vision/caltech256.py">DataPipe implementation of Caltech 256</a>.</p>
 </section>
-<section id="camvid-semantic-segmentation">
-<h3>CamVid - Semantic Segmentation<a class="headerlink" href="#camvid-semantic-segmentation" title="Permalink to this headline">¶</a></h3>
+<section id="camvid-semantic-segmentation-community-example">
+<h3>CamVid - Semantic Segmentation (community example)<a class="headerlink" href="#camvid-semantic-segmentation-community-example" title="Permalink to this headline">¶</a></h3>
 <p>The <a class="reference external" href="http://mi.eng.cam.ac.uk/research/projects/VideoRec/CamVid/">Cambridge-driving Labeled Video Database (CamVid)</a> is a collection of videos with object class semantic
 labels, complete with metadata. The database provides ground truth labels that associate each pixel with one of 32
-semantic classes. Here is the
-<a class="reference external" href="https://github.com/tcapelle/torchdata/blob/main/01_Camvid_segmentation_with_datapipes.ipynb">DataPipe implementation of CamVid</a>.</p>
+semantic classes. Here is a
+<a class="reference external" href="https://github.com/tcapelle/torchdata/blob/main/01_Camvid_segmentation_with_datapipes.ipynb">DataPipe implementation of CamVid</a>
+created by our community.</p>
 </section>
 <section id="additional-datasets-in-torchvision">
 <h3>Additional Datasets in TorchVision<a class="headerlink" href="#additional-datasets-in-torchvision" title="Permalink to this headline">¶</a></h3>
@@ -405,15 +407,15 @@ click through rate (CTR) prediction. You can find a prototype stage implementati
 </section>
 <section id="graphs-meshes-and-point-clouds">
 <h2>Graphs, Meshes and Point Clouds<a class="headerlink" href="#graphs-meshes-and-point-clouds" title="Permalink to this headline">¶</a></h2>
-<section id="moleculenet">
-<h3>MoleculeNet<a class="headerlink" href="#moleculenet" title="Permalink to this headline">¶</a></h3>
+<section id="moleculenet-community-example">
+<h3>MoleculeNet (community example)<a class="headerlink" href="#moleculenet-community-example" title="Permalink to this headline">¶</a></h3>
 <p><a class="reference external" href="https://moleculenet.org/">MoleculeNet</a> is a benchmark specially designed for testing machine learning methods of
 molecular properties. You can find an implementation of the
 <a class="reference external" href="https://github.com/pyg-team/pytorch_geometric/blob/master/examples/datapipe.py">HIV dataset with DataPipes in PyTorch Geometric</a>,
 which includes converting SMILES strings into molecular graph representations.</p>
 </section>
-<section id="princeton-modelnet">
-<h3>Princeton ModelNet<a class="headerlink" href="#princeton-modelnet" title="Permalink to this headline">¶</a></h3>
+<section id="princeton-modelnet-community-example">
+<h3>Princeton ModelNet (community example)<a class="headerlink" href="#princeton-modelnet-community-example" title="Permalink to this headline">¶</a></h3>
 <p>The Princeton ModelNet project provides a comprehensive and clean collection of 3D CAD models across various object types.
 You can find an implementation of the
 <a class="reference external" href="https://github.com/pyg-team/pytorch_geometric/blob/master/examples/datapipe.py">ModelNet10 dataset with DataPipes in PyTorch Geometric</a>,
@@ -423,8 +425,8 @@ graph generation via <a class="reference external" href="https://pytorch-geometr
 </section>
 <section id="timeseries">
 <h2>Timeseries<a class="headerlink" href="#timeseries" title="Permalink to this headline">¶</a></h2>
-<section id="a-custom-datapipe-for-timeseries-rolling-window">
-<h3>A custom DataPipe for Timeseries rolling window<a class="headerlink" href="#a-custom-datapipe-for-timeseries-rolling-window" title="Permalink to this headline">¶</a></h3>
+<section id="custom-datapipe-for-timeseries-rolling-window-community-example">
+<h3>Custom DataPipe for Timeseries rolling window (community example)<a class="headerlink" href="#custom-datapipe-for-timeseries-rolling-window-community-example" title="Permalink to this headline">¶</a></h3>
 <p>Implementing a rolling window custom <cite>DataPipe</cite> for timeseries forecasting tasks.
 Here is the
 <a class="reference external" href="https://github.com/tcapelle/torchdata/blob/main/02_Custom_timeseries_datapipe.ipynb">DataPipe implementation of a rolling window</a>.</p>
@@ -488,7 +490,7 @@ Here is the
 <li><a class="reference internal" href="#vision">Vision</a><ul>
 <li><a class="reference internal" href="#caltech-101">Caltech 101</a></li>
 <li><a class="reference internal" href="#caltech-256">Caltech 256</a></li>
-<li><a class="reference internal" href="#camvid-semantic-segmentation">CamVid - Semantic Segmentation</a></li>
+<li><a class="reference internal" href="#camvid-semantic-segmentation-community-example">CamVid - Semantic Segmentation (community example)</a></li>
 <li><a class="reference internal" href="#additional-datasets-in-torchvision">Additional Datasets in TorchVision</a></li>
 </ul>
 </li>
@@ -497,12 +499,12 @@ Here is the
 </ul>
 </li>
 <li><a class="reference internal" href="#graphs-meshes-and-point-clouds">Graphs, Meshes and Point Clouds</a><ul>
-<li><a class="reference internal" href="#moleculenet">MoleculeNet</a></li>
-<li><a class="reference internal" href="#princeton-modelnet">Princeton ModelNet</a></li>
+<li><a class="reference internal" href="#moleculenet-community-example">MoleculeNet (community example)</a></li>
+<li><a class="reference internal" href="#princeton-modelnet-community-example">Princeton ModelNet (community example)</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#timeseries">Timeseries</a><ul>
-<li><a class="reference internal" href="#a-custom-datapipe-for-timeseries-rolling-window">A custom DataPipe for Timeseries rolling window</a></li>
+<li><a class="reference internal" href="#custom-datapipe-for-timeseries-rolling-window-community-example">Custom DataPipe for Timeseries rolling window (community example)</a></li>
 </ul>
 </li>
 </ul>
