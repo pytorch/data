@@ -17,6 +17,7 @@ if DILL_AVAILABLE:
     dill.extend(use_dill=False)
 
 
+# @functional_datapipe("to_map_datapipe")  # This line must be kept for .pyi signature parser
 class IterToMapConverterMapDataPipe(MapDataPipe):
     r"""
     Lazily load data from ``IterDataPipe`` to construct a ``MapDataPipe`` with
@@ -63,9 +64,12 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
             self._map[key] = value
 
     def __getitem__(self, index):
-        if self._map is None:
-            self._load_map()
-        return self._map[index]  # type: ignore[index]
+        try:
+            if self._map is None:
+                self._load_map()
+            return self._map[index]  # type: ignore[index]
+        except KeyError:
+            raise IndexError(f"Index {index} is valid for IterToMapConverter.")
 
     def __len__(self):
         if self._length > -1:

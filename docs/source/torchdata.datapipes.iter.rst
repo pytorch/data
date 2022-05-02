@@ -170,6 +170,7 @@ A miscellaneous set of DataPipes with different functionalities.
     HashChecker
     InMemoryCacheHolder
     IterableWrapper
+    IterToMapConverter
     OnDiskCacheHolder
     ShardingFilter
 
