@@ -33,9 +33,15 @@ def gen_pyi() -> None:
     DATAPIPE_DIR = Path(__file__).parent.parent.resolve() / "torchdata" / "datapipes"
     print(f"Generating DataPipe Python interface file in {DATAPIPE_DIR}")
 
+    # Base __init__ file
     iter_init_base = get_lines_base_file(
         os.path.join(DATAPIPE_DIR, "iter/__init__.py"),
         {"from torch.utils.data import IterDataPipe", "# Copyright (c) Facebook, Inc. and its affiliates."},
+    )
+
+    map_init_base = get_lines_base_file(
+        os.path.join(DATAPIPE_DIR, "map/__init__.py"),
+        {"from torch.utils.data import MapDataPipe", "# Copyright (c) Facebook, Inc. and its affiliates."},
     )
 
     # Core Definitions
@@ -47,7 +53,16 @@ def gen_pyi() -> None:
         core_gen_pyi.iterDP_method_to_special_output_type,
     )
 
+    core_map_method_definitions = get_method_definitions(
+        core_gen_pyi.mapDP_file_path,
+        core_gen_pyi.mapDP_files_to_exclude,
+        core_gen_pyi.mapDP_deprecated_files,
+        "MapDataPipe",
+        core_gen_pyi.mapDP_method_to_special_output_type,
+    )
+
     # TorchData Definitions
+    # IterDataPipes
     iterDP_file_paths: List[str] = ["iter/load", "iter/transform", "iter/util"]
     iterDP_files_to_exclude: Set[str] = {"__init__.py"}
     iterDP_deprecated_files: Set[str] = set()
@@ -62,7 +77,7 @@ def gen_pyi() -> None:
         "extract": "IterDataPipe",
         "to_map_datapipe": "MapDataPipe",
     }
-    method_name_exlusion: Set[str] = {"def extract", "read_from_tar", "read_from_xz", "read_from_zip"}
+    iter_method_name_exclusion: Set[str] = {"def extract", "read_from_tar", "read_from_xz", "read_from_zip"}
 
     td_iter_method_definitions = get_method_definitions(
         iterDP_file_paths,
@@ -74,7 +89,7 @@ def gen_pyi() -> None:
     )
 
     td_iter_method_definitions = [
-        s for s in td_iter_method_definitions if all(ex not in s for ex in method_name_exlusion)
+        s for s in td_iter_method_definitions if all(ex not in s for ex in iter_method_name_exclusion)
     ]
 
     iter_method_definitions = core_iter_method_definitions + td_iter_method_definitions
@@ -86,6 +101,40 @@ def gen_pyi() -> None:
         template_name="iter/__init__.pyi.in",
         output_name="iter/__init__.pyi",
         replacements=iter_replacements,
+    )
+
+    # MapDataPipes
+    mapDP_file_paths: List[str] = ["map/load", "map/transform", "map/util"]
+    mapDP_files_to_exclude: Set[str] = {"__init__.py"}
+    mapDP_deprecated_files: Set[str] = set()
+    mapDP_method_to_special_output_type: Dict[str, str] = {
+        "unzip": "List[MapDataPipe]",
+        "to_iter_datapipe": "IterDataPipe",
+    }
+    map_method_name_exclusion: Set[str] = set()
+
+    td_map_method_definitions = get_method_definitions(
+        mapDP_file_paths,
+        mapDP_files_to_exclude,
+        mapDP_deprecated_files,
+        "MapDataPipe",
+        mapDP_method_to_special_output_type,
+        root=str(DATAPIPE_DIR),
+    )
+
+    td_map_method_definitions = [
+        s for s in td_map_method_definitions if all(ex not in s for ex in map_method_name_exclusion)
+    ]
+
+    map_method_definitions = core_map_method_definitions + td_map_method_definitions
+
+    map_replacements = [("${init_base}", map_init_base, 0), ("${MapDataPipeMethods}", map_method_definitions, 4)]
+
+    gen_from_template(
+        dir=str(DATAPIPE_DIR),
+        template_name="map/__init__.pyi.in",
+        output_name="map/__init__.pyi",
+        replacements=map_replacements,
     )
 
 

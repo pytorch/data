@@ -5,6 +5,7 @@ conda-bld/*
 
 torchdata/version.py
 torchdata/datapipes/iter/__init__.pyi
+torchdata/datapipes/map/__init__.pyi
 
 # Editor temporaries
 *.swn
