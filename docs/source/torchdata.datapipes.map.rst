@@ -40,4 +40,5 @@ MapDataPipes
     Mapper
     SequenceWrapper
     Shuffler
+    UnZipper
     Zipper

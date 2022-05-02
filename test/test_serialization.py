@@ -15,6 +15,7 @@ from typing import List
 
 import expecttest
 import torchdata.datapipes.iter as iterdp
+import torchdata.datapipes.map as mapdp
 from _utils._common_utils_for_test import create_temp_dir, create_temp_files
 from torch.utils.data.datapipes.utils.common import DILL_AVAILABLE
 from torchdata.datapipes.iter import IterableWrapper
@@ -359,8 +360,47 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
 
 
 class TestMapDataPipeSerialization(expecttest.TestCase):
+    def _serialization_test_helper(self, datapipe):
+        serialized_dp = pickle.dumps(datapipe)
+        deserialized_dp = pickle.loads(serialized_dp)
+        try:
+            self.assertEqual(list(datapipe), list(deserialized_dp))
+        except AssertionError as e:
+            print(f"{datapipe} is failing.")
+            raise e
+
+    def _serialization_test_for_dp_with_children(self, dp1, dp2):
+        self._serialization_test_helper(dp1)
+        self._serialization_test_helper(dp2)
+
     def test_serializable(self):
-        pass
+        picklable_datapipes: List = [
+            (mapdp.UnZipper, SequenceWrapper([(i, i + 10) for i in range(10)]), (), {"sequence_length": 2}),
+        ]
+
+        dp_skip_comparison = set()
+        # These DataPipes produce multiple DataPipes as outputs and those should be compared
+        dp_compare_children = {mapdp.UnZipper}
+
+        for dpipe, custom_input, dp_args, dp_kwargs in picklable_datapipes:
+            try:
+                # Creating input (usually a DataPipe) for the specific dpipe being tested
+                if custom_input is None:
+                    custom_input = SequenceWrapper(range(10))
+
+                if dpipe in dp_skip_comparison:  # Mke sure they are picklable and loadable (no value comparison)
+                    datapipe = dpipe(custom_input, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
+                    serialized_dp = pickle.dumps(datapipe)
+                    _ = pickle.loads(serialized_dp)
+                elif dpipe in dp_compare_children:  # DataPipes that have children
+                    dp1, dp2 = dpipe(custom_input, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
+                    self._serialization_test_for_dp_with_children(dp1, dp2)
+                else:  # Single DataPipe that requires comparison
+                    datapipe = dpipe(custom_input, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
+                    self._serialization_test_helper(datapipe)
+            except Exception as e:
+                print(f"{dpipe} is failing.")
+                raise e
 
     def test_serializable_with_dill(self):
         """Only for DataPipes that take in a function as argument"""

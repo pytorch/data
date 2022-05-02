@@ -18,7 +18,6 @@ import torch.utils.data.datapipes.iter
 import torchdata
 
 from _utils._common_utils_for_test import IDP_NoLen, reset_after_n_next_calls
-from torch.utils.data.datapipes.map import SequenceWrapper
 from torchdata.datapipes.iter import (
     BucketBatcher,
     Cycler,
@@ -37,7 +36,7 @@ from torchdata.datapipes.iter import (
     SampleMultiplexer,
     UnZipper,
 )
-from torchdata.datapipes.map import MapDataPipe
+from torchdata.datapipes.map import MapDataPipe, SequenceWrapper
 
 
 def test_torchdata_pytorch_consistency() -> None:
@@ -65,7 +64,7 @@ def test_torchdata_pytorch_consistency() -> None:
         raise AssertionError(msg + "\n".join(sorted(missing_datapipes)))
 
 
-class TestDataPipe(expecttest.TestCase):
+class TestIterDataPipe(expecttest.TestCase):
     def test_in_memory_cache_holder_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(10))
         cache_dp = source_dp.in_memory_cache(size=5)
@@ -816,8 +815,6 @@ class TestDataPipe(expecttest.TestCase):
         self.assertEqual(len(source_dp), len(dp1))
         self.assertEqual(len(source_dp), len(dp2))
         self.assertEqual(len(source_dp), len(dp3))
-
-        # TODO: Add testing for different stages of pickling for UnZipper
 
     def test_itertomap_mapdatapipe(self):
         # Functional Test with None key_value_fn
