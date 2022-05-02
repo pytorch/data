@@ -7,6 +7,7 @@
 import unittest
 
 import expecttest
+from torchdata.datapipes.iter import MapToIterConverter
 from torchdata.datapipes.map import MapDataPipe, SequenceWrapper, UnZipper
 
 
@@ -38,6 +39,21 @@ class TestMapDataPipe(expecttest.TestCase):
 
         # __len__ Test: the lengths of child DataPipes are correct
         self.assertEqual((10, 10), (len(dp2), len(dp3)))
+
+    def test_map_to_iter_converter_datapipe(self) -> None:
+        # Functional Test: ensure the conversion without indices input is correct
+        source_dp = SequenceWrapper(range(10))
+        iter_dp = source_dp.to_iter_datapipe()
+        self.assertEqual(list(range(10)), list(iter_dp))
+
+        # Functional Test: ensure conversion with custom indices is correct
+        source_dp2 = SequenceWrapper({"a": 0, "b": 1, "c": 2})
+        iter_dp2 = MapToIterConverter(source_dp2, indices=["a", "b", "c"])
+        self.assertEqual([0, 1, 2], list(iter_dp2))
+
+        # __len__ Test: the lengths of the output is correct
+        self.assertEqual(10, len(iter_dp))
+        self.assertEqual(3, len(iter_dp2))
 
 
 if __name__ == "__main__":

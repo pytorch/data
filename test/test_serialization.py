@@ -221,6 +221,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (),
                 {},
             ),
+            (iterdp.MapToIterConverter, SequenceWrapper(range(10)), (), {}),
             (
                 iterdp.MaxTokenBucketizer,
                 IterableWrapper(["1", "22", "1", "4444", "333", "1", "22", "22", "333"]),
