@@ -376,6 +376,7 @@ class TestMapDataPipeSerialization(expecttest.TestCase):
 
     def test_serializable(self):
         picklable_datapipes: List = [
+            (mapdp.InMemoryCacheHolder, None, (), {}),
             (mapdp.IterToMapConverter, IterableWrapper([(i, i) for i in range(10)]), (), {}),
             (mapdp.UnZipper, SequenceWrapper([(i, i + 10) for i in range(10)]), (), {"sequence_length": 2}),
         ]
