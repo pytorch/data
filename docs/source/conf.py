@@ -94,8 +94,10 @@ html_css_files = [
 # TODO: use regex to replace all "T" and "T_co" related signature
 signature_replacements = {
     "torch.utils.data.dataset.IterDataPipe": "IterDataPipe",
+    "torch.utils.data.datapipes.datapipe.IterDataPipe": "IterDataPipe",
     "abc.IterDataPipe": "IterDataPipe",
     "torch.utils.data.dataset.MapDataPipe": "MapDataPipe",
+    "torch.utils.data.datapipes.datapipe.MapDataPipe": "MapDataPipe",
     "abc.MapDataPipe": "MapDataPipe",
     "typing.Type[torch.utils.data.sampler.Sampler]": "torch.utils.data.sampler.Sampler",
     "<class 'torch.utils.data.sampler.SequentialSampler'>": "SequentialSampler",
@@ -108,6 +110,16 @@ signature_replacements = {
     "torch.utils.data.datapipes.map.combinatorics.T_co": "T_co",
     "torchdata.datapipes.iter.util.cycler.T_co": "T_co",
     "torchdata.datapipes.iter.util.paragraphaggregator.T_co": "T_co",
+    "torchdata.datapipes.map.util.cacheholder.T_co": "T_co",
+    "Sequence[torchdata.datapipes.map.util.unzipper.T]": "Sequence[T]",
+    "torchdata.datapipes.iter.util.samplemultiplexer.T_co": "T_co",
+    "torchdata.datapipes.iter.util.indexadder.K": "K",
+    "torchdata.datapipes.iter.util.unzipper.T": "T",
+    "torch.utils.data.datapipes.iter.grouping.T_co": "T_co",
+    "torchdata.datapipes.iter.util.dataframemaker.T_co": "T_co",
+    "torchdata.datapipes.iter.util.cacheholder.T_co": "T_co",
+    "torchdata.datapipes.iter.util.header.T_co": "T_co",
+    "<class 'torch.utils.data.datapipes.datapipe.DataChunk'>": "torch.utils.data.datapipes.datapipe.DataChunk",
     "typing.": "",
 }
 

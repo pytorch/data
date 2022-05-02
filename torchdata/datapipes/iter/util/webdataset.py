@@ -47,7 +47,7 @@ class WebDatasetIterDataPipe(IterDataPipe[Dict]):
     r"""
     Iterable DataPipe that accepts stream of (path, data) tuples, usually,
     representing the pathnames and files of a tar archive (functional name:
-    ``webdataset''). This aggregates consecutive items with the same basename
+    ``webdataset``). This aggregates consecutive items with the same basename
     into a single dictionary, using the extensions as keys (WebDataset file
     convention). Any text after the first "." in the filename is used as
     a key/extension.
@@ -56,8 +56,10 @@ class WebDatasetIterDataPipe(IterDataPipe[Dict]):
 
     Args:
         source_datapipe: a DataPipe yielding a stream of (path, data) pairs
+
     Returns:
         a DataPipe yielding a stream of dictionaries
+
     Examples:
         >>> from torchdata.datapipes.iter import FileLister, FileOpener
         >>>

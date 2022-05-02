@@ -26,6 +26,8 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
     with exactly two objects. The first object of each item becomes a key in
     the new dictionary, and the second object the corresponding value.
 
+    For the opposite converter, use ``MapToIterConverter``.
+
     Args:
         datapipe: Source IterDataPipe
         key_value_fn: Function being applied over each data to generate key-value pair
