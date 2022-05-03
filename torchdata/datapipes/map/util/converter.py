@@ -15,7 +15,7 @@ class MapToIterConverterIterDataPipe(IterDataPipe):
     Convert a ``MapDataPipe`` to an ``IterDataPipe`` (functional name: ``to_iter_datapipe``). It uses ``indices`` to
     iterate through the ``MapDataPipe``, defaults to ``range(len(mapdatapipe))`` if not given.
 
-    For the opposite converter, use ``IterToMapConverter``.
+    For the opposite converter, use :class:`.IterToMapConverter`.
 
     Args:
         datapipe: source MapDataPipe with data
