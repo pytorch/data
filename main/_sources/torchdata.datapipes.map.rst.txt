@@ -36,8 +36,10 @@ MapDataPipes
 
     Batcher
     Concater
-    IterToMapConverter
+    InMemoryCacheHolder
     Mapper
+    MapToIterConverter
     SequenceWrapper
     Shuffler
+    UnZipper
     Zipper
