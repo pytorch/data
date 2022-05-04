@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>StreamReader &mdash; TorchData main documentation</title>
+  <title>MapToIterConverter &mdash; TorchData main documentation</title>
   
 
   
@@ -33,8 +33,8 @@
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Map-style DataPipes" href="../torchdata.datapipes.map.html" />
-    <link rel="prev" title="Rows2Columnar" href="torchdata.datapipes.iter.Rows2Columnar.html" />
+    <link rel="next" title="OnDiskCacheHolder" href="torchdata.datapipes.iter.OnDiskCacheHolder.html" />
+    <link rel="prev" title="IterableWrapper" href="torchdata.datapipes.iter.IterableWrapper.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -290,13 +290,13 @@
         
           <li><a href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a> &gt;</li>
         
-      <li>StreamReader</li>
+      <li>MapToIterConverter</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/generated/torchdata.datapipes.iter.StreamReader.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/generated/torchdata.datapipes.iter.MapToIterConverter.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -322,28 +322,28 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="streamreader">
-<h1>StreamReader<a class="headerlink" href="#streamreader" title="Permalink to this headline">¶</a></h1>
+  <section id="maptoiterconverter">
+<h1>MapToIterConverter<a class="headerlink" href="#maptoiterconverter" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="torchdata.datapipes.iter.StreamReader">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">StreamReader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.StreamReader" title="Permalink to this definition">¶</a></dt>
-<dd><p>Given IO streams and their label names, yields bytes with label
-name in a tuple (functional name: <code class="docutils literal notranslate"><span class="pre">read_from_stream</span></code>).</p>
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.MapToIterConverter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">MapToIterConverter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.MapToIterConverter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert a <code class="docutils literal notranslate"><span class="pre">MapDataPipe</span></code> to an <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> (functional name: <code class="docutils literal notranslate"><span class="pre">to_iter_datapipe</span></code>). It uses <code class="docutils literal notranslate"><span class="pre">indices</span></code> to
+iterate through the <code class="docutils literal notranslate"><span class="pre">MapDataPipe</span></code>, defaults to <code class="docutils literal notranslate"><span class="pre">range(len(mapdatapipe))</span></code> if not given.</p>
+<p>For the opposite converter, use <a class="reference internal" href="torchdata.datapipes.map.IterToMapConverter.html#torchdata.datapipes.map.IterToMapConverter" title="torchdata.datapipes.map.IterToMapConverter"><code class="xref py py-class docutils literal notranslate"><span class="pre">IterToMapConverter</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>datapipe</strong> – Iterable DataPipe provides label/URL and byte stream</p></li>
-<li><p><strong>chunk</strong> – Number of bytes to be read from stream per iteration.
-If <code class="docutils literal notranslate"><span class="pre">None</span></code>, all bytes will be read util the EOF.</p></li>
+<li><p><strong>datapipe</strong> – source MapDataPipe with data</p></li>
+<li><p><strong>indices</strong> – optional list of indices that will dictate how the datapipe will be iterated over</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span><span class="p">,</span> <span class="n">StreamReader</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">StringIO</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([(</span><span class="s2">&quot;alphabet&quot;</span><span class="p">,</span> <span class="n">StringIO</span><span class="p">(</span><span class="s2">&quot;abcde&quot;</span><span class="p">))])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">StreamReader</span><span class="p">(</span><span class="n">dp</span><span class="p">,</span> <span class="n">chunk</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
-<span class="go">[(&#39;alphabet&#39;, &#39;a&#39;), (&#39;alphabet&#39;, &#39;b&#39;), (&#39;alphabet&#39;, &#39;c&#39;), (&#39;alphabet&#39;, &#39;d&#39;), (&#39;alphabet&#39;, &#39;e&#39;)]</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.map</span> <span class="kn">import</span> <span class="n">SequenceWrapper</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">source_dp</span> <span class="o">=</span> <span class="n">SequenceWrapper</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iter_dp</span> <span class="o">=</span> <span class="n">source_dp</span><span class="o">.</span><span class="n">to_iter_datapipe</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">iter_dp</span><span class="p">)</span>
+<span class="go">[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -358,10 +358,10 @@ If <code class="docutils literal notranslate"><span class="pre">None</span></cod
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../torchdata.datapipes.map.html" class="btn btn-neutral float-right" title="Map-style DataPipes" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.datapipes.iter.OnDiskCacheHolder.html" class="btn btn-neutral float-right" title="OnDiskCacheHolder" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.iter.Rows2Columnar.html" class="btn btn-neutral" title="Rows2Columnar" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="torchdata.datapipes.iter.IterableWrapper.html" class="btn btn-neutral" title="IterableWrapper" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -393,7 +393,7 @@ If <code class="docutils literal notranslate"><span class="pre">None</span></cod
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">StreamReader</a></li>
+<li><a class="reference internal" href="#">MapToIterConverter</a></li>
 </ul>
 
             </div>
