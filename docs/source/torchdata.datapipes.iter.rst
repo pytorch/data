@@ -140,6 +140,8 @@ saving files, and listing the files in directories).
     IoPathSaver
     OnlineReader
     ParquetDataFrameLoader
+    S3FileLister
+    S3FileLoader
     Saver
 
 Mapping DataPipes
@@ -170,7 +172,7 @@ A miscellaneous set of DataPipes with different functionalities.
     HashChecker
     InMemoryCacheHolder
     IterableWrapper
-    IterToMapConverter
+    MapToIterConverter
     OnDiskCacheHolder
     ShardingFilter
 

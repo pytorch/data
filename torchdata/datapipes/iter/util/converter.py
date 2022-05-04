@@ -26,6 +26,8 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
     with exactly two objects. The first object of each item becomes a key in
     the new dictionary, and the second object the corresponding value.
 
+    For the opposite converter, use :class:`.MapToIterConverter`.
+
     Args:
         datapipe: Source IterDataPipe
         key_value_fn: Function being applied over each data to generate key-value pair
@@ -33,6 +35,13 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
     Note:
         If a key being added is already present, the corresponding value
         will be replaced by the new value.
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> source_dp = IterableWrapper([(i, i) for i in range(10)])
+        >>> map_dp = source_dp.to_map_datapipe()
+        >>> list(map_dp)
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     """
     datapipe: IterDataPipe
     key_value_fn: Optional[Callable]
