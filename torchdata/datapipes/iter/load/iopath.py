@@ -77,8 +77,9 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
                 root,
             ]
         if not isinstance(root, IterDataPipe):
-            root = IterableWrapper(root)
-        self.datapipe: IterDataPipe = root
+            self.datapipe: Union[IterDataPipe, IterableWrapper] = IterableWrapper(root)
+        else:
+            self.datapipe = root
         self.pathmgr = _create_default_pathmanager() if pathmgr is None else pathmgr
         self.masks = masks
 
