@@ -124,6 +124,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         _ = next(it)
         test_helper_fn(dp)
         # 3. Testing for serialization after DataPipe is fully read
+        it = iter(dp)
         _ = list(it)
         test_helper_fn(dp)
 
@@ -138,10 +139,12 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         self._serialization_test_helper(dp2)
         # 2.5. Testing for serialization after one child DataPipe is fully read
         #      (Only for DataPipes with children DataPipes)
+        it1 = iter(dp1)
         _ = list(it1)  # fully read one child
         self._serialization_test_helper(dp1)
         self._serialization_test_helper(dp2)
         # 3. Testing for serialization after DataPipe is fully read
+        it2 = iter(dp2)
         _ = list(it2)  # fully read the other child
         self._serialization_test_helper(dp1)
         self._serialization_test_helper(dp2)

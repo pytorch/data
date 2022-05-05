@@ -105,6 +105,7 @@ class TestIterDataPipe(expecttest.TestCase):
 
         source_dp = IterableWrapper(range(10))
         ref_dp = IterableWrapper(range(20))
+        ref_dp2 = IterableWrapper(range(20))
 
         # Functional Test: Output should be a zip list of tuple
         zip_dp = source_dp.zip_with_iter(
@@ -114,7 +115,7 @@ class TestIterDataPipe(expecttest.TestCase):
 
         # Functional Test: keep_key=True, and key should show up as the first element
         zip_dp_w_key = source_dp.zip_with_iter(
-            ref_datapipe=ref_dp, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=True, buffer_size=10
+            ref_datapipe=ref_dp2, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=True, buffer_size=10
         )
         self.assertEqual([(i, (i, i)) for i in range(10)], list(zip_dp_w_key))
 
@@ -145,13 +146,13 @@ class TestIterDataPipe(expecttest.TestCase):
 
         # Without a custom merge function, there will be nested tuples
         zip_dp2 = zip_dp.zip_with_iter(
-            ref_datapipe=ref_dp, key_fn=lambda x: x[0], ref_key_fn=lambda x: x, keep_key=False, buffer_size=100
+            ref_datapipe=ref_dp2, key_fn=lambda x: x[0], ref_key_fn=lambda x: x, keep_key=False, buffer_size=100
         )
         self.assertEqual([((i, i), i) for i in range(10)], list(zip_dp2))
 
         # With a custom merge function, nesting can be prevented
         zip_dp2_w_merge = zip_dp.zip_with_iter(
-            ref_datapipe=ref_dp,
+            ref_datapipe=ref_dp2,
             key_fn=lambda x: x[0],
             ref_key_fn=lambda x: x,
             keep_key=False,
@@ -524,10 +525,11 @@ class TestIterDataPipe(expecttest.TestCase):
 
     def test_in_batch_shuffler_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(10)).batch(3)
+        source_dp2 = IterableWrapper(range(10)).batch(3)
 
         # Functional Test: drop last reduces length
         filtered_dp = source_dp.in_batch_shuffle()
-        for ret_batch, exp_batch in zip(filtered_dp, source_dp):
+        for ret_batch, exp_batch in zip(filtered_dp, source_dp2):
             ret_batch.sort()
             self.assertEqual(ret_batch, exp_batch)
 
@@ -762,28 +764,32 @@ class TestIterDataPipe(expecttest.TestCase):
         with self.assertRaises(BufferError):
             list(dp2)
 
-        # Reset Test: reset the DataPipe after reading part of it
+        # Reset Test: DataPipe resets when a new iterator is created, even if this datapipe hasn't been read
         dp1, dp2 = source_dp.unzip(sequence_length=2)
-        i1, i2 = iter(dp1), iter(dp2)
+        _ = iter(dp1)
         output2 = []
-        for i, n2 in enumerate(i2):
-            output2.append(n2)
-            if i == 4:
-                i1 = iter(dp1)  # Doesn't reset because i1 hasn't been read
-        self.assertEqual(list(range(10, 20)), output2)
+        with self.assertRaisesRegex(RuntimeError, r"iterator has been invalidated"):
+            for i, n2 in enumerate(dp2):
+                output2.append(n2)
+                if i == 4:
+                    _ = iter(dp1)  # This will reset all child DataPipes
+        self.assertEqual(list(range(10, 15)), output2)
 
         # Reset Test: DataPipe reset when some of it have been read
         dp1, dp2 = source_dp.unzip(sequence_length=2)
-        i1, i2 = iter(dp1), iter(dp2)
         output1, output2 = [], []
-        for i, (n1, n2) in enumerate(zip(i1, i2)):
+        for i, (n1, n2) in enumerate(zip(dp1, dp2)):
             output1.append(n1)
             output2.append(n2)
             if i == 4:
                 with warnings.catch_warnings(record=True) as wa:
-                    i1 = iter(dp1)  # Reset both all child DataPipe
+                    _ = iter(dp1)  # Reset both all child DataPipe
                     self.assertEqual(len(wa), 1)
                     self.assertRegex(str(wa[0].message), r"Some child DataPipes are not exhausted")
+                break
+        for i, (n1, n2) in enumerate(zip(dp1, dp2)):
+            output1.append(n1)
+            output2.append(n2)
         self.assertEqual(list(range(5)) + list(range(10)), output1)
         self.assertEqual(list(range(10, 15)) + list(range(10, 20)), output2)
 

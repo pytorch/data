@@ -196,14 +196,16 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         datapipe2 = FileOpener(datapipe1, mode="b")
         hash_check_dp = HashChecker(datapipe2, hash_dict)
 
+        expected_res = list(datapipe2)
+
         # Functional Test: Ensure the DataPipe values are unchanged if the hashes are the same
-        for (expected_path, expected_stream), (actual_path, actual_stream) in zip(datapipe2, hash_check_dp):
+        for (expected_path, expected_stream), (actual_path, actual_stream) in zip(expected_res, hash_check_dp):
             self.assertEqual(expected_path, actual_path)
             self.assertEqual(expected_stream.read(), actual_stream.read())
 
         # Functional Test: Ensure the rewind option works, and the stream is empty when there is no rewind
         hash_check_dp_no_reset = HashChecker(datapipe2, hash_dict, rewind=False)
-        for (expected_path, _), (actual_path, actual_stream) in zip(datapipe2, hash_check_dp_no_reset):
+        for (expected_path, _), (actual_path, actual_stream) in zip(expected_res, hash_check_dp_no_reset):
             self.assertEqual(expected_path, actual_path)
             self.assertEqual(b"", actual_stream.read())
 
@@ -424,7 +426,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self._unordered_compressed_files_comparison_helper(self.temp_files, res_after_reset)
 
         # Reset Test: Ensure the order is consistent between iterations
-        for r1, r2 in zip(xz_loader_dp, xz_loader_dp):
+        for r1, r2 in zip(list(xz_loader_dp), list(xz_loader_dp)):
             self.assertEqual(r1[0], r2[0])
 
         # __len__ Test: doesn't have valid length
@@ -463,7 +465,8 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self._unordered_compressed_files_comparison_helper(self.temp_files, res_after_reset)
 
         # Reset Test: Ensure the order is consistent between iterations
-        for r1, r2 in zip(bz2_loader_dp, bz2_loader_dp):
+
+        for r1, r2 in zip(list(bz2_loader_dp), list(bz2_loader_dp)):
             self.assertEqual(r1[0], r2[0])
 
         # __len__ Test: doesn't have valid length
