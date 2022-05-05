@@ -99,52 +99,60 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         except Exception as e:
             warnings.warn(f"TestIterDataPipeSerialization was not able to cleanup temp dir due to {e}")
 
-    def _serialization_test_helper(self, datapipe):
-        serialized_dp = pickle.dumps(datapipe)
-        deserialized_dp = pickle.loads(serialized_dp)
+    def _serialization_test_helper(self, datapipe, use_dill):
+        if use_dill:
+            serialized_dp = dill.dumps(datapipe)
+            deserialized_dp = dill.loads(serialized_dp)
+        else:
+            serialized_dp = pickle.dumps(datapipe)
+            deserialized_dp = pickle.loads(serialized_dp)
         try:
             self.assertEqual(list(datapipe), list(deserialized_dp))
         except AssertionError as e:
             print(f"{datapipe} is failing.")
             raise e
 
-    def _serialization_dataframe_test_helper(self, datapipe):
-        serialized_dp = pickle.dumps(datapipe)
-        deserialized_dp = pickle.loads(serialized_dp)
+    def _serialization_dataframe_test_helper(self, datapipe, use_dill):
+        if use_dill:
+            serialized_dp = dill.dumps(datapipe)
+            deserialized_dp = dill.loads(serialized_dp)
+        else:
+            serialized_dp = pickle.dumps(datapipe)
+            deserialized_dp = pickle.loads(serialized_dp)
         for df1, df2 in zip(datapipe, deserialized_dp):
             for exp, act in zip(df1, df2):
                 self.assertEqual(exp, act)
 
-    def _serialization_test_for_single_dp(self, dp, is_dataframe=False):
+    def _serialization_test_for_single_dp(self, dp, use_dill, is_dataframe=False):
         test_helper_fn = self._serialization_dataframe_test_helper if is_dataframe else self._serialization_test_helper
         # 1. Testing for serialization before any iteration starts
-        test_helper_fn(dp)
+        test_helper_fn(dp, use_dill)
         # 2. Testing for serialization afterDataPipe is partially read
         it = iter(dp)
         _ = next(it)
-        test_helper_fn(dp)
+        test_helper_fn(dp, use_dill)
         # 3. Testing for serialization after DataPipe is fully read
         _ = list(it)
-        test_helper_fn(dp)
+        test_helper_fn(dp, use_dill)
 
-    def _serialization_test_for_dp_with_children(self, dp1, dp2):
+    def _serialization_test_for_dp_with_children(self, dp1, dp2, use_dill):
         # 1. Testing for serialization before any iteration starts
-        self._serialization_test_helper(dp1)
-        self._serialization_test_helper(dp2)
+        self._serialization_test_helper(dp1, use_dill=use_dill)
+        self._serialization_test_helper(dp2, use_dill=use_dill)
         # 2. Testing for serialization after DataPipe is partially read
         it1, it2 = iter(dp1), iter(dp2)
         _, _ = next(it1), next(it2)
-        self._serialization_test_helper(dp1)
-        self._serialization_test_helper(dp2)
+        self._serialization_test_helper(dp1, use_dill=use_dill)
+        self._serialization_test_helper(dp2, use_dill=use_dill)
         # 2.5. Testing for serialization after one child DataPipe is fully read
         #      (Only for DataPipes with children DataPipes)
         _ = list(it1)  # fully read one child
-        self._serialization_test_helper(dp1)
-        self._serialization_test_helper(dp2)
+        self._serialization_test_helper(dp1, use_dill=use_dill)
+        self._serialization_test_helper(dp2, use_dill=use_dill)
         # 3. Testing for serialization after DataPipe is fully read
         _ = list(it2)  # fully read the other child
-        self._serialization_test_helper(dp1)
-        self._serialization_test_helper(dp2)
+        self._serialization_test_helper(dp1, use_dill=use_dill)
+        self._serialization_test_helper(dp2, use_dill=use_dill)
 
     def test_serializable(self):
         picklable_datapipes: List = [
@@ -304,11 +312,11 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                     _ = pickle.loads(serialized_dp)
                 elif dpipe in dp_compare_children:  # DataPipes that have children
                     dp1, dp2 = dpipe(custom_input, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
-                    self._serialization_test_for_dp_with_children(dp1, dp2)
+                    self._serialization_test_for_dp_with_children(dp1, dp2, use_dill=False)
                 else:  # Single DataPipe that requires comparison
                     datapipe = dpipe(custom_input, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
                     is_dataframe = issubclass(dpipe, (iterdp.DataFrameMaker, iterdp.ParquetDataFrameLoader))
-                    self._serialization_test_for_single_dp(datapipe, is_dataframe=is_dataframe)
+                    self._serialization_test_for_single_dp(datapipe, use_dill=False, is_dataframe=is_dataframe)
             except Exception as e:
                 print(f"{dpipe} is failing.")
                 raise e
@@ -338,7 +346,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                         _ = dill.loads(serialized_dp)
                     else:
                         datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
-                        self._serialization_test_for_single_dp(datapipe)
+                        self._serialization_test_for_single_dp(datapipe, use_dill=True)
                 except Exception as e:
                     print(f"{dpipe} is failing.")
                     raise e
