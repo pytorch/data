@@ -67,7 +67,13 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
     def __iter__(self) -> Iterator[str]:
         for root in self.datapipe:
             fs, path = fsspec.core.url_to_fs(root)
-            is_local = fs.protocol == "file" or not root.startswith(fs.protocol)
+
+            if isinstance(fs.protocol, str):
+                protocol_list = [fs.protocol]
+            else:
+                protocol_list = fs.protocol
+
+            is_local = fs.protocol == "file" or not any(root.startswith(protocol) for protocol in fs.protocol)
             if fs.isfile(path):
                 yield root
             else:
@@ -76,7 +82,7 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
                         continue
 
                     # ensure the file name has the full fsspec protocol path
-                    if file_name.startswith(fs.protocol):
+                    if any(file_name.startswith(protocol) for protocol in protocol_list):
                         yield file_name
                     else:
                         if is_local:
@@ -84,9 +90,13 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
                         else:
                             abs_path = posixpath.join(path, file_name)
 
-                        if root.startswith(fs.protocol):
-                            yield fs.protocol + "://" + abs_path
-                        else:
+                        starts_with = False
+                        for protocol in protocol_list:
+                            if root.startswith(protocol):
+                                starts_with = True
+                                yield protocol + "://" + abs_path
+
+                        if not starts_with:
                             yield abs_path
 
 
