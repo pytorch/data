@@ -69,20 +69,18 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         datapipe = FSSpecFileLister(root=["file://" + self.temp_sub_dir.name, "file://" + self.temp_sub_dir_2.name])
 
         # check all file paths within sub_folder are listed
-        for path in datapipe:
-            self.assertIn(
-                path.split("://")[1],
-                {
-                    fsspec.implementations.local.make_path_posix(file)
-                    for file in (self.temp_sub_files + self.temp_sub_files_2)
-                },
+        file_lister = list(map(lambda path: path.split("://")[1], datapipe))
+        file_lister.sort()
+        temp_files = list(
+            map(
+                lambda file: fsspec.implementations.local.make_path_posix(file),
+                self.temp_sub_files + self.temp_sub_files_2,
             )
+        )
+        temp_files.sort()
 
-        for file in self.temp_sub_files + self.temp_sub_files_2:
-            self.assertIn(
-                fsspec.implementations.local.make_path_posix(file),
-                {path.split("://")[1] for path in datapipe},
-            )
+        # check all file paths within sub_folder are listed
+        self.assertEqual(file_lister, temp_files)
 
     @skipIfNoFSSpec
     def test_fsspec_file_loader_iterdatapipe(self):
