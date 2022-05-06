@@ -73,7 +73,7 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
             else:
                 protocol_list = fs.protocol
 
-            is_local = fs.protocol == "file" or not any(root.startswith(protocol) for protocol in fs.protocol)
+            is_local = fs.protocol == "file" or not any(root.startswith(protocol) for protocol in protocol_list)
             if fs.isfile(path):
                 yield root
             else:
@@ -95,6 +95,7 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
                             if root.startswith(protocol):
                                 starts_with = True
                                 yield protocol + "://" + abs_path
+                                break
 
                         if not starts_with:
                             yield abs_path
