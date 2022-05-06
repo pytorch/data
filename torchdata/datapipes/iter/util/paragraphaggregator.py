@@ -46,22 +46,39 @@ class ParagraphAggregatorIterDataPipe(IterDataPipe[Tuple[str, str]]):
         self.source_datapipe: IterDataPipe[Tuple[str, T_co]] = source_datapipe
         _check_lambda_fn(joiner)
         self.joiner: Callable = joiner
+        self.buffer: List = []
 
     def __iter__(self) -> Iterator[Tuple[str, str]]:
-        buffer = []
+        self.reset()
         prev_filename = None
         for filename, line in self.source_datapipe:
             if prev_filename is None:
                 prev_filename = filename
             if line and prev_filename == filename:
-                buffer.append(line)
+                self.buffer.append(line)
             else:
-                if buffer:
-                    yield prev_filename, self.joiner(buffer)  # type: ignore[misc]
+                if self.buffer:
+                    yield prev_filename, self.joiner(self.buffer)  # type: ignore[misc]
                 if line:
-                    buffer = [line]
+                    self.buffer = [line]
                 else:
-                    buffer = []
+                    self.buffer = []
                 prev_filename = filename
-        if buffer:
-            yield prev_filename, self.joiner(buffer)  # type: ignore[misc]
+        if self.buffer:
+            yield prev_filename, self.joiner(self.buffer)  # type: ignore[misc]
+
+    def reset(self):
+        self.buffer = []
+
+    def __getstate__(self):
+        if IterDataPipe.getstate_hook is not None:
+            return IterDataPipe.getstate_hook(self)
+        state = (self.source_datapipe, self.joiner)
+        return state
+
+    def __setstate__(self, state):
+        (self.source_datapipe, self.joiner) = state
+        self.reset()
+
+    def __del__(self):
+        self.buffer.clear()

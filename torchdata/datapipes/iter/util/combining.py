@@ -76,14 +76,15 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
         if buffer_size is not None and buffer_size <= 0:
             raise ValueError("'buffer_size' is required to be either None or a positive integer.")
         self.buffer_size: int = buffer_size
+        self.buffer: OrderedDict = OrderedDict()
 
     def __iter__(self) -> Iterator:
-        buffer: OrderedDict = OrderedDict()
+        self.reset()
         ref_it = iter(self.ref_datapipe)
         warn_once_flag = True
         for data in self.source_datapipe:
             key = self.key_fn(data)
-            while key not in buffer:
+            while key not in self.buffer:
                 try:
                     ref_data = next(ref_it)
                 except StopIteration:
@@ -92,18 +93,18 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
                         "Please consider increasing the buffer size."
                     )
                 ref_key = self.ref_key_fn(ref_data)
-                if ref_key in buffer:
+                if ref_key in self.buffer:
                     raise ValueError("Duplicate key is found in reference DataPipe")
-                if self.buffer_size is not None and len(buffer) > self.buffer_size:
+                if self.buffer_size is not None and len(self.buffer) > self.buffer_size:
                     if warn_once_flag:
                         warn_once_flag = False
                         warnings.warn(
                             "Buffer reaches the upper limit, so reference key-data pair begins to "
                             "be removed from buffer in FIFO order. Please consider increase buffer size."
                         )
-                    buffer.popitem(last=False)
-                buffer[ref_key] = ref_data
-            res = self.merge_fn(data, buffer.pop(key)) if self.merge_fn else (data, buffer.pop(key))
+                    self.buffer.popitem(last=False)
+                self.buffer[ref_key] = ref_data
+            res = self.merge_fn(data, self.buffer.pop(key)) if self.merge_fn else (data, self.buffer.pop(key))
             if self.keep_key:
                 yield key, res
             else:
@@ -111,6 +112,38 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
+
+    def reset(self) -> None:
+        self.buffer: OrderedDict = OrderedDict()
+
+    def __getstate__(self):
+        if IterDataPipe.getstate_hook is not None:
+            return IterDataPipe.getstate_hook(self)
+        state = (
+            self.source_datapipe,
+            self.ref_datapipe,
+            self.key_fn,
+            self.ref_key_fn,
+            self.keep_key,
+            self.merge_fn,
+            self.buffer_size,
+        )
+        return state
+
+    def __setstate__(self, state):
+        (
+            self.source_datapipe,
+            self.ref_datapipe,
+            self.key_fn,
+            self.ref_key_fn,
+            self.keep_key,
+            self.merge_fn,
+            self.buffer_size,
+        ) = state
+        self.reset()
+
+    def __del__(self):
+        self.buffer.clear()
 
 
 @functional_datapipe("zip_with_map")
