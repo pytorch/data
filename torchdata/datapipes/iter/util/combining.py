@@ -114,7 +114,7 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
         return len(self.source_datapipe)
 
     def reset(self) -> None:
-        self.buffer: OrderedDict = OrderedDict()
+        self.buffer = OrderedDict()
 
     def __getstate__(self):
         if IterDataPipe.getstate_hook is not None:
