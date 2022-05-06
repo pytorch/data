@@ -234,6 +234,12 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (SequenceWrapper({"a": 100, "b": 200, "c": 300}), itemgetter(0)),
                 {},
             ),
+            (
+                iterdp.MultiplexerLongest,
+                IterableWrapper(range(10)),
+                (),
+                {},
+            ),
             (iterdp.OnDiskCacheHolder, None, (), {}),
             (iterdp.OnlineReader, None, (), {}),
             (

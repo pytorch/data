@@ -868,6 +868,39 @@ class TestIterDataPipe(expecttest.TestCase):
             self.assertEqual(len(wa), 1)
             self.assertRegex(str(wa[0].message), r"Found duplicate key")
 
+    def test_mux_longest_iterdatapipe(self):
+
+        # Functional Test: Elements are yielded one at a time from each DataPipe, until they are all exhausted
+        input_dp1 = IterableWrapper(range(4))
+        input_dp2 = IterableWrapper(range(4, 8))
+        input_dp3 = IterableWrapper(range(8, 12))
+        output_dp = input_dp1.mux_longest(input_dp2, input_dp3)
+        expected_output = [0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11]
+        self.assertEqual(len(expected_output), len(output_dp))
+        self.assertEqual(expected_output, list(output_dp))
+
+        # Functional Test: Uneven input Data Pipes
+        input_dp1 = IterableWrapper([1, 2, 3, 4])
+        input_dp2 = IterableWrapper([10])
+        input_dp3 = IterableWrapper([100, 200, 300])
+        output_dp = input_dp1.mux_longest(input_dp2, input_dp3)
+        expected_output = [1, 10, 100, 2, 200, 3, 300, 4]
+        self.assertEqual(len(expected_output), len(output_dp))
+        self.assertEqual(expected_output, list(output_dp))
+
+        # Functional Test: Empty Data Pipe
+        input_dp1 = IterableWrapper([0, 1, 2, 3])
+        input_dp2 = IterableWrapper([])
+        output_dp = input_dp1.mux_longest(input_dp2)
+        self.assertEqual(len(input_dp1), len(output_dp))
+        self.assertEqual(list(input_dp1), list(output_dp))
+
+        # __len__ Test: raises TypeError when __len__ is called and an input doesn't have __len__
+        input_dp1 = IterableWrapper(range(10))
+        input_dp_no_len = IDP_NoLen(range(10))
+        output_dp = input_dp1.mux_longest(input_dp_no_len)
+        with self.assertRaises(TypeError):
+            len(output_dp)
 
 if __name__ == "__main__":
     unittest.main()
