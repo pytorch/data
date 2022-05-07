@@ -28,7 +28,7 @@ if(BUILD_S3)
 
   add_library(_torchdata MODULE ${EXTENSION_SOURCES})
 
-  target_include_directories(_torchdata PRIVATE ${PROJECT_SOURCE_DIR} ${Python_INCLUDE_DIR} ${pybind11_INCLUDE_DIRS} ${AWS_INCLUDE_PATH})
+  target_include_directories(_torchdata PRIVATE ${PROJECT_SOURCE_DIR} ${Python_INCLUDE_DIR} ${pybind11_INCLUDE_DIRS} ${AWS_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 
   add_dependencies(_torchdata aws-cpp-sdk)
 
