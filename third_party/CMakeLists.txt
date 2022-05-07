@@ -28,3 +28,33 @@ set_property(TARGET pybind::pybind11 PROPERTY
     INTERFACE_SYSTEM_INCLUDE_DIRECTORIES ${pybind11_INCLUDE_DIRS})
 set_property(TARGET pybind::pybind11 PROPERTY
     INTERFACE_LINK_LIBRARIES python::python)
+
+# ---[ aws-sdk-cpp
+if(USE_SYSTEM_AWS_SDK_CPP)
+  find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
+  if(NOT AWSSDK_FOUND)
+    message(FATAL "Cannot find system aws-sdk-cpp")
+  endif()
+else()
+  message(STATUS "Using third_party/aws-sdk-cpp.")
+
+  set(AWS_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/aws-sdk-cpp)
+  set(AWS_INSTALL "${CMAKE_BINARY_DIR}/aws_install")
+  set(AWS_INCLUDE_PATH "${AWS_INSTALL}/include")
+
+  list(APPEND AWS_LIBS "${AWS_INSTALL}/lib/libaws-cpp-sdk-s3.so")
+  list(APPEND AWS_LIBS "${AWS_INSTALL}/lib/libaws-cpp-sdk-transfer.so")
+
+  include(ExternalProject)
+  ExternalProject_Add(
+    aws-cpp-sdk
+    PREFIX ${CMAKE_BINARY_DIR}/aws-cpp-sdk
+    SOURCE_DIR ${AWS_SOURCE_DIR}
+    URL ""
+    INSTALL_DIR ${AWS_INSTALL}
+    CMAKE_ARGS "-DBUILD_ONLY=transfer;s3" "-DENABLE_TESTING=OFF" "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_INSTALL_PREFIX=${AWS_INSTALL}"
+    BUILD_BYPRODUCTS ${AWS_LIBS}
+    )
+
+  message(STATUS "aws-sdk-cpp include dirs: " "${AWS_INCLUDE_PATH}")
+endif()
