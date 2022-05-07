@@ -59,36 +59,36 @@ jobs:
           pip3 install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
           pip3 install cmake ninja
           echo "/home/runner/.local/bin" >> $GITHUB_PATH
-      - name: Install AWS-SDK-CPP on Windows for S3 IO datapipes
-        if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
-        run: |
-          git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
-          cd aws-sdk-cpp
-          mkdir sdk-lib
-          cmake -S . -B build -GNinja -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=sdk-lib
-          cmake --build build --config Release
-          cmake --install build --config Release
-      - name: Install AWS-SDK-CPP on Non-Windows for S3 IO datapipes
-        if: matrix.with-s3 == 1 && matrix.os != 'windows-latest'
-        run: |
-          git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
-          cd aws-sdk-cpp/
-          mkdir sdk-build sdk-lib
-          cd sdk-build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DENABLE_TESTING=OFF -DCMAKE_INSTALL_PREFIX=../sdk-lib
-          make
-          sudo make install
-      - name: Export AWS-SDK-CPP
-        if: matrix.with-s3 == 1
-        shell: bash
-        run: |
-          if [[ ${{ matrix.os }} == 'windows-latest' ]]; then
-            AWSSDK_PATH="$GITHUB_WORKSPACE\\aws-sdk-cpp\\sdk-lib"
-          else
-            AWSSDK_PATH="$GITHUB_WORKSPACE/aws-sdk-cpp/sdk-lib"
-          fi
-          echo "::set-output name=awssdk::$AWSSDK_PATH"
-        id: export_path
+      # - name: Install AWS-SDK-CPP on Windows for S3 IO datapipes
+      #   if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
+      #   run: |
+      #     git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
+      #     cd aws-sdk-cpp
+      #     mkdir sdk-lib
+      #     cmake -S . -B build -GNinja -DBUILD_ONLY="s3;transfer" -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTING=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=sdk-lib
+      #     cmake --build build --config Release
+      #     cmake --install build --config Release
+      # - name: Install AWS-SDK-CPP on Non-Windows for S3 IO datapipes
+      #   if: matrix.with-s3 == 1 && matrix.os != 'windows-latest'
+      #   run: |
+      #     git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
+      #     cd aws-sdk-cpp/
+      #     mkdir sdk-build sdk-lib
+      #     cd sdk-build
+      #     cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DENABLE_TESTING=OFF -DCMAKE_INSTALL_PREFIX=../sdk-lib
+      #     make
+      #     sudo make install
+      # - name: Export AWS-SDK-CPP
+      #   if: matrix.with-s3 == 1
+      #   shell: bash
+      #   run: |
+      #     if [[ ${{ matrix.os }} == 'windows-latest' ]]; then
+      #       AWSSDK_PATH="$GITHUB_WORKSPACE\\aws-sdk-cpp\\sdk-lib"
+      #     else
+      #       AWSSDK_PATH="$GITHUB_WORKSPACE/aws-sdk-cpp/sdk-lib"
+      #     fi
+      #     echo "::set-output name=awssdk::$AWSSDK_PATH"
+      #   id: export_path
       - name: Build TorchData
         run: |
           python setup.py install
