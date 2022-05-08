@@ -28,15 +28,22 @@ if(BUILD_S3)
 
   add_library(_torchdata MODULE ${EXTENSION_SOURCES})
 
-  target_include_directories(_torchdata PRIVATE ${PROJECT_SOURCE_DIR} ${Python_INCLUDE_DIR} ${pybind11_INCLUDE_DIRS} ${AWS_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
-
   add_dependencies(_torchdata aws-cpp-sdk)
 
-  message(STATUS "AWSSDK linked libs: ${AWSSDK_LINK_LIBRARIES}")
+  target_include_directories(
+    _torchdata
+    PRIVATE
+    ${PROJECT_SOURCE_DIR}
+    ${Python_INCLUDE_DIR}
+    ${pybind11_INCLUDE_DIRS}
+    ${aws_cpp_sdk_INCLUDE_PATH}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
   target_link_libraries(
     _torchdata
     PRIVATE
-    ${AWS_LIBS}
+    ${aws_cpp_sdk_LIBS}
     ${Python_LIBRARIES}
     ${ADDITIONAL_ITEMS}
     )

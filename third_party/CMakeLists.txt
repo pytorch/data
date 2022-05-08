@@ -38,32 +38,32 @@ if(USE_SYSTEM_AWS_SDK_CPP)
 else()
   message(STATUS "Using third_party/aws-sdk-cpp.")
 
-  set(AWS_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/aws-sdk-cpp)
-  set(AWS_INSTALL "${CMAKE_BINARY_DIR}/aws_install")
-  set(AWS_INCLUDE_PATH "${AWS_INSTALL}/include")
+  set(aws_cpp_sdk_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/aws-sdk-cpp)
+  set(aws_cpp_sdk_INSTALL "${CMAKE_BINARY_DIR}/aws_cpp_sdk_INSTALL")
+  set(aws_cpp_sdk_INCLUDE_PATH "${aws_cpp_sdk_INSTALL}/include")
 
   if(WIN32)
-    list(APPEND AWS_LIBS "${AWS_INSTALL}/bin/aws-cpp-sdk-core.lib")
-    list(APPEND AWS_LIBS "${AWS_INSTALL}/bin/aws-cpp-sdk-s3.lib")
-    list(APPEND AWS_LIBS "${AWS_INSTALL}/bin/aws-cpp-sdk-transfer.lib")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/bin/aws-cpp-sdk-core.lib")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/bin/aws-cpp-sdk-s3.lib")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/bin/aws-cpp-sdk-transfer.lib")
     # set(PLATFORM_CMAKE_ARGS "-DBUILD_SHARED_LIBS=OFF")
   elseif(APPLE)
-    list(APPEND AWS_LIBS "${AWS_INSTALL}/lib/libaws-cpp-sdk-s3.dylib")
-    list(APPEND AWS_LIBS "${AWS_INSTALL}/lib/libaws-cpp-sdk-transfer.dylib")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-cpp-sdk-s3.dylib")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-cpp-sdk-transfer.dylib")
   else()
-    list(APPEND AWS_LIBS "${AWS_INSTALL}/lib/libaws-cpp-sdk-s3.so")
-    list(APPEND AWS_LIBS "${AWS_INSTALL}/lib/libaws-cpp-sdk-transfer.so")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-cpp-sdk-s3.so")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-cpp-sdk-transfer.so")
   endif()
 
   include(ExternalProject)
   ExternalProject_Add(
     aws-cpp-sdk
     PREFIX ${CMAKE_BINARY_DIR}/aws-cpp-sdk
-    SOURCE_DIR ${AWS_SOURCE_DIR}
+    SOURCE_DIR ${aws_cpp_sdk_SOURCE_DIR}
     URL ""
-    INSTALL_DIR ${AWS_INSTALL}
-    CMAKE_ARGS "-DBUILD_ONLY=transfer;s3" "-DENABLE_TESTING=OFF" "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_INSTALL_PREFIX=${AWS_INSTALL}" # ${PLATFORM_CMAKE_ARGS}
-    BUILD_BYPRODUCTS ${AWS_LIBS}
+    INSTALL_DIR ${aws_cpp_sdk_INSTALL}
+    CMAKE_ARGS "-DBUILD_ONLY=transfer;s3" "-DENABLE_TESTING=OFF" "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_INSTALL_PREFIX=${aws_cpp_sdk_INSTALL}" "-DCMAKE_INSTALL_MESSAGE=LAZY" # ${PLATFORM_CMAKE_ARGS}
+    BUILD_BYPRODUCTS ${aws_cpp_sdk_LIBS}
     )
 
   add_definitions(-DUSE_IMPORT_EXPORT)
