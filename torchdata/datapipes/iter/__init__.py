@@ -112,6 +112,7 @@ from torchdata.datapipes.iter.util.unzipper import UnZipperIterDataPipe as UnZip
 from torchdata.datapipes.iter.util.webdataset import (
     WebDatasetIterDataPipe as WebDataset,
     PipeOpenerIterDataPipe as PipeOpener,
+    ExtractKeysIterDataPipe as ExtractKeys,
     FileDecoderIterDataPipe as FileDecoder,
     RenameKeysIterDataPipe as RenameKeys,
     ShardExpanderIterDataPipe as ShardExpander,
@@ -141,6 +142,7 @@ __all__ = [
     "Demultiplexer",
     "EndOnDiskCacheHolder",
     "Enumerator",
+    "ExtractKeys",
     "Extractor",
     "FSSpecFileLister",
     "FSSpecFileOpener",

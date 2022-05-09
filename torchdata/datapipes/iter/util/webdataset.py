@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
+import sys
 import re
 import pickle
 import subprocess
@@ -173,6 +174,8 @@ default_decoders = [
 
 def find_decoder(decoders, path):
     fname = re.sub(r".*/", "", path)
+    if fname.startswith("__"):
+        return lambda x: x
     for pattern, fun in decoders[::-1]:
         if fnmatch(fname.lower(), pattern):
             return fun
@@ -181,11 +184,12 @@ def find_decoder(decoders, path):
 
 @functional_datapipe("decode")
 class FileDecoderIterDataPipe(IterDataPipe[Dict]):
-    def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], *args, must_decode=True) -> None:
+    def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], *args, must_decode=True, **kw) -> None:
         super().__init__()
         self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
         self.must_decode = must_decode
         self.decoders = list(default_decoders) + list(args)
+        self.decoders += [("*." + k, v) for k, v in kw.items()]
 
     def __iter__(self) -> Iterator[Dict]:
         for path, stream in self.source_datapipe:
@@ -206,24 +210,28 @@ class FileDecoderIterDataPipe(IterDataPipe[Dict]):
 if os.name == "nt":
     default_popen_methods = {
         "file": ["cat", "{path}"],
-        "http": ["c:\\Windows\\System32\\curl", "{url}"],
+        "http": ["c:\\Windows\\System32\\curl", "-s", "-L", "{url}"],
+        "https": ["c:\\Windows\\System32\\curl", "-s", "-L", "{url}"],
         "gs": ["gsutil", "cat", "{url}"],
     }
 else:
     default_popen_methods = {
         "file": ["cat", "{path}"],
-        "http": ["curl","{url}"],
+        "http": ["curl", "-s", "-L", "{url}"],
+        "https": ["curl", "-s", "-L", "{url}"],
         "gs": ["gsutil", "cat", "{url}"],
     }
 
 
 @functional_datapipe("popen")
 class PipeOpenerIterDataPipe(IterDataPipe[Dict]):
-    def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], **methods) -> None:
+    def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], verbose=False, **methods) -> None:
+        global default_popen_methods
         super().__init__()
         self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
         self.methods = dict(default_popen_methods)
         self.methods.update(methods)
+        self.verbose = verbose
 
     def __iter__(self) -> Iterator[Dict]:
         for url in self.source_datapipe:
@@ -231,13 +239,15 @@ class PipeOpenerIterDataPipe(IterDataPipe[Dict]):
                 raise TypeError(f"Expected string type for url, but got {type(url)}.")
             if url.lower().startswith("pipe:"):
                 cmd = url[5:]
+                if self.verbose:
+                    print(f"# {cmd}", file=sys.stderr)
                 proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
             else:
                 o = urlparse(url)
                 scheme = o.scheme or "file"
                 handler = self.methods.get(scheme)
                 if handler is None:
-                    raise ValueError(f"No known popen handler for {url[:60]}.")
+                    raise ValueError(f"No known popen handler for '{o.scheme}' ({url[:60]}).")
                 kw = dict(
                     url=url,
                     path=o.path,
@@ -249,9 +259,13 @@ class PipeOpenerIterDataPipe(IterDataPipe[Dict]):
                 )
                 if isinstance(handler, list):
                     cmd = [x.format(**kw) for x in handler]
+                    if self.verbose:
+                        print(f"# {cmd}", file=sys.stderr)
                     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
                 else:
                     cmd = handler.format(**kw)
+                    if self.verbose:
+                        print(f"# {cmd}", file=sys.stderr)
                     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
             yield url, StreamWrapper(proc.stdout)
 
@@ -299,16 +313,30 @@ class RenameKeysIterDataPipe(IterDataPipe[Dict]):
         return len(self.source_datapipe)
 
 
-if os.name == "nt":
-    default_popen_methods = {
-        "file": ["cat", "{path}"],
-        "http": ["c:\\Windows\\System32\\curl", "{url}"],
-        "gs": ["gsutil", "cat", "{url}"],
-    }
-else:
-    default_popen_methods = {
-        "file": ["cat", "{path}"],
-        "http": ["curl","{url}"],
-        "gs": ["gsutil", "cat", "{url}"],
-    }
+@functional_datapipe("extract_keys")
+class ExtractKeysIterDataPipe(IterDataPipe[Dict]):
+    def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], *args, duplicate_is_error=True, ignore_missing=False) -> None:
+        super().__init__()
+        self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
+        self.duplicate_is_error = duplicate_is_error
+        self.patterns = args
+        self.ignore_missing = ignore_missing
 
+    def __iter__(self) -> Iterator[Dict]:
+        for sample in self.source_datapipe:
+            result = []
+            for pattern in self.patterns:
+                matches = [x for x in sample.keys() if fnmatch(x, pattern)]
+                if len(matches) == 0:
+                    if self.ignore_missing:
+                        continue
+                    else:
+                        raise ValueError(f"Cannot find {pattern} in sample keys {sample.keys()}.")
+                if len(matches) > 1 and self.duplicate_is_error:
+                    raise ValueError(f"Multiple sample keys {sample.keys()} match {pattern}.")
+                value = sample[matches[0]]
+                result.append(value)
+            yield tuple(result)
+
+    def __len__(self) -> int:
+        return len(self.source_datapipe)

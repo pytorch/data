@@ -35,6 +35,7 @@ from torchdata.datapipes.iter import (
     ParagraphAggregator,
     PipeOpener,
     RenameKeys,
+    ExtractKeys,
     Rows2Columnar,
     SampleMultiplexer,
     ShardExpander,
@@ -913,24 +914,22 @@ class TestIterDataPipe(expecttest.TestCase):
         output = list(iter(stage2))
         assert len(output) == 10
 
-
     def test_decoder(self):
         def decode_junk(_):
             return "junk"
 
         stage1 = IterableWrapper([
-                ("test000.bin", io.BytesIO(b"000")),
-                ("test000.txt", io.BytesIO(b"000")),
-                ("test000.jnk", io.BytesIO(b"")),
-                ("test001.bin", io.BytesIO(b"001")),
-                ("test001.txt", io.BytesIO(b"001")),
+            ("test000.bin", io.BytesIO(b"000")),
+            ("test000.txt", io.BytesIO(b"000")),
+            ("test000.jnk", io.BytesIO(b"")),
+            ("test001.bin", io.BytesIO(b"001")),
+            ("test001.txt", io.BytesIO(b"001")),
         ])
         stage2 = FileDecoder(stage1, ("*.jnk", decode_junk))
         output = list(iter(stage2))
         assert len(output) == 5
         assert output[1][1] == "000"
         assert output[2][1] == "junk"
-
 
     def test_renamer(self):
         stage1 = IterableWrapper([
@@ -941,6 +940,18 @@ class TestIterDataPipe(expecttest.TestCase):
         output = list(iter(stage2))
         assert len(output) == 2
         assert set(output[0].keys()) == set(["t", "b"])
+
+    def test_extractor(self):
+        stage1 = IterableWrapper([
+            {"1.txt": "1", "1.bin": "1b"},
+            {"2.txt": "2", "2.bin": "2b"},
+        ])
+        stage2 = ExtractKeys(stage1, "*.txt", "*.bin")
+        output = list(iter(stage2))
+        assert len(output) == 2
+        assert output[0][0] == "1"
+        assert output[0][1] == "1b"
+
 
 
 
