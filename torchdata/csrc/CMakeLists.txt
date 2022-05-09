@@ -37,7 +37,7 @@ if(BUILD_S3)
     ${Python_INCLUDE_DIR}
     ${pybind11_INCLUDE_DIRS}
     ${aws_cpp_sdk_INCLUDE_PATH}
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    # ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
   target_link_libraries(

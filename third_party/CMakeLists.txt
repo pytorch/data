@@ -46,13 +46,29 @@ else()
     list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/bin/aws-cpp-sdk-core.lib")
     list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/bin/aws-cpp-sdk-s3.lib")
     list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/bin/aws-cpp-sdk-transfer.lib")
-    # set(PLATFORM_CMAKE_ARGS "-DBUILD_SHARED_LIBS=OFF")
   elseif(APPLE)
     list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-cpp-sdk-s3.dylib")
     list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-cpp-sdk-transfer.dylib")
   else()
-    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-cpp-sdk-s3.so")
-    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-cpp-sdk-transfer.so")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-cpp-sdk-transfer.a")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-cpp-sdk-s3.a")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-cpp-sdk-core.a")
+
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-crt-cpp.a")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-c-mqtt.a")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-c-event-stream.a")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-c-s3.a")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-c-auth.a")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-c-http.a")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-c-io.a")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libs2n.a")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-c-compression.a")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-c-cal.a")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-c-sdkutils.a")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-checksums.a")
+    list(APPEND aws_cpp_sdk_LIBS "${aws_cpp_sdk_INSTALL}/lib/libaws-c-common.a")
+
+    list(APPEND aws_cpp_sdk_LIBS "pthread;crypto;ssl;z;curl")
   endif()
 
   include(ExternalProject)
@@ -62,11 +78,9 @@ else()
     SOURCE_DIR ${aws_cpp_sdk_SOURCE_DIR}
     URL ""
     INSTALL_DIR ${aws_cpp_sdk_INSTALL}
-    CMAKE_ARGS "-DBUILD_ONLY=transfer;s3" "-DENABLE_TESTING=OFF" "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_INSTALL_PREFIX=${aws_cpp_sdk_INSTALL}" "-DCMAKE_INSTALL_MESSAGE=LAZY" # ${PLATFORM_CMAKE_ARGS}
+    CMAKE_ARGS "-DBUILD_SHARED_LIBS=OFF" "-DBUILD_ONLY=transfer;s3" "-DENABLE_TESTING=OFF" "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_INSTALL_PREFIX=${aws_cpp_sdk_INSTALL}"
     BUILD_BYPRODUCTS ${aws_cpp_sdk_LIBS}
     )
 
-  add_definitions(-DUSE_IMPORT_EXPORT)
-
-  message(STATUS "aws-sdk-cpp include dirs: " "${AWS_INCLUDE_PATH}")
+  message(STATUS "aws-sdk-cpp include dirs: " "${aws_cpp_sdk_INCLUDE_PATH}")
 endif()

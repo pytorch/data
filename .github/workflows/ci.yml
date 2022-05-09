@@ -75,7 +75,7 @@ jobs:
       #     cd aws-sdk-cpp/
       #     mkdir sdk-build sdk-lib
       #     cd sdk-build
-      #     cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DENABLE_TESTING=OFF -DCMAKE_INSTALL_PREFIX=../sdk-lib
+      #     cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF
       #     make
       #     sudo make install
       # - name: Export AWS-SDK-CPP
