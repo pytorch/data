@@ -326,7 +326,8 @@ class ExtractKeysIterDataPipe(IterDataPipe[Dict]):
         for sample in self.source_datapipe:
             result = []
             for pattern in self.patterns:
-                matches = [x for x in sample.keys() if fnmatch(x, pattern)]
+                pattern = [pattern] if not isinstance(pattern, (list, tuple)) else pattern
+                matches = [x for x in sample.keys() if any(fnmatch(x, p) for p in pattern)]
                 if len(matches) == 0:
                     if self.ignore_missing:
                         continue
