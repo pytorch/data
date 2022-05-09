@@ -4,12 +4,13 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Any, Iterator, List, Optional, Set, Sized, Tuple
+
 from torch.utils.data.datapipes._decorator import functional_datapipe
 from torch.utils.data.datapipes.datapipe import IterDataPipe
-from typing import List, Any, Iterator, Tuple, Sized, Set, Optional
 
 
-@functional_datapipe('zip_longest')
+@functional_datapipe("zip_longest")
 class ZipperLongestIterDataPipe(IterDataPipe):
     r"""
     Aggregates elements into a tuple from each of the input DataPipes (functional name: ``zip_longest``).
@@ -32,10 +33,13 @@ class ZipperLongestIterDataPipe(IterDataPipe):
     length: Optional[int]
     fill_value: Any
 
-    def __init__(self, *datapipes: IterDataPipe, fill_value: Any = None,):
+    def __init__(
+        self,
+        *datapipes: IterDataPipe,
+        fill_value: Any = None,
+    ):
         if not all(isinstance(dp, IterDataPipe) for dp in datapipes):
-            raise TypeError("All inputs are required to be `IterDataPipe` "
-                            "for `ZipperLongestIterDataPipe`.")
+            raise TypeError("All inputs are required to be `IterDataPipe` " "for `ZipperLongestIterDataPipe`.")
         super().__init__()
         self.datapipes = datapipes  # type: ignore[assignment]
         self.length = None
@@ -61,7 +65,7 @@ class ZipperLongestIterDataPipe(IterDataPipe):
     def __len__(self) -> int:
         if self.length is not None:
             if self.length == -1:
-                raise TypeError("{} instance doesn't have valid length".format(type(self).__name__))
+                raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
             return self.length
         if all(isinstance(dp, Sized) for dp in self.datapipes):
             self.length = max(len(dp) for dp in self.datapipes)
