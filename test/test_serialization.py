@@ -269,6 +269,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.WebDataset, IterableWrapper([("foo.txt", b"1"), ("bar.txt", b"2")]), (), {}),
             (iterdp.XzFileLoader, None, (), {}),
             (iterdp.ZipArchiveLoader, None, (), {}),
+            (iterdp.ZipperLongest, IterableWrapper(range(10)), (), {}),
         ]
 
         picklable_datapipes = _filter_by_module_availability(picklable_datapipes)
