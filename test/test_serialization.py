@@ -242,6 +242,12 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (SequenceWrapper({"a": 100, "b": 200, "c": 300}), itemgetter(0)),
                 {},
             ),
+            (
+                iterdp.MultiplexerLongest,
+                IterableWrapper(range(10)),
+                (),
+                {},
+            ),
             (iterdp.OnDiskCacheHolder, None, (), {}),
             (iterdp.OnlineReader, None, (), {}),
             (
@@ -271,6 +277,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.WebDataset, IterableWrapper([("foo.txt", b"1"), ("bar.txt", b"2")]), (), {}),
             (iterdp.XzFileLoader, None, (), {}),
             (iterdp.ZipArchiveLoader, None, (), {}),
+            (iterdp.ZipperLongest, IterableWrapper(range(10)), (), {}),
         ]
 
         picklable_datapipes = _filter_by_module_availability(picklable_datapipes)
