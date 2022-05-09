@@ -21,6 +21,7 @@ from _utils._common_utils_for_test import IDP_NoLen, reset_after_n_next_calls
 from torchdata.datapipes.iter import (
     BucketBatcher,
     Cycler,
+    FileDecoder,
     Header,
     InBatchShuffler,
     IndexAdder,
@@ -32,8 +33,11 @@ from torchdata.datapipes.iter import (
     MapKeyZipper,
     MaxTokenBucketizer,
     ParagraphAggregator,
+    PipeOpener,
+    RenameKeys,
     Rows2Columnar,
     SampleMultiplexer,
+    ShardExpander,
     UnZipper,
 )
 from torchdata.datapipes.map import MapDataPipe, SequenceWrapper
@@ -901,6 +905,44 @@ class TestIterDataPipe(expecttest.TestCase):
         output_dp = input_dp1.mux_longest(input_dp_no_len)
         with self.assertRaises(TypeError):
             len(output_dp)
+
+    def test_shardexpand(self):
+        stage1 = IterableWrapper(["ds-{000000..000009}.tar"])
+        print(list(iter(stage1)))
+        stage2 = ShardExpander(stage1)
+        output = list(iter(stage2))
+        assert len(output) == 10
+
+
+    def test_decoder(self):
+        def decode_junk(_):
+            return "junk"
+
+        stage1 = IterableWrapper([
+                ("test000.bin", io.BytesIO(b"000")),
+                ("test000.txt", io.BytesIO(b"000")),
+                ("test000.jnk", io.BytesIO(b"")),
+                ("test001.bin", io.BytesIO(b"001")),
+                ("test001.txt", io.BytesIO(b"001")),
+        ])
+        stage2 = FileDecoder(stage1, ("*.jnk", decode_junk))
+        output = list(iter(stage2))
+        assert len(output) == 5
+        assert output[1][1] == "000"
+        assert output[2][1] == "junk"
+
+
+    def test_renamer(self):
+        stage1 = IterableWrapper([
+            {"1.txt": "1", "1.bin": "1b"},
+            {"2.txt": "2", "2.bin": "2b"},
+        ])
+        stage2 = RenameKeys(stage1, t="*.txt", b="*.bin")
+        output = list(iter(stage2))
+        assert len(output) == 2
+        assert set(output[0].keys()) == set(["t", "b"])
+
+
 
 if __name__ == "__main__":
     unittest.main()

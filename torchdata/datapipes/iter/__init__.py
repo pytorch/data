@@ -109,7 +109,13 @@ from torchdata.datapipes.iter.util.tfrecordloader import (
     TFRecordLoaderIterDataPipe as TFRecordLoader,
 )
 from torchdata.datapipes.iter.util.unzipper import UnZipperIterDataPipe as UnZipper
-from torchdata.datapipes.iter.util.webdataset import WebDatasetIterDataPipe as WebDataset
+from torchdata.datapipes.iter.util.webdataset import (
+    WebDatasetIterDataPipe as WebDataset,
+    PipeOpenerIterDataPipe as PipeOpener,
+    FileDecoderIterDataPipe as FileDecoder,
+    RenameKeysIterDataPipe as RenameKeys,
+    ShardExpanderIterDataPipe as ShardExpander,
+)
 from torchdata.datapipes.iter.util.xzfileloader import (
     XzFileLoaderIterDataPipe as XzFileLoader,
     XzFileReaderIterDataPipe as XzFileReader,
@@ -139,6 +145,7 @@ __all__ = [
     "FSSpecFileLister",
     "FSSpecFileOpener",
     "FSSpecSaver",
+    "FileDecoder",
     "FileLister",
     "FileOpener",
     "Filter",
@@ -170,7 +177,9 @@ __all__ = [
     "OnlineReader",
     "ParagraphAggregator",
     "ParquetDataFrameLoader",
+    "PipeOpener",
     "RarArchiveLoader",
+    "RenameKeys",
     "RoutedDecoder",
     "Rows2Columnar",
     "S3FileLister",
@@ -178,6 +187,7 @@ __all__ = [
     "SampleMultiplexer",
     "Sampler",
     "Saver",
+    "ShardExpander",
     "ShardingFilter",
     "Shuffler",
     "StreamReader",

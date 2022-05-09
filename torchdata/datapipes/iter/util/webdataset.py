@@ -4,11 +4,17 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import re
+import pickle
+import subprocess
 from typing import Any, Dict, Iterator, List, Union
+from urllib.parse import urlparse
+from fnmatch import fnmatch
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+from torch.utils.data.datapipes.utils.common import StreamWrapper
 
 
 def pathsplit(p):
@@ -78,6 +84,7 @@ class WebDatasetIterDataPipe(IterDataPipe[Dict]):
     """
 
     def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]]) -> None:
+        super().__init__()
         self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
 
     def __iter__(self) -> Iterator[Dict]:
@@ -102,3 +109,206 @@ class WebDatasetIterDataPipe(IterDataPipe[Dict]):
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
+
+
+def shardexpand(s):
+    expansion = r"[{][0-9]+[.][.][0-9]+[}]"
+    m = re.search(expansion, s)
+    if not m:
+        return [s]
+    prefix = s[:m.start()]
+    rest = shardexpand(s[m.end():])
+    rng = s[m.start() + 1:m.end() - 1]
+    lohi = rng.split("..")
+    if len(lohi[0]) != len(lohi[1]):
+        raise ValueError(
+            "Shard specifications must have " +
+            f"same number of digits for low and high values in {s}."
+        )
+    lo, hi = [int(x) for x in lohi]
+    if lo >= hi:
+        raise ValueError(f"Bad range in in shard spec {s}.")
+    result = []
+    for i in range(lo, hi + 1):
+        for r in rest:
+            expanded = f"{prefix}{i:0>{len(lohi[1])}}{r}"
+            result.append(expanded)
+    return result
+
+
+@functional_datapipe("shardexpand")
+class ShardExpanderIterDataPipe(IterDataPipe[Dict]):
+    def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]]) -> None:
+        super().__init__()
+        self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
+
+    def __iter__(self) -> Iterator[Dict]:
+        for path in self.source_datapipe:
+            for expanded in shardexpand(path):
+                yield expanded
+
+    def __len__(self) -> int:
+        return len(self.source_datapipe)
+
+
+def decode_bin(stream):
+    return stream.read()
+
+
+def decode_text(stream):
+    binary = stream.read()
+    return binary.decode("utf-8")
+
+
+def decode_pickle(stream):
+    return pickle.load(stream)
+
+
+default_decoders = [
+    ("*.bin", decode_bin),
+    ("*.txt", decode_text),
+    ("*.pyd", decode_pickle),
+]
+
+
+def find_decoder(decoders, path):
+    fname = re.sub(r".*/", "", path)
+    for pattern, fun in decoders[::-1]:
+        if fnmatch(fname.lower(), pattern):
+            return fun
+    return None
+
+
+@functional_datapipe("decode")
+class FileDecoderIterDataPipe(IterDataPipe[Dict]):
+    def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], *args, must_decode=True) -> None:
+        super().__init__()
+        self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
+        self.must_decode = must_decode
+        self.decoders = list(default_decoders) + list(args)
+
+    def __iter__(self) -> Iterator[Dict]:
+        for path, stream in self.source_datapipe:
+            decoder = find_decoder(self.decoders, path)
+            if decoder is None:
+                if self.must_decode:
+                    raise ValueError(f"No decoder found for {path}.")
+                else:
+                    value = stream.read()
+            else:
+                value = decoder(stream)
+            yield path, value
+
+    def __len__(self) -> int:
+        return len(self.source_datapipe)
+
+
+if os.name == "nt":
+    default_popen_methods = {
+        "file": ["cat", "{path}"],
+        "http": ["c:\\Windows\\System32\\curl", "{url}"],
+        "gs": ["gsutil", "cat", "{url}"],
+    }
+else:
+    default_popen_methods = {
+        "file": ["cat", "{path}"],
+        "http": ["curl","{url}"],
+        "gs": ["gsutil", "cat", "{url}"],
+    }
+
+
+@functional_datapipe("popen")
+class PipeOpenerIterDataPipe(IterDataPipe[Dict]):
+    def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], **methods) -> None:
+        super().__init__()
+        self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
+        self.methods = dict(default_popen_methods)
+        self.methods.update(methods)
+
+    def __iter__(self) -> Iterator[Dict]:
+        for url in self.source_datapipe:
+            if not isinstance(url, str):
+                raise TypeError(f"Expected string type for url, but got {type(url)}.")
+            if url.lower().startswith("pipe:"):
+                cmd = url[5:]
+                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+            else:
+                o = urlparse(url)
+                scheme = o.scheme or "file"
+                handler = self.methods.get(scheme)
+                if handler is None:
+                    raise ValueError(f"No known popen handler for {url[:60]}.")
+                kw = dict(
+                    url=url,
+                    path=o.path,
+                    query=o.query,
+                    params=o.params,
+                    fragment=o.fragment,
+                    netloc=o.netloc,
+                    scheme=o.scheme,
+                )
+                if isinstance(handler, list):
+                    cmd = [x.format(**kw) for x in handler]
+                    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+                else:
+                    cmd = handler.format(**kw)
+                    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+            yield url, StreamWrapper(proc.stdout)
+
+    def __len__(self) -> int:
+        return len(self.source_datapipe)
+
+
+@functional_datapipe("rename_keys")
+class RenameKeysIterDataPipe(IterDataPipe[Dict]):
+    def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], *args, keep_unselected=False, must_match=True, duplicate_is_error=True, **kw) -> None:
+        super().__init__()
+        self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
+        self.must_match = must_match
+        self.keep_unselected = keep_unselected
+        self.duplicate_is_error = duplicate_is_error
+        self.renamings = list(args) + [(v, k) for k, v in kw.items()]
+
+    def __iter__(self) -> Iterator[Dict]:
+        for sample in self.source_datapipe:
+            new_sample = {}
+            matched = {k: False for k, _ in self.renamings}
+            for path, value in sample.items():
+                fname = re.sub(r".*/", "", path)
+                new_name = None
+                for pattern, name in self.renamings[::-1]:
+                    if fnmatch(fname.lower(), pattern):
+                        matched[pattern] = True
+                        new_name = name
+                        break
+                if new_name is None:
+                    if self.keep_unselected:
+                        new_sample[path] = value
+                    continue
+                if new_name in new_sample:
+                    if self.duplicate_is_error:
+                        raise ValueError(f"Duplicate value in sample {sample.keys()} after rename.")
+                    continue
+                new_sample[new_name] = value
+            if self.must_match and not all(matched.values()):
+                raise ValueError(f"Not all patterns ({matched}) matched sample keys ({sample.keys()}).")
+ 
+            yield new_sample
+
+    def __len__(self) -> int:
+        return len(self.source_datapipe)
+
+
+if os.name == "nt":
+    default_popen_methods = {
+        "file": ["cat", "{path}"],
+        "http": ["c:\\Windows\\System32\\curl", "{url}"],
+        "gs": ["gsutil", "cat", "{url}"],
+    }
+else:
+    default_popen_methods = {
+        "file": ["cat", "{path}"],
+        "http": ["curl","{url}"],
+        "gs": ["gsutil", "cat", "{url}"],
+    }
+
