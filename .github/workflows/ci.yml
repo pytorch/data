@@ -75,7 +75,7 @@ jobs:
           cd aws-sdk-cpp/
           mkdir sdk-build sdk-lib
           cd sdk-build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DENABLE_TESTING=OFF -DCMAKE_INSTALL_PREFIX=../sdk-lib
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer" -DENABLE_TESTING=OFF -DCMAKE_INSTALL_PREFIX=../sdk-lib -DBUILD_SHARED_LIBS=OFF
           make
           sudo make install
       - name: Export AWS-SDK-CPP
@@ -93,6 +93,7 @@ jobs:
         run: |
           python setup.py install
         env:
+          VERBOSE: 1
           BUILD_S3: ${{ matrix.with-s3 }}
           AWSSDK_DIR: ${{ steps.export_path.outputs.awssdk }}
       - name: Install test requirements
