@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 if(BUILD_S3)
+  message(STATUS "Change something to un-skip datapipes tests")
   message(STATUS "Building S3 IO functionality")
 
   # To make the right CPython is built with on GitHub Actions,
