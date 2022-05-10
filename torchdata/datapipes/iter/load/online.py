@@ -33,7 +33,7 @@ def _get_proxies() -> Optional[Dict[str, str]]:
     return None
 
 
-def _get_response_from_http(url: str, *, timeout: Optional[float], query_params : Dict[str, str]) -> Tuple[str, StreamWrapper]:
+def _get_response_from_http(url: str, *, timeout: Optional[float], query_params : Optional[Dict[str, str]]) -> Tuple[str, StreamWrapper]:
     try:
         with requests.Session() as session:
             proxies = _get_proxies()
