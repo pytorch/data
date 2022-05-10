@@ -65,7 +65,8 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper, HttpReader
         >>> file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
-        >>> http_reader_dp = HttpReader(IterableWrapper([file_url, query_params]))
+        >>> # optional query_params
+        >>> http_reader_dp = HttpReader(IterableWrapper([(file_url, query_params)]))
         >>> reader_dp = http_reader_dp.readlines()
         >>> it = iter(reader_dp)
         >>> path, line = next(it)
