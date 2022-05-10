@@ -41,7 +41,8 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
         expected_file_name = "LICENSE"
         expected_MD5_hash = "bb9675028dd39d2dd2bf71002b93e66c"
-        http_reader_dp = HttpReader(IterableWrapper([file_url]))
+        query_params = {"auth" : ("fake_username", "fake_password"), "allow_redirects" : True}
+        http_reader_dp = HttpReader(IterableWrapper([file_url, query_params]))
 
         # Functional Test: test if the Http Reader can download and read properly
         reader_dp = http_reader_dp.readlines()
@@ -58,7 +59,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         self.assertTrue(io.BufferedReader, type(stream))
 
         # __len__ Test: returns the length of source DataPipe
-        self.assertEqual(1, len(http_reader_dp))
+        self.assertEqual(2, len(http_reader_dp))
 
     def test_on_disk_cache_holder_iterdatapipe(self):
         tar_file_url = "https://raw.githubusercontent.com/pytorch/data/main/test/_fakedata/csv.tar.gz"
