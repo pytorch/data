@@ -60,7 +60,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         self.assertTrue(io.BufferedReader, type(stream))
 
         # __len__ Test: returns the length of source DataPipe
-        self.assertEqual(3, len(http_reader_dp))
+        self.assertEqual(1, len(http_reader_dp))
 
     def test_on_disk_cache_holder_iterdatapipe(self):
         tar_file_url = "https://raw.githubusercontent.com/pytorch/data/main/test/_fakedata/csv.tar.gz"
