@@ -60,7 +60,6 @@ class DataLoader2(Generic[T_co]):
         self._terminated: bool = False
 
         if self.datapipe_adapter_fn is not None:
-            # pyre-fixme[4]: Attribute annotation cannot contain `Any`.
             self.datapipe = self.datapipe_adapter_fn(self.datapipe)
         self._datapipe_before_reading_service_adapt: IterDataPipe = self.datapipe
 
@@ -91,7 +90,7 @@ class DataLoader2(Generic[T_co]):
         if self._reset_iter:
             raise StopIteration
         try:
-            return next(self._datapipe_iter)  # pyre-ignore[6]
+            return next(self._datapipe_iter)  # type: ignore[arg-type]
         except PauseIteration:
             raise StopIteration
         except StopIteration:
@@ -100,8 +99,6 @@ class DataLoader2(Generic[T_co]):
             self._reset_iter = True
             raise
 
-    # Have to add this delegation methods for `limit`, `resume`, etc.
-    # pyre-fixme[3]: Return annotation cannot be `Any`.
     def __getattr__(self, name: str) -> Any:
         if self._datapipe_iter is None:
             raise AttributeError
@@ -122,7 +119,7 @@ class DataLoader2(Generic[T_co]):
     def __enter__(self) -> "DataLoader2[T_co]":
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback) -> None:  # pyre-ignore
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.shutdown()
 
     def state_dict(self) -> Dict[str, Any]:
@@ -158,7 +155,7 @@ class DataLoader2(Generic[T_co]):
         serialized_datapipe = state[SERIALIZED_DATAPIPE_KEY_NAME]
         reading_service_state = state[READING_SERVICE_STATE_KEY_NAME]
 
-        data_loader = DataLoader2(
+        data_loader: "DataLoader2[T_co]" = DataLoader2(
             datapipe=deserialize_datapipe(serialized_datapipe),
             datapipe_adapter_fn=None,
             reading_service=reading_service,
