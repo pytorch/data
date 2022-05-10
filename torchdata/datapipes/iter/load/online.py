@@ -34,15 +34,15 @@ def _get_proxies() -> Optional[Dict[str, str]]:
 
 
 def _get_response_from_http(
-    url: str, *, timeout: Optional[float], query_params: Optional[Dict[str, str]] = {}
+    url: str, *, timeout: Optional[float], query_params: Optional[Dict[str, str]]
 ) -> Tuple[str, StreamWrapper]:
     try:
         with requests.Session() as session:
             proxies = _get_proxies()
             if timeout is None:
-                r = session.get(url, params=query_params, stream=True, proxies=proxies)
+                r = session.get(url, stream=True, proxies=proxies, **query_params)
             else:
-                r = session.get(url, timeout=timeout, params=query_params, stream=True, proxies=proxies)
+                r = session.get(url, timeout=timeout, stream=True, proxies=proxies, **query_params)
         return url, StreamWrapper(r.raw)
     except HTTPError as e:
         raise Exception(f"Could not get the file. [HTTP Error] {e.response}.")
@@ -65,8 +65,7 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper, HttpReader
         >>> file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
-        >>> # optional query_params
-        >>> http_reader_dp = HttpReader(IterableWrapper([(file_url, query_params)]))
+        >>> http_reader_dp = HttpReader(IterableWrapper([file_url]))
         >>> reader_dp = http_reader_dp.readlines()
         >>> it = iter(reader_dp)
         >>> path, line = next(it)
@@ -76,15 +75,10 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         b'BSD 3-Clause License'
     """
 
-    def __init__(
-        self,
-        source_datapipe: IterDataPipe[str],
-        query_params: Optional[Dict[str, str]] = {},
-        timeout: Optional[float] = None,
-    ) -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], timeout: Optional[float] = None, **kwargs) -> None:
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.timeout = timeout
-        self.query_params = query_params
+        self.query_params = kwargs
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for url in self.source_datapipe:
