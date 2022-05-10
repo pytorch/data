@@ -56,7 +56,7 @@ def list_connected_datapipes(scan_obj: IterDataPipe, only_datapipe: bool) -> Lis
 
 def traverse(datapipe: IterDataPipe, only_datapipe: bool = False) -> DataPipeGraph:
     if not isinstance(datapipe, IterDataPipe):
-        raise RuntimeError("Expected `IterDataPipe`, but {} is found".format(type(datapipe)))
+        raise RuntimeError(f"Expected `IterDataPipe`, but {type(datapipe)} is found")
 
     items: List[IterDataPipe] = list_connected_datapipes(datapipe, only_datapipe)
     d = {datapipe: {}}

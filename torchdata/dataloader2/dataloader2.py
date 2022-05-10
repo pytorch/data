@@ -12,10 +12,7 @@ from typing import Any, Callable, Dict, Generic, Iterator, Optional, TypeVar
 from torch.utils.data import IterDataPipe
 
 from .error import PauseIteration
-from .reading_service import (
-    CheckpointableReadingServiceInterface,
-    ReadingServiceInterface,
-)
+from .reading_service import CheckpointableReadingServiceInterface, ReadingServiceInterface
 
 T_co = TypeVar("T_co", covariant=True)
 SERIALIZED_DATAPIPE_KEY_NAME = "serialized_datapipe"
@@ -26,18 +23,14 @@ def serialize_datapipe(datapipe: IterDataPipe) -> bytes:
     try:
         return pickle.dumps(datapipe)
     except pickle.PickleError as e:
-        raise NotImplementedError(
-            f"Prototype only support pickle-able datapipes for checkpoint: {e}"
-        )
+        raise NotImplementedError(f"Prototype only support pickle-able datapipes for checkpoint: {e}")
 
 
 def deserialize_datapipe(serialized_state: bytes) -> IterDataPipe:
     try:
         return pickle.loads(serialized_state)
     except pickle.PickleError as e:
-        raise NotImplementedError(
-            f"Prototype only support pickle-able datapipes for checkpoint: {e}"
-        )
+        raise NotImplementedError(f"Prototype only support pickle-able datapipes for checkpoint: {e}")
 
 
 @dataclass
@@ -73,24 +66,16 @@ class DataLoader2(Generic[T_co]):
 
     def __iter__(self) -> Iterator[T_co]:
         if self._terminated:
-            raise Exception(
-                "Cannot iterate over the DataLoader as it has already been shut down"
-            )
+            raise Exception("Cannot iterate over the DataLoader as it has already been shut down")
 
         if self._reset_iter:
             if not self._adapted and self.reading_service is not None:
                 if self.reading_service_state is None:
                     self.datapipe = self.reading_service.initialize(self.datapipe)
                 else:
-                    if not isinstance(
-                        self.reading_service, CheckpointableReadingServiceInterface
-                    ):
-                        raise TypeError(
-                            "Cannot restore from non-checkpointable reading service"
-                        )
-                    self.datapipe = self.reading_service.restore(
-                        self.datapipe, self.reading_service_state
-                    )
+                    if not isinstance(self.reading_service, CheckpointableReadingServiceInterface):
+                        raise TypeError("Cannot restore from non-checkpointable reading service")
+                    self.datapipe = self.reading_service.restore(self.datapipe, self.reading_service_state)
                 self._adapted = True
 
             if self.reading_service is not None:
@@ -149,15 +134,11 @@ class DataLoader2(Generic[T_co]):
         Reading Service State: Reading Service checkpoint information.
         """
         reading_service_state = None
-        if self.reading_service is not None and isinstance(
-            self.reading_service, CheckpointableReadingServiceInterface
-        ):
+        if self.reading_service is not None and isinstance(self.reading_service, CheckpointableReadingServiceInterface):
             reading_service_state = self.reading_service.checkpoint()
 
         # Serialize datapipe after applying adapters and before reading service adaption
-        serialized_datapipe = serialize_datapipe(
-            self._datapipe_before_reading_service_adapt
-        )
+        serialized_datapipe = serialize_datapipe(self._datapipe_before_reading_service_adapt)
 
         return {
             SERIALIZED_DATAPIPE_KEY_NAME: serialized_datapipe,

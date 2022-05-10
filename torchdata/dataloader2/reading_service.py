@@ -6,7 +6,7 @@
 
 
 from abc import ABC, abstractmethod
-from typing import Callable, Optional, Iterator
+from typing import Callable, Optional
 
 from torch.utils.data import DataLoader, IterDataPipe
 from torch.utils.data.datapipes.iter import IterableWrapper
@@ -154,10 +154,6 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         return IterableWrapper(self.dl_)
 
     def finalize(self) -> None:
-        if (
-            self.persistent_workers
-            and self.dl_ is not None
-            and self.dl_._iterator is not None
-        ):
+        if self.persistent_workers and self.dl_ is not None and self.dl_._iterator is not None:
             self.dl_._iterator._shutdown_workers()  # pyre-ignore
             self.dl_._iterator = None  # pyre-ignore
