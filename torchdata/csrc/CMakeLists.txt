@@ -36,14 +36,13 @@ if(BUILD_S3)
     ${PROJECT_SOURCE_DIR}
     ${Python_INCLUDE_DIR}
     ${pybind11_INCLUDE_DIRS}
-    ${aws_cpp_sdk_INCLUDE_PATH}
-    # ${CMAKE_CURRENT_SOURCE_DIR}
+    ${AWSSDK_INCLUDE_DIRS}
     )
 
   target_link_libraries(
     _torchdata
     PRIVATE
-    ${aws_cpp_sdk_LIBS}
+    ${AWSSDK_LINK_LIBRARIES}
     ${Python_LIBRARIES}
     ${ADDITIONAL_ITEMS}
     )
