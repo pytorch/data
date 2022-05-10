@@ -57,6 +57,17 @@ Related Projects
 Using WebDataset in ``torchdata``
 --------------------------------
 
+This is a common pipeline for reading datasets in WebDataset format.
+The same pipeline can be used to read many different datasets.
+Following the last step, you can use any kind of augmentation or further
+processing you like.
+
+The three steps you usually want to customize are:
+
+- ``filecache`` -- this can be omitted, or you can choose a different cache directory
+- ``decode`` -- if you have other datatypes, you need to list decoders for them
+- ``extract_keys`` -- extracts relevant parts of the sample and turns it into a tuple
+
 .. code:: python
     import numpy as np
     import torchdata.datapipes as dp
@@ -65,7 +76,7 @@ Using WebDataset in ``torchdata``
     import io
 
 
-    src = "https://storage.googleapis.com/nvdata-ocropus/ia1-{000000..000033}.tar"
+    src = "https://storage.googleapis.com/nvdata-ocropus-bin/ia1-{000000..000033}.tar"
 
     ds = (
         dp.iter.IterableWrapper([src])
@@ -75,11 +86,11 @@ Using WebDataset in ``torchdata``
         .filecache(cachedir="mycache", verbose=True)
         .load_from_tar(mode="r|")
         .decode(
-            jpg=lambda s: imread(io.BytesIO(s.read())),
-            png=lambda s: imread(io.BytesIO(s.read())),
+            ("*.nrm.jpg", lambda s: imread(io.BytesIO(s.read()))),
+            ("*.hocr", lambda s: s.read().decode("utf-8")),
         )
         .webdataset()
-        .extract_keys("__key__", ["*.jpg", "*.png"])
+        .extract_keys("*.nrm.jpg", "*.hocr")
         .incshuffle(initial=5, buffer_size=10000)
     )
 
@@ -106,11 +117,11 @@ Using WebDataset in ``torchdata``
         # extract the individual files from the tar files
         .load_from_tar(mode="r|")
 
-        # decode files ending in .jpg and .png as images
+        # decode files ending in .nrm.jpg and .hocr.
         # (we need the extra io.BytesIO because imread requires a seekable source)
         .decode(
-            jpg=lambda s: imread(io.BytesIO(s.read())),
-            png=lambda s: imread(io.BytesIO(s.read())),
+            ("*.nrm.jpg", lambda s: imread(io.BytesIO(s.read()))),
+            ("*.hocr", lambda s: s.read().decode("utf-8")),
         )
 
         # group together files in the tar file based on WebDataset conventions
@@ -119,7 +130,7 @@ Using WebDataset in ``torchdata``
 
         # turn the dictionaries into tuples by extracting the sample key and
         # anything that matches one of the image formats
-        .extract_keys("__key__", ["*.jpg", "*.png"])
+        .extract_keys("*.nrm.jpg", "*.hocr")
 
         # incrementally shuffle the resulting training samples
         .incshuffle(initial=5, buffer_size=10000)
@@ -128,4 +139,19 @@ Using WebDataset in ``torchdata``
     print(list(islice(ds, 0, 10)))
 
 
+Available Functionality
+--------------------------------
+
+
+The following filters are particularly useful with WebDataset-style data, but
+they can be used with other kinds of datasets too:
+
+- WebDataset / .webdataset -- group files in stream into samples based on basename
+- ShardExpander / .shardexpand -- expand brace notations for file shards
+- FileDecoder / .decode -- apply file decoders based on matching glob patterns / extensions
+- PipeOpener / .popen -- reads local and remote datasets using command line programs
+- RenameKeys / .rename_keys -- rename samples in a dictionary by matching keys against glob patterns
+- ExtractKeys / .extract_keys -- extract sample fields and return tuple based on glob patterns
+- IncrementalShuffler / .incshuffle -- inline shuffling of shards and samples with low startup latency
+- FileCache / .filecache -- cache files / shards in a local data directory
 
