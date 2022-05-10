@@ -65,7 +65,6 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper, HttpReader
         >>> file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
-        >>> # Optionally pass in query_param dict as HttpReader(IterableWrapper([(file_url, query_param)]))
         >>> http_reader_dp = HttpReader(IterableWrapper([file_url]))
         >>> reader_dp = http_reader_dp.readlines()
         >>> it = iter(reader_dp)
@@ -76,7 +75,7 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         b'BSD 3-Clause License'
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], timeout: Optional[float] = None, **kwargs) -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], timeout: Optional[float] = None, **kwargs : Optional[Dict[str, Any]]) -> None:
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.timeout = timeout
         self.query_params = kwargs
