@@ -42,7 +42,7 @@ if(BUILD_S3)
   target_link_libraries(
     _torchdata
     PRIVATE
-    ${AWSSDK_LINK_LIBRARIES}
+    ${AWSSDK_LIBRARIES}
     ${Python_LIBRARIES}
     ${ADDITIONAL_ITEMS}
     )
