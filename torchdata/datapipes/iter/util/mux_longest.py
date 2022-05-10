@@ -4,12 +4,13 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Optional, Set, Sized
+
 from torch.utils.data.datapipes._decorator import functional_datapipe
 from torch.utils.data.datapipes.datapipe import IterDataPipe
-from typing import Sized, Set, Optional
 
 
-@functional_datapipe('mux_longest')
+@functional_datapipe("mux_longest")
 class MultiplexerLongestIterDataPipe(IterDataPipe):
     r"""
     Yields one element at a time from each of the input Iterable DataPipes (functional name: ``mux_longest``). As in,
@@ -25,6 +26,7 @@ class MultiplexerLongestIterDataPipe(IterDataPipe):
         >>> list(dp1.mux_longest(dp2, dp3))
         [0, 10, 20, 1, 11, 21, 2, 12, 22, 3, 13, 23, 4, 14, 24]
     """
+
     def __init__(self, *datapipes):
         self.datapipes = datapipes
         self.length: Optional[int] = None
@@ -44,7 +46,7 @@ class MultiplexerLongestIterDataPipe(IterDataPipe):
     def __len__(self):
         if self.length is not None:
             if self.length == -1:
-                raise TypeError("{} instance doesn't have valid length".format(type(self).__name__))
+                raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
             return self.length
         if all(isinstance(dp, Sized) for dp in self.datapipes):
             self.length = sum(len(dp) for dp in self.datapipes)

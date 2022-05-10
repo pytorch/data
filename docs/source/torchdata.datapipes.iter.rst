@@ -101,6 +101,7 @@ These tend to involve multiple DataPipes, combining them or splitting one to man
     SampleMultiplexer
     UnZipper
     Zipper
+    ZipperLongest
 
 Grouping DataPipes
 -----------------------------

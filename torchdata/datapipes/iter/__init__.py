@@ -88,13 +88,13 @@ from torchdata.datapipes.iter.util.indexadder import (
     IndexAdderIterDataPipe as IndexAdder,
 )
 from torchdata.datapipes.iter.util.jsonparser import JsonParserIterDataPipe as JsonParser
+from torchdata.datapipes.iter.util.mux_longest import MultiplexerLongestIterDataPipe as MultiplexerLongest
 from torchdata.datapipes.iter.util.paragraphaggregator import ParagraphAggregatorIterDataPipe as ParagraphAggregator
 from torchdata.datapipes.iter.util.plain_text_reader import (
     CSVDictParserIterDataPipe as CSVDictParser,
     CSVParserIterDataPipe as CSVParser,
     LineReaderIterDataPipe as LineReader,
 )
-from torchdata.datapipes.iter.util.mux_longest import MultiplexerLongestIterDataPipe as MultiplexerLongest
 from torchdata.datapipes.iter.util.rararchiveloader import RarArchiveLoaderIterDataPipe as RarArchiveLoader
 from torchdata.datapipes.iter.util.rows2columnar import Rows2ColumnarIterDataPipe as Rows2Columnar
 from torchdata.datapipes.iter.util.samplemultiplexer import SampleMultiplexerDataPipe as SampleMultiplexer
@@ -123,6 +123,7 @@ from torchdata.datapipes.iter.util.xzfileloader import (
     XzFileLoaderIterDataPipe as XzFileLoader,
     XzFileReaderIterDataPipe as XzFileReader,
 )
+from torchdata.datapipes.iter.util.zip_longest import ZipperLongestIterDataPipe as ZipperLongest
 from torchdata.datapipes.iter.util.ziparchiveloader import (
     ZipArchiveLoaderIterDataPipe as ZipArchiveLoader,
     ZipArchiveReaderIterDataPipe as ZipArchiveReader,
@@ -208,6 +209,7 @@ __all__ = [
     "ZipArchiveLoader",
     "ZipArchiveReader",
     "Zipper",
+    "ZipperLongest",
 ]
 
 # Please keep this list sorted
