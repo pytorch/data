@@ -34,13 +34,13 @@ def _get_proxies() -> Optional[Dict[str, str]]:
 
 
 def _get_response_from_http(
-    url: str, *, timeout: Optional[float], query_params: Optional[Dict[str, Any]]
+    url: str, *, timeout: Optional[float], headers : Optional[Dict[str,str]], query_params: Optional[Dict[str, Any]]
 ) -> Tuple[str, StreamWrapper]:
     try:
         with requests.Session() as session:
             proxies = _get_proxies()
             if timeout is None:
-                r = session.get(url, stream=True, proxies=proxies, **query_params)
+                r = session.get(url, stream=True, headers=headers, proxies=proxies, **query_params)
             else:
                 r = session.get(url, timeout=timeout, stream=True, proxies=proxies, **query_params)
         return url, StreamWrapper(r.raw)
@@ -65,6 +65,7 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper, HttpReader
         >>> file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
+        >>> # Optionally pass in query_param dict as HttpReader(IterableWrapper([(file_url, query_param)]))
         >>> http_reader_dp = HttpReader(IterableWrapper([file_url]))
         >>> reader_dp = http_reader_dp.readlines()
         >>> it = iter(reader_dp)
