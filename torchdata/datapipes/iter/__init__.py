@@ -116,6 +116,8 @@ from torchdata.datapipes.iter.util.webdataset import (
     FileDecoderIterDataPipe as FileDecoder,
     RenameKeysIterDataPipe as RenameKeys,
     ShardExpanderIterDataPipe as ShardExpander,
+    IncrementalShufflerIterDataPipe as IncrementalShuffler,
+    FileCacheIterDataPipe as FileCache,
 )
 from torchdata.datapipes.iter.util.xzfileloader import (
     XzFileLoaderIterDataPipe as XzFileLoader,
@@ -147,6 +149,7 @@ __all__ = [
     "FSSpecFileLister",
     "FSSpecFileOpener",
     "FSSpecSaver",
+    "FileCache",
     "FileDecoder",
     "FileLister",
     "FileOpener",
@@ -160,6 +163,7 @@ __all__ = [
     "HttpReader",
     "InBatchShuffler",
     "InMemoryCacheHolder",
+    "IncrementalShuffler",
     "IndexAdder",
     "IoPathFileLister",
     "IoPathFileOpener",

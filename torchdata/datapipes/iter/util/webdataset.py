@@ -9,8 +9,10 @@ import sys
 import re
 import pickle
 import subprocess
-from typing import Any, Dict, Iterator, List, Union
-from urllib.parse import urlparse
+import random
+import urllib.parse
+import shutil
+from typing import Any, Dict, Iterator, List, Union, Tuple
 from fnmatch import fnmatch
 
 from torchdata.datapipes import functional_datapipe
@@ -139,11 +141,29 @@ def shardexpand(s):
 
 @functional_datapipe("shardexpand")
 class ShardExpanderIterDataPipe(IterDataPipe[Dict]):
-    def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]]) -> None:
-        super().__init__()
-        self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
+    r"""
+    Expands incoming shard strings into shards.
 
-    def __iter__(self) -> Iterator[Dict]:
+    Sharded data files are named using shell-like brace notation. For example,
+    an ImageNet dataset sharded into 1200 shards and stored on a web server
+    might be named `imagenet-{000000..001199}.tar`.
+
+    Note that shard names can be expanded without any server transactions;
+    this makes `shardexpand` reproducible and storage system independent
+    (unlike `ListFiles` etc.).
+
+    Args:
+        source_datapipe: a DataPipe yielding a stream of  pairs
+
+    Returns:
+        a DataPipe yielding a stream of expanded pathnames.
+    """
+
+    def __init__(self, source_datapipe: IterDataPipe[str]) -> None:
+        super().__init__()
+        self.source_datapipe: IterDataPipe[str] = source_datapipe
+
+    def __iter__(self) -> Iterator[str]:
         for path in self.source_datapipe:
             for expanded in shardexpand(path):
                 yield expanded
@@ -184,14 +204,36 @@ def find_decoder(decoders, path):
 
 @functional_datapipe("decode")
 class FileDecoderIterDataPipe(IterDataPipe[Dict]):
-    def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], *args, must_decode=True, **kw) -> None:
+    r"""
+    Decode files in `(fname, stream)` tuples based on filename extensions.
+
+    Args:
+        source_datapipe: a DataPipe yielding a stream of pairs, as returned by `load_from_tar`
+        *args: pairs of the form `("*.jpg", imread)`
+        **kw: arguments of the form `jpg=imread`, shorthand for `("*.jpg", imread)`
+        must_decode: require an decoder for every file encountered (True)
+        defaults: list of default decoders (prepended to `args`)
+
+    Returns:
+        a DataPipe yielding a stream of `(fname, data)` pairs
+
+    Examples:
+        >>> from torchdata.datapipes.iter import FileLister, FileOpener
+        >>> from imageio import imread
+        >>>
+        >>> dp = FileLister("data", "imagenet-*.tar").open().load_from_tar().decode(jpg=imread)
+        >>> for path, data in dataset:
+        >>>     if path.endswith(".jpg"):
+        >>>         imshow(data)
+    """
+    def __init__(self, source_datapipe: IterDataPipe[Tuple[str, Any]], *args, must_decode=True, defaults=default_decoders, **kw) -> None:
         super().__init__()
-        self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
+        self.source_datapipe: IterDataPipe[Tuple[str, Any]] = source_datapipe
         self.must_decode = must_decode
-        self.decoders = list(default_decoders) + list(args)
+        self.decoders = list(defaults) + list(args)
         self.decoders += [("*." + k, v) for k, v in kw.items()]
 
-    def __iter__(self) -> Iterator[Dict]:
+    def __iter__(self) -> Iterator[Tuple[str, Any]]:
         for path, stream in self.source_datapipe:
             decoder = find_decoder(self.decoders, path)
             if decoder is None:
@@ -213,6 +255,8 @@ if os.name == "nt":
         "http": ["c:\\Windows\\System32\\curl", "-s", "-L", "{url}"],
         "https": ["c:\\Windows\\System32\\curl", "-s", "-L", "{url}"],
         "gs": ["gsutil", "cat", "{url}"],
+        "s3": ["aws", "s3", "{url}", "-"],
+        "ais": ["ais", "cat", "{url}"],
     }
 else:
     default_popen_methods = {
@@ -220,13 +264,58 @@ else:
         "http": ["curl", "-s", "-L", "{url}"],
         "https": ["curl", "-s", "-L", "{url}"],
         "gs": ["gsutil", "cat", "{url}"],
+        "s3": ["aws", "s3", "{url}", "-"],
+        "ais": ["ais", "cat", "{url}"],
     }
+
+
+def _re_search(regex, s, group=0, default=""):
+    if s is None:
+        return default
+    m = re.search(regex, s)
+    if m:
+        return m.group(group)
+    return default
 
 
 @functional_datapipe("popen")
 class PipeOpenerIterDataPipe(IterDataPipe[Dict]):
+    r"""
+    Given a stream of urls, open those urls and returns a stream of `(url, stream)` pairs.
+
+    This uses subprocesses the open URLs. The use of subprocesses means that I/O can be
+    asynchronous and that any kind of command line tool can be used for accessing
+    remote servers.
+
+    URL schemes are mapped to commands by specifying keyword arguments. Default command
+    lines are provided for opening `file`, `http`, `https`, `gs`, `s3`, and `ais`.
+
+    Command lines can be specified either as a single string, passed to a shell,
+    or as a list. Either way, url components can be referenced in the command line
+    using url, path, query, params, fragment, netloc, scheme, dirname, topdir, fname.
+
+    The `pipe:` scheme can be used for specifying arbitrary commands as inputs.
+
+    Args:
+        source_datapipe: a DataPipe yielding a stream of pairs, as returned by `load_from_tar`
+        verbose: print command lines before executing
+        **methods: `scheme=command_line` pairs
+
+    Returns:
+        a DataPipe yielding a stream of `(fname, data)` pairs
+
+    Examples:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>>
+        >>> dp = (
+        >>>     IterableWrapper(["http://google.com", "http://facebook.com", "pipe:echo hello"])
+        >>>     # override default http opener
+        >>>     .popen(http=["lynx", "-dump", "{url}"])
+        >>> )
+        >>> for url, text in dp:
+        >>>     print(url, repr(text)[:40])
+    """
     def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], verbose=False, **methods) -> None:
-        global default_popen_methods
         super().__init__()
         self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
         self.methods = dict(default_popen_methods)
@@ -243,9 +332,9 @@ class PipeOpenerIterDataPipe(IterDataPipe[Dict]):
                     print(f"# {cmd}", file=sys.stderr)
                 proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
             else:
-                o = urlparse(url)
+                o = urllib.parse.urlparse(url)
                 scheme = o.scheme or "file"
-                handler = self.methods.get(scheme)
+                handler = self.methods.get(scheme.lower())
                 if handler is None:
                     raise ValueError(f"No known popen handler for '{o.scheme}' ({url[:60]}).")
                 kw = dict(
@@ -256,6 +345,9 @@ class PipeOpenerIterDataPipe(IterDataPipe[Dict]):
                     fragment=o.fragment,
                     netloc=o.netloc,
                     scheme=o.scheme,
+                    dirname=_re_search("^(.*)/", o.path, group=1),
+                    topdir=_re_search("^(.*?)/", o.path, group=1),
+                    fname=_re_search("^.*/(.*?)$", o.path, group=1),
                 )
                 if isinstance(handler, list):
                     cmd = [x.format(**kw) for x in handler]
@@ -275,13 +367,31 @@ class PipeOpenerIterDataPipe(IterDataPipe[Dict]):
 
 @functional_datapipe("rename_keys")
 class RenameKeysIterDataPipe(IterDataPipe[Dict]):
+    r"""
+    Given a stream of dictionaries, rename keys using glob patterns.
+
+    Args:
+        source_datapipe: a DataPipe yielding a stream of dictionaries.
+        keep_unselected: keep keys/value pairs even if they don't match any pattern (False)
+        must_match: all key value pairs must match (True)
+        duplicate_is_error: it is an error if two renamings yield the same key (True)
+        *args: `(renamed, pattern)` pairs
+        **kw: `renamed=pattern` pairs
+
+    Returns:
+        a DataPipe yielding a stream of dictionaries.
+
+    Examples:
+        >>> dp = IterableWrapper([{"/a/b.jpg": b"data"}]).rename_keys(image="*.jpg")
+    """
     def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], *args, keep_unselected=False, must_match=True, duplicate_is_error=True, **kw) -> None:
         super().__init__()
         self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
         self.must_match = must_match
         self.keep_unselected = keep_unselected
         self.duplicate_is_error = duplicate_is_error
-        self.renamings = list(args) + [(v, k) for k, v in kw.items()]
+        self.renamings = [(pattern, output) for output, pattern in args]
+        self.renamings += [(pattern, output) for output, pattern in kw.items()]
 
     def __iter__(self) -> Iterator[Dict]:
         for sample in self.source_datapipe:
@@ -315,14 +425,29 @@ class RenameKeysIterDataPipe(IterDataPipe[Dict]):
 
 @functional_datapipe("extract_keys")
 class ExtractKeysIterDataPipe(IterDataPipe[Dict]):
-    def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], *args, duplicate_is_error=True, ignore_missing=False) -> None:
+    r"""
+    Given a stream of dictionaries, return a stream of tuples by selecting keys using glob patterns.
+
+    Args:
+        source_datapipe: a DataPipe yielding a stream of dictionaries.
+        duplicate_is_error: it is an error if the same key is selected twice (True)
+        ignore_missing: skip any dictionaries where one or more patterns don't match (False)
+        *args: list of glob patterns or list of glob patterns
+
+    Returns:
+        a DataPipe yielding a stream of tuples
+
+    Examples:
+        >>> dp = FileLister(...).load_from_tar().webdataset().decode(...).extract_keys(["*.jpg", "*.png"], "*.gt.txt")
+    """
+    def __init__(self, source_datapipe: IterDataPipe[Dict], *args, duplicate_is_error=True, ignore_missing=False) -> None:
         super().__init__()
-        self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
+        self.source_datapipe: IterDataPipe[Dict] = source_datapipe
         self.duplicate_is_error = duplicate_is_error
         self.patterns = args
         self.ignore_missing = ignore_missing
 
-    def __iter__(self) -> Iterator[Dict]:
+    def __iter__(self) -> Iterator[Tuple]:
         for sample in self.source_datapipe:
             result = []
             for pattern in self.patterns:
@@ -338,6 +463,110 @@ class ExtractKeysIterDataPipe(IterDataPipe[Dict]):
                 value = sample[matches[0]]
                 result.append(value)
             yield tuple(result)
+
+    def __len__(self) -> int:
+        return len(self.source_datapipe)
+
+
+def _pick(buf, rng):
+    k = rng.randint(0, len(buf) - 1)
+    sample = buf[k]
+    buf[k] = buf[-1]
+    buf.pop()
+    return sample
+
+
+@functional_datapipe("incshuffle")
+class IncrementalShufflerIterDataPipe(IterDataPipe[Dict]):
+    r"""
+    Perform incremental shuffling on a stream of data.
+
+    This initially reads `initial` samples. Subsequently, an output sample
+    is generated by randomly selecting an input sample from the buffer and
+    replacing it with another sample from the input stream. If the shuffle
+    buffer is smaller than `buffer_size`, an additional sample is used to fill
+    up the shuffle buffer.
+
+    This shuffle function allows the user to make a tradeoff between startup
+    latency and randomness.
+
+    Args:
+        source_datapipe: a DataPipe yielding a stream of samples
+        rng: user supplied random number generator
+        initial: initial buffer size (10)
+        buffer_size: buffer size for shuffling (1000)
+
+    Returns:
+        a DataPipe yielding a stream of tuples
+    """
+    def __init__(self, source_datapipe: IterDataPipe[Any], rng=None, initial=10, buffer_size=1000):
+        super().__init__()
+        self.source_datapipe: IterDataPipe[Any] = source_datapipe
+        self.rng = rng or random.Random(os.urandom(8))
+        self.initial = initial
+        self.buffer_size = buffer_size
+
+    def __iter__(self) -> Iterator[Any]:
+        initial = min(self.initial, self.buffer_size)
+        buf = []
+        data = iter(self.source_datapipe)
+        for sample in data:
+            buf.append(sample)
+            if len(buf) < self.buffer_size:
+                try:
+                    buf.append(next(data))  # skipcq: PYL-R1708
+                except StopIteration:
+                    pass
+            if len(buf) >= initial:
+                yield _pick(buf, self.rng)
+        while len(buf) > 0:
+            yield _pick(buf, self.rng)
+
+    def __len__(self) -> int:
+        return len(self.source_datapipe)
+
+
+def cache_by_fname(s):
+    result = re.sub("^.*/", "", s)
+    return urllib.parse.quote(result)
+
+
+if os.name == "nt":
+    default_cachedir = "datacache"
+else:
+    default_cachedir = "_datacache"
+
+
+@functional_datapipe("filecache")
+class FileCacheIterDataPipe(IterDataPipe[Dict]):
+    r"""
+    """
+    def __init__(self, source_datapipe: IterDataPipe[Tuple[str, Any]], cachedir=default_cachedir, cachename=cache_by_fname, chunksize=1024**2, verbose=False, makedir=True) -> None:
+        super().__init__()
+        if not os.path.exists(cachedir):
+            if makedir:
+                os.makedirs(cachedir)
+            else:
+                raise ValueError(f"Cache directory {cachedir} does not exist.")
+        self.source_datapipe: IterDataPipe[Tuple[str, Any]] = source_datapipe
+        self.cachedir = cachedir
+        self.cachename = cachename
+        self.verbose = verbose
+        self.chunksize = chunksize
+
+    def __iter__(self) -> Iterator[Dict]:
+        for url, stream in self.source_datapipe:
+            cached = os.path.join(self.cachedir, self.cachename(url))
+            if not os.path.exists(cached):
+                if self.verbose:
+                    print(f"# downloading {url} to {cached}", file=sys.stderr)
+                with open(cached+".temp", "wb") as dest:
+                    shutil.copyfileobj(stream, dest, self.chunksize)
+                os.rename(cached+".temp", cached)
+            if self.verbose:
+                print(f"# returning {cached}", file=sys.stderr)
+            cached_stream = open(cached, "rb")
+            yield url, StreamWrapper(cached_stream)
 
     def __len__(self) -> int:
         return len(self.source_datapipe)

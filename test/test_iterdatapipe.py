@@ -26,6 +26,7 @@ from torchdata.datapipes.iter import (
     InBatchShuffler,
     IndexAdder,
     InMemoryCacheHolder,
+    IncrementalShuffler,
     IterableWrapper,
     IterDataPipe,
     IterKeyZipper,
@@ -952,7 +953,14 @@ class TestIterDataPipe(expecttest.TestCase):
         assert output[0][0] == "1"
         assert output[0][1] == "1b"
 
-
+    def test_incshuffle(self):
+        for initial in [3, 10, 17, 167, 1000, 1500]:
+            for buffer in [3, 6, 10, 19, 223, 1000, 1001, 1500]:
+                for n in [10, 100, 1000]:
+                    stage1 = IterableWrapper(range(n))
+                    stage2 = IncrementalShuffler(stage1, initial=initial, buffer_size=buffer)
+                    output = list(iter(stage2))
+                    assert set(output) == set(range(n))
 
 
 if __name__ == "__main__":
