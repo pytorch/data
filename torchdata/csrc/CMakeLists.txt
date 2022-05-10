@@ -28,7 +28,9 @@ if(BUILD_S3)
 
   add_library(_torchdata MODULE ${EXTENSION_SOURCES})
 
-  add_dependencies(_torchdata aws-cpp-sdk)
+  if(NOT USE_SYSTEM_AWS_SDK_CPP)
+    add_dependencies(_torchdata aws-cpp-sdk)
+  endif()
 
   target_include_directories(
     _torchdata
