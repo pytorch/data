@@ -7,7 +7,7 @@
 import re
 import urllib
 
-from typing import Dict, Iterator, Optional, Tuple
+from typing import Any, Dict, Iterator, Optional, Tuple
 
 import requests
 
@@ -34,7 +34,7 @@ def _get_proxies() -> Optional[Dict[str, str]]:
 
 
 def _get_response_from_http(
-    url: str, *, timeout: Optional[float], query_params: Optional[Dict[str, str]]
+    url: str, *, timeout: Optional[float], query_params: Optional[Dict[str, Any]]
 ) -> Tuple[str, StreamWrapper]:
     try:
         with requests.Session() as session:
