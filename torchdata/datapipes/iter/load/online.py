@@ -34,7 +34,7 @@ def _get_proxies() -> Optional[Dict[str, str]]:
 
 
 def _get_response_from_http(
-    url: str, *, timeout: Optional[float], query_params: Optional[Dict[str, Any]]
+    url: str, *, timeout: Optional[float], **query_params: Optional[Dict[str, Any]]
 ) -> Tuple[str, StreamWrapper]:
     try:
         with requests.Session() as session:
@@ -75,14 +75,19 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         b'BSD 3-Clause License'
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], timeout: Optional[float] = None, **kwargs : Optional[Dict[str, Any]]) -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], timeout: Optional[float] = None,
+     **kwargs : Optional[Dict[str, Any]]) -> None:
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.timeout = timeout
         self.query_params = kwargs
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for url in self.source_datapipe:
-            yield _get_response_from_http(url, timeout=self.timeout, query_params=self.query_params)
+            if self.query_params:
+                yield _get_response_from_http(url, timeout=self.timeout, **self.query_params)
+            else:
+                yield _get_response_from_http(url, timeout=self.timeout)
+
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
