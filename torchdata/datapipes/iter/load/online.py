@@ -60,13 +60,13 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     Args:
         source_datapipe: a DataPipe that contains URLs
+        timeout: timeout in seconds for HTTP request
         **kwargs: a Dictionary to pass optional arguments that requests takes. For the full list check out https://docs.python-requests.org/en/master/api/
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper, HttpReader
         >>> file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
         >>> query_params = {"auth" : ("fake_username", "fake_password"), "allow_redirects" : True}
-
         >>> http_reader_dp = HttpReader(IterableWrapper([file_url]))
         >>> reader_dp = http_reader_dp.readlines()
         >>> it = iter(reader_dp)
