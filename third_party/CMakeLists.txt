@@ -105,9 +105,8 @@ else()
   include(ExternalProject)
   ExternalProject_Add(
     aws-cpp-sdk
-    PREFIX ${CMAKE_BINARY_DIR}/aws-cpp-sdk
+    PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/aws-cpp-sdk
     SOURCE_DIR ${aws_cpp_sdk_SOURCE_DIR}
-    URL ""
     INSTALL_DIR ${aws_cpp_sdk_INSTALL}
     CMAKE_ARGS "-DBUILD_SHARED_LIBS=OFF" "-DBUILD_ONLY=transfer;s3" "-DENABLE_TESTING=OFF" "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_INSTALL_PREFIX=${aws_cpp_sdk_INSTALL}"
     BUILD_BYPRODUCTS ${AWSSDK_LINK_LIBRARIES}
