@@ -34,13 +34,13 @@ def _get_proxies() -> Optional[Dict[str, str]]:
 
 
 def _get_response_from_http(
-    url: str, *, timeout: Optional[float], headers : Optional[Dict[str,str]], query_params: Optional[Dict[str, Any]]
+    url: str, *, timeout: Optional[float], query_params: Optional[Dict[str, Any]]
 ) -> Tuple[str, StreamWrapper]:
     try:
         with requests.Session() as session:
             proxies = _get_proxies()
             if timeout is None:
-                r = session.get(url, stream=True, headers=headers, proxies=proxies, **query_params)
+                r = session.get(url, stream=True, proxies=proxies, **query_params)
             else:
                 r = session.get(url, timeout=timeout, stream=True, proxies=proxies, **query_params)
         return url, StreamWrapper(r.raw)
