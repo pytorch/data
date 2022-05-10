@@ -7,7 +7,7 @@
 import re
 import urllib
 
-from typing import Dict, Iterator, Optional, Tuple, Dict
+from typing import Dict, Iterator, Optional, Tuple
 
 import requests
 
@@ -33,7 +33,9 @@ def _get_proxies() -> Optional[Dict[str, str]]:
     return None
 
 
-def _get_response_from_http(url: str, *, timeout: Optional[float], query_params : Optional[Dict[str, str]]) -> Tuple[str, StreamWrapper]:
+def _get_response_from_http(
+    url: str, *, timeout: Optional[float], query_params: Optional[Dict[str, str]] = {}
+) -> Tuple[str, StreamWrapper]:
     try:
         with requests.Session() as session:
             proxies = _get_proxies()
@@ -73,7 +75,12 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         b'BSD 3-Clause License'
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], query_params : Optional[Dict[str,str]] = {}, timeout: Optional[float] = None) -> None:
+    def __init__(
+        self,
+        source_datapipe: IterDataPipe[str],
+        query_params: Optional[Dict[str, str]] = {},
+        timeout: Optional[float] = None,
+    ) -> None:
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.timeout = timeout
         self.query_params = query_params
