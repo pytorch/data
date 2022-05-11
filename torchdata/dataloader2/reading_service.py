@@ -6,7 +6,7 @@
 
 
 from abc import ABC, abstractmethod
-from typing import Callable, Optional, Iterator
+from typing import Callable, Optional
 
 from torch.utils.data import DataLoader, IterDataPipe
 from torch.utils.data.datapipes.iter import IterableWrapper
@@ -126,7 +126,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         pin_memory: bool = False,
         timeout: float = 0,
         worker_init_fn: Optional[Callable[[int], None]] = None,
-        multiprocessing_context=None,  # pyre-ignore
+        multiprocessing_context=None,
         prefetch_factor: int = 2,
         persistent_workers: bool = False,
     ) -> None:
@@ -134,7 +134,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         self.pin_memory = pin_memory
         self.timeout = timeout
         self.worker_init_fn = worker_init_fn
-        self.multiprocessing_context = multiprocessing_context  # pyre-ignore
+        self.multiprocessing_context = multiprocessing_context
         self.prefetch_factor = prefetch_factor
         self.persistent_workers = persistent_workers
         self.dl_: Optional[DataLoader] = None
@@ -154,10 +154,6 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         return IterableWrapper(self.dl_)
 
     def finalize(self) -> None:
-        if (
-            self.persistent_workers
-            and self.dl_ is not None
-            and self.dl_._iterator is not None
-        ):
-            self.dl_._iterator._shutdown_workers()  # pyre-ignore
-            self.dl_._iterator = None  # pyre-ignore
+        if self.persistent_workers and self.dl_ is not None and self.dl_._iterator is not None:
+            self.dl_._iterator._shutdown_workers()  # type: ignore[attr-defined]
+            self.dl_._iterator = None

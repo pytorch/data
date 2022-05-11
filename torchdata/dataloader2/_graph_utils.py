@@ -11,7 +11,7 @@ from typing import Dict, List
 
 from torch.utils.data import IterDataPipe
 
-DataPipeGraph = Dict[IterDataPipe, "DataPipeGraph"]
+DataPipeGraph = Dict[IterDataPipe, "DataPipeGraph"]  # type: ignore[misc]
 
 
 # Modified based on torch.utils.data.graph
@@ -31,9 +31,9 @@ def list_connected_datapipes(scan_obj: IterDataPipe, only_datapipe: bool) -> Lis
         for k, v in obj.__dict__.items():
             if isinstance(v, (IterDataPipe, dict, list, set, tuple)):  # including all potential containers
                 state[k] = v
-        return state
+        return state  # type: ignore[return-value]
 
-    def reduce_hook(obj: IterDataPipe):  # pyre-ignore
+    def reduce_hook(obj: IterDataPipe):
         if obj == scan_obj:
             raise NotImplementedError
         else:
@@ -56,10 +56,10 @@ def list_connected_datapipes(scan_obj: IterDataPipe, only_datapipe: bool) -> Lis
 
 def traverse(datapipe: IterDataPipe, only_datapipe: bool = False) -> DataPipeGraph:
     if not isinstance(datapipe, IterDataPipe):
-        raise RuntimeError("Expected `IterDataPipe`, but {} is found".format(type(datapipe)))
+        raise RuntimeError(f"Expected `IterDataPipe`, but {type(datapipe)} is found")
 
     items: List[IterDataPipe] = list_connected_datapipes(datapipe, only_datapipe)
-    d = {datapipe: {}}
+    d: DataPipeGraph = {datapipe: {}}
     for item in items:
         d[datapipe].update(traverse(item, only_datapipe))
     return d
