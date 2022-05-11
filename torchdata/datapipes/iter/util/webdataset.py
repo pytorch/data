@@ -5,19 +5,20 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-import sys
-import re
 import pickle
-import subprocess
 import random
-import urllib.parse
+import re
 import shutil
-from typing import Any, Dict, Iterator, List, Union, Tuple
+import subprocess
+import sys
+import urllib.parse
 from fnmatch import fnmatch
+from typing import Any, Dict, Iterator, List, Tuple, Union
+
+from torch.utils.data.datapipes.utils.common import StreamWrapper
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
-from torch.utils.data.datapipes.utils.common import StreamWrapper
 
 
 def pathsplit(p):
@@ -119,15 +120,12 @@ def shardexpand(s):
     m = re.search(expansion, s)
     if not m:
         return [s]
-    prefix = s[:m.start()]
-    rest = shardexpand(s[m.end():])
-    rng = s[m.start() + 1:m.end() - 1]
+    prefix = s[: m.start()]
+    rest = shardexpand(s[m.end() :])
+    rng = s[m.start() + 1 : m.end() - 1]
     lohi = rng.split("..")
     if len(lohi[0]) != len(lohi[1]):
-        raise ValueError(
-            "Shard specifications must have " +
-            f"same number of digits for low and high values in {s}."
-        )
+        raise ValueError("Shard specifications must have " + f"same number of digits for low and high values in {s}.")
     lo, hi = [int(x) for x in lohi]
     if lo >= hi:
         raise ValueError(f"Bad range in in shard spec {s}.")
@@ -226,7 +224,10 @@ class FileDecoderIterDataPipe(IterDataPipe[Dict]):
         >>>     if path.endswith(".jpg"):
         >>>         imshow(data)
     """
-    def __init__(self, source_datapipe: IterDataPipe[Tuple[str, Any]], *args, must_decode=True, defaults=default_decoders, **kw) -> None:
+
+    def __init__(
+        self, source_datapipe: IterDataPipe[Tuple[str, Any]], *args, must_decode=True, defaults=default_decoders, **kw
+    ) -> None:
         super().__init__()
         self.source_datapipe: IterDataPipe[Tuple[str, Any]] = source_datapipe
         self.must_decode = must_decode
@@ -315,6 +316,7 @@ class PipeOpenerIterDataPipe(IterDataPipe[Dict]):
         >>> for url, text in dp:
         >>>     print(url, repr(text)[:40])
     """
+
     def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], verbose=False, **methods) -> None:
         super().__init__()
         self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
@@ -384,7 +386,16 @@ class RenameKeysIterDataPipe(IterDataPipe[Dict]):
     Examples:
         >>> dp = IterableWrapper([{"/a/b.jpg": b"data"}]).rename_keys(image="*.jpg")
     """
-    def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], *args, keep_unselected=False, must_match=True, duplicate_is_error=True, **kw) -> None:
+
+    def __init__(
+        self,
+        source_datapipe: IterDataPipe[List[Union[Dict, List]]],
+        *args,
+        keep_unselected=False,
+        must_match=True,
+        duplicate_is_error=True,
+        **kw,
+    ) -> None:
         super().__init__()
         self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
         self.must_match = must_match
@@ -416,7 +427,7 @@ class RenameKeysIterDataPipe(IterDataPipe[Dict]):
                 new_sample[new_name] = value
             if self.must_match and not all(matched.values()):
                 raise ValueError(f"Not all patterns ({matched}) matched sample keys ({sample.keys()}).")
- 
+
             yield new_sample
 
     def __len__(self) -> int:
@@ -440,7 +451,10 @@ class ExtractKeysIterDataPipe(IterDataPipe[Dict]):
     Examples:
         >>> dp = FileLister(...).load_from_tar().webdataset().decode(...).extract_keys(["*.jpg", "*.png"], "*.gt.txt")
     """
-    def __init__(self, source_datapipe: IterDataPipe[Dict], *args, duplicate_is_error=True, ignore_missing=False) -> None:
+
+    def __init__(
+        self, source_datapipe: IterDataPipe[Dict], *args, duplicate_is_error=True, ignore_missing=False
+    ) -> None:
         super().__init__()
         self.source_datapipe: IterDataPipe[Dict] = source_datapipe
         self.duplicate_is_error = duplicate_is_error
@@ -499,6 +513,7 @@ class IncrementalShufflerIterDataPipe(IterDataPipe[Dict]):
     Returns:
         a DataPipe yielding a stream of tuples
     """
+
     def __init__(self, source_datapipe: IterDataPipe[Any], rng=None, initial=10, buffer_size=1000):
         super().__init__()
         self.source_datapipe: IterDataPipe[Any] = source_datapipe
@@ -539,9 +554,17 @@ else:
 
 @functional_datapipe("filecache")
 class FileCacheIterDataPipe(IterDataPipe[Dict]):
-    r"""
-    """
-    def __init__(self, source_datapipe: IterDataPipe[Tuple[str, Any]], cachedir=default_cachedir, cachename=cache_by_fname, chunksize=1024**2, verbose=False, makedir=True) -> None:
+    r""" """
+
+    def __init__(
+        self,
+        source_datapipe: IterDataPipe[Tuple[str, Any]],
+        cachedir=default_cachedir,
+        cachename=cache_by_fname,
+        chunksize=1024**2,
+        verbose=False,
+        makedir=True,
+    ) -> None:
         super().__init__()
         if not os.path.exists(cachedir):
             if makedir:
@@ -560,9 +583,9 @@ class FileCacheIterDataPipe(IterDataPipe[Dict]):
             if not os.path.exists(cached):
                 if self.verbose:
                     print(f"# downloading {url} to {cached}", file=sys.stderr)
-                with open(cached+".temp", "wb") as dest:
+                with open(cached + ".temp", "wb") as dest:
                     shutil.copyfileobj(stream, dest, self.chunksize)
-                os.rename(cached+".temp", cached)
+                os.rename(cached + ".temp", cached)
             if self.verbose:
                 print(f"# returning {cached}", file=sys.stderr)
             cached_stream = open(cached, "rb")
