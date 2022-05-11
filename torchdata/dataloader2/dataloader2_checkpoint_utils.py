@@ -8,17 +8,12 @@ import logging
 import pickle
 from typing import Any, Dict, Optional, Tuple
 
-from torchdata.dataloader2.dataloader2 import (
-    READING_SERVICE_STATE_KEY_NAME,
-    SERIALIZED_DATAPIPE_KEY_NAME,
-)
+from torchdata.dataloader2.dataloader2 import READING_SERVICE_STATE_KEY_NAME, SERIALIZED_DATAPIPE_KEY_NAME
 
 logger: logging.Logger = logging.getLogger()
 
 
-def try_deserialize_as_dlv2_checkpoint(
-    checkpoint_bytes: Optional[bytes],
-) -> Tuple[bool, Optional[Dict[str, Any]]]:
+def try_deserialize_as_dlv2_checkpoint(checkpoint_bytes: Optional[bytes]) -> Tuple[bool, Optional[Dict[str, Any]]]:
     """
     Handling the checkpoint conversion from bytes to DataLoader V2 format.
     Model store checkpoint agent only store ByteIO/Tensor/ShardedTensor.
@@ -44,14 +39,9 @@ def try_deserialize_as_dlv2_checkpoint(
                 logger.info("Checkpoint deserialized as dataloader v2 checkpoing.")
                 return True, deserialized_state_dict
     except pickle.UnpicklingError:
-        logger.info(
-            "Reader checkpoint UnpicklingError. Proceed as dataloader v1 checkpoint."
-        )
+        logger.info("Reader checkpoint UnpicklingError. Proceed as dataloader v1 checkpoint.")
     except Exception:
-        logger.warn(
-            "Exception when deserializing reader checkpoint as dataloader v2 "
-            "checkpoint."
-        )
+        logger.warn("Exception when deserializing reader checkpoint as dataloader v2 checkpoint")
         raise
     return False, None
 

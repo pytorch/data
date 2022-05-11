@@ -9,7 +9,7 @@ from typing import List, Type
 
 from torch.utils.data import IterDataPipe
 
-from ._graph_utils import traverse, DataPipeGraph
+from ._graph_utils import DataPipeGraph, traverse
 
 
 # In case that there will be multiple datapipe needs to be adapted
@@ -79,9 +79,7 @@ def _remove_dp(recv_dp, send_graph: DataPipeGraph, datapipe: IterDataPipe) -> No
 
 # For each `recv_dp`, find if the source_datapipe needs to be replaced by the new one.
 # If found, find where the `old_dp` is located in `recv_dp` and switch it to the `new_dp`
-def _replace_dp(
-    recv_dp, send_graph: DataPipeGraph, old_dp: IterDataPipe, new_dp: IterDataPipe  # pyre-ignore
-) -> None:
+def _replace_dp(recv_dp, send_graph: DataPipeGraph, old_dp: IterDataPipe, new_dp: IterDataPipe) -> None:  # pyre-ignore
     for send_dp in send_graph:
         if send_dp is old_dp:
             _assign_attr(recv_dp, old_dp, new_dp, inner_dp=True)

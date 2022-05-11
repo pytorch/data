@@ -9,13 +9,11 @@ import unittest
 from typing import Iterator, List, Tuple, TypeVar
 
 import expecttest
-from torchdata.dataloader2 import (
-    DataLoader2,
-    MultiProcessingReadingService,
-    ReadingServiceInterface,
-)
-from torchdata.dataloader2.graph import traverse, find_dps, replace_dp, remove_dp
+
+from _utils._common_utils_for_test import IS_WINDOWS
 from torch.utils.data import IterDataPipe
+from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService, ReadingServiceInterface
+from torchdata.dataloader2.graph import find_dps, remove_dp, replace_dp, traverse
 from torchdata.datapipes.iter import IterableWrapper, Mapper
 
 T_co = TypeVar("T_co", covariant=True)
@@ -124,9 +122,7 @@ class TestGraph(expecttest.TestCase):
         ) = self._get_datapipes()
 
         graph = remove_dp(graph, m1)
-        exp_g1 = {
-            dp: {m2: {c1: {dm: {ub: {src_dp: {}}}}}, c2: {dm: {ub: {src_dp: {}}}}}
-        }
+        exp_g1 = {dp: {m2: {c1: {dm: {ub: {src_dp: {}}}}}, c2: {dm: {ub: {src_dp: {}}}}}}
         self.assertEqual(graph, exp_g1)
         self.assertEqual(traverse(dp, only_datapipe=True), exp_g1)
 
@@ -164,8 +160,14 @@ class TestGraph(expecttest.TestCase):
         for new_dp in rs.adaptors:
             self.assertFalse(new_dp.started)
 
+    @unittest.skipIf(IS_WINDOWS, "Fork is required for lambda")
     def test_multiprocessing_reading_service(self) -> None:
         _, (*_, dp) = self._get_datapipes()  # pyre-ignore
+
+        import torch.multiprocessing as mp
+
+        mp.set_start_method("fork")
+
         rs = MultiProcessingReadingService(2, persistent_workers=True)
         dl = DataLoader2(dp, reading_service=rs)
         d1 = list(dl)
