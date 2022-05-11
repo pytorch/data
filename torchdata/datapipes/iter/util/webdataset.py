@@ -226,7 +226,12 @@ class FileDecoderIterDataPipe(IterDataPipe[Dict]):
     """
 
     def __init__(
-        self, source_datapipe: IterDataPipe[Tuple[str, Any]], *args, must_decode=True, defaults=default_decoders, **kw
+        self,
+        source_datapipe: IterDataPipe[Tuple[str, Any]],
+        *args,
+        must_decode=True,
+        defaults=default_decoders,
+        **kw,
     ) -> None:
         super().__init__()
         self.source_datapipe: IterDataPipe[Tuple[str, Any]] = source_datapipe
@@ -402,7 +407,7 @@ class RenameKeysIterDataPipe(IterDataPipe[Dict]):
         self.keep_unselected = keep_unselected
         self.duplicate_is_error = duplicate_is_error
         self.renamings = [(pattern, output) for output, pattern in args]
-        self.renamings += [(pattern, output) for output, pattern in kw.items()]
+        self.renamings += [("*." + pattern, output) for output, pattern in kw.items()]
 
     def __iter__(self) -> Iterator[Dict]:
         for sample in self.source_datapipe:
