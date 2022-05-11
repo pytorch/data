@@ -78,7 +78,9 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         b'BSD 3-Clause License'
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], timeout: Optional[float] = None, **kwargs : Optional[Dict[str, Any]]) -> None:
+    def __init__(
+        self, source_datapipe: IterDataPipe[str], timeout: Optional[float] = None, **kwargs: Optional[Dict[str, Any]]
+    ) -> None:
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.timeout = timeout
         self.query_params = kwargs
@@ -89,7 +91,6 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
                 yield _get_response_from_http(url, timeout=self.timeout, **self.query_params)
             else:
                 yield _get_response_from_http(url, timeout=self.timeout)
-
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
