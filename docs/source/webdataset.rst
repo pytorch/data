@@ -154,4 +154,3 @@ they can be used with other kinds of datasets too:
 - ExtractKeys / .extract_keys -- extract sample fields and return tuple based on glob patterns
 - IncrementalShuffler / .incshuffle -- inline shuffling of shards and samples with low startup latency
 - FileCache / .filecache -- cache files / shards in a local data directory
-
