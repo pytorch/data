@@ -39,7 +39,7 @@ else()
   message(STATUS "Using third_party/aws-sdk-cpp.")
 
   set(aws_cpp_sdk_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/aws-sdk-cpp)
-  set(aws_cpp_sdk_INSTALL "${CMAKE_BINARY_DIR}/aws_cpp_sdk_INSTALL")
+  set(aws_cpp_sdk_INSTALL "${CMAKE_CURRENT_SOURCE_DIR}/aws_cpp_sdk_INSTALL")
   set(AWSSDK_INCLUDE_DIRS "${aws_cpp_sdk_INSTALL}/include")
 
   set(
