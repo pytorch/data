@@ -170,27 +170,27 @@ class ShardExpanderIterDataPipe(IterDataPipe[Dict]):
         return len(self.source_datapipe)
 
 
-def decode_bin(stream):
+def _decode_bin(stream):
     return stream.read()
 
 
-def decode_text(stream):
+def _decode_text(stream):
     binary = stream.read()
     return binary.decode("utf-8")
 
 
-def decode_pickle(stream):
+def _decode_pickle(stream):
     return pickle.load(stream)
 
 
 default_decoders = [
-    ("*.bin", decode_bin),
-    ("*.txt", decode_text),
-    ("*.pyd", decode_pickle),
+    ("*.bin", _decode_bin),
+    ("*.txt", _decode_text),
+    ("*.pyd", _decode_pickle),
 ]
 
 
-def find_decoder(decoders, path):
+def _find_decoder(decoders, path):
     fname = re.sub(r".*/", "", path)
     if fname.startswith("__"):
         return lambda x: x
@@ -241,7 +241,7 @@ class FileDecoderIterDataPipe(IterDataPipe[Dict]):
 
     def __iter__(self) -> Iterator[Tuple[str, Any]]:
         for path, stream in self.source_datapipe:
-            decoder = find_decoder(self.decoders, path)
+            decoder = _find_decoder(self.decoders, path)
             if decoder is None:
                 if self.must_decode:
                     raise ValueError(f"No decoder found for {path}.")
@@ -407,7 +407,7 @@ class RenameKeysIterDataPipe(IterDataPipe[Dict]):
         self.keep_unselected = keep_unselected
         self.duplicate_is_error = duplicate_is_error
         self.renamings = [(pattern, output) for output, pattern in args]
-        self.renamings += [("*." + pattern, output) for output, pattern in kw.items()]
+        self.renamings += [(pattern, output) for output, pattern in kw.items()]
 
     def __iter__(self) -> Iterator[Dict]:
         for sample in self.source_datapipe:
