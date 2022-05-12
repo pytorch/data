@@ -73,13 +73,16 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: ${{ inputs.branch }}
+          submodules: recursive
       - name: Install PyTorch and Build TorchData Wheel
         shell: bash
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
           BUILD_S3: 1
-        run: packaging/build_wheel.sh
+        run: |
+          echo "/home/runner/.local/bin" >> $GITHUB_PATH
+          packaging/build_wheel.sh
       - name: Install TorchData Wheel
         shell: bash
         run: pip3 install dist/torchdata*.whl
@@ -222,7 +225,7 @@ jobs:
       - name: Display All TorchData Conda Package
         if: steps.trigger_upload.outputs.value == 'true'
         run: ls -lh ./*/torchdata-*.tar.bz2
-      # - name: Build & Upload Wheels to Conda
+      # - name: Upload Packages to Conda
       #   if: steps.trigger_upload.outputs.value == 'true'
       #   shell: bash
       #   env:

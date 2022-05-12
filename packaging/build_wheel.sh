@@ -16,7 +16,7 @@ export BUILD_TYPE="wheel"
 
 export SOURCE_ROOT_DIR="$PWD"
 setup_env
-pip_install numpy future wheel
+pip_install numpy future wheel cmake ninja
 setup_pip_pytorch_version
 
 git submodule update --init --recursive
