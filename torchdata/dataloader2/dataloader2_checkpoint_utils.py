@@ -16,7 +16,6 @@ logger: logging.Logger = logging.getLogger()
 def try_deserialize_as_dlv2_checkpoint(checkpoint_bytes: Optional[bytes]) -> Tuple[bool, Optional[Dict[str, Any]]]:
     """
     Handling the checkpoint conversion from bytes to DataLoader V2 format.
-    Model store checkpoint agent only store ByteIO/Tensor/ShardedTensor.
 
     Args:
         checkpoint_bytes: checkpoint in bytes format.
