@@ -28,16 +28,9 @@ class ReadingServiceInterface(ABC):
             Adapated IterDataPipe.
 
         Example:
-            Internal:
-                DppReadingService finds Dpp executable datapipe,
-                gets information (e.g. Koski DF, Conversion Metadata, Post-collate JIT transforms, ...) from it,
-                constructs DppIterDataPipe to hold information, and replace original graph with DppIterDataPipe.
-
-                Note: Dpp executable datapipe will always be the 1st DataPipe in graph,
-                    which is a TracingArrowDataPipe converted IterDataPipe via collate.
-            OSS:
-                MultiProcessingReadingService finds information about sharding,
-                separates graph by multiple pieces and reconnects it using queues. Spawns processes/threads.
+            MultiProcessingReadingService finds information about sharding,
+            separates graph by multiple pieces and reconnects it using queues.
+            Spawns processes/threads.
         """
         pass
 
@@ -47,11 +40,7 @@ class ReadingServiceInterface(ABC):
         Called in DataLoader shutdown and __del__
 
         Example:
-            Internal:
-                DppReadingService invalidate Dpp Client.
-
-            OSS:
-                MultiProcessingReadingService invalidate states & handle persistent worker.
+            MultiProcessingReadingService invalidate states & handle persistent worker.
         """
         pass
 
@@ -61,11 +50,7 @@ class ReadingServiceInterface(ABC):
         Called at the beginning of every time getting DataLoader iterator.
 
         Example:
-            Internal:
-                DppReadingService spins up DPP service by creating session.
-
-            OSS:
-                MultiProcessingReadingService - starts prefetching of the items from the graph.
+            MultiProcessingReadingService starts prefetching items from the graph.
         """
         pass
 
@@ -74,10 +59,7 @@ class ReadingServiceInterface(ABC):
         ReadingService end service.
 
         Example:
-            Internal:
-                DppReadingService destroy DPP service by destroying session.
-            OSS:
-                MultiprocessingReadingService cleans up processes.
+            MultiprocessingReadingService cleans up processes.
         """
         pass
 
@@ -102,12 +84,6 @@ class CheckpointableReadingServiceInterface(ReadingServiceInterface):
 
         Returns:
             Adapted IterDataPipe.
-
-        Example:
-            Internal:
-                Same as `initialize`.
-            OSS:
-                Not implemented in H1.
         """
         pass
 
