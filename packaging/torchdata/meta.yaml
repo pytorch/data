@@ -6,11 +6,14 @@ source:
   path: "{{ environ.get('SOURCE_ROOT_DIR') }}"
 
 requirements:
+  build:
+    - cmake
+    - {{ compiler('c') }} # [win]
+    - {{ compiler('cxx') }} # [win]
+    - curl # [not win]
   host:
     - python
     - setuptools
-    - urllib3>=1.25
-    - requests
     - cpuonly
     {{ environ.get('CONDA_PYTORCH_BUILD_CONSTRAINT') }}
   run:
