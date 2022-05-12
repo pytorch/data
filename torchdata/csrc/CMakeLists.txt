@@ -18,9 +18,6 @@ if(BUILD_S3)
     find_package(Python3 COMPONENTS Interpreter Development)
   endif()
 
-  list(APPEND CMAKE_PREFIX_PATH ${AWSSDK_DIR})
-  find_package(AWSSDK REQUIRED COMPONENTS s3 transfer)
-
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
   set(
@@ -31,14 +28,23 @@ if(BUILD_S3)
 
   add_library(_torchdata MODULE ${EXTENSION_SOURCES})
 
-  target_include_directories(_torchdata PRIVATE ${PROJECT_SOURCE_DIR} ${Python_INCLUDE_DIR} ${pybind11_INCLUDE_DIRS})
+  if(NOT USE_SYSTEM_AWS_SDK_CPP)
+    add_dependencies(_torchdata aws-cpp-sdk)
+  endif()
 
+  target_include_directories(
+    _torchdata
+    PRIVATE
+    ${PROJECT_SOURCE_DIR}
+    ${Python_INCLUDE_DIR}
+    ${pybind11_INCLUDE_DIRS}
+    ${AWSSDK_INCLUDE_DIRS}
+    )
 
-  message(STATUS "AWSSDK linked libs: ${AWSSDK_LINK_LIBRARIES}")
   target_link_libraries(
     _torchdata
     PRIVATE
-    ${AWSSDK_LINK_LIBRARIES}
+    ${AWSSDK_LIBRARIES}
     ${Python_LIBRARIES}
     ${ADDITIONAL_ITEMS}
     )
