@@ -81,6 +81,7 @@ jobs:
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
           BUILD_S3: 1
         run: |
+          pip install cmake ninja
           echo "/home/runner/.local/bin" >> $GITHUB_PATH
           packaging/build_wheel.sh
       - name: Install TorchData Wheel
