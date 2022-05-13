@@ -12,6 +12,7 @@ requirements:
     - {{ compiler('c') }} # [win]
     - {{ compiler('cxx') }} # [win]
     - curl # [not win]
+    {{ environ.get('CONDA_PYTORCH_BUILD_CONSTRAINT') }}
   host:
     - python
     - setuptools
