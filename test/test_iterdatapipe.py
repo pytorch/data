@@ -21,6 +21,7 @@ from _utils._common_utils_for_test import IDP_NoLen, reset_after_n_next_calls
 from torchdata.datapipes.iter import (
     BucketBatcher,
     Cycler,
+    FileDecoder,
     Header,
     InBatchShuffler,
     IndexAdder,
@@ -901,6 +902,25 @@ class TestIterDataPipe(expecttest.TestCase):
         output_dp = input_dp1.mux_longest(input_dp_no_len)
         with self.assertRaises(TypeError):
             len(output_dp)
+
+    def test_decoder(self):
+
+        # Functional Test: verify that decoders are invoked and results handled correctly
+        def decode_junk(_):
+            return "junk"
+
+        stage1 = IterableWrapper([
+            ("test000.bin", io.BytesIO(b"000")),
+            ("test000.txt", io.BytesIO(b"000")),
+            ("test000.jnk", io.BytesIO(b"")),
+            ("test001.bin", io.BytesIO(b"001")),
+            ("test001.txt", io.BytesIO(b"001")),
+        ])
+        stage2 = FileDecoder(stage1, ("*.jnk", decode_junk))
+        output = list(iter(stage2))
+        assert len(output) == 5
+        assert output[1][1] == "000"
+        assert output[2][1] == "junk"
 
     def test_zip_longest_iterdatapipe(self):
 
