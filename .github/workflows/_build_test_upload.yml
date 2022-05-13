@@ -199,6 +199,15 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: ${{ inputs.branch }}
+          submodules: recursive
+      - name: Setup msbuild on Windows
+        if: startsWith( matrix.os, 'windows' )
+        uses: microsoft/setup-msbuild@v1.1
+      - name: Set up Visual Studio shell
+        if: startsWith( matrix.os, 'windows' )
+        uses: egor-tensin/vs-shell@v2
+        with:
+          arch: x64
       - name: Build TorchData for Conda
         shell: bash -l {0}
         env:
@@ -300,6 +309,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: ${{ inputs.branch }}
+          submodules: recursive
       - name: Install Dependencies
         run: |
           echo `python3 --version`
