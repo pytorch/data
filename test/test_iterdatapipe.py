@@ -34,6 +34,7 @@ from torchdata.datapipes.iter import (
     ParagraphAggregator,
     Rows2Columnar,
     SampleMultiplexer,
+    ShardExpander,
     UnZipper,
 )
 from torchdata.datapipes.map import MapDataPipe, SequenceWrapper
@@ -901,6 +902,15 @@ class TestIterDataPipe(expecttest.TestCase):
         output_dp = input_dp1.mux_longest(input_dp_no_len)
         with self.assertRaises(TypeError):
             len(output_dp)
+
+    def test_shardexpand(self):
+
+        # Functional Test: ensure expansion generates the right number of shards
+        stage1 = IterableWrapper(["ds-{000000..000009}.tar"])
+        print(list(iter(stage1)))
+        stage2 = ShardExpander(stage1)
+        output = list(iter(stage2))
+        assert len(output) == 10
 
     def test_zip_longest_iterdatapipe(self):
 
