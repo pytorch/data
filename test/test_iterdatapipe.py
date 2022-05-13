@@ -936,6 +936,5 @@ class TestIterDataPipe(expecttest.TestCase):
         # __len__ Test: length matches the length of the shortest input
         self.assertEqual(len(output_dp), 10)
 
-
 if __name__ == "__main__":
     unittest.main()
