@@ -11,15 +11,14 @@ requirements:
     - ninja
     - {{ compiler('c') }} # [win]
     - {{ compiler('cxx') }} # [win]
-    {{ environ.get('CONDA_PYTORCH_BUILD_CONSTRAINT') }}
-  host:
-    - python
-    - setuptools
-    - cpuonly
     - curl # [not win]
     - openssl # [unix]
     - zlib # [unix]
+    - python
     {{ environ.get('CONDA_PYTORCH_BUILD_CONSTRAINT') }}
+  host:
+    - setuptools
+    - cpuonly
   run:
     - python
     - urllib3>=1.25
@@ -30,6 +29,7 @@ build:
   string: py{{py}}
   script_env:
     - BUILD_VERSION
+    - BUILD_S3
 
 test:
   imports:
