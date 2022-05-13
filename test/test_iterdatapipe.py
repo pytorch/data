@@ -32,6 +32,7 @@ from torchdata.datapipes.iter import (
     MapKeyZipper,
     MaxTokenBucketizer,
     ParagraphAggregator,
+    RenameKeys,
     Rows2Columnar,
     SampleMultiplexer,
     UnZipper,
@@ -901,6 +902,18 @@ class TestIterDataPipe(expecttest.TestCase):
         output_dp = input_dp1.mux_longest(input_dp_no_len)
         with self.assertRaises(TypeError):
             len(output_dp)
+
+    def test_renamer(self):
+
+        # Functional Test: verify that renaming by patterns yields correct output
+        stage1 = IterableWrapper([
+            {"1.txt": "1", "1.bin": "1b"},
+            {"2.txt": "2", "2.bin": "2b"},
+        ])
+        stage2 = RenameKeys(stage1, t="*.txt", b="*.bin")
+        output = list(iter(stage2))
+        assert len(output) == 2
+        assert set(output[0].keys()) == set(["t", "b"])
 
     def test_zip_longest_iterdatapipe(self):
 
