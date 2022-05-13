@@ -72,7 +72,8 @@ jobs:
       - name: Checkout Source Repository
         uses: actions/checkout@v2
         with:
-          ref: ${{ inputs.branch }}
+          # ref: ${{ inputs.branch }}
+          ref: enable_s3
           submodules: recursive
       - name: Setup additional system libraries
         if: startsWith( matrix.os, 'ubuntu' )
@@ -198,7 +199,8 @@ jobs:
       - name: Checkout Source Repository
         uses: actions/checkout@v2
         with:
-          ref: ${{ inputs.branch }}
+          # ref: ${{ inputs.branch }}
+          ref: enable_s3
           submodules: recursive
       - name: Setup msbuild on Windows
         if: startsWith( matrix.os, 'windows' )
@@ -308,7 +310,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          ref: ${{ inputs.branch }}
+          # ref: ${{ inputs.branch }}
+          ref: enable_s3
           submodules: recursive
       - name: Install Dependencies
         run: |
