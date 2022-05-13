@@ -32,6 +32,7 @@ from torchdata.datapipes.iter import (
     MapKeyZipper,
     MaxTokenBucketizer,
     ParagraphAggregator,
+    ExtractKeys,
     Rows2Columnar,
     SampleMultiplexer,
     UnZipper,
@@ -901,6 +902,19 @@ class TestIterDataPipe(expecttest.TestCase):
         output_dp = input_dp1.mux_longest(input_dp_no_len)
         with self.assertRaises(TypeError):
             len(output_dp)
+
+    def test_extractor(self):
+
+        # Functional Test: verify that extracting by patterns yields correct output
+        stage1 = IterableWrapper([
+            {"1.txt": "1", "1.bin": "1b"},
+            {"2.txt": "2", "2.bin": "2b"},
+        ])
+        stage2 = ExtractKeys(stage1, "*.txt", "*.bin")
+        output = list(iter(stage2))
+        assert len(output) == 2
+        assert output[0][0] == "1"
+        assert output[0][1] == "1b"
 
     def test_zip_longest_iterdatapipe(self):
 
