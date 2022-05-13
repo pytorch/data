@@ -74,6 +74,20 @@ jobs:
         with:
           ref: ${{ inputs.branch }}
           submodules: recursive
+      - name: Setup additional system libraries
+        if: startsWith( matrix.os, 'ubuntu' )
+        run: |
+          sudo add-apt-repository multiverse
+          sudo apt update
+          sudo apt install libssl-dev libcurl4-openssl-dev zlib1g-dev
+      - name: Setup msbuild on Windows
+        if: startsWith( matrix.os, 'windows' )
+        uses: microsoft/setup-msbuild@v1.1
+      - name: Set up Visual Studio shell
+        if: startsWith( matrix.os, 'windows' )
+        uses: egor-tensin/vs-shell@v2
+        with:
+          arch: x64
       - name: Install PyTorch and Build TorchData Wheel
         shell: bash
         env:
