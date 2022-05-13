@@ -18,5 +18,7 @@ export SOURCE_ROOT_DIR="$PWD"
 setup_env
 setup_conda_pytorch_constraint
 
+conda install ${CONDA_PYTORCH_BUILD_CONSTRAINT:2} $CONDA_CHANNEL_FLAGS
+
 mkdir -p conda-bld
 conda build $CONDA_CHANNEL_FLAGS --no-anaconda-upload --output-folder conda-bld --python "$PYTHON_VERSION" packaging/torchdata
