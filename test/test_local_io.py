@@ -34,6 +34,7 @@ from torchdata.datapipes.iter import (
     IoPathSaver,
     IterableWrapper,
     JsonParser,
+    PipeOpener,
     RarArchiveLoader,
     Saver,
     TarArchiveLoader,
@@ -777,6 +778,35 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         assert len(items) == nsamples
         assert items[0][".txt"] == "text0"
         assert items[9][".bin"] == "bin9"
+
+
+    def test_popener_local_file_cat(self) -> None:
+        nfiles = 100
+        testdata = b"hello, world"
+        dest = os.path.join(self.temp_dir.name, "testdata")
+        with open(dest, "wb") as stream:
+            stream.write(testdata)
+        stage1 = IterableWrapper([dest] * nfiles)
+        stage2 = PipeOpener(stage1)
+        count = 0
+        for path, stream in stage2:
+            data = stream.read()
+            count += 1
+            assert data == testdata
+        assert count == nfiles
+
+
+    def test_popener_pipe_url(self) -> None:
+        nfiles = 100
+        url = "pipe:echo hello world"
+        stage1 = IterableWrapper([url] * nfiles)
+        stage2 = PipeOpener(stage1)
+        count = 0
+        for path, stream in stage2:
+            data = stream.read()
+            count += 1
+            assert data == b"hello world\n"
+        assert count == nfiles
 
 
 if __name__ == "__main__":
