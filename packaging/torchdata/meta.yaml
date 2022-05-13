@@ -11,12 +11,14 @@ requirements:
     - ninja
     - {{ compiler('c') }} # [win]
     - {{ compiler('cxx') }} # [win]
-    - curl # [not win]
     {{ environ.get('CONDA_PYTORCH_BUILD_CONSTRAINT') }}
   host:
     - python
     - setuptools
     - cpuonly
+    - curl # [not win]
+    - openssl # [unix]
+    - zlib # [unix]
     {{ environ.get('CONDA_PYTORCH_BUILD_CONSTRAINT') }}
   run:
     - python
