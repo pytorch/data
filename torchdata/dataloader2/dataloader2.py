@@ -163,6 +163,7 @@ class DataLoader2(Generic[T_co]):
         data_loader.reading_service_state = reading_service_state
         return data_loader
 
+
     def load_state_dict(self, state: Dict[str, Any]) -> None:
         # edge case checking
         # iterator has already been created: 1) iterator is just created 2) iterator is created and iter is exhausted
