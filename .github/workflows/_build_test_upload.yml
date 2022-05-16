@@ -89,12 +89,24 @@ jobs:
         uses: egor-tensin/vs-shell@v2
         with:
           arch: x64
+      - name: Determine if build AWSSDK
+        shell: bash
+        run: |
+          # Disable AWSSDK on MacOS due to the minimum version
+          # of MACOSX_DEPLOYMENT_TARGET is 10.13
+          if ${{ startsWith( matrix.os, 'macos' ) }}; then
+            BUILD_S3=0
+          else
+            BUILD_S3=1
+          fi
+          echo "::set-output name=value::$BUILD_S3"
+        id: build_s3
       - name: Install PyTorch and Build TorchData Wheel
         shell: bash
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
-          BUILD_S3: 1
+          BUILD_S3: ${{ steps.build_s3.outputs.value }}
         run: |
           pip install cmake ninja
           echo "/home/runner/.local/bin" >> $GITHUB_PATH
@@ -211,7 +223,7 @@ jobs:
       - name: Determine if build AWSSDK
         shell: bash
         run: |
-          if [[ ${{ startsWith( matrix.os, 'windows' ) }} ]]; then
+          if ${{ startsWith( matrix.os, 'macos' ) || startsWith( matrix.os, 'windows' ) }}; then
             BUILD_S3=0
           else
             BUILD_S3=1
