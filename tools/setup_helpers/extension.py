@@ -77,10 +77,6 @@ class CMakeBuild(build_ext):
         if ext.name != "torchdata._torchdata":
             return
 
-        from .gen_pyi import gen_pyi
-
-        gen_pyi()
-
         extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
 
         # required for auto-detection of auxiliary "native" libs
