@@ -30,7 +30,7 @@ def get_lines_base_file(base_file_path: str, to_skip: Optional[Set[str]] = None)
 
 
 def gen_pyi() -> None:
-    DATAPIPE_DIR = Path(__file__).parent.parent.resolve() / "torchdata" / "datapipes"
+    DATAPIPE_DIR = Path(__file__).parent.parent.parent.resolve() / "torchdata" / "datapipes"
     print(f"Generating DataPipe Python interface file in {DATAPIPE_DIR}")
 
     # Base __init__ file

@@ -143,10 +143,7 @@ if __name__ == "__main__":
     print("-- Building version " + VERSION)
 
     if RUN_BUILD_DEP:
-        from tools.gen_pyi import gen_pyi
-
         _check_submodules()
-        gen_pyi()
 
     setup(
         # Metadata
