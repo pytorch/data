@@ -6,11 +6,13 @@ source:
   path: "{{ environ.get('SOURCE_ROOT_DIR') }}"
 
 requirements:
+  # TODO: Figure out how to add build-time python dependency (PyTorch for codegen)
   build:
     - cmake
     - ninja
-    - {{ compiler('c') }} # [win]
-    - {{ compiler('cxx') }} # [win]
+    # TODO: Enable AWSSDK on windows
+    # - {{ compiler('c') }} # [win]
+    # - {{ compiler('cxx') }} # [win]
     - python
     - setuptools
     - cpuonly
