@@ -12,6 +12,8 @@ import lzma
 import os
 import subprocess
 import tarfile
+import tempfile
+import time
 import unittest
 import warnings
 import zipfile
@@ -33,14 +35,18 @@ from torchdata.datapipes.iter import (
     IoPathFileOpener,
     IoPathSaver,
     IterableWrapper,
+    IterDataPipe,
     JsonParser,
     RarArchiveLoader,
     Saver,
+    StreamReader,
     TarArchiveLoader,
     WebDataset,
     XzFileLoader,
     ZipArchiveLoader,
 )
+
+from torch.utils.data import DataLoader
 
 try:
     import iopath
@@ -62,6 +68,10 @@ try:
 except (ModuleNotFoundError, FileNotFoundError):
     HAS_RAR_TOOLS = False
 skipIfNoRarTools = unittest.skipIf(not HAS_RAR_TOOLS, "no rar tools")
+
+
+def _unbatch(x):
+    return x[0]
 
 
 class TestDataPipeLocalIO(expecttest.TestCase):
@@ -589,6 +599,30 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         source_dp = IterableWrapper(sorted(name_to_data.items()))
         saver_dp = source_dp.save_to_disk(filepath_fn=filepath_fn, mode="wb")
         list(saver_dp)
+
+    def test_disk_cache_locks(self):
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            file_name = os.path.join(tmpdirname, 'test.bin')
+            dp = IterableWrapper([file_name])
+            dp = dp.on_disk_cache(filepath_fn=lambda x: x)
+
+            def _slow_fn(x):
+                with open(os.path.join(tmpdirname, str(os.getpid())), 'w') as pid_fh:
+                    pid_fh.write('anything')
+                time.sleep(2)
+                return (x, 'str')
+            dp = dp.map(_slow_fn)
+            dp = dp.end_caching(mode="t", filepath_fn=lambda x: x)
+            dp = FileOpener(dp)
+            dp = StreamReader(dp)
+            dl = DataLoader(dp, num_workers=10, multiprocessing_context="spawn", batch_size=1, collate_fn=_unbatch)
+            result = list(dl)
+            all_files = []
+            for (_, _, filenames) in os.walk(tmpdirname):
+                all_files += filenames
+            # We expect only two files, one with pid and 'downloaded' one
+            self.assertEquals(2, len(all_files))
+            self.assertEquals('str', result[0][1])
 
     # TODO(120): this test currently only covers reading from local
     # filesystem. It needs to be modified once test data can be stored on

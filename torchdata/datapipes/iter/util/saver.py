@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
+import portalocker
 
 from typing import Any, Callable, Iterator, Optional, Tuple, Union
 
@@ -56,7 +57,7 @@ class SaverIterDataPipe(IterDataPipe[str]):
             dirname = os.path.dirname(filepath)
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
-            with open(filepath, self.mode) as f:
+            with portalocker.Lock(filepath, self.mode) as f:
                 f.write(data)
             yield filepath
 

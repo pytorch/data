@@ -7,7 +7,9 @@
 import hashlib
 import inspect
 import os.path
+import portalocker
 import sys
+import time
 
 from collections import deque
 from functools import partial
@@ -106,7 +108,7 @@ def _hash_check(filepath, hash_dict, hash_type):
     else:
         hash_func = hashlib.md5()
 
-    with open(filepath, "rb") as f:
+    with portalocker.Lock(filepath, "rb") as f:
         chunk = f.read(1024 ** 2)
         while chunk:
             hash_func.update(chunk)
@@ -145,7 +147,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         >>> hash_dict = {"expected_filepath": expected_MD5_hash}
         >>> cache_dp = url.on_disk_cache(filepath_fn=_filepath_fn, hash_dict=_hash_dict, hash_type="md5")
         >>> # You must call ``.end_caching`` at a later point to stop tracing and save the results to local files.
-        >>> cache_dp = HttpReader(cache_dp).end_caching(mode="wb". filepath_fn=_filepath_fn)
+        >>> cache_dp = HttpReader(cache_dp).end_caching(mode="wb", filepath_fn=_filepath_fn)
     """
 
     _temp_dict: Dict = {}
@@ -184,22 +186,31 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     @staticmethod
     def _cache_check_fn(data, filepath_fn, hash_dict, hash_type, extra_check_fn):
         filepaths = data if filepath_fn is None else filepath_fn(data)
+        result = True
         if not isinstance(filepaths, (list, tuple)):
             filepaths = [
                 filepaths,
             ]
 
         for filepath in filepaths:
-            if not os.path.exists(filepath):
-                return False
+            promise_filepath = filepath + '.promise'
+            if not os.path.exists(promise_filepath):
+                if not os.path.exists(filepath):
+                        with portalocker.Lock(promise_filepath, 'w') as fh:
+                            fh.write('!')
+                        result = False
 
-            if hash_dict is not None and not _hash_check(filepath, hash_dict, hash_type):
-                return False
+                elif hash_dict is not None and not _hash_check(filepath, hash_dict, hash_type):
+                        with portalocker.Lock(promise_filepath, 'w') as fh:
+                                fh.write('!')
+                        result = False
 
-            if extra_check_fn is not None and not extra_check_fn(filepath):
-                return False
+                elif extra_check_fn is not None and not extra_check_fn(filepath):
+                        with portalocker.Lock(promise_filepath, 'w') as fh:
+                            fh.write('!')
+                        result = False
 
-        return True
+        return result
 
     def _end_caching(self):
         filepath_fn, hash_dict, hash_type, extra_check_fn = OnDiskCacheHolderIterDataPipe._temp_dict.pop(self)
@@ -231,6 +242,16 @@ def _read_bytes(fd):
 def _read_str(fd):
     return "".join(fd)
 
+def _wait_promise_fn(filename):
+    promise_filename = filename + '.promise'
+    while os.path.exists(promise_filename):
+        time.sleep(0.01)
+    return filename
+
+def _promise_fulfilled_fn(filename):
+    promise_filename = filename + '.promise'
+    os.unlink(promise_filename)
+    return filename
 
 @functional_datapipe("end_caching")
 class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
@@ -259,7 +280,7 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
         >>> # You must call ``.on_disk_cache`` at some point before ``.end_caching``
         >>> cache_dp = url.on_disk_cache(filepath_fn=_filepath_fn, hash_dict=_hash_dict, hash_type="md5")
         >>> # You must call ``.end_caching`` at a later point to stop tracing and save the results to local files.
-        >>> cache_dp = HttpReader(cache_dp).end_caching(mode="wb". filepath_fn=_filepath_fn)
+        >>> cache_dp = HttpReader(cache_dp).end_caching(mode="wb", filepath_fn=_filepath_fn)
     """
 
     def __new__(cls, datapipe, mode="wb", filepath_fn=None, *, same_filepath_fn=False, skip_read=False):
@@ -276,6 +297,7 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
 
         _filepath_fn, _hash_dict, _hash_type, _ = OnDiskCacheHolderIterDataPipe._temp_dict[cache_holder]
         cached_dp = cache_holder._end_caching()
+        cached_dp = cached_dp.map(_wait_promise_fn)
         cached_dp = FileLister(cached_dp, recursive=True)
 
         if same_filepath_fn:
@@ -297,6 +319,7 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
             todo_dp = todo_dp.check_hash(_hash_dict, _hash_type)
 
         todo_dp = todo_dp.save_to_disk(mode=mode)
+        todo_dp = todo_dp.map(_promise_fulfilled_fn)
 
         return cached_dp.concat(todo_dp)
 
