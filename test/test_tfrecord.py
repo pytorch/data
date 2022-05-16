@@ -24,6 +24,15 @@ from torchdata.datapipes.iter import (
     TFRecordLoader,
 )
 
+try:
+    import google.protobuf as _protobuf
+
+    del _protobuf
+    HAS_PROTOBUF = True
+except ImportError:
+    HAS_PROTOBUF = False
+skipIfNoPROTOBUF = unittest.skipIf(not HAS_PROTOBUF, "no google protobuf")
+
 
 class TestDataPipeTFRecord(expecttest.TestCase):
     def setUp(self):
@@ -34,7 +43,7 @@ class TestDataPipeTFRecord(expecttest.TestCase):
 
     def _ground_truth_data(self):
         for i in range(4):
-            x = torch.range(i * 10, (i + 1) * 10 - 1)
+            x = torch.arange(i * 10, (i + 1) * 10)
             yield {
                 "x_float": x,
                 "x_int": (x * 10).long(),
@@ -43,7 +52,7 @@ class TestDataPipeTFRecord(expecttest.TestCase):
 
     def _ground_truth_seq_data(self):
         for i in range(4):
-            x = torch.range(i * 10, (i + 1) * 10 - 1)
+            x = torch.arange(i * 10, (i + 1) * 10)
             rep = 2 * i + 3
             yield {"x_float": x, "x_int": (x * 10).long(), "x_byte": [b"test str"]}, {
                 "x_float_seq": [x] * rep,
@@ -51,6 +60,7 @@ class TestDataPipeTFRecord(expecttest.TestCase):
                 "x_byte_seq": [[b"test str"]] * rep,
             }
 
+    @skipIfNoPROTOBUF
     @torch.no_grad()
     def test_tfrecord_loader_example_iterdatapipe(self):
         filename = f"{self.temp_dir}/example.tfrecord"
@@ -146,6 +156,7 @@ class TestDataPipeTFRecord(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "doesn't have valid length"):
             len(tfrecord_parser)
 
+    @skipIfNoPROTOBUF
     @torch.no_grad()
     def test_tfrecord_loader_sequence_example_iterdatapipe(self):
         filename = f"{self.temp_dir}/sequence_example.tfrecord"
