@@ -11,7 +11,6 @@ requirements:
     - ninja
     - {{ compiler('c') }} # [win]
     - {{ compiler('cxx') }} # [win]
-  host:
     - python
     - setuptools
     - cpuonly
