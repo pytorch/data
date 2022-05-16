@@ -60,8 +60,8 @@ jobs:
           - ubuntu-latest
           - windows-latest
         python-version:
-          # - 3.7
-          # - 3.8
+          - 3.7
+          - 3.8
           - 3.9
           - "3.10"
     steps:
@@ -186,8 +186,8 @@ jobs:
           - ubuntu-latest
           - windows-latest
         python-version:
-          # - 3.7
-          # - 3.8
+          - 3.7
+          - 3.8
           - 3.9
           - "3.10"
     steps:
@@ -208,20 +208,22 @@ jobs:
           sudo add-apt-repository multiverse
           sudo apt update
           sudo apt install libssl-dev libcurl4-openssl-dev zlib1g-dev
-      - name: Setup msbuild on Windows
-        if: startsWith( matrix.os, 'windows' )
-        uses: microsoft/setup-msbuild@v1.1
-      - name: Set up Visual Studio shell
-        if: startsWith( matrix.os, 'windows' )
-        uses: egor-tensin/vs-shell@v2
-        with:
-          arch: x64
+      - name: Determine if build AWSSDK
+        shell: bash
+        run: |
+          if [[ ${{ startsWith( matrix.os, 'windows' ) }} ]]; then
+            BUILD_S3=0
+          else
+            BUILD_S3=1
+          fi
+          echo "::set-output name=value::$BUILD_S3"
+        id: build_s3
       - name: Build TorchData for Conda
         shell: bash -l {0}
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
-          BUILD_S3: 1
+          BUILD_S3: steps.build_s3.outputs.value
         run: |
           conda activate conda_build_env
           conda install -yq conda-build -c conda-forge
