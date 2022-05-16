@@ -223,7 +223,7 @@ jobs:
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
-          BUILD_S3: steps.build_s3.outputs.value
+          BUILD_S3: ${{ steps.build_s3.outputs.value }}
         run: |
           conda activate conda_build_env
           conda install -yq conda-build -c conda-forge
