@@ -10,6 +10,7 @@ import inspect
 import os.path
 import sys
 import time
+import warnings
 
 from collections import deque
 from functools import partial
@@ -195,22 +196,25 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
             ]
 
         for filepath in filepaths:
+            create_promise = False
             promise_filepath = filepath + ".promise"
             if not os.path.exists(promise_filepath):
                 if not os.path.exists(filepath):
-                    with portalocker.Lock(promise_filepath, "w") as fh:
-                        fh.write("!")
+                    create_promise = True
                     result = False
-
                 elif hash_dict is not None and not _hash_check(filepath, hash_dict, hash_type):
-                    with portalocker.Lock(promise_filepath, "w") as fh:
-                        fh.write("!")
+                    create_promise = True
+                    result = False
+                elif extra_check_fn is not None and not extra_check_fn(filepath):
+                    create_promise = True
                     result = False
 
-                elif extra_check_fn is not None and not extra_check_fn(filepath):
-                    with portalocker.Lock(promise_filepath, "w") as fh:
-                        fh.write("!")
-                    result = False
+            if create_promise:
+                dirname = os.path.dirname(promise_filepath)
+                if not os.path.exists(dirname):
+                    os.makedirs(dirname)
+                with portalocker.Lock(promise_filepath, "w") as fh:
+                    fh.write("!")
 
         return result
 
@@ -260,7 +264,12 @@ def _wait_promise_fn(timeout, filename):
 
 def _promise_fulfilled_fn(filename):
     promise_filename = filename + ".promise"
-    os.unlink(promise_filename)
+    if os.path.exists(promise_filename):
+        os.unlink(promise_filename)
+    else:
+        warnings.warn(
+            f"Attempt to mark {promise_filename} promise as fulfilled failed. Potentially missmatching filename functions of on_disk_cache and end_cache."
+        )
     return filename
 
 
