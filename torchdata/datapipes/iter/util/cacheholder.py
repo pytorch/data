@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import functools
 import hashlib
 import inspect
 import os.path
@@ -110,10 +111,10 @@ def _hash_check(filepath, hash_dict, hash_type):
         hash_func = hashlib.md5()
 
     with portalocker.Lock(filepath, "rb") as f:
-        chunk = f.read(1024**2)
+        chunk = f.read(1024 ** 2)
         while chunk:
             hash_func.update(chunk)
-            chunk = f.read(1024**2)
+            chunk = f.read(1024 ** 2)
 
     return hash_func.hexdigest() == hash_dict[filepath]
 
@@ -244,10 +245,16 @@ def _read_str(fd):
     return "".join(fd)
 
 
-def _wait_promise_fn(filename):
+def _wait_promise_fn(timeout, filename):
     promise_filename = filename + ".promise"
+    start = time.time()
     while os.path.exists(promise_filename):
         time.sleep(0.01)
+        if time.time() - start > timeout:
+            raise Exception(
+                f"OnDiskCache Exception: {filename} expected to be written by different process, "
+                + f"but file is ready in {timeout} seconds."
+            )
     return filename
 
 
@@ -273,6 +280,7 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
         same_filepath_fn: Set to ``True`` to use same ``filepath_fn`` from the ``OnDiskCacheHolder``.
         skip_read: Boolean value to skip reading the file handle from ``datapipe``.
             By default, reading is enabled and reading function is created based on the ``mode``.
+        timeout: Integer value of seconds to wait for uncached item to be written to disk
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper, HttpReader
@@ -287,7 +295,7 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
         >>> cache_dp = HttpReader(cache_dp).end_caching(mode="wb", filepath_fn=_filepath_fn)
     """
 
-    def __new__(cls, datapipe, mode="wb", filepath_fn=None, *, same_filepath_fn=False, skip_read=False):
+    def __new__(cls, datapipe, mode="wb", filepath_fn=None, *, same_filepath_fn=False, skip_read=False, timeout=300):
         if filepath_fn is not None and same_filepath_fn:
             raise ValueError("`filepath_fn` is mutually exclusive with `same_filepath_fn`")
 
@@ -301,7 +309,7 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
 
         _filepath_fn, _hash_dict, _hash_type, _ = OnDiskCacheHolderIterDataPipe._temp_dict[cache_holder]
         cached_dp = cache_holder._end_caching()
-        cached_dp = cached_dp.map(_wait_promise_fn)
+        cached_dp = cached_dp.map(functools.partial(_wait_promise_fn, timeout))
         cached_dp = FileLister(cached_dp, recursive=True)
 
         if same_filepath_fn:
