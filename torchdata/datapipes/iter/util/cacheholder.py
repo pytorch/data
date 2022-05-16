@@ -7,13 +7,14 @@
 import hashlib
 import inspect
 import os.path
-import portalocker
 import sys
 import time
 
 from collections import deque
 from functools import partial
 from typing import Callable, Deque, Dict, Iterator, Optional, TypeVar
+
+import portalocker
 
 from torch.utils.data.datapipes.utils.common import _check_lambda_fn, DILL_AVAILABLE
 
@@ -109,10 +110,10 @@ def _hash_check(filepath, hash_dict, hash_type):
         hash_func = hashlib.md5()
 
     with portalocker.Lock(filepath, "rb") as f:
-        chunk = f.read(1024 ** 2)
+        chunk = f.read(1024**2)
         while chunk:
             hash_func.update(chunk)
-            chunk = f.read(1024 ** 2)
+            chunk = f.read(1024**2)
 
     return hash_func.hexdigest() == hash_dict[filepath]
 
@@ -193,22 +194,22 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
             ]
 
         for filepath in filepaths:
-            promise_filepath = filepath + '.promise'
+            promise_filepath = filepath + ".promise"
             if not os.path.exists(promise_filepath):
                 if not os.path.exists(filepath):
-                        with portalocker.Lock(promise_filepath, 'w') as fh:
-                            fh.write('!')
-                        result = False
+                    with portalocker.Lock(promise_filepath, "w") as fh:
+                        fh.write("!")
+                    result = False
 
                 elif hash_dict is not None and not _hash_check(filepath, hash_dict, hash_type):
-                        with portalocker.Lock(promise_filepath, 'w') as fh:
-                                fh.write('!')
-                        result = False
+                    with portalocker.Lock(promise_filepath, "w") as fh:
+                        fh.write("!")
+                    result = False
 
                 elif extra_check_fn is not None and not extra_check_fn(filepath):
-                        with portalocker.Lock(promise_filepath, 'w') as fh:
-                            fh.write('!')
-                        result = False
+                    with portalocker.Lock(promise_filepath, "w") as fh:
+                        fh.write("!")
+                    result = False
 
         return result
 
@@ -242,16 +243,19 @@ def _read_bytes(fd):
 def _read_str(fd):
     return "".join(fd)
 
+
 def _wait_promise_fn(filename):
-    promise_filename = filename + '.promise'
+    promise_filename = filename + ".promise"
     while os.path.exists(promise_filename):
         time.sleep(0.01)
     return filename
 
+
 def _promise_fulfilled_fn(filename):
-    promise_filename = filename + '.promise'
+    promise_filename = filename + ".promise"
     os.unlink(promise_filename)
     return filename
+
 
 @functional_datapipe("end_caching")
 class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):

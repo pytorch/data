@@ -5,9 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-import portalocker
 
 from typing import Any, Callable, Iterator, Optional, Tuple, Union
+
+import portalocker
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
