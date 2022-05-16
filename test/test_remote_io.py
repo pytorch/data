@@ -1,4 +1,3 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
 # This source code is licensed under the BSD-style license found in the
@@ -179,14 +178,14 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
     def test_s3_io_iterdatapipe(self):
         # sanity test
         file_urls = ["s3://ai2-public-datasets"]
-        #  try:
-        s3_lister_dp = S3FileLister(IterableWrapper(file_urls))
-        s3_loader_dp = S3FileLoader(IterableWrapper(file_urls))
-        #  except ModuleNotFoundError:
-        #      warnings.warn(
-        #          "S3 IO datapipes or C++ extension '_torchdata' isn't built in the current 'torchdata' package"
-        #      )
-        #      return
+        try:
+            s3_lister_dp = S3FileLister(IterableWrapper(file_urls))
+            s3_loader_dp = S3FileLoader(IterableWrapper(file_urls))
+        except ModuleNotFoundError:
+            warnings.warn(
+                "S3 IO datapipes or C++ extension '_torchdata' isn't built in the current 'torchdata' package"
+            )
+            return
 
         # S3FileLister: different inputs
         input_list = [
