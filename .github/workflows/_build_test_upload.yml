@@ -103,6 +103,11 @@ jobs:
             esac
             pydir="/opt/python/$DESIRED_PYTHON"
             export PATH="$pydir/bin:$PATH"
+            ls /opt/python/
+            which python
+            python --version
+            ls $pydir
+            ls $pydir/bin
           else
             pip install cmake ninja
             echo "/home/runner/.local/bin" >> $GITHUB_PATH
