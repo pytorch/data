@@ -311,7 +311,7 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
                     # Workaround about Windows not letting to delete file, while it is open by another process
                     retry = True
                     if time.time() - start > PROMISE_FILE_DELETE_TIMEOUT:
-                        raise
+                        raise Exception("Timeout while trying to recover from the ", type(e), e)
                     time.sleep(PROMISE_FILE_DELETE_RETRY_INTERVAL)
         else:
             warnings.warn(
