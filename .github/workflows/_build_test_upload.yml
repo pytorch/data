@@ -88,26 +88,9 @@ jobs:
       - name: Install Build Dependency
         shell: bash
         run: |
-          set -x
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
             yum -y install ninja-build
             yum -y install openssl-devel curl-devel zlib-devel
-            python_nodot="$(echo ${{ matrix.python-version }} | tr -d '.')"
-            case ${{ matrix.python-version }} in
-              3.[6-7]*)
-                DESIRED_PYTHON="cp${python_nodot}-cp${python_nodot}m"
-                ;;
-              3.*)
-                DESIRED_PYTHON="cp${python_nodot}-cp${python_nodot}"
-                ;;
-            esac
-            pydir="/opt/python/$DESIRED_PYTHON"
-            export PATH="$pydir/bin:$PATH"
-            ls /opt/python/
-            which python
-            python --version
-            ls $pydir
-            ls $pydir/bin
           else
             pip install cmake ninja
             echo "/home/runner/.local/bin" >> $GITHUB_PATH
@@ -119,7 +102,11 @@ jobs:
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
           BUILD_S3: 1
         run: |
-          packaging/build_wheel.sh
+          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            packaging/build_manylinux_wheel.sh
+          else
+            packaging/build_wheel.sh
+          fi
       - name: Install TorchData Wheel
         shell: bash
         run: pip3 install dist/torchdata*.whl
