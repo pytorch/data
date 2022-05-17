@@ -79,7 +79,7 @@ jobs:
       - name: Setup additional system libraries
         if: startsWith( matrix.os, 'ubuntu' )
         run: |
-          yum install openssl-devel curl-devel zlib-devel
+          yum -y install openssl-devel curl-devel zlib-devel
       - name: Setup msbuild on Windows
         if: startsWith( matrix.os, 'windows' )
         uses: microsoft/setup-msbuild@v1.1
