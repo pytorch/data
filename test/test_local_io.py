@@ -15,9 +15,9 @@ import tarfile
 import unittest
 import warnings
 import zipfile
+from functools import partial
 
 from json.decoder import JSONDecodeError
-from functools import partial 
 
 import expecttest
 
@@ -65,14 +65,17 @@ except (ModuleNotFoundError, FileNotFoundError):
     HAS_RAR_TOOLS = False
 skipIfNoRarTools = unittest.skipIf(not HAS_RAR_TOOLS, "no rar tools")
 
-def filepath_fn(temp_dir_name,name: str) -> str:
+
+def filepath_fn(temp_dir_name, name: str) -> str:
     return os.path.join(temp_dir_name, os.path.basename(name))
+
 
 def init_fn(worker_id):
     info = torch.utils.data.get_worker_info()
     num_workers = info.num_workers
     datapipe = info.dataset
     torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
+
 
 class TestDataPipeLocalIO(expecttest.TestCase):
     def setUp(self):
@@ -306,7 +309,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         saver_dp = Saver(source_dp, filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(saver_dp, n_elements_before_reset)
-        self.assertEqual([filepath_fn(self.temp_dir.name, "1.txt"), filepath_fn(self.temp_dir.name,"2.txt")], res_before_reset)
+        self.assertEqual(
+            [filepath_fn(self.temp_dir.name, "1.txt"), filepath_fn(self.temp_dir.name, "2.txt")], res_before_reset
+        )
         self.assertEqual(expected_paths, res_after_reset)
         for name in name_to_data.keys():
             p = filepath_fn(self.temp_dir.name, name)
@@ -646,7 +651,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         saver_dp = IoPathSaver(source_dp, filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(saver_dp, n_elements_before_reset)
-        self.assertEqual([filepath_fn(self.temp_dir.name,"1.txt"), filepath_fn(self.temp_dir.name,"2.txt")], res_before_reset)
+        self.assertEqual(
+            [filepath_fn(self.temp_dir.name, "1.txt"), filepath_fn(self.temp_dir.name, "2.txt")], res_before_reset
+        )
         self.assertEqual(expected_paths, res_after_reset)
         for name in name_to_data.keys():
             p = filepath_fn(self.temp_dir.name, name)
@@ -655,7 +662,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         # __len__ Test: returns the length of source DataPipe
         self.assertEqual(3, len(saver_dp))
-    
+
     @skipIfNoIoPath
     def test_io_path_saver_file_lock(self):
         # Same filename with different name
@@ -668,7 +675,6 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         saver_dp = source_dp.save_by_iopath(filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="ab")
 
         import torch.utils.data.graph_settings
-
 
         from torch.utils.data import DataLoader
 
