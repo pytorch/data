@@ -67,6 +67,7 @@ jobs:
           - "3.10"
     steps:
       - name: Setup Python ${{ matrix.python-version }}
+        if: ${{ ! startsWith( matrix.os, 'ubuntu' ) }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
