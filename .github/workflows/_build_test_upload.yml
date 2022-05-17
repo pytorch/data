@@ -79,9 +79,7 @@ jobs:
       - name: Setup additional system libraries
         if: startsWith( matrix.os, 'ubuntu' )
         run: |
-          sudo add-apt-repository multiverse
-          sudo apt update
-          sudo apt install libssl-dev libcurl4-openssl-dev zlib1g-dev
+          yum install openssl-devel curl-devel zlib-devel
       - name: Setup msbuild on Windows
         if: startsWith( matrix.os, 'windows' )
         uses: microsoft/setup-msbuild@v1.1
