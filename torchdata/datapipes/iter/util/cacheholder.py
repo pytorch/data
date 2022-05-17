@@ -298,7 +298,7 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
     @staticmethod
     def _del_promise_file(promise_filename, filename):
         if os.path.exists(promise_filename):
-            with portalocker.Lock(promise_filename, "r"):
+            with portalocker.Lock(promise_filename, "r", flags=portalocker.LockFlags.EXCLUSIVE):
                 os.unlink(promise_filename)
         else:
             warnings.warn(
