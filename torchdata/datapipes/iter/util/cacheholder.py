@@ -31,6 +31,9 @@ if DILL_AVAILABLE:
 
 T_co = TypeVar("T_co", covariant=True)
 
+PROMISE_FILE_DELETE_TIMEOUT = 30
+PROMISE_FILE_DELETE_RETRY_INTERVAL = 0.005
+
 
 @functional_datapipe("in_memory_cache")
 class InMemoryCacheHolderIterDataPipe(IterDataPipe[T_co]):
@@ -298,8 +301,18 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
     @staticmethod
     def _del_promise_file(promise_filename, filename):
         if os.path.exists(promise_filename):
-            with portalocker.Lock(promise_filename, "r", flags=portalocker.LockFlags.EXCLUSIVE):
-                os.unlink(promise_filename)
+            retry = True
+            start = time.time()
+            while retry:
+                retry = False
+                try:
+                    os.unlink(promise_filename)
+                except PermissionError:
+                    # Workaround about Windows not letting to delete file, while it is open by another process
+                    retry = True
+                    if time.time() - start > PROMISE_FILE_DELETE_TIMEOUT:
+                        raise
+                    time.sleep(PROMISE_FILE_DELETE_RETRY_INTERVAL)
         else:
             warnings.warn(
                 f"Attempt to mark {promise_filename} promise (base of file {filename}) as fulfilled failed. Potentially missmatching filename functions of on_disk_cache and end_cache."
