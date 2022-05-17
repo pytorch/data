@@ -77,10 +77,6 @@ jobs:
           # ref: ${{ inputs.branch }}
           ref: manylinux
           submodules: recursive
-      - name: Setup additional system libraries
-        if: startsWith( matrix.os, 'ubuntu' )
-        run: |
-          yum -y install openssl-devel curl-devel zlib-devel
       - name: Setup msbuild on Windows
         if: startsWith( matrix.os, 'windows' )
         uses: microsoft/setup-msbuild@v1.1
@@ -89,6 +85,28 @@ jobs:
         uses: egor-tensin/vs-shell@v2
         with:
           arch: x64
+      - name: Install Build Dependency
+        shell: bash
+        run: |
+          set -x
+          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            yum -y install ninja-build
+            yum -y install openssl-devel curl-devel zlib-devel
+            python_nodot="$(echo ${{ matrix.python-version }} | tr -d '.')"
+            case ${{ matrix.python-version }} in
+              3.[6-7]*)
+                DESIRED_PYTHON="cp${python_nodot}-cp${python_nodot}m"
+                ;;
+              3.*)
+                DESIRED_PYTHON="cp${python_nodot}-cp${python_nodot}"
+                ;;
+            esac
+            pydir="/opt/python/$DESIRED_PYTHON"
+            export PATH="$pydir/bin:$PATH"
+          else
+            pip install cmake ninja
+            echo "/home/runner/.local/bin" >> $GITHUB_PATH
+          fi
       - name: Install PyTorch and Build TorchData Wheel
         shell: bash
         env:
@@ -96,8 +114,6 @@ jobs:
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
           BUILD_S3: 1
         run: |
-          pip install cmake ninja
-          echo "/home/runner/.local/bin" >> $GITHUB_PATH
           packaging/build_wheel.sh
       - name: Install TorchData Wheel
         shell: bash
