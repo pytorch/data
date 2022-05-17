@@ -298,7 +298,8 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
     @staticmethod
     def _del_promise_file(promise_filename, filename):
         if os.path.exists(promise_filename):
-            os.unlink(promise_filename)
+            with portalocker.Lock(promise_filename, "r"):
+                os.unlink(promise_filename)
         else:
             warnings.warn(
                 f"Attempt to mark {promise_filename} promise (base of file {filename}) as fulfilled failed. Potentially missmatching filename functions of on_disk_cache and end_cache."
