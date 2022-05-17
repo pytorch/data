@@ -52,7 +52,7 @@ jobs:
   wheel_build_test:
     needs: get_release_type
     runs-on: ${{ matrix.os }}
-    container: ${{ matrix.os == 'ubuntu-latest' && 'https://quay.io/repository/pypa/manylinux2014_x86_64' || null }}
+    container: ${{ startsWith( matrix.os, 'ubuntu' ) && 'quay.io/pypa/manylinux2014_x86_64' || null }}
     strategy:
       fail-fast: false
       matrix:
