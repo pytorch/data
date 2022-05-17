@@ -17,6 +17,7 @@ import warnings
 import zipfile
 
 from json.decoder import JSONDecodeError
+from functools import partial 
 
 import expecttest
 
@@ -44,6 +45,7 @@ from torchdata.datapipes.iter import (
 
 try:
     import iopath
+    import torch
 
     HAS_IOPATH = True
 except ImportError:
@@ -63,6 +65,14 @@ except (ModuleNotFoundError, FileNotFoundError):
     HAS_RAR_TOOLS = False
 skipIfNoRarTools = unittest.skipIf(not HAS_RAR_TOOLS, "no rar tools")
 
+def filepath_fn(temp_dir_name,name: str) -> str:
+    return os.path.join(temp_dir_name, os.path.basename(name))
+
+def init_fn(worker_id):
+    info = torch.utils.data.get_worker_info()
+    num_workers = info.num_workers
+    datapipe = info.dataset
+    torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
 
 class TestDataPipeLocalIO(expecttest.TestCase):
     def setUp(self):
@@ -280,29 +290,26 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             len(json_dp)
 
     def test_saver_iterdatapipe(self):
-        def filepath_fn(name: str) -> str:
-            return os.path.join(self.temp_dir.name, os.path.basename(name))
-
         # Functional Test: Saving some data
         name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
         source_dp = IterableWrapper(sorted(name_to_data.items()))
-        saver_dp = source_dp.save_to_disk(filepath_fn=filepath_fn, mode="wb")
+        saver_dp = source_dp.save_to_disk(filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
         res_file_paths = list(saver_dp)
-        expected_paths = [filepath_fn(name) for name in name_to_data.keys()]
+        expected_paths = [filepath_fn(self.temp_dir.name, name) for name in name_to_data.keys()]
         self.assertEqual(expected_paths, res_file_paths)
         for name in name_to_data.keys():
-            p = filepath_fn(name)
+            p = filepath_fn(self.temp_dir.name, name)
             with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # Reset Test:
-        saver_dp = Saver(source_dp, filepath_fn=filepath_fn, mode="wb")
+        saver_dp = Saver(source_dp, filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(saver_dp, n_elements_before_reset)
-        self.assertEqual([filepath_fn("1.txt"), filepath_fn("2.txt")], res_before_reset)
+        self.assertEqual([filepath_fn(self.temp_dir.name, "1.txt"), filepath_fn(self.temp_dir.name,"2.txt")], res_before_reset)
         self.assertEqual(expected_paths, res_after_reset)
         for name in name_to_data.keys():
-            p = filepath_fn(name)
+            p = filepath_fn(self.temp_dir.name, name)
             with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
@@ -582,12 +589,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             len(tar_decompress_dp)
 
     def _write_text_files(self):
-        def filepath_fn(name: str) -> str:
-            return os.path.join(self.temp_dir.name, os.path.basename(name))
-
         name_to_data = {"1.text": b"DATA", "2.text": b"DATA", "3.text": b"DATA"}
         source_dp = IterableWrapper(sorted(name_to_data.items()))
-        saver_dp = source_dp.save_to_disk(filepath_fn=filepath_fn, mode="wb")
+        saver_dp = source_dp.save_to_disk(filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
         list(saver_dp)
 
     # TODO(120): this test currently only covers reading from local
@@ -626,34 +630,59 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
     @skipIfNoIoPath
     def test_io_path_saver_iterdatapipe(self):
-        def filepath_fn(name: str) -> str:
-            return os.path.join(self.temp_dir.name, os.path.basename(name))
-
         # Functional Test: Saving some data
         name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
         source_dp = IterableWrapper(sorted(name_to_data.items()))
-        saver_dp = source_dp.save_by_iopath(filepath_fn=filepath_fn, mode="wb")
+        saver_dp = source_dp.save_by_iopath(filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
         res_file_paths = list(saver_dp)
-        expected_paths = [filepath_fn(name) for name in name_to_data.keys()]
+        expected_paths = [filepath_fn(self.temp_dir.name, name) for name in name_to_data.keys()]
         self.assertEqual(expected_paths, res_file_paths)
         for name in name_to_data.keys():
-            p = filepath_fn(name)
+            p = filepath_fn(self.temp_dir.name, name)
             with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # Reset Test:
-        saver_dp = IoPathSaver(source_dp, filepath_fn=filepath_fn, mode="wb")
+        saver_dp = IoPathSaver(source_dp, filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(saver_dp, n_elements_before_reset)
-        self.assertEqual([filepath_fn("1.txt"), filepath_fn("2.txt")], res_before_reset)
+        self.assertEqual([filepath_fn(self.temp_dir.name,"1.txt"), filepath_fn(self.temp_dir.name,"2.txt")], res_before_reset)
         self.assertEqual(expected_paths, res_after_reset)
         for name in name_to_data.keys():
-            p = filepath_fn(name)
+            p = filepath_fn(self.temp_dir.name, name)
             with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # __len__ Test: returns the length of source DataPipe
         self.assertEqual(3, len(saver_dp))
+    
+    @skipIfNoIoPath
+    def test_io_path_saver_file_lock(self):
+        # Same filename with different name
+        name_to_data = {"1.txt": b"DATA1", "1.txt": b"DATA2", "2.txt": b"DATA3", "2.txt": b"DATA4"}  # noqa: F601
+
+        # Add sharding_filter to shard data into 2
+        source_dp = IterableWrapper(list(name_to_data.items())).sharding_filter()
+
+        # Use appending as the mode
+        saver_dp = source_dp.save_by_iopath(filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="ab")
+
+        import torch.utils.data.graph_settings
+
+
+        from torch.utils.data import DataLoader
+
+        num_workers = 2
+        line_lengths = []
+        dl = DataLoader(saver_dp, num_workers=num_workers, worker_init_fn=init_fn, multiprocessing_context="spawn")
+        for filename in dl:
+            with open(filename[0]) as f:
+                lines = f.readlines()
+                x = len(lines)
+                line_lengths.append(x)
+                self.assertEqual(x, 1)
+
+        self.assertEqual(num_workers, len(line_lengths))
 
     def _write_test_rar_files(self):
         # `rarfile` can only read but not write .rar archives so we use to system utilities

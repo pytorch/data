@@ -183,8 +183,10 @@ class IoPathSaverIterDataPipe(IterDataPipe[str]):
     def __iter__(self) -> Iterator[str]:
         for meta, data in self.source_datapipe:
             filepath = meta if self.filepath_fn is None else self.filepath_fn(meta)
-            with self.pathmgr.open(filepath, self.mode) as f:
-                f.write(data)
+            with iopath.file_lock(filepath):
+                if not os.path.exists(filepath):
+                    with self.pathmgr.open(filepath, self.mode) as f:
+                        f.write(data)
             yield filepath
 
     def register_handler(self, handler, allow_override=False):
