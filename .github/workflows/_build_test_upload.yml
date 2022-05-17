@@ -118,6 +118,7 @@ jobs:
             pydir="/opt/python/$DESIRED_PYTHON"
             # export PATH="$pydir/bin:$PATH"
             echo "$pydir/bin" >> $GITHUB_PATH
+            which python
           fi
 
           packaging/build_wheel.sh
