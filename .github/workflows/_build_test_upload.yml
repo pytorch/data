@@ -103,6 +103,8 @@ jobs:
           BUILD_S3: 1
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            # See: https://github.com/actions/checkout/issues/760
+            git config --global --add safe.directory /__w/data/data
             packaging/build_manylinux_wheel.sh
           else
             packaging/build_wheel.sh
