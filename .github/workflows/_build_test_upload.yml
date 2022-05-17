@@ -105,11 +105,15 @@ jobs:
         shell: bash
         run: |
           pip3 install pkginfo
-          pip3 install auditwheel
+          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            pip3 install auditwheel
+          fi
           for pkg in dist/torchdata*.whl; do
               echo "PkgInfo of $pkg:"
               pkginfo $pkg
-              auditwheel show $pkg
+              if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+                auditwheel show $pkg
+              fi
           done
       - name: Install Test Requirements
         run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile protobuf
