@@ -307,12 +307,14 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
                 retry = False
                 try:
                     os.unlink(promise_filename)
-                except PermissionError:
+                except PermissionError as e:
                     # Workaround about Windows not letting to delete file, while it is open by another process
                     retry = True
                     if time.time() - start > PROMISE_FILE_DELETE_TIMEOUT:
                         raise Exception("Timeout while trying to recover from the ", type(e), e)
                     time.sleep(PROMISE_FILE_DELETE_RETRY_INTERVAL)
+                except Exception as e:
+                    raise Exception("Something else happened while trying to delete promise file ", type(e), e)
         else:
             warnings.warn(
                 f"Attempt to mark {promise_filename} promise (base of file {filename}) as fulfilled failed. Potentially missmatching filename functions of on_disk_cache and end_cache."
