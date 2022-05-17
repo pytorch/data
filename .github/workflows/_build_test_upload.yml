@@ -105,13 +105,22 @@ jobs:
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
             # See: https://github.com/actions/checkout/issues/760
             git config --global --add safe.directory /__w/data/data
-            packaging/build_manylinux_wheel.sh
-          else
-            packaging/build_wheel.sh
+            python_nodot="$(echo $PYTHON_VERSION | tr -d '.')"
+            case $PYTHON_VERSION in
+              3.[6-7]*)
+                DESIRED_PYTHON="cp${python_nodot}-cp${python_nodot}m"
+                ;;
+              3.*)
+                DESIRED_PYTHON="cp${python_nodot}-cp${python_nodot}"
+                ;;
+            esac
+
+            pydir="/opt/python/$DESIRED_PYTHON"
+            # export PATH="$pydir/bin:$PATH"
+            echo "$pydir/bin" >> $GITHUB_PATH
           fi
-      - name: Install TorchData Wheel
-        shell: bash
-        run: pip3 install dist/torchdata*.whl
+
+          packaging/build_wheel.sh
       - name: Validate TorchData Wheel
         shell: bash
         run: |
@@ -126,6 +135,9 @@ jobs:
                 auditwheel show $pkg
               fi
           done
+      - name: Install TorchData Wheel
+        shell: bash
+        run: pip3 install dist/torchdata*.whl
       - name: Install Test Requirements
         run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile protobuf
       - name: Run DataPipes Tests with pytest
