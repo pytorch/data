@@ -308,6 +308,8 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
         old_promise_filename = None
         old_filename = None
         first_entry = True
+        # TODO(VitalyFedyunin): Limit buffer size here. It is only contains file names from archive,
+        # but better be save than sorry.
         buffer = []
         for filename in self.source_datapipe:
             promise_filename = _find_promise_file(filename)
