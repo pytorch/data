@@ -108,7 +108,7 @@ setup_build_version() {
 # AWSSDK requires at lest 10.13
 setup_macos() {
   if [[ "$(uname)" == Darwin ]]; then
-    export MACOSX_DEPLOYMENT_TARGET=10.13 CC=clang CXX=clang++
+    export CC=clang CXX=clang++
   fi
 }
 
