@@ -4,13 +4,13 @@ on:
     branches:
       - main
       - release/*
-  # pull_request:
-  #   types: [opened, synchronize, reopened, labeled]
-  #   branches:
-  #     - main
-  #     # For PR created by ghstack
-  #     - gh/*/*/base
-  #     - release/*
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    branches:
+      - main
+      # For PR created by ghstack
+      - gh/*/*/base
+      - release/*
 
 jobs:
   test:
