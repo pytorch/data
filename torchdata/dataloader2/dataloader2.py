@@ -167,7 +167,9 @@ class DataLoader2(Generic[T_co]):
         # edge case checking
         # iterator has already been created: 1) iterator is just created 2) iterator is created and iter is exhausted
         if self._datapipe_iter is not None:
-            raise RuntimeError("DataLoaderV2 iterator has already been created, `load_state_dict()` can’t be called. Please create a new dataloader in order to use load state dict.")
+            raise RuntimeError(
+                "DataLoaderV2 iterator has already been created, `load_state_dict()` can’t be called. Please create a new dataloader in order to use load state dict."
+            )
 
         serialized_datapipe = state[SERIALIZED_DATAPIPE_KEY_NAME]
         reading_service_state = state[READING_SERVICE_STATE_KEY_NAME]
