@@ -73,12 +73,43 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: ${{ inputs.branch }}
+          submodules: recursive
+      - name: Setup additional system libraries
+        if: startsWith( matrix.os, 'ubuntu' )
+        run: |
+          sudo add-apt-repository multiverse
+          sudo apt update
+          sudo apt install libssl-dev libcurl4-openssl-dev zlib1g-dev
+      - name: Setup msbuild on Windows
+        if: startsWith( matrix.os, 'windows' )
+        uses: microsoft/setup-msbuild@v1.1
+      - name: Set up Visual Studio shell
+        if: startsWith( matrix.os, 'windows' )
+        uses: egor-tensin/vs-shell@v2
+        with:
+          arch: x64
+      - name: Determine if build AWSSDK
+        shell: bash
+        run: |
+          # Disable AWSSDK on MacOS due to the minimum version
+          # of MACOSX_DEPLOYMENT_TARGET is 10.13
+          if ${{ startsWith( matrix.os, 'macos' ) }}; then
+            BUILD_S3=0
+          else
+            BUILD_S3=1
+          fi
+          echo "::set-output name=value::$BUILD_S3"
+        id: build_s3
       - name: Install PyTorch and Build TorchData Wheel
         shell: bash
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
-        run: packaging/build_wheel.sh
+          BUILD_S3: ${{ steps.build_s3.outputs.value }}
+        run: |
+          pip install cmake ninja
+          echo "/home/runner/.local/bin" >> $GITHUB_PATH
+          packaging/build_wheel.sh
       - name: Install TorchData Wheel
         shell: bash
         run: pip3 install dist/torchdata*.whl
@@ -180,11 +211,29 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: ${{ inputs.branch }}
+          submodules: recursive
+      - name: Setup additional system libraries
+        if: startsWith( matrix.os, 'ubuntu' )
+        run: |
+          sudo add-apt-repository multiverse
+          sudo apt update
+          sudo apt install libssl-dev libcurl4-openssl-dev zlib1g-dev
+      - name: Determine if build AWSSDK
+        shell: bash
+        run: |
+          if ${{ startsWith( matrix.os, 'macos' ) || startsWith( matrix.os, 'windows' ) }}; then
+            BUILD_S3=0
+          else
+            BUILD_S3=1
+          fi
+          echo "::set-output name=value::$BUILD_S3"
+        id: build_s3
       - name: Build TorchData for Conda
         shell: bash -l {0}
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
+          BUILD_S3: ${{ steps.build_s3.outputs.value }}
         run: |
           conda activate conda_build_env
           conda install -yq conda-build -c conda-forge
@@ -220,7 +269,7 @@ jobs:
       - name: Display All TorchData Conda Package
         if: steps.trigger_upload.outputs.value == 'true'
         run: ls -lh ./*/torchdata-*.tar.bz2
-      - name: Build & Upload Wheels to Conda
+      - name: Upload Packages to Conda
         if: steps.trigger_upload.outputs.value == 'true'
         shell: bash
         env:
@@ -280,6 +329,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: ${{ inputs.branch }}
+          submodules: recursive
       - name: Install Dependencies
         run: |
           echo `python3 --version`

@@ -39,7 +39,7 @@ else()
   message(STATUS "Using third_party/aws-sdk-cpp.")
 
   set(aws_cpp_sdk_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/aws-sdk-cpp)
-  set(aws_cpp_sdk_INSTALL "${CMAKE_CURRENT_SOURCE_DIR}/aws_cpp_sdk_INSTALL")
+  set(aws_cpp_sdk_INSTALL "${CMAKE_CURRENT_LIST_DIR}/aws_sdk")
   set(AWSSDK_INCLUDE_DIRS "${aws_cpp_sdk_INSTALL}/include")
 
   set(
@@ -67,8 +67,7 @@ else()
 
   include(ExternalProject)
   ExternalProject_Add(
-    aws-cpp-sdk
-    PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/aws-cpp-sdk
+    aws_sdk
     SOURCE_DIR ${aws_cpp_sdk_SOURCE_DIR}
     INSTALL_DIR ${aws_cpp_sdk_INSTALL}
     CMAKE_ARGS "-DBUILD_SHARED_LIBS=OFF" "-DBUILD_ONLY=transfer;s3" "-DENABLE_TESTING=OFF" "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_INSTALL_PREFIX=${aws_cpp_sdk_INSTALL}"

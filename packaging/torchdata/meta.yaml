@@ -6,12 +6,19 @@ source:
   path: "{{ environ.get('SOURCE_ROOT_DIR') }}"
 
 requirements:
-  host:
+  # TODO: Figure out how to add build-time python dependency (PyTorch for codegen)
+  build:
+    - cmake
+    - ninja
+    # TODO: Enable AWSSDK on windows
+    # - {{ compiler('c') }} # [win]
+    # - {{ compiler('cxx') }} # [win]
     - python
     - setuptools
-    - urllib3>=1.25
-    - requests
     - cpuonly
+    - curl # [not win]
+    - openssl # [unix]
+    - zlib # [unix]
     {{ environ.get('CONDA_PYTORCH_BUILD_CONSTRAINT') }}
   run:
     - python
@@ -23,6 +30,7 @@ build:
   string: py{{py}}
   script_env:
     - BUILD_VERSION
+    - BUILD_S3
 
 test:
   imports:
@@ -39,6 +47,8 @@ test:
     # The following packages are not on the default conda channel
     # - iopath
     # - rarfile
+  commands:
+    - pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
 
 about:
   home: https://github.com/pytorch/data
