@@ -100,13 +100,14 @@ def _export_version(version, sha):
 
 def _get_requirements():
     req_list = []
-    with Path('requirements.txt').open('r') as f:
+    with Path("requirements.txt").open("r") as f:
         for line in f:
             req = line.strip()
-            if len(req) == 0 or req.startswith('#'):
+            if len(req) == 0 or req.startswith("#"):
                 continue
             req_list.append(req)
     return req_list
+
 
 # Use new version of torch on main branch
 pytorch_package_dep = "torch>1.11.0"
