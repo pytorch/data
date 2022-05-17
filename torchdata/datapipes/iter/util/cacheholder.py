@@ -14,7 +14,7 @@ import warnings
 
 from collections import deque
 from functools import partial
-from typing import Callable, Deque, Dict, Iterator, Optional, TypeVar
+from typing import Any, Callable, Deque, Dict, Iterator, List, Optional, TypeVar
 
 import portalocker
 
@@ -310,7 +310,7 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
         first_entry = True
         # TODO(VitalyFedyunin): Limit buffer size here. It is only contains file names from archive,
         # but better be save than sorry.
-        buffer = []
+        buffer: List[Any] = []
         for filename in self.source_datapipe:
             promise_filename = _find_promise_file(filename)
             if not first_entry:
