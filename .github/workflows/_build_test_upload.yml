@@ -90,7 +90,7 @@ jobs:
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
             yum -y install ninja-build
-            yum -y install openssl-devel curl-devel zlib-devel
+            yum -y install openssl-devel openssl-static curl-devel zlib-devel
           else
             pip install cmake ninja
             echo "/home/runner/.local/bin" >> $GITHUB_PATH
