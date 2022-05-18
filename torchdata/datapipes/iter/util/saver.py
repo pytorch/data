@@ -8,6 +8,8 @@ import os
 
 from typing import Any, Callable, Iterator, Optional, Tuple, Union
 
+import portalocker
+
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
