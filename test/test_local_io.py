@@ -621,7 +621,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             dp = dp.end_caching(mode="t", filepath_fn=_noop, timeout=120)
             dp = FileOpener(dp)
             dp = StreamReader(dp)
-            dl = DataLoader(dp, num_workers=5, multiprocessing_context="spawn", batch_size=1, collate_fn=_unbatch)
+            dl = DataLoader(dp, num_workers=10, multiprocessing_context="spawn", batch_size=1, collate_fn=_unbatch)
             result = list(dl)
             all_files = []
             for (_, _, filenames) in os.walk(tmpdirname):
