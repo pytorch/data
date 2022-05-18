@@ -7,8 +7,8 @@ on:
 
 jobs:
   build_test_upload:
-    if: |
-      github.repository == 'pytorch/data' && github.ref_name == 'main'
+    # if: |
+    #   github.repository == 'pytorch/data' && github.ref_name == 'main'
     uses: ./.github/workflows/_build_test_upload.yml
     with:
       branch: "main"
