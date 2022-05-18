@@ -114,7 +114,10 @@ def _hash_check(filepath, hash_dict, hash_type):
     else:
         hash_func = hashlib.md5()
 
-    with portalocker.Lock(filepath, "rb", flags=portalocker.LockFlags.SHARED) as f:
+    # with portalocker.Lock(filepath, "rb", flags=portalocker.LockFlags.SHARED) as f:
+    # TODO(VitalyFedyunin): Line above will require all readers (Win) to obtain proper locks,
+    # I'm putting it on hold as we need to modify PyTorch core codebase heavily.
+    with open(filepath, "rb") as f:
         chunk = f.read(1024 ** 2)
         while chunk:
             hash_func.update(chunk)

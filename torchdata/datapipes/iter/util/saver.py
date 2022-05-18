@@ -8,8 +8,6 @@ import os
 
 from typing import Any, Callable, Iterator, Optional, Tuple, Union
 
-# import portalocker
-
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
@@ -59,7 +57,7 @@ class SaverIterDataPipe(IterDataPipe[str]):
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
             # with portalocker.Lock(filepath, self.mode, flags=portalocker.LockFlags.EXCLUSIVE) as f:
-            # TODO(VitalyFedyunin): Enabling line above fails TorchText tests, need to investigate race condition
+            # TODO(VitalyFedyunin): Enabling line above will require all read sites to be updated (Win).
             with open(filepath, self.mode) as f:
                 f.write(data)
             yield filepath
