@@ -64,7 +64,10 @@ class ParagraphAggregatorIterDataPipe(IterDataPipe[Tuple[str, str]]):
                     self.buffer = []
                 prev_filename = filename
         if self.buffer:
-            yield prev_filename, self.joiner(self.buffer)  # type: ignore[misc]
+            try:
+                yield prev_filename, self.joiner(self.buffer)  # type: ignore[misc]
+            finally:
+                self.buffer.clear()
 
     def reset(self) -> None:
         self.buffer = []

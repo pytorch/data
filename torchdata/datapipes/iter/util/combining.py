@@ -108,6 +108,8 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
                 yield key, res
             else:
                 yield res
+        if self.buffer:
+            self.buffer.clear()
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
