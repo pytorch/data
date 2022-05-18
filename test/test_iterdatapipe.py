@@ -874,6 +874,74 @@ class TestIterDataPipe(expecttest.TestCase):
             self.assertEqual(len(wa), 1)
             self.assertRegex(str(wa[0].message), r"Found duplicate key")
 
+    def test_mux_longest_iterdatapipe(self):
+
+        # Functional Test: Elements are yielded one at a time from each DataPipe, until they are all exhausted
+        input_dp1 = IterableWrapper(range(4))
+        input_dp2 = IterableWrapper(range(4, 8))
+        input_dp3 = IterableWrapper(range(8, 12))
+        output_dp = input_dp1.mux_longest(input_dp2, input_dp3)
+        expected_output = [0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11]
+        self.assertEqual(len(expected_output), len(output_dp))
+        self.assertEqual(expected_output, list(output_dp))
+
+        # Functional Test: Uneven input Data Pipes
+        input_dp1 = IterableWrapper([1, 2, 3, 4])
+        input_dp2 = IterableWrapper([10])
+        input_dp3 = IterableWrapper([100, 200, 300])
+        output_dp = input_dp1.mux_longest(input_dp2, input_dp3)
+        expected_output = [1, 10, 100, 2, 200, 3, 300, 4]
+        self.assertEqual(len(expected_output), len(output_dp))
+        self.assertEqual(expected_output, list(output_dp))
+
+        # Functional Test: Empty Data Pipe
+        input_dp1 = IterableWrapper([0, 1, 2, 3])
+        input_dp2 = IterableWrapper([])
+        output_dp = input_dp1.mux_longest(input_dp2)
+        self.assertEqual(len(input_dp1), len(output_dp))
+        self.assertEqual(list(input_dp1), list(output_dp))
+
+        # __len__ Test: raises TypeError when __len__ is called and an input doesn't have __len__
+        input_dp1 = IterableWrapper(range(10))
+        input_dp_no_len = IDP_NoLen(range(10))
+        output_dp = input_dp1.mux_longest(input_dp_no_len)
+        with self.assertRaises(TypeError):
+            len(output_dp)
+
+    def test_zip_longest_iterdatapipe(self):
+
+        # Functional Test: raises TypeError when an input is not of type `IterDataPipe`
+        with self.assertRaises(TypeError):
+            input_dp1 = IterableWrapper(range(10))
+            input_no_dp = list(range(10))
+            output_dp = input_dp1.zip_longest(input_no_dp)  # type: ignore[arg-type]
+
+        # Functional Test: raises TypeError when an input does not have valid length
+        input_dp1 = IterableWrapper(range(10))
+        input_dp_no_len = IDP_NoLen(range(5))
+        output_dp = input_dp1.zip_longest(input_dp_no_len)
+        with self.assertRaisesRegex(TypeError, r"instance doesn't have valid length$"):
+            len(output_dp)
+
+        # Functional Test: zips the results properly even when lengths are different
+        # (zips to the longest, filling missing values with default value None.)
+        input_dp1 = IterableWrapper(range(10))
+        input_dp2 = IterableWrapper(range(5))
+        output_dp = input_dp1.zip_longest(input_dp2)
+        exp = [(i, i) for i in range(5)] + [(i, None) for i in range(5, 10)]
+        self.assertEqual(list(output_dp), exp)
+
+        # Functional Test: zips the results properly even when lengths are different
+        # (zips to the longest, filling missing values with user input)
+        input_dp1 = IterableWrapper(range(10))
+        input_dp2 = IterableWrapper(range(5))
+        output_dp = input_dp1.zip_longest(input_dp2, fill_value=-1)
+        exp = [(i, i) for i in range(5)] + [(i, -1) for i in range(5, 10)]
+        self.assertEqual(list(output_dp), exp)
+
+        # __len__ Test: length matches the length of the shortest input
+        self.assertEqual(len(output_dp), 10)
+
 
 if __name__ == "__main__":
     unittest.main()

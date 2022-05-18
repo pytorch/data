@@ -49,7 +49,6 @@ class ParagraphAggregatorIterDataPipe(IterDataPipe[Tuple[str, str]]):
         self.buffer: List = []
 
     def __iter__(self) -> Iterator[Tuple[str, str]]:
-        self.reset()
         prev_filename = None
         for filename, line in self.source_datapipe:
             if prev_filename is None:
@@ -67,7 +66,7 @@ class ParagraphAggregatorIterDataPipe(IterDataPipe[Tuple[str, str]]):
         if self.buffer:
             yield prev_filename, self.joiner(self.buffer)  # type: ignore[misc]
 
-    def reset(self):
+    def reset(self) -> None:
         self.buffer = []
 
     def __getstate__(self):
@@ -78,7 +77,6 @@ class ParagraphAggregatorIterDataPipe(IterDataPipe[Tuple[str, str]]):
 
     def __setstate__(self, state):
         (self.source_datapipe, self.joiner) = state
-        self.reset()
 
     def __del__(self):
         self.buffer.clear()

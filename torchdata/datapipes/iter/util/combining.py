@@ -79,7 +79,6 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
         self.buffer: OrderedDict = OrderedDict()
 
     def __iter__(self) -> Iterator:
-        self.reset()
         ref_it = iter(self.ref_datapipe)
         warn_once_flag = True
         for data in self.source_datapipe:
@@ -140,7 +139,7 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
             self.merge_fn,
             self.buffer_size,
         ) = state
-        self.reset()
+        self.buffer = OrderedDict()
 
     def __del__(self):
         self.buffer.clear()
