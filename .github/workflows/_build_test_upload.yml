@@ -52,6 +52,7 @@ jobs:
   wheel_build_test:
     needs: get_release_type
     runs-on: ${{ matrix.os }}
+    container: ${{ startsWith( matrix.os, 'ubuntu' ) && 'quay.io/pypa/manylinux2014_x86_64' || null }}
     strategy:
       fail-fast: false
       matrix:
@@ -66,6 +67,7 @@ jobs:
           - "3.10"
     steps:
       - name: Setup Python ${{ matrix.python-version }}
+        if: ${{ ! startsWith( matrix.os, 'ubuntu' ) }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
@@ -73,29 +75,74 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: ${{ inputs.branch }}
+          submodules: recursive
+      - name: Setup msbuild on Windows
+        if: startsWith( matrix.os, 'windows' )
+        uses: microsoft/setup-msbuild@v1.1
+      - name: Set up Visual Studio shell
+        if: startsWith( matrix.os, 'windows' )
+        uses: egor-tensin/vs-shell@v2
+        with:
+          arch: x64
+      - name: Install Build Dependency
+        shell: bash
+        run: |
+          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            yum -y install ninja-build
+            yum -y install openssl-devel openssl-static curl-devel zlib-devel
+          else
+            pip install cmake ninja
+            echo "/home/runner/.local/bin" >> $GITHUB_PATH
+          fi
       - name: Install PyTorch and Build TorchData Wheel
         shell: bash
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
-        run: packaging/build_wheel.sh
-      - name: Install TorchData Wheel
-        shell: bash
-        run: pip3 install dist/torchdata*.whl
+          BUILD_S3: 1
+        run: |
+          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            # See: https://github.com/actions/checkout/issues/760
+            git config --global --add safe.directory /__w/data/data
+            source packaging/manylinux_wheel_helper.sh
+          fi
+          packaging/build_wheel.sh
       - name: Validate TorchData Wheel
         shell: bash
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
+          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            source packaging/manylinux_wheel_helper.sh
+            pip3 install auditwheel
+          fi
           pip3 install pkginfo
           for pkg in dist/torchdata*.whl; do
               echo "PkgInfo of $pkg:"
               pkginfo $pkg
+              if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+                auditwheel show $pkg
+              fi
           done
-      - name: Install Test Requirements
-        run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile protobuf
+      - name: Install TorchData Wheel
+        shell: bash
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+        run: |
+          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            source packaging/manylinux_wheel_helper.sh
+          fi
+          pip3 install dist/torchdata*.whl
       - name: Run DataPipes Tests with pytest
-        run:
-          pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py
-          --ignore=test/test_audio_examples.py
+        shell: bash
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+        run: |
+          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            source packaging/manylinux_wheel_helper.sh
+          fi
+          pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile protobuf
+          pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Wheels to Github
         uses: actions/upload-artifact@v2
         with:
@@ -180,11 +227,29 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: ${{ inputs.branch }}
+          submodules: recursive
+      - name: Setup additional system libraries
+        if: startsWith( matrix.os, 'ubuntu' )
+        run: |
+          sudo add-apt-repository multiverse
+          sudo apt update
+          sudo apt install libssl-dev libcurl4-openssl-dev zlib1g-dev
+      - name: Determine if build AWSSDK
+        shell: bash
+        run: |
+          if ${{ startsWith( matrix.os, 'windows' ) }}; then
+            BUILD_S3=0
+          else
+            BUILD_S3=1
+          fi
+          echo "::set-output name=value::$BUILD_S3"
+        id: build_s3
       - name: Build TorchData for Conda
         shell: bash -l {0}
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
+          BUILD_S3: ${{ steps.build_s3.outputs.value }}
         run: |
           conda activate conda_build_env
           conda install -yq conda-build -c conda-forge
@@ -220,7 +285,7 @@ jobs:
       - name: Display All TorchData Conda Package
         if: steps.trigger_upload.outputs.value == 'true'
         run: ls -lh ./*/torchdata-*.tar.bz2
-      - name: Build & Upload Wheels to Conda
+      - name: Upload Packages to Conda
         if: steps.trigger_upload.outputs.value == 'true'
         shell: bash
         env:
@@ -280,6 +345,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: ${{ inputs.branch }}
+          submodules: recursive
       - name: Install Dependencies
         run: |
           echo `python3 --version`

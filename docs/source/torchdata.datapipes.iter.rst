@@ -97,9 +97,11 @@ These tend to involve multiple DataPipes, combining them or splitting one to man
     IterKeyZipper
     MapKeyZipper
     Multiplexer
+    MultiplexerLongest
     SampleMultiplexer
     UnZipper
     Zipper
+    ZipperLongest
 
 Grouping DataPipes
 -----------------------------

@@ -88,6 +88,7 @@ from torchdata.datapipes.iter.util.indexadder import (
     IndexAdderIterDataPipe as IndexAdder,
 )
 from torchdata.datapipes.iter.util.jsonparser import JsonParserIterDataPipe as JsonParser
+from torchdata.datapipes.iter.util.mux_longest import MultiplexerLongestIterDataPipe as MultiplexerLongest
 from torchdata.datapipes.iter.util.paragraphaggregator import ParagraphAggregatorIterDataPipe as ParagraphAggregator
 from torchdata.datapipes.iter.util.plain_text_reader import (
     CSVDictParserIterDataPipe as CSVDictParser,
@@ -113,6 +114,7 @@ from torchdata.datapipes.iter.util.xzfileloader import (
     XzFileLoaderIterDataPipe as XzFileLoader,
     XzFileReaderIterDataPipe as XzFileReader,
 )
+from torchdata.datapipes.iter.util.zip_longest import ZipperLongestIterDataPipe as ZipperLongest
 from torchdata.datapipes.iter.util.ziparchiveloader import (
     ZipArchiveLoaderIterDataPipe as ZipArchiveLoader,
     ZipArchiveReaderIterDataPipe as ZipArchiveReader,
@@ -164,6 +166,7 @@ __all__ = [
     "Mapper",
     "MaxTokenBucketizer",
     "Multiplexer",
+    "MultiplexerLongest",
     "OnDiskCacheHolder",
     "OnlineReader",
     "ParagraphAggregator",
@@ -190,6 +193,7 @@ __all__ = [
     "ZipArchiveLoader",
     "ZipArchiveReader",
     "Zipper",
+    "ZipperLongest",
 ]
 
 # Please keep this list sorted
