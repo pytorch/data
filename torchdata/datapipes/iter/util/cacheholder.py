@@ -317,6 +317,8 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
                     time.sleep(PROMISE_FILE_DELETE_RETRY_INTERVAL)
                 except Exception as e:
                     raise Exception("Something else happened while trying to delete promise file ", type(e), e)
+                except:
+                    raise Exception("Unclassified situation")
         else:
             warnings.warn(
                 f"Attempt to mark {promise_filename} promise (base of file {filename}) as fulfilled failed. Potentially missmatching filename functions of on_disk_cache and end_cache."
