@@ -272,15 +272,16 @@ def _find_promise_file(filename):
 
 
 def _is_promise_pending(promise_filename):
-    try:
-        with portalocker.Lock(promise_filename, "r") as promise_fh:
-            data = promise_fh.read()
-            file_exists = len(data) > 0
-    except FileNotFoundError:
-        return False
-    except PermissionError:
-        return True
-    return file_exists
+    return os.path.exists(promise_filename)
+    # try:
+    #     with portalocker.Lock(promise_filename, "r") as promise_fh:
+    #         data = promise_fh.read()
+    #         file_exists = len(data) > 0
+    # except FileNotFoundError:
+    #     return False
+    # except PermissionError:
+    #     return True
+    # return file_exists
 
 
 def _wait_promise_fn(timeout, filename):
