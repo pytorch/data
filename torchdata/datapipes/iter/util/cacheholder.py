@@ -278,6 +278,8 @@ def _is_promise_pending(promise_filename):
             file_exists = len(data) > 0
     except FileNotFoundError:
         return False
+    except PermissionError:
+        return True
     return file_exists
 
 
