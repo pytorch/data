@@ -59,7 +59,6 @@ class SaverIterDataPipe(IterDataPipe[str]):
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
             with portalocker.Lock(filepath, self.mode, flags=portalocker.LockFlags.EXCLUSIVE) as f:
-                # with open(filepath, self.mode) as f:
                 f.write(data)
             yield filepath
 

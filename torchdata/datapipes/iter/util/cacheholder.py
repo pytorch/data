@@ -123,6 +123,10 @@ def _hash_check(filepath, hash_dict, hash_type):
     return hash_func.hexdigest() == hash_dict[filepath]
 
 
+def _promise_filename(filename):
+    return filename + ".promise"
+
+
 @functional_datapipe("on_disk_cache")
 class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     """
@@ -208,7 +212,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                 cached_file_exists = False
 
             if not cached_file_exists:
-                promise_filepath = filepath + ".promise"
+                promise_filepath = _promise_filename(filepath)
                 dirname = os.path.dirname(promise_filepath)
                 if not os.path.exists(dirname):
                     os.makedirs(dirname)
@@ -261,27 +265,18 @@ def _read_str(fd):
 
 
 def _find_promise_file(filename):
-    promise_filename = filename + ".promise"
+    promise_filename = _promise_filename(filename)
     while not os.path.exists(promise_filename):
         dirname = os.path.dirname(promise_filename)
         if dirname == os.path.dirname(dirname):
-            promise_filename = filename + ".promise"
+            promise_filename = _promise_filename(filename)
             break
-        promise_filename = dirname + ".promise"
+        promise_filename = _promise_filename(dirname)
     return promise_filename
 
 
 def _is_promise_pending(promise_filename):
     return os.path.exists(promise_filename)
-    # try:
-    #     with portalocker.Lock(promise_filename, "r") as promise_fh:
-    #         data = promise_fh.read()
-    #         file_exists = len(data) > 0
-    # except FileNotFoundError:
-    #     return False
-    # except PermissionError:
-    #     return True
-    # return file_exists
 
 
 def _wait_promise_fn(timeout, filename):
@@ -309,21 +304,13 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
             while retry:
                 retry = False
                 try:
-                    # print()
-                    # print()
                     os.unlink(promise_filename)
-                # except:
-                except (PermissionError, Exception) as e:
+                except Exception as e:
                     # Workaround about Windows not letting to delete file, while it is open by another process
                     retry = True
                     if time.time() - start > PROMISE_FILE_DELETE_TIMEOUT:
-                        # raise Exception("Timeout while trying to recover from the ", type(e), e)
-                        raise Exception("Timeout while trying to recover from the exception ", type(e))
+                        raise Exception("Timeout while trying to recover from the ", type(e), e)
                     time.sleep(PROMISE_FILE_DELETE_RETRY_INTERVAL)
-                # except Exception as e:
-                #     raise Exception("Something else happened while trying to delete promise file ", type(e), e)
-                # except:
-                #     raise Exception("Unclassified situation")
         else:
             warnings.warn(
                 f"Attempt to mark {promise_filename} promise (base of file {filename}) as fulfilled failed. Potentially missmatching filename functions of on_disk_cache and end_cache."
