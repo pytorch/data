@@ -6,6 +6,8 @@
 
 @echo off
 
+git config --system core.longpaths true
+
 git submodule update --init --recursive
 if errorlevel 1 exit /b 1
 

@@ -39,7 +39,6 @@ def _get_build(var, default=False):
 
 
 _BUILD_S3 = _get_build("BUILD_S3", False)
-_AWSSDK_DIR = os.environ.get("AWSSDK_DIR", None)
 _USE_SYSTEM_AWS_SDK_CPP = _get_build("USE_SYSTEM_AWS_SDK_CPP", False)
 _USE_SYSTEM_PYBIND11 = _get_build("USE_SYSTEM_PYBIND11", False)
 _USE_SYSTEM_LIBS = _get_build("USE_SYSTEM_LIBS", False)
@@ -99,11 +98,6 @@ class CMakeBuild(build_ext):
         ]
 
         build_args = ["--config", cfg]
-
-        if _BUILD_S3 and _AWSSDK_DIR:
-            cmake_args += [
-                f"-DAWSSDK_DIR={_AWSSDK_DIR}",
-            ]
 
         # Default to Ninja
         if "CMAKE_GENERATOR" not in os.environ or platform.system() == "Windows":

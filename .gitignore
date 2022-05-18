@@ -49,3 +49,6 @@ docs/build
 docs/source/generated
 # pytorch-sphinx-theme gets installed here
 docs/src
+
+# AWSSDK
+third_party/aws_sdk
