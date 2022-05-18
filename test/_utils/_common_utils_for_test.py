@@ -6,6 +6,7 @@
 
 import hashlib
 import os
+import sys
 import tempfile
 from typing import List, Tuple, TypeVar
 
@@ -13,6 +14,11 @@ from torchdata.datapipes.iter import IterDataPipe
 
 
 T_co = TypeVar("T_co", covariant=True)
+
+
+IS_LINUX = sys.platform == "linux"
+IS_WINDOWS = sys.platform == "win32"
+IS_MACOS = sys.platform == "darwin"
 
 
 class IDP_NoLen(IterDataPipe):

@@ -60,8 +60,10 @@ if(APPLE)
 endif()
 
 # Options
+option(USE_SYSTEM_AWS_SDK_CPP "Use system-provided aws-sdk-cpp." OFF)
 option(USE_SYSTEM_PYBIND11 "Use system-provided PyBind11." OFF)
 if(USE_SYSTEM_LIBS)
+  set(USE_SYSTEM_AWS_SDK_CPP ON)
   set(USE_SYSTEM_PYBIND11 ON)
 endif()
 
