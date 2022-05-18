@@ -109,7 +109,7 @@ requirements = [
     "urllib3 >= 1.25",
     "requests",
     pytorch_package_dep,
-    "portalocker",
+    "portalocker >= 2.0.0",
 ]
 
 
