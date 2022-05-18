@@ -309,14 +309,15 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
                 retry = False
                 try:
                     # print()
+                    # print()
                     os.unlink(promise_filename)
-                except:
-                # except PermissionError as e:
+                # except:
+                except (PermissionError, Exception) as e:
                     # Workaround about Windows not letting to delete file, while it is open by another process
                     retry = True
                     if time.time() - start > PROMISE_FILE_DELETE_TIMEOUT:
                         # raise Exception("Timeout while trying to recover from the ", type(e), e)
-                        raise Exception("Timeout while trying to recover from the ")
+                        raise Exception("Timeout while trying to recover from the exception ", type(e))
                     time.sleep(PROMISE_FILE_DELETE_RETRY_INTERVAL)
                 # except Exception as e:
                 #     raise Exception("Something else happened while trying to delete promise file ", type(e), e)
