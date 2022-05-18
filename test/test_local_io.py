@@ -83,6 +83,7 @@ def init_fn(worker_id):
     datapipe = info.dataset
     torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
 
+
 def _unbatch(x):
     return x[0]
 
