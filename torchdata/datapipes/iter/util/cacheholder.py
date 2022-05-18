@@ -114,7 +114,7 @@ def _hash_check(filepath, hash_dict, hash_type):
     else:
         hash_func = hashlib.md5()
 
-    with portalocker.Lock(filepath, "rb") as f:
+    with portalocker.Lock(filepath, "rb", flags=portalocker.LockFlags.EXCLUSIVE) as f:
         chunk = f.read(1024 ** 2)
         while chunk:
             hash_func.update(chunk)
