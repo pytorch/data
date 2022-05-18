@@ -59,6 +59,8 @@ class SaverIterDataPipe(IterDataPipe[str]):
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
             with portalocker.Lock(filepath, self.mode, flags=portalocker.LockFlags.EXCLUSIVE) as f:
+                # TODO(VitalyFedyunin): Enabling line above fails TorchText tests, need to investigate race condition
+                # with open(filepath, self.mode) as f:
                 f.write(data)
             yield filepath
 
