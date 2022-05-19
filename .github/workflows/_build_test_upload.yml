@@ -69,7 +69,7 @@ jobs:
           - "3.10"
     steps:
       - name: Setup Python ${{ matrix.python-version }}
-        # if: ${{ ! startsWith( matrix.os, 'ubuntu' ) }}
+        if: ${{ ! startsWith( matrix.os, 'ubuntu' ) }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
@@ -103,13 +103,16 @@ jobs:
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
-          BUILD_S3: ${{ startsWith( matrix.os, 'ubuntu' ) && 'OFF' || 'ON' }}
-          SHARED_SYSTEM_LIBS: ${{ startsWith( matrix.os, 'ubuntu' ) && 'OFF' || 'ON' }}
+          BUILD_S3: 1
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            # The default docker path is __w
+            export WORKSPACE="/__w"
             # See: https://github.com/actions/checkout/issues/760
-            git config --global --add safe.directory /__w/data/data
-            source packaging/manylinux/wheel_helper.sh
+            git config --global --add safe.directory "$WORKSPACE/data/data"
+            source packaging/manylinux/python_helper.sh
+            ./packaging/manylinux/install_openssl.sh
+            export CMAKE_PREFIX_PATH="$WORKSPACE/ssl/:$CMAKE_PREFIX_PATH"
           fi
           packaging/build_wheel.sh
       - name: Validate TorchData Wheel
@@ -118,7 +121,7 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-            source packaging/manylinux_wheel_helper.sh
+            source packaging/manylinux/python_helper.sh
             pip3 install auditwheel
           fi
           pip3 install pkginfo
@@ -136,7 +139,7 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-            source packaging/manylinux_wheel_helper.sh
+            source packaging/manylinux/python_helper.sh
           fi
           pip3 install dist/torchdata*.whl
       - name: Run DataPipes Tests with pytest
@@ -145,7 +148,7 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-            source packaging/manylinux_wheel_helper.sh
+            source packaging/manylinux/python_helper.sh
           fi
           pip3 install -r test/requirements.txt
           pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py

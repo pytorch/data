@@ -1,4 +1,4 @@
-
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
 # This source code is licensed under the BSD-style license found in the
@@ -56,16 +56,19 @@ else()
     endif()
   endforeach()
 
-  if(WIN32)
-    list(APPEND AWSSDK_LIBRARIES "Userenv;version;ws2_32;Bcrypt;Wininet;winhttp;Crypt32;Secur32;NCrypt;Shlwapi")
-  elseif(APPLE)
-    list(APPEND AWSSDK_LIBRARIES "pthread;curl")
-  else()
+  # if(WIN32)
+  #   list(APPEND AWSSDK_LIBRARIES "Userenv;version;ws2_32;Bcrypt;Wininet;winhttp;Crypt32;Secur32;NCrypt;Shlwapi")
+  # elseif(APPLE)
+  #   list(APPEND AWSSDK_LIBRARIES "pthread;curl")
+  # else()
+  #   list(APPEND AWSSDK_LIBRARIES "${aws_cpp_sdk_INSTALL}/lib/libs2n.a")
+  #   list(APPEND AWSSDK_LIBRARIES "pthread;curl")
+  #   # if(NOT SHARED_SYSTEM_LIBS)
+  #   # list(APPEND AWSSDK_LIBRARIES "crypto;ssl;z;curl")
+  #   # endif()
+  # endif()
+  if(UNIX)
     list(APPEND AWSSDK_LIBRARIES "${aws_cpp_sdk_INSTALL}/lib/libs2n.a")
-    list(APPEND AWSSDK_LIBRARIES "pthread")
-    # if(NOT SHARED_SYSTEM_LIBS)
-    list(APPEND AWSSDK_LIBRARIES "crypto;ssl;z;curl")
-    # endif()
   endif()
 
   include(ExternalProject)
