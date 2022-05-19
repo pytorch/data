@@ -9,6 +9,8 @@ import pickle
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Generic, Iterator, Optional, TypeVar
 
+from torch.utils.data.datapipes.datapipe import _IterDataPipeSerializationWrapper
+
 from torchdata.datapipes.iter import IterDataPipe
 
 from .error import PauseIteration
@@ -58,6 +60,9 @@ class DataLoader2(Generic[T_co]):
         self.reading_service = reading_service
         self.reading_service_state: Optional[bytes] = None
         self._terminated: bool = False
+
+        # _DataPipeSerializationWrapper container makes it easier to serialize without redefining pickler
+        self.datapipe = _IterDataPipeSerializationWrapper(self.datapipe)  # type: ignore[assignment]
 
         if self.datapipe_adapter_fn is not None:
             self.datapipe = self.datapipe_adapter_fn(self.datapipe)
