@@ -9,7 +9,7 @@ import io
 import pickle
 from typing import Dict, List
 
-from torch.utils.data import IterDataPipe
+from torchdata.datapipes.iter import IterDataPipe
 
 DataPipeGraph = Dict[IterDataPipe, "DataPipeGraph"]  # type: ignore[misc]
 
