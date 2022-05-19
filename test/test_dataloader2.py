@@ -7,13 +7,8 @@
 
 from unittest import TestCase
 
-from torchdata.dataloader2 import (
-    DataLoader2,
-)
-from torchdata.dataloader2.dataloader2 import (
-    READING_SERVICE_STATE_KEY_NAME,
-    SERIALIZED_DATAPIPE_KEY_NAME,
-)
+from torchdata.dataloader2 import DataLoader2
+from torchdata.dataloader2.dataloader2 import READING_SERVICE_STATE_KEY_NAME, SERIALIZED_DATAPIPE_KEY_NAME
 from torchdata.datapipes.iter import IterableWrapper
 
 
