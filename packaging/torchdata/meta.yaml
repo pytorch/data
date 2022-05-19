@@ -24,6 +24,7 @@ requirements:
     - python
     - urllib3>=1.25
     - requests
+    - portalocker>=2.0.0
     {{ environ.get('CONDA_PYTORCH_CONSTRAINT') }}
 
 build:
@@ -47,8 +48,9 @@ test:
     # The following packages are not on the default conda channel
     # - iopath
     # - rarfile
-  commands:
-    - pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
+  # TODO: Re-enable it after #386 is landed
+  # commands:
+  #   - pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
 
 about:
   home: https://github.com/pytorch/data
