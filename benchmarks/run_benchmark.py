@@ -97,18 +97,21 @@ for epoch in range(num_epochs):
         input_image = input_image.reshape(64,3,7,7) / 255
 
         labels = elem["label"]
+        
+        # TODO: remove this is wrong
+        labels = labels.repeat(64)
         optimizer.zero_grad()
 
         outputs = model(input_image)
-
-        # TODO: ValueError: Expected input batch_size (64) to match target batch_size (1).
+        
+        # ValueError: Expected input batch_size (64) to match target batch_size (1).
         loss = criterion(outputs,labels)
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
-        if i % 2000 == 1999:    # print every 2000 mini-batches
-            print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
-            running_loss = 0.0
+        # if i % 2000 == 1999:    # print every 2000 mini-batches
+        print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
+        running_loss = 0.0
 
         batch_end = time.time()
         batch_duration = batch_end - batch_start 
