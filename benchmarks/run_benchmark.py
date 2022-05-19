@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--dataset", type=str, default="gtsrb", help="The name of the dataset")
 parser.add_argument("--model_name", type=str, default="resnext50_32x4d", help="The name of the model")
 parser.add_argument("--batch_size", type=int, default=1, help="")
+parser.add_argument("--device", type=str, default="cuda:0", help="Options are are cpu or cuda:0")
 parser.add_argument("--num_epochs", type=int, default=2)
 parser.add_argument("--report_location", type=str, default="./report.md", help="The location where the generated report will be stored")
 parser.add_argument("--num_workers", type=int, default=1, help="Number of dataloader workers")
@@ -57,7 +58,7 @@ model_map = {
 
 }
 
-model = model_map[model_name]()
+model = model_map[model_name]().to(torch.device("cuda:0"))
 
 # setup data pipe
 dp = load(dataset, split="train")
@@ -92,11 +93,11 @@ for epoch in range(num_epochs):
         batch_start = time.time()
         # Should image preprocessing be done online or offline?
         # This is all image specific, need to refactor this out or create a training loop per model/dataset combo
-        input_image = torch.unsqueeze(elem["image"], 0)
+        input_image = torch.unsqueeze(elem["image"], 0).to(torch.device("cuda:0"))
         input_image = transforms.Resize(size=(96,98))(input_image)
         input_image = input_image.reshape(64,3,7,7) / 255
 
-        labels = elem["label"]
+        labels = elem["label"].to(torch.device("cuda:0"))
         
         # TODO: remove this is wrong
         labels = labels.repeat(64)
