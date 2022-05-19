@@ -15,7 +15,7 @@ def _check_shuffle_before_sharding(datapipe: IterDataPipe) -> bool:
     This function will check if a ``shuffle`` operation is presented before each
     ``sharding_filter`` operation for every single path in the ``DataPipe`` graph.
     """
-    graph: DataPipeGraph = traverse(datapipe)
+    graph: DataPipeGraph = traverse(datapipe)  # type: ignore[arg-type]
     return _check_shuffler_before_sharding_helper(graph)
 
 

@@ -7,8 +7,9 @@
 
 import unittest
 
-from torchdata.datapipes.iter import IterableWrapper, ShardingFilter, Shuffler
 from torchdata.dataloader2.linter import _check_shuffle_before_sharding
+
+from torchdata.datapipes.iter import IterableWrapper, ShardingFilter, Shuffler
 
 
 def dummy_fn(x):
