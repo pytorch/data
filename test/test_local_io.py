@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import bz2
+import functools
 import hashlib
 import io
 import itertools
@@ -12,6 +13,8 @@ import lzma
 import os
 import subprocess
 import tarfile
+import tempfile
+import time
 import unittest
 import warnings
 import zipfile
@@ -22,6 +25,8 @@ from json.decoder import JSONDecodeError
 import expecttest
 
 from _utils._common_utils_for_test import create_temp_dir, create_temp_files, get_name, reset_after_n_next_calls
+
+from torch.utils.data import DataLoader
 from torchdata.datapipes.iter import (
     Bz2FileLoader,
     CSVDictParser,
@@ -34,9 +39,11 @@ from torchdata.datapipes.iter import (
     IoPathFileOpener,
     IoPathSaver,
     IterableWrapper,
+    IterDataPipe,
     JsonParser,
     RarArchiveLoader,
     Saver,
+    StreamReader,
     TarArchiveLoader,
     WebDataset,
     XzFileLoader,
@@ -75,6 +82,14 @@ def init_fn(worker_id):
     num_workers = info.num_workers
     datapipe = info.dataset
     torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
+
+
+def _unbatch(x):
+    return x[0]
+
+
+def _noop(x):
+    return x
 
 
 class TestDataPipeLocalIO(expecttest.TestCase):
@@ -605,6 +620,31 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         source_dp = IterableWrapper(sorted(name_to_data.items()))
         saver_dp = source_dp.save_to_disk(filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
         list(saver_dp)
+
+    @staticmethod
+    def _slow_fn(tmpdirname, x):
+        with open(os.path.join(tmpdirname, str(os.getpid())), "w") as pid_fh:
+            pid_fh.write("anything")
+        time.sleep(2)
+        return (x, "str")
+
+    def test_disk_cache_locks(self):
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            file_name = os.path.join(tmpdirname, "test.bin")
+            dp = IterableWrapper([file_name])
+            dp = dp.on_disk_cache(filepath_fn=_noop)
+            dp = dp.map(functools.partial(self._slow_fn, tmpdirname))
+            dp = dp.end_caching(mode="t", filepath_fn=_noop, timeout=120)
+            dp = FileOpener(dp)
+            dp = StreamReader(dp)
+            dl = DataLoader(dp, num_workers=10, multiprocessing_context="spawn", batch_size=1, collate_fn=_unbatch)
+            result = list(dl)
+            all_files = []
+            for (_, _, filenames) in os.walk(tmpdirname):
+                all_files += filenames
+            # We expect only two files, one with pid and 'downloaded' one
+            self.assertEqual(2, len(all_files))
+            self.assertEqual("str", result[0][1])
 
     # TODO(120): this test currently only covers reading from local
     # filesystem. It needs to be modified once test data can be stored on
