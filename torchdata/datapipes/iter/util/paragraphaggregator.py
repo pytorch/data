@@ -77,6 +77,7 @@ class ParagraphAggregatorIterDataPipe(IterDataPipe[Tuple[str, str]]):
 
     def __setstate__(self, state):
         (self.source_datapipe, self.joiner) = state
+        self.buffer = []
 
     def __del__(self):
         self.buffer.clear()
