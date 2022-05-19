@@ -92,16 +92,8 @@ jobs:
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
             set -ex
-            ls -l /usr/lib64 | grep libcrypto
-            ls -l /usr/lib64 | grep libz
-            ls -l /usr/lib64 | grep ssl
-            ls -l /usr/lib64 | grep curl
             yum -y install ninja-build
-            yum -y install openssl-static zlib-static curl-devel
-            ls -l /usr/lib64 | grep libcrypto
-            ls -l /usr/lib64 | grep libz
-            ls -l /usr/lib64 | grep ssl
-            ls -l /usr/lib64 | grep curl
+            yum -y install zlib-static
           else
             pip install cmake ninja
             echo "/home/runner/.local/bin" >> $GITHUB_PATH
@@ -117,7 +109,7 @@ jobs:
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
             # See: https://github.com/actions/checkout/issues/760
             git config --global --add safe.directory /__w/data/data
-            source packaging/manylinux_wheel_helper.sh
+            source packaging/manylinux/wheel_helper.sh
           fi
           packaging/build_wheel.sh
       - name: Validate TorchData Wheel
