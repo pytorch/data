@@ -112,17 +112,17 @@ jobs:
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
-          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-            # source packaging/manylinux_wheel_helper.sh
-            pip3 install auditwheel
-          fi
+          # if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+          #   source packaging/manylinux_wheel_helper.sh
+          #   pip3 install auditwheel
+          # fi
           pip3 install pkginfo
           for pkg in dist/torchdata*.whl; do
               echo "PkgInfo of $pkg:"
               pkginfo $pkg
-              if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-                auditwheel show $pkg
-              fi
+              # if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+              #   auditwheel show $pkg
+              # fi
           done
       - name: Install TorchData Wheel
         shell: bash
