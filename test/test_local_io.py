@@ -84,10 +84,17 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self.temp_sub_dir = create_temp_dir(self.temp_dir.name)
         self.temp_sub_files = create_temp_files(self.temp_sub_dir, 4, False)
 
+        self.temp_dir_2 = create_temp_dir()
+        self.temp_files_2 = create_temp_files(self.temp_dir_2)
+        self.temp_sub_dir_2 = create_temp_dir(self.temp_dir_2.name)
+        self.temp_sub_files_2 = create_temp_files(self.temp_sub_dir_2, 4, False)
+
     def tearDown(self):
         try:
             self.temp_sub_dir.cleanup()
             self.temp_dir.cleanup()
+            self.temp_sub_dir_2.cleanup()
+            self.temp_dir_2.cleanup()
         except Exception as e:
             warnings.warn(f"TestDataPipeLocalIO was not able to cleanup temp dir due to {e}")
 
@@ -609,6 +616,18 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # check all file paths within sub_folder are listed
         for path in datapipe:
             self.assertTrue(path in self.temp_sub_files)
+
+    @skipIfNoIoPath
+    def test_io_path_file_lister_iterdatapipe_with_list(self):
+        datapipe = IoPathFileLister(root=[self.temp_sub_dir.name, self.temp_sub_dir_2.name])
+
+        file_lister = list(datapipe)
+        file_lister.sort()
+        all_temp_files = list(self.temp_sub_files + self.temp_sub_files_2)
+        all_temp_files.sort()
+
+        # check all file paths within sub_folder are listed
+        self.assertEqual(file_lister, all_temp_files)
 
     @skipIfNoIoPath
     def test_io_path_file_loader_iterdatapipe(self):
