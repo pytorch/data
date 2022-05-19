@@ -13,7 +13,8 @@ import expecttest
 
 import torchdata
 
-from _utils._common_utils_for_test import check_hash_fn, create_temp_dir
+from _utils._common_utils_for_test import check_hash_fn, create_temp_dir, IS_WINDOWS
+from torch.utils.data import DataLoader
 
 from torchdata.datapipes.iter import (
     EndOnDiskCacheHolder,
@@ -143,8 +144,9 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
 
         cached_it = iter(file_cache_dp)
         for expected_csv_path in _gen_filepath_fn(expected_file_name):
-            # File doesn't exist on disk
-            self.assertFalse(os.path.exists(expected_csv_path))
+
+            # Check disabled due to some elements of prefetching inside of on_disck_cache
+            # self.assertFalse(os.path.exists(expected_csv_path))
 
             csv_path = next(cached_it)
 
@@ -167,14 +169,21 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         cached_it = iter(file_cache_dp)
         for i in range(3):
             expected_csv_path = os.path.join(self.temp_dir.name, root_dir, f"{i}.csv")
+
             # File doesn't exist on disk
-            self.assertFalse(os.path.exists(expected_csv_path))
+            # Check disabled due to some elements of prefetching inside of on_disck_cache
+            # self.assertFalse(os.path.exists(expected_csv_path))
 
             csv_path = next(cached_it)
 
             # File is cached to disk
             self.assertTrue(os.path.exists(expected_csv_path))
             self.assertEqual(expected_csv_path, csv_path)
+
+        if not IS_WINDOWS:
+            dl = DataLoader(file_cache_dp, num_workers=3, multiprocessing_context="fork", batch_size=1)
+            expected = [[os.path.join(self.temp_dir.name, root_dir, f"{i}.csv")] for i in range(3)] * 3
+            self.assertEqual(sorted(expected), sorted(list(dl)))
 
     def test_s3_io_iterdatapipe(self):
         # sanity test

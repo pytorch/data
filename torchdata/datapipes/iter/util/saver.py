@@ -56,6 +56,8 @@ class SaverIterDataPipe(IterDataPipe[str]):
             dirname = os.path.dirname(filepath)
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
+            # with portalocker.Lock(filepath, self.mode, flags=portalocker.LockFlags.EXCLUSIVE) as f:
+            # TODO(VitalyFedyunin): Enabling line above will require all read sites to be updated (Win).
             with open(filepath, self.mode) as f:
                 f.write(data)
             yield filepath
