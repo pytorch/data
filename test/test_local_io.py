@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import bz2
+import functools
 import hashlib
 import io
 import itertools
@@ -12,6 +13,8 @@ import lzma
 import os
 import subprocess
 import tarfile
+import tempfile
+import time
 import unittest
 import warnings
 import zipfile
@@ -22,6 +25,8 @@ from json.decoder import JSONDecodeError
 import expecttest
 
 from _utils._common_utils_for_test import create_temp_dir, create_temp_files, get_name, reset_after_n_next_calls
+
+from torch.utils.data import DataLoader
 from torchdata.datapipes.iter import (
     Bz2FileLoader,
     CSVDictParser,
@@ -34,9 +39,11 @@ from torchdata.datapipes.iter import (
     IoPathFileOpener,
     IoPathSaver,
     IterableWrapper,
+    IterDataPipe,
     JsonParser,
     RarArchiveLoader,
     Saver,
+    StreamReader,
     TarArchiveLoader,
     WebDataset,
     XzFileLoader,
@@ -77,6 +84,14 @@ def init_fn(worker_id):
     torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
 
 
+def _unbatch(x):
+    return x[0]
+
+
+def _noop(x):
+    return x
+
+
 class TestDataPipeLocalIO(expecttest.TestCase):
     def setUp(self):
         self.temp_dir = create_temp_dir()
@@ -84,10 +99,17 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self.temp_sub_dir = create_temp_dir(self.temp_dir.name)
         self.temp_sub_files = create_temp_files(self.temp_sub_dir, 4, False)
 
+        self.temp_dir_2 = create_temp_dir()
+        self.temp_files_2 = create_temp_files(self.temp_dir_2)
+        self.temp_sub_dir_2 = create_temp_dir(self.temp_dir_2.name)
+        self.temp_sub_files_2 = create_temp_files(self.temp_sub_dir_2, 4, False)
+
     def tearDown(self):
         try:
             self.temp_sub_dir.cleanup()
             self.temp_dir.cleanup()
+            self.temp_sub_dir_2.cleanup()
+            self.temp_dir_2.cleanup()
         except Exception as e:
             warnings.warn(f"TestDataPipeLocalIO was not able to cleanup temp dir due to {e}")
 
@@ -599,6 +621,31 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         saver_dp = source_dp.save_to_disk(filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
         list(saver_dp)
 
+    @staticmethod
+    def _slow_fn(tmpdirname, x):
+        with open(os.path.join(tmpdirname, str(os.getpid())), "w") as pid_fh:
+            pid_fh.write("anything")
+        time.sleep(2)
+        return (x, "str")
+
+    def test_disk_cache_locks(self):
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            file_name = os.path.join(tmpdirname, "test.bin")
+            dp = IterableWrapper([file_name])
+            dp = dp.on_disk_cache(filepath_fn=_noop)
+            dp = dp.map(functools.partial(self._slow_fn, tmpdirname))
+            dp = dp.end_caching(mode="t", filepath_fn=_noop, timeout=120)
+            dp = FileOpener(dp)
+            dp = StreamReader(dp)
+            dl = DataLoader(dp, num_workers=10, multiprocessing_context="spawn", batch_size=1, collate_fn=_unbatch)
+            result = list(dl)
+            all_files = []
+            for (_, _, filenames) in os.walk(tmpdirname):
+                all_files += filenames
+            # We expect only two files, one with pid and 'downloaded' one
+            self.assertEqual(2, len(all_files))
+            self.assertEqual("str", result[0][1])
+
     # TODO(120): this test currently only covers reading from local
     # filesystem. It needs to be modified once test data can be stored on
     # gdrive/s3/onedrive
@@ -609,6 +656,18 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # check all file paths within sub_folder are listed
         for path in datapipe:
             self.assertTrue(path in self.temp_sub_files)
+
+    @skipIfNoIoPath
+    def test_io_path_file_lister_iterdatapipe_with_list(self):
+        datapipe = IoPathFileLister(root=[self.temp_sub_dir.name, self.temp_sub_dir_2.name])
+
+        file_lister = list(datapipe)
+        file_lister.sort()
+        all_temp_files = list(self.temp_sub_files + self.temp_sub_files_2)
+        all_temp_files.sort()
+
+        # check all file paths within sub_folder are listed
+        self.assertEqual(file_lister, all_temp_files)
 
     @skipIfNoIoPath
     def test_io_path_file_loader_iterdatapipe(self):
