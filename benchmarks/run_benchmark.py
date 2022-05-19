@@ -11,9 +11,10 @@ from torchvision import transforms
 import time
 from statistics import mean
 import torch.optim as optim
+from torch.profiler import profile, record_function, ProfilerActivity
 
 
-
+## Arg parsing
 parser = argparse.ArgumentParser()
 parser.add_argument("--dataset", type=str, default="gtsrb", help="The name of the dataset")
 parser.add_argument("--model_name", type=str, default="resnext50_32x4d", help="The name of the model")
@@ -48,6 +49,12 @@ def init_fn(worker_id):
     num_workers = info.num_workers
     datapipe = info.dataset
     torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
+
+def trace_handler(p):
+    output = p.key_averages().table(sort_by="self_cuda_time_total", row_limit=10)
+    print(output)
+    p.export_chrome_trace("/tmp/trace_" + str(p.step_num) + ".json")
+
 
 # Download model
 model_map = {
@@ -86,42 +93,52 @@ batch_durations = []
 
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
-for epoch in range(num_epochs):
-    epoch_start = time.time()
-    running_loss = 0
-    for i, elem in enumerate(dl):
-        batch_start = time.time()
-        # Should image preprocessing be done online or offline?
-        # This is all image specific, need to refactor this out or create a training loop per model/dataset combo
-        input_image = torch.unsqueeze(elem["image"], 0).to(torch.device("cuda:0"))
-        input_image = transforms.Resize(size=(96,98))(input_image)
-        input_image = input_image.reshape(64,3,7,7) / 255
 
-        labels = elem["label"].to(torch.device("cuda:0"))
-        
-        # TODO: remove this is wrong
-        labels = labels.repeat(64)
-        optimizer.zero_grad()
+with profile(
+    activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+    schedule=torch.profiler.schedule(
+        wait=1,
+        warmup=1,
+        active=2),
+    on_trace_ready=trace_handler
+) as p:
 
-        outputs = model(input_image)
-        
-        # ValueError: Expected input batch_size (64) to match target batch_size (1).
-        loss = criterion(outputs,labels)
-        loss.backward()
-        optimizer.step()
-        running_loss += loss.item()
-        # if i % 2000 == 1999:    # print every 2000 mini-batches
-        print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
-        running_loss = 0.0
+    for epoch in range(num_epochs):
+        epoch_start = time.time()
+        running_loss = 0
+        for i, elem in enumerate(dl):
+            batch_start = time.time()
+            # Should image preprocessing be done online or offline?
+            # This is all image specific, need to refactor this out or create a training loop per model/dataset combo
+            input_image = torch.unsqueeze(elem["image"], 0).to(torch.device("cuda:0"))
+            input_image = transforms.Resize(size=(96,98))(input_image)
+            input_image = input_image.reshape(64,3,7,7) / 255
 
-        batch_end = time.time()
-        batch_duration = batch_end - batch_start 
-        batch_durations.append(batch_duration)
-    epoch_end = time.time()
-    epoch_duration = epoch_end - epoch_start
-    per_epoch_durations.append(epoch_duration)
-total_end = time.time()
-total_duration = total_end - total_start
+            labels = elem["label"].to(torch.device("cuda:0"))
+            
+            # TODO: remove this is wrong
+            labels = labels.repeat(64)
+            optimizer.zero_grad()
+
+            outputs = model(input_image)
+            
+            # ValueError: Expected input batch_size (64) to match target batch_size (1).
+            loss = criterion(outputs,labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+            # if i % 2000 == 1999:    # print every 2000 mini-batches
+            print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
+            running_loss = 0.0
+
+            batch_end = time.time()
+            batch_duration = batch_end - batch_start 
+            batch_durations.append(batch_duration)
+        epoch_end = time.time()
+        epoch_duration = epoch_end - epoch_start
+        per_epoch_durations.append(epoch_duration)
+    total_end = time.time()
+    total_duration = total_end - total_start
 
 print(f"Total duration is {total_duration}")
 print(f"Per epoch duration {mean(per_epoch_durations)}")
