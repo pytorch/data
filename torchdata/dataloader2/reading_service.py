@@ -8,8 +8,8 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Optional
 
-from torch.utils.data import DataLoader, IterDataPipe
-from torch.utils.data.datapipes.iter import IterableWrapper
+from torch.utils.data import DataLoader
+from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 
 
 class ReadingServiceInterface(ABC):

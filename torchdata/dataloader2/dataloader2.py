@@ -9,7 +9,7 @@ import pickle
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Generic, Iterator, Optional, TypeVar
 
-from torch.utils.data import IterDataPipe
+from torchdata.datapipes.iter import IterDataPipe
 
 from .error import PauseIteration
 from .reading_service import CheckpointableReadingServiceInterface, ReadingServiceInterface

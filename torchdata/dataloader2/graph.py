@@ -7,7 +7,7 @@
 
 from typing import List, Type
 
-from torch.utils.data import IterDataPipe
+from torchdata.datapipes.iter import IterDataPipe
 
 from ._graph_utils import DataPipeGraph, traverse
 
