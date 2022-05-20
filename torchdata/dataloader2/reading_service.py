@@ -127,7 +127,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             prefetch_factor=self.prefetch_factor,
             persistent_workers=self.persistent_workers,
         )
-        return IterableWrapper(self.dl_)
+        return IterableWrapper(self.dl_)  # type: ignore[return-value]
 
     def finalize(self) -> None:
         if self.persistent_workers and self.dl_ is not None and self.dl_._iterator is not None:
