@@ -32,6 +32,9 @@ class LinterTest(unittest.TestCase):
         dp = source_dp.map(dummy_fn).sharding_filter()
         self.assertFalse(_check_shuffle_before_sharding(dp))
 
+        dp = source_dp.map(dummy_fn).sharding_filter().shuffle()
+        self.assertFalse(_check_shuffle_before_sharding(dp))
+
         # Multi pathes
         def _multi_path_dp_1(shuffle):
             s_dp = source_dp.shuffle() if shuffle else source_dp
