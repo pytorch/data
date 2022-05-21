@@ -140,6 +140,9 @@ DataPipe is essentially a container to apply an operation to data yielded from a
 we alias to just "Operation-er" in **init** files. For our ``IterDataPipe`` example, we'll name the module
 ``MapperIterDataPipe`` and alias it as ``iter.Mapper`` under ``torchdata.datapipes``.
 
+For the functional method name, the naming convention is ``datapipe.<operation>``. For instance,
+the functional method name of ``Mapper`` is ``map``, such that it can be invoked by ``datapipe.map(...)``.
+
 
 Constructor
 ^^^^^^^^^^^^^^^^^^
