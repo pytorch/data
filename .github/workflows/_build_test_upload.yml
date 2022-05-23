@@ -59,9 +59,9 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          # - macos-latest
+          - macos-latest
           - ubuntu-latest
-          # - windows-latest
+          - windows-latest
         python-version:
           - 3.7
           - 3.8
@@ -91,9 +91,8 @@ jobs:
         shell: bash
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-            set -ex
             yum -y install ninja-build
-            yum -y install zlib-static
+            yum -y install openssl-devel openssl-static curl-devel zlib-static
           else
             pip install cmake ninja
             echo "/home/runner/.local/bin" >> $GITHUB_PATH
@@ -107,12 +106,12 @@ jobs:
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
             # The default docker path is __w
-            export WORKSPACE="/__w"
+            # export WORKSPACE="/__w"
             # See: https://github.com/actions/checkout/issues/760
             git config --global --add safe.directory "$WORKSPACE/data/data"
             source packaging/manylinux/python_helper.sh
-            ./packaging/manylinux/install_openssl.sh
-            export CMAKE_PREFIX_PATH="$WORKSPACE/ssl/:$CMAKE_PREFIX_PATH"
+            # ./packaging/manylinux/install_openssl.sh
+            # export CMAKE_PREFIX_PATH="$WORKSPACE/ssl/:$CMAKE_PREFIX_PATH"
           fi
           packaging/build_wheel.sh
       - name: Validate TorchData Wheel
@@ -130,7 +129,6 @@ jobs:
               pkginfo $pkg
               if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
                 auditwheel show $pkg
-                auditwheel repair $pkg --plat manylinux1_x86_64
               fi
           done
       - name: Install TorchData Wheel
