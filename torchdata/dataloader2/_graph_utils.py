@@ -8,7 +8,9 @@
 from typing import Dict, Union
 
 from torch.utils.data.graph import traverse
-from torchdata.datapipes.iter import IterDataPipe, MapDataPipe
+
+from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.map import MapDataPipe
 
 __all__ = ["DataPipe", "DataPipeGraph", "traverse"]
 

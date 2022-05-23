@@ -7,6 +7,9 @@
 
 from typing import List, Type
 
+from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.map import MapDataPipe
+
 from ._graph_utils import DataPipe, DataPipeGraph, traverse
 
 
@@ -90,7 +93,7 @@ def _replace_dp(recv_dp, send_graph: DataPipeGraph, old_dp: DataPipe, new_dp: Da
 def _assign_attr(obj, old_dp, new_dp, inner_dp: bool = False):
     if obj is old_dp:
         return new_dp
-    elif isinstance(obj, DataPipe):
+    elif isinstance(obj, (IterDataPipe, MapDataPipe)):
         # Prevent recursive call for DataPipe
         if not inner_dp:
             return None
