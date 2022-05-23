@@ -10,7 +10,7 @@ from typing import Dict, Union
 from torch.utils.data.graph import traverse
 from torchdata.datapipes.iter import IterDataPipe, MapDataPipe
 
-__all__ = ["DataPipeGraph", "traverse"]
+__all__ = ["DataPipe", "DataPipeGraph", "traverse"]
 
 DataPipe = Union[IterDataPipe, MapDataPipe]
-DataPipeGraph = Dict[IterDataPipe, "DataPipeGraph"]  # type: ignore[misc]
+DataPipeGraph = Dict[DataPipe, "DataPipeGraph"]  # type: ignore[misc]
