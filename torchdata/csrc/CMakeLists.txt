@@ -11,11 +11,25 @@ if(BUILD_S3)
   # see https://github.com/actions/setup-python/issues/121#issuecomment-1014500503
   set(Python_FIND_FRAMEWORK "LAST")
 
-  if (WIN32)
+  if(WIN32)
       find_package(Python3 ${PYTHON_VERSION} EXACT COMPONENTS Interpreter Development)
     set(ADDITIONAL_ITEMS Python3::Python)
   else()
     find_package(Python3 COMPONENTS Interpreter Development)
+  endif()
+
+  # AWSSDK Dependencies
+  if(WIN32)
+    set(AWSSDK_DEP_LIBRARIES "Userenv;version;ws2_32;Bcrypt;Wininet;winhttp;Crypt32;Secur32;NCrypt;Shlwapi")
+  elseif(APPLE)
+    set(AWSSDK_DEP_LIBRARIES pthread curl)
+  elseif(UNIX)
+    if(STATIC_OPENSSL)
+      set(OPENSSL_USE_STATIC_LIBS TRUE)
+    endif()
+    include(FindOpenSSL)
+    set(AWSSDK_DEP_INCLUDE_DIRS ${AWSSDK_INCLUDE_DIRS})
+    set(AWSSDK_DEP_LIBRARIES ${OPENSSL_CRYPTO_LIBRARIES} ${OPENSSL_SSL_LIBRARIES} curl)
   endif()
 
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -39,15 +53,24 @@ if(BUILD_S3)
     ${Python_INCLUDE_DIR}
     ${pybind11_INCLUDE_DIRS}
     ${AWSSDK_INCLUDE_DIRS}
+    ${AWSSDK_DEP_INCLUDE_DIRS}
     )
 
   target_link_libraries(
     _torchdata
     PRIVATE
-    ${AWSSDK_LIBRARIES}
     ${Python_LIBRARIES}
     ${ADDITIONAL_ITEMS}
+    ${AWSSDK_LIBRARIES}
+    ${AWSSDK_DEP_LIBRARIES}
     )
+
+  if(UNIX)
+    target_link_libraries(
+      _torchdata
+      PRIVATE
+    )
+  endif()
 
   set_target_properties(_torchdata PROPERTIES PREFIX "")
   if (MSVC)

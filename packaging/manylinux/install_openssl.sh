@@ -6,8 +6,8 @@
 # LICENSE file in the root directory of this source tree.
 
 OPENSSL_URL="https://www.openssl.org/source/"
-OPENSSL_NAME="openssl-1.1.1n"
-OPENSSL_SHA256="40dceb51a4f6a5275bde0e6bf20ef4b91bfc32ed57c0552e2e8e15463372b17a"
+OPENSSL_NAME="openssl-1.1.1o"
+OPENSSL_SHA256="9384a2b0570dd80358841464677115df785edb941c71211f75076d72fe6b438f"
 OPENSSL_BUILD_FLAGS="no-ssl2 no-zlib no-shared no-comp no-dynamic-engine enable-ec_nistp_64_gcc_128"
 
 function check_sha256sum {
