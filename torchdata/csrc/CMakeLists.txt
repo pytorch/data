@@ -24,14 +24,16 @@ if(BUILD_S3)
   elseif(APPLE)
     set(AWSSDK_DEP_LIBRARIES pthread curl)
   elseif(UNIX)
-    if(STATIC_OPENSSL)
+    set(AWSSDK_DEP_LIBRARIES pthread)
+    if(STATIC_DEPS)
       set(OPENSSL_USE_STATIC_LIBS TRUE)
     endif()
+    include(FindCURL)
+    list(APPEND AWSSDK_DEP_LIBRARIES ${CURL_LIBRARIES})
     include(FindOpenSSL)
-    set(AWSSDK_DEP_INCLUDE_DIRS ${AWSSDK_INCLUDE_DIRS})
-    set(AWSSDK_DEP_LIBRARIES ${OPENSSL_CRYPTO_LIBRARIES} ${OPENSSL_SSL_LIBRARIES} curl)
+    list(APPEND AWSSDK_DEP_LIBRARIES ${OPENSSL_SSL_LIBRARIES} ${OPENSSL_CRYPTO_LIBRARIES})
   endif()
-  message(STATUS "AWSSDK DEPENDENCIES AWSSDK_DEP_INCLUDE_DIRS: ${AWSSDK_DEP_INCLUDE_DIRS}, AWSSDK_DEP_LIBRARIES: ${AWSSDK_DEP_LIBRARIES}")
+  message(STATUS "AWSSDK DEPENDENCIES AWSSDK_DEP_LIBRARIES: ${AWSSDK_DEP_LIBRARIES}")
 
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -54,7 +56,6 @@ if(BUILD_S3)
     ${Python_INCLUDE_DIR}
     ${pybind11_INCLUDE_DIRS}
     ${AWSSDK_INCLUDE_DIRS}
-    ${AWSSDK_DEP_INCLUDE_DIRS}
     )
 
   target_link_libraries(
@@ -65,13 +66,6 @@ if(BUILD_S3)
     ${AWSSDK_LIBRARIES}
     ${AWSSDK_DEP_LIBRARIES}
     )
-
-  if(UNIX)
-    target_link_libraries(
-      _torchdata
-      PRIVATE
-    )
-  endif()
 
   set_target_properties(_torchdata PROPERTIES PREFIX "")
   if (MSVC)

@@ -4,13 +4,13 @@ on:
     branches:
       - main
       - release/*
-  # pull_request:
-  #   types: [opened, synchronize, reopened, labeled]
-  #   branches:
-  #     - main
-  #     # For PR created by ghstack
-  #     - gh/*/*/base
-  #     - release/*
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    branches:
+      - main
+      # For PR created by ghstack
+      - gh/*/*/base
+      - release/*
 
 jobs:
   test:
@@ -29,9 +29,6 @@ jobs:
           - 3.7
           - 3.8
           - 3.9
-        with-s3:
-          - 1
-          - 0
     steps:
       - name: Setup additional system libraries
         if: startsWith( matrix.os, 'ubuntu' )
@@ -44,10 +41,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Setup msbuild on Windows
-        if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-latest'
         uses: microsoft/setup-msbuild@v1.1
       - name: Set up Visual Studio shell
-        if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-latest'
         uses: egor-tensin/vs-shell@v2
         with:
           arch: x64
@@ -65,7 +62,7 @@ jobs:
         run: |
           python setup.py install
         env:
-          BUILD_S3: ${{ matrix.with-s3 }}
+          BUILD_S3: 1
       - name: Install test requirements
         run: pip3 install -r test/requirements.txt
       - name: Run DataPipes tests with pytest

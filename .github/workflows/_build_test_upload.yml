@@ -89,11 +89,16 @@ jobs:
           arch: x64
       - name: Install Build Dependency
         shell: bash
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-            yum -y install ninja-build
-            # yum -y install openssl-devel openssl-static curl-devel zlib-static
-            yum -y install curl-devel zlib-static
+            source packaging/manylinux/python_helper.sh
+            yum -y install ninja-build zlib-static
+            # Docker path is /__w by default
+            export WORKSPACE="/__w"
+            # Install static OpenSSL/libcrypto library
+            ./packaging/manylinux/install_openssl_curl.sh
           else
             pip install cmake ninja
             echo "/home/runner/.local/bin" >> $GITHUB_PATH
@@ -107,16 +112,13 @@ jobs:
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
             source packaging/manylinux/python_helper.sh
-            # Docker path is /__w by default
-            export WORKSPACE="/__w"
             # See: https://github.com/actions/checkout/issues/760
             git config --global --add safe.directory "$WORKSPACE/data/data"
-            # Install static OpenSSL/libcrypto library
-            ./packaging/manylinux/install_openssl.sh
             # AWSSDK uses $CMAKE_PREFIX_PATH to find openssl
-            export CMAKE_PREFIX_PATH="$WORKSPACE/ssl/:$CMAKE_PREFIX_PATH"
-            export OPENSSL_ROOT_DIR="$WORKSPACE/ssl"
-            export STATIC_OPENSSL=TRUE
+            export OPENSSL_ROOT_DIR="/__w/ssl"
+            export CURL_ROOT_DIR="/__w/curl"
+            export CMAKE_PREFIX_PATH="$OPENSSL_ROOT_DIR:$CURL_ROOT_DIR:$CMAKE_PREFIX_PATH"
+            export STATIC_DEPS=TRUE
           fi
           packaging/build_wheel.sh
       - name: Validate TorchData Wheel
@@ -213,7 +215,7 @@ jobs:
   #           --username __token__ \
   #           --password "$PYPI_TOKEN" \
   #           dist/torchdata*.whl
-  # 
+  #
   # conda_build_test:
   #   needs: get_release_type
   #   runs-on: ${{ matrix.os }}
@@ -271,7 +273,7 @@ jobs:
   #       with:
   #         name: torchdata-artifact
   #         path: conda-bld/*/torchdata-*.tar.bz2
-  # 
+  #
   # conda_upload:
   #   if: always() && inputs.branch != ''
   #   needs: [get_release_type, conda_build_test]
@@ -306,13 +308,13 @@ jobs:
   #       run: |
   #         conda install -yq anaconda-client
   #         conda install -c conda-forge -yq jq
-  #     
+  #
   #         if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
   #           CONDA_CHANNEL=pytorch
   #         else
   #           CONDA_CHANNEL=pytorch-${{ needs.get_release_type.outputs.type }}
   #         fi
-  #     
+  #
   #         if [[ ${{ needs.get_release_type.outputs.type }} == 'nightly' ]]; then
   #           # Loop over all platforms [win-64, osx-64, linux-64]
   #           for subdir in $(find . -type f -name '*torchdata*.tar.bz2' | sed -r 's|/[^/]+$||' | uniq | cut -f2 -d/) ; do
@@ -341,7 +343,7 @@ jobs:
   #         else
   #           anaconda -t "${CONDA_PYTORCHBOT_TOKEN}" upload ./*/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
   #         fi
-  # 
+  #
   # build_docs:
   #   if: |
   #     always() && inputs.branch != '' &&
@@ -375,14 +377,14 @@ jobs:
   #         else
   #           PYTORCH_VERSION=torch==${{ inputs.pytorch_version }}
   #         fi
-  # 
+  #
   #         PIP_CHANNEL=${{ needs.get_release_type.outputs.type }}
   #         if [[ $PIP_CHANNEL == 'official' ]]; then
   #           pip3 install "$PYTORCH_VERSION" -f https://download.pytorch.org/whl/torch_stable.html
   #         else
   #           pip3 install --pre "$PYTORCH_VERSION" -f "https://download.pytorch.org/whl/$PIP_CHANNEL/torch_$PIP_CHANNEL.html"
   #         fi
-  # 
+  #
   #         pip3 install -r requirements.txt
   #         python3 setup.py install
   #     - name: Check env
