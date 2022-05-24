@@ -54,8 +54,8 @@ Follow the instructions
 
 ### Local pip or conda
 
-First, set up an environment. We will be installing a nightly PyTorch binary as well as torchdata. If you're using
-conda, create a conda environment:
+First, set up an environment. We will be installing a PyTorch binary as well as torchdata. If you're using conda, create
+a conda environment:
 
 ```bash
 conda create --name torchdata
@@ -99,6 +99,25 @@ assert batch['text'][0][0:8] == ['Wall', 'St.', 'Bears', 'Claw', 'Back', 'Into',
 
 ```bash
 python setup.py install
+```
+
+In case building TorchData from source fails, install the nightly version of PyTorch following the linked guide on the
+[contributing page](https://github.com/pytorch/data/blob/main/CONTRIBUTING.md#install-pytorch-nightly).
+
+### From nightly
+
+The nightly version of TorchData is also provided and updated daily from main branch.
+
+Using pip:
+
+```bash
+pip install --pre torchdata --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+```
+
+Using conda:
+
+```bash
+conda install torchdata -c pytorch-nightly
 ```
 
 ## What are DataPipes?
