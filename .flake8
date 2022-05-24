@@ -10,3 +10,4 @@ exclude =
     ./third_party,
     *.pyi,
     ./examples/text/utils.py, # Copy from TorchText
+    docs/source/conf.py,
