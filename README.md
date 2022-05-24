@@ -177,17 +177,30 @@ Q: What should I do if the existing set of DataPipes does not do what I need?
 A: You can
 [implement your own custom DataPipe](https://pytorch.org/data/main/tutorial.html#implementing-a-custom-datapipe). If you
 believe your use case is common enough such that the community can benefit from having your custom DataPipe added to
-this library, feel free to open a GitHub issue.
+this library, feel free to open a GitHub issue. We will be happy to discuss!
 
-Q: What happens when the `Shuffler`/`Batcher` DataPipes are used with DataLoader?
+Q: What happens when the `Shuffler` DataPipe is used with DataLoader?
 
-A: If you choose those DataPipes while setting `shuffle=True`/`batch_size>1` for DataLoader, your samples will be
-shuffled/batched more than once. You should choose one or the other.
+A. In order to enable shuffling, you need to add a `Shuffler` to your DataPipe line and set `shuffle=True` within
+DataLoader.
+
+Q: What happens when the `Batcher` DataPipe is used with DataLoader?
+
+A: If you choose to use `Batcher` while setting `batch_size > 1` for DataLoader, your samples will be batched more than
+once. You should choose one or the other.
+
+Q: Why are there fewer built-in `MapDataPipes` than `IterDataPipes`?
+
+A: By design, there are fewer `MapDataPipes` than `IterDataPipes` to avoid duplicate implementations of the same
+functionalities as `MapDataPipe`. We encourage users to use the built-in `IterDataPipe` for various functionalities, and
+convert it to `MapDataPipe` as needed.
 
 Q: How is multiprocessing handled with DataPipes?
 
 A: Multi-process data loading is still handled by DataLoader, see the
 [DataLoader documentation for more details](https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading).
+If you would like to shard data across processes, use `ShardingFilter` and provide a `worker_init_fn` as shown in the
+[tutorial](https://pytorch.org/data/beta/tutorial.html#working-with-dataloader).
 
 Q: What is the upcoming plan for DataLoader?
 
