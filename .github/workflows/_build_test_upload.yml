@@ -76,8 +76,7 @@ jobs:
       - name: Checkout Source Repository
         uses: actions/checkout@v2
         with:
-          # ref: ${{ inputs.branch }}
-          ref: py_manylinux
+          ref: ${{ inputs.branch }}
           submodules: recursive
       - name: Setup msbuild on Windows
         if: startsWith( matrix.os, 'windows' )
@@ -187,228 +186,228 @@ jobs:
       - name: Display All TorchData Wheels
         if: steps.trigger_upload.outputs.value == 'true'
         run: ls -lh torchdata*.whl
-  #     - name: Upload Wheels to S3 Storage
-  #       if: steps.trigger_upload.outputs.value == 'true'
-  #       env:
-  #         AWS_ACCESS_KEY_ID: ${{ secrets.PYTORCH_BINARY_AWS_ACCESS_KEY_ID }}
-  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY }}
-  #       run: |
-  #         if [[ ${{ inputs.branch }} == 'main' ]]; then
-  #           S3_PATH=s3://pytorch/whl/nightly/
-  #         else
-  #           S3_PATH=s3://pytorch/whl/test/
-  #         fi
-  #         pip3 install awscli
-  #         set -x
-  #         for pkg in torchdata*.whl; do
-  #           aws s3 cp "$pkg" "$S3_PATH" --acl public-read
-  #         done
-  #     - name: Upload Official Wheels to PYPI
-  #       if: |
-  #         steps.trigger_upload.outputs.value == 'true' &&
-  #         needs.get_release_type.outputs.type == 'official'
-  #       env:
-  #         PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
-  #       run: |
-  #         pip3 install twine
-  #         python -m twine upload \
-  #           --username __token__ \
-  #           --password "$PYPI_TOKEN" \
-  #           dist/torchdata*.whl
-  #
-  # conda_build_test:
-  #   needs: get_release_type
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       os:
-  #         - macos-latest
-  #         - ubuntu-latest
-  #         - windows-latest
-  #       python-version:
-  #         - 3.7
-  #         - 3.8
-  #         - 3.9
-  #         - "3.10"
-  #   steps:
-  #     - name: Create Conda Env
-  #       uses: conda-incubator/setup-miniconda@v2
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-  #         activate-environment: conda_build_env
-  #     - name: Checkout Source Repository
-  #       uses: actions/checkout@v2
-  #       with:
-  #         ref: ${{ inputs.branch }}
-  #         submodules: recursive
-  #     - name: Setup additional system libraries
-  #       if: startsWith( matrix.os, 'ubuntu' )
-  #       run: |
-  #         sudo add-apt-repository multiverse
-  #         sudo apt update
-  #         sudo apt install libssl-dev libcurl4-openssl-dev zlib1g-dev
-  #     - name: Determine if build AWSSDK
-  #       shell: bash
-  #       run: |
-  #         if ${{ startsWith( matrix.os, 'windows' ) }}; then
-  #           BUILD_S3=0
-  #         else
-  #           BUILD_S3=1
-  #         fi
-  #         echo "::set-output name=value::$BUILD_S3"
-  #       id: build_s3
-  #     - name: Build TorchData for Conda
-  #       shell: bash -l {0}
-  #       env:
-  #         PYTHON_VERSION: ${{ matrix.python-version }}
-  #         PYTORCH_VERSION: ${{ inputs.pytorch_version }}
-  #         BUILD_S3: ${{ steps.build_s3.outputs.value }}
-  #       run: |
-  #         conda activate conda_build_env
-  #         conda install -yq conda-build -c conda-forge
-  #         packaging/build_conda.sh
-  #     - name: Upload Conda Package to Github
-  #       uses: actions/upload-artifact@v2
-  #       with:
-  #         name: torchdata-artifact
-  #         path: conda-bld/*/torchdata-*.tar.bz2
-  #
-  # conda_upload:
-  #   if: always() && inputs.branch != ''
-  #   needs: [get_release_type, conda_build_test]
-  #   runs-on: ubuntu-latest
-  #   container: continuumio/miniconda3
-  #   outputs:
-  #     upload: ${{ steps.trigger_upload.outputs.value }}
-  #   steps:
-  #     - name: Download Artifacts from Github
-  #       continue-on-error: true
-  #       uses: actions/download-artifact@v2
-  #       with:
-  #         name: torchdata-artifact
-  #     - name: Determine if Conda Uploading is needed
-  #       run: |
-  #         upload=false
-  #         for pkg in ./*/torchdata-*.tar.bz2; do
-  #           upload=true
-  #           break
-  #         done
-  #         echo "::set-output name=value::$upload"
-  #       id: trigger_upload
-  #     - name: Display All TorchData Conda Package
-  #       if: steps.trigger_upload.outputs.value == 'true'
-  #       run: ls -lh ./*/torchdata-*.tar.bz2
-  #     - name: Upload Packages to Conda
-  #       if: steps.trigger_upload.outputs.value == 'true'
-  #       shell: bash
-  #       env:
-  #         CONDA_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_PYTORCHBOT_TOKEN }}
-  #         CONDA_NIGHTLY_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_NIGHTLY_PYTORCHBOT_TOKEN }}
-  #       run: |
-  #         conda install -yq anaconda-client
-  #         conda install -c conda-forge -yq jq
-  #
-  #         if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
-  #           CONDA_CHANNEL=pytorch
-  #         else
-  #           CONDA_CHANNEL=pytorch-${{ needs.get_release_type.outputs.type }}
-  #         fi
-  #
-  #         if [[ ${{ needs.get_release_type.outputs.type }} == 'nightly' ]]; then
-  #           # Loop over all platforms [win-64, osx-64, linux-64]
-  #           for subdir in $(find . -type f -name '*torchdata*.tar.bz2' | sed -r 's|/[^/]+$||' | uniq | cut -f2 -d/) ; do
-  #             version=""
-  #             # Find existing conda packages on pytorch nightly
-  #             for val in $(conda search --json torchdata --channel=$CONDA_CHANNEL --subdir=$subdir | jq -r '.[][] | .version, .build'); do
-  #               if [[ -z $version ]]; then
-  #                 version=$val
-  #               else
-  #                 build=$val
-  #                 # Check if a new conda package built based on the same Python version and platform exists
-  #                 for new_package in ./$subdir/torchdata-*-$build.tar.bz2; do
-  #                   if [[ -f "$new_package" ]]; then
-  #                     echo "Removing $CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
-  #                     anaconda -t "${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}" remove -f "$CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
-  #                     break
-  #                   fi
-  #                 done
-  #                 version=""
-  #                 build=""
-  #               fi
-  #             done
-  #             # Upload new conda packages per subdir
-  #             anaconda -t "${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}" upload ./$subdir/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
-  #           done
-  #         else
-  #           anaconda -t "${CONDA_PYTORCHBOT_TOKEN}" upload ./*/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
-  #         fi
-  #
-  # build_docs:
-  #   if: |
-  #     always() && inputs.branch != '' &&
-  #     ( needs.wheel_upload.outputs.upload == 'true' || needs.conda_upload.outputs.upload == 'true' )
-  #   needs: [get_release_type, wheel_upload, conda_upload]
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Setup Python 3.8
-  #       uses: actions/setup-python@v2
-  #       with:
-  #         python-version: 3.8
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
-  #       with:
-  #         ref: ${{ inputs.branch }}
-  #         submodules: recursive
-  #     - name: Install Dependencies
-  #       run: |
-  #         echo `python3 --version`
-  #         sudo apt-get install -y python-setuptools
-  #         python3 -m pip install --upgrade pip
-  #         python3 -m pip install setuptools
-  #         python3 -m pip install matplotlib
-  #         sudo apt-get install -y yarn
-  #     - name: Install PyTorch & TorchData
-  #       run: |
-  #         pip3 install numpy
-  #         # Add version requirement to PyTorch except nightly release
-  #         if [[ -z "${{ inputs.pytorch_version }}" ]]; then
-  #           PYTORCH_VERSION=torch
-  #         else
-  #           PYTORCH_VERSION=torch==${{ inputs.pytorch_version }}
-  #         fi
-  #
-  #         PIP_CHANNEL=${{ needs.get_release_type.outputs.type }}
-  #         if [[ $PIP_CHANNEL == 'official' ]]; then
-  #           pip3 install "$PYTORCH_VERSION" -f https://download.pytorch.org/whl/torch_stable.html
-  #         else
-  #           pip3 install --pre "$PYTORCH_VERSION" -f "https://download.pytorch.org/whl/$PIP_CHANNEL/torch_$PIP_CHANNEL.html"
-  #         fi
-  #
-  #         pip3 install -r requirements.txt
-  #         python3 setup.py install
-  #     - name: Check env
-  #       run: echo `which spinx-build`
-  #     - name: Build the docset
-  #       run: |
-  #         cd ./docs
-  #         pip3 install -r requirements.txt
-  #         make html
-  #         cd ..
-  #     - name: Export Target Folder
-  #       run: |
-  #         TARGET_FOLDER=${{ inputs.branch }}
-  #         if [[ $TARGET_FOLDER == release/* ]]; then
-  #           TARGET_FOLDER=${TARGET_FOLDER:8}
-  #         elif [[ $TARGET_FOLDER == tags/* ]]; then
-  #           TARGET_FOLDER=${TARGET_FOLDER:5}
-  #         fi
-  #         echo "::set-output name=value::$TARGET_FOLDER"
-  #       id: target_folder
-  #     - name: Deploy
-  #       uses: JamesIves/github-pages-deploy-action@v4.2.5
-  #       with:
-  #         token: ${{ secrets.GITHUB_TOKEN }}
-  #         branch: gh-pages # The branch the action should deploy to.
-  #         folder: docs/build/html # The folder the action should deploy.
-  #         target-folder: ${{ steps.target_folder.outputs.value }} # The destination folder the action should deploy to.
+      - name: Upload Wheels to S3 Storage
+        if: steps.trigger_upload.outputs.value == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.PYTORCH_BINARY_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY }}
+        run: |
+          if [[ ${{ inputs.branch }} == 'main' ]]; then
+            S3_PATH=s3://pytorch/whl/nightly/
+          else
+            S3_PATH=s3://pytorch/whl/test/
+          fi
+          pip3 install awscli
+          set -x
+          for pkg in torchdata*.whl; do
+            aws s3 cp "$pkg" "$S3_PATH" --acl public-read
+          done
+      - name: Upload Official Wheels to PYPI
+        if: |
+          steps.trigger_upload.outputs.value == 'true' &&
+          needs.get_release_type.outputs.type == 'official'
+        env:
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          pip3 install twine
+          python -m twine upload \
+            --username __token__ \
+            --password "$PYPI_TOKEN" \
+            dist/torchdata*.whl
+
+  conda_build_test:
+    needs: get_release_type
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+        python-version:
+          - 3.7
+          - 3.8
+          - 3.9
+          - "3.10"
+    steps:
+      - name: Create Conda Env
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: conda_build_env
+      - name: Checkout Source Repository
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ inputs.branch }}
+          submodules: recursive
+      - name: Setup additional system libraries
+        if: startsWith( matrix.os, 'ubuntu' )
+        run: |
+          sudo add-apt-repository multiverse
+          sudo apt update
+          sudo apt install libssl-dev libcurl4-openssl-dev zlib1g-dev
+      - name: Determine if build AWSSDK
+        shell: bash
+        run: |
+          if ${{ startsWith( matrix.os, 'windows' ) }}; then
+            BUILD_S3=0
+          else
+            BUILD_S3=1
+          fi
+          echo "::set-output name=value::$BUILD_S3"
+        id: build_s3
+      - name: Build TorchData for Conda
+        shell: bash -l {0}
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+          PYTORCH_VERSION: ${{ inputs.pytorch_version }}
+          BUILD_S3: ${{ steps.build_s3.outputs.value }}
+        run: |
+          conda activate conda_build_env
+          conda install -yq conda-build -c conda-forge
+          packaging/build_conda.sh
+      - name: Upload Conda Package to Github
+        uses: actions/upload-artifact@v2
+        with:
+          name: torchdata-artifact
+          path: conda-bld/*/torchdata-*.tar.bz2
+
+  conda_upload:
+    if: always() && inputs.branch != ''
+    needs: [get_release_type, conda_build_test]
+    runs-on: ubuntu-latest
+    container: continuumio/miniconda3
+    outputs:
+      upload: ${{ steps.trigger_upload.outputs.value }}
+    steps:
+      - name: Download Artifacts from Github
+        continue-on-error: true
+        uses: actions/download-artifact@v2
+        with:
+          name: torchdata-artifact
+      - name: Determine if Conda Uploading is needed
+        run: |
+          upload=false
+          for pkg in ./*/torchdata-*.tar.bz2; do
+            upload=true
+            break
+          done
+          echo "::set-output name=value::$upload"
+        id: trigger_upload
+      - name: Display All TorchData Conda Package
+        if: steps.trigger_upload.outputs.value == 'true'
+        run: ls -lh ./*/torchdata-*.tar.bz2
+      - name: Upload Packages to Conda
+        if: steps.trigger_upload.outputs.value == 'true'
+        shell: bash
+        env:
+          CONDA_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_PYTORCHBOT_TOKEN }}
+          CONDA_NIGHTLY_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_NIGHTLY_PYTORCHBOT_TOKEN }}
+        run: |
+          conda install -yq anaconda-client
+          conda install -c conda-forge -yq jq
+
+          if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
+            CONDA_CHANNEL=pytorch
+          else
+            CONDA_CHANNEL=pytorch-${{ needs.get_release_type.outputs.type }}
+          fi
+
+          if [[ ${{ needs.get_release_type.outputs.type }} == 'nightly' ]]; then
+            # Loop over all platforms [win-64, osx-64, linux-64]
+            for subdir in $(find . -type f -name '*torchdata*.tar.bz2' | sed -r 's|/[^/]+$||' | uniq | cut -f2 -d/) ; do
+              version=""
+              # Find existing conda packages on pytorch nightly
+              for val in $(conda search --json torchdata --channel=$CONDA_CHANNEL --subdir=$subdir | jq -r '.[][] | .version, .build'); do
+                if [[ -z $version ]]; then
+                  version=$val
+                else
+                  build=$val
+                  # Check if a new conda package built based on the same Python version and platform exists
+                  for new_package in ./$subdir/torchdata-*-$build.tar.bz2; do
+                    if [[ -f "$new_package" ]]; then
+                      echo "Removing $CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
+                      anaconda -t "${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}" remove -f "$CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
+                      break
+                    fi
+                  done
+                  version=""
+                  build=""
+                fi
+              done
+              # Upload new conda packages per subdir
+              anaconda -t "${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}" upload ./$subdir/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
+            done
+          else
+            anaconda -t "${CONDA_PYTORCHBOT_TOKEN}" upload ./*/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
+          fi
+
+  build_docs:
+    if: |
+      always() && inputs.branch != '' &&
+      ( needs.wheel_upload.outputs.upload == 'true' || needs.conda_upload.outputs.upload == 'true' )
+    needs: [get_release_type, wheel_upload, conda_upload]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ inputs.branch }}
+          submodules: recursive
+      - name: Install Dependencies
+        run: |
+          echo `python3 --version`
+          sudo apt-get install -y python-setuptools
+          python3 -m pip install --upgrade pip
+          python3 -m pip install setuptools
+          python3 -m pip install matplotlib
+          sudo apt-get install -y yarn
+      - name: Install PyTorch & TorchData
+        run: |
+          pip3 install numpy
+          # Add version requirement to PyTorch except nightly release
+          if [[ -z "${{ inputs.pytorch_version }}" ]]; then
+            PYTORCH_VERSION=torch
+          else
+            PYTORCH_VERSION=torch==${{ inputs.pytorch_version }}
+          fi
+
+          PIP_CHANNEL=${{ needs.get_release_type.outputs.type }}
+          if [[ $PIP_CHANNEL == 'official' ]]; then
+            pip3 install "$PYTORCH_VERSION" -f https://download.pytorch.org/whl/torch_stable.html
+          else
+            pip3 install --pre "$PYTORCH_VERSION" -f "https://download.pytorch.org/whl/$PIP_CHANNEL/torch_$PIP_CHANNEL.html"
+          fi
+
+          pip3 install -r requirements.txt
+          python3 setup.py install
+      - name: Check env
+        run: echo `which spinx-build`
+      - name: Build the docset
+        run: |
+          cd ./docs
+          pip3 install -r requirements.txt
+          make html
+          cd ..
+      - name: Export Target Folder
+        run: |
+          TARGET_FOLDER=${{ inputs.branch }}
+          if [[ $TARGET_FOLDER == release/* ]]; then
+            TARGET_FOLDER=${TARGET_FOLDER:8}
+          elif [[ $TARGET_FOLDER == tags/* ]]; then
+            TARGET_FOLDER=${TARGET_FOLDER:5}
+          fi
+          echo "::set-output name=value::$TARGET_FOLDER"
+        id: target_folder
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4.2.5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh-pages # The branch the action should deploy to.
+          folder: docs/build/html # The folder the action should deploy.
+          target-folder: ${{ steps.target_folder.outputs.value }} # The destination folder the action should deploy to.
