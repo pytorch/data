@@ -15,9 +15,9 @@ corresponding label from a folder on the disk.
 
 By design, there are fewer ``MapDataPipe`` than ``IterDataPipe`` to avoid duplicate implementations of the same
 functionalities as ``MapDataPipe``. We encourage users to use the built-in ``IterDataPipe`` for various functionalities,
-and convert it to ``MapDataPipe`` as needed using ``MapToIterConverter`` or ``.to_iter_datapipe()``.
-If you have any question about usage or best practices while using `MapDataPipe`, feel free to ask on the PyTorch forum
-under the `'data' category <https://discuss.pytorch.org/c/data/37>`_.
+and convert it to ``MapDataPipe`` as needed using :class:`.IterToMapConverter` or ``.to_map_datapipe()``.
+If you have any question about usage or best practices while using ``MapDataPipe``, feel free to ask on the PyTorch
+forum under the `'data' category <https://discuss.pytorch.org/c/data/37>`_.
 
 We are open to add additional ``MapDataPipe`` where the operations can be lazily executed and ``__len__`` can be
 known in advance. Feel free to make suggestions with description of your use case in
