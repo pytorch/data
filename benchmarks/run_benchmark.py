@@ -78,7 +78,7 @@ print(f"Dataset name {dp}")
 print(f"Dataset length {len(dp)}")
 
 # Datapipe format
-print(f"data format before preprocessing is {next(iter(dp))}")
+# print(f"data format before preprocessing is {next(iter(dp))}")
 
 if dataset == "gtsrb":
     def transform(img):
@@ -109,7 +109,7 @@ if dataset == "gtsrb":
     dp = dp.batch(batch_size)
     
 # Datapipe format after preprocessing
-print(f"data format after preprocessing is \n {next(iter(dp))}\n")
+# print(f"data format after preprocessing is \n {next(iter(dp))}\n")
 
 # Setup data loader
 if num_workers == 1:
@@ -141,8 +141,8 @@ with profile(
         running_loss = 0
         for i, elem in enumerate(dl):
             batch_start = time.time()
-            # print(f"elem is {elem}")
-            labels = elem[0]["label"]      
+
+            labels = torch.argmax(elem[0]["label"], dim=1)      
             optimizer.zero_grad()
             outputs = model(elem[0]["image"])
             loss = criterion(outputs,labels)
