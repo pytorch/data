@@ -18,7 +18,7 @@ parser.add_argument("--dataset", type=str, default="gtsrb", help="The name of th
 parser.add_argument("--model_name", type=str, default="resnext50_32x4d", help="The name of the model")
 parser.add_argument("--batch_size", type=int, default=1, help="")
 parser.add_argument("--device", type=str, default="cuda:0", help="Options are are cpu or cuda:0")
-parser.add_argument("--num_epochs", type=int, default=2)
+parser.add_argument("--num_epochs", type=int, default=1)
 parser.add_argument("--report_location", type=str, default="./report.md", help="The location where the generated report will be stored")
 parser.add_argument("--num_workers", type=int, default=1, help="Number of dataloader workers")
 parser.add_argument("--shuffle", action="store_true")
@@ -49,10 +49,10 @@ def init_fn(worker_id):
     datapipe = info.dataset
     torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
 
-def trace_handler(p):
-    output = p.key_averages().table(sort_by="self_cuda_time_total", row_limit=10)
-    print(output)
-    p.export_chrome_trace("/tmp/trace_" + str(p.step_num) + ".json")
+# def trace_handler(p):
+#     output = p.key_averages().table(sort_by="self_cuda_time_total", row_limit=10)
+#     print(output)
+#     p.export_chrome_trace("/tmp/trace_" + str(p.step_num) + ".json")
 
 
 # Download model
@@ -129,11 +129,12 @@ optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
 with profile(
     activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
-    schedule=torch.profiler.schedule(
-        wait=1,
-        warmup=1,
-        active=2),
-    on_trace_ready=trace_handler
+    on_trace_ready=torch.profiler.tensorboard_trace_handler,
+    record_shapes=True,
+    profile_memory=True,
+    with_flops=True,
+    with_stack=True,
+    with_modules=True
 ) as p:
 
     for epoch in range(num_epochs):
@@ -150,8 +151,8 @@ with profile(
             optimizer.step()
 
             running_loss += loss.item()
-            if i % 200 == 1999:    # print every 2000 mini-batches
-                print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
+            # if i % 200 == 1999:    # print every 2000 mini-batches
+            print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.10f}')
             running_loss = 0.0
 
             batch_end = time.time()
