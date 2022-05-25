@@ -95,6 +95,9 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
                     if match_masks(file_name, self.masks):
                         yield os.path.join(path, file_name)
 
+    def list_files(self) -> List[str]:
+        return [path for path in self]
+
 
 @functional_datapipe("open_files_by_iopath")
 class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
