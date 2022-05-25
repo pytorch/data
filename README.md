@@ -181,8 +181,8 @@ this library, feel free to open a GitHub issue. We will be happy to discuss!
 
 Q: What happens when the `Shuffler` DataPipe is used with DataLoader?
 
-A. In order to enable shuffling, you need to add a `Shuffler` to your DataPipe line and set `shuffle=True` within
-DataLoader.
+A. In order to enable shuffling, you need to add a `Shuffler` to your DataPipe line. Then, by default, shuffling will
+happen at the point where you specified as long as you do not set `shuffle=False` within DataLoader.
 
 Q: What happens when the `Batcher` DataPipe is used with DataLoader?
 

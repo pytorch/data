@@ -99,9 +99,9 @@ pass defined functions to DataPipes rather than lambda functions because the for
         datapipe = datapipe.filter(filter_fn=filter_for_data)
         datapipe = datapipe.open_files(mode='rt')
         datapipe = datapipe.parse_csv(delimiter=",", skip_lines=1)
-        datapipe = datapipe.map(row_processer)
-        # We will also have to set `shuffle=True` later in the DataLoader
+        # Shuffle will happen as long as you do NOT set `shuffle=False` later in the DataLoader
         datapipe = datapipe.shuffle()
+        datapipe = datapipe.map(row_processer)
         return datapipe
 
 Lastly, we will put everything together in ``'__main__'`` and pass the DataPipe into the DataLoader. Note that
@@ -117,7 +117,7 @@ batched more than once. You should choose one or the other.
         for i in range(num_files_to_generate):
             generate_csv(file_label=i, num_rows=10, num_features=3)
         datapipe = build_datapipes()
-        dl = DataLoader(dataset=datapipe, shuffle=True, batch_size=5, num_workers=2)
+        dl = DataLoader(dataset=datapipe, batch_size=5, num_workers=2)
         first = next(iter(dl))
         labels, features = first['label'], first['data']
         print(f"Labels batch shape: {labels.size()}")
@@ -146,13 +146,15 @@ The reason why ``n_sample = 12`` is because ``ShardingFilter`` (``datapipe.shard
 each worker will independently return all samples. In this case, there are 10 rows per file and 3 files, with a
 batch size of 5, that gives us 6 batches per worker. With 2 workers, we get 12 total batches from the ``DataLoader``.
 
-In order for DataPipe sharding to work with ``DataLoader``, we need to add the following:
+In order for DataPipe sharding to work with ``DataLoader``, we need to add the following. It is crucial to add
+`ShardingFilter` after `Shuffler` to ensure that all worker processes have the same order of data for sharding.
 
 .. code:: python
 
     def build_datapipes(root_dir="."):
         datapipe = ...
         # Add the following line to `build_datapipes`
+        # Note that it is somewhere after `Shuffler` in the DataPipe line
         datapipe = datapipe.sharding_filter()
         return datapipe
 
