@@ -64,6 +64,15 @@ class TestDataPipeFSSpec(expecttest.TestCase):
                 {fsspec.implementations.local.make_path_posix(file) for file in self.temp_sub_files},
             )
 
+        # checks for functional API
+        datapipe = IterableWrapper([self.temp_sub_dir.name])
+        listed = list(datapipe.list_file_by_fsspec())
+        for path in listed:
+            self.assertIn(
+                path,
+                {fsspec.implementations.local.make_path_posix(file) for file in self.temp_sub_files},
+            )
+
     @skipIfNoFSSpec
     def test_fsspec_file_lister_iterdatapipe_with_list(self):
         datapipe = FSSpecFileLister(root=["file://" + self.temp_sub_dir.name, "file://" + self.temp_sub_dir_2.name])
@@ -82,32 +91,12 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         # check all file paths within sub_folder are listed
         self.assertEqual(file_lister, temp_files)
 
-    @skipIfNoFSSpec
-    def test_fsspec_functional_list_file(self):
-        datapipe = FSSpecFileLister(root="file://" + self.temp_sub_dir.name)
+        # checks for functional API
+        datapipe = IterableWrapper([self.temp_sub_dir.name, self.temp_sub_dir_2.name])
+        listed = list(datapipe.list_file_by_fsspec())
+        listed.sort()
+        self.assertEqual(listed, temp_files)
 
-        # Should be consistent with test_fsspec_file_lister_iterdatapipe
-        paths = list(datapipe.list_file_by_fsspec())
-        for path in paths:
-            self.assertIn(
-                path.split("://")[1],
-                {fsspec.implementations.local.make_path_posix(file) for file in self.temp_sub_files},
-            )
-
-    @skipIfNoFSSpec
-    def test_fsspec_functional_list_file(self):
-        datapipe = FSSpecFileLister(root=["file://" + self.temp_sub_dir.name, "file://" + self.temp_sub_dir_2.name])
-
-        paths = list(datapipe.list_file_by_fsspec())
-        paths = sorted(map(lambda path: path.split("://")[1], paths))
-        temp_files = list(
-            map(
-                lambda file: fsspec.implementations.local.make_path_posix(file),
-                self.temp_sub_files + self.temp_sub_files_2,
-            )
-        )
-        temp_files.sort()
-        self.assertEqual(paths, temp_files)
 
     @skipIfNoFSSpec
     def test_fsspec_iterdatapipe_list_file_has_protocol(self):
