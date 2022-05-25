@@ -39,6 +39,7 @@ def _create_default_pathmanager():
     return pathmgr
 
 
+@functional_datapipe("list_file_by_iopath")
 class IoPathFileListerIterDataPipe(IterDataPipe[str]):
     r"""
     Lists the contents of the directory at the provided ``root`` pathname or URL,
@@ -94,9 +95,6 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
                 for file_name in self.pathmgr.ls(path):
                     if match_masks(file_name, self.masks):
                         yield os.path.join(path, file_name)
-
-    def list_files(self) -> List[str]:
-        return [path for path in self]
 
 
 @functional_datapipe("open_files_by_iopath")
