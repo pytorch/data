@@ -83,21 +83,22 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         self.assertEqual(file_lister, temp_files)
 
     @skipIfNoFSSpec
-    def test_fsspec_file_lister_iterdatapipe_list_file(self):
+    def test_fsspec_functional_list_file(self):
         datapipe = FSSpecFileLister(root="file://" + self.temp_sub_dir.name)
 
         # Should be consistent with test_fsspec_file_lister_iterdatapipe
-        for path in datapipe.list_files():
+        paths = list(datapipe.list_file_by_fsspec())
+        for path in paths:
             self.assertIn(
                 path.split("://")[1],
                 {fsspec.implementations.local.make_path_posix(file) for file in self.temp_sub_files},
             )
 
     @skipIfNoFSSpec
-    def test_fsspec_file_lister_iterdatapipe_with_list_list_file(self):
+    def test_fsspec_functional_list_file(self):
         datapipe = FSSpecFileLister(root=["file://" + self.temp_sub_dir.name, "file://" + self.temp_sub_dir_2.name])
 
-        paths = datapipe.list_files()
+        paths = list(datapipe.list_file_by_fsspec())
         paths = sorted(map(lambda path: path.split("://")[1], paths))
         temp_files = list(
             map(
