@@ -90,12 +90,18 @@ if dataset == "gtsrb":
         )
         return t(img).to(torch.device(device))
 
+    def str_to_list(str):
+        l = []
+        for char in str:
+            l.append(int(char))
+        return l
+
     # Filter out bounding box and path to image
     dp = dp.map(lambda sample : {"image" : sample["image"], "label" : sample["label"]})
 
     # Apply image preprocessing
     dp = dp.map(lambda sample : transform(sample.decode()), input_col="image")
-    dp = dp.map(lambda sample : sample.to_categories(), input_col="label")
+    dp = dp.map(lambda sample : torch.tensor(str_to_list(sample.to_categories())).to(torch.device(device)), input_col="label")
 
     # TODO: Missing a collation
 
@@ -135,10 +141,10 @@ with profile(
         running_loss = 0
         for i, elem in enumerate(dl):
             batch_start = time.time()
-            
-            labels = elem["label"].to(torch.device(device))       
+            # print(f"elem is {elem}")
+            labels = elem[0]["label"]      
             optimizer.zero_grad()
-            outputs = model(elem["image"])
+            outputs = model(elem[0]["image"])
             loss = criterion(outputs,labels)
             loss.backward()
             optimizer.step()
