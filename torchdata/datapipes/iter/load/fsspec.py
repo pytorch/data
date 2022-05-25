@@ -100,6 +100,9 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
                         if not starts_with:
                             yield abs_path
 
+    def list_files(self) -> List[str]:
+        return [fp for fp in self]
+
 
 @functional_datapipe("open_files_by_fsspec")
 class FSSpecFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
