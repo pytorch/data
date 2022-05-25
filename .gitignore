@@ -52,3 +52,6 @@ docs/src
 
 # AWSSDK
 third_party/aws_sdk
+
+# Release Notes
+scripts/release_notes/results
