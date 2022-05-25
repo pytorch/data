@@ -97,13 +97,6 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         listed.sort()
         self.assertEqual(listed, temp_files)
 
-
-    @skipIfNoFSSpec
-    def test_fsspec_iterdatapipe_list_file_has_protocol(self):
-        datapipe = FSSpecFileLister(root="file://" + self.temp_sub_dir.name)
-        for path in datapipe.list_files():
-            self.assertIn("file://", path)
-
     @skipIfNoFSSpec
     def test_fsspec_file_loader_iterdatapipe(self):
         datapipe1 = FSSpecFileLister(root="file://" + self.temp_sub_dir.name)
