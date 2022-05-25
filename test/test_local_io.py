@@ -683,6 +683,17 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self.assertEqual(file_lister, all_temp_files)
 
     @skipIfNoIoPath
+    def test_io_path_list_files_iterdatapipe_with_list(self):
+        datapipe = IoPathFileLister(root=[self.temp_sub_dir.name, self.temp_sub_dir_2.name])
+
+        listed = datapipe.list_files()
+        listed.sort()
+        all_temp_files = [*self.temp_sub_files, *self.temp_sub_files_2]
+        all_temp_files.sort()
+
+        self.assertEqual(listed, all_temp_files)
+
+    @skipIfNoIoPath
     def test_io_path_file_loader_iterdatapipe(self):
         datapipe1 = IoPathFileLister(root=self.temp_sub_dir.name)
         datapipe2 = IoPathFileOpener(datapipe1)
