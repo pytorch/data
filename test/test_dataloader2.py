@@ -7,9 +7,14 @@
 
 from unittest import TestCase
 
-from torchdata.dataloader2 import DataLoader2
+from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService, ReadingServiceInterface
 from torchdata.dataloader2.dataloader2 import READING_SERVICE_STATE_KEY_NAME, SERIALIZED_DATAPIPE_KEY_NAME
-from torchdata.datapipes.iter import IterableWrapper
+from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
+
+
+class TestReadingService(ReadingServiceInterface):
+    def initialize(self, dp: IterDataPipe) -> IterDataPipe:
+        return dp
 
 
 class DataLoader2Test(TestCase):
@@ -36,3 +41,23 @@ class DataLoader2Test(TestCase):
         self.assertIsNotNone(state[SERIALIZED_DATAPIPE_KEY_NAME])
         self.assertIsNone(state[READING_SERVICE_STATE_KEY_NAME])
         data_loader.shutdown()
+
+    def test_dataloader2_reading_service(self) -> None:
+        test_data_pipe = IterableWrapper(range(3))
+        reading_service = TestReadingService()
+        data_loader = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
+
+        expected_batch = 0
+        for batch in iter(data_loader):
+            self.assertEqual(batch, expected_batch)
+            expected_batch += 1
+
+    def test_dataloader2_multi_process_reading_service(self) -> None:
+        test_data_pipe = IterableWrapper(range(3))
+        reading_service = MultiProcessingReadingService()
+        data_loader = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
+
+        expected_batch = 0
+        for batch in iter(data_loader):
+            self.assertEqual(batch, expected_batch)
+            expected_batch += 1
