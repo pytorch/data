@@ -56,7 +56,7 @@ else()
     endif()
   endforeach()
 
-  if(UNIX)
+  if(UNIX AND NOT APPLE)
     list(APPEND AWSSDK_LIBRARIES "${aws_cpp_sdk_INSTALL}/lib/libs2n.a")
   endif()
 
