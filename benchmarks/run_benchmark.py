@@ -88,15 +88,20 @@ if dataset == "gtsrb":
             # transforms.reshape(64,3,7,7),
             transforms.ToTensor()]
         )
-        return t(img)
+        return t(img).to(torch.device(device))
 
+    # Filter out bounding box and path to image
     dp = dp.map(lambda sample : {"image" : sample["image"], "label" : sample["label"]})
+
+    # Apply image preprocessing
     dp = dp.map(lambda sample : transform(sample.decode()), input_col="image")
     dp = dp.map(lambda sample : sample.to_categories(), input_col="label")
+
+    # TODO: Missing a collation
+
+    # Batch
     dp = dp.batch(batch_size)
     
-# dp_batches.map(lambda batch : {"images" : [sample["image"]]})
-
 # Datapipe format after preprocessing
 print(f"data format after preprocessing is \n {next(iter(dp))}\n")
 
@@ -131,7 +136,7 @@ with profile(
         for i, elem in enumerate(dl):
             batch_start = time.time()
             
-            labels = elem["label"].to(torch.device("cuda:0"))       
+            labels = elem["label"].to(torch.device(device))       
             optimizer.zero_grad()
             outputs = model(elem["image"])
             loss = criterion(outputs,labels)
