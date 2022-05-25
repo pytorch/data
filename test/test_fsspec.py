@@ -83,6 +83,16 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         self.assertEqual(file_lister, temp_files)
 
     @skipIfNoFSSpec
+    def test_fsspec_file_lister_iterdatapipe_list_file(self):
+        datapipe = FSSpecFileLister(root="file://" + self.temp_sub_dir.name)
+
+        for path in datapipe.list_files():
+            self.assertIn(
+                path.split("://")[1],
+                {fsspec.implementations.local.make_path_posix(file) for file in self.temp_sub_files},
+            )
+
+    @skipIfNoFSSpec
     def test_fsspec_file_loader_iterdatapipe(self):
         datapipe1 = FSSpecFileLister(root="file://" + self.temp_sub_dir.name)
         datapipe2 = FSSpecFileOpener(datapipe1)
