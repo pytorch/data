@@ -145,7 +145,7 @@ def _token_filter_fn(data, *, min_len, max_len):
 class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
     r"""
     Creates mini-batches of data from a min-heap with limited size, and the total length of samples
-    returned by ``len_fn`` within each batch will be limited by ``max_token_count``.
+    returned by ``len_fn`` within each batch will be limited by ``max_token_count``
     (functional name: ``max_token_bucketize``). If ``min_len`` or ``max_len`` is set, the samples with
     length that is out of ``[min_len, max_len]`` will be filtered out.
 
