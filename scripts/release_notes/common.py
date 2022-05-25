@@ -7,11 +7,12 @@
 # This file is adpated from PyTorch Core
 # https://github.com/pytorch/pytorch/blob/master/scripts/release_notes/common.py
 
+import json
 import locale
+import os
 import re
 import subprocess
 from collections import namedtuple
-from os.path import expanduser
 
 import requests
 
@@ -99,7 +100,7 @@ def parse_pr_number(body, commit_hash, title):
 
 def get_ghstack_token():
     pattern = "github_oauth = (.*)"
-    with open(expanduser("~/.ghstackrc"), "r+") as f:
+    with open(os.path.expanduser("~/.ghstackrc"), "r+") as f:
         config = f.read()
     matches = re.findall(pattern, config)
     if len(matches) == 0:
@@ -154,3 +155,29 @@ def get_features(commit_hash, return_dict=False):
     if return_dict:
         return features_to_dict(result)
     return result
+
+
+class CommitDataCache:
+    def __init__(self, path="results/data.json"):
+        self.path = path
+        self.data = {}
+        if os.path.exists(path):
+            self.data = self.read_from_disk()
+
+    def get(self, commit):
+        if commit not in self.data.keys():
+            # Fetch and cache the data
+            self.data[commit] = get_features(commit)
+            self.write_to_disk()
+        return self.data[commit]
+
+    def read_from_disk(self):
+        with open(self.path) as f:
+            data = json.load(f)
+            data = {commit: dict_to_features(dct) for commit, dct in data.items()}
+        return data
+
+    def write_to_disk(self):
+        data = {commit: features._asdict() for commit, features in self.data.items()}
+        with open(self.path, "w") as f:
+            json.dump(data, f)
