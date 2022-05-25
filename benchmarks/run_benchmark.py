@@ -1,10 +1,9 @@
 import argparse
+import sys
 import torchvision
 import torch
-try:
-    import transformers
-except:
-    pass
+import transformers
+
 from torchvision.prototype.datasets import load
 import torch.nn.functional as F
 from torchvision import transforms
@@ -12,7 +11,6 @@ import time
 from statistics import mean
 import torch.optim as optim
 from torch.profiler import profile, record_function, ProfilerActivity
-
 
 ## Arg parsing
 parser = argparse.ArgumentParser()
@@ -30,6 +28,7 @@ args = parser.parse_args()
 dataset = args.dataset
 model_name = args.model_name
 batch_size = args.batch_size
+device = args.device
 num_epochs = args.num_epochs
 report_location = args.report_location
 num_workers = args.num_workers
@@ -61,20 +60,45 @@ model_map = {
     "resnext50_32x4d": torchvision.models.resnext50_32x4d,
     "mobilenet_v3_large" : torchvision.models.mobilenet_v3_large,
     "transformerencoder" : torch.nn.TransformerEncoder,
-    # "bert-base" : transformers.BertModel,
+    "bert-base" : transformers.BertModel,
 
 }
 
-model = model_map[model_name]().to(torch.device("cuda:0"))
+model = model_map[model_name]().to(torch.device(device))
 
 # setup data pipe
-dp = load(dataset, split="train")
+if model_name in ["resnext50_32x4d", "mobilenet_v3_large"]:
+    dp = load(dataset, split="train")
+
+else:
+    print(f"{model} not supported yet")
+
 print(f"batch size {batch_size}")
 print(f"Dataset name {dp}")
 print(f"Dataset length {len(dp)}")
 
 # Datapipe format
-print(f"data format is {next(iter(dp))}")
+print(f"data format before preprocessing is {next(iter(dp))}")
+
+if dataset == "gtsrb":
+    def transform(img):
+        t= transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize(size=(96,98)),
+            # transforms.reshape(64,3,7,7),
+            transforms.ToTensor()]
+        )
+        return t(img)
+
+    dp = dp.map(lambda sample : {"image" : sample["image"], "label" : sample["label"]})
+    dp = dp.map(lambda sample : transform(sample.decode()), input_col="image")
+    dp = dp.map(lambda sample : sample.to_categories(), input_col="label")
+    dp = dp.batch(batch_size)
+    
+# dp_batches.map(lambda batch : {"images" : [sample["image"]]})
+
+# Datapipe format after preprocessing
+print(f"data format after preprocessing is \n {next(iter(dp))}\n")
 
 # Setup data loader
 if num_workers == 1:
@@ -84,8 +108,6 @@ if num_workers == 1:
 else:
     dl = DataLoader(dataset=dp, batch_size=batch_size, shuffle=True, num_workers=num_workers, worker_init_fn=init_fn, multiprocessing_context="spawn")
 
-
-# TODO: Add measurements time per batch, per epoch and total time here
 
 total_start = time.time()
 per_epoch_durations = []
@@ -108,27 +130,17 @@ with profile(
         running_loss = 0
         for i, elem in enumerate(dl):
             batch_start = time.time()
-            # Should image preprocessing be done online or offline?
-            # This is all image specific, need to refactor this out or create a training loop per model/dataset combo
-            input_image = torch.unsqueeze(elem["image"], 0).to(torch.device("cuda:0"))
-            input_image = transforms.Resize(size=(96,98))(input_image)
-            input_image = input_image.reshape(64,3,7,7) / 255
-
-            labels = elem["label"].to(torch.device("cuda:0"))
             
-            # TODO: remove this is wrong
-            labels = labels.repeat(64)
+            labels = elem["label"].to(torch.device("cuda:0"))       
             optimizer.zero_grad()
-
-            outputs = model(input_image)
-            
-            # ValueError: Expected input batch_size (64) to match target batch_size (1).
+            outputs = model(elem["image"])
             loss = criterion(outputs,labels)
             loss.backward()
             optimizer.step()
+
             running_loss += loss.item()
-            # if i % 2000 == 1999:    # print every 2000 mini-batches
-            print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
+            if i % 200 == 1999:    # print every 2000 mini-batches
+                print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
             running_loss = 0.0
 
             batch_end = time.time()
