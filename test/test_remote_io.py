@@ -197,6 +197,9 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             )
             return
 
+        # TODO: Skip the following tests due to https://github.com/pytorch/data/issues/460
+        return
+
         # S3FileLister: different inputs
         input_list = [
             [["s3://ai2-public-datasets"], 71],  # bucket without '/'
