@@ -1,16 +1,20 @@
 import argparse
 import sys
+import logging
+
 import torchvision
 import torch
 import transformers
-
 from torchvision.prototype.datasets import load
 import torch.nn.functional as F
 from torchvision import transforms
 import time
 from statistics import mean
 import torch.optim as optim
-from torch.profiler import profile, record_function, ProfilerActivity
+import torch.profiler
+
+logging.basicConfig(filename='example.log', level=logging.DEBUG)
+
 
 ## Arg parsing
 parser = argparse.ArgumentParser()
@@ -49,12 +53,6 @@ def init_fn(worker_id):
     datapipe = info.dataset
     torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
 
-# def trace_handler(p):
-#     output = p.key_averages().table(sort_by="self_cuda_time_total", row_limit=10)
-#     print(output)
-#     p.export_chrome_trace("/tmp/trace_" + str(p.step_num) + ".json")
-
-
 # Download model
 model_map = {
     "resnext50_32x4d": torchvision.models.resnext50_32x4d,
@@ -78,7 +76,7 @@ print(f"Dataset name {dp}")
 print(f"Dataset length {len(dp)}")
 
 # Datapipe format
-# print(f"data format before preprocessing is {next(iter(dp))}")
+logging.debug(f"data format before preprocessing is {next(iter(dp))}")
 
 if dataset == "gtsrb":
     def transform(img):
@@ -103,13 +101,11 @@ if dataset == "gtsrb":
     dp = dp.map(lambda sample : transform(sample.decode()), input_col="image")
     dp = dp.map(lambda sample : torch.tensor(str_to_list(sample.to_categories())).to(torch.device(device)), input_col="label")
 
-    # TODO: Missing a collation
-
     # Batch
     dp = dp.batch(batch_size)
     
 # Datapipe format after preprocessing
-# print(f"data format after preprocessing is \n {next(iter(dp))}\n")
+logging.debug(f"data format after preprocessing is \n {next(iter(dp))}\n")
 
 # Setup data loader
 if num_workers == 1:
@@ -127,9 +123,10 @@ batch_durations = []
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-with profile(
-    activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
-    on_trace_ready=torch.profiler.tensorboard_trace_handler,
+with torch.profiler.profile(
+    activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA],
+    on_trace_ready=torch.profiler.tensorboard_trace_handler('./result', worker_name='datapipe0'),
+    schedule=torch.profiler.schedule(wait=1,warmup=1,active=2),
     record_shapes=True,
     profile_memory=True,
     with_flops=True,
@@ -141,6 +138,8 @@ with profile(
         epoch_start = time.time()
         running_loss = 0
         for i, elem in enumerate(dl):
+            p.step()
+
             batch_start = time.time()
 
             labels = torch.argmax(elem[0]["label"], dim=1)      
@@ -158,12 +157,18 @@ with profile(
             batch_end = time.time()
             batch_duration = batch_end - batch_start 
             batch_durations.append(batch_duration)
+            p.step()
+        p.step()
         epoch_end = time.time()
         epoch_duration = epoch_end - epoch_start
         per_epoch_durations.append(epoch_duration)
     total_end = time.time()
     total_duration = total_end - total_start
 
-print(f"Total duration is {total_duration}")
-print(f"Per epoch duration {mean(per_epoch_durations)}")
-print(f"Per batch duration {mean(batch_durations)}")
+# TODO: Make this output some human readable markdown file
+def create_report(per_epoch_durations, batch_durations, total_duration):
+    print(f"Total duration is {total_duration}")
+    print(f"Per epoch duration {mean(per_epoch_durations)}")
+    print(f"Per batch duration {mean(batch_durations)}")
+
+create_report(per_epoch_durations, batch_durations, total_duration)
