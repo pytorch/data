@@ -21,13 +21,15 @@ BUILD_S3=1 python setup.py install
 
 If you'd like to use customized installations of `pybind11` or `aws-sdk-cpp`, you may set the following flags when
 building from source.
+
 ```
 USE_SYSTEM_PYBIND11=1
 USE_SYSTEM_AWS_SDK_CPP=1
 USE_SYSTEM_LIBS=1 # uses both pre-installed pybind11 and aws-sdk-cpp
 ```
 
-Note: refer to the official documentation for detailed installtion instructions of [aws-sdk-cpp](https://github.com/aws/aws-sdk-cpp).
+Note: refer to the official documentation for detailed installtion instructions of
+[aws-sdk-cpp](https://github.com/aws/aws-sdk-cpp).
 
 ## Using S3 IO datapies
 
@@ -75,4 +77,6 @@ be overwritten by the `region` variable).
 
 ## Troubleshooting
 
-If you get `Access Denied`, it's very possibly a [wrong region configuration](https://github.com/aws/aws-sdk-cpp/issues/1211) or an [accessing issue with `aws-sdk-cpp`](https://aws.amazon.com/premiumsupport/knowledge-center/s3-access-denied-aws-sdk/).
+If you get `Access Denied`, it's very possibly a
+[wrong region configuration](https://github.com/aws/aws-sdk-cpp/issues/1211) or an
+[accessing issue with `aws-sdk-cpp`](https://aws.amazon.com/premiumsupport/knowledge-center/s3-access-denied-aws-sdk/).
