@@ -82,7 +82,7 @@ if dataset == "gtsrb":
     def transform(img):
         t= transforms.Compose([
             transforms.ToPILImage(),
-            transforms.Resize(size=(96,98)),
+            transforms.Resize(size=(100,100)),
             # transforms.reshape(64,3,7,7),
             transforms.ToTensor()]
         )
