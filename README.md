@@ -101,7 +101,8 @@ assert batch['text'][0][0:8] == ['Wall', 'St.', 'Bears', 'Claw', 'Back', 'Into',
 python setup.py install
 ```
 
-In you'd like to include the S3 IO datapipes and aws-sdk-cpp, you may also follow [the instructions here](https://github.com/pytorch/data/blob/main/torchdata/datapipes/iter/load/README.md)
+In you'd like to include the S3 IO datapipes and aws-sdk-cpp, you may also follow
+[the instructions here](https://github.com/pytorch/data/blob/main/torchdata/datapipes/iter/load/README.md)
 
 In case building TorchData from source fails, install the nightly version of PyTorch following the linked guide on the
 [contributing page](https://github.com/pytorch/data/blob/main/CONTRIBUTING.md#install-pytorch-nightly).

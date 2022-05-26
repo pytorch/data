@@ -67,7 +67,7 @@ jobs:
         env:
           BUILD_S3: ${{ matrix.with-s3 }}
       - name: Install test requirements
-        run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile protobuf
+        run: pip3 install -r test/requirements.txt
       - name: Run DataPipes tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run:
