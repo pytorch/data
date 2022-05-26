@@ -44,7 +44,6 @@ test:
     - pytest
     - expecttest
     - fsspec
-    - numpy
     # The following packages are not on the default conda channel
     # - iopath
     # - rarfile
