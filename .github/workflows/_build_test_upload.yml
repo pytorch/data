@@ -141,9 +141,8 @@ jobs:
           # if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
           #   source packaging/manylinux_wheel_helper.sh
           # fi
-          pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile protobuf
-          # TODO: Re-enable test after #386 is landed
-          # pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
+          pip3 install -r test/requirements.txt
+          pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Wheels to Github
         uses: actions/upload-artifact@v2
         with:
