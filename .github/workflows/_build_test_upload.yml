@@ -21,6 +21,8 @@ on:
         required: false
       CONDA_PYTORCHBOT_TOKEN:
         required: false
+      CONDA_TEST_PYTORCHBOT_TOKEN:
+        required: false
       CONDA_NIGHTLY_PYTORCHBOT_TOKEN:
         required: false
 
@@ -298,8 +300,13 @@ jobs:
 
           if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
             CONDA_CHANNEL=pytorch
+            CONDA_TOKEN=${CONDA_PYTORCHBOT_TOKEN}
+          elif [[ ${{ needs.get_release_type.outputs.type }} == 'test' ]]; then
+            CONDA_CHANNEL=pytorch-${{ needs.get_release_type.outputs.type }}
+            CONDA_TOKEN=${CONDA_TEST_PYTORCHBOT_TOKEN}
           else
             CONDA_CHANNEL=pytorch-${{ needs.get_release_type.outputs.type }}
+            CONDA_TOKEN=${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}
           fi
 
           if [[ ${{ needs.get_release_type.outputs.type }} == 'nightly' ]]; then
@@ -316,7 +323,7 @@ jobs:
                   for new_package in ./$subdir/torchdata-*-$build.tar.bz2; do
                     if [[ -f "$new_package" ]]; then
                       echo "Removing $CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
-                      anaconda -t "${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}" remove -f "$CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
+                      anaconda -t "${CONDA_TOKEN}" remove -f "$CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
                       break
                     fi
                   done
@@ -325,10 +332,10 @@ jobs:
                 fi
               done
               # Upload new conda packages per subdir
-              anaconda -t "${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}" upload ./$subdir/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
+              anaconda -t "${CONDA_TOKEN}" upload ./$subdir/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
             done
           else
-            anaconda -t "${CONDA_PYTORCHBOT_TOKEN}" upload ./*/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
+            anaconda -t "${CONDA_TOKEN}" upload ./*/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
           fi
 
   build_docs:
