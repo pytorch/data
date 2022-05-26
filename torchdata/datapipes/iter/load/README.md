@@ -1,36 +1,33 @@
 # S3 IO Datapipe Documentation
 
-## Installation
+## Build from Source
 
-Torchdata S3 IO datapipes depends on [aws-sdk-cpp](https://github.com/aws/aws-sdk-cpp). The following is just a
-recommended way to installing aws-sdk-cpp, please refer to official documentation for detailed instructions.
+`ninja` is required to link PyThon implementation to C++ source code.
 
 ```bash
-git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
-cd aws-sdk-cpp/
-mkdir sdk-build
-cd sdk-build
-# need to add flag -DBUILD_SHARED_LIBS=OFF for static linking on Windows
-cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer"
-make
-make install # may need sudo
+conda install ninja
 ```
 
-`ninja` and `pybind11` are also required to link PyThon implementation to C++ source code.
+S3 IO datapipes are included when building with flag `BUILD_S3=1`. The following commands can build `torchdata` from
+source with S3 datapipes.
 
 ```bash
-conda install ninja pybind11
-```
-
-S3 IO datapipes are't included when building by default. To build S3 IO in `torchdata`, at the `/data` root folder, run
-the following commands.
-
-```bash
-export BUILD_S3=ON
 pip uninstall torchdata -y
+git clone https://github.com/pytorch/data.git
+cd data
 python setup.py clean
-python setup.py install
+BUILD_S3=1 python setup.py install
 ```
+
+If you'd like to use customized installations of `pybind11` or `aws-sdk-cpp`, you may set the following flags when
+building from source.
+```
+USE_SYSTEM_PYBIND11=1
+USE_SYSTEM_AWS_SDK_CPP=1
+USE_SYSTEM_LIBS=1 # uses both pre-installed pybind11 and aws-sdk-cpp
+```
+
+Note: refer to the official documentation for detailed installtion instructions of [aws-sdk-cpp](https://github.com/aws/aws-sdk-cpp).
 
 ## Using S3 IO datapies
 
@@ -75,3 +72,7 @@ for d in datapipe: # Start loading data
 It's recommended to set up a detailed configuration file with the `AWS_CONFIG_FILE` environment variable. The following
 environment variables are also parsed: `HOME`, `S3_USE_HTTPS`, `S3_VERIFY_SSL`, `S3_ENDPOINT_URL`, `AWS_REGION` (would
 be overwritten by the `region` variable).
+
+## Troubleshooting
+
+If you get `Access Denied`, it's very possibly a [wrong region configuration](https://github.com/aws/aws-sdk-cpp/issues/1211) or an [accessing issue with `aws-sdk-cpp`](https://aws.amazon.com/premiumsupport/knowledge-center/s3-access-denied-aws-sdk/).
