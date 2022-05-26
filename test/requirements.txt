@@ -1,0 +1,7 @@
+pytest
+expecttest
+fsspec
+iopath == 0.1.9
+numpy
+rarfile
+protobuf < 4
