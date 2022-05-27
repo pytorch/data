@@ -661,7 +661,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             self.assertTrue(path in self.temp_sub_files)
 
         datapipe = IterableWrapper([self.temp_sub_dir.name])
-        datapipe = list(datapipe.list_file_by_iopath())
+        datapipe = datapipe.list_file_by_iopath()
         for path in datapipe:
             self.assertTrue(path in self.temp_sub_files)
 

@@ -66,7 +66,7 @@ class TestDataPipeFSSpec(expecttest.TestCase):
 
         # checks for functional API
         datapipe = IterableWrapper([self.temp_sub_dir.name])
-        datapipe = list(datapipe.list_file_by_fsspec())
+        datapipe = datapipe.list_file_by_fsspec()
         for path in datapipe:
             self.assertIn(
                 path,
