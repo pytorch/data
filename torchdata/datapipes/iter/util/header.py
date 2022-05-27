@@ -1,4 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 from typing import Iterator, TypeVar
 from warnings import warn
 
@@ -12,6 +17,8 @@ T_co = TypeVar("T_co", covariant=True)
 class HeaderIterDataPipe(IterDataPipe[T_co]):
     r"""
     Yields elements from the source DataPipe from the start, up to the specfied limit (functional name: ``header``).
+    This DataPipe can also be used to manually set the length of a DataPipe to a certain value; you
+    can do so by calling ``dp.header(desired_len)``.
 
     Args:
         source_datapipe: the DataPipe from which elements will be yielded

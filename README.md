@@ -54,8 +54,8 @@ Follow the instructions
 
 ### Local pip or conda
 
-First, set up an environment. We will be installing a nightly PyTorch binary as well as torchdata. If you're using
-conda, create a conda environment:
+First, set up an environment. We will be installing a PyTorch binary as well as torchdata. If you're using conda, create
+a conda environment:
 
 ```bash
 conda create --name torchdata
@@ -99,6 +99,28 @@ assert batch['text'][0][0:8] == ['Wall', 'St.', 'Bears', 'Claw', 'Back', 'Into',
 
 ```bash
 python setup.py install
+```
+
+In you'd like to include the S3 IO datapipes and aws-sdk-cpp, you may also follow
+[the instructions here](https://github.com/pytorch/data/blob/main/torchdata/datapipes/iter/load/README.md)
+
+In case building TorchData from source fails, install the nightly version of PyTorch following the linked guide on the
+[contributing page](https://github.com/pytorch/data/blob/main/CONTRIBUTING.md#install-pytorch-nightly).
+
+### From nightly
+
+The nightly version of TorchData is also provided and updated daily from main branch.
+
+Using pip:
+
+```bash
+pip install --pre torchdata --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+```
+
+Using conda:
+
+```bash
+conda install torchdata -c pytorch-nightly
 ```
 
 ## What are DataPipes?
@@ -158,17 +180,30 @@ Q: What should I do if the existing set of DataPipes does not do what I need?
 A: You can
 [implement your own custom DataPipe](https://pytorch.org/data/main/tutorial.html#implementing-a-custom-datapipe). If you
 believe your use case is common enough such that the community can benefit from having your custom DataPipe added to
-this library, feel free to open a GitHub issue.
+this library, feel free to open a GitHub issue. We will be happy to discuss!
 
-Q: What happens when the `Shuffler`/`Batcher` DataPipes are used with DataLoader?
+Q: What happens when the `Shuffler` DataPipe is used with DataLoader?
 
-A: If you choose those DataPipes while setting `shuffle=True`/`batch_size>1` for DataLoader, your samples will be
-shuffled/batched more than once. You should choose one or the other.
+A. In order to enable shuffling, you need to add a `Shuffler` to your DataPipe line. Then, by default, shuffling will
+happen at the point where you specified as long as you do not set `shuffle=False` within DataLoader.
+
+Q: What happens when the `Batcher` DataPipe is used with DataLoader?
+
+A: If you choose to use `Batcher` while setting `batch_size > 1` for DataLoader, your samples will be batched more than
+once. You should choose one or the other.
+
+Q: Why are there fewer built-in `MapDataPipes` than `IterDataPipes`?
+
+A: By design, there are fewer `MapDataPipes` than `IterDataPipes` to avoid duplicate implementations of the same
+functionalities as `MapDataPipe`. We encourage users to use the built-in `IterDataPipe` for various functionalities, and
+convert it to `MapDataPipe` as needed.
 
 Q: How is multiprocessing handled with DataPipes?
 
 A: Multi-process data loading is still handled by DataLoader, see the
 [DataLoader documentation for more details](https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading).
+If you would like to shard data across processes, use `ShardingFilter` and provide a `worker_init_fn` as shown in the
+[tutorial](https://pytorch.org/data/beta/tutorial.html#working-with-dataloader).
 
 Q: What is the upcoming plan for DataLoader?
 

@@ -1,13 +1,18 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os
 import posixpath
 
-from typing import Any, Callable, Iterator, List, Optional, Tuple, Union
+from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple, Union
 
 from torch.utils.data.datapipes.utils.common import match_masks
 
 from torchdata.datapipes import functional_datapipe
-from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
 
 try:
@@ -34,7 +39,7 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
     and yields the full pathname or URL for each file within the directory.
 
     Args:
-        root: The root `fsspec` path directory to list files from
+        root: The root `fsspec` path directory or list of path directories to list files from
         masks: Unix style filter string or string list for filtering file name(s)
 
     Example:
@@ -44,37 +49,56 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
 
     def __init__(
         self,
-        root: str,
+        root: Union[str, Sequence[str], IterDataPipe],
         masks: Union[str, List[str]] = "",
     ) -> None:
         _assert_fsspec()
 
-        self.root: str = root
+        if isinstance(root, str):
+            root = [
+                root,
+            ]
+        if not isinstance(root, IterDataPipe):
+            self.datapipe: IterDataPipe = IterableWrapper(root)  # type: ignore[assignment]
+        else:
+            self.datapipe = root
         self.masks = masks
 
     def __iter__(self) -> Iterator[str]:
-        fs, path = fsspec.core.url_to_fs(self.root)
-        is_local = fs.protocol == "file" or not self.root.startswith(fs.protocol)
-        if fs.isfile(path):
-            yield self.root
-        else:
-            for file_name in fs.ls(path):
-                if not match_masks(file_name, self.masks):
-                    continue
+        for root in self.datapipe:
+            fs, path = fsspec.core.url_to_fs(root)
 
-                # ensure the file name has the full fsspec protocol path
-                if file_name.startswith(fs.protocol):
-                    yield file_name
-                else:
-                    if is_local:
-                        abs_path = os.path.join(path, file_name)
-                    else:
-                        abs_path = posixpath.join(path, file_name)
+            if isinstance(fs.protocol, str):
+                protocol_list = [fs.protocol]
+            else:
+                protocol_list = fs.protocol
 
-                    if self.root.startswith(fs.protocol):
-                        yield fs.protocol + "://" + abs_path
+            is_local = fs.protocol == "file" or not any(root.startswith(protocol) for protocol in protocol_list)
+            if fs.isfile(path):
+                yield root
+            else:
+                for file_name in fs.ls(path):
+                    if not match_masks(file_name, self.masks):
+                        continue
+
+                    # ensure the file name has the full fsspec protocol path
+                    if any(file_name.startswith(protocol) for protocol in protocol_list):
+                        yield file_name
                     else:
-                        yield abs_path
+                        if is_local:
+                            abs_path = os.path.join(path, file_name)
+                        else:
+                            abs_path = posixpath.join(path, file_name)
+
+                        starts_with = False
+                        for protocol in protocol_list:
+                            if root.startswith(protocol):
+                                starts_with = True
+                                yield protocol + "://" + abs_path
+                                break
+
+                        if not starts_with:
+                            yield abs_path
 
 
 @functional_datapipe("open_file_by_fsspec")

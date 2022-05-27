@@ -1,4 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os
 
 from typing import Any, Callable, Iterator, Optional, Tuple, Union
@@ -51,6 +56,8 @@ class SaverIterDataPipe(IterDataPipe[str]):
             dirname = os.path.dirname(filepath)
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
+            # with portalocker.Lock(filepath, self.mode, flags=portalocker.LockFlags.EXCLUSIVE) as f:
+            # TODO(VitalyFedyunin): Enabling line above will require all read sites to be updated (Win).
             with open(filepath, self.mode) as f:
                 f.write(data)
             yield filepath

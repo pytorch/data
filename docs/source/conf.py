@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full
@@ -50,7 +56,12 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = [
+    "generated/torchdata.datapipes.iter.Extractor.rst",
+    "generated/torchdata.datapipes.iter.TarArchiveReader.rst",
+    "generated/torchdata.datapipes.iter.XzFileReader.rst",
+    "generated/torchdata.datapipes.iter.ZipArchiveReader.rst",
+]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -82,21 +93,30 @@ html_css_files = [
 
 # TODO: use regex to replace all "T" and "T_co" related signature
 signature_replacements = {
-    "torch.utils.data.dataset.IterDataPipe": "IterDataPipe",
+    "torch.utils.data.datapipes.datapipe.IterDataPipe": "IterDataPipe",
     "abc.IterDataPipe": "IterDataPipe",
-    "torch.utils.data.dataset.MapDataPipe": "MapDataPipe",
+    "torch.utils.data.datapipes.datapipe.MapDataPipe": "MapDataPipe",
     "abc.MapDataPipe": "MapDataPipe",
     "typing.Type[torch.utils.data.sampler.Sampler]": "torch.utils.data.sampler.Sampler",
     "<class 'torch.utils.data.sampler.SequentialSampler'>": "SequentialSampler",
     "torch.utils.data.datapipes.iter.combining.T_co": "T_co",
     "torch.utils.data.datapipes.iter.combinatorics.T_co": "T_co",
     "torchdata.datapipes.iter.transform.bucketbatcher.T_co": "T_co",
-    "<class 'torch.utils.data.dataset.DataChunk'>": "DataChunk",
     "torch.utils.data.datapipes.map.grouping.T": "T",
     "torch.utils.data.datapipes.map.combining.T_co": "T_co",
     "torch.utils.data.datapipes.map.combinatorics.T_co": "T_co",
     "torchdata.datapipes.iter.util.cycler.T_co": "T_co",
     "torchdata.datapipes.iter.util.paragraphaggregator.T_co": "T_co",
+    "torchdata.datapipes.map.util.cacheholder.T_co": "T_co",
+    "Sequence[torchdata.datapipes.map.util.unzipper.T]": "Sequence[T]",
+    "torchdata.datapipes.iter.util.samplemultiplexer.T_co": "T_co",
+    "torchdata.datapipes.iter.util.indexadder.K": "K",
+    "torchdata.datapipes.iter.util.unzipper.T": "T",
+    "torch.utils.data.datapipes.iter.grouping.T_co": "T_co",
+    "torchdata.datapipes.iter.util.dataframemaker.T_co": "T_co",
+    "torchdata.datapipes.iter.util.cacheholder.T_co": "T_co",
+    "torchdata.datapipes.iter.util.header.T_co": "T_co",
+    "<class 'torch.utils.data.datapipes.datapipe.DataChunk'>": "List",
     "typing.": "",
 }
 

@@ -29,27 +29,45 @@ jobs:
           - 3.7
           - 3.8
           - 3.9
+        with-s3:
+          - 1
+          - 0
     steps:
       - name: Setup additional system libraries
         if: startsWith( matrix.os, 'ubuntu' )
         run: |
           sudo add-apt-repository multiverse
           sudo apt update
-          sudo apt install rar unrar
+          sudo apt install rar unrar libssl-dev libcurl4-openssl-dev zlib1g-dev
       - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Setup msbuild on Windows
+        if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
+        uses: microsoft/setup-msbuild@v1.1
+      - name: Set up Visual Studio shell
+        if: matrix.with-s3 == 1 && matrix.os == 'windows-latest'
+        uses: egor-tensin/vs-shell@v2
+        with:
+          arch: x64
       - name: Check out source repository
         uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: Install dependencies
         run: |
           pip3 install -r requirements.txt
           pip3 install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
-      - name: Install test requirements
-        run: pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile
+          pip3 install cmake ninja
+          echo "/home/runner/.local/bin" >> $GITHUB_PATH
       - name: Build TorchData
-        run: python setup.py develop
+        run: |
+          python setup.py install
+        env:
+          BUILD_S3: ${{ matrix.with-s3 }}
+      - name: Install test requirements
+        run: pip3 install -r test/requirements.txt
       - name: Run DataPipes tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run:

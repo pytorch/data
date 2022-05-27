@@ -1,4 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 from typing import Optional, Sequence, TypeVar
 
 from torch.utils.data.datapipes.iter.combining import _ChildDataPipe, _ForkerIterDataPipe
@@ -13,8 +18,8 @@ T = TypeVar("T")
 class UnZipperIterDataPipe(IterDataPipe[T]):
     r"""
     Takes in a DataPipe of Sequences, unpacks each Sequence, and return the elements in separate DataPipes
-    based on their position in the Sequence. The number of instances produced equals to the sequence legnth
-    minus the number of columns to skip.
+    based on their position in the Sequence (functional name: ``unzip``). The number of instances produced equals to
+    the sequence length minus the number of columns to skip.
 
     Note:
         Each sequence within the DataPipe should have the same length, specified by

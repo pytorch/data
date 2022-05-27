@@ -1,10 +1,15 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import warnings
 
 from typing import Callable, Dict, Optional
 
 from torch.utils.data import IterDataPipe, MapDataPipe
-from torch.utils.data.datapipes.utils.common import check_lambda_fn, DILL_AVAILABLE
+from torch.utils.data.datapipes.utils.common import _check_lambda_fn, DILL_AVAILABLE
 
 if DILL_AVAILABLE:
     import dill
@@ -12,6 +17,7 @@ if DILL_AVAILABLE:
     dill.extend(use_dill=False)
 
 
+# @functional_datapipe("to_map_datapipe")  # This line must be kept for .pyi signature parser
 class IterToMapConverterMapDataPipe(MapDataPipe):
     r"""
     Lazily load data from ``IterDataPipe`` to construct a ``MapDataPipe`` with
@@ -20,6 +26,8 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
     with exactly two objects. The first object of each item becomes a key in
     the new dictionary, and the second object the corresponding value.
 
+    For the opposite converter, use :class:`.MapToIterConverter`.
+
     Args:
         datapipe: Source IterDataPipe
         key_value_fn: Function being applied over each data to generate key-value pair
@@ -27,6 +35,13 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
     Note:
         If a key being added is already present, the corresponding value
         will be replaced by the new value.
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> source_dp = IterableWrapper([(i, i) for i in range(10)])
+        >>> map_dp = source_dp.to_map_datapipe()
+        >>> list(map_dp)
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     """
     datapipe: IterDataPipe
     key_value_fn: Optional[Callable]
@@ -37,7 +52,7 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
         if not isinstance(datapipe, IterDataPipe):
             raise TypeError(f"IterToMapConverter can only apply on IterDataPipe, but found {type(datapipe)}")
         self.datapipe = datapipe
-        check_lambda_fn(key_value_fn)
+        _check_lambda_fn(key_value_fn)
         self.key_value_fn = key_value_fn  # type: ignore[assignment]
         self._map = None
         self._length = -1
@@ -58,9 +73,12 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
             self._map[key] = value
 
     def __getitem__(self, index):
-        if self._map is None:
-            self._load_map()
-        return self._map[index]  # type: ignore[index]
+        try:
+            if self._map is None:
+                self._load_map()
+            return self._map[index]  # type: ignore[index]
+        except KeyError:
+            raise IndexError(f"Index {index} is valid for IterToMapConverter.")
 
     def __len__(self):
         if self._length > -1:

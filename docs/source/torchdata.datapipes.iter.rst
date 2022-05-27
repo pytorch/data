@@ -52,6 +52,7 @@ These DataPipes help opening and decompressing archive files of different format
     Decompressor
     RarArchiveLoader
     TarArchiveLoader
+    WebDataset
     XzFileLoader
     ZipArchiveLoader
 
@@ -96,9 +97,11 @@ These tend to involve multiple DataPipes, combining them or splitting one to man
     IterKeyZipper
     MapKeyZipper
     Multiplexer
+    MultiplexerLongest
     SampleMultiplexer
     UnZipper
     Zipper
+    ZipperLongest
 
 Grouping DataPipes
 -----------------------------
@@ -139,6 +142,8 @@ saving files, and listing the files in directories).
     IoPathSaver
     OnlineReader
     ParquetDataFrameLoader
+    S3FileLister
+    S3FileLoader
     Saver
 
 Mapping DataPipes
@@ -151,6 +156,7 @@ These DataPipes apply the a given function to each element in the DataPipe.
     :toctree: generated/
     :template: datapipe.rst
 
+    BatchMapper
     FlatMapper
     Mapper
 
@@ -168,6 +174,7 @@ A miscellaneous set of DataPipes with different functionalities.
     HashChecker
     InMemoryCacheHolder
     IterableWrapper
+    MapToIterConverter
     OnDiskCacheHolder
     ShardingFilter
 

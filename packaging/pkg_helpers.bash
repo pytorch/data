@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
 
 # A set of useful bash functions for common functionality we need to do in
 # many build scripts
@@ -100,9 +105,10 @@ setup_build_version() {
 }
 
 # Set some useful variables for OS X, if applicable
+# AWSSDK requires at lest 10.13
 setup_macos() {
   if [[ "$(uname)" == Darwin ]]; then
-    export MACOSX_DEPLOYMENT_TARGET=10.9 CC=clang CXX=clang++
+    export MACOSX_DEPLOYMENT_TARGET=10.13 CC=clang CXX=clang++
   fi
 }
 

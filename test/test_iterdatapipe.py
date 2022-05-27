@@ -1,4 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import io
 import itertools
 import unittest
@@ -13,7 +18,6 @@ import torch.utils.data.datapipes.iter
 import torchdata
 
 from _utils._common_utils_for_test import IDP_NoLen, reset_after_n_next_calls
-from torch.utils.data.datapipes.map import SequenceWrapper
 from torchdata.datapipes.iter import (
     BucketBatcher,
     Cycler,
@@ -32,7 +36,7 @@ from torchdata.datapipes.iter import (
     SampleMultiplexer,
     UnZipper,
 )
-from torchdata.datapipes.map import MapDataPipe
+from torchdata.datapipes.map import MapDataPipe, SequenceWrapper
 
 
 def test_torchdata_pytorch_consistency() -> None:
@@ -60,7 +64,7 @@ def test_torchdata_pytorch_consistency() -> None:
         raise AssertionError(msg + "\n".join(sorted(missing_datapipes)))
 
 
-class TestDataPipe(expecttest.TestCase):
+class TestIterDataPipe(expecttest.TestCase):
     def test_in_memory_cache_holder_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(10))
         cache_dp = source_dp.in_memory_cache(size=5)
@@ -101,6 +105,7 @@ class TestDataPipe(expecttest.TestCase):
 
         source_dp = IterableWrapper(range(10))
         ref_dp = IterableWrapper(range(20))
+        ref_dp2 = IterableWrapper(range(20))
 
         # Functional Test: Output should be a zip list of tuple
         zip_dp = source_dp.zip_with_iter(
@@ -110,7 +115,7 @@ class TestDataPipe(expecttest.TestCase):
 
         # Functional Test: keep_key=True, and key should show up as the first element
         zip_dp_w_key = source_dp.zip_with_iter(
-            ref_datapipe=ref_dp, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=True, buffer_size=10
+            ref_datapipe=ref_dp2, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=True, buffer_size=10
         )
         self.assertEqual([(i, (i, i)) for i in range(10)], list(zip_dp_w_key))
 
@@ -141,13 +146,13 @@ class TestDataPipe(expecttest.TestCase):
 
         # Without a custom merge function, there will be nested tuples
         zip_dp2 = zip_dp.zip_with_iter(
-            ref_datapipe=ref_dp, key_fn=lambda x: x[0], ref_key_fn=lambda x: x, keep_key=False, buffer_size=100
+            ref_datapipe=ref_dp2, key_fn=lambda x: x[0], ref_key_fn=lambda x: x, keep_key=False, buffer_size=100
         )
         self.assertEqual([((i, i), i) for i in range(10)], list(zip_dp2))
 
         # With a custom merge function, nesting can be prevented
         zip_dp2_w_merge = zip_dp.zip_with_iter(
-            ref_datapipe=ref_dp,
+            ref_datapipe=ref_dp2,
             key_fn=lambda x: x[0],
             ref_key_fn=lambda x: x,
             keep_key=False,
@@ -520,10 +525,11 @@ class TestDataPipe(expecttest.TestCase):
 
     def test_in_batch_shuffler_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(10)).batch(3)
+        source_dp2 = IterableWrapper(range(10)).batch(3)
 
         # Functional Test: drop last reduces length
         filtered_dp = source_dp.in_batch_shuffle()
-        for ret_batch, exp_batch in zip(filtered_dp, source_dp):
+        for ret_batch, exp_batch in zip(filtered_dp, source_dp2):
             ret_batch.sort()
             self.assertEqual(ret_batch, exp_batch)
 
@@ -644,6 +650,46 @@ class TestDataPipe(expecttest.TestCase):
         with self.assertRaises(TypeError):
             len(batch_dp)
 
+    def test_map_batches_iterdatapipe(self):
+        source_dp = IterableWrapper(list(range(20)))
+
+        def fn(batch):
+            return [d + 1 for d in batch]
+
+        batch_mapped_dp = source_dp.map_batches(fn, batch_size=9)
+        expected_list = list(range(1, 21))
+        self.assertEqual(expected_list, list(batch_mapped_dp))
+
+        # Reset Test: reset the DataPipe after reading part of it
+        n_elements_before_reset = 5
+        res_before_reset, res_after_reset = reset_after_n_next_calls(batch_mapped_dp, n_elements_before_reset)
+
+        self.assertEqual(expected_list[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_list, res_after_reset)
+
+        # Functional Test: Different sizes between input and output
+        def fn_less(batch):
+            return [batch[idx] // 2 for idx in range(0, len(batch), 2)]
+
+        less_batch_mapped_dp = source_dp.map_batches(fn_less, batch_size=8)
+        self.assertEqual(list(range(10)), list(less_batch_mapped_dp))
+
+        # Functional Test: Specify input_col
+        source_dp = IterableWrapper([(d - 1, d, d + 1) for d in range(20)])
+
+        batch_mapped_input_1_dp = source_dp.map_batches(fn, batch_size=9, input_col=0)
+        self.assertEqual(list(range(20)), list(batch_mapped_input_1_dp))
+
+        def fn_2_cols(batch):
+            return [(d1, d2 - 1) for d1, d2 in batch]
+
+        batch_mapped_input_2_dp = source_dp.map_batches(fn_2_cols, batch_size=9, input_col=[1, 2])
+        self.assertEqual([(d, d) for d in range(20)], list(batch_mapped_input_2_dp))
+
+        # __len__ Test: length should be determined by ``fn`` which we can't know
+        with self.assertRaisesRegex(TypeError, "length relies on the output of its function."):
+            len(batch_mapped_dp)
+
     def test_flatmap_iterdatapipe(self):
         source_dp = IterableWrapper(list(range(20)))
 
@@ -652,8 +698,21 @@ class TestDataPipe(expecttest.TestCase):
 
         flatmapped_dp = source_dp.flatmap(fn)
         expected_list = list(itertools.chain(*[(e, e * 10) for e in source_dp]))
-        flatmapped_dp_list = list(flatmapped_dp)
-        self.assertEqual(expected_list, flatmapped_dp_list)
+        self.assertEqual(expected_list, list(flatmapped_dp))
+
+        # Funtional Test: Specify input_col
+        tuple_source_dp = IterableWrapper([(d - 1, d, d + 1) for d in range(20)])
+
+        # Single input_col
+        input_col_1_dp = tuple_source_dp.flatmap(fn, input_col=1)
+        self.assertEqual(expected_list, list(input_col_1_dp))
+
+        # Multiple input_col
+        def mul_fn(a, b):
+            return [a - b, b - a]
+
+        input_col_2_dp = tuple_source_dp.flatmap(mul_fn, input_col=(0, 2))
+        self.assertEqual(list(itertools.chain(*[(-2, 2) for _ in range(20)])), list(input_col_2_dp))
 
         # Reset Test: reset the DataPipe after reading part of it
         n_elements_before_reset = 5
@@ -705,28 +764,32 @@ class TestDataPipe(expecttest.TestCase):
         with self.assertRaises(BufferError):
             list(dp2)
 
-        # Reset Test: reset the DataPipe after reading part of it
+        # Reset Test: DataPipe resets when a new iterator is created, even if this datapipe hasn't been read
         dp1, dp2 = source_dp.unzip(sequence_length=2)
-        i1, i2 = iter(dp1), iter(dp2)
+        _ = iter(dp1)
         output2 = []
-        for i, n2 in enumerate(i2):
-            output2.append(n2)
-            if i == 4:
-                i1 = iter(dp1)  # Doesn't reset because i1 hasn't been read
-        self.assertEqual(list(range(10, 20)), output2)
+        with self.assertRaisesRegex(RuntimeError, r"iterator has been invalidated"):
+            for i, n2 in enumerate(dp2):
+                output2.append(n2)
+                if i == 4:
+                    _ = iter(dp1)  # This will reset all child DataPipes
+        self.assertEqual(list(range(10, 15)), output2)
 
         # Reset Test: DataPipe reset when some of it have been read
         dp1, dp2 = source_dp.unzip(sequence_length=2)
-        i1, i2 = iter(dp1), iter(dp2)
         output1, output2 = [], []
-        for i, (n1, n2) in enumerate(zip(i1, i2)):
+        for i, (n1, n2) in enumerate(zip(dp1, dp2)):
             output1.append(n1)
             output2.append(n2)
             if i == 4:
                 with warnings.catch_warnings(record=True) as wa:
-                    i1 = iter(dp1)  # Reset both all child DataPipe
+                    _ = iter(dp1)  # Reset both all child DataPipe
                     self.assertEqual(len(wa), 1)
                     self.assertRegex(str(wa[0].message), r"Some child DataPipes are not exhausted")
+                break
+        for i, (n1, n2) in enumerate(zip(dp1, dp2)):
+            output1.append(n1)
+            output2.append(n2)
         self.assertEqual(list(range(5)) + list(range(10)), output1)
         self.assertEqual(list(range(10, 15)) + list(range(10, 20)), output2)
 
@@ -758,8 +821,6 @@ class TestDataPipe(expecttest.TestCase):
         self.assertEqual(len(source_dp), len(dp1))
         self.assertEqual(len(source_dp), len(dp2))
         self.assertEqual(len(source_dp), len(dp3))
-
-        # TODO: Add testing for different stages of pickling for UnZipper
 
     def test_itertomap_mapdatapipe(self):
         # Functional Test with None key_value_fn
@@ -812,6 +873,74 @@ class TestDataPipe(expecttest.TestCase):
             dup_map_dp._load_map()
             self.assertEqual(len(wa), 1)
             self.assertRegex(str(wa[0].message), r"Found duplicate key")
+
+    def test_mux_longest_iterdatapipe(self):
+
+        # Functional Test: Elements are yielded one at a time from each DataPipe, until they are all exhausted
+        input_dp1 = IterableWrapper(range(4))
+        input_dp2 = IterableWrapper(range(4, 8))
+        input_dp3 = IterableWrapper(range(8, 12))
+        output_dp = input_dp1.mux_longest(input_dp2, input_dp3)
+        expected_output = [0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11]
+        self.assertEqual(len(expected_output), len(output_dp))
+        self.assertEqual(expected_output, list(output_dp))
+
+        # Functional Test: Uneven input Data Pipes
+        input_dp1 = IterableWrapper([1, 2, 3, 4])
+        input_dp2 = IterableWrapper([10])
+        input_dp3 = IterableWrapper([100, 200, 300])
+        output_dp = input_dp1.mux_longest(input_dp2, input_dp3)
+        expected_output = [1, 10, 100, 2, 200, 3, 300, 4]
+        self.assertEqual(len(expected_output), len(output_dp))
+        self.assertEqual(expected_output, list(output_dp))
+
+        # Functional Test: Empty Data Pipe
+        input_dp1 = IterableWrapper([0, 1, 2, 3])
+        input_dp2 = IterableWrapper([])
+        output_dp = input_dp1.mux_longest(input_dp2)
+        self.assertEqual(len(input_dp1), len(output_dp))
+        self.assertEqual(list(input_dp1), list(output_dp))
+
+        # __len__ Test: raises TypeError when __len__ is called and an input doesn't have __len__
+        input_dp1 = IterableWrapper(range(10))
+        input_dp_no_len = IDP_NoLen(range(10))
+        output_dp = input_dp1.mux_longest(input_dp_no_len)
+        with self.assertRaises(TypeError):
+            len(output_dp)
+
+    def test_zip_longest_iterdatapipe(self):
+
+        # Functional Test: raises TypeError when an input is not of type `IterDataPipe`
+        with self.assertRaises(TypeError):
+            input_dp1 = IterableWrapper(range(10))
+            input_no_dp = list(range(10))
+            output_dp = input_dp1.zip_longest(input_no_dp)  # type: ignore[arg-type]
+
+        # Functional Test: raises TypeError when an input does not have valid length
+        input_dp1 = IterableWrapper(range(10))
+        input_dp_no_len = IDP_NoLen(range(5))
+        output_dp = input_dp1.zip_longest(input_dp_no_len)
+        with self.assertRaisesRegex(TypeError, r"instance doesn't have valid length$"):
+            len(output_dp)
+
+        # Functional Test: zips the results properly even when lengths are different
+        # (zips to the longest, filling missing values with default value None.)
+        input_dp1 = IterableWrapper(range(10))
+        input_dp2 = IterableWrapper(range(5))
+        output_dp = input_dp1.zip_longest(input_dp2)
+        exp = [(i, i) for i in range(5)] + [(i, None) for i in range(5, 10)]
+        self.assertEqual(list(output_dp), exp)
+
+        # Functional Test: zips the results properly even when lengths are different
+        # (zips to the longest, filling missing values with user input)
+        input_dp1 = IterableWrapper(range(10))
+        input_dp2 = IterableWrapper(range(5))
+        output_dp = input_dp1.zip_longest(input_dp2, fill_value=-1)
+        exp = [(i, i) for i in range(5)] + [(i, -1) for i in range(5, 10)]
+        self.assertEqual(list(output_dp), exp)
+
+        # __len__ Test: length matches the length of the shortest input
+        self.assertEqual(len(output_dp), 10)
 
 
 if __name__ == "__main__":
