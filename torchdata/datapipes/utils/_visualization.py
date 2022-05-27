@@ -108,7 +108,7 @@ def to_nodes(dp):
 
         return nodes
 
-    return aggregate(recurse(traverse(dp)))
+    return aggregate(recurse(traverse(dp, only_datapipe=True)))
 
 
 def to_graph(dp) -> "graphviz.Digraph":
