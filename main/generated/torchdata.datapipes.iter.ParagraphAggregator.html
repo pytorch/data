@@ -6,7 +6,7 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
@@ -323,17 +323,17 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <section id="paragraphaggregator">
-<h1>ParagraphAggregator<a class="headerlink" href="#paragraphaggregator" title="Permalink to this headline">¶</a></h1>
+<h1>ParagraphAggregator<a class="headerlink" href="#paragraphaggregator" title="Permalink to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.ParagraphAggregator">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">ParagraphAggregator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">source_datapipe:</span> <span class="pre">IterDataPipe[Tuple[str,</span> <span class="pre">T_co]],</span> <span class="pre">joiner:</span> <span class="pre">Callable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_line_join&gt;</span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.ParagraphAggregator" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">ParagraphAggregator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">source_datapipe:</span> <span class="pre">~IterDataPipe[~Tuple[str,</span> <span class="pre">~T_co]],</span> <span class="pre">joiner:</span> <span class="pre">~Callable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_line_join&gt;</span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.ParagraphAggregator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Aggregates lines of text from the same file into a single paragraph (functional name: <code class="docutils literal notranslate"><span class="pre">lines_to_paragraphs</span></code>).
 Specifically, this accepts a DataPipe consisting of tuples of a file name and a line. For each tuple,
 it checks if the file name matches the file name from the previous tuple. If yes, it joins the current line
 with existing paragraph. If the file names do not match, the existing paragraph is yielded and a new
 paragraph starts.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_datapipe</strong> – a DataPipe with tuples of a file name and a line</p></li>
 <li><p><strong>joiner</strong> – a function that joins a list of lines together</p></li>
@@ -416,6 +416,7 @@ paragraph starts.</p>
          <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
          <script src="../_static/jquery.js"></script>
          <script src="../_static/underscore.js"></script>
+         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
      
 

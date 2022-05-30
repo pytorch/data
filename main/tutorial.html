@@ -6,7 +6,7 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
@@ -321,9 +321,9 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <section id="tutorial">
-<h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this heading">¶</a></h1>
 <section id="using-datapipes">
-<h2>Using DataPipes<a class="headerlink" href="#using-datapipes" title="Permalink to this headline">¶</a></h2>
+<h2>Using DataPipes<a class="headerlink" href="#using-datapipes" title="Permalink to this heading">¶</a></h2>
 <p>Suppose that we want to load data from CSV files with the following steps:</p>
 <ul class="simple">
 <li><p>List all CSV files in a directory</p></li>
@@ -372,7 +372,7 @@ class constructors. A pipeline can be assembled as the following:</p>
 <a class="reference external" href="torchdata.datapipes.map.html">MapDataPipes here</a>.</p>
 </section>
 <section id="working-with-dataloader">
-<h2>Working with DataLoader<a class="headerlink" href="#working-with-dataloader" title="Permalink to this headline">¶</a></h2>
+<h2>Working with DataLoader<a class="headerlink" href="#working-with-dataloader" title="Permalink to this heading">¶</a></h2>
 <p>In this section, we will demonstrate how you can use DataPipe with <code class="docutils literal notranslate"><span class="pre">DataLoader</span></code>.
 For the most part, you should be able to use it just by passing <code class="docutils literal notranslate"><span class="pre">dataset=datapipe</span></code> as an input arugment
 into the <code class="docutils literal notranslate"><span class="pre">DataLoader</span></code>. For detailed documentation related to <code class="docutils literal notranslate"><span class="pre">DataLoader</span></code>,
@@ -479,7 +479,7 @@ batch size of 5, that gives us 6 batches per worker. With 2 workers, we get 12 t
 <p>You can find more DataPipe implementation examples for various research domains <a class="reference external" href="torchexamples.html">on this page</a>.</p>
 </section>
 <section id="implementing-a-custom-datapipe">
-<h2>Implementing a Custom DataPipe<a class="headerlink" href="#implementing-a-custom-datapipe" title="Permalink to this headline">¶</a></h2>
+<h2>Implementing a Custom DataPipe<a class="headerlink" href="#implementing-a-custom-datapipe" title="Permalink to this heading">¶</a></h2>
 <p>Currently, we already have a large number of built-in DataPipes and we expect them to cover most necessary
 data processing operations. If none of them supports your need, you can create your own custom DataPipe.</p>
 <p>As a guiding example, let us implement an <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> that applies a callable to the input iterator. For
@@ -487,7 +487,7 @@ data processing operations. If none of them supports your need, you can create y
 <a class="reference external" href="https://github.com/pytorch/pytorch/tree/master/torch/utils/data/datapipes/map">map</a>
 folder for examples, and follow the steps below for the <code class="docutils literal notranslate"><span class="pre">__getitem__</span></code> method instead of  the <code class="docutils literal notranslate"><span class="pre">__iter__</span></code> method.</p>
 <section id="naming">
-<h3>Naming<a class="headerlink" href="#naming" title="Permalink to this headline">¶</a></h3>
+<h3>Naming<a class="headerlink" href="#naming" title="Permalink to this heading">¶</a></h3>
 <p>The naming convention for <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> is “Operation”-er, followed by <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> or <code class="docutils literal notranslate"><span class="pre">MapDataPipe</span></code>, as each
 DataPipe is essentially a container to apply an operation to data yielded from a source <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code>. For succinctness,
 we alias to just “Operation-er” in <strong>init</strong> files. For our <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> example, we’ll name the module
@@ -496,7 +496,7 @@ we alias to just “Operation-er” in <strong>init</strong> files. For our <cod
 the functional method name of <code class="docutils literal notranslate"><span class="pre">Mapper</span></code> is <code class="docutils literal notranslate"><span class="pre">map</span></code>, such that it can be invoked by <code class="docutils literal notranslate"><span class="pre">datapipe.map(...)</span></code>.</p>
 </section>
 <section id="constructor">
-<h3>Constructor<a class="headerlink" href="#constructor" title="Permalink to this headline">¶</a></h3>
+<h3>Constructor<a class="headerlink" href="#constructor" title="Permalink to this heading">¶</a></h3>
 <p>DataSets are now generally constructed as stacks of <code class="docutils literal notranslate"><span class="pre">DataPipes</span></code>, so each <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> typically takes a
 source <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> as its first argument. Here is a simplified version of <cite>Mapper</cite> as an example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterDataPipe</span>
@@ -522,7 +522,7 @@ another <code class="docutils literal notranslate"><span class="pre">IterDataPip
 </ul>
 </section>
 <section id="iterator">
-<h3>Iterator<a class="headerlink" href="#iterator" title="Permalink to this headline">¶</a></h3>
+<h3>Iterator<a class="headerlink" href="#iterator" title="Permalink to this heading">¶</a></h3>
 <p>For <code class="docutils literal notranslate"><span class="pre">IterDataPipes</span></code>, an <code class="docutils literal notranslate"><span class="pre">__iter__</span></code> function is needed to consume data from the source <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> then
 apply the operation over the data before <code class="docutils literal notranslate"><span class="pre">yield</span></code>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MapperIterDataPipe</span><span class="p">(</span><span class="n">IterDataPipe</span><span class="p">):</span>
@@ -535,7 +535,7 @@ apply the operation over the data before <code class="docutils literal notransla
 </div>
 </section>
 <section id="length">
-<h3>Length<a class="headerlink" href="#length" title="Permalink to this headline">¶</a></h3>
+<h3>Length<a class="headerlink" href="#length" title="Permalink to this heading">¶</a></h3>
 <p>In many cases, as in our <code class="docutils literal notranslate"><span class="pre">MapperIterDataPipe</span></code> example, the <code class="docutils literal notranslate"><span class="pre">__len__</span></code> method of a DataPipe returns the length of the
 source DataPipe.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MapperIterDataPipe</span><span class="p">(</span><span class="n">IterDataPipe</span><span class="p">):</span>
@@ -552,7 +552,7 @@ an Error depending on the input. In those cases, the Error must be a <code class
 build-in functions like <code class="docutils literal notranslate"><span class="pre">list(dp)</span></code>.</p>
 </section>
 <section id="registering-datapipes-with-the-functional-api">
-<h3>Registering DataPipes with the functional API<a class="headerlink" href="#registering-datapipes-with-the-functional-api" title="Permalink to this headline">¶</a></h3>
+<h3>Registering DataPipes with the functional API<a class="headerlink" href="#registering-datapipes-with-the-functional-api" title="Permalink to this heading">¶</a></h3>
 <p>Each DataPipe can be registered to support functional invocation using the decorator <code class="docutils literal notranslate"><span class="pre">functional_datapipe</span></code>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@functional_datapipe</span><span class="p">(</span><span class="s2">&quot;map&quot;</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">MapperIterDataPipe</span><span class="p">(</span><span class="n">IterDataPipe</span><span class="p">):</span>
@@ -651,6 +651,7 @@ recommend using the functional form of DataPipes.</p>
          <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
          <script src="_static/jquery.js"></script>
          <script src="_static/underscore.js"></script>
+         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="_static/doctools.js"></script>
      
 
