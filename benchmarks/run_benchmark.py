@@ -1,6 +1,7 @@
 import argparse
 import sys
 import logging
+import subprocess
 
 import torchvision
 import torch
@@ -71,6 +72,13 @@ if model_name in ["resnext50_32x4d", "mobilenet_v3_large"]:
 else:
     print(f"{model} not supported yet")
 
+if device.startswith("cuda"):
+    nvidiasmi = subprocess.check_output("nvidia-smi", shell=True, text=True)
+    print(nvidiasmi)
+
+lscpu = subprocess.check_output("lscpu", shell=True, text=True)
+print(lscpu)
+
 print(f"batch size {batch_size}")
 print(f"Dataset name {dp}")
 print(f"Dataset length {len(dp)}")
@@ -138,8 +146,6 @@ with torch.profiler.profile(
         epoch_start = time.time()
         running_loss = 0
         for i, elem in enumerate(dl):
-            p.step()
-
             batch_start = time.time()
 
             labels = torch.argmax(elem[0]["label"], dim=1)      
@@ -158,10 +164,11 @@ with torch.profiler.profile(
             batch_duration = batch_end - batch_start 
             batch_durations.append(batch_duration)
             p.step()
-        p.step()
+
         epoch_end = time.time()
         epoch_duration = epoch_end - epoch_start
         per_epoch_durations.append(epoch_duration)
+
     total_end = time.time()
     total_duration = total_end - total_start
 
