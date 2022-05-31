@@ -96,11 +96,11 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
                         yield os.path.join(path, file_name)
 
 
-@functional_datapipe("open_file_by_iopath")
+@functional_datapipe("open_files_by_iopath")
 class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
     Opens files from input datapipe which contains pathnames or URLs,
-    and yields a tuple of pathname and opened file stream (functional name: ``open_file_by_iopath``).
+    and yields a tuple of pathname and opened file stream (functional name: ``open_files_by_iopath``).
 
     Args:
         source_datapipe: Iterable DataPipe that provides the pathnames or URLs
@@ -114,7 +114,7 @@ class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Example:
         >>> from torchdata.datapipes.iter import IoPathFileLister
         >>> datapipe = IoPathFileLister(root=S3URL)
-        >>> file_dp = datapipe.open_file_by_iopath()
+        >>> file_dp = datapipe.open_files_by_iopath()
     """
 
     def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r", pathmgr=None) -> None:

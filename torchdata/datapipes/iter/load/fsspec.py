@@ -101,11 +101,11 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
                             yield abs_path
 
 
-@functional_datapipe("open_file_by_fsspec")
+@functional_datapipe("open_files_by_fsspec")
 class FSSpecFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
     Opens files from input datapipe which contains `fsspec` paths and yields a tuple of
-    pathname and opened file stream (functional name: ``open_file_by_fsspec``).
+    pathname and opened file stream (functional name: ``open_files_by_fsspec``).
 
     Args:
         source_datapipe: Iterable DataPipe that provides the pathnames or URLs
@@ -114,7 +114,7 @@ class FSSpecFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Example:
         >>> from torchdata.datapipes.iter import FSSpecFileLister
         >>> datapipe = FSSpecFileLister(root=dir_path)
-        >>> file_dp = datapipe.open_file_by_fsspec()
+        >>> file_dp = datapipe.open_files_by_fsspec()
     """
 
     def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r") -> None:
