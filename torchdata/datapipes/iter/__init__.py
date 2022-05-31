@@ -103,6 +103,7 @@ from torchdata.datapipes.iter.util.tararchiveloader import (
     TarArchiveLoaderIterDataPipe as TarArchiveLoader,
     TarArchiveReaderIterDataPipe as TarArchiveReader,
 )
+from torchdata.datapipes.iter.util.tensor_ops import PinMemoryIterDataPipe as PinMemory
 from torchdata.datapipes.iter.util.tfrecordloader import (
     TFRecordExample,
     TFRecordExampleSpec,
@@ -171,6 +172,7 @@ __all__ = [
     "OnlineReader",
     "ParagraphAggregator",
     "ParquetDataFrameLoader",
+    "PinMemory",
     "RarArchiveLoader",
     "RoutedDecoder",
     "Rows2Columnar",
