@@ -54,7 +54,7 @@ jobs:
   wheel_build_test:
     needs: get_release_type
     runs-on: ${{ matrix.os }}
-    # container: ${{ startsWith( matrix.os, 'ubuntu' ) && 'quay.io/pypa/manylinux2014_x86_64' || null }}
+    container: ${{ startsWith( matrix.os, 'ubuntu' ) && 'pytorch/manylinux-cpu' || null }}
     strategy:
       fail-fast: false
       matrix:
@@ -69,7 +69,7 @@ jobs:
           - "3.10"
     steps:
       - name: Setup Python ${{ matrix.python-version }}
-        # if: ${{ ! startsWith( matrix.os, 'ubuntu' ) }}
+        if: ${{ ! startsWith( matrix.os, 'ubuntu' ) }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
@@ -88,61 +88,72 @@ jobs:
           arch: x64
       - name: Install Build Dependency
         shell: bash
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
-          # if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-          #   yum -y install ninja-build
-          #   yum -y install openssl-devel openssl-static curl-devel zlib-devel
-          # else
-          pip install cmake ninja
-          echo "/home/runner/.local/bin" >> $GITHUB_PATH
-          # fi
+          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            source packaging/manylinux/python_helper.sh
+            yum -y install ninja-build zlib-static
+            # Docker path is /__w by default
+            export WORKSPACE="/__w"
+            # Install static OpenSSL/libcrypto library
+            ./packaging/manylinux/install_openssl_curl.sh
+          else
+            pip install cmake ninja
+            echo "/home/runner/.local/bin" >> $GITHUB_PATH
+          fi
       - name: Install PyTorch and Build TorchData Wheel
         shell: bash
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
-          BUILD_S3: ${{ startsWith( matrix.os, 'ubuntu' ) && 'OFF' || 'ON' }}
+          BUILD_S3: 1
         run: |
-          # if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-          #   # See: https://github.com/actions/checkout/issues/760
-          #   git config --global --add safe.directory /__w/data/data
-          #   source packaging/manylinux_wheel_helper.sh
-          # fi
+          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            source packaging/manylinux/python_helper.sh
+            # See: https://github.com/actions/checkout/issues/760
+            git config --global --add safe.directory "$WORKSPACE/data/data"
+            # AWSSDK uses $CMAKE_PREFIX_PATH to find openssl
+            export OPENSSL_ROOT_DIR="/__w/ssl"
+            export CURL_ROOT_DIR="/__w/curl"
+            export CMAKE_PREFIX_PATH="$OPENSSL_ROOT_DIR:$CURL_ROOT_DIR:$CMAKE_PREFIX_PATH"
+            export STATIC_DEPS=TRUE
+          fi
           packaging/build_wheel.sh
       - name: Validate TorchData Wheel
         shell: bash
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
-          # if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-          #   source packaging/manylinux_wheel_helper.sh
-          #   pip3 install auditwheel
-          # fi
+          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            source packaging/manylinux/python_helper.sh
+            pip3 install auditwheel
+          fi
           pip3 install pkginfo
           for pkg in dist/torchdata*.whl; do
               echo "PkgInfo of $pkg:"
               pkginfo $pkg
-              # if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-              #   auditwheel show $pkg
-              # fi
+              if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+                auditwheel show $pkg
+              fi
           done
       - name: Install TorchData Wheel
         shell: bash
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
-          # if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-          #   source packaging/manylinux_wheel_helper.sh
-          # fi
+          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            source packaging/manylinux/python_helper.sh
+          fi
           pip3 install dist/torchdata*.whl
       - name: Run DataPipes Tests with pytest
         shell: bash
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
-          # if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-          #   source packaging/manylinux_wheel_helper.sh
-          # fi
+          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            source packaging/manylinux/python_helper.sh
+          fi
           pip3 install -r test/requirements.txt
           pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Wheels to Github

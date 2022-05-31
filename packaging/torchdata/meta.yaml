@@ -47,9 +47,8 @@ test:
     # The following packages are not on the default conda channel
     # - iopath
     # - rarfile
-  # TODO: Re-enable it after #386 is landed
-  # commands:
-  #   - pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
+  commands:
+    - pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
 
 about:
   home: https://github.com/pytorch/data
