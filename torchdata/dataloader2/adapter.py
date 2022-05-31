@@ -25,7 +25,22 @@ class Adapter:
 
 
 class Shuffle(Adapter):
-    def __init__(self, enable):
+    r"""
+    Shuffle DataPipes adapter allows control over all existing Shuffler (`shuffle`) DataPipes in the graph.
+
+    Args:
+        enable: Optional[Boolean] = True
+            Shuffle(enable = True) - enables all previously disabled Shuffler DataPipes. If none exists, it will add a new `shuffle` at the end of the graph.
+            Shuffle(enable = False) - disables all Shuffler DataPipes in the graph.
+            Shuffle(enable = None) - Is noop. Introduced for backward compatibility.
+
+    Example:
+        >>>  dp = IterableWrapper(range(size)).shuffle()
+        >>>  dl = DataLoader2(dp, [Shuffle(False)])
+        >>>  self.assertEqual(list(range(size)), list(dl))
+    """
+
+    def __init__(self, enable=True):
         self.enable = enable
 
     def __call__(self, datapipe: IterDataPipe) -> IterDataPipe:
