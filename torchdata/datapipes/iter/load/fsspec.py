@@ -133,6 +133,10 @@ class FSSpecFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         return len(self.source_datapipe)
 
 
+# Register for functional API for backward compatibility
+IterDataPipe.register_datapipe_as_function("open_file_by_fsspec", FSSpecFileOpenerIterDataPipe)
+
+
 @functional_datapipe("save_by_fsspec")
 class FSSpecSaverIterDataPipe(IterDataPipe[str]):
     r"""

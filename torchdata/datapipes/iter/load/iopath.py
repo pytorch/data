@@ -141,6 +141,10 @@ class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         return len(self.source_datapipe)
 
 
+# Register for functional API for backward compatibility
+IterDataPipe.register_datapipe_as_function("open_file_by_iopath", IoPathFileOpenerIterDataPipe)
+
+
 @functional_datapipe("save_by_iopath")
 class IoPathSaverIterDataPipe(IterDataPipe[str]):
 

@@ -684,7 +684,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Reset Test: Ensure the resulting streams are still readable after the DataPipe is reset/exhausted
         self._write_text_files()
         lister_dp = FileLister(self.temp_dir.name, "*.text")
-        iopath_file_loader_dp = IoPathFileOpener(lister_dp, mode="rb")
+        iopath_file_loader_dp = lister_dp.open_files_by_iopath(mode="rb")
 
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(iopath_file_loader_dp, n_elements_before_reset)
