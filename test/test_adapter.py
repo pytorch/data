@@ -11,7 +11,7 @@ from unittest import TestCase
 import torch
 
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService, ReadingServiceInterface
-from torchdata.dataloader2.adapter import Shuffle
+from torchdata.dataloader2.adapter import PinMemory, Shuffle
 from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 
 
@@ -44,5 +44,6 @@ class AdapterTest(TestCase):
 
     def test_pin_memory(self):
         size = 10
-        dp = IterableWrapper(range(size)).map(lambda x: {"a": torch.Tensor(x)}).pin_memory()
-        self.assertEqual(list(range(size)), list(dp))
+        dp = IterableWrapper(range(size))
+        dl = DataLoader2(dp, [PinMemory])
+        self.assertEqual(list(range(size)), list(dl))
