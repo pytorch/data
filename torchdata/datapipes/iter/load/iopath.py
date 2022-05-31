@@ -39,7 +39,7 @@ def _create_default_pathmanager():
     return pathmgr
 
 
-@functional_datapipe("list_file_by_iopath")
+@functional_datapipe("list_files_by_iopath")
 class IoPathFileListerIterDataPipe(IterDataPipe[str]):
     r"""
     Lists the contents of the directory at the provided ``root`` pathname or URL,
