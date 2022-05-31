@@ -4,27 +4,29 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import functools
-
-from typing import Callable, Optional
+from abc import abstractmethod
 
 import torch
+
 from torchdata.datapipes.iter import IterDataPipe
 
 __all__ = [
     "Adapter",
-    "shuffle",
+    "Shuffle",
 ]
 
 assert __all__ == sorted(__all__)
 
-Adapter = Callable[[IterDataPipe], IterDataPipe]
+
+class Adapter:
+    @abstractmethod
+    def __call__(self, datapipe: IterDataPipe) -> IterDataPipe:
+        pass
 
 
-def shuffle(enable=None) -> Adapter:
-    return functools.partial(_shuffle, enable)
+class Shuffle(Adapter):
+    def __init__(self, enable):
+        self.enable = enable
 
-
-def _shuffle(enable: Optional[bool], datapipe: IterDataPipe) -> IterDataPipe:
-    datapipe = torch.utils.data.graph_settings.apply_shuffle_settings(datapipe, shuffle=enable)
-    return datapipe
+    def __call__(self, datapipe: IterDataPipe) -> IterDataPipe:
+        return torch.utils.data.graph_settings.apply_shuffle_settings(datapipe, shuffle=self.enable)

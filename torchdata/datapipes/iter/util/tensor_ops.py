@@ -44,11 +44,11 @@ class PinMemoryIterDataPipe(IterDataPipe[T_co]):
     @staticmethod
     def pin_memory(object):
         if isinstance(object, Dict):
-            result = {key: PinMemoryIterDataPipe.pin_or_raise(value) for key, value in object.items()}
-            return result
+            dict_result = {key: PinMemoryIterDataPipe.pin_or_raise(value) for key, value in object.items()}
+            return dict_result
         elif isinstance(object, Iterable):
-            result = [PinMemoryIterDataPipe.pin_or_raise(value) for value in object]
-            return result
+            list_result = [PinMemoryIterDataPipe.pin_or_raise(value) for value in object]
+            return list_result
         else:
             return PinMemoryIterDataPipe.pin_or_raise(object)
 
