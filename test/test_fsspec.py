@@ -94,8 +94,8 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         # checks for functional API
         datapipe = IterableWrapper([self.temp_sub_dir.name, self.temp_sub_dir_2.name])
         datapipe = datapipe.list_files_by_fsspec()
-        datapipe.sort()
-        self.assertEqual(datapipe, temp_files)
+        res = list(datapipe).sort()
+        self.assertEqual(res, temp_files)
 
     @skipIfNoFSSpec
     def test_fsspec_file_loader_iterdatapipe(self):
