@@ -304,6 +304,7 @@ jobs:
         env:
           CONDA_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_PYTORCHBOT_TOKEN }}
           CONDA_NIGHTLY_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_NIGHTLY_PYTORCHBOT_TOKEN }}
+          CONDA_TEST_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_TEST_PYTORCHBOT_TOKEN }}
         run: |
           conda install -yq anaconda-client
           conda install -c conda-forge -yq jq
