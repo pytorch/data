@@ -35,8 +35,8 @@ Note: refer to the official documentation for detailed installtion instructions 
 
 ### S3FileLister
 
-`S3FileLister` accepts a list of S3 prefixes and iterates all matching s3 urls. The functional API is `list_file_by_s3`.
-Acceptable prefixes include `s3://bucket-name`, `s3://bucket-name/`, `s3://bucket-name/folder`,
+`S3FileLister` accepts a list of S3 prefixes and iterates all matching s3 urls. The functional API is
+`list_files_by_s3`. Acceptable prefixes include `s3://bucket-name`, `s3://bucket-name/`, `s3://bucket-name/folder`,
 `s3://bucket-name/folder/`, and `s3://bucket-name/prefix`. You may also set `length`, `request_timeout_ms` (default 3000
 ms in aws-sdk-cpp), and `region`. Note that:
 
@@ -48,7 +48,7 @@ ms in aws-sdk-cpp), and `region`. Note that:
 ### S3FileLoader
 
 `S3FileLoader` accepts a list of S3 URLs and iterates all files in `BytesIO` format with `(url, BytesIO)` tuples. The
-functional API is `load_file_by_s3`. You may also set `request_timeout_ms` (default 3000 ms in aws-sdk-cpp), `region`,
+functional API is `load_files_by_s3`. You may also set `request_timeout_ms` (default 3000 ms in aws-sdk-cpp), `region`,
 `buffer_size` (default 120Mb), and `multi_part_download` (default to use multi-part downloading). Note that:
 
 1. Input **must** be a list and S3 URLs must be valid.

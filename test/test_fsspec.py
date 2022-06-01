@@ -94,10 +94,10 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         # Reset Test: Ensure the resulting streams are still readable after the DataPipe is reset/exhausted
         self._write_text_files()
         lister_dp = FileLister(self.temp_dir.name, "*.text")
-        fsspec_file_loader_dp = FSSpecFileOpener(lister_dp, mode="rb")
+        fsspec_file_opener_dp = lister_dp.open_files_by_fsspec(mode="rb")
 
         n_elements_before_reset = 2
-        res_before_reset, res_after_reset = reset_after_n_next_calls(fsspec_file_loader_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(fsspec_file_opener_dp, n_elements_before_reset)
         self.assertEqual(2, len(res_before_reset))
         self.assertEqual(3, len(res_after_reset))
         for _name, stream in res_before_reset:
