@@ -20,9 +20,9 @@ try:
 except ImportError:
     datasets = None
 
-def _get_response_from_huggingface_hub(dataset, revision, data_files):
+def _get_response_from_huggingface_hub(dataset, revision, data_files) -> Tuple[Any, StreamWrapper]:
     dataset = datasets.load_dataset(dataset, revision, data_files)
-    return dataset
+    return dataset[0], StreamWrapper(dataset)
 
 @functional_datapipe("read_from_huggingface_hub")
 class HuggingFaceHubReaderDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
@@ -46,14 +46,15 @@ class HuggingFaceHubReaderDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     source_datapipe: IterDataPipe[str]
 
-    def __init__(self, source_datapipe: IterDataPipe[str], *, revision : Optional[str] = None, data_files : Optional[Dict[str,str]] = None) -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], *, split : str = "train", revision : Optional[str] = None, data_files : Optional[Dict[str,str]] = None) -> None:
         self.source_datapipe = source_datapipe
+        self.split = split
         self.revision = revision
         self.data_files = data_files
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for dataset in self.source_datapipe:
-            yield _get_response_from_huggingface_hub(dataset, revision=self.revision, data_files=self.data_files)
+            yield _get_response_from_huggingface_hub(dataset, split=split, revision=self.revision, data_files=self.data_files)
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
