@@ -8,10 +8,7 @@ def train(num_epochs, model, dl, per_epoch_durations, batch_durations, criterion
         for i, elem in enumerate(dl):
             batch_start = time.time()
 
-            labels = torch.argmax(elem[0]["label"], dim=1)      
-            optimizer.zero_grad()
-            outputs = model(elem[0]["image"])
-            loss = criterion(outputs,labels)
+            loss = process(model, criterion, optimizer, elem)
             loss.backward()
             optimizer.step()
 
@@ -28,3 +25,10 @@ def train(num_epochs, model, dl, per_epoch_durations, batch_durations, criterion
         epoch_end = time.time()
         epoch_duration = epoch_end - epoch_start
         per_epoch_durations.append(epoch_duration)
+
+def process(model, criterion, optimizer, elem):
+    labels = torch.argmax(elem[0]["label"], dim=1)      
+    optimizer.zero_grad()
+    outputs = model(elem[0]["image"])
+    loss = criterion(outputs,labels)
+    return loss

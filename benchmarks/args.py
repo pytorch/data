@@ -4,6 +4,7 @@ import argparse
 def arg_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="gtsrb", help="The name of the dataset")
+    parser.add_argument("--ispipe", action="store_true", help="is datapipe or dataset?")
     parser.add_argument("--model_name", type=str, default="resnext50_32x4d", help="The name of the model")
     parser.add_argument("--batch_size", type=int, default=1, help="")
     parser.add_argument("--device", type=str, default="cuda:0", help="Options are are cpu or cuda:0")
@@ -14,7 +15,9 @@ def arg_parser():
     parser.add_argument("--dataloaderv", type=int, default=1)
 
     args = parser.parse_args()
+    print(args)
     dataset = args.dataset
+    ispipe = args.ispipe
     model_name = args.model_name
     batch_size = args.batch_size
     device = args.device
@@ -23,4 +26,4 @@ def arg_parser():
     num_workers = args.num_workers
     shuffle = args.shuffle
     dataloaderv = args.dataloaderv
-    return dataset,model_name,batch_size,device,num_epochs,num_workers,shuffle,dataloaderv
+    return dataset, ispipe, model_name,batch_size,device,num_epochs,num_workers,shuffle,dataloaderv
