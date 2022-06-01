@@ -216,6 +216,13 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
             elif extra_check_fn is not None and not extra_check_fn(filepath):
                 cached_file_exists = False
 
+            def _check_promise_file_uuid(data, promise_filepath, filepath, uuid):
+                if len(data) > 0 and data != str(uuid):
+                    raise RuntimeError(
+                        f"Found lock {promise_filepath} from the previous failed run {data}. {filepath} and cache folder are potentially incorrect."
+                        " Consider cleanining it up or remove the lock file."
+                    )
+
             if not cached_file_exists:
                 promise_filepath = _promise_filename(filepath)
                 dirname = os.path.dirname(promise_filepath)
@@ -225,11 +232,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                 with portalocker.Lock(promise_filepath, "a+", flags=portalocker.LockFlags.EXCLUSIVE) as promise_fh:
                     promise_fh.seek(0)
                     data = promise_fh.read()
-                    if len(data) > 0 and data != str(uuid):
-                        raise RuntimeError(
-                            f"Found lock {promise_filepath} from the previous failed run {data}. {filepath} and cache folder are potentially incorrect."
-                            " Consider cleanining it up or remove the lock file."
-                        )
+                    _check_promise_file_uuid(data, promise_filepath, filepath, uuid)
                     file_exists = len(data) > 0
                     if not file_exists:
                         result = False
@@ -242,11 +245,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                 with portalocker.Lock(promise_filepath, "r", flags=portalocker.LockFlags.SHARED) as promise_fh:
                     promise_fh.seek(0)
                     data = promise_fh.read()
-                    if len(data) > 0 and data != str(uuid):
-                        raise RuntimeError(
-                            f"Found lock {promise_filepath} from the previous failed run {data}. {filepath} and cache folder are potentially incorrect."
-                            " Consider cleanining it up or remove the lock file."
-                        )
+                    _check_promise_file_uuid(data, promise_filepath, filepath, uuid)
 
         return result
 
