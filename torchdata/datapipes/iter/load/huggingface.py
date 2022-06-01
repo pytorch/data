@@ -33,9 +33,9 @@ class HuggingFaceHubReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         revision: the specific dataset version
         data_files: Optional dict to set custom train/test/validation split
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper, HuggingFaceHubReaderDataPipe
-        >>> huggingface_reader_dp = HuggingFaceHubReaderDataPipe(IterableWrapper([dataset]), revision=main)
-        >>> reader_dp = huggingface_reader_dp.readlines()
+        >>> from torchdata.datapipes.iter import IterableWrapper, HuggingFaceHubReaderIterDataPipe
+        >>> huggingface_reader_dp = HuggingFaceHubReaderDataPipe(IterableWrapper(["lhoestq/demo1"]), revision="main")
+        >>> reader_dp = huggingface_reader_dp
         >>> it = iter(reader_dp)
         >>> path, line = next(it)
         >>> path
