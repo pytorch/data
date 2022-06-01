@@ -20,8 +20,8 @@ try:
 except ImportError:
     datasets = None
 
-def _get_response_from_huggingface_hub(dataset, revision, data_files) -> Tuple[Any, StreamWrapper]:
-    dataset = datasets.load_dataset(dataset, revision, data_files)
+def _get_response_from_huggingface_hub(dataset, split, revision, data_files) -> Tuple[Any, StreamWrapper]:
+    dataset = datasets.load_dataset(dataset, split, revision, data_files)
     return dataset[0], StreamWrapper(dataset)
 
 @functional_datapipe("read_from_huggingface_hub")
