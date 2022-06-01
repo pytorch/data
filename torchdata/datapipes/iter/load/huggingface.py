@@ -46,15 +46,14 @@ class HuggingFaceHubReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     source_datapipe: IterDataPipe[str]
 
-    def __init__(self, source_datapipe: IterDataPipe[str], *, split : str = "train", revision : Optional[str] = None, data_files : Optional[Dict[str,str]] = None) -> None:
-        self.source_datapipe = source_datapipe
+    def __init__(self, dataset_name: str, *, split : str = "train", revision : Optional[str] = None, data_files : Optional[Dict[str,str]] = None) -> None:
+        self.dataset_name = dataset_name
         self.split = split
         self.revision = revision
         self.data_files = data_files
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
-        for dataset in self.source_datapipe:
-            yield _get_response_from_huggingface_hub(dataset, split=split, revision=self.revision, data_files=self.data_files)
+        yield _get_response_from_huggingface_hub(dataset=self.dataset_name, split=self.split, revision=self.revision, data_files=self.data_files)
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
