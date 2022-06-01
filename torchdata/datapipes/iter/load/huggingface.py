@@ -24,7 +24,6 @@ def _get_response_from_huggingface_hub(dataset, split, revision, data_files) -> 
     dataset = datasets.load_dataset(dataset, split, revision, data_files)
     return dataset[0], StreamWrapper(dataset)
 
-@functional_datapipe("read_from_huggingface_hub")
 class HuggingFaceHubReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
     Takes in dataset names and returns an Iterable HuggingFace dataset
