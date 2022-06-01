@@ -1,4 +1,6 @@
 # Util function for multiprocessing
+import torch
+
 def init_fn(worker_id):
     info = torch.utils.data.get_worker_info()
     num_workers = info.num_workers
