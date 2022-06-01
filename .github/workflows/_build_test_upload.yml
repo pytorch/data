@@ -111,11 +111,13 @@ jobs:
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
             source packaging/manylinux/python_helper.sh
+            # Docker path is /__w by default
+            export WORKSPACE="/__w"
             # See: https://github.com/actions/checkout/issues/760
             git config --global --add safe.directory "$WORKSPACE/data/data"
             # AWSSDK uses $CMAKE_PREFIX_PATH to find openssl
-            export OPENSSL_ROOT_DIR="/__w/ssl"
-            export CURL_ROOT_DIR="/__w/curl"
+            export OPENSSL_ROOT_DIR="$WORKSPACE/ssl"
+            export CURL_ROOT_DIR="$WORKSPACE/curl"
             export CMAKE_PREFIX_PATH="$OPENSSL_ROOT_DIR:$CURL_ROOT_DIR:$CMAKE_PREFIX_PATH"
             export STATIC_DEPS=TRUE
           fi
