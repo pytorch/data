@@ -65,7 +65,7 @@ class TestDataPipeFSSpec(expecttest.TestCase):
             )
 
         # checks for functional API
-        datapipe = IterableWrapper([self.temp_sub_dir.name])
+        datapipe = IterableWrapper(["file://" + self.temp_sub_dir.name])
         datapipe = datapipe.list_files_by_fsspec()
         for path in datapipe:
             self.assertIn(
@@ -92,7 +92,7 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         self.assertEqual(file_lister, temp_files)
 
         # checks for functional API
-        datapipe = IterableWrapper([self.temp_sub_dir.name, self.temp_sub_dir_2.name])
+        datapipe = IterableWrapper(["file://" + self.temp_sub_dir.name, "file://" + self.temp_sub_dir_2.name])
         datapipe = datapipe.list_files_by_fsspec()
         res = list(datapipe).sort()
         self.assertEqual(res, temp_files)
