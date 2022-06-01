@@ -13,10 +13,10 @@ from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
 
 
-@functional_datapipe("list_file_by_s3")
+@functional_datapipe("list_files_by_s3")
 class S3FileListerIterDataPipe(IterDataPipe[str]):
     r"""
-    Iterable DataPipe that lists Amazon S3 file URLs with the given prefixes (functional name: ``list_file_by_s3``).
+    Iterable DataPipe that lists Amazon S3 file URLs with the given prefixes (functional name: ``list_files_by_s3``).
     Acceptable prefixes include ``s3://bucket-name``, ``s3://bucket-name/``, ``s3://bucket-name/folder``,
     ``s3://bucket-name/folder/``, and ``s3://bucket-name/prefix``. You may also set ``length``, ``request_timeout_ms``
     (default 3000 ms in aws-sdk-cpp), and ``region``.
@@ -72,10 +72,10 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
         return self.length
 
 
-@functional_datapipe("load_file_by_s3")
+@functional_datapipe("load_files_by_s3")
 class S3FileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
-    Iterable DataPipe that loads Amazon S3 files from the given S3 URLs (functional name: ``load_file_by_s3``).
+    Iterable DataPipe that loads Amazon S3 files from the given S3 URLs (functional name: ``load_files_by_s3``).
     ``S3FileLoader`` iterates all given S3 URLs in ``BytesIO`` format with ``(url, BytesIO)`` tuples.
     You may also set ``request_timeout_ms`` (default 3000 ms in aws-sdk-cpp), ``region``,
     ``buffer_size`` (default 120Mb), and ``multi_part_download`` (default to use multi-part downloading).

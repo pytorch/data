@@ -6,12 +6,12 @@
 
 import os
 
-from typing import Any, Callable, Iterator, List, Optional, Tuple, Union
+from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple, Union
 
 from torch.utils.data.datapipes.utils.common import match_masks
 
 from torchdata.datapipes import functional_datapipe
-from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
 
 try:
@@ -45,7 +45,7 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
     and yields the full pathname or URL for each file within the directory.
 
     Args:
-        root: The root local filepath or URL directory to list files from
+        root: The root local filepath or URL directory or list of roots to list files from
         masks: Unix style filter string or string list for filtering file name(s)
         pathmgr: Custom ``iopath.PathManager``. If not specified, a default ``PathManager`` is created.
 
@@ -60,7 +60,7 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
 
     def __init__(
         self,
-        root: str,
+        root: Union[str, Sequence[str], IterDataPipe],
         masks: Union[str, List[str]] = "",
         *,
         pathmgr=None,
@@ -72,7 +72,14 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
                 "to install the package"
             )
 
-        self.root: str = root
+        if isinstance(root, str):
+            root = [
+                root,
+            ]
+        if not isinstance(root, IterDataPipe):
+            self.datapipe: IterDataPipe = IterableWrapper(root)  # type: ignore[assignment]
+        else:
+            self.datapipe = root
         self.pathmgr = _create_default_pathmanager() if pathmgr is None else pathmgr
         self.masks = masks
 
@@ -80,19 +87,20 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
         self.pathmgr.register_handler(handler, allow_override=allow_override)
 
     def __iter__(self) -> Iterator[str]:
-        if self.pathmgr.isfile(self.root):
-            yield self.root
-        else:
-            for file_name in self.pathmgr.ls(self.root):
-                if match_masks(file_name, self.masks):
-                    yield os.path.join(self.root, file_name)
+        for path in self.datapipe:
+            if self.pathmgr.isfile(path):
+                yield path
+            else:
+                for file_name in self.pathmgr.ls(path):
+                    if match_masks(file_name, self.masks):
+                        yield os.path.join(path, file_name)
 
 
-@functional_datapipe("open_file_by_iopath")
+@functional_datapipe("open_files_by_iopath")
 class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
     Opens files from input datapipe which contains pathnames or URLs,
-    and yields a tuple of pathname and opened file stream (functional name: ``open_file_by_iopath``).
+    and yields a tuple of pathname and opened file stream (functional name: ``open_files_by_iopath``).
 
     Args:
         source_datapipe: Iterable DataPipe that provides the pathnames or URLs
@@ -106,7 +114,7 @@ class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Example:
         >>> from torchdata.datapipes.iter import IoPathFileLister
         >>> datapipe = IoPathFileLister(root=S3URL)
-        >>> file_dp = datapipe.open_file_by_iopath()
+        >>> file_dp = datapipe.open_files_by_iopath()
     """
 
     def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r", pathmgr=None) -> None:
@@ -131,6 +139,10 @@ class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
+
+
+# Register for functional API for backward compatibility
+IterDataPipe.register_datapipe_as_function("open_file_by_iopath", IoPathFileOpenerIterDataPipe)
 
 
 @functional_datapipe("save_by_iopath")

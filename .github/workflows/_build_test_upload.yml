@@ -21,6 +21,8 @@ on:
         required: false
       CONDA_PYTORCHBOT_TOKEN:
         required: false
+      CONDA_TEST_PYTORCHBOT_TOKEN:
+        required: false
       CONDA_NIGHTLY_PYTORCHBOT_TOKEN:
         required: false
 
@@ -52,7 +54,7 @@ jobs:
   wheel_build_test:
     needs: get_release_type
     runs-on: ${{ matrix.os }}
-    container: ${{ startsWith( matrix.os, 'ubuntu' ) && 'quay.io/pypa/manylinux2014_x86_64' || null }}
+    container: ${{ startsWith( matrix.os, 'ubuntu' ) && 'pytorch/manylinux-cpu' || null }}
     strategy:
       fail-fast: false
       matrix:
@@ -86,10 +88,16 @@ jobs:
           arch: x64
       - name: Install Build Dependency
         shell: bash
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-            yum -y install ninja-build
-            yum -y install openssl-devel openssl-static curl-devel zlib-devel
+            source packaging/manylinux/python_helper.sh
+            yum -y install ninja-build zlib-static
+            # Docker path is /__w by default
+            export WORKSPACE="/__w"
+            # Install static OpenSSL/libcrypto library
+            ./packaging/manylinux/install_openssl_curl.sh
           else
             pip install cmake ninja
             echo "/home/runner/.local/bin" >> $GITHUB_PATH
@@ -102,9 +110,14 @@ jobs:
           BUILD_S3: 1
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            source packaging/manylinux/python_helper.sh
             # See: https://github.com/actions/checkout/issues/760
-            git config --global --add safe.directory /__w/data/data
-            source packaging/manylinux_wheel_helper.sh
+            git config --global --add safe.directory "$WORKSPACE/data/data"
+            # AWSSDK uses $CMAKE_PREFIX_PATH to find openssl
+            export OPENSSL_ROOT_DIR="/__w/ssl"
+            export CURL_ROOT_DIR="/__w/curl"
+            export CMAKE_PREFIX_PATH="$OPENSSL_ROOT_DIR:$CURL_ROOT_DIR:$CMAKE_PREFIX_PATH"
+            export STATIC_DEPS=TRUE
           fi
           packaging/build_wheel.sh
       - name: Validate TorchData Wheel
@@ -113,7 +126,7 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-            source packaging/manylinux_wheel_helper.sh
+            source packaging/manylinux/python_helper.sh
             pip3 install auditwheel
           fi
           pip3 install pkginfo
@@ -130,7 +143,7 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-            source packaging/manylinux_wheel_helper.sh
+            source packaging/manylinux/python_helper.sh
           fi
           pip3 install dist/torchdata*.whl
       - name: Run DataPipes Tests with pytest
@@ -139,9 +152,9 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-            source packaging/manylinux_wheel_helper.sh
+            source packaging/manylinux/python_helper.sh
           fi
-          pip3 install expecttest fsspec iopath==0.1.9 numpy pytest rarfile protobuf
+          pip3 install -r test/requirements.txt
           pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Wheels to Github
         uses: actions/upload-artifact@v2
@@ -291,14 +304,20 @@ jobs:
         env:
           CONDA_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_PYTORCHBOT_TOKEN }}
           CONDA_NIGHTLY_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_NIGHTLY_PYTORCHBOT_TOKEN }}
+          CONDA_TEST_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_TEST_PYTORCHBOT_TOKEN }}
         run: |
           conda install -yq anaconda-client
           conda install -c conda-forge -yq jq
 
           if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
             CONDA_CHANNEL=pytorch
+            CONDA_TOKEN=${CONDA_PYTORCHBOT_TOKEN}
+          elif [[ ${{ needs.get_release_type.outputs.type }} == 'test' ]]; then
+            CONDA_CHANNEL=pytorch-${{ needs.get_release_type.outputs.type }}
+            CONDA_TOKEN=${CONDA_TEST_PYTORCHBOT_TOKEN}
           else
             CONDA_CHANNEL=pytorch-${{ needs.get_release_type.outputs.type }}
+            CONDA_TOKEN=${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}
           fi
 
           if [[ ${{ needs.get_release_type.outputs.type }} == 'nightly' ]]; then
@@ -315,7 +334,7 @@ jobs:
                   for new_package in ./$subdir/torchdata-*-$build.tar.bz2; do
                     if [[ -f "$new_package" ]]; then
                       echo "Removing $CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
-                      anaconda -t "${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}" remove -f "$CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
+                      anaconda -t "${CONDA_TOKEN}" remove -f "$CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
                       break
                     fi
                   done
@@ -324,10 +343,10 @@ jobs:
                 fi
               done
               # Upload new conda packages per subdir
-              anaconda -t "${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}" upload ./$subdir/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
+              anaconda -t "${CONDA_TOKEN}" upload ./$subdir/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
             done
           else
-            anaconda -t "${CONDA_PYTORCHBOT_TOKEN}" upload ./*/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
+            anaconda -t "${CONDA_TOKEN}" upload ./*/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
           fi
 
   build_docs:

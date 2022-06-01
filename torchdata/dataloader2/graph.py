@@ -7,14 +7,15 @@
 
 from typing import List, Type
 
-from torch.utils.data import IterDataPipe
+from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.map import MapDataPipe
 
-from ._graph_utils import DataPipeGraph, traverse
+from ._graph_utils import DataPipe, DataPipeGraph, traverse
 
 
 # In case that there will be multiple datapipe needs to be adapted
-def find_dps(graph: DataPipeGraph, dp_type: Type[IterDataPipe]) -> List[IterDataPipe]:
-    dps: List[IterDataPipe] = []
+def find_dps(graph: DataPipeGraph, dp_type: Type[DataPipe]) -> List[DataPipe]:
+    dps: List[DataPipe] = []
 
     def helper(g) -> None:  # pyre-ignore
         for dp in g:
@@ -29,7 +30,7 @@ def find_dps(graph: DataPipeGraph, dp_type: Type[IterDataPipe]) -> List[IterData
 
 
 # Given the DataPipe needs to be adapted and the expected DataPipe, return a new graph
-def replace_dp(graph: DataPipeGraph, old_datapipe: IterDataPipe, new_datapipe: IterDataPipe):  # pyre-ignore
+def replace_dp(graph: DataPipeGraph, old_datapipe: DataPipe, new_datapipe: DataPipe) -> DataPipeGraph:
     if old_datapipe is new_datapipe:
         return graph
     if old_datapipe in graph:
@@ -45,7 +46,7 @@ def replace_dp(graph: DataPipeGraph, old_datapipe: IterDataPipe, new_datapipe: I
 
 
 # Given the DataPipe needs to be removed, return a new graph
-def remove_dp(graph: DataPipeGraph, datapipe: IterDataPipe):  # pyre-ignore
+def remove_dp(graph: DataPipeGraph, datapipe: DataPipe) -> DataPipeGraph:
     if datapipe in graph:
         graph = graph[datapipe]
         if len(graph) == 0:
@@ -63,7 +64,7 @@ def remove_dp(graph: DataPipeGraph, datapipe: IterDataPipe):  # pyre-ignore
 
 # For each `recv_dp`, find if the source_datapipe needs to be replaced by the new one.
 # If found, find where the `old_dp` is located in `dp` and switch it to the `new_dp`
-def _remove_dp(recv_dp, send_graph: DataPipeGraph, datapipe: IterDataPipe) -> None:  # pyre-ignore
+def _remove_dp(recv_dp, send_graph: DataPipeGraph, datapipe: DataPipe) -> None:
     for send_dp in send_graph:
         if send_dp is datapipe:
             g = send_graph[send_dp]
@@ -79,7 +80,7 @@ def _remove_dp(recv_dp, send_graph: DataPipeGraph, datapipe: IterDataPipe) -> No
 
 # For each `recv_dp`, find if the source_datapipe needs to be replaced by the new one.
 # If found, find where the `old_dp` is located in `recv_dp` and switch it to the `new_dp`
-def _replace_dp(recv_dp, send_graph: DataPipeGraph, old_dp: IterDataPipe, new_dp: IterDataPipe) -> None:  # pyre-ignore
+def _replace_dp(recv_dp, send_graph: DataPipeGraph, old_dp: DataPipe, new_dp: DataPipe) -> None:
     for send_dp in send_graph:
         if send_dp is old_dp:
             _assign_attr(recv_dp, old_dp, new_dp, inner_dp=True)
@@ -88,11 +89,11 @@ def _replace_dp(recv_dp, send_graph: DataPipeGraph, old_dp: IterDataPipe, new_dp
 
 
 # Recursively re-assign datapipe for the sake of nested data structure
-# `inner_dp` is used to prevent recursive call if we have already met `IterDataPipe`
-def _assign_attr(obj, old_dp, new_dp, inner_dp: bool = False):  # pyre-ignore
+# `inner_dp` is used to prevent recursive call if we have already met `DataPipe`
+def _assign_attr(obj, old_dp, new_dp, inner_dp: bool = False):
     if obj is old_dp:
         return new_dp
-    elif isinstance(obj, IterDataPipe):
+    elif isinstance(obj, (IterDataPipe, MapDataPipe)):
         # Prevent recursive call for DataPipe
         if not inner_dp:
             return None
