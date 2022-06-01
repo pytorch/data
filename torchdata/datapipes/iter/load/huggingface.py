@@ -47,6 +47,13 @@ class HuggingFaceHubReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     source_datapipe: IterDataPipe[str]
 
     def __init__(self, dataset: str, *, split : str = "train", revision : Optional[str] = None, data_files : Optional[Dict[str,str]] = None) -> None:
+        if datasets is None:
+            raise ModuleNotFoundError(
+                "Package `datasets` is required to be installed to use this datapipe."
+                "Please use `pip install datasets` or `conda install -c conda-forge datasets`"
+                "to install the package"
+            )
+            
         self.dataset = dataset
         self.split = split
         self.revision = revision
