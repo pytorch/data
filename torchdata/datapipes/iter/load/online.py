@@ -12,7 +12,6 @@ from typing import Any, Dict, Iterator, Optional, Tuple
 import requests
 
 from requests.exceptions import HTTPError, RequestException
-from datasets import load_dataset
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -97,6 +96,11 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         return len(self.source_datapipe)
 
 
+def _extract_gdrive_api_response(content: str) -> Optional[str]:
+    match = re.search("<title>Google Drive - (?P<api_response>.+?)</title>", content)
+    return match["api_response"] if match is not None else None
+
+
 def _get_response_from_google_drive(url: str, *, timeout: Optional[float]) -> Tuple[str, StreamWrapper]:
     confirm_token = None
 
@@ -105,11 +109,16 @@ def _get_response_from_google_drive(url: str, *, timeout: Optional[float]) -> Tu
             response = session.get(url, stream=True)
         else:
             response = session.get(url, timeout=timeout, stream=True)
+
         for k, v in response.cookies.items():
             if k.startswith("download_warning"):
                 confirm_token = v
-        if confirm_token is None:
-            if "Quota exceeded" in str(response.content):
+                break
+        else:
+            api_response = _extract_gdrive_api_response(response.text)
+            if api_response == "Virus scan warning":
+                confirm_token = "t"
+            elif api_response == "Quota exceeded":
                 raise RuntimeError(f"Google drive link {url} is currently unavailable, because the quota was exceeded.")
 
         if confirm_token:
@@ -161,47 +170,6 @@ class GDriveReaderDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for url in self.source_datapipe:
             yield _get_response_from_google_drive(url, timeout=self.timeout)
-
-    def __len__(self) -> int:
-        return len(self.source_datapipe)
-
-def _get_response_from_huggingface_hub(dataset, revision, data_files):
-    dataset = load_dataset(dataset, revision, data_files)
-    return dataset
-
-@functional_datapipe("read_from_huggingface_hub")
-class HuggingFaceHubReaderDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
-    r"""
-    Takes file URLs (HTTP URLs pointing to files), and yields tuples of file URL and
-    IO stream (functional name: ``read_from_http``).
-
-    Args:
-        source_datapipe: a DataPipe that contains dataset names which will be accepted by the HuggingFace datasets library
-        revision: the specific dataset version
-        data_files: Optional dict to set custom train/test/validation split
-
-    Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper, HuggingFaceHubReaderDataPipe
-        >>> huggingface_reader_dp = HuggingFaceHubReaderDataPipe(IterableWrapper([dataset]), revision=main)
-        >>> reader_dp = huggingface_reader_dp.readlines()
-        >>> it = iter(reader_dp)
-        >>> path, line = next(it)
-        >>> path
-        Add test result here
-        >>> line
-        Add test result here b'BSD 3-Clause License'
-    """
-
-    source_datapipe: IterDataPipe[str]
-
-    def __init__(self, source_datapipe: IterDataPipe[str], *, revision : Optional[str] = None, data_files : Optional[Dict[str,str]] = None) -> None:
-        self.source_datapipe = source_datapipe
-        self.revision = revision
-        self.data_files = data_files
-
-    def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
-        for dataset in self.source_datapipe:
-            yield _get_response_from_huggingface_hub(dataset, revision=self.revision, data_files=self.data_files)
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
