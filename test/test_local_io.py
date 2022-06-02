@@ -679,7 +679,8 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         datapipe = IterableWrapper([self.temp_sub_dir.name, self.temp_sub_dir_2.name])
         datapipe = datapipe.list_files_by_iopath()
-        results = list(datapipe).sort()
+        results = list(datapipe)
+        results.sort()
         self.assertEqual(results, all_temp_files)
 
     @skipIfNoIoPath
