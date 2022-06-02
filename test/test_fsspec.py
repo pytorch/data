@@ -94,7 +94,13 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         # checks for functional API
         datapipe = IterableWrapper(["file://" + self.temp_sub_dir.name, "file://" + self.temp_sub_dir_2.name])
         datapipe = datapipe.list_files_by_fsspec()
-        res = list(datapipe).sort()
+        res = list(map(lambda path: path.split("://")[1], datapipe)).sort()
+        temp_files = list(
+            map(
+                lambda file: fsspec.implementations.local.make_path_posix(file),
+                self.temp_sub_dir_files + self.temp_sub_dir_files_2,
+            )
+        )
         self.assertEqual(res, temp_files)
 
     @skipIfNoFSSpec
