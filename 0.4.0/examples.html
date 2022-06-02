@@ -6,7 +6,7 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
@@ -320,14 +320,14 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <section id="examples">
-<h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h1>
+<h1>Examples<a class="headerlink" href="#examples" title="Permalink to this heading">¶</a></h1>
 <p>In this section, you will find the data loading implementations (using DataPipes) of various
 popular datasets across different research domains. Some of the examples are implements by the PyTorch team and the
 implementation codes are maintained within PyTorch libraries. Others are created by members of the PyTorch community.</p>
 <section id="audio">
-<h2>Audio<a class="headerlink" href="#audio" title="Permalink to this headline">¶</a></h2>
+<h2>Audio<a class="headerlink" href="#audio" title="Permalink to this heading">¶</a></h2>
 <section id="librispeech">
-<h3>LibriSpeech<a class="headerlink" href="#librispeech" title="Permalink to this headline">¶</a></h3>
+<h3>LibriSpeech<a class="headerlink" href="#librispeech" title="Permalink to this heading">¶</a></h3>
 <p><a class="reference external" href="https://www.openslr.org/12/">LibriSpeech dataset</a> is corpus of approximately 1000 hours of 16kHz read
 English speech. Here is the
 <a class="reference external" href="https://github.com/pytorch/data/blob/main/examples/audio/librispeech.py">DataPipe implementation of LibriSpeech</a>
@@ -335,9 +335,9 @@ to load the data.</p>
 </section>
 </section>
 <section id="text">
-<h2>Text<a class="headerlink" href="#text" title="Permalink to this headline">¶</a></h2>
+<h2>Text<a class="headerlink" href="#text" title="Permalink to this heading">¶</a></h2>
 <section id="amazon-review-polarity">
-<h3>Amazon Review Polarity<a class="headerlink" href="#amazon-review-polarity" title="Permalink to this headline">¶</a></h3>
+<h3>Amazon Review Polarity<a class="headerlink" href="#amazon-review-polarity" title="Permalink to this heading">¶</a></h3>
 <p>The Amazon reviews dataset contains reviews from Amazon. Its purpose is to train text/sentiment classification models.
 In our DataPipe
 <a class="reference external" href="https://github.com/pytorch/data/blob/main/examples/text/amazonreviewpolarity.py">implementation of the dataset</a>,
@@ -345,41 +345,41 @@ we described every step with detailed comments to help you understand what each 
 having a look at this example.</p>
 </section>
 <section id="imdb">
-<h3>IMDB<a class="headerlink" href="#imdb" title="Permalink to this headline">¶</a></h3>
+<h3>IMDB<a class="headerlink" href="#imdb" title="Permalink to this heading">¶</a></h3>
 <p>This is a <a class="reference external" href="http://ai.stanford.edu/~amaas/data/sentiment/">large movie review dataset</a> for binary sentiment
 classification containing 25,000 highly polar movie reviews for training and 25,00 for testing. Here is the
 <a class="reference external" href="https://github.com/pytorch/data/blob/main/examples/text/imdb.py">DataPipe implementation to load the data</a>.</p>
 </section>
 <section id="squad">
-<h3>SQuAD<a class="headerlink" href="#squad" title="Permalink to this headline">¶</a></h3>
+<h3>SQuAD<a class="headerlink" href="#squad" title="Permalink to this heading">¶</a></h3>
 <p><a class="reference external" href="https://rajpurkar.github.io/SQuAD-explorer/">SQuAD (Stanford Question Answering Dataset)</a> is a dataset for
 reading comprehension. It consists of a list of questions by crowdworkers on a set of Wikipedia articles. Here are the
 DataPipe implementations for <a class="reference external" href="https://github.com/pytorch/data/blob/main/examples/text/squad1.py">version 1.1</a>
 is here and <a class="reference external" href="https://github.com/pytorch/data/blob/main/examples/text/squad2.py">version 2.0</a>.</p>
 </section>
 <section id="additional-datasets-in-torchtext">
-<h3>Additional Datasets in TorchText<a class="headerlink" href="#additional-datasets-in-torchtext" title="Permalink to this headline">¶</a></h3>
+<h3>Additional Datasets in TorchText<a class="headerlink" href="#additional-datasets-in-torchtext" title="Permalink to this heading">¶</a></h3>
 <p>In a separate PyTorch domain library <a class="reference external" href="https://github.com/pytorch/text">TorchText</a>, you will find some of the most
 popular datasets in the NLP field implemented as loadable datasets using DataPipes. You can find
 all of those <a class="reference external" href="https://github.com/pytorch/text/tree/main/torchtext/datasets">NLP datasets here</a>.</p>
 </section>
 </section>
 <section id="vision">
-<h2>Vision<a class="headerlink" href="#vision" title="Permalink to this headline">¶</a></h2>
+<h2>Vision<a class="headerlink" href="#vision" title="Permalink to this heading">¶</a></h2>
 <section id="caltech-101">
-<h3>Caltech 101<a class="headerlink" href="#caltech-101" title="Permalink to this headline">¶</a></h3>
+<h3>Caltech 101<a class="headerlink" href="#caltech-101" title="Permalink to this heading">¶</a></h3>
 <p>The <a class="reference external" href="http://www.vision.caltech.edu/Image_Datasets/Caltech101/">Caltech 101 dataset</a> contains pictures of objects
 belonging to 101 categories. Here is the
 <a class="reference external" href="https://github.com/pytorch/data/blob/main/examples/vision/caltech101.py">DataPipe implementation of Caltech 101</a>.</p>
 </section>
 <section id="caltech-256">
-<h3>Caltech 256<a class="headerlink" href="#caltech-256" title="Permalink to this headline">¶</a></h3>
+<h3>Caltech 256<a class="headerlink" href="#caltech-256" title="Permalink to this heading">¶</a></h3>
 <p>The <a class="reference external" href="http://www.vision.caltech.edu/Image_Datasets/Caltech256/">Caltech 256 dataset</a> contains 30607 images
 from 256 categories. Here is the
 <a class="reference external" href="https://github.com/pytorch/data/blob/main/examples/vision/caltech256.py">DataPipe implementation of Caltech 256</a>.</p>
 </section>
 <section id="camvid-semantic-segmentation-community-example">
-<h3>CamVid - Semantic Segmentation (community example)<a class="headerlink" href="#camvid-semantic-segmentation-community-example" title="Permalink to this headline">¶</a></h3>
+<h3>CamVid - Semantic Segmentation (community example)<a class="headerlink" href="#camvid-semantic-segmentation-community-example" title="Permalink to this heading">¶</a></h3>
 <p>The <a class="reference external" href="http://mi.eng.cam.ac.uk/research/projects/VideoRec/CamVid/">Cambridge-driving Labeled Video Database (CamVid)</a> is a collection of videos with object class semantic
 labels, complete with metadata. The database provides ground truth labels that associate each pixel with one of 32
 semantic classes. Here is a
@@ -387,7 +387,7 @@ semantic classes. Here is a
 created by our community.</p>
 </section>
 <section id="additional-datasets-in-torchvision">
-<h3>Additional Datasets in TorchVision<a class="headerlink" href="#additional-datasets-in-torchvision" title="Permalink to this headline">¶</a></h3>
+<h3>Additional Datasets in TorchVision<a class="headerlink" href="#additional-datasets-in-torchvision" title="Permalink to this heading">¶</a></h3>
 <p>In a separate PyTorch domain library <a class="reference external" href="https://github.com/pytorch/vision">TorchVision</a>, you will find some of the most
 popular datasets in the computer vision field implemented as loadable datasets using DataPipes. You can find all of
 those <a class="reference external" href="https://github.com/pytorch/vision/tree/main/torchvision/prototype/datasets/_builtin">vision datasets here</a>.</p>
@@ -396,9 +396,9 @@ in the coming months. Nonetheless, they demonstrate the different ways DataPipes
 </section>
 </section>
 <section id="recommender-system">
-<h2>Recommender System<a class="headerlink" href="#recommender-system" title="Permalink to this headline">¶</a></h2>
+<h2>Recommender System<a class="headerlink" href="#recommender-system" title="Permalink to this heading">¶</a></h2>
 <section id="criteo-1tb-click-logs">
-<h3>Criteo 1TB Click Logs<a class="headerlink" href="#criteo-1tb-click-logs" title="Permalink to this headline">¶</a></h3>
+<h3>Criteo 1TB Click Logs<a class="headerlink" href="#criteo-1tb-click-logs" title="Permalink to this heading">¶</a></h3>
 <p>The <a class="reference external" href="https://ailab.criteo.com/download-criteo-1tb-click-logs-dataset">Criteo dataset</a> contains feature values
 and click feedback for millions of display advertisements. It aims to benchmark algorithms for
 click through rate (CTR) prediction. You can find a prototype stage implementation of the
@@ -406,16 +406,16 @@ click through rate (CTR) prediction. You can find a prototype stage implementati
 </section>
 </section>
 <section id="graphs-meshes-and-point-clouds">
-<h2>Graphs, Meshes and Point Clouds<a class="headerlink" href="#graphs-meshes-and-point-clouds" title="Permalink to this headline">¶</a></h2>
+<h2>Graphs, Meshes and Point Clouds<a class="headerlink" href="#graphs-meshes-and-point-clouds" title="Permalink to this heading">¶</a></h2>
 <section id="moleculenet-community-example">
-<h3>MoleculeNet (community example)<a class="headerlink" href="#moleculenet-community-example" title="Permalink to this headline">¶</a></h3>
+<h3>MoleculeNet (community example)<a class="headerlink" href="#moleculenet-community-example" title="Permalink to this heading">¶</a></h3>
 <p><a class="reference external" href="https://moleculenet.org/">MoleculeNet</a> is a benchmark specially designed for testing machine learning methods of
 molecular properties. You can find an implementation of the
 <a class="reference external" href="https://github.com/pyg-team/pytorch_geometric/blob/master/examples/datapipe.py">HIV dataset with DataPipes in PyTorch Geometric</a>,
 which includes converting SMILES strings into molecular graph representations.</p>
 </section>
 <section id="princeton-modelnet-community-example">
-<h3>Princeton ModelNet (community example)<a class="headerlink" href="#princeton-modelnet-community-example" title="Permalink to this headline">¶</a></h3>
+<h3>Princeton ModelNet (community example)<a class="headerlink" href="#princeton-modelnet-community-example" title="Permalink to this heading">¶</a></h3>
 <p>The Princeton ModelNet project provides a comprehensive and clean collection of 3D CAD models across various object types.
 You can find an implementation of the
 <a class="reference external" href="https://github.com/pyg-team/pytorch_geometric/blob/master/examples/datapipe.py">ModelNet10 dataset with DataPipes in PyTorch Geometric</a>,
@@ -424,9 +424,9 @@ graph generation via <a class="reference external" href="https://pytorch-geometr
 </section>
 </section>
 <section id="timeseries">
-<h2>Timeseries<a class="headerlink" href="#timeseries" title="Permalink to this headline">¶</a></h2>
+<h2>Timeseries<a class="headerlink" href="#timeseries" title="Permalink to this heading">¶</a></h2>
 <section id="custom-datapipe-for-timeseries-rolling-window-community-example">
-<h3>Custom DataPipe for Timeseries rolling window (community example)<a class="headerlink" href="#custom-datapipe-for-timeseries-rolling-window-community-example" title="Permalink to this headline">¶</a></h3>
+<h3>Custom DataPipe for Timeseries rolling window (community example)<a class="headerlink" href="#custom-datapipe-for-timeseries-rolling-window-community-example" title="Permalink to this heading">¶</a></h3>
 <p>Implementing a rolling window custom <cite>DataPipe</cite> for timeseries forecasting tasks.
 Here is the
 <a class="reference external" href="https://github.com/tcapelle/torchdata/blob/main/02_Custom_timeseries_datapipe.ipynb">DataPipe implementation of a rolling window</a>.</p>
@@ -527,6 +527,7 @@ Here is the
          <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
          <script src="_static/jquery.js"></script>
          <script src="_static/underscore.js"></script>
+         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="_static/doctools.js"></script>
      
 
