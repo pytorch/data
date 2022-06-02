@@ -27,7 +27,7 @@ class Adapter:
 
 class Shuffle(Adapter):
     r"""
-    Shuffle DataPipes adapter allows control over all existing Shuffler (`shuffle`) DataPipes in the graph.
+    Shuffle DataPipes adapter allows control over all existing Shuffler (``shuffle``) DataPipes in the graph.
 
     Args:
         enable: Optional[Boolean] = True
