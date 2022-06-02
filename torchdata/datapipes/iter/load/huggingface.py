@@ -18,7 +18,7 @@ except ImportError:
 
 def _get_response_from_huggingface_hub(
     dataset: str, split: str, revision: str, streaming: bool, data_files: str
-) -> Tuple[Any, StreamWrapper]:
+) -> Iterator[Any]:
     hf_dataset = datasets.load_dataset(
         dataset, split=split, revision=revision, streaming=streaming, data_files=data_files
     )
@@ -36,7 +36,8 @@ class HuggingFaceHubReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         >>> from torchdata.datapipes.iter import IterableWrapper, HuggingFaceHubReaderIterDataPipe
         >>> huggingface_reader_dp = HuggingFaceHubReaderDataPipe(IterableWrapper(["lhoestq/demo1"]), revision="main")
         >>> reader_dp = huggingface_reader_dp
-        >>> it = iter(reader_dp)
+        >>> elem = next(iter(datapipe))
+
         >>> path, line = next(it)
         >>> path
         Add test result here
@@ -69,7 +70,7 @@ class HuggingFaceHubReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         self.data_files = data_files
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
-        yield _get_response_from_huggingface_hub(
+        return _get_response_from_huggingface_hub(
             dataset=self.dataset,
             split=self.split,
             revision=self.revision,

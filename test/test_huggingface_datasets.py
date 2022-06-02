@@ -48,10 +48,9 @@ class TestHuggingFaceHubReader(expecttest.TestCase):
     @skipIfNoDatasets
     def test_huggingface_hubreader(self):
         datapipe = HuggingFaceHubReader(dataset="lhoestq/demo1", revision="main", streaming=True)
-
-        for gen in datapipe:
-            for elem in gen:
-                assert type(elem) == dict
+        elem = next(iter(datapipe))
+        assert type(elem) is dict
+        assert elem["package_name"] == "com.mantz_it.rfanalyzer"
 
 
 if __name__ == "__main__":
