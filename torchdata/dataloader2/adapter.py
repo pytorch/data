@@ -12,6 +12,7 @@ from torchdata.datapipes.iter import IterDataPipe
 
 __all__ = [
     "Adapter",
+    "PinMemory",
     "Shuffle",
 ]
 
@@ -45,3 +46,13 @@ class Shuffle(Adapter):
 
     def __call__(self, datapipe: IterDataPipe) -> IterDataPipe:
         return torch.utils.data.graph_settings.apply_shuffle_settings(datapipe, shuffle=self.enable)
+
+
+class PinMemory(Adapter):
+    def __new__(cls, *args, **kwargs):
+        if len(args) or len(kwargs):
+            return PinMemory()(*args, **kwargs)
+        return super().__new__(cls)
+
+    def __call__(self, datapipe: IterDataPipe) -> IterDataPipe:
+        return datapipe.map(lambda x: x * 10)
