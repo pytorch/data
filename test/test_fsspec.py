@@ -69,7 +69,7 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         datapipe = datapipe.list_files_by_fsspec()
         for path in datapipe:
             self.assertIn(
-                path,
+                path.split("://")[1],
                 {fsspec.implementations.local.make_path_posix(file) for file in self.temp_sub_files},
             )
 
