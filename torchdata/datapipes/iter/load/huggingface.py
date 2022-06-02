@@ -28,21 +28,19 @@ def _get_response_from_huggingface_hub(
 class HuggingFaceHubReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
     Takes in dataset names and returns an Iterable HuggingFace dataset
+    Args format is the same as https://huggingface.co/docs/datasets/loading
     Args:
         source_datapipe: a DataPipe that contains dataset names which will be accepted by the HuggingFace datasets library
         revision: the specific dataset version
+        split: train/test split
+        streaming: Stream dataset instead of downloading it one go
         data_files: Optional dict to set custom train/test/validation split
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper, HuggingFaceHubReaderIterDataPipe
-        >>> huggingface_reader_dp = HuggingFaceHubReaderDataPipe(IterableWrapper(["lhoestq/demo1"]), revision="main")
-        >>> reader_dp = huggingface_reader_dp
-        >>> elem = next(iter(datapipe))
-
-        >>> path, line = next(it)
-        >>> path
-        Add test result here
-        >>> line
-        Add test result here b'BSD 3-Clause License'
+        >>> huggingface_reader_dp = HuggingFaceHubReaderDataPipe("lhoestq/demo1", revision="main")
+        >>> elem = next(iter(huggingface_reader_dp))
+        >>> elem["package_name"]
+        com.mantz_it.rfanalyzer
     """
 
     source_datapipe: IterDataPipe[str]
