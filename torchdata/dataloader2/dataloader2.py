@@ -189,6 +189,7 @@ class DataLoader2(Generic[T_co]):
         self.reading_service_state = reading_service_state
 
         # re-initialize datapipe_adapter_fn and _datapipe_before_reading_service_adapt
-        if self.datapipe_adapter_fn is not None:
-            self.datapipe = self.datapipe_adapter_fn(self.datapipe)
+        if self.datapipe_adapter_fns is not None:
+            for adapter_fn in self.datapipe_adapter_fns:
+                self.datapipe = adapter_fn(self.datapipe)
         self._datapipe_before_reading_service_adapt = self.datapipe
