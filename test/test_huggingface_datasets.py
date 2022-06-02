@@ -12,7 +12,7 @@ import expecttest
 
 from _utils._common_utils_for_test import create_temp_dir, create_temp_files, reset_after_n_next_calls
 
-from torchdata.datapipes.iter import IterableWrapper, HuggingFaceHubReader
+from torchdata.datapipes.iter import HuggingFaceHubReader, IterableWrapper
 
 try:
     import datasets
@@ -22,6 +22,7 @@ try:
 except ImportError:
     HAS_DATASETS = False
 skipIfNoDatasets = unittest.skipIf(not HAS_DATASETS, "no datasets")
+
 
 class TestHuggingFaceHubReader(expecttest.TestCase):
     def setUp(self):
@@ -44,13 +45,14 @@ class TestHuggingFaceHubReader(expecttest.TestCase):
         except Exception as e:
             warnings.warn(f"HuggingFace datasets was not able to cleanup temp dir due to {e}")
 
-
     @skipIfNoDatasets
     def test_huggingface_hubreader(self):
-        datapipe = HuggingFaceHubReader(dataset="lhoestq/demo1", revision="main")
+        datapipe = HuggingFaceHubReader(dataset="lhoestq/demo1", revision="main", streaming=True)
 
-        # TODO: add a more useful tests
-        assert datapipe is not None
+        for gen in datapipe:
+            for elem in gen:
+                assert type(elem) == dict
+
 
 if __name__ == "__main__":
     unittest.main()

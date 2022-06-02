@@ -39,9 +39,7 @@ from torchdata.datapipes.iter.load.fsspec import (
     FSSpecSaverIterDataPipe as FSSpecSaver,
 )
 
-from torchdata.datapipes.iter.load.huggingface import (
-    HuggingFaceHubReaderIterDataPipe as HuggingFaceHubReader
-)
+from torchdata.datapipes.iter.load.huggingface import HuggingFaceHubReaderIterDataPipe as HuggingFaceHubReader
 
 from torchdata.datapipes.iter.load.iopath import (
     IoPathFileListerIterDataPipe as IoPathFileLister,
@@ -145,7 +143,6 @@ __all__ = [
     "FSSpecFileLister",
     "FSSpecFileOpener",
     "FSSpecSaver",
-    "HuggingFaceHubReader",
     "FileLister",
     "FileOpener",
     "Filter",
@@ -156,6 +153,7 @@ __all__ = [
     "HashChecker",
     "Header",
     "HttpReader",
+    "HuggingFaceHubReader",
     "InBatchShuffler",
     "InMemoryCacheHolder",
     "IndexAdder",
