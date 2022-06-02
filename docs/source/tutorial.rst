@@ -176,6 +176,11 @@ When we re-run, we will get:
     ...
     n_sample = 6
 
+Note:
+
+- Place ``ShardingFilter`` (``datapipe.sharding_filter``) as early as possible in the pipeline, especially before expensive
+  operations such as decoding, in order to avoid repeating these expensive operations across worker/distributed processes.
+
 
 You can find more DataPipe implementation examples for various research domains `on this page <torchexamples.html>`_.
 
