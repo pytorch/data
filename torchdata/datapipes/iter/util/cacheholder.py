@@ -242,10 +242,11 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                         promise_fh.flush()
             else:
                 promise_filepath = _promise_filename(filepath)
-                with portalocker.Lock(promise_filepath, "r", flags=portalocker.LockFlags.SHARED) as promise_fh:
-                    promise_fh.seek(0)
-                    data = promise_fh.read()
-                    _check_promise_file_uuid(data, promise_filepath, filepath, uuid)
+                if os.path.exists(promise_filepath):
+                    with portalocker.Lock(promise_filepath, "r", flags=portalocker.LockFlags.SHARED) as promise_fh:
+                        promise_fh.seek(0)
+                        data = promise_fh.read()
+                        _check_promise_file_uuid(data, promise_filepath, filepath, uuid)
 
         return result
 
