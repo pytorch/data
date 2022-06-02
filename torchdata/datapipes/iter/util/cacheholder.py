@@ -10,6 +10,7 @@ import inspect
 import os.path
 import sys
 import time
+import uuid
 import warnings
 
 from collections import deque
@@ -183,6 +184,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         OnDiskCacheHolderIterDataPipe._temp_dict[self] = (filepath_fn, hash_dict, hash_type, extra_check_fn)
 
         self._end_caching_flag: bool = False
+        self.uuid = uuid.uuid1()
 
     def __iter__(self):
         if self._end_caching_flag:
@@ -197,7 +199,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     # Since Demux is using this function, we should not attach it to OnDiskCacheHolder instance.
     # Otherwise, it would cause infinite recursion in graph traversal
     @staticmethod
-    def _cache_check_fn(data, filepath_fn, hash_dict, hash_type, extra_check_fn):
+    def _cache_check_fn(data, filepath_fn, hash_dict, hash_type, extra_check_fn, uuid):
         filepaths = data if filepath_fn is None else filepath_fn(data)
         result = True
         if not isinstance(filepaths, (list, tuple)):
@@ -214,6 +216,13 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
             elif extra_check_fn is not None and not extra_check_fn(filepath):
                 cached_file_exists = False
 
+            def _check_promise_file_uuid(data, promise_filepath, filepath, uuid):
+                if len(data) > 0 and data != str(uuid):
+                    raise RuntimeError(
+                        f"Found lock {promise_filepath} from the previous failed run {data}. {filepath} and cache folder are potentially incorrect."
+                        " Consider cleanining it up or remove the lock file."
+                    )
+
             if not cached_file_exists:
                 promise_filepath = _promise_filename(filepath)
                 dirname = os.path.dirname(promise_filepath)
@@ -223,16 +232,21 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                 with portalocker.Lock(promise_filepath, "a+", flags=portalocker.LockFlags.EXCLUSIVE) as promise_fh:
                     promise_fh.seek(0)
                     data = promise_fh.read()
-                    # TODO(VitalyFedyunin): Potentially there is old .promise file from previous failed run, we
-                    # need to somehow propagate uniq session id for dataloader, save and compare it here,
-                    # raising error
+                    _check_promise_file_uuid(data, promise_filepath, filepath, uuid)
                     file_exists = len(data) > 0
                     if not file_exists:
                         result = False
                         promise_fh.seek(0)
-                        promise_fh.write("[dataloader session uid]")
+                        promise_fh.write(str(uuid))
                         promise_fh.truncate()
                         promise_fh.flush()
+            else:
+                promise_filepath = _promise_filename(filepath)
+                if os.path.exists(promise_filepath):
+                    with portalocker.Lock(promise_filepath, "r", flags=portalocker.LockFlags.SHARED) as promise_fh:
+                        promise_fh.seek(0)
+                        data = promise_fh.read()
+                        _check_promise_file_uuid(data, promise_filepath, filepath, uuid)
 
         return result
 
@@ -247,6 +261,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                 hash_dict=hash_dict,
                 hash_type=hash_type,
                 extra_check_fn=extra_check_fn,
+                uuid=self.uuid,
             ),
         )
         # Cached: keep filepath(s)

@@ -649,6 +649,12 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             self.assertEqual(2, len(all_files))
             self.assertEqual("str", result[0][1])
 
+            dl = DataLoader(dp, num_workers=10, multiprocessing_context="spawn", batch_size=1, collate_fn=_unbatch)
+            with open(os.path.join(tmpdirname, "test.bin.promise"), "w") as fh:
+                fh.write("old_uuid")
+            with self.assertRaisesRegex(RuntimeError, "old_uuid"):
+                result = list(dl)
+
     # TODO(120): this test currently only covers reading from local
     # filesystem. It needs to be modified once test data can be stored on
     # gdrive/s3/onedrive
