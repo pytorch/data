@@ -7,7 +7,9 @@
 
 import pickle
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Generic, Iterator, Optional, TypeVar
+from typing import Any, Dict, Generic, Iterable, Iterator, Optional, TypeVar, Union
+
+from torchdata.dataloader2.adapter import Adapter
 
 from torchdata.datapipes.iter import IterDataPipe
 
@@ -45,8 +47,7 @@ class DataLoader2(Generic[T_co]):
     def __init__(
         self,
         datapipe: IterDataPipe,
-        # TODO: Change into Iterable[DPAdapter] and apply them sequentially for OSS use case
-        datapipe_adapter_fn: Optional[Callable[[IterDataPipe], IterDataPipe]] = None,
+        datapipe_adapter_fn: Optional[Union[Iterable[Adapter], Adapter]] = None,
         reading_service: Optional[ReadingServiceInterface] = None,
     ) -> None:
         self.datapipe = datapipe
@@ -54,13 +55,19 @@ class DataLoader2(Generic[T_co]):
         self._datapipe_iter: Optional[Iterator[T_co]] = None
         self._reset_iter: bool = True
         # TODO(VitalyFedyunin): Some ReadingServices might want to validate adapters, we can add this feature
-        self.datapipe_adapter_fn = datapipe_adapter_fn
+        if datapipe_adapter_fn is None:
+            self.datapipe_adapter_fns = None
+        elif isinstance(datapipe_adapter_fn, Iterable):
+            self.datapipe_adapter_fns = datapipe_adapter_fn
+        else:
+            self.datapipe_adapter_fns = [datapipe_adapter_fn]
         self.reading_service = reading_service
         self.reading_service_state: Optional[bytes] = None
         self._terminated: bool = False
 
-        if self.datapipe_adapter_fn is not None:
-            self.datapipe = self.datapipe_adapter_fn(self.datapipe)
+        if self.datapipe_adapter_fns is not None:
+            for adapter_fn in self.datapipe_adapter_fns:
+                self.datapipe = adapter_fn(self.datapipe)
         self._datapipe_before_reading_service_adapt: IterDataPipe = self.datapipe
 
     def __iter__(self) -> Iterator[T_co]:
@@ -182,6 +189,7 @@ class DataLoader2(Generic[T_co]):
         self.reading_service_state = reading_service_state
 
         # re-initialize datapipe_adapter_fn and _datapipe_before_reading_service_adapt
-        if self.datapipe_adapter_fn is not None:
-            self.datapipe = self.datapipe_adapter_fn(self.datapipe)
+        if self.datapipe_adapter_fns is not None:
+            for adapter_fn in self.datapipe_adapter_fns:
+                self.datapipe = adapter_fn(self.datapipe)
         self._datapipe_before_reading_service_adapt = self.datapipe
