@@ -1,7 +1,7 @@
 import itertools
 from collections import defaultdict
 
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, Set, TYPE_CHECKING
 
 from torch.utils.data.datapipes.iter.combining import _ChildDataPipe, IterDataPipe
 from torch.utils.data.graph import traverse
@@ -49,7 +49,7 @@ class Node:
         return f"{self}-{hash(self)}"
 
 
-def to_nodes(dp):
+def to_nodes(dp, *, debug: bool) -> Set[Node]:
     def recurse(dp_graph, child=None):
         for dp_node, dp_parents in dp_graph.items():
             node = Node(dp_node)
@@ -82,6 +82,9 @@ def to_nodes(dp):
 
             nodes.add(aggregated_node)
 
+        if debug:
+            return nodes
+
         child_dp_nodes = set(
             itertools.chain.from_iterable(node.parents for node in nodes if isinstance(node.dp, _ChildDataPipe))
         )
@@ -111,7 +114,7 @@ def to_nodes(dp):
     return aggregate(recurse(traverse(dp, only_datapipe=True)))
 
 
-def to_graph(dp) -> "graphviz.Digraph":
+def to_graph(dp, *, debug: bool = False) -> "graphviz.Digraph":
     """Turns a datapipe into a :class:`graphviz.Digraph` representing the graph of the datapipe.
 
     .. note::
@@ -124,6 +127,11 @@ def to_graph(dp) -> "graphviz.Digraph":
 
         - :meth:`~graphviz.Digraph.render`: Save the graph to a file.
         - :meth:`~graphviz.Digraph.view`: Open the graph in a viewer.
+
+    Args:
+        dp: Datapipe.
+        debug (bool): If ``True``, renders internal datapipes that are usually hidden from the user. Defaults to
+            ``False``.
     """
     try:
         import graphviz
@@ -146,7 +154,7 @@ def to_graph(dp) -> "graphviz.Digraph":
     )
     graph = graphviz.Digraph(node_attr=node_attr, graph_attr=dict(size="12,12"))
 
-    for node in to_nodes(dp):
+    for node in to_nodes(dp, debug=debug):
         fillcolor: Optional[str]
         if not node.parents:
             fillcolor = "lightblue"
