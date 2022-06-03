@@ -67,7 +67,7 @@ class HuggingFaceHubReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         self.streaming = streaming
         self.data_files = data_files
 
-    def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
+    def __iter__(self) -> Iterator[Any]:
         return _get_response_from_huggingface_hub(
             dataset=self.dataset,
             split=self.split,
