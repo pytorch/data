@@ -33,6 +33,7 @@ def _assert_fsspec() -> None:
         )
 
 
+@functional_datapipe("list_files_by_fsspec")
 class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
     r"""
     Lists the contents of the directory at the provided ``root`` pathname or URL,
