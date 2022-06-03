@@ -1,6 +1,7 @@
 pytest
 expecttest
 fsspec
+s3fs
 iopath == 0.1.9
 numpy
 rarfile
