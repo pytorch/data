@@ -195,6 +195,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.HashChecker, None, ({},), {}),
             (iterdp.Header, None, (3,), {}),
             (iterdp.HttpReader, None, (), {}),
+            (iterdp.HuggingFaceHubReader, None, (), {}),
             # TODO (ejguan): Deterministic serialization is required
             #  (iterdp.InBatchShuffler, IterableWrapper(range(10)).batch(3), (), {}),
             (iterdp.InMemoryCacheHolder, None, (), {}),
@@ -298,6 +299,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             iterdp.IoPathFileOpener,
             iterdp.HashChecker,
             iterdp.HttpReader,
+            iterdp.HuggingFaceHubReader,
             iterdp.OnDiskCacheHolder,
             iterdp.OnlineReader,
             iterdp.ParquetDataFrameLoader,
