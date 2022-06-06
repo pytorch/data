@@ -339,7 +339,7 @@ elements are computed only when <code class="docutils literal notranslate"><span
 <p>All subclasses should overwrite <code class="xref py py-meth docutils literal notranslate"><span class="pre">__iter__()</span></code>, which would return an
 iterator of samples in this DataPipe. Calling <code class="docutils literal notranslate"><span class="pre">__iter__</span></code> of an <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> automatically invokes its
 method <code class="docutils literal notranslate"><span class="pre">reset()</span></code>, which by default performs no operation. When writing a custom <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code>, users should
-override <code class="docutils literal notranslate"><span class="pre">reset()</span></code> if necesssary. The common usages include resetting buffers, pointers,
+override <code class="docutils literal notranslate"><span class="pre">reset()</span></code> if necessary. The common usages include resetting buffers, pointers,
 and various state variables within the custom <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -347,7 +347,7 @@ and various state variables within the custom <code class="docutils literal notr
 and the creation a second iterator will invalidate the first one. This constraint is necessary because
 some <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> have internal buffers, whose states can become invalid if there are multiple iterators.
 The code example below presents details on how this constraint looks in practice.
-If you have any feedback related to this constraint, please see <a class="reference external" href="https://github.com/pytorch/data/issues/45">Github IterDataPipe Singler Iterator Issue</a>.</p>
+If you have any feedback related to this constraint, please see <a class="reference external" href="https://github.com/pytorch/data/issues/45">GitHub IterDataPipe Single Iterator Issue</a>.</p>
 </div>
 <p>These DataPipes can be invoked in two ways, using the class constructor or applying their
 functional form onto an existing <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> (recommended, available to most but not all DataPipes).

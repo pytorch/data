@@ -476,6 +476,11 @@ batch size of 5, that gives us 6 batches per worker. With 2 workers, we get 12 t
 <span class="n">n_sample</span> <span class="o">=</span> <span class="mi">6</span>
 </pre></div>
 </div>
+<p>Note:</p>
+<ul class="simple">
+<li><p>Place <code class="docutils literal notranslate"><span class="pre">ShardingFilter</span></code> (<code class="docutils literal notranslate"><span class="pre">datapipe.sharding_filter</span></code>) as early as possible in the pipeline, especially before expensive
+operations such as decoding, in order to avoid repeating these expensive operations across worker/distributed processes.</p></li>
+</ul>
 <p>You can find more DataPipe implementation examples for various research domains <a class="reference external" href="torchexamples.html">on this page</a>.</p>
 </section>
 <section id="implementing-a-custom-datapipe">
