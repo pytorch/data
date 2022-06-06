@@ -6,4 +6,6 @@
 
 from torch.utils.data.datapipes.utils.common import StreamWrapper
 
-__all__ = ["StreamWrapper"]
+from .janitor import janitor
+
+__all__ = ["janitor", "StreamWrapper"]
