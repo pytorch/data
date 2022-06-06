@@ -67,10 +67,13 @@ class ZipArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                         continue
                     extracted_fobj = zips.open(zipinfo)
                     inner_pathname = os.path.normpath(os.path.join(pathname, zipinfo.filename))
-                    yield inner_pathname, StreamWrapper(extracted_fobj)  # type: ignore[misc]
+                    yield inner_pathname, StreamWrapper(extracted_fobj, data_stream, name=inner_pathname)  # type: ignore[misc]
             except Exception as e:
                 warnings.warn(f"Unable to extract files from corrupted zipfile stream {pathname} due to: {e}, abort!")
                 raise e
+            finally:
+                if isinstance(data_stream, StreamWrapper):
+                    data_stream.autoclose()
             # We are unable to close 'data_stream' here, because it needs to be available to use later
 
     def __len__(self) -> int:
