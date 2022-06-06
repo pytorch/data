@@ -77,4 +77,4 @@ class HuggingFaceHubReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         )
 
     def __len__(self) -> int:
-        return len([self.dataset])
+        raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
