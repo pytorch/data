@@ -27,6 +27,11 @@ if DILL_AVAILABLE:
     dill.extend(use_dill=False)
 
 try:
+    import datasets
+except ImportError:
+    datasets = None
+
+try:
     import fsspec
 except ImportError:
     fsspec = None
@@ -74,6 +79,8 @@ def _filepath_fn(name: str, dir) -> str:
 
 def _filter_by_module_availability(datapipes):
     filter_set = set()
+    if datasets is None:
+        filter_set.update([iterdp.HuggingFaceHubReader])
     if fsspec is None:
         filter_set.update([iterdp.FSSpecFileLister, iterdp.FSSpecFileOpener, iterdp.FSSpecSaver])
     if iopath is None:
@@ -195,6 +202,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.HashChecker, None, ({},), {}),
             (iterdp.Header, None, (3,), {}),
             (iterdp.HttpReader, None, (), {}),
+            (iterdp.HuggingFaceHubReader, None, (), {}),
             # TODO (ejguan): Deterministic serialization is required
             #  (iterdp.InBatchShuffler, IterableWrapper(range(10)).batch(3), (), {}),
             (iterdp.InMemoryCacheHolder, None, (), {}),
@@ -298,6 +306,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             iterdp.IoPathFileOpener,
             iterdp.HashChecker,
             iterdp.HttpReader,
+            iterdp.HuggingFaceHubReader,
             iterdp.OnDiskCacheHolder,
             iterdp.OnlineReader,
             iterdp.ParquetDataFrameLoader,
