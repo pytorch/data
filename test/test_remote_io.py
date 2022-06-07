@@ -19,12 +19,32 @@ from torch.utils.data import DataLoader
 from torchdata.datapipes.iter import (
     EndOnDiskCacheHolder,
     FileOpener,
+    FSSpecFileLister,
+    FSSpecFileOpener,
     HttpReader,
     IterableWrapper,
     OnDiskCacheHolder,
     S3FileLister,
     S3FileLoader,
 )
+
+try:
+    import fsspec
+    import s3fs
+
+    HAS_FSSPEC_S3 = True
+except ImportError:
+    HAS_FSSPEC_S3 = False
+skipIfNoFSSpecS3 = unittest.skipIf(not HAS_FSSPEC_S3, "no FSSpec with S3fs")
+
+try:
+    from torchdata._torchdata import S3Handler
+
+    HAS_AWS = True
+except ImportError:
+    HAS_AWS = False
+skipIfAWS = unittest.skipIf(HAS_AWS, "AWSSDK Enabled")
+skipIfNoAWS = unittest.skipIf(not HAS_AWS, "No AWSSDK Enabled")
 
 
 class TestDataPipeRemoteIO(expecttest.TestCase):
@@ -183,20 +203,43 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         if not IS_WINDOWS:
             dl = DataLoader(file_cache_dp, num_workers=3, multiprocessing_context="fork", batch_size=1)
             expected = [[os.path.join(self.temp_dir.name, root_dir, f"{i}.csv")] for i in range(3)] * 3
-            self.assertEqual(sorted(expected), sorted(list(dl)))
+            res = list(dl)
+            self.assertEqual(sorted(expected), sorted(res))
 
-    def test_s3_io_iterdatapipe(self):
-        # sanity test
+    @skipIfNoFSSpecS3
+    def test_fsspec_io_iterdatapipe(self):
+        input_list = [
+            (["s3://ai2-public-datasets"], 39),  # bucket without '/'
+            (["s3://ai2-public-datasets/charades/"], 18),  # bucket with '/'
+            (
+                [
+                    "s3://ai2-public-datasets/charades/Charades_v1.zip",
+                    "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
+                    "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
+                    "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
+                ],
+                4,
+            ),  # multiple files
+        ]
+        for urls, num in input_list:
+            fsspec_lister_dp = FSSpecFileLister(IterableWrapper(urls), anon=True)
+            self.assertEqual(sum(1 for _ in fsspec_lister_dp), num, f"{urls} failed")
+
+        url = "s3://ai2-public-datasets/charades/"
+        fsspec_loader_dp = FSSpecFileOpener(FSSpecFileLister(IterableWrapper([url]), anon=True), anon=True)
+        res = list(fsspec_loader_dp)
+        self.assertEqual(len(res), 18, f"{input} failed")
+
+    @skipIfAWS
+    def test_disabled_s3_io_iterdatapipe(self):
         file_urls = ["s3://ai2-public-datasets"]
-        try:
-            s3_lister_dp = S3FileLister(IterableWrapper(file_urls))
-            s3_loader_dp = S3FileLoader(IterableWrapper(file_urls))
-        except ModuleNotFoundError:
-            warnings.warn(
-                "S3 IO datapipes or C++ extension '_torchdata' isn't built in the current 'torchdata' package"
-            )
-            return
+        with self.assertRaisesRegex(ModuleNotFoundError, "TorchData must be built with"):
+            _ = S3FileLister(IterableWrapper(file_urls))
+        with self.assertRaisesRegex(ModuleNotFoundError, "TorchData must be built with"):
+            _ = S3FileLoader(IterableWrapper(file_urls))
 
+    @skipIfNoAWS
+    def test_s3_io_iterdatapipe(self):
         # S3FileLister: different inputs
         input_list = [
             [["s3://ai2-public-datasets"], 77],  # bucket without '/'
