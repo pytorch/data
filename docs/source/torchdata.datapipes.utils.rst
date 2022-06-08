@@ -12,6 +12,7 @@ File Object and Stream Utility
     :template: datapipe.rst
 
     StreamWrapper
+    to_graph
 
 
 DataLoader
