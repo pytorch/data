@@ -16,7 +16,16 @@ from collections import deque
 from functools import partial
 from typing import Any, Callable, Deque, Dict, Iterator, List, Optional, TypeVar
 
-import portalocker
+try:
+    import portalocker
+except ImportError as e:
+    if os.name == "nt" and str(e).startswith("DLL load failed while importing"):
+        print(
+            "Please take a look at FAQ in https://github.com/pytorch/data#frequently-asked-questions-faq"
+            "for the solution of this Error."
+        )
+    raise
+
 
 from torch.utils.data.datapipes.utils.common import _check_lambda_fn, DILL_AVAILABLE
 

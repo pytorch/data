@@ -213,6 +213,12 @@ only be responsible for multiprocessing, distributed, and similar functionalitie
 processing features, such as the shuffling and batching, will be moved out of DataLoader to DataPipe. At the same time,
 the current/old version of DataLoader should still be available and you can use DataPipes with that as well.
 
+Q: Why is there an Error saying the specified DLL could not be found at the time of importing `portalocker`?
+
+A: It only happens for people who runs `torchdata` on Windows OS as a common problem with `pywin32`. And, you can find
+the reason and the solution for it in the
+[link](https://github.com/mhammond/pywin32#the-specified-procedure-could-not-be-found--entry-point-not-found-errors).
+
 ## Contributing
 
 We welcome PRs! See the [CONTRIBUTING](CONTRIBUTING.md) file.
