@@ -105,7 +105,7 @@ pass defined functions to DataPipes rather than lambda functions because the for
         return datapipe
 
 Lastly, we will put everything together in ``'__main__'`` and pass the DataPipe into the DataLoader. Note that
-if you choose to use `Batcher` while setting `batch_size > 1` for DataLoader, your samples will be
+if you choose to use ``Batcher`` while setting ``batch_size > 1`` for DataLoader, your samples will be
 batched more than once. You should choose one or the other.
 
 .. code:: python
@@ -154,20 +154,9 @@ In order for DataPipe sharding to work with ``DataLoader``, we need to add the f
     def build_datapipes(root_dir="."):
         datapipe = ...
         # Add the following line to `build_datapipes`
-        # Note that it is somewhere after `Shuffler` in the DataPipe line
+        # Note that it is somewhere after `Shuffler` in the DataPipe line, but before expensive operations
         datapipe = datapipe.sharding_filter()
         return datapipe
-
-    def worker_init_fn(worker_id):
-        info = torch.utils.data.get_worker_info()
-        num_workers = info.num_workers
-        datapipe = info.dataset
-        torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
-
-    # Pass `worker_init_fn` into `DataLoader` within '__main__'
-    ...
-    dl = DataLoader(dataset=datapipe, shuffle=True, batch_size=5, num_workers=2, worker_init_fn=worker_init_fn)
-    ...
 
 When we re-run, we will get:
 

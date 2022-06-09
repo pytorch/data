@@ -200,10 +200,12 @@ convert it to `MapDataPipe` as needed.
 
 Q: How is multiprocessing handled with DataPipes?
 
-A: Multi-process data loading is still handled by DataLoader, see the
+A: Multi-process data loading is still handled by the `DataLoader`, see the
 [DataLoader documentation for more details](https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading).
-If you would like to shard data across processes, use `ShardingFilter` and provide a `worker_init_fn` as shown in the
-[tutorial](https://pytorch.org/data/beta/tutorial.html#working-with-dataloader).
+As of PyTorch version 1.12.0 (TorchData version 0.4.0), data sharding is automatically done for DataPipes within the
+`DataLoader` as long as a `ShardingFiler` DataPipe exists in your pipeline, you no longer need to pass in a backward
+compatility `worker_init_fn`. Please see the
+[tutorial](https://pytorch.org/data/beta/tutorial.html#working-with-dataloader) for an example.
 
 Q: What is the upcoming plan for DataLoader?
 
