@@ -77,13 +77,6 @@ def filepath_fn(temp_dir_name, name: str) -> str:
     return os.path.join(temp_dir_name, os.path.basename(name))
 
 
-def init_fn(worker_id):
-    info = torch.utils.data.get_worker_info()
-    num_workers = info.num_workers
-    datapipe = info.dataset
-    torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
-
-
 def _unbatch(x):
     return x[0]
 
@@ -753,7 +746,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         num_workers = 2
         line_lengths = []
-        dl = DataLoader(saver_dp, num_workers=num_workers, worker_init_fn=init_fn, multiprocessing_context="spawn")
+        dl = DataLoader(saver_dp, num_workers=num_workers, multiprocessing_context="spawn")
         for filename in dl:
             with open(filename[0]) as f:
                 lines = f.readlines()
