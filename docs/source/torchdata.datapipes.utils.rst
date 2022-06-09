@@ -1,6 +1,21 @@
 Utility Functions
 ===========================
 
+..
+    Comment: the next section will become "DataPipe Graph Visualization and Linter" when linter is added.
+
+DataPipe Graph Visualization
+-------------------------------------
+.. currentmodule:: torchdata.datapipes.utils
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated/
+    :template: function.rst
+
+    to_graph
+
+
 File Object and Stream Utility
 -------------------------------------
 
@@ -12,7 +27,6 @@ File Object and Stream Utility
     :template: datapipe.rst
 
     StreamWrapper
-    to_graph
 
 
 DataLoader

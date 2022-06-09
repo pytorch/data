@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import itertools
 from collections import defaultdict
 
@@ -115,7 +121,8 @@ def to_nodes(dp, *, debug: bool) -> Set[Node]:
 
 
 def to_graph(dp, *, debug: bool = False) -> "graphviz.Digraph":
-    """Turns a datapipe into a :class:`graphviz.Digraph` representing the graph of the datapipe.
+    """Visualizes a DataPipe by returning a :class:`graphviz.Digraph`, which is a graph of the data pipeline.
+    This allows you to visually inspect all the transformation that takes place in your DataPipes.
 
     .. note::
 
@@ -129,9 +136,20 @@ def to_graph(dp, *, debug: bool = False) -> "graphviz.Digraph":
         - :meth:`~graphviz.Digraph.view`: Open the graph in a viewer.
 
     Args:
-        dp: Datapipe.
-        debug (bool): If ``True``, renders internal datapipes that are usually hidden from the user. Defaults to
-            ``False``.
+        dp: DataPipe that you would like to visualize (generally the last one in a chain of DataPipes).
+        debug (bool): If ``True``, renders internal datapipes that are usually hidden from the user
+            (such as ``ChildDataPipe`` of `demux` and `fork`). Defaults to ``False``.
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> from torchdata.datapipes.utils import to_graph
+        >>> dp = IterableWrapper(range(10))
+        >>> dp1, dp2 = dp.demux(num_instances=2, classifier_fn=lambda x: x % 2)
+        >>> dp1 = dp1.map(lambda x: x + 1)
+        >>> dp2 = dp2.filter(lambda _: True)
+        >>> dp3 = dp1.zip(dp2).map(lambda t: t[0] + t[1])
+        >>> g = to_graph(dp3)
+        >>> g.view()  # This will open the graph in a viewer
     """
     try:
         import graphviz
