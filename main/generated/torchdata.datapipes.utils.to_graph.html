@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>OnDiskCacheHolder &mdash; TorchData main documentation</title>
+  <title>to_graph &mdash; TorchData main documentation</title>
   
 
   
@@ -33,8 +33,8 @@
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="ShardingFilter" href="torchdata.datapipes.iter.ShardingFilter.html" />
-    <link rel="prev" title="MapToIterConverter" href="torchdata.datapipes.iter.MapToIterConverter.html" />
+    <link rel="next" title="Tutorial" href="../tutorial.html" />
+    <link rel="prev" title="StreamWrapper" href="torchdata.datapipes.utils.StreamWrapper.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -230,9 +230,9 @@
             
               <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.map.html">Map-style DataPipes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.utils.html">Utility Functions</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../torchdata.datapipes.utils.html">Utility Functions</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
 <ul>
@@ -288,15 +288,15 @@
       </li>
 
         
-          <li><a href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a> &gt;</li>
+          <li><a href="../torchdata.datapipes.utils.html">Utility Functions</a> &gt;</li>
         
-      <li>OnDiskCacheHolder</li>
+      <li>to_graph</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/generated/torchdata.datapipes.iter.OnDiskCacheHolder.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/generated/torchdata.datapipes.utils.to_graph.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -322,43 +322,33 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="ondiskcacheholder">
-<h1>OnDiskCacheHolder<a class="headerlink" href="#ondiskcacheholder" title="Permalink to this heading">¶</a></h1>
+  <section id="to-graph">
+<h1>to_graph<a class="headerlink" href="#to-graph" title="Permalink to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="torchdata.datapipes.iter.OnDiskCacheHolder">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">OnDiskCacheHolder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepath_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hash_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hash_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'sha256'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_check_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.OnDiskCacheHolder" title="Permalink to this definition">¶</a></dt>
-<dd><p>Caches the outputs of multiple DataPipe operations to local files, which are
-typically performance bottleneck such download, decompress, and etc (functional name: <code class="docutils literal notranslate"><span class="pre">on_disk_cache</span></code>).</p>
-<p>Must use <code class="docutils literal notranslate"><span class="pre">.end_caching()</span></code> to stop tracing the sequence of DataPipe operations and save the results to local files.</p>
+<dt class="sig sig-object py" id="torchdata.datapipes.utils.to_graph">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.utils.</span></span><span class="sig-name descname"><span class="pre">to_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dp</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">debug</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.utils.to_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Turns a datapipe into a <a class="reference external" href="https://graphviz.readthedocs.io/en/stable/api.html#graphviz.Digraph" title="(in graphviz v0.20)"><code class="xref py py-class docutils literal notranslate"><span class="pre">graphviz.Digraph</span></code></a> representing the graph of the datapipe.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The package <code class="xref py py-mod docutils literal notranslate"><span class="pre">graphviz</span></code> is required to use this function.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The most common interfaces for the returned graph object are:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://graphviz.readthedocs.io/en/stable/api.html#graphviz.Digraph.render" title="(in graphviz v0.20)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">render()</span></code></a>: Save the graph to a file.</p></li>
+<li><p><a class="reference external" href="https://graphviz.readthedocs.io/en/stable/api.html#graphviz.Digraph.view" title="(in graphviz v0.20)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">view()</span></code></a>: Open the graph in a viewer.</p></li>
+</ul>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>source_datapipe</strong> – IterDataPipe</p></li>
-<li><p><strong>filepath_fn</strong> – Given data from <code class="docutils literal notranslate"><span class="pre">source_datapipe</span></code>, returns file path(s) on local file system.
-Single file path, tuple or list of file paths is accepted as return type.
-And, generator function that yields file paths is also allowed.
-As default, data from <code class="docutils literal notranslate"><span class="pre">source_datapipe</span></code> is directly used to determine the existency of cache.</p></li>
-<li><p><strong>hash_dict</strong> – A Dictionary mapping file names to their corresponding hashes. If <code class="docutils literal notranslate"><span class="pre">hash_dict</span></code> is specified,
-the extra hash check will be attached before saving data to local file system. If the data
-doesn’t meet the hash, the pipeline will raise an Error.</p></li>
-<li><p><strong>hash_type</strong> – The type of hash function to apply</p></li>
-<li><p><strong>extra_check_fn</strong> – Optional function to carry out extra validation on
-the given file path from <code class="docutils literal notranslate"><span class="pre">filepath_fn</span></code>.</p></li>
+<li><p><strong>dp</strong> – Datapipe.</p></li>
+<li><p><strong>debug</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, renders internal datapipes that are usually hidden from the user. Defaults to
+<code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
 </ul>
 </dd>
 </dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span><span class="p">,</span> <span class="n">HttpReader</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">url</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([</span><span class="s2">&quot;https://path/to/filename&quot;</span><span class="p">,</span> <span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">_filepath_fn</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">temp_dir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">gettempdir</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">temp_dir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">url</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">hash_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;expected_filepath&quot;</span><span class="p">:</span> <span class="n">expected_MD5_hash</span><span class="p">}</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">cache_dp</span> <span class="o">=</span> <span class="n">url</span><span class="o">.</span><span class="n">on_disk_cache</span><span class="p">(</span><span class="n">filepath_fn</span><span class="o">=</span><span class="n">_filepath_fn</span><span class="p">,</span> <span class="n">hash_dict</span><span class="o">=</span><span class="n">_hash_dict</span><span class="p">,</span> <span class="n">hash_type</span><span class="o">=</span><span class="s2">&quot;md5&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># You must call ``.end_caching`` at a later point to stop tracing and save the results to local files.</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">cache_dp</span> <span class="o">=</span> <span class="n">HttpReader</span><span class="p">(</span><span class="n">cache_dp</span><span class="p">)</span><span class="o">.</span><span class="n">end_caching</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;wb&quot;</span><span class="p">,</span> <span class="n">filepath_fn</span><span class="o">=</span><span class="n">_filepath_fn</span><span class="p">)</span>
-</pre></div>
-</div>
 </dd></dl>
 
 </section>
@@ -371,10 +361,10 @@ the given file path from <code class="docutils literal notranslate"><span class=
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="torchdata.datapipes.iter.ShardingFilter.html" class="btn btn-neutral float-right" title="ShardingFilter" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="../tutorial.html" class="btn btn-neutral float-right" title="Tutorial" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.iter.MapToIterConverter.html" class="btn btn-neutral" title="MapToIterConverter" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="torchdata.datapipes.utils.StreamWrapper.html" class="btn btn-neutral" title="StreamWrapper" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -406,7 +396,7 @@ the given file path from <code class="docutils literal notranslate"><span class=
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">OnDiskCacheHolder</a></li>
+<li><a class="reference internal" href="#">to_graph</a></li>
 </ul>
 
             </div>
