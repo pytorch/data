@@ -142,3 +142,8 @@ def setup(app):
                 obj.__name__ = name
 
     app.connect("autodoc-process-signature", process_signature)
+
+
+intersphinx_mapping = {
+    "graphviz": ("https://graphviz.readthedocs.io/en/stable/", None),
+}
