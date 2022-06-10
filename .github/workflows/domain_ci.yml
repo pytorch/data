@@ -9,7 +9,7 @@ on:
       - main
       # For PR created by ghstack
       - gh/*/*/base
-      - release/*
+      # - release/*
 
 jobs:
   torchvision:
