@@ -204,6 +204,7 @@ jobs:
           pip3 install -r test/requirements.txt
           pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Wheels to Github
+        if: always()
         uses: actions/upload-artifact@v2
         with:
           name: torchdata-artifact
@@ -340,7 +341,16 @@ jobs:
           conda activate conda_build_env
           conda install -yq conda-build -c conda-forge
           packaging/build_conda.sh
+      - name: Install TorchData Conda Package
+        shell: bash -l {0}
+        run: conda install --offline conda-bld/*/torchdata-*.tar.bz2
+      - name: Run DataPipes Tests with pytest
+        shell: bash
+        run: |
+          pip3 install -r test/requirements.txt
+          pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Conda Package to Github
+        if: always()
         uses: actions/upload-artifact@v2
         with:
           name: torchdata-artifact
