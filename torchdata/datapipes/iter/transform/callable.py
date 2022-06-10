@@ -128,6 +128,7 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
         _check_lambda_fn(fn)
         self.fn = fn  # type: ignore[assignment]
         self.input_col = input_col
+        self._ensure_fn_works_on_input(fn)
 
     def _ensure_fn_works_on_input(self, fn: Callable):
         sig = inspect.signature(fn)
