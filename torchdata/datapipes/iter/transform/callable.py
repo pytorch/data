@@ -102,6 +102,8 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
     Args:
         datapipe: Source IterDataPipe
         fn: the function to be applied to each element in the DataPipe, the output must be a Sequence
+        input_col: The index or indices of data which ``fn`` is applied to.
+
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
