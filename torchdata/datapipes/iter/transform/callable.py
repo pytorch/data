@@ -129,6 +129,14 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
         self.fn = fn  # type: ignore[assignment]
         self.input_col = input_col
 
+    def _ensure_fn_works_on_input(self, fn: Callable):
+        sig = inspect.signature(fn)
+        if len(sig.parameters) != self.input_col + 1:
+            raise TypeError(
+                f"The function {fn.__name__} takes {len(sig.parameters)} arguments, "
+                f"but {self.input_col + 1} are required."
+            )
+
     def _apply_fn(self, data):
         if self.input_col is None:
             return self.fn(data)
