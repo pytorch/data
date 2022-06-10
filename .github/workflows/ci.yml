@@ -4,7 +4,6 @@ on:
     branches:
       - main
       - release/*
-    tags:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
     branches:
@@ -31,16 +30,6 @@ jobs:
           - 3.8
           - 3.9
     steps:
-      - name: Get PyTorch Channel
-        shell: bash
-        run: |
-          if [[ ${{ github.base_ref }} == release/* ]] || [[ ${{ github.ref }} == refs/heads/release/* ]] || [[ ${{ github.ref }} == refs/tags/v* ]]; then
-            PT_CHANNEL="https://download.pytorch.org/whl/test/cpu/torch_test.html"
-          else
-            PT_CHANNEL="https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html"
-          fi
-          echo "::set-output name=value::$PT_CHANNEL"
-        id: pytorch_channel
       - name: Setup additional system libraries
         if: startsWith( matrix.os, 'ubuntu' )
         run: |
@@ -66,7 +55,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip3 install -r requirements.txt
-          pip3 install --pre torch -f "${{ steps.pytorch_channel.outputs.value }}"
+          pip3 install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
           pip3 install cmake ninja
           echo "/home/runner/.local/bin" >> $GITHUB_PATH
       - name: Build TorchData
