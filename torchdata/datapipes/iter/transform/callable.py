@@ -9,6 +9,8 @@ from typing import Callable, Iterator, List, TypeVar
 from torch.utils.data import functional_datapipe, IterDataPipe
 from torch.utils.data.datapipes.utils.common import _check_lambda_fn
 
+import inspect
+
 T_co = TypeVar("T_co", covariant=True)
 
 
@@ -102,7 +104,10 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
     Args:
         datapipe: Source IterDataPipe
         fn: the function to be applied to each element in the DataPipe, the output must be a Sequence
-        input_col: The index or indices of data which ``fn`` is applied to.
+        input_col: Index or indices of data which ``fn`` is applied, such as:
+            - ``None`` as default to apply ``fn`` to the data directly.
+            - Integer(s) is used for list/tuple.
+            - Key(s) is used for dict.
 
 
     Example:
