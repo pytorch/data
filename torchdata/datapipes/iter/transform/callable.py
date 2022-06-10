@@ -4,12 +4,11 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import inspect
 from typing import Callable, Iterator, List, TypeVar
 
 from torch.utils.data import functional_datapipe, IterDataPipe
 from torch.utils.data.datapipes.utils.common import _check_lambda_fn
-
-import inspect
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -143,7 +142,8 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
         elif isinstance(self.input_col, (list, tuple)):
             if len(sig.parameters) != len(self.input_col):
                 raise TypeError(
-                    f"The function {fn.__name__} takes {len(sig.parameters)} arguments, "
+                    f"The function {fn.__name__} takes {len(sig.parameters)} "
+                    f"arguments, "
                     f"but {len(self.input_col)} are required."
                 )
 
