@@ -414,7 +414,7 @@ pass defined functions to DataPipes rather than lambda functions because the for
 </pre></div>
 </div>
 <p>Lastly, we will put everything together in <code class="docutils literal notranslate"><span class="pre">'__main__'</span></code> and pass the DataPipe into the DataLoader. Note that
-if you choose to use <cite>Batcher</cite> while setting <cite>batch_size &gt; 1</cite> for DataLoader, your samples will be
+if you choose to use <code class="docutils literal notranslate"><span class="pre">Batcher</span></code> while setting <code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">&gt;</span> <span class="pre">1</span></code> for DataLoader, your samples will be
 batched more than once. You should choose one or the other.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch.utils.data</span> <span class="kn">import</span> <span class="n">DataLoader</span>
 
@@ -455,20 +455,9 @@ batch size of 5, that gives us 6 batches per worker. With 2 workers, we get 12 t
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">build_datapipes</span><span class="p">(</span><span class="n">root_dir</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">):</span>
     <span class="n">datapipe</span> <span class="o">=</span> <span class="o">...</span>
     <span class="c1"># Add the following line to `build_datapipes`</span>
-    <span class="c1"># Note that it is somewhere after `Shuffler` in the DataPipe line</span>
+    <span class="c1"># Note that it is somewhere after `Shuffler` in the DataPipe line, but before expensive operations</span>
     <span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">sharding_filter</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">datapipe</span>
-
-<span class="k">def</span> <span class="nf">worker_init_fn</span><span class="p">(</span><span class="n">worker_id</span><span class="p">):</span>
-    <span class="n">info</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">get_worker_info</span><span class="p">()</span>
-    <span class="n">num_workers</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">num_workers</span>
-    <span class="n">datapipe</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">dataset</span>
-    <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">graph_settings</span><span class="o">.</span><span class="n">apply_sharding</span><span class="p">(</span><span class="n">datapipe</span><span class="p">,</span> <span class="n">num_workers</span><span class="p">,</span> <span class="n">worker_id</span><span class="p">)</span>
-
-<span class="c1"># Pass `worker_init_fn` into `DataLoader` within &#39;__main__&#39;</span>
-<span class="o">...</span>
-<span class="n">dl</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">datapipe</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">num_workers</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">worker_init_fn</span><span class="o">=</span><span class="n">worker_init_fn</span><span class="p">)</span>
-<span class="o">...</span>
 </pre></div>
 </div>
 <p>When we re-run, we will get:</p>

@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>FSSpecSaver &mdash; TorchData 0.4.0 (beta) documentation</title>
+  <title>to_graph &mdash; TorchData 0.4.0 (beta) documentation</title>
   
 
   
@@ -33,8 +33,8 @@
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="FileLister" href="torchdata.datapipes.iter.FileLister.html" />
-    <link rel="prev" title="FSSpecFileOpener" href="torchdata.datapipes.iter.FSSpecFileOpener.html" />
+    <link rel="next" title="StreamWrapper" href="torchdata.datapipes.utils.StreamWrapper.html" />
+    <link rel="prev" title="Utility Functions" href="../torchdata.datapipes.utils.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -230,9 +230,9 @@
             
               <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.map.html">Map-style DataPipes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.utils.html">Utility Functions</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../torchdata.datapipes.utils.html">Utility Functions</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
 <ul>
@@ -288,15 +288,15 @@
       </li>
 
         
-          <li><a href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a> &gt;</li>
+          <li><a href="../torchdata.datapipes.utils.html">Utility Functions</a> &gt;</li>
         
-      <li>FSSpecSaver</li>
+      <li>to_graph</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/generated/torchdata.datapipes.iter.FSSpecSaver.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/generated/torchdata.datapipes.utils.to_graph.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -322,33 +322,44 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="fsspecsaver">
-<h1>FSSpecSaver<a class="headerlink" href="#fsspecsaver" title="Permalink to this heading">¶</a></h1>
-<dl class="py class">
-<dt class="sig sig-object py" id="torchdata.datapipes.iter.FSSpecSaver">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">FSSpecSaver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">bytes</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bytearray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'w'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepath_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.FSSpecSaver" title="Permalink to this definition">¶</a></dt>
-<dd><p>Takes in a DataPipe of tuples of metadata and data, saves the data to the target
-path (generated by the filepath_fn and metadata), and yields the resulting <cite>fsspec</cite>
-path (functional name: <code class="docutils literal notranslate"><span class="pre">save_by_fsspec</span></code>).</p>
+  <section id="to-graph">
+<h1>to_graph<a class="headerlink" href="#to-graph" title="Permalink to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="torchdata.datapipes.utils.to_graph">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.utils.</span></span><span class="sig-name descname"><span class="pre">to_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dp</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">debug</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://graphviz.readthedocs.io/en/stable/api.html#graphviz.Digraph" title="(in graphviz v0.20)"><span class="pre">graphviz.Digraph</span></a></span></span><a class="headerlink" href="#torchdata.datapipes.utils.to_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes a DataPipe by returning a <a class="reference external" href="https://graphviz.readthedocs.io/en/stable/api.html#graphviz.Digraph" title="(in graphviz v0.20)"><code class="xref py py-class docutils literal notranslate"><span class="pre">graphviz.Digraph</span></code></a>, which is a graph of the data pipeline.
+This allows you to visually inspect all the transformation that takes place in your DataPipes.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The package <code class="xref py py-mod docutils literal notranslate"><span class="pre">graphviz</span></code> is required to use this function.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The most common interfaces for the returned graph object are:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://graphviz.readthedocs.io/en/stable/api.html#graphviz.Digraph.render" title="(in graphviz v0.20)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">render()</span></code></a>: Save the graph to a file.</p></li>
+<li><p><a class="reference external" href="https://graphviz.readthedocs.io/en/stable/api.html#graphviz.Digraph.view" title="(in graphviz v0.20)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">view()</span></code></a>: Open the graph in a viewer.</p></li>
+</ul>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>source_datapipe</strong> – Iterable DataPipe with tuples of metadata and data</p></li>
-<li><p><strong>mode</strong> – Mode in which the file will be opened for write the data (<code class="docutils literal notranslate"><span class="pre">&quot;w&quot;</span></code> by default)</p></li>
-<li><p><strong>filepath_fn</strong> – Function that takes in metadata and returns the target path of the new file</p></li>
-<li><p><strong>kwargs</strong> – Extra options that make sense to a particular storage connection,
-e.g. host, port, username, password, etc.</p></li>
+<li><p><strong>dp</strong> – DataPipe that you would like to visualize (generally the last one in a chain of DataPipes).</p></li>
+<li><p><strong>debug</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, renders internal datapipes that are usually hidden from the user
+(such as <code class="docutils literal notranslate"><span class="pre">ChildDataPipe</span></code> of <cite>demux</cite> and <cite>fork</cite>). Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Example</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">filepath_fn</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="n">dir_path</span> <span class="o">+</span> <span class="n">name</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">name_to_data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;1.txt&quot;</span><span class="p">:</span> <span class="sa">b</span><span class="s2">&quot;DATA1&quot;</span><span class="p">,</span> <span class="s2">&quot;2.txt&quot;</span><span class="p">:</span> <span class="sa">b</span><span class="s2">&quot;DATA2&quot;</span><span class="p">,</span> <span class="s2">&quot;3.txt&quot;</span><span class="p">:</span> <span class="sa">b</span><span class="s2">&quot;DATA3&quot;</span><span class="p">}</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">source_dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">name_to_data</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">fsspec_saver_dp</span> <span class="o">=</span> <span class="n">source_dp</span><span class="o">.</span><span class="n">save_by_fsspec</span><span class="p">(</span><span class="n">filepath_fn</span><span class="o">=</span><span class="n">filepath_fn</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;wb&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">res_file_paths</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">fsspec_saver_dp</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.utils</span> <span class="kn">import</span> <span class="n">to_graph</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp1</span><span class="p">,</span> <span class="n">dp2</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">demux</span><span class="p">(</span><span class="n">num_instances</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">classifier_fn</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">%</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp1</span> <span class="o">=</span> <span class="n">dp1</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp2</span> <span class="o">=</span> <span class="n">dp2</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">_</span><span class="p">:</span> <span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp3</span> <span class="o">=</span> <span class="n">dp1</span><span class="o">.</span><span class="n">zip</span><span class="p">(</span><span class="n">dp2</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g</span> <span class="o">=</span> <span class="n">to_graph</span><span class="p">(</span><span class="n">dp3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>  <span class="c1"># This will open the graph in a viewer</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -363,10 +374,10 @@ e.g. host, port, username, password, etc.</p></li>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="torchdata.datapipes.iter.FileLister.html" class="btn btn-neutral float-right" title="FileLister" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.datapipes.utils.StreamWrapper.html" class="btn btn-neutral float-right" title="StreamWrapper" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.iter.FSSpecFileOpener.html" class="btn btn-neutral" title="FSSpecFileOpener" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="../torchdata.datapipes.utils.html" class="btn btn-neutral" title="Utility Functions" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -398,7 +409,7 @@ e.g. host, port, username, password, etc.</p></li>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">FSSpecSaver</a></li>
+<li><a class="reference internal" href="#">to_graph</a></li>
 </ul>
 
             </div>
