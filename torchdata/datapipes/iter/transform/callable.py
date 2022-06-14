@@ -96,7 +96,6 @@ class BatchMapperIterDataPipe(IterDataPipe[T_co]):
         assert batch_size > 0, "Batch size is required to be larger than 0!"
         self.batch_size = batch_size
         self.input_col = input_col
-        ensure_fn_works(fn, input_col)
 
     def _apply_fn(self, batch):
         if self.input_col is None:
