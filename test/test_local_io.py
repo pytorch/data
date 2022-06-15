@@ -309,6 +309,14 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "len"):
             len(json_dp)
 
+        # kwargs Test:
+        json_dp = JsonParser(datapipe_nonempty, parse_int=str)
+        expected_res = [
+            ("1.json", ["foo", {"bar": ["baz", None, 1.0, "2"]}]),
+            ("2.json", {"__complex__": True, "real": "1", "imag": "2"}),
+        ]
+        self.assertEqual(expected_res, list(json_dp))
+
     def test_saver_iterdatapipe(self):
         # Functional Test: Saving some data
         name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}

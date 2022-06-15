@@ -148,7 +148,7 @@ class JsonParserIterDataPipe(IterDataPipe):
     def __iter__(self):
         for file_name, stream in self.source_datapipe:
             data = stream.read()
-            yield file_name, json.loads(data)
+            yield file_name, json.loads(data, **self.kwargs)
 
     def __len__(self):
         return len(self.source_datapipe)
