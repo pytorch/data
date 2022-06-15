@@ -41,7 +41,7 @@ class JsonParserIterDataPipe(IterDataPipe[Tuple[str, Dict]]):
         for file_name, stream in self.source_datapipe:
             data = stream.read()
             stream.close()
-            yield file_name, json.loads(data)
+            yield file_name, json.loads(data, **self.kwargs)
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
