@@ -26,6 +26,10 @@ NUM_LINES = {
 DATASET_NAME = "AG_NEWS"
 
 
+def _process_tuple(t):
+    return int(t[0]), " ".join(t[1:])
+
+
 @_add_docstring_header(num_lines=NUM_LINES, num_classes=4)
 @_create_dataset_directory(dataset_name=DATASET_NAME)
 @_wrap_split_argument(("train", "test"))
@@ -36,4 +40,4 @@ def AG_NEWS(root, split):
     """
 
     # Stack CSV Parser directly on top of web-stream
-    return HttpReader([URL[split]]).parse_csv().map(lambda t: (int(t[0]), " ".join(t[1:])))
+    return HttpReader([URL[split]]).parse_csv().map(_process_tuple)
