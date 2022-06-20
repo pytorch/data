@@ -78,7 +78,7 @@ def AmazonReviewPolarity(root, split):
 
     # Again, `.on_disk_cache` is invoked again here and the subsequent DataPipe operations (until `.end_caching`)
     # will be saved onto the disk. At this point, `cache_decompressed_dp` contains paths to the cached files.
-    cache_decompressed_dp = cache_compressed_dp.on_disk_cache(filepath_fn=partial(_cache_path_fn(root, split)))
+    cache_decompressed_dp = cache_compressed_dp.on_disk_cache(filepath_fn=partial(_cache_path_fn, root, split))
 
     # Opens the cache files using `FileOpener`
     cache_decompressed_dp = FileOpener(cache_decompressed_dp, mode="b")
