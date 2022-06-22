@@ -27,6 +27,12 @@ if DILL_AVAILABLE:
 T_co = TypeVar("T_co")
 
 
+def _construct_dataframe(data, dtype=None, dtype_generator=None, columns=None, device=None):
+    if dtype is None:
+        dtype = dtype_generator()
+    return torcharrow.DataFrame(data, dtype=dtype, columns=columns, device=device)
+
+
 @functional_datapipe("dataframe")
 class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDataFrame[T_co]]
     r"""
@@ -63,8 +69,9 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
     def __new__(
         cls,
         source_dp: IterDataPipe[T_co],
-        dataframe_size: int = 1000,
-        dtype=None,
+        dataframe_size: int = 1000,  # or Page Size
+        dtype=None,  # Optional[torcharrow.dtypes.DType]
+        dtype_generator = None,
         columns: Optional[List[str]] = None,
         device: str = "",
     ):
@@ -75,7 +82,7 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
             )
         # In this version, DF tracing is not available, which would allow DataPipe to run DataFrame operations
         batch_dp = source_dp.batch(dataframe_size)
-        df_dp = batch_dp.map(partial(torcharrow.dataframe, dtype=dtype, columns=columns, device=device))
+        df_dp = batch_dp.map(partial(_construct_dataframe, dtype=dtype, dtype_generator=dtype_generator, columns=columns, device=device))
         return df_dp
 
 
