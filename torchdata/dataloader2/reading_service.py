@@ -132,6 +132,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             persistent_workers=self.persistent_workers,
             # TODO: `collate_fn` is necessary until we stop using DLv1 https://github.com/pytorch/data/issues/530
             collate_fn=_collate_no_op,
+            batch_size=1,  # This reading service assume batching is done via DataPipe
         )
         return IterableWrapper(self.dl_)  # type: ignore[return-value]
 
