@@ -30,7 +30,7 @@ T_co = TypeVar("T_co")
 def _construct_dataframe(data, dtype=None, dtype_generator=None, columns=None, device=None):
     if dtype is None:
         dtype = dtype_generator()
-    return torcharrow.DataFrame(data, dtype=dtype, columns=columns, device=device)
+    return torcharrow.dataframe(data, dtype=dtype, columns=columns, device=device)
 
 
 @functional_datapipe("dataframe")
