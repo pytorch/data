@@ -1,0 +1,56 @@
+package:
+  name: torchdata
+  version: "{{ environ.get('BUILD_VERSION') }}"
+
+source:
+  path: "{{ environ.get('SOURCE_ROOT_DIR') }}"
+
+requirements:
+  # TODO: Figure out how to add build-time python dependency (PyTorch for codegen)
+  build:
+    - cmake
+    - ninja
+    # TODO: Enable AWSSDK on windows
+    # - {{ compiler('c') }} # [win]
+    # - {{ compiler('cxx') }} # [win]
+    - python
+    - setuptools
+    - cpuonly
+    - curl # [not win]
+    - openssl # [unix]
+    - zlib # [unix]
+    {{ environ.get('CONDA_PYTORCH_BUILD_CONSTRAINT') }}
+  run:
+    - python
+    - urllib3>=1.25
+    - requests
+    - portalocker>=2.0.0
+    {{ environ.get('CONDA_PYTORCH_CONSTRAINT') }}
+
+build:
+  string: py{{py}}
+  script_env:
+    - BUILD_VERSION
+    - BUILD_S3
+
+test:
+  imports:
+    - torchdata
+    - torchdata.datapipes
+  source_files:
+    - test
+  requires:
+    - cpuonly
+    - pytest
+    - expecttest
+    - fsspec
+    # The following packages are not on the default conda channel
+    # - iopath
+    # - rarfile
+
+about:
+  home: https://github.com/pytorch/data
+  license: BSD
+  license_file: LICENSE
+  summary: "Common modular data loading primitives for easily constructing flexible and performant data pipelines for PyTorch users"
+  doc_url: https://pytorch.org/data

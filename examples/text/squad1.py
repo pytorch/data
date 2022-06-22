@@ -1,5 +1,11 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os
+from functools import partial
 
 from torchdata.datapipes.iter import FileOpener, HttpReader, IterableWrapper, IterDataPipe
 
@@ -22,6 +28,10 @@ NUM_LINES = {
 
 
 DATASET_NAME = "SQuAD1"
+
+
+def _path_fn(root, path):
+    return os.path.join(root, os.path.basename(path))
 
 
 class _ParseSQuADQAData(IterDataPipe):
@@ -55,8 +65,8 @@ def SQuAD1(root, split):
     url_dp = IterableWrapper([URL[split]])
     # cache data on-disk with sanity check
     cache_dp = url_dp.on_disk_cache(
-        filepath_fn=lambda x: os.path.join(root, os.path.basename(x)),
-        hash_dict={os.path.join(root, os.path.basename(URL[split])): MD5[split]},
+        filepath_fn=partial(_path_fn, root),
+        hash_dict={_path_fn(root, URL[split]): MD5[split]},
         hash_type="md5",
     )
     cache_dp = HttpReader(cache_dp).end_caching(mode="wb", same_filepath_fn=True)

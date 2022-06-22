@@ -4,8 +4,10 @@ ignore = E203,E402,E501,F821,W503,W504,
 per-file-ignores =
     __init__.py: F401, F403, F405
     test/*: F401
+    _extension.py: F401
 exclude =
     ./.git,
     ./third_party,
     *.pyi,
     ./examples/text/utils.py, # Copy from TorchText
+    docs/source/conf.py,

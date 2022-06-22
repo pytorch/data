@@ -1,16 +1,15 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
-import os
-import sys
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import unittest
 
 import torch.multiprocessing as mp
 
 from torch.testing._internal.common_utils import slowTest
 from torch.utils.data import DataLoader
-
-current = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(current)
-sys.path.insert(0, ROOT)
 
 from torchtext.datasets import AG_NEWS, AmazonReviewPolarity, IMDB, SQuAD1, SQuAD2, SST2
 

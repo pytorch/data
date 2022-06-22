@@ -1,6 +1,12 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import hashlib
 import os
+import sys
 import tempfile
 from typing import List, Tuple, TypeVar
 
@@ -8,6 +14,11 @@ from torchdata.datapipes.iter import IterDataPipe
 
 
 T_co = TypeVar("T_co", covariant=True)
+
+
+IS_LINUX = sys.platform == "linux"
+IS_WINDOWS = sys.platform == "win32"
+IS_MACOS = sys.platform == "darwin"
 
 
 class IDP_NoLen(IterDataPipe):

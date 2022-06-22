@@ -1,4 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os
 import unittest
 import warnings
@@ -43,8 +48,8 @@ class TestDataFrame(expecttest.TestCase):
     def _write_parquet_files(self):
         # Create TorchArrow DataFrames
         DTYPE = dt.Struct([dt.Field("Values", dt.int32)])
-        df1 = torcharrow.DataFrame([(i,) for i in range(10)], dtype=DTYPE)
-        df2 = torcharrow.DataFrame([(i,) for i in range(100)], dtype=DTYPE)
+        df1 = torcharrow.dataframe([(i,) for i in range(10)], dtype=DTYPE)
+        df2 = torcharrow.dataframe([(i,) for i in range(100)], dtype=DTYPE)
         # Write them as parquet files
         for i, df in enumerate([df1, df2]):
             fname = f"df{i}.parquet"
@@ -79,15 +84,15 @@ class TestDataFrame(expecttest.TestCase):
         # Functional Test: DataPipe correctly converts into a single TorchArrow DataFrame
         df_dp = source_dp.dataframe(dtype=DTYPE)
         df = list(df_dp)[0]
-        expected_df = torcharrow.DataFrame([(i,) for i in range(10)], dtype=DTYPE)
+        expected_df = torcharrow.dataframe([(i,) for i in range(10)], dtype=DTYPE)
         self._compare_dataframes(expected_df, df)
 
         # Functional Test: DataPipe correctly converts into multiple TorchArrow DataFrames, based on size argument
         df_dp = DataFrameMaker(source_dp, dataframe_size=5, dtype=DTYPE)
         dfs = list(df_dp)
         expected_dfs = [
-            torcharrow.DataFrame([(i,) for i in range(5)], dtype=DTYPE),
-            torcharrow.DataFrame([(i,) for i in range(5, 10)], dtype=DTYPE),
+            torcharrow.dataframe([(i,) for i in range(5)], dtype=DTYPE),
+            torcharrow.dataframe([(i,) for i in range(5, 10)], dtype=DTYPE),
         ]
         for exp_df, act_df in zip(expected_dfs, dfs):
             self._compare_dataframes(exp_df, act_df)
@@ -122,7 +127,7 @@ class TestDataFrame(expecttest.TestCase):
         # Functional Test: Correctly generate TorchArrow DataFrame from CSV
         DTYPE = dt.Struct([dt.Field("key", dt.string), dt.Field("item", dt.string)])
         df_dp = csv_dict_parser_dp.dataframe(dtype=DTYPE, columns=["key", "item"])
-        expected_dfs = [torcharrow.DataFrame([{"key": "a", "item": "1"}, {"key": "b", "item": "2"}], dtype=DTYPE)]
+        expected_dfs = [torcharrow.dataframe([{"key": "a", "item": "1"}, {"key": "b", "item": "2"}], dtype=DTYPE)]
         for exp_df, act_df in zip(expected_dfs, list(df_dp)):
             self._compare_dataframes(exp_df, act_df)
 
@@ -139,8 +144,8 @@ class TestDataFrame(expecttest.TestCase):
         source_dp = FileLister(self.temp_dir.name, masks="df*.parquet")
         parquet_df_dp = ParquetDataFrameLoader(source_dp, dtype=DTYPE)
         expected_dfs = [
-            torcharrow.DataFrame([(i,) for i in range(10)], dtype=DTYPE),
-            torcharrow.DataFrame([(i,) for i in range(100)], dtype=DTYPE),
+            torcharrow.dataframe([(i,) for i in range(10)], dtype=DTYPE),
+            torcharrow.dataframe([(i,) for i in range(100)], dtype=DTYPE),
         ]
         for exp_df, act_df in zip(expected_dfs, list(parquet_df_dp)):
             self._compare_dataframes(exp_df, act_df)
@@ -148,7 +153,7 @@ class TestDataFrame(expecttest.TestCase):
         # Functional Test: correctly read from a Parquet file that was a merged DataFrame
         merged_source_dp = FileLister(self.temp_dir.name, masks="merged.parquet")
         merged_parquet_df_dp = ParquetDataFrameLoader(merged_source_dp, dtype=DTYPE)
-        expected_merged_dfs = [torcharrow.DataFrame([(i,) for i in chain(range(10), range(100))], dtype=DTYPE)]
+        expected_merged_dfs = [torcharrow.dataframe([(i,) for i in chain(range(10), range(100))], dtype=DTYPE)]
         for exp_df, act_df in zip(expected_merged_dfs, list(merged_parquet_df_dp)):
             self._compare_dataframes(exp_df, act_df)
 
@@ -163,3 +168,7 @@ class TestDataFrame(expecttest.TestCase):
             self._compare_dataframes(exp_df, act_df)
         for exp_df, act_df in zip(expected_dfs, res_after_reset):
             self._compare_dataframes(exp_df, act_df)
+
+
+if __name__ == "__main__":
+    unittest.main()

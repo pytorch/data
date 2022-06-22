@@ -1,4 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import hashlib
 
 from io import IOBase
@@ -16,18 +21,31 @@ U = Union[D_type, StreamWrapper]
 @functional_datapipe("check_hash")
 class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, U]]):
     r"""
-    Iterable DataPipe that computes and checks the hash of each file, from an input
-    DataPipe of tuples of file name and data (stream). If the hashes match the given hash
-    in the dictionary, it yields a tuple of file name and data (stream). Otherwise, it raises an error.
+    Computes and checks the hash of each file, from an input DataPipe of tuples of file name and
+    data/stream (functional name: ``check_hash``). If the hashes match the given hash
+    in the dictionary, it yields a tuple of file name and data/stream. Otherwise, it will raise an error.
 
     Args:
-        source_datapipe: IterDataPipe with tuples of file name and data (stream)
-        hash_dict: Dict that maps file names to their corresponding hashes
+        source_datapipe: IterDataPipe with tuples of file name and data/stream
+        hash_dict: Dictionary that maps file names to their corresponding hashes
         hash_type: The type of hash function to apply
         rewind: Rewind the stream after using the stream to compute the hash (this
             does not work with non-seekable stream, e.g. HTTP)
 
-    Usage: dp = dp.check_hash({'train.py':'0d8b94d9fa9fb1ad89b9e3da9e1521495dca558fc5213b0fd7fd7b71c23f9921'})
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper, FileOpener
+        >>> expected_MD5_hash = "bb9675028dd39d2dd2bf71002b93e66c"
+        File is from "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
+        >>> file_dp = FileOpener(IterableWrapper(["LICENSE.txt"]), mode='rb')
+        >>> # An exception is only raised when the hash doesn't match, otherwise (path, stream) is returned
+        >>> check_hash_dp = file_dp.check_hash({"LICENSE.txt": expected_MD5_hash}, "md5", rewind=True)
+        >>> reader_dp = check_hash_dp.readlines()
+        >>> it = iter(reader_dp)
+        >>> path, line = next(it)
+        >>> path
+        LICENSE.txt
+        >>> line
+        b'BSD 3-Clause License'
     """
 
     def __init__(

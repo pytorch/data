@@ -1,4 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 from collections import defaultdict
 from typing import Dict, Iterator, List, Union
 
@@ -9,17 +14,39 @@ from torchdata.datapipes.iter import IterDataPipe
 @functional_datapipe("rows2columnar")
 class Rows2ColumnarIterDataPipe(IterDataPipe[Dict]):
     r"""
-    Iterable DataPipe that accepts an input DataPipe with batches of data, and each row
-    within a batch must either be a Dict or a List. This DataPipe processes one batch
-    at a time and yields a Dict for each batch, with column names as keys and lists of
-    corresponding values from each row as values.
+    Accepts an input DataPipe with batches of data, and processes one batch
+    at a time and yields a Dict for each batch, with ``column_names`` as keys and lists of
+    corresponding values from each row as values (functional name: ``rows2columnar``).
 
-    Note: If column names are not given and each row is a Dict, the keys of that Dict will be used as column names.
+    Within the input DataPipe, each row within a batch must either be a `Dict` or a `List`
+
+    Note:
+        If ``column_names`` are not given and each row is a `Dict`, the keys of that Dict will be used as column names.
 
     Args:
         source_datapipe: a DataPipe where each item is a batch. Within each batch,
-            there are rows and each row is a List or Dict.
-        column_names: a function that joins a list of lines together
+            there are rows and each row is a `List` or `Dict`
+        column_names: if each element in a batch contains `Dict`, ``column_names`` act as a filter for matching keys;
+            otherwise, these are used as keys to for the generated `Dict` of each batch
+
+    Example:
+        >>> # Each element in a batch is a `Dict`
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> dp = IterableWrapper([[{'a': 1}, {'b': 2, 'a': 1}], [{'a': 1, 'b': 200}, {'b': 2, 'c': 3, 'a': 100}]])
+        >>> row2col_dp = dp.rows2columnar()
+        >>> list(row2col_dp)
+        [defaultdict(<class 'list'>, {'a': [1, 1], 'b': [2]}),
+         defaultdict(<class 'list'>, {'a': [1, 100], 'b': [200, 2], 'c': [3]})]
+        >>> row2col_dp = dp.rows2columnar(column_names=['a'])
+        >>> list(row2col_dp)
+        [defaultdict(<class 'list'>, {'a': [1, 1]}),
+         defaultdict(<class 'list'>, {'a': [1, 100]})]
+        >>> # Each element in a batch is a `List`
+        >>> dp = IterableWrapper([[[0, 1, 2, 3], [4, 5, 6, 7]]])
+        >>> row2col_dp = dp.rows2columnar(column_names=["1st_in_batch", "2nd_in_batch", "3rd_in_batch", "4th_in_batch"])
+        >>> list(row2col_dp)
+        [defaultdict(<class 'list'>, {'1st_in_batch': [0, 4], '2nd_in_batch': [1, 5],
+                                      '3rd_in_batch': [2, 6], '4th_in_batch': [3, 7]})]
     """
     column_names: List[str]
 
