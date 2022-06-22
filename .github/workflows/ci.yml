@@ -69,6 +69,8 @@ jobs:
           pip3 install --pre torch -f "${{ steps.pytorch_channel.outputs.value }}"
           pip3 install cmake ninja
           echo "/home/runner/.local/bin" >> $GITHUB_PATH
+      - name: Run AIStore local deployment
+        uses: NVIDIA/aistore@master
       - name: Build TorchData
         run: |
           python setup.py install
