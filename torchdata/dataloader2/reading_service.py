@@ -88,6 +88,10 @@ class CheckpointableReadingServiceInterface(ReadingServiceInterface):
         pass
 
 
+def _collate_no_op(batch):
+    return batch[0]
+
+
 class MultiProcessingReadingService(ReadingServiceInterface):
     num_workers: int
     pin_memory: bool
@@ -126,6 +130,8 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             multiprocessing_context=self.multiprocessing_context,
             prefetch_factor=self.prefetch_factor,
             persistent_workers=self.persistent_workers,
+            # TODO: `collate_fn` is necessary until we stop using DLv1 https://github.com/pytorch/data/issues/530
+            collate_fn=_collate_no_op,
         )
         return IterableWrapper(self.dl_)  # type: ignore[return-value]
 
