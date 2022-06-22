@@ -1,4 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import contextlib
 import csv
 from typing import IO, Iterator, Tuple, TypeVar, Union
@@ -67,18 +72,28 @@ class PlainTextReaderHelper:
 @functional_datapipe("readlines")
 class LineReaderIterDataPipe(IterDataPipe[Union[Str_Or_Bytes, Tuple[str, Str_Or_Bytes]]]):
     r"""
-    Iterable DataPipe that accepts a DataPipe consisting of tuples of file name and string data stream,
-    and for each line in the stream, it yields a tuple of file name and the line
+    Accepts a DataPipe consisting of tuples of file name and string data stream, and for each line in the
+    stream, yields a tuple of file name and the line (functional name: ``readlines``).
 
     Args:
         source_datapipe: a DataPipe with tuples of file name and string data stream
         skip_lines: number of lines to skip at the beginning of each file
-        strip_newline: if True, the new line character will be stripped
-        decode: if True, this will decode the contents of the file based on the specified encoding
-        encoding: the character encoding of the files (default='utf-8')
+        strip_newline: if ``True``, the new line character will be stripped
+        decode: if ``True``, this will decode the contents of the file based on the specified ``encoding``
+        encoding: the character encoding of the files (`default='utf-8'`)
         errors: the error handling scheme used while decoding
-        return_path: if True, each line will return a tuple of path and contents, rather
+        return_path: if ``True``, each line will return a tuple of path and contents, rather
             than just the contents
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> import io
+        >>> text1 = "Line1\nLine2"
+        >>> text2 = "Line2,1\r\nLine2,2\r\nLine2,3"
+        >>> source_dp = IterableWrapper([("file1", io.StringIO(text1)), ("file2", io.StringIO(text2))])
+        >>> line_reader_dp = source_dp.readlines()
+        >>> list(line_reader_dp)
+        [('file1', 'Line1'), ('file1', 'Line2'), ('file2', 'Line2,1'), ('file2', 'Line2,2'), ('file2', 'Line2,3')]
     """
 
     def __init__(
@@ -145,19 +160,31 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
 @functional_datapipe("parse_csv")
 class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
     r"""
-    Iterable DataPipe that accepts a DataPipe consists of tuples of file name and CSV data stream.
-    This reads and returns the contents within the CSV files one row at a time (as a List
-    by default, depending on fmtparams).
+    Accepts a DataPipe consists of tuples of file name and CSV data stream,
+    reads and returns the contents within the CSV files one row at a time (functional name: ``parse_csv``).
+    Each output is a `List` by default, but it depends on ``fmtparams``.
 
     Args:
         source_datapipe: source DataPipe with tuples of file name and CSV data stream
         skip_lines: number of lines to skip at the beginning of each file
-        strip_newline: if True, the new line character will be stripped
-        decode: if True, this will decode the contents of the file based on the specified encoding
-        encoding: the character encoding of the files (default='utf-8')
+        strip_newline: if ``True``, the new line character will be stripped
+        decode: if ``True``, this will decode the contents of the file based on the specified ``encoding``
+        encoding: the character encoding of the files (`default='utf-8'`)
         errors: the error handling scheme used while decoding
-        return_path: if True, each line will return a tuple of path and contents, rather
+        return_path: if ``True``, each line will return a tuple of path and contents, rather
             than just the contents
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper, FileOpener
+        >>> import os
+        >>> def get_name(path_and_stream):
+        >>>     return os.path.basename(path_and_stream[0]), path_and_stream[1]
+        >>> datapipe1 = IterableWrapper(["1.csv", "empty.csv", "empty2.csv"])
+        >>> datapipe2 = FileOpener(datapipe1, mode="b")
+        >>> datapipe3 = datapipe2.map(get_name)
+        >>> csv_parser_dp = datapipe3.parse_csv()
+        >>> list(csv_parser_dp)
+        [['key', 'item'], ['a', '1'], ['b', '2'], []]
     """
 
     def __init__(
@@ -186,21 +213,34 @@ class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
 @functional_datapipe("parse_csv_as_dict")
 class CSVDictParserIterDataPipe(_CSVBaseParserIterDataPipe):
     r"""
-    Iterable DataPipe that accepts a DataPipe consists of tuples of file name and CSV data stream.
-    This reads and returns the contents within the CSV files one row at a time (as a Dict by default,
-    depending on fmtparams).
-    The first row of each file, unless skipped, will be used as the header; the contents of the header row
-    will be used as keys for the Dicts generated from the remaining rows.
+    Accepts a DataPipe consists of tuples of file name and CSV data stream, reads and returns the contents
+    within the CSV files one row at a time (functional name: ``parse_csv_as_dict``).
+
+    Each output is a `Dict` by default, but it depends on ``fmtparams``. The first row of each file, unless skipped,
+    will be used as the header; the contents of the header row will be used as keys for the `Dict`\s
+    generated from the remaining rows.
 
     Args:
         source_datapipe: source DataPipe with tuples of file name and CSV data stream
         skip_lines: number of lines to skip at the beginning of each file
-        strip_newline: if True, the new line character will be stripped
-        decode: if True, this will decode the contents of the file based on the specified encoding
-        encoding: the character encoding of the files (default='utf-8')
+        strip_newline: if ``True``, the new line character will be stripped
+        decode: if ``True``, this will decode the contents of the file based on the specified ``encoding``
+        encoding: the character encoding of the files (`default='utf-8'`)
         errors: the error handling scheme used while decoding
-        return_path: if True, each line will return a tuple of path and contents, rather
+        return_path: if ``True``, each line will return a tuple of path and contents, rather
             than just the contents
+
+    Example:
+        >>> from torchdata.datapipes.iter import FileLister, FileOpener
+        >>> import os
+        >>> def get_name(path_and_stream):
+        >>>     return os.path.basename(path_and_stream[0]), path_and_stream[1]
+        >>> datapipe1 = FileLister(".", "*.csv")
+        >>> datapipe2 = FileOpener(datapipe1, mode="b")
+        >>> datapipe3 = datapipe2.map(get_name)
+        >>> csv_dict_parser_dp = datapipe3.parse_csv_as_dict()
+        >>> list(csv_dict_parser_dp)
+        [{'key': 'a', 'item': '1'}, {'key': 'b', 'item': '2'}]
     """
 
     def __init__(

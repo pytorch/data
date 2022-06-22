@@ -1,4 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os.path
 import re
 
@@ -11,7 +16,7 @@ from torchdata.datapipes.iter import (
     IterKeyZipper,
     Mapper,
     RoutedDecoder,
-    TarArchiveReader,
+    TarArchiveLoader,
 )
 
 
@@ -90,14 +95,14 @@ def collate_sample(data):
 def Caltech101(root=ROOT):
     anns_dp = IterableWrapper([os.path.join(root, "Annotations.tar")])
     anns_dp = FileOpener(anns_dp, mode="b")
-    anns_dp = TarArchiveReader(anns_dp)
+    anns_dp = TarArchiveLoader(anns_dp)
     anns_dp = Filter(anns_dp, is_ann)
     anns_dp = RoutedDecoder(anns_dp, mathandler())
     anns_dp = Mapper(anns_dp, collate_ann)
 
     images_dp = IterableWrapper([os.path.join(root, "101_ObjectCategories.tar.gz")])
     images_dp = FileOpener(images_dp, mode="b")
-    images_dp = TarArchiveReader(images_dp)
+    images_dp = TarArchiveLoader(images_dp)
     images_dp = Filter(images_dp, is_not_background_image)
     images_dp = Filter(images_dp, is_not_rogue_image)
     images_dp = RoutedDecoder(images_dp, imagehandler("pil"))

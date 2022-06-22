@@ -1,4 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import io
 import os
 import unittest
@@ -6,9 +11,40 @@ import warnings
 
 import expecttest
 
-from _utils._common_utils_for_test import check_hash_fn, create_temp_dir
+import torchdata
 
-from torchdata.datapipes.iter import EndOnDiskCacheHolder, FileOpener, HttpReader, IterableWrapper, OnDiskCacheHolder
+from _utils._common_utils_for_test import check_hash_fn, create_temp_dir, IS_WINDOWS
+from torch.utils.data import DataLoader
+
+from torchdata.datapipes.iter import (
+    EndOnDiskCacheHolder,
+    FileOpener,
+    FSSpecFileLister,
+    FSSpecFileOpener,
+    HttpReader,
+    IterableWrapper,
+    OnDiskCacheHolder,
+    S3FileLister,
+    S3FileLoader,
+)
+
+try:
+    import fsspec
+    import s3fs
+
+    HAS_FSSPEC_S3 = True
+except ImportError:
+    HAS_FSSPEC_S3 = False
+skipIfNoFSSpecS3 = unittest.skipIf(not HAS_FSSPEC_S3, "no FSSpec with S3fs")
+
+try:
+    from torchdata._torchdata import S3Handler
+
+    HAS_AWS = True
+except ImportError:
+    HAS_AWS = False
+skipIfAWS = unittest.skipIf(HAS_AWS, "AWSSDK Enabled")
+skipIfNoAWS = unittest.skipIf(not HAS_AWS, "No AWSSDK Enabled")
 
 
 class TestDataPipeRemoteIO(expecttest.TestCase):
@@ -26,7 +62,9 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
         expected_file_name = "LICENSE"
         expected_MD5_hash = "bb9675028dd39d2dd2bf71002b93e66c"
-        http_reader_dp = HttpReader(IterableWrapper([file_url]))
+        query_params = {"auth": ("fake_username", "fake_password"), "allow_redirects": True}
+        timeout = 120
+        http_reader_dp = HttpReader(IterableWrapper([file_url]), timeout=timeout, **query_params)
 
         # Functional Test: test if the Http Reader can download and read properly
         reader_dp = http_reader_dp.readlines()
@@ -43,9 +81,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         self.assertTrue(io.BufferedReader, type(stream))
 
         # __len__ Test: returns the length of source DataPipe
-        source_dp = IterableWrapper([file_url])
-        http_dp = HttpReader(source_dp)
-        self.assertEqual(1, len(http_dp))
+        self.assertEqual(1, len(http_reader_dp))
 
     def test_on_disk_cache_holder_iterdatapipe(self):
         tar_file_url = "https://raw.githubusercontent.com/pytorch/data/main/test/_fakedata/csv.tar.gz"
@@ -113,7 +149,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         file_cache_dp = FileOpener(file_cache_dp, mode="rb")
 
         # Functional API
-        file_cache_dp = file_cache_dp.read_from_tar()
+        file_cache_dp = file_cache_dp.load_from_tar()
 
         def _csv_filepath_fn(csv_path):
             return os.path.join(self.temp_dir.name, "csv", os.path.basename(csv_path))
@@ -128,14 +164,173 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
 
         cached_it = iter(file_cache_dp)
         for expected_csv_path in _gen_filepath_fn(expected_file_name):
-            # File doesn't exist on disk
-            self.assertFalse(os.path.exists(expected_csv_path))
+
+            # Check disabled due to some elements of prefetching inside of on_disck_cache
+            # self.assertFalse(os.path.exists(expected_csv_path))
 
             csv_path = next(cached_it)
 
             # File is cached to disk
             self.assertTrue(os.path.exists(expected_csv_path))
             self.assertEqual(expected_csv_path, csv_path)
+
+        # Cache decompressed archive but only check root directory
+        root_dir = "temp"
+
+        file_cache_dp = OnDiskCacheHolder(
+            tar_cache_dp, filepath_fn=lambda tar_path: os.path.join(os.path.dirname(tar_path), root_dir)
+        )
+        file_cache_dp = FileOpener(file_cache_dp, mode="rb").load_from_tar()
+        file_cache_dp = file_cache_dp.end_caching(
+            mode="wb",
+            filepath_fn=lambda file_path: os.path.join(self.temp_dir.name, root_dir, os.path.basename(file_path)),
+        )
+
+        cached_it = iter(file_cache_dp)
+        for i in range(3):
+            expected_csv_path = os.path.join(self.temp_dir.name, root_dir, f"{i}.csv")
+
+            # File doesn't exist on disk
+            # Check disabled due to some elements of prefetching inside of on_disck_cache
+            # self.assertFalse(os.path.exists(expected_csv_path))
+
+            csv_path = next(cached_it)
+
+            # File is cached to disk
+            self.assertTrue(os.path.exists(expected_csv_path))
+            self.assertEqual(expected_csv_path, csv_path)
+
+        if not IS_WINDOWS:
+            dl = DataLoader(file_cache_dp, num_workers=3, multiprocessing_context="fork", batch_size=1)
+            expected = [[os.path.join(self.temp_dir.name, root_dir, f"{i}.csv")] for i in range(3)] * 3
+            res = list(dl)
+            self.assertEqual(sorted(expected), sorted(res))
+
+    @skipIfNoFSSpecS3
+    def test_fsspec_io_iterdatapipe(self):
+        input_list = [
+            (["s3://ai2-public-datasets"], 39),  # bucket without '/'
+            (["s3://ai2-public-datasets/charades/"], 18),  # bucket with '/'
+            (
+                [
+                    "s3://ai2-public-datasets/charades/Charades_v1.zip",
+                    "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
+                    "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
+                    "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
+                ],
+                4,
+            ),  # multiple files
+        ]
+        for urls, num in input_list:
+            fsspec_lister_dp = FSSpecFileLister(IterableWrapper(urls), anon=True)
+            self.assertEqual(sum(1 for _ in fsspec_lister_dp), num, f"{urls} failed")
+
+        url = "s3://ai2-public-datasets/charades/"
+        fsspec_loader_dp = FSSpecFileOpener(FSSpecFileLister(IterableWrapper([url]), anon=True), anon=True)
+        res = list(fsspec_loader_dp)
+        self.assertEqual(len(res), 18, f"{input} failed")
+
+    @skipIfAWS
+    def test_disabled_s3_io_iterdatapipe(self):
+        file_urls = ["s3://ai2-public-datasets"]
+        with self.assertRaisesRegex(ModuleNotFoundError, "TorchData must be built with"):
+            _ = S3FileLister(IterableWrapper(file_urls))
+        with self.assertRaisesRegex(ModuleNotFoundError, "TorchData must be built with"):
+            _ = S3FileLoader(IterableWrapper(file_urls))
+
+    @skipIfNoAWS
+    def test_s3_io_iterdatapipe(self):
+        # S3FileLister: different inputs
+        input_list = [
+            [["s3://ai2-public-datasets"], 77],  # bucket without '/'
+            [["s3://ai2-public-datasets/"], 77],  # bucket with '/'
+            [["s3://ai2-public-datasets/charades"], 18],  # folder without '/'
+            [["s3://ai2-public-datasets/charades/"], 18],  # folder without '/'
+            [["s3://ai2-public-datasets/charad"], 18],  # prefix
+            [
+                [
+                    "s3://ai2-public-datasets/charades/Charades_v1",
+                    "s3://ai2-public-datasets/charades/Charades_vu17",
+                ],
+                12,
+            ],  # prefixes
+            [["s3://ai2-public-datasets/charades/Charades_v1.zip"], 1],  # single file
+            [
+                [
+                    "s3://ai2-public-datasets/charades/Charades_v1.zip",
+                    "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
+                    "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
+                    "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
+                ],
+                4,
+            ],  # multiple files
+            [
+                [
+                    "s3://ai2-public-datasets/charades/Charades_v1.zip",
+                    "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
+                    "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
+                    "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
+                    "s3://ai2-public-datasets/charades/Charades_vu17",
+                ],
+                10,
+            ],  # files + prefixes
+        ]
+        for input in input_list:
+            s3_lister_dp = S3FileLister(IterableWrapper(input[0]), region="us-west-2")
+            self.assertEqual(sum(1 for _ in s3_lister_dp), input[1], f"{input[0]} failed")
+
+        # S3FileLister: prefixes + different region
+        file_urls = [
+            "s3://aft-vbi-pds/bin-images/111",
+            "s3://aft-vbi-pds/bin-images/222",
+        ]
+        s3_lister_dp = S3FileLister(IterableWrapper(file_urls), region="us-east-1")
+        self.assertEqual(sum(1 for _ in s3_lister_dp), 2212, f"{input} failed")
+
+        # S3FileLister: incorrect inputs
+        input_list = [
+            [""],
+            ["ai2-public-datasets"],
+            ["s3://"],
+            ["s3:///bin-images"],
+        ]
+        for input in input_list:
+            with self.assertRaises(ValueError, msg=f"{input} should raise ValueError."):
+                s3_lister_dp = S3FileLister(IterableWrapper(input), region="us-east-1")
+                for _ in s3_lister_dp:
+                    pass
+
+        # S3FileLoader: loader
+        input = [
+            "s3://charades-tar-shards/charades-video-0.tar",
+            "s3://charades-tar-shards/charades-video-1.tar",
+        ]  # multiple files
+        s3_loader_dp = S3FileLoader(input, region="us-west-2")
+        self.assertEqual(sum(1 for _ in s3_loader_dp), 2, f"{input} failed")
+
+        input = [["s3://aft-vbi-pds/bin-images/100730.jpg"], 1]
+        s3_loader_dp = S3FileLoader(input[0], region="us-east-1")
+        self.assertEqual(sum(1 for _ in s3_loader_dp), input[1], f"{input[0]} failed")
+
+        # S3FileLoader: incorrect inputs
+        input_list = [
+            [""],
+            ["ai2-public-datasets"],
+            ["s3://"],
+            ["s3:///bin-images"],
+            ["s3://ai2-public-datasets/bin-image"],
+        ]
+        for input in input_list:
+            with self.assertRaises(ValueError, msg=f"{input} should raise ValueError."):
+                s3_loader_dp = S3FileLoader(input, region="us-east-1")
+                for _ in s3_loader_dp:
+                    pass
+
+        # integration test
+        input = [["s3://charades-tar-shards/"], 10]
+        s3_lister_dp = S3FileLister(IterableWrapper(input[0]), region="us-west-2")
+        s3_loader_dp = S3FileLoader(s3_lister_dp, region="us-west-2")
+        self.assertEqual(sum(1 for _ in s3_loader_dp), input[1], f"{input[0]} failed")
 
 
 if __name__ == "__main__":

@@ -1,9 +1,14 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os.path
 
 from torch.utils.data.datapipes.utils.decoder import imagehandler
 
-from torchdata.datapipes.iter import FileOpener, IterableWrapper, Mapper, RoutedDecoder, TarArchiveReader
+from torchdata.datapipes.iter import FileOpener, IterableWrapper, Mapper, RoutedDecoder, TarArchiveLoader
 
 
 # Download size is ~1.2 GB so fake data is provided
@@ -24,7 +29,7 @@ def collate_sample(data):
 def Caltech256(root=ROOT):
     dp = IterableWrapper([os.path.join(root, "256_ObjectCategories.tar")])
     dp = FileOpener(dp, mode="b")
-    dp = TarArchiveReader(dp)
+    dp = TarArchiveLoader(dp)
     dp = RoutedDecoder(dp, imagehandler("pil"))
     return Mapper(dp, collate_sample)
 

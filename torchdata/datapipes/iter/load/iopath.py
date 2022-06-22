@@ -1,12 +1,17 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os
 
-from typing import Any, Callable, Iterator, List, Optional, Tuple, Union
+from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple, Union
 
 from torch.utils.data.datapipes.utils.common import match_masks
 
 from torchdata.datapipes import functional_datapipe
-from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
 
 try:
@@ -34,25 +39,29 @@ def _create_default_pathmanager():
     return pathmgr
 
 
+@functional_datapipe("list_files_by_iopath")
 class IoPathFileListerIterDataPipe(IterDataPipe[str]):
-    r""":class:`IoPathFileListerIterDataPipe`.
-
-    Iterable DataPipe to list the contents of the directory at the provided `root` pathname or url,
-    and yields the full pathname or url for each file within the directory.
+    r"""
+    Lists the contents of the directory at the provided ``root`` pathname or URL,
+    and yields the full pathname or URL for each file within the directory.
 
     Args:
-        root: The root local filepath or url directory to list files from
+        root: The root local filepath or URL directory or list of roots to list files from
         masks: Unix style filter string or string list for filtering file name(s)
-        pathmgr: Custom iopath PathManager. If not specified, a default PathManager is created.
+        pathmgr: Custom ``iopath.PathManager``. If not specified, a default ``PathManager`` is created.
 
     Note:
-        Default PathManager currently supports local file path, normal HTTP url and OneDrive url.
-        S3 url is supported only with `iopath`>=0.1.9.
+        Default ``PathManager`` currently supports local file path, normal HTTP URL and OneDrive URL.
+        S3 URL is supported only with ``iopath``>=0.1.9.
+
+    Example:
+        >>> from torchdata.datapipes.iter import IoPathFileLister
+        >>> datapipe = IoPathFileLister(root=S3URL)
     """
 
     def __init__(
         self,
-        root: str,
+        root: Union[str, Sequence[str], IterDataPipe],
         masks: Union[str, List[str]] = "",
         *,
         pathmgr=None,
@@ -64,7 +73,14 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
                 "to install the package"
             )
 
-        self.root: str = root
+        if isinstance(root, str):
+            root = [
+                root,
+            ]
+        if not isinstance(root, IterDataPipe):
+            self.datapipe: IterDataPipe = IterableWrapper(root)  # type: ignore[assignment]
+        else:
+            self.datapipe = root
         self.pathmgr = _create_default_pathmanager() if pathmgr is None else pathmgr
         self.masks = masks
 
@@ -72,29 +88,34 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
         self.pathmgr.register_handler(handler, allow_override=allow_override)
 
     def __iter__(self) -> Iterator[str]:
-        if self.pathmgr.isfile(self.root):
-            yield self.root
-        else:
-            for file_name in self.pathmgr.ls(self.root):
-                if match_masks(file_name, self.masks):
-                    yield os.path.join(self.root, file_name)
+        for path in self.datapipe:
+            if self.pathmgr.isfile(path):
+                yield path
+            else:
+                for file_name in self.pathmgr.ls(path):
+                    if match_masks(file_name, self.masks):
+                        yield os.path.join(path, file_name)
 
 
-@functional_datapipe("open_file_by_iopath")
+@functional_datapipe("open_files_by_iopath")
 class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
-    r""":class:`IoPathFileOpenerIterDataPipe`.
-
-    Iterable DataPipe to open files from input datapipe which contains pathnames or URLs,
-    and yields a tuple of pathname and opened file stream.
+    r"""
+    Opens files from input datapipe which contains pathnames or URLs,
+    and yields a tuple of pathname and opened file stream (functional name: ``open_files_by_iopath``).
 
     Args:
-        source_datapipe: Iterable DataPipe that provides the pathnames or urls
-        mode: An optional string that specifies the mode in which the file is opened ('r' by default)
-        pathmgr: Custom iopath PathManager. If not specified, a default PathManager is created.
+        source_datapipe: Iterable DataPipe that provides the pathnames or URLs
+        mode: An optional string that specifies the mode in which the file is opened (``"r"`` by default)
+        pathmgr: Custom ``iopath.PathManager``. If not specified, a default ``PathManager`` is created.
 
     Note:
-        Default PathManager currently supports local file path, normal HTTP url and OneDrive url.
-        S3 url is supported only with `iopath`>=0.1.9.
+        Default ``PathManager`` currently supports local file path, normal HTTP URL and OneDrive URL.
+        S3 URL is supported only with `iopath`>=0.1.9.
+
+    Example:
+        >>> from torchdata.datapipes.iter import IoPathFileLister
+        >>> datapipe = IoPathFileLister(root=S3URL)
+        >>> file_dp = datapipe.open_files_by_iopath()
     """
 
     def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r", pathmgr=None) -> None:
@@ -121,22 +142,36 @@ class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         return len(self.source_datapipe)
 
 
+# Register for functional API for backward compatibility
+IterDataPipe.register_datapipe_as_function("open_file_by_iopath", IoPathFileOpenerIterDataPipe)
+
+
 @functional_datapipe("save_by_iopath")
 class IoPathSaverIterDataPipe(IterDataPipe[str]):
+
     r"""
-    Iterable DataPipe that takes in a DataPipe of tuples of metadata and data, saves the data
-    to the target path (generated by the filepath_fn and metadata), and yields the resulting path
-    by iopath
+    Takes in a DataPipe of tuples of metadata and data, saves the data
+    to the target path which is generated by the ``filepath_fn`` and metadata, and yields the resulting path
+    in `iopath` format (functional name: ``save_by_iopath``).
 
     Args:
         source_datapipe: Iterable DataPipe with tuples of metadata and data
-        mode: Mode in which the file will be opened for write the data ("w" by default)
-        filepath_fn: Function that takes in metadata nad returns the target path of the new file
-        pathmgr: Custom iopath PathManager. If not specified, a default PathManager is created.
+        mode: Mode in which the file will be opened for write the data (``"w"`` by default)
+        filepath_fn: Function that takes in metadata and returns the target path of the new file
+        pathmgr: Custom ``iopath.PathManager``. If not specified, a default ``PathManager`` is created.
 
     Note:
-        Default PathManager currently supports local file path, normal HTTP url and OneDrive url.
-        S3 url is supported only with `iopath`>=0.1.9.
+        Default ``PathManager`` currently supports local file path, normal HTTP URL and OneDrive URL.
+        S3 URL is supported only with `iopath`>=0.1.9.
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> def filepath_fn(name: str) -> str:
+        >>>     return S3URL + name
+        >>> name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
+        >>> source_dp = IterableWrapper(sorted(name_to_data.items()))
+        >>> iopath_saver_dp = source_dp.save_by_iopath(filepath_fn=filepath_fn, mode="wb")
+        >>> res_file_paths = list(iopath_saver_dp)
     """
 
     def __init__(
@@ -162,8 +197,10 @@ class IoPathSaverIterDataPipe(IterDataPipe[str]):
     def __iter__(self) -> Iterator[str]:
         for meta, data in self.source_datapipe:
             filepath = meta if self.filepath_fn is None else self.filepath_fn(meta)
-            with self.pathmgr.open(filepath, self.mode) as f:
-                f.write(data)
+            with iopath.file_lock(filepath):
+                if not os.path.exists(filepath):
+                    with self.pathmgr.open(filepath, self.mode) as f:
+                        f.write(data)
             yield filepath
 
     def register_handler(self, handler, allow_override=False):

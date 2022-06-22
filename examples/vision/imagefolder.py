@@ -1,11 +1,14 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import http.server
 import os
 import re
 import threading
 
-import torch
-import torch.utils.data.backward_compatibility
 import torchvision.datasets as datasets
 import torchvision.datasets.folder
 import torchvision.transforms as transforms
@@ -21,7 +24,7 @@ BATCH_SIZE = None
 
 data_transform = transforms.Compose(
     [
-        transforms.RandomSizedCrop(224),
+        transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
@@ -163,7 +166,6 @@ if __name__ == "__main__":
         batch_size=BATCH_SIZE,
         shuffle=False,
         num_workers=NUM_WORKERS,
-        worker_init_fn=torch.utils.data.backward_compatibility.worker_init_fn,
     )
     items = list(dl)
     assert len(items) == 6
@@ -181,7 +183,6 @@ if __name__ == "__main__":
         batch_size=BATCH_SIZE,
         shuffle=False,
         num_workers=NUM_WORKERS,
-        worker_init_fn=torch.utils.data.backward_compatibility.worker_init_fn,
     )
 
     try:

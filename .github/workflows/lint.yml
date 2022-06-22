@@ -2,7 +2,9 @@ name: Lint
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - release/*
   pull_request:
 
 jobs:
@@ -45,6 +47,7 @@ jobs:
           set -eux
           python -m pip install requests --user
           python -m pip install mypy==0.812 --user
+          python -m pip install graphviz --user
       - name: Build TorchData
         run: |
           set -eux
