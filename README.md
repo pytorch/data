@@ -208,10 +208,9 @@ the `DataLoader` as long as a `ShardingFiler` DataPipe exists in your pipeline. 
 
 Q: What is the upcoming plan for DataLoader?
 
-A: There will be a new version of DataLoader in the next release. At the high level, the plan is that DataLoader V2 will
-only be responsible for multiprocessing, distributed, and similar functionalities, not data processing logic. All data
-processing features, such as the shuffling and batching, will be moved out of DataLoader to DataPipe. At the same time,
-the current/old version of DataLoader should still be available and you can use DataPipes with that as well.
+A: DataLoader2 is in the prototype phase and more features are actively being developed. Please see the README file in
+`torchdata/dataloader2`. If you would like to experiment with it (or other prototype features), we encourage you to
+install the nightly version of this library.
 
 Q: Why is there an Error saying the specified DLL could not be found at the time of importing `portalocker`?
 
