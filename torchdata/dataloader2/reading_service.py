@@ -9,7 +9,7 @@ import functools
 import multiprocessing as mp
 import time
 from abc import ABC, abstractmethod
-from typing import Callable, List, Optional
+from typing import Any, Callable, List, Optional
 
 import torch
 from torch.utils.data import DataLoader
