@@ -149,6 +149,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
     def initialize(self, datapipe: IterDataPipe) -> IterDataPipe:
         if self.num_workers == 0:
+            # TODO(VitalyFedyunin): Warn and recommend usage of InPorcessReadingService
             return datapipe
         for worker_id in range(self.num_workers):
             # TODO(VitalyFedyunin): Separate into function, because we also need to apply distributed seed and call it inside process
