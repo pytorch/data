@@ -36,7 +36,7 @@ Note: refer to the official documentation for detailed installtion instructions 
 Please refer to the documentation:
 
 - [`S3FileLister`](https://pytorch.org/data/main/generated/torchdata.datapipes.iter.S3FileLister.html#s3filelister)
-- [`S3FileLister`](https://pytorch.org/data/main/generated/torchdata.datapipes.iter.S3FileLoader.html#s3fileloader)
+- [`S3FileLoader`](https://pytorch.org/data/main/generated/torchdata.datapipes.iter.S3FileLoader.html#s3fileloader)
 
 ### Note
 
