@@ -56,13 +56,13 @@ Vision
 
 Caltech 101
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-The `Caltech 101 dataset <http://www.vision.caltech.edu/Image_Datasets/Caltech101/>`_ contains pictures of objects
+The `Caltech 101 dataset <https://data.caltech.edu/records/20086>`_ contains pictures of objects
 belonging to 101 categories. Here is the
 `DataPipe implementation of Caltech 101 <https://github.com/pytorch/data/blob/main/examples/vision/caltech101.py>`_.
 
 Caltech 256
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-The `Caltech 256 dataset <http://www.vision.caltech.edu/Image_Datasets/Caltech256/>`_ contains 30607 images
+The `Caltech 256 dataset <https://data.caltech.edu/records/20087>`_ contains 30607 images
 from 256 categories. Here is the
 `DataPipe implementation of Caltech 256 <https://github.com/pytorch/data/blob/main/examples/vision/caltech256.py>`_.
 

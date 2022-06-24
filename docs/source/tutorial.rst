@@ -171,7 +171,7 @@ Note:
   operations such as decoding, in order to avoid repeating these expensive operations across worker/distributed processes.
 
 
-You can find more DataPipe implementation examples for various research domains `on this page <torchexamples.html>`_.
+You can find more DataPipe implementation examples for various research domains `on this page <examples.html>`_.
 
 
 Implementing a Custom DataPipe
