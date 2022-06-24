@@ -134,21 +134,10 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     def __init__(
         self,
         num_workers: int = 0,
-        #        pin_memory: bool = False,
-        #        timeout: float = 0,
-        #        worker_init_fn: Optional[Callable[[int], None]] = None,
         multiprocessing_context=None,
-        #        prefetch_factor: int = 2,
-        #        persistent_workers: bool = False,
     ) -> None:
         self.num_workers = num_workers
-        #       self.pin_memory = pin_memory
-        #       self.timeout = timeout
-        #       self.worker_init_fn = worker_init_fn
-        self.multiprocessing_context = multiprocessing_context or mp.get_context("fork")
-        #       self.prefetch_factor = prefetch_factor
-        #       self.persistent_workers = persistent_workers
-        #       self.dl_: Optional[DataLoader] = None
+        self.multiprocessing_context = multiprocessing_context
         self.processes = []
         self.datapipes = []
 
@@ -159,11 +148,14 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
 
     def initialize(self, datapipe: IterDataPipe) -> IterDataPipe:
+        if self.num_workers == 0:
+            return datapipe
         for worker_id in range(self.num_workers):
             # TODO(VitalyFedyunin): Separate into function, because we also need to apply distributed seed and call it inside process
             call_inside_process = functools.partial(self.init_datapipe_process, self.num_workers, worker_id)
+            ctx = mp.get_context(self.multiprocessing_context)
             (process, req_queue, res_queue) = communication.eventloop.SpawnProcessForDataPipeline(
-                self.multiprocessing_context, datapipe, call_inside_process
+                ctx, datapipe, call_inside_process
             )
             process.start()
             self.processes.append((process, req_queue, res_queue))  # These queues are independent

@@ -117,10 +117,18 @@ class DataLoader2ConsistencyTest(TestCase):
 
     @staticmethod
     def _get_mp_reading_service():
-        return MultiProcessingReadingService(num_workers=0)
+        return MultiProcessingReadingService(num_workers=2)
 
     @staticmethod
     def _get_proto_reading_service():
+        return PrototypeMultiProcessingReadingService(num_workers=2)
+
+    @staticmethod
+    def _get_mp_reading_service_zero_workers():
+        return MultiProcessingReadingService(num_workers=0)
+
+    @staticmethod
+    def _get_proto_reading_service_zero_workers():
         return PrototypeMultiProcessingReadingService(num_workers=0)
 
     def _collect_data(self, datapipe, reading_service_gen):
@@ -133,15 +141,25 @@ class DataLoader2ConsistencyTest(TestCase):
             result.append(row)
         return result
 
+    @staticmethod
+    def _no_op(x):
+        return x
+
     def test_dataloader2_batch_collate(self) -> None:
-        dp: IterDataPipe = IterableWrapper(range(100)).batch(2).collate()  # type: ignore[assignment]
+        dp: IterDataPipe = IterableWrapper(range(100)).batch(2).sharding_filter().collate(self._no_op)  # type: ignore[assignment]
         expected = self._collect_data(dp, reading_service_gen=self._get_no_reading_service)
 
-        reading_service_generators = (self._get_mp_reading_service, self._get_proto_reading_service)
+        reading_service_generators = (
+            self._get_mp_reading_service,
+            self._get_proto_reading_service,
+            self._get_mp_reading_service_zero_workers,
+            self._get_proto_reading_service_zero_workers,
+        )
         for reading_service_gen in reading_service_generators:
             actual = self._collect_data(dp, reading_service_gen=reading_service_gen)
             # TODO(VitalyFedyunin): This comparison only indicates that somethings is broken and not helping with debug
-            self.assertTrue(all(x.eq(y).all() for x, y in zip(expected, actual)))
+            self.assertEqual(expected, actual, reading_service_gen)
+            # self.assertTrue(all(x.eq(y).all() for x, y in zip(expected, actual)), reading_service_gen)
 
     def test_dataloader2_shuffle(self) -> None:
         # TODO
