@@ -123,12 +123,6 @@ class _IterateQueueDataPipes:
 
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     num_workers: int
-    #   pin_memory: bool
-    #   timeout: float
-    #   worker_init_fn: Optional[Callable[[int], None]]
-    #   prefetch_factor: int
-    #   persistent_workers: bool
-
     processes: List
     datapipes: List
 
