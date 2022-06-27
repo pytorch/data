@@ -328,36 +328,41 @@
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.S3FileLoader">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">S3FileLoader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">request_timeout_ms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multi_part_download</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.S3FileLoader" title="Permalink to this definition">¶</a></dt>
 <dd><p>Iterable DataPipe that loads Amazon S3 files from the given S3 URLs (functional name: <code class="docutils literal notranslate"><span class="pre">load_files_by_s3</span></code>).
-<code class="docutils literal notranslate"><span class="pre">S3FileLoader</span></code> iterates all given S3 URLs in <code class="docutils literal notranslate"><span class="pre">BytesIO</span></code> format with <code class="docutils literal notranslate"><span class="pre">(url,</span> <span class="pre">BytesIO)</span></code> tuples.
-You may also set <code class="docutils literal notranslate"><span class="pre">request_timeout_ms</span></code> (default 3000 ms in aws-sdk-cpp), <code class="docutils literal notranslate"><span class="pre">region</span></code>,
-<code class="docutils literal notranslate"><span class="pre">buffer_size</span></code> (default 120Mb), and <code class="docutils literal notranslate"><span class="pre">multi_part_download</span></code> (default to use multi-part downloading).</p>
+<code class="docutils literal notranslate"><span class="pre">S3FileLoader</span></code> iterates all given S3 URLs in <code class="docutils literal notranslate"><span class="pre">BytesIO</span></code> format with <code class="docutils literal notranslate"><span class="pre">(url,</span> <span class="pre">BytesIO)</span></code> tuples.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <ol class="arabic simple">
-<li><p>Input <strong>must</strong> be a list and S3 URLs must be valid.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">source_datapipe</span></code> <strong>must</strong> contain a list of valid S3 URLs.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">request_timeout_ms</span></code> and <code class="docutils literal notranslate"><span class="pre">region</span></code> will overwrite settings in the
 configuration file or environment variables.</p></li>
-<li><p>AWS_CPP_SDK is necessary to use the S3 DataPipe(s).</p></li>
 </ol>
 </div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_datapipe</strong> – a DataPipe that contains URLs to s3 files</p></li>
-<li><p><strong>requestTimeoutMs</strong> – optional, overwrite the default timeout setting for this datapipe</p></li>
-<li><p><strong>region</strong> – optional, overwrite the default region inferred from credentials for this datapipe</p></li>
+<li><p><strong>request_timeout_ms</strong> – timeout setting for each reqeust (3,000ms by default)</p></li>
+<li><p><strong>region</strong> – region for access files (inferred from credentials by default)</p></li>
+<li><p><strong>buffer_size</strong> – buffer size of each chunk to download large files progressively (128Mb by default)</p></li>
+<li><p><strong>multi_part_download</strong> – flag to split each chunk into small packets and download those packets in parallel (enabled by default)</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">S3FileLister</span><span class="p">,</span> <span class="n">S3FileLoader</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">s3_prefixes</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;s3://bucket-name/folder/&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dp_s3_urls</span> <span class="o">=</span> <span class="n">S3FileLister</span><span class="p">(</span><span class="n">s3_prefixes</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dp_s3_files</span> <span class="o">=</span> <span class="n">S3FileLoader</span><span class="p">(</span><span class="n">s3_urls</span><span class="p">)</span> <span class="c1"># outputs in (url, StreamWrapper(BytesIO))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># more datapipes to convert loaded bytes, e.g.</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">datapipe</span> <span class="o">=</span> <span class="n">dp_s3_files</span><span class="o">.</span><span class="n">parse_csv</span><span class="p">(</span><span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datapipe</span><span class="p">:</span> <span class="c1"># Start loading data</span>
-<span class="gp">... </span>    <span class="k">pass</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span><span class="p">,</span> <span class="n">S3FileLoader</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp_s3_urls</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([</span><span class="s1">&#39;s3://bucket-name/folder/&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span><span class="o">.</span><span class="n">list_files_by_s3</span><span class="p">()</span>
+<span class="go"># In order to make sure data are shuffled and sharded in the</span>
+<span class="go"># distributed environment, `shuffle`  and `sharding_filter`</span>
+<span class="go"># are required. For detail, please check our tutorial in:</span>
+<span class="go"># https://pytorch.org/data/main/tutorial.html#working-with-dataloader</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sharded_s3_urls</span> <span class="o">=</span> <span class="n">dp_s3_urls</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span><span class="o">.</span><span class="n">sharding_filter</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp_s3_files</span> <span class="o">=</span> <span class="n">S3FileLoader</span><span class="p">(</span><span class="n">sharded_s3_urls</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">url</span><span class="p">,</span> <span class="n">fd</span> <span class="ow">in</span> <span class="n">dp_s3_files</span><span class="p">:</span> <span class="c1"># Start loading data</span>
+<span class="gp">... </span>    <span class="n">data</span> <span class="o">=</span> <span class="n">fd</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="go"># Functional API</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp_s3_files</span> <span class="o">=</span> <span class="n">sharded_s3_urls</span><span class="o">.</span><span class="n">load_files_by_s3</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">256</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">url</span><span class="p">,</span> <span class="n">fd</span> <span class="ow">in</span> <span class="n">dp_s3_files</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">data</span> <span class="o">=</span> <span class="n">fd</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
 </pre></div>
 </div>
 </dd></dl>

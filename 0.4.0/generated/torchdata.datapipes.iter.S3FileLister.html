@@ -328,18 +328,15 @@
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.S3FileLister">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">S3FileLister</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">request_timeout_ms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.S3FileLister" title="Permalink to this definition">¶</a></dt>
 <dd><p>Iterable DataPipe that lists Amazon S3 file URLs with the given prefixes (functional name: <code class="docutils literal notranslate"><span class="pre">list_files_by_s3</span></code>).
-Acceptable prefixes include <code class="docutils literal notranslate"><span class="pre">s3://bucket-name</span></code>, <code class="docutils literal notranslate"><span class="pre">s3://bucket-name/</span></code>, <code class="docutils literal notranslate"><span class="pre">s3://bucket-name/folder</span></code>,
-<code class="docutils literal notranslate"><span class="pre">s3://bucket-name/folder/</span></code>, and <code class="docutils literal notranslate"><span class="pre">s3://bucket-name/prefix</span></code>. You may also set <code class="docutils literal notranslate"><span class="pre">length</span></code>, <code class="docutils literal notranslate"><span class="pre">request_timeout_ms</span></code>
-(default 3000 ms in aws-sdk-cpp), and <code class="docutils literal notranslate"><span class="pre">region</span></code>.</p>
+Acceptable prefixes include <code class="docutils literal notranslate"><span class="pre">s3://bucket-name</span></code>, <code class="docutils literal notranslate"><span class="pre">s3://bucket-name/</span></code>, <code class="docutils literal notranslate"><span class="pre">s3://bucket-name/folder</span></code>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <ol class="arabic simple">
-<li><p>Input <strong>must</strong> be a list and direct S3 URLs are skipped.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">source_datapipe</span></code> <strong>must</strong> contain a list of valid S3 URLs</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">length</span></code> is <cite>-1</cite> by default, and any call to <code class="docutils literal notranslate"><span class="pre">__len__()</span></code> is invalid, because the length is unknown
 until all files are iterated.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">request_timeout_ms</span></code> and <code class="docutils literal notranslate"><span class="pre">region</span></code> will overwrite settings in the configuration file or
 environment variables.</p></li>
-<li><p>AWS_CPP_SDK is necessary to use the S3 DataPipe(s).</p></li>
 </ol>
 </div>
 <dl class="field-list simple">
@@ -347,19 +344,20 @@ environment variables.</p></li>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_datapipe</strong> – a DataPipe that contains URLs/URL prefixes to s3 files</p></li>
 <li><p><strong>length</strong> – Nominal length of the datapipe</p></li>
-<li><p><strong>requestTimeoutMs</strong> – optional, overwrite the default timeout setting for this datapipe</p></li>
-<li><p><strong>region</strong> – optional, overwrite the default region inferred from credentials for this datapipe</p></li>
+<li><p><strong>request_timeout_ms</strong> – timeout setting for each reqeust (3,000ms by default)</p></li>
+<li><p><strong>region</strong> – region for access files (inferred from credentials by default)</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">S3FileLister</span><span class="p">,</span> <span class="n">S3FileLoader</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">s3_prefixes</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;s3://bucket-name/folder/&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span><span class="p">,</span> <span class="n">S3FileLister</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s3_prefixes</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([</span><span class="s1">&#39;s3://bucket-name/folder/&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">dp_s3_urls</span> <span class="o">=</span> <span class="n">S3FileLister</span><span class="p">(</span><span class="n">s3_prefixes</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dp_s3_files</span> <span class="o">=</span> <span class="n">S3FileLoader</span><span class="p">(</span><span class="n">s3_urls</span><span class="p">)</span> <span class="c1"># outputs in (url, StreamWrapper(BytesIO))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># more datapipes to convert loaded bytes, e.g.</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">datapipe</span> <span class="o">=</span> <span class="n">dp_s3_files</span><span class="o">.</span><span class="n">parse_csv</span><span class="p">(</span><span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datapipe</span><span class="p">:</span> <span class="c1"># Start loading data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dp_s3_urls</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">pass</span>
+<span class="go"># Functional API</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp_s3_urls</span> <span class="o">=</span> <span class="n">s3_prefixes</span><span class="o">.</span><span class="n">list_files_by_s3</span><span class="p">(</span><span class="n">request_timeout_ms</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dp_s3_urls</span><span class="p">:</span>
 <span class="gp">... </span>    <span class="k">pass</span>
 </pre></div>
 </div>
