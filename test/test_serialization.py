@@ -374,15 +374,13 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             else:
                 dp_no_attribute_error = (iterdp.OnDiskCacheHolder,)
                 try:
-                    with warnings.catch_warnings(record=True) as wa:
+                    with self.assertWarnsRegex(UserWarning, r"^Local function is not supported by pickle"):
                         datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
-                        self.assertEqual(len(wa), 1)
-                        self.assertRegex(str(wa[0].message), r"^Lambda function is not supported for pickle")
-                        if isinstance(datapipe, dp_no_attribute_error):
+                    if isinstance(datapipe, dp_no_attribute_error):
+                        _ = pickle.dumps(datapipe)
+                    else:
+                        with self.assertRaises(AttributeError):
                             _ = pickle.dumps(datapipe)
-                        else:
-                            with self.assertRaises(AttributeError):
-                                _ = pickle.dumps(datapipe)
                 except Exception as e:
                     print(f"{dpipe} is failing.")
                     raise e

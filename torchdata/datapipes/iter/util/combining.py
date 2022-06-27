@@ -9,7 +9,7 @@ from collections import OrderedDict
 from typing import Callable, Iterator, Optional, TypeVar
 
 from torch.utils.data import functional_datapipe, IterDataPipe, MapDataPipe
-from torch.utils.data.datapipes.utils.common import _check_lambda_fn
+from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -64,14 +64,14 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
             raise TypeError(f"ref_datapipe must be a IterDataPipe, but its type is {type(ref_datapipe)} instead.")
         self.source_datapipe = source_datapipe
         self.ref_datapipe = ref_datapipe
-        _check_lambda_fn(key_fn)
+        _check_unpickable_fn(key_fn)
         self.key_fn = key_fn
         if ref_key_fn is not None:
-            _check_lambda_fn(ref_key_fn)
+            _check_unpickable_fn(ref_key_fn)
         self.ref_key_fn = key_fn if ref_key_fn is None else ref_key_fn
         self.keep_key = keep_key
         if merge_fn is not None:
-            _check_lambda_fn(merge_fn)
+            _check_unpickable_fn(merge_fn)
         self.merge_fn = merge_fn
         if buffer_size is not None and buffer_size <= 0:
             raise ValueError("'buffer_size' is required to be either None or a positive integer.")
@@ -185,10 +185,10 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
             raise TypeError(f"map_datapipe must be a MapDataPipe, but its type is {type(map_datapipe)} instead.")
         self.source_iterdatapipe: IterDataPipe = source_iterdatapipe
         self.map_datapipe: MapDataPipe = map_datapipe
-        _check_lambda_fn(key_fn)
+        _check_unpickable_fn(key_fn)
         self.key_fn: Callable = key_fn
         if merge_fn is not None:
-            _check_lambda_fn(merge_fn)
+            _check_unpickable_fn(merge_fn)
         self.merge_fn: Optional[Callable] = merge_fn
         self.length: int = -1
 
