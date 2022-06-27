@@ -103,21 +103,22 @@ class _IterateQueueDataPipes:
         self.datapipes = datapipes
 
     def __iter__(self):
-        # TODO(VitalyFedyunin): This can traverse pipes in any order, so undeterministic
-        not_available = False
+        # TODO(VitalyFedyunin): This is slow as it does not sends data requests ahead.
         exclude_datapipes: List[Any] = []
         while len(exclude_datapipes) < len(self.datapipes):
             for dp in self.datapipes:
                 if dp not in exclude_datapipes:
-                    try:
-                        value = dp.nonblocking_next()
-                        yield value
-                    except StopIteration:
-                        exclude_datapipes.append(dp)
-                    except communication.iter.NotAvailable:
-                        not_available = True
-            if not_available:
-                time.sleep(0.001)
+                    forever = True
+                    while forever:
+                        try:
+                            value = dp.nonblocking_next()
+                            yield value
+                            forever = False
+                        except StopIteration:
+                            exclude_datapipes.append(dp)
+                            forever = False
+                        except communication.iter.NotAvailable:
+                            time.sleep(0.001)
 
 
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
