@@ -15,4 +15,5 @@ from torchdata.datapipes.map import MapDataPipe
 __all__ = ["DataPipe", "DataPipeGraph", "traverse"]
 
 DataPipe = Union[IterDataPipe, MapDataPipe]
+# TODO(VitalyFedyunin): This type is actually confusing, consider renaming to DataPipeGraphTraverse
 DataPipeGraph = Dict[DataPipe, "DataPipeGraph"]  # type: ignore[misc]

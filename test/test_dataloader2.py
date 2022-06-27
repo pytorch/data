@@ -159,7 +159,6 @@ class DataLoader2ConsistencyTest(TestCase):
             actual = self._collect_data(dp, reading_service_gen=reading_service_gen)
             # TODO(VitalyFedyunin): This comparison only indicates that somethings is broken and not helping with debug
             self.assertEqual(expected, actual, reading_service_gen)
-            # self.assertTrue(all(x.eq(y).all() for x, y in zip(expected, actual)), reading_service_gen)
 
     def test_dataloader2_shuffle(self) -> None:
         # TODO

@@ -12,10 +12,11 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, List, Optional
 
 import torch
+import torchdata.dataloader2.graph as graph
 from torch.utils.data import DataLoader
 
 from torchdata.dataloader2 import communication
-from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
+from torchdata.datapipes.iter import IterableWrapper, IterDataPipe, ShardingFilter
 
 
 class ReadingServiceInterface(ABC):
@@ -186,6 +187,103 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
         for process, req_queue, res_queue in self.processes:
             clean_me(process, req_queue, res_queue)
+
+        self.processes = []
+
+
+class Prototype2MultiProcessingReadingService(ReadingServiceInterface):
+    num_workers: int
+    #   pin_memory: bool
+    #   timeout: float
+    #   worker_init_fn: Optional[Callable[[int], None]]
+    #   prefetch_factor: int
+    #   persistent_workers: bool
+
+    processes: List
+    datapipes: List
+
+    def __init__(
+        self,
+        num_workers: int = 0,
+        multiprocessing_context=None,
+    ) -> None:
+        self.num_workers = num_workers
+        # TODO(VitalyFedyunin): Should be one of 'fork', 'spawn'
+        self.multiprocessing_context = multiprocessing_context
+        self.processes = []
+        self.datapipes = []
+
+    @staticmethod
+    def init_datapipe_process(num_workers, worker_id, datapipe):
+        # TODO(VitalyFedyunin): Add distributed support
+        # TODO(VitalyFedyunin): Add shuffle determinism support
+        torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
+
+    @staticmethod
+    def connect_sharding_datapipe_to_queue(req_queue, res_queue, call_after_fn, datapipe):
+        print("reconnect to ", req_queue, res_queue)
+        call_after_fn(datapipe)
+
+    def initialize(self, datapipe: IterDataPipe) -> IterDataPipe:
+
+        if self.num_workers == 0:
+            # TODO(VitalyFedyunin): Warn and recommend usage of InPorcessReadingService
+            return datapipe
+
+        ctx = mp.get_context(self.multiprocessing_context)
+
+        pre_shard_graph = graph.clone_datapipe(datapipe)
+        graph_traverse = graph.traverse(pre_shard_graph)
+        print(graph_traverse)
+        shard_dps = graph.find_dps(graph_traverse, ShardingFilter)
+        print(shard_dps)
+        assert len(shard_dps) == 1
+        pre_shard_dp = shard_dps[0].source_datapipe
+        forked_dps = pre_shard_dp.fork(self.num_workers)
+        call_inside_process = functools.partial(self.init_datapipe_process, 1, 0)
+        process, pipes_and_queues = communication.eventloop.SpawnProcessForMultipleDataPipelines(
+            ctx, forked_dps, call_inside_process
+        )
+        # Take care about termination of the separate process
+        for _, req_queue, res_queue in pipes_and_queues:
+            self.processes.append((process, req_queue, res_queue))
+
+        for worker_id, pipe_and_queues in zip(range(self.num_workers), pipes_and_queues):
+
+            # TODO(VitalyFedyunin): Separate into function, because we also need to apply distributed seed and call it inside process
+            call_inside_process = functools.partial(self.init_datapipe_process, self.num_workers, worker_id)
+
+            call_inside_process = functools.partial(
+                self.connect_sharding_datapipe_to_queue, pipe_and_queues[1], pipe_and_queues[2], call_inside_process
+            )
+
+            (process, req_queue, res_queue) = communication.eventloop.SpawnProcessForDataPipeline(
+                ctx, datapipe, call_inside_process
+            )
+            process.start()
+            self.processes.append((process, req_queue, res_queue))  # These queues are independent
+            local_datapipe = communication.iter.QueueWrapper(
+                communication.protocol.IterDataPipeQueueProtocolClient(req_queue, res_queue)
+            )
+            self.datapipes.append(local_datapipe)
+
+        return IterableWrapper(_IterateQueueDataPipes(self.datapipes), deepcopy=False)  # type: ignore[return-value]
+
+    def initialize_iteration(self) -> None:
+        for dp in self.datapipes:
+            dp.reset_iterator()
+
+    def __del__(self):
+        self.finalize()
+
+    def finalize(self) -> None:
+        # TODO(VitalyFedyunin): Check if anyone stuck with messages
+        for process, req_queue, res_queue in self.processes:
+            req_queue.put(communication.messages.TerminateRequest())
+
+        for process, req_queue, res_queue in self.processes:
+            _ = res_queue.get()
+            process.join()
 
         self.processes = []
 
