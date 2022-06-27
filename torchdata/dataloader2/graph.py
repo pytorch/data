@@ -5,12 +5,20 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import pickle
 from typing import List, Type
 
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.map import MapDataPipe
 
 from ._graph_utils import DataPipe, DataPipeGraph, traverse
+
+
+# Make a copy of the graph
+def clone_datapipe(datapipe: DataPipe) -> DataPipe:
+    # TODO(VitalyFedyunin): Unify it with all dill operations
+    datapipe = pickle.loads(pickle.dumps(datapipe))
+    return datapipe
 
 
 # In case that there will be multiple datapipe needs to be adapted

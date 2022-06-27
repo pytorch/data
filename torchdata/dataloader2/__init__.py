@@ -9,6 +9,7 @@ from .dataloader2 import DataLoader2
 from .error import PauseIteration
 from .reading_service import (
     MultiProcessingReadingService,
+    Prototype2MultiProcessingReadingService,
     PrototypeMultiProcessingReadingService,
     ReadingServiceInterface,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "DataLoader2",
     "MultiProcessingReadingService",
     "PauseIteration",
+    "Prototype2MultiProcessingReadingService",
     "PrototypeMultiProcessingReadingService",
     "ReadingServiceInterface",
     "ShuffleSpec",

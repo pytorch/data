@@ -109,10 +109,12 @@ def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_re
 
         if isinstance(request, communication.messages.ResetIteratorRequest):
             source_datapipe.reset_iterator()
+            print("Reset iterator ", source_datapipe)
             protocol.response_reset_iterator()
 
         elif isinstance(request, communication.messages.TerminateRequest):
             forever = False
+            print("Terminated ", source_datapipe)
             protocol.response_terminate()
 
         elif isinstance(request, communication.messages.GetNextRequest):
