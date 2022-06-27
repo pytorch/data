@@ -94,7 +94,7 @@ class S3FileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         # https://pytorch.org/data/main/tutorial.html#working-with-dataloader
         >>> sharded_s3_urls = dp_s3_urls.shuffle().sharding_filter()
         >>> dp_s3_files = S3FileLoader(sharded_s3_urls)
-        >>> for url, fd in datapipe: # Start loading data
+        >>> for url, fd in dp_s3_files: # Start loading data
         ...     data = fd.read()
         # Functional API
         >>> dp_s3_files = sharded_s3_urls.load_files_by_s3(buffer_size=256)
