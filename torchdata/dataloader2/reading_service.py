@@ -137,6 +137,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         multiprocessing_context=None,
     ) -> None:
         self.num_workers = num_workers
+        # TODO(VitalyFedyunin): Should be one of 'fork', 'spawn'
         self.multiprocessing_context = multiprocessing_context
         self.processes = []
         self.datapipes = []
