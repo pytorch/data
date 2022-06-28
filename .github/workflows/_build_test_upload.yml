@@ -215,7 +215,7 @@ jobs:
           python -m twine upload \
             --username __token__ \
             --password "$PYPI_TOKEN" \
-            dist/torchdata*.whl
+            torchdata*.whl
 
   conda_build_test:
     needs: get_release_type
