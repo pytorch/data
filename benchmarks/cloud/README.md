@@ -13,8 +13,9 @@ https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-cli-cre
 
 ```sh
  aws cloudformation create-stack \
-  --stack-name myteststack \
+  --stack-name torchdatabenchmark \
   --template-body ec2.yml \
+  --parameters ParameterKey=InstanceTypeParameter,ParameterValue=p3.2xlarge ParameterKey=DiskType,ParameterValue=gp3
 ```
 
 ## Ssh into machine and run job 
