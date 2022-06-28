@@ -14,7 +14,7 @@ usage: run_benchmark.py [-h] [--dataset DATASET] [--model_name MODEL_NAME] [--ba
 ```
 
 ## Available metrics
-* [ ] PyTorch profiler
+* [ ] PyTorch profiler - won't be possible until H2 2022
 * [x] Total time
 * [x] Time per batch
 * [x] Time per epoch
