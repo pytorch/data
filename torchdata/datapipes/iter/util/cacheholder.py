@@ -27,7 +27,7 @@ except ImportError as e:
     raise
 
 
-from torch.utils.data.datapipes.utils.common import _check_lambda_fn, DILL_AVAILABLE
+from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, DILL_AVAILABLE
 
 from torch.utils.data.graph import traverse
 from torchdata.datapipes import functional_datapipe
@@ -184,7 +184,8 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     ):
         self.source_datapipe = source_datapipe
 
-        _check_lambda_fn(filepath_fn)
+        if filepath_fn is not None:
+            _check_unpickable_fn(filepath_fn)
         filepath_fn = _generator_to_list(filepath_fn) if inspect.isgeneratorfunction(filepath_fn) else filepath_fn
 
         if hash_dict is not None and hash_type not in ("sha256", "md5"):

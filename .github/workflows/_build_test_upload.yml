@@ -137,8 +137,13 @@ jobs:
               pkginfo $pkg
               if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
                 auditwheel show $pkg
+                auditwheel repair $pkg --plat manylinux2014_x86_64 -w wheelhouse
               fi
           done
+          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            mv dist temp
+            mv wheelhousr dist
+          fi
       - name: Install TorchData Wheel
         shell: bash
         env:
@@ -216,7 +221,7 @@ jobs:
           python -m twine upload \
             --username __token__ \
             --password "$PYPI_TOKEN" \
-            dist/torchdata*.whl
+            torchdata*.whl
 
   conda_build_test:
     needs: get_release_type
