@@ -30,6 +30,7 @@ from torchdata.datapipes.iter import (
     IterKeyZipper,
     LineReader,
     MapKeyZipper,
+    MapTemplate,
     MaxTokenBucketizer,
     ParagraphAggregator,
     Rows2Columnar,
@@ -64,7 +65,36 @@ def test_torchdata_pytorch_consistency() -> None:
         raise AssertionError(msg + "\n".join(sorted(missing_datapipes)))
 
 
+class TestDP(MapTemplate):
+    def map(self, data):
+        return data + 1
+
+
 class TestIterDataPipe(expecttest.TestCase):
+    def test_maptemplate(self):
+        source_dp = IterableWrapper(range(10))
+        modified_dp = TestDP(source_dp)
+        expected = [i + 1 for i in range(10)]
+        self.assertEqual(expected, list(modified_dp))
+
+        source_dp_2 = IterableWrapper(range(10))
+        source_dp = IterableWrapper(range(10)).zip(source_dp_2)
+        modified_dp = TestDP(source_dp, input_col=0)
+        expected = [(i + 1, i) for i in range(10)]
+        self.assertEqual(expected, list(modified_dp))
+
+        source_dp_2 = IterableWrapper(range(10))
+        source_dp = IterableWrapper(range(10)).zip(source_dp_2)
+        modified_dp = TestDP(source_dp, input_col=1)
+        expected = [(i, i + 1) for i in range(10)]
+        self.assertEqual(expected, list(modified_dp))
+
+        source_dp_2 = IterableWrapper(range(10))
+        source_dp = IterableWrapper(range(10)).zip(source_dp_2)
+        modified_dp = TestDP(source_dp, input_col=1, output_col=-1)
+        expected = [(i, i, i + 1) for i in range(10)]
+        self.assertEqual(expected, list(modified_dp))
+
     def test_in_memory_cache_holder_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(10))
         cache_dp = source_dp.in_memory_cache(size=5)
