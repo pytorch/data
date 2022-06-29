@@ -72,7 +72,7 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
     def __new__(
         cls,
         source_dp: IterDataPipe[T_co],
-        dataframe_size: int = 1000,  # or Page Size
+        dataframe_size: int = 1000,
         dtype=None,  # Optional[torcharrow.dtypes.DType]
         dtype_generator=None,
         columns: Optional[List[str]] = None,
