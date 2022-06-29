@@ -56,10 +56,13 @@ class XzFileLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
             try:
                 extracted_fobj = lzma.open(data_stream, mode="rb")  # type: ignore[call-overload]
                 new_pathname = pathname.rstrip(".xz")
-                yield new_pathname, StreamWrapper(extracted_fobj)  # type: ignore[misc]
+                yield new_pathname, StreamWrapper(extracted_fobj, data_stream)  # type: ignore[misc]
             except Exception as e:
                 warnings.warn(f"Unable to extract files from corrupted xz/lzma stream {pathname} due to: {e}, abort!")
                 raise e
+            finally:
+                if isinstance(data_stream, StreamWrapper):
+                    data_stream.autoclose()
 
     def __len__(self) -> int:
         if self.length == -1:

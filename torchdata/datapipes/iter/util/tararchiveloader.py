@@ -67,10 +67,13 @@ class TarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                         warnings.warn(f"failed to extract file {tarinfo.name} from source tarfile {pathname}")
                         raise tarfile.ExtractError
                     inner_pathname = os.path.normpath(os.path.join(pathname, tarinfo.name))
-                    yield inner_pathname, StreamWrapper(extracted_fobj)  # type: ignore[misc]
+                    yield inner_pathname, StreamWrapper(extracted_fobj, data_stream, name=inner_pathname)  # type: ignore[misc]
             except Exception as e:
                 warnings.warn(f"Unable to extract files from corrupted tarfile stream {pathname} due to: {e}, abort!")
                 raise e
+            finally:
+                if isinstance(data_stream, StreamWrapper):
+                    data_stream.autoclose()
 
     def __len__(self) -> int:
         if self.length == -1:

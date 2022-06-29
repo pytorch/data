@@ -11,6 +11,8 @@ from typing import Callable, Iterator, Optional, TypeVar
 from torch.utils.data import functional_datapipe, IterDataPipe, MapDataPipe
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
 
+from torchdata.datapipes.utils.janitor import janitor
+
 T_co = TypeVar("T_co", covariant=True)
 
 
@@ -108,6 +110,14 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
                 yield key, res
             else:
                 yield res
+
+        for remaining in ref_it:
+            janitor(remaining)
+
+        # TODO(VItalyFedyunin): This should be Exception or warn when debug mode is enabled
+        if len(self.buffer) > 0:
+            for k, v in self.buffer.items():
+                janitor(v)
 
     def __len__(self) -> int:
         return len(self.source_datapipe)

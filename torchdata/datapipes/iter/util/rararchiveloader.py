@@ -107,7 +107,9 @@ class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
                 inner_path = os.path.join(path, info.filename)
                 file_obj = rar.open(info)
 
-                yield inner_path, StreamWrapper(file_obj)  # type: ignore[misc]
+                yield inner_path, StreamWrapper(file_obj, stream)  # type: ignore[misc]
+            if isinstance(stream, StreamWrapper):
+                stream.autoclose()
 
     def __len__(self) -> int:
         if self.length == -1:
