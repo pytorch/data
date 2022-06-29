@@ -9,7 +9,7 @@ import warnings
 from typing import Callable, Dict, Optional
 
 from torch.utils.data import IterDataPipe, MapDataPipe
-from torch.utils.data.datapipes.utils.common import _check_lambda_fn, DILL_AVAILABLE
+from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, DILL_AVAILABLE
 
 if DILL_AVAILABLE:
     import dill
@@ -52,7 +52,8 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
         if not isinstance(datapipe, IterDataPipe):
             raise TypeError(f"IterToMapConverter can only apply on IterDataPipe, but found {type(datapipe)}")
         self.datapipe = datapipe
-        _check_lambda_fn(key_value_fn)
+        if key_value_fn is not None:
+            _check_unpickable_fn(key_value_fn)
         self.key_value_fn = key_value_fn  # type: ignore[assignment]
         self._map = None
         self._length = -1
