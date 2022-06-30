@@ -5,14 +5,14 @@
 # LICENSE file in the root directory of this source tree.
 
 import json
-from typing import Dict, IO, Iterator, Tuple
+from typing import IO
 
 from torchdata.datapipes import functional_datapipe
-from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.iter import IterDataPipe, MapTemplate
 
 
 @functional_datapipe("parse_json_files")
-class JsonParserIterDataPipe(IterDataPipe[Tuple[str, Dict]]):
+class JsonParserIterDataPipe(MapTemplate):
     r"""
     Reads from JSON data streams and yields a tuple of file name and JSON data (functional name: ``parse_json_files``).
 
@@ -33,15 +33,13 @@ class JsonParserIterDataPipe(IterDataPipe[Tuple[str, Dict]]):
         [('1.json', ['foo', {'bar': ['baz', None, 1.0, 2]}]), ('2.json', {'__complex__': True, 'real': 1, 'imag': 2})]
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[Tuple[str, IO]], **kwargs) -> None:
-        self.source_datapipe: IterDataPipe[Tuple[str, IO]] = source_datapipe
+    def __init__(self, source_datapipe: IterDataPipe, input_col=1, output_col=None, **kwargs) -> None:
+        super().__init__(source_datapipe, input_col=input_col, output_col=output_col)
         self.kwargs = kwargs
 
-    def __iter__(self) -> Iterator[Tuple[str, Dict]]:
-        for file_name, stream in self.source_datapipe:
+    def _map(self, stream: IO):
+        try:
             data = stream.read()
+            return json.loads(data, **self.kwargs)
+        finally:
             stream.close()
-            yield file_name, json.loads(data, **self.kwargs)
-
-    def __len__(self) -> int:
-        return len(self.source_datapipe)
