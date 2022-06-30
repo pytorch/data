@@ -70,6 +70,10 @@ class TestDP(MapTemplate):
         return data + 1
 
 
+def boom(x):
+    yield from range(x)
+
+
 class TestIterDataPipe(expecttest.TestCase):
     def test_maptemplate(self):
         source_dp = IterableWrapper(range(10))
@@ -93,6 +97,18 @@ class TestIterDataPipe(expecttest.TestCase):
         source_dp = IterableWrapper(range(10)).zip(source_dp_2)
         modified_dp = TestDP(source_dp, input_col=1, output_col=-1)
         expected = [(i, i, i + 1) for i in range(10)]
+        self.assertEqual(expected, list(modified_dp))
+
+    def test_flatmapper_proto(self):
+        source_dp = IterableWrapper(range(4))
+        modified_dp = source_dp.flatmap_proto(fn=boom)
+        expected = [0, 0, 1, 0, 1, 2]
+        self.assertEqual(expected, list(modified_dp))
+
+        source_dp_2 = IterableWrapper(range(4))
+        source_dp = IterableWrapper(range(4)).zip(source_dp_2)
+        modified_dp = source_dp.flatmap_proto(fn=boom, input_col=0)
+        expected = [(0, 1), (0, 2), (1, 2), (0, 3), (1, 3), (2, 3)]
         self.assertEqual(expected, list(modified_dp))
 
     def test_in_memory_cache_holder_iterdatapipe(self) -> None:
