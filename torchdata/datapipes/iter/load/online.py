@@ -43,6 +43,7 @@ def _get_response_from_http(
                 r = session.get(url, stream=True, proxies=proxies, **query_params)
             else:
                 r = session.get(url, timeout=timeout, stream=True, proxies=proxies, **query_params)
+        r.raise_for_status()
         return url, StreamWrapper(r.raw)
     except HTTPError as e:
         raise Exception(f"Could not get the file. [HTTP Error] {e.response}.")
