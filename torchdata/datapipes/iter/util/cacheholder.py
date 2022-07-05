@@ -302,10 +302,10 @@ class _WaitPendingCacheItemIterDataPipe(IterDataPipe):
             start = time.time()
             while _is_promise_pending(promise_filename):
                 time.sleep(0.01)
-                if time.time() - start > timeout:
+                if time.time() - start > self.timeout:
                     raise Exception(
                         f"OnDiskCache Exception: {filename} expected to be written by different process, "
-                        + f"but file is not ready in {timeout} seconds."
+                        + f"but file is not ready in {self.timeout} seconds."
                     )
             yield filename
 
