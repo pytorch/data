@@ -50,7 +50,16 @@ class Shuffle(Adapter):
 
 
 class CacheTimeout(Adapter):
-    r""" """
+    r"""
+    CacheTimeout DataPipes adapter allows control over timeouts of all existing EndOnDiskCacheHolder (``end_caching``)
+    DataPipes in the graph. Usefull when cached pipeline takes to long to execute (ex. slow file downloading).
+
+    Args:
+        timeout: int - amount of seconds parallel processes will wait for cached files to appear.
+
+    Example:
+        >>>  dl = DataLoader2(dp, [CacheTimeout(600)])
+    """
 
     def __init__(self, timeout=None):
         if timeout is None:
