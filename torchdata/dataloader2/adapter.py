@@ -9,9 +9,11 @@ from abc import abstractmethod
 import torch
 
 from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.iter.util.cacheholder import _WaitPendingCacheItemIterDataPipe
 
 __all__ = [
     "Adapter",
+    "CacheTimeout",
     "Shuffle",
 ]
 
@@ -45,3 +47,22 @@ class Shuffle(Adapter):
 
     def __call__(self, datapipe: IterDataPipe) -> IterDataPipe:
         return torch.utils.data.graph_settings.apply_shuffle_settings(datapipe, shuffle=self.enable)
+
+
+class CacheTimeout(Adapter):
+    r""" """
+
+    def __init__(self, timeout=None):
+        if timeout is None:
+            raise ValueError("timeout should be integer")
+        self.timeout = timeout
+
+    def __call__(self, datapipe: IterDataPipe) -> IterDataPipe:
+        graph = torch.utils.data.graph.traverse(datapipe, only_datapipe=True)
+        all_pipes = torch.utils.data.graph_settings.get_all_graph_pipes(graph)
+        cache_locks = {pipe for pipe in all_pipes if isinstance(pipe, _WaitPendingCacheItemIterDataPipe)}
+
+        for cache_lock in cache_locks:
+            cache_lock.set_timeout(self.timeout)
+
+        return datapipe

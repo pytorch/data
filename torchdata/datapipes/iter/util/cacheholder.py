@@ -296,6 +296,9 @@ class _WaitPendingCacheItemIterDataPipe(IterDataPipe):
         self.source_datapipe = source_datapipe
         self.timeout = timeout
 
+    def set_timeout(self, timeout):
+        self.timeout = timeout
+
     def __iter__(self):
         for filename in self.source_datapipe:
             promise_filename = _find_promise_file(filename)
