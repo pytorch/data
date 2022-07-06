@@ -100,5 +100,26 @@ class DataLoader2Test(TestCase):
         restored_data_loader.shutdown()
 
 
+class DataLoader2ConsistencyTest(TestCase):
+    r"""
+    These tests ensure that the behaviors of `DataLoader2` are consistent across `ReadingServices` and potentially
+    with `DataLoaderV1`.
+    """
+
+    def test_dataloader2_batch_collate(self) -> None:
+        dp: IterDataPipe = IterableWrapper(range(10)).batch(2).collate()  # type: ignore[assignment]
+
+        dl_no_rs: DataLoader2 = DataLoader2(dp)
+
+        rs = MultiProcessingReadingService(num_workers=0)
+        dl_multi_rs: DataLoader2 = DataLoader2(dp, reading_service=rs)
+
+        self.assertTrue(all(x.eq(y).all() for x, y in zip(dl_no_rs, dl_multi_rs)))
+
+    def test_dataloader2_shuffle(self) -> None:
+        # TODO
+        pass
+
+
 if __name__ == "__main__":
     unittest.main()

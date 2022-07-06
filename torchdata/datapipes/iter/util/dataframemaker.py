@@ -27,6 +27,12 @@ if DILL_AVAILABLE:
 T_co = TypeVar("T_co")
 
 
+def _construct_dataframe(data, dtype=None, dtype_generator=None, columns=None, device=None):
+    if dtype is None:
+        dtype = dtype_generator()
+    return torcharrow.dataframe(data, dtype=dtype, columns=columns, device=device)
+
+
 @functional_datapipe("dataframe")
 class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDataFrame[T_co]]
     r"""
@@ -41,6 +47,9 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
         source_dp: IterDataPipe containing rows of data
         dataframe_size: number of rows of data within each DataFrame, page size can be option
         dtype: specify the `TorchArrow` dtype for the DataFrame, use ``torcharrow.dtypes.DType``
+        dtype_generator: function with no input argument that generates a torcharrow.dtypes.DType,
+            which overrides dtype if both are given. This is useful for when the desired dtype is
+            not serializable.
         columns: List of str that specifies the column names of the DataFrame
         device: specify the device on which the DataFrame will be stored
 
@@ -64,7 +73,8 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
         cls,
         source_dp: IterDataPipe[T_co],
         dataframe_size: int = 1000,
-        dtype=None,
+        dtype=None,  # Optional[torcharrow.dtypes.DType]
+        dtype_generator=None,
         columns: Optional[List[str]] = None,
         device: str = "",
     ):
@@ -75,7 +85,9 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
             )
         # In this version, DF tracing is not available, which would allow DataPipe to run DataFrame operations
         batch_dp = source_dp.batch(dataframe_size)
-        df_dp = batch_dp.map(partial(torcharrow.dataframe, dtype=dtype, columns=columns, device=device))
+        df_dp = batch_dp.map(
+            partial(_construct_dataframe, dtype=dtype, dtype_generator=dtype_generator, columns=columns, device=device)
+        )
         return df_dp
 
 
