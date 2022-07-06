@@ -29,6 +29,7 @@ class CompressionType(Enum):
     BZIP2 = "bz2"
 
 
+# TODO(VitalyFedyunin): Candidate for MapTemplate
 @functional_datapipe("decompress")
 class DecompressorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
