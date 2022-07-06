@@ -73,7 +73,7 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
         cls,
         source_dp: IterDataPipe[T_co],
         dataframe_size: int = 1000,
-        dtype=None,  # Optional[torcharrow.dtypes.DType]
+        dtype=None,
         dtype_generator=None,
         columns: Optional[List[str]] = None,
         device: str = "",
