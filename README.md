@@ -204,14 +204,14 @@ A: Multi-process data loading is still handled by the `DataLoader`, see the
 [DataLoader documentation for more details](https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading).
 As of PyTorch version >= 1.12.0 (TorchData version >= 0.4.0), data sharding is automatically done for DataPipes within
 the `DataLoader` as long as a `ShardingFiler` DataPipe exists in your pipeline. Please see the
-[tutorial](https://pytorch.org/data/beta/tutorial.html#working-with-dataloader) for an example.
+[tutorial](https://pytorch.org/data/main/tutorial.html#working-with-dataloader) for an example.
 
 Q: What is the upcoming plan for DataLoader?
 
-A: There will be a new version of DataLoader in the next release. At the high level, the plan is that DataLoader V2 will
-only be responsible for multiprocessing, distributed, and similar functionalities, not data processing logic. All data
-processing features, such as the shuffling and batching, will be moved out of DataLoader to DataPipe. At the same time,
-the current/old version of DataLoader should still be available and you can use DataPipes with that as well.
+A: `DataLoader2` is in the prototype phase and more features are actively being developed. Please see the
+[README file in `torchdata/dataloader2`](https://github.com/pytorch/data/blob/main/torchdata/dataloader2/README.md). If
+you would like to experiment with it (or other prototype features), we encourage you to install the nightly version of
+this library.
 
 Q: Why is there an Error saying the specified DLL could not be found at the time of importing `portalocker`?
 
