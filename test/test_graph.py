@@ -175,12 +175,7 @@ class TestGraph(expecttest.TestCase):
     @unittest.skipIf(IS_WINDOWS, "Fork is required for lambda")
     def test_multiprocessing_reading_service(self) -> None:
         _, (*_, dp) = self._get_datapipes()  # pyre-ignore
-
-        import torch.multiprocessing as mp
-
-        mp.set_start_method("fork")
-
-        rs = MultiProcessingReadingService(2, persistent_workers=True)
+        rs = MultiProcessingReadingService(2, persistent_workers=True, multiprocessing_context="fork")
         dl = DataLoader2(dp, reading_service=rs)
         d1 = list(dl)
         d2 = list(dl)

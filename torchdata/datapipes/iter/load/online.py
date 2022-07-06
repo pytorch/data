@@ -40,9 +40,9 @@ def _get_response_from_http(
         with requests.Session() as session:
             proxies = _get_proxies()
             if timeout is None:
-                r = session.get(url, stream=True, proxies=proxies, **query_params)
+                r = session.get(url, stream=True, proxies=proxies, **query_params)  # type: ignore[arg-type]
             else:
-                r = session.get(url, timeout=timeout, stream=True, proxies=proxies, **query_params)
+                r = session.get(url, timeout=timeout, stream=True, proxies=proxies, **query_params)  # type: ignore[arg-type]
         return url, StreamWrapper(r.raw)
     except HTTPError as e:
         raise Exception(f"Could not get the file. [HTTP Error] {e.response}.")
