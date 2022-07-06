@@ -54,10 +54,13 @@ class Bz2FileLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
             try:
                 extracted_fobj = bz2.open(data_stream, mode="rb")  # type: ignore[call-overload]
                 new_pathname = pathname.rstrip(".bz2")
-                yield new_pathname, StreamWrapper(extracted_fobj)  # type: ignore[misc]
+                yield new_pathname, StreamWrapper(extracted_fobj, data_stream, name=new_pathname)  # type: ignore[misc]
             except Exception as e:
                 warnings.warn(f"Unable to extract files from corrupted bzip2 stream {pathname} due to: {e}, abort!")
                 raise e
+            finally:
+                if isinstance(data_stream, StreamWrapper):
+                    data_stream.autoclose()
 
     def __len__(self) -> int:
         if self.length == -1:
