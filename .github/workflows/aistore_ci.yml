@@ -1,0 +1,59 @@
+name: Run AIStore Datapipe Test
+on:
+  push:
+    branches:
+      - main
+      - release/*
+    tags:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    branches:
+      - main
+      # For PR created by ghstack
+      - gh/*/*/base
+      - release/*
+
+jobs:
+  test:
+    if: ${{ github.repository_owner == 'pytorch' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+        python-version:
+          - 3.7
+          - 3.8
+          - 3.9
+    steps:
+      - name: Get PyTorch Channel
+        shell: bash
+        run: |
+          if [[ "${{ github.base_ref }}" == release/* ]] || [[ "${{ github.ref }}" == refs/heads/release/* ]] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            PT_CHANNEL="https://download.pytorch.org/whl/test/cpu/torch_test.html"
+          else
+            PT_CHANNEL="https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html"
+          fi
+          echo "::set-output name=value::$PT_CHANNEL"
+        id: pytorch_channel
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Check out source repository
+        uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          pip3 install -r requirements.txt
+          pip3 install --pre torch -f "${{ steps.pytorch_channel.outputs.value }}"
+      - name: Run AIStore local deployment
+        uses: NVIDIA/aistore@master
+      - name: Build TorchData
+        run: |
+          python setup.py install
+      - name: Install test requirements
+        run: pip3 install -r test/requirements_aistore.txt
+      - name: Run AIStore DataPipe tests with pytest
+        run: pytest --no-header -v test/test_aistore.py
