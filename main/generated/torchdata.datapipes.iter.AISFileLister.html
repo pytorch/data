@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>S3FileLister &mdash; TorchData main documentation</title>
+  <title>AISFileLister &mdash; TorchData main documentation</title>
   
 
   
@@ -33,8 +33,8 @@
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="S3FileLoader" href="torchdata.datapipes.iter.S3FileLoader.html" />
-    <link rel="prev" title="ParquetDataFrameLoader" href="torchdata.datapipes.iter.ParquetDataFrameLoader.html" />
+    <link rel="next" title="AISFileLoader" href="torchdata.datapipes.iter.AISFileLoader.html" />
+    <link rel="prev" title="UnBatcher" href="torchdata.datapipes.iter.UnBatcher.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -290,13 +290,13 @@
         
           <li><a href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a> &gt;</li>
         
-      <li>S3FileLister</li>
+      <li>AISFileLister</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/generated/torchdata.datapipes.iter.S3FileLister.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/generated/torchdata.datapipes.iter.AISFileLister.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -322,42 +322,42 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="s3filelister">
-<h1>S3FileLister<a class="headerlink" href="#s3filelister" title="Permalink to this heading">¶</a></h1>
+  <section id="aisfilelister">
+<h1>AISFileLister<a class="headerlink" href="#aisfilelister" title="Permalink to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="torchdata.datapipes.iter.S3FileLister">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">S3FileLister</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">request_timeout_ms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.S3FileLister" title="Permalink to this definition">¶</a></dt>
-<dd><p>Iterable DataPipe that lists Amazon S3 file URLs with the given prefixes (functional name: <code class="docutils literal notranslate"><span class="pre">list_files_by_s3</span></code>).
-Acceptable prefixes include <code class="docutils literal notranslate"><span class="pre">s3://bucket-name</span></code>, <code class="docutils literal notranslate"><span class="pre">s3://bucket-name/</span></code>, <code class="docutils literal notranslate"><span class="pre">s3://bucket-name/folder</span></code>.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<ol class="arabic simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">source_datapipe</span></code> <strong>must</strong> contain a list of valid S3 URLs</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">length</span></code> is <cite>-1</cite> by default, and any call to <code class="docutils literal notranslate"><span class="pre">__len__()</span></code> is invalid, because the length is unknown
-until all files are iterated.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">request_timeout_ms</span></code> and <code class="docutils literal notranslate"><span class="pre">region</span></code> will overwrite settings in the configuration file or
-environment variables.</p></li>
-</ol>
-</div>
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.AISFileLister">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">AISFileLister</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.AISFileLister" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterable Datapipe that lists files from the AIStore backends with the given URL prefixes. (functional name: <code class="docutils literal notranslate"><span class="pre">list_files_by_ais</span></code>).
+Acceptable prefixes include but not limited to - <cite>ais://bucket-name</cite>, <cite>ais://bucket-name/</cite></p>
+<p>Note:
+-   This function also supports files from multiple backends (<cite>aws://..</cite>, <cite>gcp://..</cite>, <cite>hdfs://..</cite>, etc)
+-   Input must be a list and direct URLs are not supported.
+-   length is -1 by default, all calls to len() are invalid as</p>
+<blockquote>
+<div><p>not all items are iterated at the start.</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>This internally uses AIStore Python SDK.</p></li>
+</ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>source_datapipe</strong> – a DataPipe that contains URLs/URL prefixes to s3 files</p></li>
-<li><p><strong>length</strong> – Nominal length of the datapipe</p></li>
-<li><p><strong>request_timeout_ms</strong> – timeout setting for each reqeust (3,000ms by default)</p></li>
-<li><p><strong>region</strong> – region for access files (inferred from credentials by default)</p></li>
+<li><p><strong>source_datapipe</strong> (<a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><em>IterDataPipe</em></a><em>[</em><em>str</em><em>]</em>) – a DataPipe that contains URLs/URL
+prefixes to objects on AIS</p></li>
+<li><p><strong>url</strong> (<em>str</em>) – AIStore endpoint</p></li>
+<li><p><strong>length</strong> (<em>int</em>) – length of the datapipe</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span><span class="p">,</span> <span class="n">S3FileLister</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">s3_prefixes</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([</span><span class="s1">&#39;s3://bucket-name/folder/&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dp_s3_urls</span> <span class="o">=</span> <span class="n">S3FileLister</span><span class="p">(</span><span class="n">s3_prefixes</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dp_s3_urls</span><span class="p">:</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span><span class="p">,</span> <span class="n">AISFileLister</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ais_prefixes</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([</span><span class="s1">&#39;ais://bucket-name/folder/&#39;</span><span class="p">,</span> <span class="s1">&#39;aws:bucket-name/folder/&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp_ais_urls</span> <span class="o">=</span> <span class="n">AISFileLister</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s1">&#39;localhost:8080&#39;</span><span class="p">,</span> <span class="n">source_datapipe</span><span class="o">=</span><span class="n">prefix</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dp_ais_urls</span><span class="p">:</span>
 <span class="gp">... </span>    <span class="k">pass</span>
-<span class="go"># Functional API</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dp_s3_urls</span> <span class="o">=</span> <span class="n">s3_prefixes</span><span class="o">.</span><span class="n">list_files_by_s3</span><span class="p">(</span><span class="n">request_timeout_ms</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dp_s3_urls</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Functional API</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp_ais_urls</span> <span class="o">=</span> <span class="n">dp_ais_urls</span><span class="o">.</span><span class="n">list_files_by_ais</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s1">&#39;localhost:8080&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dp_ais_urls</span><span class="p">:</span>
 <span class="gp">... </span>    <span class="k">pass</span>
 </pre></div>
 </div>
@@ -373,10 +373,10 @@ environment variables.</p></li>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="torchdata.datapipes.iter.S3FileLoader.html" class="btn btn-neutral float-right" title="S3FileLoader" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.datapipes.iter.AISFileLoader.html" class="btn btn-neutral float-right" title="AISFileLoader" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.iter.ParquetDataFrameLoader.html" class="btn btn-neutral" title="ParquetDataFrameLoader" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="torchdata.datapipes.iter.UnBatcher.html" class="btn btn-neutral" title="UnBatcher" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -408,7 +408,7 @@ environment variables.</p></li>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">S3FileLister</a></li>
+<li><a class="reference internal" href="#">AISFileLister</a></li>
 </ul>
 
             </div>
