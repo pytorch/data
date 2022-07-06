@@ -27,45 +27,6 @@ class MapTemplateIterDataPipe(Mapper[T_co]):
 
 @functional_datapipe("flatmap_proto")
 class FlatMapperProtoIterDataPipe(IterDataPipe[T_co]):
-    r"""
-    Applies a function over each item from the source DataPipe (functional name: ``flatmap``).
-    The function can be any regular Python function or partial object. Lambda
-    function is not recommended as it is not supported by pickle.
-
-    The function should return iterable object per each input, which contains zero or many elements.
-    Elements would be treated as separate rows in resulted DataPipe.
-
-    Args:
-        datapipe: Source Iterable DataPipe
-        fn: Function being applied over each item
-        input_col: Index or indices of data which ``fn`` is applied, such as:
-
-            - ``None`` as default to apply ``fn`` to the data directly.
-            - Integer(s) is used for list/tuple.
-            - Key(s) is used for dict.
-
-        output_col: Index of data where result of ``fn`` is placed. ``output_col`` can be specified
-            only when ``input_col`` is not ``None``
-
-            - ``None`` as default to replace the index that ``input_col`` specified; For ``input_col`` with
-              multiple indices, the left-most one is used, and other indices will be removed.
-            - Integer is used for list/tuple. ``-1`` represents to append result at the end.
-            - Key is used for dict. New key is acceptable.
-
-    Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper, Mapper
-        >>> def add_one(x):
-        ...     return x + 1
-        >>> dp = IterableWrapper(range(10))
-        >>> map_dp_1 = dp.map(add_one)  # Invocation via functional form is preferred
-        >>> list(map_dp_1)
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        >>> # We discourage the usage of `lambda` functions as they are not serializable with `pickle`
-        >>> # Use `functools.partial` or explicitly define the function instead
-        >>> map_dp_2 = Mapper(dp, lambda x: x + 1)
-        >>> list(map_dp_2)
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    """
     datapipe: IterDataPipe
     fn: Callable
 
@@ -94,6 +55,7 @@ class FlatMapperProtoIterDataPipe(IterDataPipe[T_co]):
         self.output_col = output_col
 
     def _apply_fn(self, data):
+        # TODO(VitalyFedyunin): Can be unified with _apply_fn of MapperProtoIterDataPipe
         if self.input_col is None and self.output_col is None:
             yield from self.fn(data)
             return
