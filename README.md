@@ -175,49 +175,77 @@ There are several data loading implementations of popular datasets across differ
 
 ## Frequently Asked Questions (FAQ)
 
-Q: What should I do if the existing set of DataPipes does not do what I need?
+<details>
+<summary>
+What should I do if the existing set of DataPipes does not do what I need?
+</summary>
 
-A: You can
+You can
 [implement your own custom DataPipe](https://pytorch.org/data/main/tutorial.html#implementing-a-custom-datapipe). If you
 believe your use case is common enough such that the community can benefit from having your custom DataPipe added to
 this library, feel free to open a GitHub issue. We will be happy to discuss!
+</details>
 
-Q: What happens when the `Shuffler` DataPipe is used with DataLoader?
+<details>
+<summary>
+What happens when the <code>Shuffler</code> DataPipe is used with DataLoader?
+</summary>
 
-A. In order to enable shuffling, you need to add a `Shuffler` to your DataPipe line. Then, by default, shuffling will
+In order to enable shuffling, you need to add a <code>Shuffler</code> to your DataPipe line. Then, by default, shuffling will
 happen at the point where you specified as long as you do not set `shuffle=False` within DataLoader.
+</details>
 
-Q: What happens when the `Batcher` DataPipe is used with DataLoader?
+<details>
+<summary>
+What happens when the <code>Batcher</code> DataPipe is used with DataLoader?
+</summary>
 
-A: If you choose to use `Batcher` while setting `batch_size > 1` for DataLoader, your samples will be batched more than
+If you choose to use <code>Batcher</code> while setting <code>batch_size > 1</code> for DataLoader, your samples will be batched more than
 once. You should choose one or the other.
+</details>
 
-Q: Why are there fewer built-in `MapDataPipes` than `IterDataPipes`?
+<details>
+<summary>
+Why are there fewer built-in <code>MapDataPipes</code> than <code>IterDataPipes</code>?
+</summary>
 
-A: By design, there are fewer `MapDataPipes` than `IterDataPipes` to avoid duplicate implementations of the same
+By design, there are fewer `MapDataPipes` than `IterDataPipes` to avoid duplicate implementations of the same
 functionalities as `MapDataPipe`. We encourage users to use the built-in `IterDataPipe` for various functionalities, and
 convert it to `MapDataPipe` as needed.
+</details>
 
-Q: How is multiprocessing handled with DataPipes?
+<details>
+<summary>
+How is multiprocessing handled with DataPipes?
+</summary>
 
-A: Multi-process data loading is still handled by the `DataLoader`, see the
+Multi-process data loading is still handled by the `DataLoader`, see the
 [DataLoader documentation for more details](https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading).
 As of PyTorch version >= 1.12.0 (TorchData version >= 0.4.0), data sharding is automatically done for DataPipes within
-the `DataLoader` as long as a `ShardingFiler` DataPipe exists in your pipeline. Please see the
+the `DataLoader` as long as a `ShardingFilter` DataPipe exists in your pipeline. Please see the
 [tutorial](https://pytorch.org/data/main/tutorial.html#working-with-dataloader) for an example.
+</details>
 
-Q: What is the upcoming plan for DataLoader?
+<details>
+<summary>
+What is the upcoming plan for DataLoader?
+</summary>
 
-A: `DataLoader2` is in the prototype phase and more features are actively being developed. Please see the
+`DataLoader2` is in the prototype phase and more features are actively being developed. Please see the
 [README file in `torchdata/dataloader2`](https://github.com/pytorch/data/blob/main/torchdata/dataloader2/README.md). If
 you would like to experiment with it (or other prototype features), we encourage you to install the nightly version of
 this library.
+</details>
 
-Q: Why is there an Error saying the specified DLL could not be found at the time of importing `portalocker`?
+<details>
+<summary>
+Why is there an Error saying the specified DLL could not be found at the time of importing <code>portalocker</code>?
+</summary>
 
-A: It only happens for people who runs `torchdata` on Windows OS as a common problem with `pywin32`. And, you can find
+It only happens for people who runs `torchdata` on Windows OS as a common problem with `pywin32`. And, you can find
 the reason and the solution for it in the
 [link](https://github.com/mhammond/pywin32#the-specified-procedure-could-not-be-found--entry-point-not-found-errors).
+</details>
 
 ## Contributing
 
