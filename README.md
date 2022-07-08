@@ -184,6 +184,7 @@ You can
 [implement your own custom DataPipe](https://pytorch.org/data/main/tutorial.html#implementing-a-custom-datapipe). If you
 believe your use case is common enough such that the community can benefit from having your custom DataPipe added to
 this library, feel free to open a GitHub issue. We will be happy to discuss!
+
 </details>
 
 <details>
@@ -191,8 +192,9 @@ this library, feel free to open a GitHub issue. We will be happy to discuss!
 What happens when the <code>Shuffler</code> DataPipe is used with DataLoader?
 </summary>
 
-In order to enable shuffling, you need to add a <code>Shuffler</code> to your DataPipe line. Then, by default, shuffling will
+In order to enable shuffling, you need to add a `Shuffler` to your DataPipe line. Then, by default, shuffling will
 happen at the point where you specified as long as you do not set `shuffle=False` within DataLoader.
+
 </details>
 
 <details>
@@ -202,6 +204,7 @@ What happens when the <code>Batcher</code> DataPipe is used with DataLoader?
 
 If you choose to use `Batcher` while setting `batch_size > 1` for DataLoader, your samples will be batched more than
 once. You should choose one or the other.
+
 </details>
 
 <details>
@@ -212,6 +215,7 @@ Why are there fewer built-in <code>MapDataPipes</code> than <code>IterDataPipes<
 By design, there are fewer `MapDataPipes` than `IterDataPipes` to avoid duplicate implementations of the same
 functionalities as `MapDataPipe`. We encourage users to use the built-in `IterDataPipe` for various functionalities, and
 convert it to `MapDataPipe` as needed.
+
 </details>
 
 <details>
@@ -224,6 +228,7 @@ Multi-process data loading is still handled by the `DataLoader`, see the
 As of PyTorch version >= 1.12.0 (TorchData version >= 0.4.0), data sharding is automatically done for DataPipes within
 the `DataLoader` as long as a `ShardingFilter` DataPipe exists in your pipeline. Please see the
 [tutorial](https://pytorch.org/data/main/tutorial.html#working-with-dataloader) for an example.
+
 </details>
 
 <details>
@@ -235,6 +240,7 @@ What is the upcoming plan for DataLoader?
 [README file in `torchdata/dataloader2`](https://github.com/pytorch/data/blob/main/torchdata/dataloader2/README.md). If
 you would like to experiment with it (or other prototype features), we encourage you to install the nightly version of
 this library.
+
 </details>
 
 <details>
@@ -242,9 +248,10 @@ this library.
 Why is there an Error saying the specified DLL could not be found at the time of importing <code>portalocker</code>?
 </summary>
 
-It only happens for people who runs `torchdata` on Windows OS as a common problem with `pywin32`. And, you can find
-the reason and the solution for it in the
+It only happens for people who runs `torchdata` on Windows OS as a common problem with `pywin32`. And, you can find the
+reason and the solution for it in the
 [link](https://github.com/mhammond/pywin32#the-specified-procedure-could-not-be-found--entry-point-not-found-errors).
+
 </details>
 
 ## Contributing
