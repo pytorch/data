@@ -1,6 +1,8 @@
-# S3 IO Datapipe Documentation
+# Iterable Datapipes
 
-## Build from Source
+## S3 IO Datapipe Documentation
+
+### Build from Source
 
 `ninja` is required to link PyThon implementation to C++ source code.
 
@@ -44,8 +46,37 @@ It's recommended to set up a detailed configuration file with the `AWS_CONFIG_FI
 environment variables are also parsed: `HOME`, `S3_USE_HTTPS`, `S3_VERIFY_SSL`, `S3_ENDPOINT_URL`, `AWS_REGION` (would
 be overwritten by the `region` variable).
 
-## Troubleshooting
+### Troubleshooting
 
 If you get `Access Denied`, it's very possibly a
 [wrong region configuration](https://github.com/aws/aws-sdk-cpp/issues/1211) or an
 [accessing issue with `aws-sdk-cpp`](https://aws.amazon.com/premiumsupport/knowledge-center/s3-access-denied-aws-sdk/).
+
+## AIStore IO Datapipe
+
+[AIStore](https://github.com/NVIDIA/aistore) (AIS for short) is a highly available lightweight object storage system
+that specifically focuses on petascale deep learning. As a reliable redundant storage, AIS supports n-way mirroring and
+erasure coding. But it is not purely – or not only – a storage system: it’ll shuffle user datasets and run custom
+extract-transform-load workloads.
+
+AIS is an elastic cluster that can grow and shrink at runtime and can be ad-hoc deployed, with or without Kubernetes,
+anywhere from a single Linux machine to a bare-metal cluster of any size.
+
+AIS fully supports Amazon S3, Google Cloud, and Microsoft Azure backends, providing a unified namespace across multiple
+connected backends and/or other AIS clusters, and [more](https://github.com/NVIDIA/aistore#features). Getting started
+with AIS will take only a few minutes (prerequisites boil down to having a Linux with a disk) and can be done either by
+running a prebuilt all-in-one docker image or directly from the open-source.
+
+### Dependency
+
+The `AISFileLister` and `AISFileLoader` under [`aisio.py`](/torchdata/datapipes/iter/load/aisio.py) internally use the
+[Python SDK](https://github.com/NVIDIA/aistore/tree/master/sdk/python) for AIStore.
+
+Run `pip install aistore` or `conda install aistore` to install the [python package](https://pypi.org/project/aistore/).
+
+### Example
+
+Please refer to the documentation:
+
+- [`AISFileLister`](https://pytorch.org/data/main/generated/torchdata.datapipes.iter.AISFileLister.html#aisfilelister)
+- [`AISFileLoader`](https://pytorch.org/data/main/generated/torchdata.datapipes.iter.AISFileLoader.html#aisfileloader)
