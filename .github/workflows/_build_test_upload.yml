@@ -142,7 +142,7 @@ jobs:
           done
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
             mv dist temp
-            mv wheelhousr dist
+            mv wheelhouse dist
           fi
       - name: Install TorchData Wheel
         shell: bash
