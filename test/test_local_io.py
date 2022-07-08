@@ -656,7 +656,6 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             for f in os.listdir(tmpdirname):
                 os.remove(os.path.join(tmpdirname, f))
 
-            dp = StreamReader(dp)
             dp = CacheTimeout(2)(dp)  # Calling adapter manually to work with classic DataLoader
             dl = DataLoader(dp, num_workers=10, multiprocessing_context="spawn", batch_size=1, collate_fn=_unbatch)
             with self.assertRaisesRegex(Exception, "OnDiskCache Exception"):
