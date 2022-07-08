@@ -29,6 +29,10 @@ from torch.utils.data.datapipes.iter import (
     UnBatcher,
     Zipper,
 )
+from torchdata.datapipes.iter.load.aisio import (
+    AISFileListerIterDataPipe as AISFileLister,
+    AISFileLoaderIterDataPipe as AISFileLoader,
+)
 
 ###############################################################################
 # TorchData
@@ -125,6 +129,8 @@ from torchdata.datapipes.iter.util.ziparchiveloader import (
 from torchdata.datapipes.map.util.converter import MapToIterConverterIterDataPipe as MapToIterConverter
 
 __all__ = [
+    "AISFileLister",
+    "AISFileLoader",
     "BatchMapper",
     "Batcher",
     "BucketBatcher",
