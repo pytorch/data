@@ -200,7 +200,7 @@ happen at the point where you specified as long as you do not set `shuffle=False
 What happens when the <code>Batcher</code> DataPipe is used with DataLoader?
 </summary>
 
-If you choose to use <code>Batcher</code> while setting <code>batch_size > 1</code> for DataLoader, your samples will be batched more than
+If you choose to use `Batcher` while setting `batch_size > 1` for DataLoader, your samples will be batched more than
 once. You should choose one or the other.
 </details>
 
