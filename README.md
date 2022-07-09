@@ -45,6 +45,7 @@ The following is the corresponding `torchdata` versions and supported Python ver
 | `torch`            | `torchdata`        | `python`          |
 | ------------------ | ------------------ | ----------------- |
 | `main` / `nightly` | `main` / `nightly` | `>=3.7`, `<=3.10` |
+| `1.12.0`           | `0.4.0`            | `>=3.7`, `<=3.10` |
 | `1.11.0`           | `0.3.0`            | `>=3.7`, `<=3.10` |
 
 ### Colab
@@ -101,7 +102,7 @@ assert batch['text'][0][0:8] == ['Wall', 'St.', 'Bears', 'Claw', 'Back', 'Into',
 python setup.py install
 ```
 
-In you'd like to include the S3 IO datapipes and aws-sdk-cpp, you may also follow
+If you'd like to include the S3 IO datapipes and aws-sdk-cpp, you may also follow
 [the instructions here](https://github.com/pytorch/data/blob/main/torchdata/datapipes/iter/load/README.md)
 
 In case building TorchData from source fails, install the nightly version of PyTorch following the linked guide on the
@@ -228,10 +229,9 @@ We welcome PRs! See the [CONTRIBUTING](CONTRIBUTING.md) file.
 We'd love to hear from and work with early adopters to shape our designs. Please reach out by raising an issue if you're
 interested in using this tooling for your project.
 
-## Future Plans
+<!-- ## Future Plans -->
 
-We hope to continue to expand the library, harden APIs, and gather feedback to enable another release at the time of the
-PyTorch 1.12 release (mid 2022). We also plan to release a new version of DataLoader by then. Stay tuned!
+<!-- TODO: what are the new goals? -->
 
 ## License
 
