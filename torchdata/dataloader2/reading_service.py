@@ -31,7 +31,7 @@ class ReadingServiceInterface(ABC):
             datapipe: IterDataPipe. Original datapipe.
 
         Return:
-            Adapated IterDataPipe.
+            Adapted IterDataPipe.
 
         Example:
             MultiProcessingReadingService finds information about sharding,
@@ -173,7 +173,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     def finalize(self) -> None:
         # TODO(VitalyFedyunin): Check if anyone stuck with messages
         def clean_me(process, req_queue, res_queue):
-            # TODO(VitalyFedyunin): Can send terminations simulteniously
+            # TODO(VitalyFedyunin): Can send terminations simultaneously
             # TODO(VitalyFedyunin): Make termination a function of QueueWrapperDataPipe (similar to reset)
             req_queue.put(communication.messages.TerminateRequest())
             _ = res_queue.get()
