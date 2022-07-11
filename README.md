@@ -229,10 +229,6 @@ We welcome PRs! See the [CONTRIBUTING](CONTRIBUTING.md) file.
 We'd love to hear from and work with early adopters to shape our designs. Please reach out by raising an issue if you're
 interested in using this tooling for your project.
 
-<!-- ## Future Plans -->
-
-<!-- TODO: what are the new goals? -->
-
 ## License
 
 TorchData is BSD licensed, as found in the [LICENSE](LICENSE) file.
