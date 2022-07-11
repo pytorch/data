@@ -208,6 +208,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     # Otherwise, it would cause infinite recursion in graph traversal
     @staticmethod
     def _cache_check_fn(data, filepath_fn, hash_dict, hash_type, extra_check_fn):
+        data_copy = data
         filepaths = data if filepath_fn is None else filepath_fn(data)
         result = True
         if not isinstance(filepaths, (list, tuple)):
@@ -244,6 +245,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                         promise_fh.truncate()
                         promise_fh.flush()
 
+        print(data_copy, 'cache check is', result)
         return result
 
     def _end_caching(self):
@@ -259,12 +261,19 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                 extra_check_fn=extra_check_fn,
             ),
         )
+
+        def dbg(prefix, data):
+            print(prefix, data)
+            return data
+
         # Cached: keep filepath(s)
-        cached_dp = cached_dp.map(fn=filepath_fn)
+        cached_dp = cached_dp.map(partial(dbg, 'cached_dp')).map(fn=filepath_fn).map(partial(dbg, 'cached_dp'))
         # Convert list back to single elements
         cached_dp = cached_dp.unbatch(-1)
 
-        self.source_datapipe = todo_dp
+
+
+        self.source_datapipe = todo_dp.map(partial(dbg, 'todo_dp'))
         self._end_caching_flag = True
         return cached_dp
 
@@ -384,9 +393,17 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
         >>> cache_dp = HttpReader(cache_dp).end_caching(mode="wb", filepath_fn=_filepath_fn)
     """
 
-    def __new__(cls, datapipe, mode="wb", filepath_fn=None, *, same_filepath_fn=False, skip_read=False, timeout=300):
+    def __new__(cls, datapipe, mode="wb", filepath_fn=None, *, same_filepath_fn=False, skip_read=False, timeout=300, prefix = ''):
         if filepath_fn is not None and same_filepath_fn:
             raise ValueError("`filepath_fn` is mutually exclusive with `same_filepath_fn`")
+
+        def dbg(prefix, data):
+            print(prefix, data)
+            return data
+
+        def dbg_0(prefix, data):
+            print(prefix, data[0])
+            return data
 
         graph = traverse(datapipe, only_datapipe=True)
         # Get the last CacheHolder
@@ -397,7 +414,7 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
             raise RuntimeError("`end_caching` can only be invoked once per `OnDiskCacheHolder`")
 
         _filepath_fn, _hash_dict, _hash_type, _ = OnDiskCacheHolderIterDataPipe._temp_dict[cache_holder]
-        cached_dp = cache_holder._end_caching()
+        cached_dp = cache_holder._end_caching().map(partial(dbg, 'wait promise'))
         cached_dp = cached_dp.map(functools.partial(_wait_promise_fn, timeout))
         cached_dp = FileLister(cached_dp, recursive=True)
 
@@ -412,17 +429,20 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
                 todo_dp = todo_dp.map(fn=_read_bytes, input_col=1)
 
         if filepath_fn is not None:
-            todo_dp = todo_dp.map(fn=filepath_fn, input_col=0)
+            # todo_dp = todo_dp.map(partial(dbg_0, 'raw')).map(fn=filepath_fn, input_col=0)
+            todo_dp = todo_dp.map(partial(dbg_0, prefix + 'raw')).map(fn=filepath_fn, input_col=0).map(partial(dbg_0, prefix +  'file_path'))
+
 
         # Extra hash check here when hash is provided.
         # And, raise Error if data returned from prior operations doesn't meet hash
         if _hash_dict is not None:
             todo_dp = todo_dp.check_hash(_hash_dict, _hash_type)
 
-        todo_dp = todo_dp.save_to_disk(mode=mode)
-        todo_dp = _FulfilledPromisesIterDataPipe(todo_dp)
+        todo_dp = todo_dp.save_to_disk(mode=mode).map(partial(dbg, 'todo serialized'))
+        todo_dp = _FulfilledPromisesIterDataPipe(todo_dp).map(partial(dbg, 'todo unlocked'))
 
-        return cached_dp.concat(todo_dp)
+        return todo_dp.concat(cached_dp)
+        # return cached_dp.concat(todo_dp)
 
     @staticmethod
     def _recursive_search(graph):

@@ -135,7 +135,7 @@ def _get_response_from_google_drive(url: str, *, timeout: Optional[float]) -> Tu
         filename = re.findall('filename="(.+)"', response.headers["content-disposition"])
         if filename is None:
             raise RuntimeError("Filename could not be autodetected")
-
+    print('created stream for ',filename[0])
     return filename[0], StreamWrapper(response.raw)
 
 
