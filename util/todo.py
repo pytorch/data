@@ -1,37 +1,43 @@
 # Scrip can be used with
-# find -name '*.py' | perl -ne'print "python ../todo.py $_"' | head -n 5 | bash
+# find -name '*.py' | perl -ne'print "python util/todo.py $_"' | head -n 5 | bash
 
-from github import Github # pip install PyGithub
-import sys
-import tempfile
-import shutil
+import configparser
 import os
 import re
-import configparser
+import shutil
+import sys
+import tempfile
+
+from github import Github  # pip install PyGithub
 
 file_name = sys.argv[1]
 
-import yaml
-
-import os
-
 config = configparser.ConfigParser(allow_no_value=True)
-with open(os.path.join(os.path.expanduser("~"),".ghstackrc"), "r") as stream:
+with open(os.path.join(os.path.expanduser("~"), ".ghstackrc")) as stream:
     config.read_string(stream.read())
 
-GITHUB_KEY = config['ghstack']['github_oauth']
+GITHUB_KEY = config["ghstack"]["github_oauth"]
+
 
 def get_git_branch_hash():
     stream = os.popen("git rev-parse origin/main")
     return stream.read().rstrip()
 
+
 def generate_issue_id(id_or_name, title, file_name, line_number):
     git_branch_hash = get_git_branch_hash()
-    print(git_branch_hash)
-    if re.match(r'\(\d+\)', id_or_name):
-        return int(id_or_name)
-    match = re.match('\((.*)\)', id_or_name)
-    name = match.group(1)
+    # print(file_name, line_number, title, id_or_name)
+    match = re.match(r"\((\d+)\)", id_or_name)
+    if match:
+        return int(match.group(1))
+    match = re.match(r"\((.*)\)", id_or_name)
+    name = None
+    if match:
+        name = match.group(1)
+    if name is not None:
+        owner = f"cc @{name}"
+    else:
+        owner = ""
     g = Github(GITHUB_KEY)
     repo = g.get_repo("pytorch/data")
     # label_be = repo.get_label("better-engineering" )
@@ -39,33 +45,37 @@ def generate_issue_id(id_or_name, title, file_name, line_number):
     body = """
 This issue is generated from the TODO line
 https://github.com/pytorch/data/blob/{git_branch_hash}/{file_name}#L{line_number}
-cc @{owner}
-    """.format(owner = name, git_branch_hash= git_branch_hash, line_number=line_number,file_name=file_name)
-    issue = repo.create_issue(title=title, body=body, labels = [])
-    print(issue)
+{owner}
+    """.format(
+        owner=owner, git_branch_hash=git_branch_hash, line_number=line_number, file_name=file_name
+    )
+    title = f"[TODO] {title}"
+    issue = repo.create_issue(title=title, body=body, labels=[])
+    print(f"Created issue https://github.com/pytorch/data/issues/{issue.number}")
     return issue.number
+
 
 def update_file(file_name):
     try:
         f = tempfile.NamedTemporaryFile(delete=False)
         shutil.copyfile(file_name, f.name)
-        with open(f.name, "r") as f_inp:
+        with open(f.name) as f_inp:
             with open(file_name, "w") as f_out:
-                for  line_number, line in enumerate(f_inp.readlines()):
-                    if not re.search(r'ignore-todo', line, re.IGNORECASE):
-                        match = re.search(r'(.*?)#\s*todo(\([^)]+\)){0,1}:{0,1}(.*)', line, re.IGNORECASE)
+                for line_number, line in enumerate(f_inp.readlines()):
+                    if not re.search(r"ignore-todo", line, re.IGNORECASE):
+                        match = re.search(r"(.*?)#\s*todo(\([^)]+\)){0,1}:{0,1}(.*)", line, re.IGNORECASE)
                         if match:
+                            # print(line)
                             prefix = match.group(1)
                             text = match.group(3)
-                            issue_id = generate_issue_id(str(match.group(2)),text, file_name, line_number+1)
-                            line = "{}# TODO({}):{}\n".format(prefix, issue_id, text) # ignore-todo
+                            issue_id = generate_issue_id(str(match.group(2)), text, file_name, line_number + 1)
+                            line = f"{prefix}# TODO({issue_id}):{text}\n"  # ignore-todo
                     f_out.write(line)
     except Exception as e:
         shutil.copyfile(f.name, file_name)
-        print(e)
+        raise e
     finally:
         os.unlink(f.name)
 
+
 update_file(file_name)
-
-
