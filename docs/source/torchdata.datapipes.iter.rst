@@ -130,6 +130,8 @@ saving files, and listing the files in directories).
     :toctree: generated/
     :template: datapipe.rst
 
+    AISFileLister
+    AISFileLoader
     FSSpecFileLister
     FSSpecFileOpener
     FSSpecSaver
