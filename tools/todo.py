@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 # Scrip can be used with
-# find -name '*.py' | grep -v third_party | perl -ne'print "python util/todo.py $_"' | head -n 5 | bash
+# find -name '*.py' | grep -v third_party | perl -ne'print "python tools/todo.py $_"' | head -n 5 | bash
 
 import configparser
 import os
