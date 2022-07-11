@@ -18,7 +18,7 @@ from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
 
 
-# TODO: Remove this helper function when https://bugs.python.org/issue42627 is resolved
+# TODO(642): Remove this helper function when https://bugs.python.org/issue42627 is resolved
 def _get_proxies() -> Optional[Dict[str, str]]:
     import os
 

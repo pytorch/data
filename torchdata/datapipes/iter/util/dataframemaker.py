@@ -12,7 +12,7 @@ from torch.utils.data.datapipes.utils.common import DILL_AVAILABLE
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
-try:  # TODO: Create dependency on TorchArrow?
+try:  # TODO(637): Create dependency on TorchArrow?
     import pyarrow.parquet as parquet
     import torcharrow
 except ImportError:
@@ -145,7 +145,7 @@ class ParquetDFLoaderIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDat
             parquet_file = parquet.ParquetFile(path)
             num_row_groups = parquet_file.num_row_groups
             for i in range(num_row_groups):
-                # TODO: More fine-grain control over the number of rows or row group per DataFrame
+                # TODO(638): More fine-grain control over the number of rows or row group per DataFrame
                 row_group = parquet_file.read_row_group(i, columns=self.columns, use_threads=self.use_threads)
                 yield torcharrow.from_arrow(row_group, dtype=self.dtype)
 
