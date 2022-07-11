@@ -157,11 +157,11 @@ class DataLoader2ConsistencyTest(TestCase):
         )
         for reading_service_gen in reading_service_generators:
             actual = self._collect_data(dp, reading_service_gen=reading_service_gen)
-            # TODO(VitalyFedyunin): This comparison only indicates that somethings is broken and not helping with debug
+            # TODO(588): This comparison only indicates that somethings is broken and not helping with debug
             self.assertEqual(expected, actual, reading_service_gen)
 
     def test_dataloader2_shuffle(self) -> None:
-        # TODO
+        # TODO(589): Add shuffle test
         pass
 
 
