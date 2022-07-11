@@ -1,7 +1,13 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 """
 This file contains the data pipeline to read from a Paruet and output a DataFrame.
 """
+
 import torcharrow.dtypes as dt
 from common import DEFAULT_CAT_NAMES, DEFAULT_INT_NAMES
 from torchdata.datapipes.iter import FileLister, ParquetDataFrameLoader

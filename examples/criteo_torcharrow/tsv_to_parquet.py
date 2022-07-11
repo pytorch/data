@@ -1,8 +1,14 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 """
 This file pre-process the source file and save it as a TSV file and a Parquet file.
 You do not need to re-run this file if "day_11_first_3k_rows.parquet" and "day_11_first_3k_rows.tsv" exist locally
 """
+
 import pandas
 import pyarrow
 import pyarrow.parquet as parquet

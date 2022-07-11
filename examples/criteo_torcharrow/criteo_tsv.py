@@ -1,7 +1,13 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 """
 This file contains the data pipeline to read from a TSV file and output a DataFrame.
 """
+
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
