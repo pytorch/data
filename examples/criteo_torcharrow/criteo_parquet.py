@@ -14,6 +14,6 @@ DTYPE = dt.Struct(
 )
 
 source_dp = FileLister(".", masks="*.parquet")
-# TODO: There is current a bug in TorchArrow/Velox related to conversion of arrow arrys to DataFrame that causes
+# TODO(595): There is current a bug in TorchArrow/Velox related to conversion of arrow arrys to DataFrame that causes
 #       the following operation to fail
 parquet_df_dp = ParquetDataFrameLoader(source_dp, dtype=DTYPE)

@@ -63,7 +63,7 @@ def update_file(file_name):
             with open(file_name, "w") as f_out:
                 for line_number, line in enumerate(f_inp.readlines()):
                     if not re.search(r"ignore-todo", line, re.IGNORECASE):
-                        match = re.search(r"(.*?)#\s*todo(\([^)]+\)){0,1}:{0,1}(.*)", line, re.IGNORECASE)
+                        match = re.search(r"(.*?)#\s*todo\s*(\([^)]+\)){0,1}:{0,1}(.*)", line, re.IGNORECASE)
                         if match:
                             # print(line)
                             prefix = match.group(1)

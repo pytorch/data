@@ -153,7 +153,7 @@ class CriteoIterDataPipe(IterDataPipe):
 # Creating DataFrame from TSV File
 df = criteo_dataframes_from_tsv("day_11_first_3k_rows_original.tsv")
 
-# TODO(VitalyFedyunin): Optimize this operation
+# TODO(596): Optimize this operation
 df = df.shuffle()
 
 df["dense_features"] = df["dense_features"].fill_null(0)
