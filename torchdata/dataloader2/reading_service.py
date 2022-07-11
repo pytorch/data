@@ -13,6 +13,7 @@ from typing import Any, Callable, List, Optional
 
 import torch
 from torch.utils.data import DataLoader
+from torch.utils.data.graph import DataPipe
 
 from torchdata.dataloader2 import communication
 from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
@@ -20,7 +21,7 @@ from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 
 class ReadingServiceInterface(ABC):
     @abstractmethod
-    def initialize(self, datapipe: IterDataPipe) -> IterDataPipe:
+    def initialize(self, datapipe: DataPipe) -> DataPipe:
         """
         ReadingService traverses datapipe graph, finds executable part,
         adapts into its own datapipe, and replaces in datapipe graph.
@@ -28,10 +29,10 @@ class ReadingServiceInterface(ABC):
         Called once in creating DataLoader iterator at first time.
 
         Args:
-            datapipe: IterDataPipe. Original datapipe.
+            datapipe: DataPipe. Original datapipe.
 
         Return:
-            Adapted IterDataPipe.
+            Adapted DataPipe.
 
         Example:
             MultiProcessingReadingService finds information about sharding,
@@ -81,7 +82,7 @@ class CheckpointableReadingServiceInterface(ReadingServiceInterface):
         pass
 
     @abstractmethod
-    def restore(self, datapipe: IterDataPipe, serialized_state: bytes) -> IterDataPipe:
+    def restore(self, datapipe: DataPipe, serialized_state: bytes) -> DataPipe:
         """
         ReadingService adapts datapipe and consume serialized state.
 
@@ -143,7 +144,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         # TODO(VitalyFedyunin): Add shuffle determinism support
         torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
 
-    def initialize(self, datapipe: IterDataPipe) -> IterDataPipe:
+    def initialize(self, datapipe: DataPipe) -> DataPipe:
         if self.num_workers == 0:
             # TODO(VitalyFedyunin): Warn and recommend usage of InPorcessReadingService
             return datapipe
@@ -213,7 +214,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         self.dl_: Optional[DataLoader] = None
 
     # Wrap the DataLoader with IterableWrapper to respect type annotation
-    def initialize(self, datapipe: IterDataPipe) -> IterDataPipe:
+    def initialize(self, datapipe: DataPipe) -> DataPipe:
         self.dl_ = DataLoader(
             datapipe,
             num_workers=self.num_workers,

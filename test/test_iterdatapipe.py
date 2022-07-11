@@ -22,7 +22,6 @@ from torchdata.datapipes.iter import (
     BucketBatcher,
     Cycler,
     Header,
-    InBatchShuffler,
     IndexAdder,
     InMemoryCacheHolder,
     IterableWrapper,
@@ -787,7 +786,7 @@ class TestIterDataPipe(expecttest.TestCase):
                     self.assertEqual(len(wa), 1)
                     self.assertRegex(str(wa[0].message), r"Some child DataPipes are not exhausted")
                 break
-        for i, (n1, n2) in enumerate(zip(dp1, dp2)):
+        for n1, n2 in zip(dp1, dp2):
             output1.append(n1)
             output2.append(n2)
         self.assertEqual(list(range(5)) + list(range(10)), output1)
