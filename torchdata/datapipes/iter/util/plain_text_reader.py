@@ -6,7 +6,7 @@
 
 import contextlib
 import csv
-from typing import IO, Iterator, List, Tuple, TypeVar, Union
+from typing import IO, Iterator, Tuple, TypeVar, Union
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -70,7 +70,7 @@ class PlainTextReaderHelper:
         for data in stream:
             yield path, data
 
-    def as_tuple(self, stream: Iterator[List]) -> Iterator[Union[List, Tuple]]:
+    def as_tuple(self, stream: Iterator[D]) -> Iterator[Union[D, Tuple]]:
         if not self._as_tuple:
             yield from stream
             return
