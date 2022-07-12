@@ -159,6 +159,11 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         expected_res = [("1.csv", ["key", "item"]), ("1.csv", ["a", "1"]), ("1.csv", ["b", "2"]), ("empty2.csv", [])]
         self.assertEqual(expected_res, list(csv_parser_dp))
 
+        # Functional Test: yield one row at time from each file as tuple instead of list, skipping over empty content
+        csv_parser_dp = datapipe3.parse_csv(as_tuple=True)
+        expected_res = [("key", "item"), ("a", "1"), ("b", "2"), ()]
+        self.assertEqual(expected_res, list(csv_parser_dp))
+
         # Reset Test:
         csv_parser_dp = CSVParser(datapipe3, return_path=True)
         n_elements_before_reset = 2
