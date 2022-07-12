@@ -426,12 +426,12 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
 
     @staticmethod
     def _recursive_search(graph):
-        for dp in graph.keys():
+        for dp, _ in graph.values():
             # Find the closest CacheHolder
             if isinstance(dp, OnDiskCacheHolderIterDataPipe):
                 return dp
-        for dp in graph.values():
-            res = EndOnDiskCacheHolderIterDataPipe._recursive_search(dp)
+        for _, sub_graph in graph.values():
+            res = EndOnDiskCacheHolderIterDataPipe._recursive_search(sub_graph)
             if res is not None:
                 return res
         return None

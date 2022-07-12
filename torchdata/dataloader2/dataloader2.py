@@ -9,9 +9,9 @@ import pickle
 from dataclasses import dataclass
 from typing import Any, Dict, Generic, Iterable, Iterator, Optional, TypeVar, Union
 
-from torchdata.dataloader2.adapter import Adapter
+from torch.utils.data.graph import DataPipe
 
-from torchdata.datapipes.iter import IterDataPipe
+from torchdata.dataloader2.adapter import Adapter
 
 from .error import PauseIteration
 from .reading_service import CheckpointableReadingServiceInterface, ReadingServiceInterface
@@ -21,14 +21,14 @@ SERIALIZED_DATAPIPE_KEY_NAME = "serialized_datapipe"
 READING_SERVICE_STATE_KEY_NAME = "reading_service_state"
 
 
-def serialize_datapipe(datapipe: IterDataPipe) -> bytes:
+def serialize_datapipe(datapipe: DataPipe) -> bytes:
     try:
         return pickle.dumps(datapipe)
     except pickle.PickleError as e:
         raise NotImplementedError(f"Prototype only support pickle-able datapipes for checkpoint: {e}")
 
 
-def deserialize_datapipe(serialized_state: bytes) -> IterDataPipe:
+def deserialize_datapipe(serialized_state: bytes) -> DataPipe:
     try:
         return pickle.loads(serialized_state)
     except pickle.PickleError as e:
@@ -46,7 +46,7 @@ class ConcurrencySpec:
 class DataLoader2(Generic[T_co]):
     def __init__(
         self,
-        datapipe: IterDataPipe,
+        datapipe: DataPipe,
         datapipe_adapter_fn: Optional[Union[Iterable[Adapter], Adapter]] = None,
         reading_service: Optional[ReadingServiceInterface] = None,
     ) -> None:
@@ -68,7 +68,7 @@ class DataLoader2(Generic[T_co]):
         if self.datapipe_adapter_fns is not None:
             for adapter_fn in self.datapipe_adapter_fns:
                 self.datapipe = adapter_fn(self.datapipe)
-        self._datapipe_before_reading_service_adapt: IterDataPipe = self.datapipe
+        self._datapipe_before_reading_service_adapt: DataPipe = self.datapipe
 
     def __iter__(self) -> Iterator[T_co]:
         if self._terminated:

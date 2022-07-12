@@ -8,7 +8,7 @@ from abc import abstractmethod
 
 import torch
 
-from torchdata.datapipes.iter import IterDataPipe
+from torch.utils.data.graph import DataPipe
 
 __all__ = [
     "Adapter",
@@ -20,7 +20,7 @@ assert __all__ == sorted(__all__)
 
 class Adapter:
     @abstractmethod
-    def __call__(self, datapipe: IterDataPipe) -> IterDataPipe:
+    def __call__(self, datapipe: DataPipe) -> DataPipe:
         pass
 
 
@@ -43,5 +43,5 @@ class Shuffle(Adapter):
     def __init__(self, enable=True):
         self.enable = enable
 
-    def __call__(self, datapipe: IterDataPipe) -> IterDataPipe:
+    def __call__(self, datapipe: DataPipe) -> DataPipe:
         return torch.utils.data.graph_settings.apply_shuffle_settings(datapipe, shuffle=self.enable)
