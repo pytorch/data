@@ -115,7 +115,7 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
             for remaining in ref_it:
                 janitor(remaining)
 
-            # TODO(VItalyFedyunin): This should be Exception or warn when debug mode is enabled
+            # TODO(633): This should be Exception or warn when debug mode is enabled
             if len(self.buffer) > 0:
                 for k, v in self.buffer.items():
                     janitor(v)

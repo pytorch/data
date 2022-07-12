@@ -54,7 +54,7 @@ class DataLoader2(Generic[T_co]):
         self._adapted: bool = False
         self._datapipe_iter: Optional[Iterator[T_co]] = None
         self._reset_iter: bool = True
-        # TODO(VitalyFedyunin): Some ReadingServices might want to validate adapters, we can add this feature
+        # TODO(630): Some ReadingServices might want to validate adapters, we can add this feature
         if datapipe_adapter_fn is None:
             self.datapipe_adapter_fns = None
         elif isinstance(datapipe_adapter_fn, Iterable):

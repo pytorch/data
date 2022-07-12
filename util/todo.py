@@ -48,12 +48,17 @@ def generate_issue_id(id_or_name, title, file_name, line_number):
     repo = g.get_repo("pytorch/data")
     # label_be = repo.get_label("better-engineering" )
     # labels = [label_be]
+    line_reference = f"https://github.com/pytorch/data/blob/{git_branch_hash}/{file_name}#L{line_number}"
+    line_reference = line_reference.replace("/./", "/")
     body = """
 This issue is generated from the TODO line
-https://github.com/pytorch/data/blob/{git_branch_hash}/{file_name}#L{line_number}
+
+{line_reference}
+
 {owner}
     """.format(
-        owner=owner, git_branch_hash=git_branch_hash, line_number=line_number, file_name=file_name
+        owner=owner,
+        line_reference=line_reference,
     )
     title = f"[TODO] {title}"
     issue = repo.create_issue(title=title, body=body, labels=[])
