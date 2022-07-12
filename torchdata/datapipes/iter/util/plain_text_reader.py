@@ -188,7 +188,7 @@ class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
         errors: the error handling scheme used while decoding
         return_path: if ``True``, each line will return a tuple of path and contents, rather
             than just the contents
-        as_tuple: if ``True``, each line return as a tuple instead of a list
+        as_tuple: if ``True``, each line will return a tuple instead of a list
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper, FileOpener
