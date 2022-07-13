@@ -79,6 +79,10 @@ from torchdata.datapipes.iter.util.combining import (
     IterKeyZipperIterDataPipe as IterKeyZipper,
     MapKeyZipperIterDataPipe as MapKeyZipper,
 )
+from torchdata.datapipes.iter.util.common import (
+    FlatMapTemplateIterDataPipe as FlatMapTemplate,
+    MapTemplateIterDataPipe as MapTemplate,
+)
 from torchdata.datapipes.iter.util.cycler import CyclerIterDataPipe as Cycler
 from torchdata.datapipes.iter.util.dataframemaker import (
     DataFrameMakerIterDataPipe as DataFrameMaker,
@@ -152,6 +156,7 @@ __all__ = [
     "FileLister",
     "FileOpener",
     "Filter",
+    "FlatMapTemplate",
     "FlatMapper",
     "Forker",
     "GDriveReader",
@@ -172,6 +177,7 @@ __all__ = [
     "JsonParser",
     "LineReader",
     "MapKeyZipper",
+    "MapTemplate",
     "MapToIterConverter",
     "Mapper",
     "MaxTokenBucketizer",
