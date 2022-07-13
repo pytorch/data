@@ -52,7 +52,7 @@ class AISFileListerIterDataPipe(IterDataPipe[str]):
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper, AISFileLister
         >>> ais_prefixes = IterableWrapper(['gcp://bucket-name/folder/', 'aws:bucket-name/folder/', 'ais://bucket-name/folder/', ...])
-        >>> dp_ais_urls = AISFileLister(url='localhost:8080', source_datapipe=prefix)
+        >>> dp_ais_urls = AISFileLister(url='localhost:8080', source_datapipe=ais_prefixes)
         >>> for url in dp_ais_urls:
         ...     pass
         >>> # Functional API
@@ -99,7 +99,7 @@ class AISFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper, AISFileLister,AISFileLoader
         >>> ais_prefixes = IterableWrapper(['gcp://bucket-name/folder/', 'aws:bucket-name/folder/', 'ais://bucket-name/folder/', ...])
-        >>> dp_ais_urls = AISFileLister(url='localhost:8080', source_datapipe=prefix)
+        >>> dp_ais_urls = AISFileLister(url='localhost:8080', source_datapipe=ais_prefixes)
         >>> dp_cloud_files = AISFileLoader(url='localhost:8080', source_datapipe=dp_ais_urls)
         >>> for url, file in dp_cloud_files:
         ...     pass
