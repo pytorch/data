@@ -5,10 +5,16 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import functools
+import multiprocessing as mp
+import time
 from abc import ABC, abstractmethod
-from typing import Callable, Optional
+from typing import Any, Callable, List, Optional
 
+import torch
 from torch.utils.data import DataLoader
+
+from torchdata.dataloader2 import communication
 from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 
 
@@ -25,7 +31,7 @@ class ReadingServiceInterface(ABC):
             datapipe: IterDataPipe. Original datapipe.
 
         Return:
-            Adapated IterDataPipe.
+            Adapted IterDataPipe.
 
         Example:
             MultiProcessingReadingService finds information about sharding,
@@ -90,6 +96,93 @@ class CheckpointableReadingServiceInterface(ReadingServiceInterface):
 
 def _collate_no_op(batch):
     return batch[0]
+
+
+class _IterateQueueDataPipes:
+    def __init__(self, datapipes):
+        self.datapipes = datapipes
+
+    def __iter__(self):
+        # TODO(VitalyFedyunin): This is slow as it does not sends data requests ahead.
+        exclude_datapipes: List[Any] = []
+        while len(exclude_datapipes) < len(self.datapipes):
+            for dp in self.datapipes:
+                if dp not in exclude_datapipes:
+                    forever = True
+                    while forever:
+                        try:
+                            value = dp.nonblocking_next()
+                            yield value
+                            forever = False
+                        except StopIteration:
+                            exclude_datapipes.append(dp)
+                            forever = False
+                        except communication.iter.NotAvailable:
+                            time.sleep(0.001)
+
+
+class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
+    num_workers: int
+    processes: List
+    datapipes: List
+
+    def __init__(
+        self,
+        num_workers: int = 0,
+        multiprocessing_context=None,
+    ) -> None:
+        self.num_workers = num_workers
+        # TODO(VitalyFedyunin): Should be one of 'fork', 'spawn'
+        self.multiprocessing_context = multiprocessing_context
+        self.processes = []
+        self.datapipes = []
+
+    @staticmethod
+    def init_datapipe_process(num_workers, worker_id, datapipe):
+        # TODO(VitalyFedyunin): Add distributed support
+        # TODO(VitalyFedyunin): Add shuffle determinism support
+        torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
+
+    def initialize(self, datapipe: IterDataPipe) -> IterDataPipe:
+        if self.num_workers == 0:
+            # TODO(VitalyFedyunin): Warn and recommend usage of InPorcessReadingService
+            return datapipe
+        for worker_id in range(self.num_workers):
+            # TODO(VitalyFedyunin): Separate into function, because we also need to apply distributed seed and call it inside process
+            call_inside_process = functools.partial(self.init_datapipe_process, self.num_workers, worker_id)
+            ctx = mp.get_context(self.multiprocessing_context)
+            (process, req_queue, res_queue) = communication.eventloop.SpawnProcessForDataPipeline(
+                ctx, datapipe, call_inside_process
+            )
+            process.start()
+            self.processes.append((process, req_queue, res_queue))  # These queues are independent
+            local_datapipe = communication.iter.QueueWrapper(
+                communication.protocol.IterDataPipeQueueProtocolClient(req_queue, res_queue)
+            )
+            self.datapipes.append(local_datapipe)
+
+        return IterableWrapper(_IterateQueueDataPipes(self.datapipes), deepcopy=False)  # type: ignore[return-value]
+
+    def initialize_iteration(self) -> None:
+        for dp in self.datapipes:
+            dp.reset_iterator()
+
+    def __del__(self):
+        self.finalize()
+
+    def finalize(self) -> None:
+        # TODO(VitalyFedyunin): Check if anyone stuck with messages
+        def clean_me(process, req_queue, res_queue):
+            # TODO(VitalyFedyunin): Can send terminations simultaneously
+            # TODO(VitalyFedyunin): Make termination a function of QueueWrapperDataPipe (similar to reset)
+            req_queue.put(communication.messages.TerminateRequest())
+            _ = res_queue.get()
+            process.join()
+
+        for process, req_queue, res_queue in self.processes:
+            clean_me(process, req_queue, res_queue)
+
+        self.processes = []
 
 
 class MultiProcessingReadingService(ReadingServiceInterface):
