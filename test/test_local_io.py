@@ -167,6 +167,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Reset Test:
         csv_parser_dp = CSVParser(datapipe3, return_path=True)
         n_elements_before_reset = 2
+        expected_res = [("1.csv", ["key", "item"]), ("1.csv", ["a", "1"]), ("1.csv", ["b", "2"]), ("empty2.csv", [])]
         res_before_reset, res_after_reset = reset_after_n_next_calls(csv_parser_dp, n_elements_before_reset)
         self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
         self.assertEqual(expected_res, res_after_reset)
