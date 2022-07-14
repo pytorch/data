@@ -168,7 +168,7 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
             stream = self._helper.skip_lines(file)
             stream = self._helper.decode(stream)
             stream = self._csv_reader(stream, **self.fmtparams)
-            stream = self._helper.as_tuple(stream)
+            stream = self._helper.as_tuple(stream)  # type: ignore[assignment]
             yield from self._helper.return_path(stream, path=path)  # type: ignore[misc]
 
 
