@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data.graph import DataPipe
 
 from torchdata.dataloader2 import communication
-from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
+from torchdata.datapipes.iter import IterableWrapper
 
 
 class ReadingServiceInterface(ABC):
