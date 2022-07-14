@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Optional, Sequence, TypeVar
+from typing import List, Optional, Sequence, TypeVar
 
 from torch.utils.data.datapipes.iter.combining import _ChildDataPipe, _ForkerIterDataPipe
 from torchdata.datapipes import functional_datapipe
@@ -65,11 +65,15 @@ class UnZipperIterDataPipe(IterDataPipe[T]):
             )
 
         # The implementation basically uses Forker but only yields a specific element within the sequence
-        container = _UnZipperIterDataPipe(source_datapipe, sequence_length, buffer_size)  # type: ignore[arg-type]
-        return [_ChildDataPipe(container, i) for i in instance_ids]
+        container = _UnZipperIterDataPipe(source_datapipe, instance_ids, buffer_size)  # type: ignore[arg-type]
+        return [_ChildDataPipe(container, i) for i in range(len(instance_ids))]
 
 
 class _UnZipperIterDataPipe(_ForkerIterDataPipe):
+    def __init__(self, datapipe: IterDataPipe, instance_ids: List[int], buffer_size: int = 1000):
+        super().__init__(datapipe, len(instance_ids), buffer_size)
+        self.instance_ids = instance_ids
+
     def get_next_element_by_instance(self, instance_id: int):
         for return_val in super().get_next_element_by_instance(instance_id):
-            yield return_val[instance_id]
+            yield return_val[self.instance_ids[instance_id]]
