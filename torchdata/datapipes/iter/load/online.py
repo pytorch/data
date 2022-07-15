@@ -130,7 +130,12 @@ def _get_response_from_google_drive(url: str, *, timeout: Optional[float]) -> Tu
             response = session.get(url, timeout=timeout, stream=True)
 
         if "content-disposition" not in response.headers:
-            raise RuntimeError("Internal error: headers don't contain content-disposition.")
+            raise RuntimeError(
+                "Internal error: headers don't contain content-disposition. This is usually caused by "
+                "using a sharing/viewing link instead of a download link. Click 'Download' on the "
+                "Google Drive page, which should redirect you to a download page, and use the link "
+                "of that page."
+            )
 
         filename = re.findall('filename="(.+)"', response.headers["content-disposition"])
         if filename is None:
