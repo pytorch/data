@@ -57,8 +57,9 @@ class TarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
             validate_pathname_binary_tuple(data)
             pathname, data_stream = data
             try:
+                reading_mode = self.mode if data_stream.seekable() else self.mode.replace(":", "|")
                 # typing.cast is used here to silence mypy's type checker
-                tar = tarfile.open(fileobj=cast(Optional[IO[bytes]], data_stream), mode=self.mode)
+                tar = tarfile.open(fileobj=cast(Optional[IO[bytes]], data_stream), mode=reading_mode)
                 for tarinfo in tar:
                     if not tarinfo.isfile():
                         continue
