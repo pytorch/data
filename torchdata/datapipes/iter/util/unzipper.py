@@ -71,9 +71,14 @@ class UnZipperIterDataPipe(IterDataPipe[T]):
 
 class _UnZipperIterDataPipe(_ForkerIterDataPipe):
     def __init__(self, datapipe: IterDataPipe, instance_ids: List[int], buffer_size: int = 1000):
-        super().__init__(datapipe, len(instance_ids), buffer_size)
+        super().__init__(datapipe, len(instance_ids), buffer_size)  # type: ignore[arg-type]
         self.instance_ids = instance_ids
 
     def get_next_element_by_instance(self, instance_id: int):
+        r"""
+        Note:
+            Each element returned from datapipe is required to be a sequnce that can
+            be subscribed with a column index
+        """
         for return_val in super().get_next_element_by_instance(instance_id):
             yield return_val[self.instance_ids[instance_id]]
