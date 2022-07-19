@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from collections import deque
 from typing import List, Optional, Sequence, TypeVar
 
 from torch.utils.data.datapipes.iter.combining import _ChildDataPipe, _ForkerIterDataPipe
@@ -85,27 +84,9 @@ class _UnZipperIterDataPipe(_ForkerIterDataPipe):
             yield return_val[self.instance_ids[instance_id]]
 
     def __getstate__(self):
-        if IterDataPipe.getstate_hook is not None:
-            return IterDataPipe.getstate_hook(self)
-
-        state = (
-            self.main_datapipe,
-            self.num_instances,
-            self.buffer_size,
-            self.instance_ids,
-        )
-        return state
+        state = super().__getstate__()
+        return (*state, self.instance_ids)
 
     def __setstate__(self, state):
-        (
-            self.main_datapipe,
-            self.num_instances,
-            self.buffer_size,
-            self.instance_ids,
-        ) = state
-        self._datapipe_iterator = None
-        self.buffer = deque()
-        self.child_pointers = [0] * self.num_instances
-        self.slowest_ptr = 0
-        self.leading_ptr = 0
-        self.end_ptr = None
+        super().__setstate__(state[:-1])
+        self.instance_ids = state[-1]
