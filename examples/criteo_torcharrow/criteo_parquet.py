@@ -1,7 +1,13 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 """
 This file contains the data pipeline to read from a Paruet and output a DataFrame.
 """
+
 import torcharrow.dtypes as dt
 from common import DEFAULT_CAT_NAMES, DEFAULT_INT_NAMES
 from torchdata.datapipes.iter import FileLister, ParquetDataFrameLoader
@@ -14,6 +20,6 @@ DTYPE = dt.Struct(
 )
 
 source_dp = FileLister(".", masks="*.parquet")
-# TODO: There is current a bug in TorchArrow/Velox related to conversion of arrow arrys to DataFrame that causes
+# TODO(595): There is current a bug in TorchArrow/Velox related to conversion of arrow arrys to DataFrame that causes
 #       the following operation to fail
 parquet_df_dp = ParquetDataFrameLoader(source_dp, dtype=DTYPE)

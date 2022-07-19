@@ -1,2 +1,2 @@
 pytest
-aistore > 0.9.1
+aistore == 0.9.2

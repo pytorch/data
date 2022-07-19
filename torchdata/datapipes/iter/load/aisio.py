@@ -37,7 +37,7 @@ class AISFileListerIterDataPipe(IterDataPipe[str]):
     Acceptable prefixes include but not limited to - `ais://bucket-name`, `ais://bucket-name/`
 
     Note:
-    -   This function also supports files from multiple backends (`aws://..`, `gcp://..`, `hdfs://..`, etc)
+    -   This function also supports files from multiple backends (`aws://..`, `gcp://..`, `azure://..`, etc)
     -   Input must be a list and direct URLs are not supported.
     -   length is -1 by default, all calls to len() are invalid as
         not all items are iterated at the start.
@@ -51,13 +51,13 @@ class AISFileListerIterDataPipe(IterDataPipe[str]):
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper, AISFileLister
-        >>> ais_prefixes = IterableWrapper(['ais://bucket-name/folder/', 'aws:bucket-name/folder/', ...])
-        >>> dp_ais_urls = AISFileLister(url='localhost:8080', source_datapipe=prefix)
-        >>> for d in dp_ais_urls:
+        >>> ais_prefixes = IterableWrapper(['gcp://bucket-name/folder/', 'aws:bucket-name/folder/', 'ais://bucket-name/folder/', ...])
+        >>> dp_ais_urls = AISFileLister(url='localhost:8080', source_datapipe=ais_prefixes)
+        >>> for url in dp_ais_urls:
         ...     pass
         >>> # Functional API
-        >>> dp_ais_urls = dp_ais_urls.list_files_by_ais(url='localhost:8080')
-        >>> for d in dp_ais_urls:
+        >>> dp_ais_urls = ais_prefixes.list_files_by_ais(url='localhost:8080')
+        >>> for url in dp_ais_urls:
         ...     pass
     """
 
@@ -87,7 +87,7 @@ class AISFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Iterates all files in BytesIO format and returns a tuple (url, BytesIO).
 
     Note:
-    -   This function also supports files from multiple backends (`aws://..`, `gcp://..`, etc)
+    -   This function also supports files from multiple backends (`aws://..`, `gcp://..`, `azure://..`, etc)
     -   Input must be a list and direct URLs are not supported.
     -   This internally uses AIStore Python SDK.
 
@@ -98,14 +98,14 @@ class AISFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper, AISFileLister,AISFileLoader
-        >>> ais_prefixes = IterableWrapper(['ais://bucket-name/folder/', 'aws:bucket-name/folder/', ...])
-        >>> dp_ais_urls = AISFileLister(url='localhost:8080', source_datapipe=prefix)
-        >>> dp_s3_files = AISFileLoader(url='localhost:8080', source_datapipe=dp_ais_urls)
-        >>> for url, file in dp_ais_urls:
+        >>> ais_prefixes = IterableWrapper(['gcp://bucket-name/folder/', 'aws:bucket-name/folder/', 'ais://bucket-name/folder/', ...])
+        >>> dp_ais_urls = AISFileLister(url='localhost:8080', source_datapipe=ais_prefixes)
+        >>> dp_cloud_files = AISFileLoader(url='localhost:8080', source_datapipe=dp_ais_urls)
+        >>> for url, file in dp_cloud_files:
         ...     pass
         >>> # Functional API
-        >>> dp_ais_urls = dp_ais_urls.load_files_by_ais(url='localhost:8080')
-        >>> for url, file in dp_ais_urls:
+        >>> dp_cloud_files = dp_ais_urls.load_files_by_ais(url='localhost:8080')
+        >>> for url, file in dp_cloud_files:
         ...     pass
     """
 

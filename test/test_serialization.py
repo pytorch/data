@@ -203,7 +203,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.Header, None, (3,), {}),
             (iterdp.HttpReader, None, (), {}),
             (iterdp.HuggingFaceHubReader, None, (), {}),
-            # TODO (ejguan): Deterministic serialization is required
+            # TODO(593): (ejguan): Deterministic serialization is required
             #  (iterdp.InBatchShuffler, IterableWrapper(range(10)).batch(3), (), {}),
             (iterdp.InMemoryCacheHolder, None, (), {}),
             (iterdp.IndexAdder, IterableWrapper([{"a": 1, "b": 2}, {"c": 3, "a": 1}]), ("label",), {}),
@@ -283,7 +283,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)},
             ),
             (iterdp.TarArchiveLoader, None, (), {}),
-            # TODO: Add serialization tests for optional DataPipe
+            # TODO(594): Add serialization tests for optional DataPipe
             #  (iterdp.TFRecordLoader, None, (), {}),
             (iterdp.UnZipper, IterableWrapper([(i, i + 10) for i in range(10)]), (), {"sequence_length": 2}),
             (iterdp.WebDataset, IterableWrapper([("foo.txt", b"1"), ("bar.txt", b"2")]), (), {}),

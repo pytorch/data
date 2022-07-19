@@ -91,7 +91,7 @@ html_css_files = [
     "css/custom.css",
 ]
 
-# TODO: use regex to replace all "T" and "T_co" related signature
+# TODO(598): use regex to replace all "T" and "T_co" related signature
 signature_replacements = {
     "torch.utils.data.datapipes.datapipe.IterDataPipe": "IterDataPipe",
     "abc.IterDataPipe": "IterDataPipe",
