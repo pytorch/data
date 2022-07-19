@@ -9,9 +9,12 @@ from abc import abstractmethod
 import torch
 
 from torch.utils.data.graph import DataPipe
+from torchdata.datapipes.iter.util.cacheholder import _WaitPendingCacheItemIterDataPipe
+
 
 __all__ = [
     "Adapter",
+    "CacheTimeout",
     "Shuffle",
 ]
 
@@ -45,3 +48,31 @@ class Shuffle(Adapter):
 
     def __call__(self, datapipe: DataPipe) -> DataPipe:
         return torch.utils.data.graph_settings.apply_shuffle_settings(datapipe, shuffle=self.enable)
+
+
+class CacheTimeout(Adapter):
+    r"""
+    CacheTimeout DataPipes adapter allows control over timeouts of all existing EndOnDiskCacheHolder (``end_caching``)
+    DataPipes in the graph. Usefull when cached pipeline takes to long to execute (ex. slow file downloading).
+
+    Args:
+        timeout: int - amount of seconds parallel processes will wait for cached files to appear.
+
+    Example:
+        >>>  dl = DataLoader2(dp, [CacheTimeout(600)])
+    """
+
+    def __init__(self, timeout=None):
+        if timeout is None:
+            raise ValueError("timeout should be integer")
+        self.timeout = timeout
+
+    def __call__(self, datapipe: DataPipe) -> DataPipe:
+        graph = torch.utils.data.graph.traverse(datapipe, only_datapipe=True)
+        all_pipes = torch.utils.data.graph_settings.get_all_graph_pipes(graph)
+        cache_locks = {pipe for pipe in all_pipes if isinstance(pipe, _WaitPendingCacheItemIterDataPipe)}
+
+        for cache_lock in cache_locks:
+            cache_lock.set_timeout(self.timeout)
+
+        return datapipe

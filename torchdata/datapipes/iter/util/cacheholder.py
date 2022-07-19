@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import functools
 import hashlib
 import inspect
 import os.path
@@ -292,17 +291,26 @@ def _is_promise_pending(promise_filename):
     return os.path.exists(promise_filename)
 
 
-def _wait_promise_fn(timeout, filename):
-    promise_filename = _find_promise_file(filename)
-    start = time.time()
-    while _is_promise_pending(promise_filename):
-        time.sleep(0.01)
-        if time.time() - start > timeout:
-            raise Exception(
-                f"OnDiskCache Exception: {filename} expected to be written by different process, "
-                + f"but file is not ready in {timeout} seconds."
-            )
-    return filename
+class _WaitPendingCacheItemIterDataPipe(IterDataPipe):
+    def __init__(self, source_datapipe, timeout=300):
+        self.source_datapipe = source_datapipe
+        self.timeout = timeout
+
+    def set_timeout(self, timeout):
+        self.timeout = timeout
+
+    def __iter__(self):
+        for filename in self.source_datapipe:
+            promise_filename = _find_promise_file(filename)
+            start = time.time()
+            while _is_promise_pending(promise_filename):
+                time.sleep(0.01)
+                if time.time() - start > self.timeout:
+                    raise Exception(
+                        f"OnDiskCache Exception: {filename} expected to be written by different process, "
+                        + f"but file is not ready in {self.timeout} seconds."
+                    )
+            yield filename
 
 
 class _FulfilledPromisesIterDataPipe(IterDataPipe):
@@ -398,7 +406,7 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
 
         _filepath_fn, _hash_dict, _hash_type, _ = OnDiskCacheHolderIterDataPipe._temp_dict[cache_holder]
         cached_dp = cache_holder._end_caching()
-        cached_dp = cached_dp.map(functools.partial(_wait_promise_fn, timeout))
+        cached_dp = _WaitPendingCacheItemIterDataPipe(cached_dp, timeout=timeout)
         cached_dp = FileLister(cached_dp, recursive=True)
 
         if same_filepath_fn:

@@ -27,6 +27,8 @@ import expecttest
 from _utils._common_utils_for_test import create_temp_dir, create_temp_files, get_name, reset_after_n_next_calls
 
 from torch.utils.data import DataLoader
+
+from torchdata.dataloader2.adapter import CacheTimeout
 from torchdata.datapipes.iter import (
     Bz2FileLoader,
     CSVDictParser,
@@ -635,7 +637,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
     def _slow_fn(tmpdirname, x):
         with open(os.path.join(tmpdirname, str(os.getpid())), "w") as pid_fh:
             pid_fh.write("anything")
-        time.sleep(2)
+        time.sleep(10)
         return (x, "str")
 
     def test_disk_cache_locks(self):
@@ -655,6 +657,15 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             # We expect only two files, one with pid and 'downloaded' one
             self.assertEqual(2, len(all_files))
             self.assertEqual("str", result[0][1])
+
+            # cleanup cached files
+            for f in os.listdir(tmpdirname):
+                os.remove(os.path.join(tmpdirname, f))
+
+            dp = CacheTimeout(2)(dp)  # Calling adapter manually to work with classic DataLoader
+            dl = DataLoader(dp, num_workers=10, multiprocessing_context="spawn", batch_size=1, collate_fn=_unbatch)
+            with self.assertRaisesRegex(Exception, "OnDiskCache Exception"):
+                result = list(dl)
 
     # TODO(120): this test currently only covers reading from local
     # filesystem. It needs to be modified once test data can be stored on
