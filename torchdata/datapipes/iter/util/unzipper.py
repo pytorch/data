@@ -78,7 +78,7 @@ class _UnZipperIterDataPipe(_ForkerIterDataPipe):
     def get_next_element_by_instance(self, instance_id: int):
         r"""
         Note:
-            Each element returned from datapipe is required to be a sequnce that can
+            Each element returned from the source datapipe is required to be a sequnce that can
             be subscribed with a column index
         """
         for return_val in super().get_next_element_by_instance(instance_id):
