@@ -744,7 +744,7 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual(list(range(10, 20)), list(dp2))
         self.assertEqual(list(range(20, 30)), list(dp3))
 
-        (dp2,) = source_dp.unzip(sequence_length=3, columns_to_skip=[0, 2])
+        (dp2,) = source_dp.unzip(sequence_length=3, columns_to_skip=[0, 2], buffer_size=0)
         self.assertEqual(list(range(10, 20)), list(dp2))
 
         source_dp = IterableWrapper([(i, i + 10, i + 20, i + 30) for i in range(10)])
@@ -754,12 +754,16 @@ class TestIterDataPipe(expecttest.TestCase):
 
         # Functional Test: one child DataPipe yields all value first, but buffer_size = 5 being too small, raises error
         source_dp = IterableWrapper([(i, i + 10) for i in range(10)])
-        dp1, dp2 = source_dp.unzip(sequence_length=2, buffer_size=5)
+        dp1, dp2 = source_dp.unzip(sequence_length=2, buffer_size=4)
         it1 = iter(dp1)
-        for _ in range(5):
+        for _ in range(4):
             next(it1)
         with self.assertRaises(BufferError):
             next(it1)
+        with self.assertRaises(BufferError):
+            list(dp2)
+
+        dp1, dp2 = source_dp.unzip(sequence_length=2, buffer_size=4)
         with self.assertRaises(BufferError):
             list(dp2)
 
