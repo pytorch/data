@@ -1,7 +1,13 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 """
 This file contains the data pipeline to read from a TSV file and output a DataFrame.
 """
+
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
@@ -153,7 +159,7 @@ class CriteoIterDataPipe(IterDataPipe):
 # Creating DataFrame from TSV File
 df = criteo_dataframes_from_tsv("day_11_first_3k_rows_original.tsv")
 
-# TODO(VitalyFedyunin): Optimize this operation
+# TODO(596): Optimize this operation
 df = df.shuffle()
 
 df["dense_features"] = df["dense_features"].fill_null(0)
