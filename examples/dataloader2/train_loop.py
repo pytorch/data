@@ -11,7 +11,7 @@ from torchdata.datapipes.iter import IterableWrapper
 
 
 class ToyModel(torch.nn.Module):
-    def __init__(self):
+    def __init__(self) -> None:
         """
         In the model constructor, we instantiate four parameters and use them
         as member parameters.
@@ -22,7 +22,7 @@ class ToyModel(torch.nn.Module):
         self.c = torch.nn.Parameter(torch.randn(()))
         self.d = torch.nn.Parameter(torch.randn(()))
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Simple model forward function
         """
