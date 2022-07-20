@@ -102,6 +102,7 @@ from torchdata.datapipes.iter.util.plain_text_reader import (
     CSVParserIterDataPipe as CSVParser,
     LineReaderIterDataPipe as LineReader,
 )
+from torchdata.datapipes.iter.util.prefetch import FullSyncIterDataPipe as FullSync
 from torchdata.datapipes.iter.util.rararchiveloader import RarArchiveLoaderIterDataPipe as RarArchiveLoader
 from torchdata.datapipes.iter.util.rows2columnar import Rows2ColumnarIterDataPipe as Rows2Columnar
 from torchdata.datapipes.iter.util.samplemultiplexer import SampleMultiplexerDataPipe as SampleMultiplexer
@@ -154,6 +155,7 @@ __all__ = [
     "Filter",
     "FlatMapper",
     "Forker",
+    "FullSync",
     "GDriveReader",
     "Grouper",
     "HashChecker",
