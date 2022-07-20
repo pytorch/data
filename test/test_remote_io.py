@@ -86,10 +86,8 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         # Error Test: test if the Http Reader raises an error when the url is invalid
         error_url = "https://github.com/pytorch/data/this/url/dont/exist"
         http_error_dp = HttpReader(IterableWrapper([error_url]), timeout=timeout)
-        with self.assertRaises(Exception) as e:
+        with self.assertRaisesRegex(Exception, '[404]'):
             next(iter(http_error_dp.readlines()))
-        err_msg = "Could not get the file. [HTTP Error] <Response [404]>."
-        self.assertEqual( str(e.exception)[:54], err_msg)
 
     def test_on_disk_cache_holder_iterdatapipe(self):
         tar_file_url = "https://raw.githubusercontent.com/pytorch/data/main/test/_fakedata/csv.tar.gz"
