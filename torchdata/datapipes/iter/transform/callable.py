@@ -4,12 +4,43 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Callable, Iterator, List, TypeVar
+import inspect
+from typing import Callable, Iterator, List, Optional, TypeVar, Union
 
 from torch.utils.data import functional_datapipe, IterDataPipe
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
 
 T_co = TypeVar("T_co", covariant=True)
+
+
+def ensure_fn_works(fn: Callable, input_col: Optional[Union[int, tuple, list]]):
+    """
+    Checks that function is compatible with the input column.
+
+    Args:
+        fn: The function to check.
+        input_col: The input column to check.
+
+    Returns:
+        None.
+
+    Raises:
+        TypeError: If the function is not compatible with the input column.
+    """
+    sig = inspect.signature(fn)
+
+    if isinstance(input_col, int) or not input_col:
+        if len(sig.parameters) != 1:
+            raise TypeError(
+                f"The function {fn.__name__} takes {len(sig.parameters)} " f"arguments, " f"but 1 is required."
+            )
+    elif isinstance(input_col, (list, tuple)):
+        if len(sig.parameters) != len(input_col):
+            raise TypeError(
+                f"The function {fn.__name__} takes {len(sig.parameters)} "
+                f"arguments, "
+                f"but {len(input_col)} are required."
+            )
 
 
 @functional_datapipe("map_batches")
@@ -102,6 +133,11 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
     Args:
         datapipe: Source IterDataPipe
         fn: the function to be applied to each element in the DataPipe, the output must be a Sequence
+        input_col: Index or indices of data which ``fn`` is applied, such as:
+            - ``None`` as default to apply ``fn`` to the data directly.
+            - Integer(s) is used for list/tuple.
+            - Key(s) is used for dict.
+
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
@@ -121,6 +157,7 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
         _check_unpickable_fn(fn)
         self.fn = fn  # type: ignore[assignment]
         self.input_col = input_col
+        ensure_fn_works(fn, input_col)
 
     def _apply_fn(self, data):
         if self.input_col is None:
