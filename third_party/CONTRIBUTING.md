@@ -1,6 +1,6 @@
 # Third-Party Libraries
 
-The `third_party` directory contains all of (optional) dependency libraries used by `torchdata`.
+The `third_party` directory contains all of the (optional) dependency libraries used by `torchdata`.
 And, it relies on the `CMake` system to compile and integrate them into a C-extension module that
 can be found as `torchdata/_torchdata`.
 
@@ -15,10 +15,12 @@ for more detail.
 `TorchData` as a data-processing libraries provides a bunch of `DataPipes` that are integrated with
 different third-party libraries to handle specific use cases. For example, `datasets` is imported
 to load dataset from `HuggingFace`, and `fsspec` is imported to provide a unified API to access and
-load from local or remote file systems. Those dependencies should only be verified of their availability
-until they are used/referenced by users during `DataPipe` construction. You can find examples from
+load from local or remote file systems. Those dependencies are optional and should only be verified
+of their availability when they are used/referenced by users during `DataPipe` construction.You can
+find examples from
 [here](https://github.com/pytorch/data/blob/bb78231e5f87620385cb2f91cda87e7f9414eb4a/torchdata/datapipes/iter/load/huggingface.py#L57-L62)
 and [here](https://github.com/pytorch/data/blob/d19858202df7e8b75765074259e6023f539cbf3f/torchdata/datapipes/iter/load/fsspec.py#L59).
+They are contrasted with Core dependencies that are must be installed along with `torchdata`.
 
 - Optional features
   - For a Python library, please follow the example above to add soft dependency to `torchdata`.
