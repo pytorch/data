@@ -15,16 +15,15 @@ import transformers
 from args import arg_parser
 from benchmarks.datasets import prepare_gtsrb_dataset
 from datasets import prepare_gtsrb_datapipe
-from report import create_report
 from torchvision import transforms
 from torchvision.prototype.datasets import load as loadpipe
 from trainers import train
-from utils import init_fn
+from report import MetricCache, CSVReport
 
 logging.basicConfig(filename="example.log", level=logging.DEBUG)
 
 
-dataset, ispipe, model_name, batch_size, device, num_epochs, num_workers, shuffle, dataloaderv = arg_parser()
+dataset, ispipe, model_name, batch_size, device, num_epochs, report_location, num_workers, shuffle, dataloaderv = arg_parser()
 
 if device.startswith("cuda"):
     nvidiasmi = subprocess.check_output("nvidia-smi", shell=True, text=True)
@@ -52,6 +51,7 @@ model_map = {
 model = model_map[model_name]().to(torch.device(device))
 
 # setup data pipe
+# TODO: How about we just make this work with any HF dataset
 if dataset == "gtsrb":
     if ispipe:
         dp = loadpipe(dataset, split="train")
@@ -70,9 +70,9 @@ else:
     print(f"{dataset} not supported yet")
 
 
-print(f"batch size {batch_size}")
-print(f"Dataset name {dp}")
-print(f"Dataset length {len(dp)}")
+logging.info(f"batch size {batch_size}")
+logging.info(f"Dataset name {dp}")
+logging.info(f"Dataset length {len(dp)}")
 
 # Setup data loader
 
@@ -107,10 +107,12 @@ with torch.profiler.profile(
     with_modules=True,
 ) as p:
 
+    # TODO: Double check if this actually modifies the metrics in calling code
     train(num_epochs, model, dl, per_epoch_durations, batch_durations, criterion, optimizer, p)
 
     total_end = time.time()
     total_duration = total_end - total_start
+    metric_cache = MetricCache(batch_durations, per_epoch_durations, total_duration)
 
 # TODO: Make this output some human readable markdown file
-create_report(per_epoch_durations, batch_durations, total_duration)
+CSVReport(metric_cache, report_location).export()

@@ -35,6 +35,7 @@ class MetricExporter(ABC):
 
 
 class StdOutReport(MetricExporter):
+    @staticmethod
     def export(self, metric_cache):
         percentiles_dict = metric_cache.calculate_percentiles()
         for field, percentiles in percentiles_dict.items:
@@ -42,6 +43,7 @@ class StdOutReport(MetricExporter):
 
 
 class CSVReport(MetricExporter):
+    @staticmethod
     def export(self, metric_cache: MetricCache, filepath: str):
         percentiles_dict = metric_cache.calculate_percentiles()
         with open(filepath, "w") as file:
