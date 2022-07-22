@@ -1,0 +1,9 @@
+--extra-index-url https://download.pytorch.org/whl/nightly/cu113
+simple-parsing
+dill
+numpy
+torch 
+torchvision
+torchaudio
+torchtext 
+transformers
