@@ -40,7 +40,9 @@ class ProtocolClient(Protocol):
 
     def request_served(self, result=None):
         if not self.waiting_for_response():
-            raise Exception("Expected no peding requests, but something got served", result)
+            raise Exception(
+                "Expected no peding requests, but something got served", result
+            )
         self._req_sent = None
 
 
@@ -102,14 +104,18 @@ class MapDataPipeQueueProtocolServer(ProtocolServer):
 class MapDataPipeQueueProtocolClient(ProtocolClient):
     def request_len(self):
         if not self.can_take_request():
-            raise Exception("Can not request len while we are still waiting response for previous request")
+            raise Exception(
+                "Can not request len while we are still waiting response for previous request"
+            )
         request = communication.messages.LenRequest()
         self.request_queue.put(request)
         self.request_sent(request)
 
     def request_item(self, index):
         if not self.can_take_request():
-            raise Exception("Can not request item while we are still waiting response for previous request")
+            raise Exception(
+                "Can not request item while we are still waiting response for previous request"
+            )
         request = communication.messages.GetItemRequest(index)
         self.request_queue.put(request)
         self.request_sent(request)
@@ -147,7 +153,9 @@ class IterDataPipeQueueProtocolServer(ProtocolServer):
     def response_reset_iterator(self):
         if not self.have_pending_request():
             raise Exception("Attempting to reply with pending request")
-        if not isinstance(self._req_received, communication.messages.ResetIteratorRequest):
+        if not isinstance(
+            self._req_received, communication.messages.ResetIteratorRequest
+        ):
             raise Exception("Replaying with reset status to other type of message")
         self.response_queue.put(communication.messages.ResetIteratorResponse())
         self._req_received = None
@@ -174,14 +182,18 @@ class IterDataPipeQueueProtocolServer(ProtocolServer):
 class IterDataPipeQueueProtocolClient(ProtocolClient):
     def request_reset_iterator(self):
         if not self.can_take_request():
-            raise Exception("Can not reset while we are still waiting response for previous request")
+            raise Exception(
+                "Can not reset while we are still waiting response for previous request"
+            )
         request = communication.messages.ResetIteratorRequest()
         self.request_queue.put(request)
         self.request_sent(request)
 
     def request_next(self):
         if not self.can_take_request():
-            raise Exception("Can not request next item while we are still waiting response for previous request")
+            raise Exception(
+                "Can not request next item while we are still waiting response for previous request"
+            )
         request = communication.messages.GetNextRequest()
         self.request_queue.put(request)
         self.request_sent(request)

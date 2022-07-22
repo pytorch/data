@@ -82,9 +82,13 @@ def _filter_by_module_availability(datapipes):
     if datasets is None:
         filter_set.update([iterdp.HuggingFaceHubReader])
     if fsspec is None:
-        filter_set.update([iterdp.FSSpecFileLister, iterdp.FSSpecFileOpener, iterdp.FSSpecSaver])
+        filter_set.update(
+            [iterdp.FSSpecFileLister, iterdp.FSSpecFileOpener, iterdp.FSSpecSaver]
+        )
     if iopath is None:
-        filter_set.update([iterdp.IoPathFileLister, iterdp.IoPathFileOpener, iterdp.IoPathSaver])
+        filter_set.update(
+            [iterdp.IoPathFileLister, iterdp.IoPathFileOpener, iterdp.IoPathSaver]
+        )
     if rarfile is None:
         filter_set.update([iterdp.RarArchiveLoader])
     if torcharrow is None or not DILL_AVAILABLE:
@@ -104,7 +108,9 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             self.temp_sub_dir.cleanup()
             self.temp_dir.cleanup()
         except Exception as e:
-            warnings.warn(f"TestIterDataPipeSerialization was not able to cleanup temp dir due to {e}")
+            warnings.warn(
+                f"TestIterDataPipeSerialization was not able to cleanup temp dir due to {e}"
+            )
 
     def _serialization_test_helper(self, datapipe, use_dill):
         if use_dill:
@@ -131,7 +137,11 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 self.assertEqual(exp, act)
 
     def _serialization_test_for_single_dp(self, dp, use_dill, is_dataframe=False):
-        test_helper_fn = self._serialization_dataframe_test_helper if is_dataframe else self._serialization_test_helper
+        test_helper_fn = (
+            self._serialization_dataframe_test_helper
+            if is_dataframe
+            else self._serialization_test_helper
+        )
         # 1. Testing for serialization before any iteration starts
         test_helper_fn(dp, use_dill)
         # 2. Testing for serialization afterDataPipe is partially read
@@ -166,13 +176,21 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
 
     def test_serializable(self):
         picklable_datapipes: List = [
-            (iterdp.BatchMapper, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), (_fake_batch_fn, 2, 1), {}),
+            (
+                iterdp.BatchMapper,
+                IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]),
+                (_fake_batch_fn, 2, 1),
+                {},
+            ),
             (iterdp.BucketBatcher, IterableWrapper([0, 0, 0, 0, 0, 0, 0]), (5,), {}),
             (iterdp.Bz2FileLoader, None, (), {}),
             (
                 iterdp.CSVDictParser,
                 IterableWrapper(
-                    [("f1", StringIO("Label,1,1\nLabel,2,2\nLabel,3,3")), ("f2", StringIO("L,1,1\r\nL,2,2\r\nL,3,3"))]
+                    [
+                        ("f1", StringIO("Label,1,1\nLabel,2,2\nLabel,3,3")),
+                        ("f2", StringIO("L,1,1\r\nL,2,2\r\nL,3,3")),
+                    ]
                 ),
                 (),
                 {},
@@ -180,13 +198,21 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (
                 iterdp.CSVParser,
                 IterableWrapper(
-                    [("f1", StringIO("Label,1,1\nLabel,2,2\nLabel,3,3")), ("f2", StringIO("L,1,1\r\nL,2,2\r\nL,3,3"))]
+                    [
+                        ("f1", StringIO("Label,1,1\nLabel,2,2\nLabel,3,3")),
+                        ("f2", StringIO("L,1,1\r\nL,2,2\r\nL,3,3")),
+                    ]
                 ),
                 (),
                 {},
             ),
             (iterdp.Cycler, None, (2,), {}),
-            (iterdp.DataFrameMaker, IterableWrapper([(i,) for i in range(3)]), (), {"dtype": DTYPE}),
+            (
+                iterdp.DataFrameMaker,
+                IterableWrapper([(i,) for i in range(3)]),
+                (),
+                {"dtype": DTYPE},
+            ),
             (iterdp.Decompressor, None, (), {}),
             (iterdp.Enumerator, None, (2,), {}),
             (iterdp.FlatMapper, None, (_fake_fn_ls,), {}),
@@ -194,9 +220,14 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.FSSpecFileOpener, None, (), {}),
             (
                 iterdp.FSSpecSaver,
-                IterableWrapper([("1.txt", b"DATA1"), ("2.txt", b"DATA2"), ("3.txt", b"DATA3")]),
+                IterableWrapper(
+                    [("1.txt", b"DATA1"), ("2.txt", b"DATA2"), ("3.txt", b"DATA3")]
+                ),
                 (),
-                {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)},
+                {
+                    "mode": "wb",
+                    "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name),
+                },
             ),
             (iterdp.GDriveReader, None, (), {}),
             (iterdp.HashChecker, None, ({},), {}),
@@ -206,19 +237,33 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             # TODO(593): (ejguan): Deterministic serialization is required
             #  (iterdp.InBatchShuffler, IterableWrapper(range(10)).batch(3), (), {}),
             (iterdp.InMemoryCacheHolder, None, (), {}),
-            (iterdp.IndexAdder, IterableWrapper([{"a": 1, "b": 2}, {"c": 3, "a": 1}]), ("label",), {}),
+            (
+                iterdp.IndexAdder,
+                IterableWrapper([{"a": 1, "b": 2}, {"c": 3, "a": 1}]),
+                ("label",),
+                {},
+            ),
             (iterdp.IoPathFileLister, ".", (), {}),
             (iterdp.IoPathFileOpener, None, (), {}),
             (
                 iterdp.IoPathSaver,
-                IterableWrapper([("1.txt", b"DATA1"), ("2.txt", b"DATA2"), ("3.txt", b"DATA3")]),
+                IterableWrapper(
+                    [("1.txt", b"DATA1"), ("2.txt", b"DATA2"), ("3.txt", b"DATA3")]
+                ),
                 (),
-                {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)},
+                {
+                    "mode": "wb",
+                    "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name),
+                },
             ),
             (
                 iterdp.IterKeyZipper,
                 IterableWrapper([("a", 100), ("b", 200), ("c", 300)]),
-                (IterableWrapper([("a", 1), ("b", 2), ("c", 3)]), itemgetter(0), itemgetter(0)),
+                (
+                    IterableWrapper([("a", 1), ("b", 2), ("c", 3)]),
+                    itemgetter(0),
+                    itemgetter(0),
+                ),
                 {},
             ),
             (
@@ -235,7 +280,10 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (
                 iterdp.LineReader,
                 IterableWrapper(
-                    [("file1", StringIO("Line1\nLine2")), ("file2", StringIO("Line2,1\r\nLine2,2\r\nLine2,3"))]
+                    [
+                        ("file1", StringIO("Line1\nLine2")),
+                        ("file2", StringIO("Line2,1\r\nLine2,2\r\nLine2,3")),
+                    ]
                 ),
                 (),
                 {},
@@ -243,7 +291,9 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.MapToIterConverter, SequenceWrapper(range(10)), (), {}),
             (
                 iterdp.MaxTokenBucketizer,
-                IterableWrapper(["1", "22", "1", "4444", "333", "1", "22", "22", "333"]),
+                IterableWrapper(
+                    ["1", "22", "1", "4444", "333", "1", "22", "22", "333"]
+                ),
                 (4,),
                 {},
             ),
@@ -263,7 +313,9 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.OnlineReader, None, (), {}),
             (
                 iterdp.ParagraphAggregator,
-                IterableWrapper([("f1", "L1"), ("f1", "L2"), ("f2", "21"), ("f2", "22")]),
+                IterableWrapper(
+                    [("f1", "L1"), ("f1", "L2"), ("f2", "21"), ("f2", "22")]
+                ),
                 (),
                 {},
             ),
@@ -271,22 +323,44 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.RarArchiveLoader, None, (), {}),
             (
                 iterdp.Rows2Columnar,
-                IterableWrapper([[{"a": 1}, {"b": 2, "a": 1}], [{"a": 1, "b": 200}, {"c": 3}]]),
+                IterableWrapper(
+                    [[{"a": 1}, {"b": 2, "a": 1}], [{"a": 1, "b": 200}, {"c": 3}]]
+                ),
                 (),
                 {},
             ),
-            (iterdp.SampleMultiplexer, {IterableWrapper([0] * 10): 0.5, IterableWrapper([1] * 10): 0.5}, (), {}),
+            (
+                iterdp.SampleMultiplexer,
+                {IterableWrapper([0] * 10): 0.5, IterableWrapper([1] * 10): 0.5},
+                (),
+                {},
+            ),
             (
                 iterdp.Saver,
-                IterableWrapper([("1.txt", b"DATA1"), ("2.txt", b"DATA2"), ("3.txt", b"DATA3")]),
+                IterableWrapper(
+                    [("1.txt", b"DATA1"), ("2.txt", b"DATA2"), ("3.txt", b"DATA3")]
+                ),
                 (),
-                {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)},
+                {
+                    "mode": "wb",
+                    "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name),
+                },
             ),
             (iterdp.TarArchiveLoader, None, (), {}),
             # TODO(594): Add serialization tests for optional DataPipe
             #  (iterdp.TFRecordLoader, None, (), {}),
-            (iterdp.UnZipper, IterableWrapper([(i, i + 10) for i in range(10)]), (), {"sequence_length": 2}),
-            (iterdp.WebDataset, IterableWrapper([("foo.txt", b"1"), ("bar.txt", b"2")]), (), {}),
+            (
+                iterdp.UnZipper,
+                IterableWrapper([(i, i + 10) for i in range(10)]),
+                (),
+                {"sequence_length": 2},
+            ),
+            (
+                iterdp.WebDataset,
+                IterableWrapper([("foo.txt", b"1"), ("bar.txt", b"2")]),
+                (),
+                {},
+            ),
             (iterdp.XzFileLoader, None, (), {}),
             (iterdp.ZipArchiveLoader, None, (), {}),
             (iterdp.ZipperLongest, IterableWrapper(range(10)), (), {}),
@@ -326,17 +400,25 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 if custom_input is None:
                     custom_input = IterableWrapper(range(10))
 
-                if dpipe in dp_skip_comparison:  # Mke sure they are picklable and loadable (no value comparison)
+                if (
+                    dpipe in dp_skip_comparison
+                ):  # Mke sure they are picklable and loadable (no value comparison)
                     datapipe = dpipe(custom_input, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
                     serialized_dp = pickle.dumps(datapipe)
                     _ = pickle.loads(serialized_dp)
                 elif dpipe in dp_compare_children:  # DataPipes that have children
                     dp1, dp2 = dpipe(custom_input, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
-                    self._serialization_test_for_dp_with_children(dp1, dp2, use_dill=False)
+                    self._serialization_test_for_dp_with_children(
+                        dp1, dp2, use_dill=False
+                    )
                 else:  # Single DataPipe that requires comparison
                     datapipe = dpipe(custom_input, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
-                    is_dataframe = issubclass(dpipe, (iterdp.DataFrameMaker, iterdp.ParquetDataFrameLoader))
-                    self._serialization_test_for_single_dp(datapipe, use_dill=False, is_dataframe=is_dataframe)
+                    is_dataframe = issubclass(
+                        dpipe, (iterdp.DataFrameMaker, iterdp.ParquetDataFrameLoader)
+                    )
+                    self._serialization_test_for_single_dp(
+                        datapipe, use_dill=False, is_dataframe=is_dataframe
+                    )
             except Exception as e:
                 print(f"{dpipe} is failing.")
                 raise e
@@ -360,7 +442,9 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         for dpipe, dp_args, dp_kwargs in unpicklable_datapipes:
             if DILL_AVAILABLE:
                 try:
-                    if dpipe in dp_skip_comparison:  # Make sure they are picklable/loadable (no value comparison)
+                    if (
+                        dpipe in dp_skip_comparison
+                    ):  # Make sure they are picklable/loadable (no value comparison)
                         datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
                         serialized_dp = dill.dumps(datapipe)
                         _ = dill.loads(serialized_dp)
@@ -374,7 +458,9 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             else:
                 dp_no_attribute_error = (iterdp.OnDiskCacheHolder,)
                 try:
-                    with self.assertWarnsRegex(UserWarning, r"^Local function is not supported by pickle"):
+                    with self.assertWarnsRegex(
+                        UserWarning, r"^Local function is not supported by pickle"
+                    ):
                         datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
                     if isinstance(datapipe, dp_no_attribute_error):
                         _ = pickle.dumps(datapipe)
@@ -403,8 +489,18 @@ class TestMapDataPipeSerialization(expecttest.TestCase):
     def test_serializable(self):
         picklable_datapipes: List = [
             (mapdp.InMemoryCacheHolder, None, (), {}),
-            (mapdp.IterToMapConverter, IterableWrapper([(i, i) for i in range(10)]), (), {}),
-            (mapdp.UnZipper, SequenceWrapper([(i, i + 10) for i in range(10)]), (), {"sequence_length": 2}),
+            (
+                mapdp.IterToMapConverter,
+                IterableWrapper([(i, i) for i in range(10)]),
+                (),
+                {},
+            ),
+            (
+                mapdp.UnZipper,
+                SequenceWrapper([(i, i + 10) for i in range(10)]),
+                (),
+                {"sequence_length": 2},
+            ),
         ]
 
         dp_skip_comparison = set()
@@ -417,7 +513,9 @@ class TestMapDataPipeSerialization(expecttest.TestCase):
                 if custom_input is None:
                     custom_input = SequenceWrapper(range(10))
 
-                if dpipe in dp_skip_comparison:  # Mke sure they are picklable and loadable (no value comparison)
+                if (
+                    dpipe in dp_skip_comparison
+                ):  # Mke sure they are picklable and loadable (no value comparison)
                     datapipe = dpipe(custom_input, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
                     serialized_dp = pickle.dumps(datapipe)
                     _ = pickle.loads(serialized_dp)

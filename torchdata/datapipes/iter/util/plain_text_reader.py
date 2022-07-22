@@ -44,7 +44,9 @@ class PlainTextReaderHelper:
         yield from file
         file.close()
 
-    def strip_newline(self, stream: Union[Iterator[bytes], Iterator[str]]) -> Union[Iterator[bytes], Iterator[str]]:
+    def strip_newline(
+        self, stream: Union[Iterator[bytes], Iterator[str]]
+    ) -> Union[Iterator[bytes], Iterator[str]]:
         if not self._strip_newline:
             yield from stream
             return
@@ -55,15 +57,21 @@ class PlainTextReaderHelper:
             else:
                 yield line.strip(b"\r\n")
 
-    def decode(self, stream: Union[Iterator[bytes], Iterator[str]]) -> Union[Iterator[bytes], Iterator[str]]:
+    def decode(
+        self, stream: Union[Iterator[bytes], Iterator[str]]
+    ) -> Union[Iterator[bytes], Iterator[str]]:
         if not self._decode:
             yield from stream
             return
 
         for line in stream:
-            yield line.decode(self._encoding, self._errors) if isinstance(line, bytes) else line
+            yield line.decode(self._encoding, self._errors) if isinstance(
+                line, bytes
+            ) else line
 
-    def return_path(self, stream: Iterator[D], *, path: str) -> Iterator[Union[D, Tuple[str, D]]]:
+    def return_path(
+        self, stream: Iterator[D], *, path: str
+    ) -> Iterator[Union[D, Tuple[str, D]]]:
         if not self._return_path:
             yield from stream
             return
@@ -82,7 +90,9 @@ class PlainTextReaderHelper:
 
 
 @functional_datapipe("readlines")
-class LineReaderIterDataPipe(IterDataPipe[Union[Str_Or_Bytes, Tuple[str, Str_Or_Bytes]]]):
+class LineReaderIterDataPipe(
+    IterDataPipe[Union[Str_Or_Bytes, Tuple[str, Str_Or_Bytes]]]
+):
     r"""
     Accepts a DataPipe consisting of tuples of file name and string data stream, and for each line in the
     stream, yields a tuple of file name and the line (functional name: ``readlines``).

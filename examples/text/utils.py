@@ -48,11 +48,15 @@ def _dataset_docstring_header(fn, num_lines=None, num_classes=None):
     """
     argspec = inspect.getfullargspec(fn)
     if not (argspec.args[0] == "root" and argspec.args[1] == "split"):
-        raise ValueError(f"Internal Error: Given function {fn} did not adhere to standard signature.")
+        raise ValueError(
+            f"Internal Error: Given function {fn} did not adhere to standard signature."
+        )
     default_split = argspec.defaults[1]
 
     if not (isinstance(default_split, tuple) or isinstance(default_split, str)):
-        raise ValueError(f"default_split type expected to be of string or tuple but got {type(default_split)}")
+        raise ValueError(
+            f"default_split type expected to be of string or tuple but got {type(default_split)}"
+        )
 
     header_s = fn.__name__ + " dataset\n"
 
@@ -81,7 +85,9 @@ def _dataset_docstring_header(fn, num_lines=None, num_classes=None):
 
     if isinstance(default_split, str):
         args_s += "\n     split: Only {default_split} is available."
-        args_s += "\n         Default: {default_split}.format(default_split=default_split)"
+        args_s += (
+            "\n         Default: {default_split}.format(default_split=default_split)"
+        )
 
     return "\n".join([header_s, args_s]) + "\n"
 
@@ -119,7 +125,9 @@ def _wrap_split_argument_with_fn(fn, splits):
         and len(argspec.kwonlyargs) == 0
         and len(argspec.annotations) == 0
     ):
-        raise ValueError(f"Internal Error: Given function {fn} did not adhere to standard signature.")
+        raise ValueError(
+            f"Internal Error: Given function {fn} did not adhere to standard signature."
+        )
 
     @functools.wraps(fn)
     def new_fn(root=os.path.expanduser("~/.torchtext/cache"), split=splits, **kwargs):
@@ -158,7 +166,9 @@ def _create_dataset_directory(dataset_name):
             and len(argspec.kwonlyargs) == 0
             and len(argspec.annotations) == 0
         ):
-            raise ValueError(f"Internal Error: Given function {func} did not adhere to standard signature.")
+            raise ValueError(
+                f"Internal Error: Given function {func} did not adhere to standard signature."
+            )
 
         @functools.wraps(func)
         def wrapper(root=os.path.expanduser("~/.torchtext/cache"), *args, **kwargs):

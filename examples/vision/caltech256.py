@@ -8,7 +8,13 @@ import os.path
 
 from torch.utils.data.datapipes.utils.decoder import imagehandler
 
-from torchdata.datapipes.iter import FileOpener, IterableWrapper, Mapper, RoutedDecoder, TarArchiveLoader
+from torchdata.datapipes.iter import (
+    FileOpener,
+    IterableWrapper,
+    Mapper,
+    RoutedDecoder,
+    TarArchiveLoader,
+)
 
 
 # Download size is ~1.2 GB so fake data is provided

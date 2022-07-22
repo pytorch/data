@@ -30,7 +30,9 @@ class CyclerIterDataPipe(IterDataPipe[T_co]):
         [0, 1, 2, 0, 1, 2]
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[T_co], count: Optional[int] = None) -> None:
+    def __init__(
+        self, source_datapipe: IterDataPipe[T_co], count: Optional[int] = None
+    ) -> None:
         self.source_datapipe: IterDataPipe[T_co] = source_datapipe
         self.count: Optional[int] = count
         if count is not None and count < 0:

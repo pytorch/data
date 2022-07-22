@@ -46,7 +46,9 @@ class MultiplexerLongestIterDataPipe(IterDataPipe):
     def __len__(self):
         if self.length is not None:
             if self.length == -1:
-                raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
+                raise TypeError(
+                    f"{type(self).__name__} instance doesn't have valid length"
+                )
             return self.length
         if all(isinstance(dp, Sized) for dp in self.datapipes):
             self.length = sum(len(dp) for dp in self.datapipes)

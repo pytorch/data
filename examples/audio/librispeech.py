@@ -75,7 +75,9 @@ def load_librispeech_item(data):
     )
 
 
-def LibriSpeech(root: Union[str, Path], url: str = URL, folder_in_archive: str = FOLDER_IN_ARCHIVE):
+def LibriSpeech(
+    root: Union[str, Path], url: str = URL, folder_in_archive: str = FOLDER_IN_ARCHIVE
+):
     if url in [
         "dev-clean",
         "dev-other",
@@ -90,7 +92,9 @@ def LibriSpeech(root: Union[str, Path], url: str = URL, folder_in_archive: str =
     # Get string representation of 'root' in case Path object is passed
     root = os.fspath(root)
 
-    checksum_dict = {os.path.join(root, key): value for key, value in _CHECKSUMS.items()}
+    checksum_dict = {
+        os.path.join(root, key): value for key, value in _CHECKSUMS.items()
+    }
 
     url_dp = IterableWrapper([url])
 
@@ -100,20 +104,30 @@ def LibriSpeech(root: Union[str, Path], url: str = URL, folder_in_archive: str =
         hash_dict=checksum_dict,
         hash_type="sha256",
     )
-    cache_compressed_dp = HttpReader(cache_compressed_dp).end_caching(same_filepath_fn=True)
+    cache_compressed_dp = HttpReader(cache_compressed_dp).end_caching(
+        same_filepath_fn=True
+    )
 
     # Cache decompressed archive into folder_in_archive
     cache_decompressed_dp = cache_compressed_dp.on_disk_cache(
-        filepath_fn=lambda tar_path: os.path.join(root, folder_in_archive, tar_path.split(".")[0])
+        filepath_fn=lambda tar_path: os.path.join(
+            root, folder_in_archive, tar_path.split(".")[0]
+        )
     )
     cache_decompressed_dp = FileOpener(cache_decompressed_dp, mode="b").load_from_tar()
     cache_decompressed_dp = cache_decompressed_dp.end_caching(
-        filepath_fn=functools.partial(decompress_filepath_fn, root_path=os.path.join(root, folder_in_archive)),
+        filepath_fn=functools.partial(
+            decompress_filepath_fn, root_path=os.path.join(root, folder_in_archive)
+        ),
     )
 
-    audio_dp, txt_dp = cache_decompressed_dp.demux(2, classify_file_fn, drop_none=True, buffer_size=-1)
+    audio_dp, txt_dp = cache_decompressed_dp.demux(
+        2, classify_file_fn, drop_none=True, buffer_size=-1
+    )
 
-    txt_dp = FileOpener(txt_dp, mode="t").readlines(return_path=False).map(text_split_fn)
+    txt_dp = (
+        FileOpener(txt_dp, mode="t").readlines(return_path=False).map(text_split_fn)
+    )
     transcript_map_dp = txt_dp.to_map_datapipe()
 
     audio_transcript_dp = audio_dp.zip_with_map(transcript_map_dp, key_fn=audio_key_fn)

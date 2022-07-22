@@ -61,7 +61,9 @@ class DecompressorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     }
 
     def __init__(
-        self, source_datapipe: IterDataPipe[Tuple[str, IOBase]], file_type: Optional[Union[str, CompressionType]] = None
+        self,
+        source_datapipe: IterDataPipe[Tuple[str, IOBase]],
+        file_type: Optional[Union[str, CompressionType]] = None,
     ) -> None:
         self.source_datapipe: IterDataPipe[Tuple[str, IOBase]] = source_datapipe
         if isinstance(file_type, str):
@@ -109,6 +111,8 @@ class ExtractorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     """
 
     def __new__(
-        cls, source_datapipe: IterDataPipe[Tuple[str, IOBase]], file_type: Optional[Union[str, CompressionType]] = None
+        cls,
+        source_datapipe: IterDataPipe[Tuple[str, IOBase]],
+        file_type: Optional[Union[str, CompressionType]] = None,
     ):
         return DecompressorIterDataPipe(source_datapipe, file_type)

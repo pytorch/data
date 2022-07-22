@@ -44,7 +44,9 @@ class XzFileLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         b'0123456789abcdef'
     """
 
-    def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1) -> None:
+    def __init__(
+        self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1
+    ) -> None:
         super().__init__()
         self.datapipe: Iterable[Tuple[str, BufferedIOBase]] = datapipe
         self.length: int = length
@@ -58,7 +60,9 @@ class XzFileLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                 new_pathname = pathname.rstrip(".xz")
                 yield new_pathname, StreamWrapper(extracted_fobj, data_stream, name=pathname)  # type: ignore[misc]
             except Exception as e:
-                warnings.warn(f"Unable to extract files from corrupted xz/lzma stream {pathname} due to: {e}, abort!")
+                warnings.warn(
+                    f"Unable to extract files from corrupted xz/lzma stream {pathname} due to: {e}, abort!"
+                )
                 raise e
             finally:
                 if isinstance(data_stream, StreamWrapper):

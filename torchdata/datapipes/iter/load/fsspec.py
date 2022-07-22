@@ -78,7 +78,9 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
             else:
                 protocol_list = fs.protocol
 
-            is_local = fs.protocol == "file" or not any(root.startswith(protocol) for protocol in protocol_list)
+            is_local = fs.protocol == "file" or not any(
+                root.startswith(protocol) for protocol in protocol_list
+            )
             if fs.isfile(path):
                 yield root
             else:
@@ -87,7 +89,9 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
                         continue
 
                     # ensure the file name has the full fsspec protocol path
-                    if any(file_name.startswith(protocol) for protocol in protocol_list):
+                    if any(
+                        file_name.startswith(protocol) for protocol in protocol_list
+                    ):
                         yield file_name
                     else:
                         if is_local:
@@ -126,7 +130,9 @@ class FSSpecFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         >>> file_dp = datapipe.open_files_by_fsspec()
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r", **kwargs) -> None:
+    def __init__(
+        self, source_datapipe: IterDataPipe[str], mode: str = "r", **kwargs
+    ) -> None:
         _assert_fsspec()
 
         self.source_datapipe: IterDataPipe[str] = source_datapipe
@@ -144,7 +150,9 @@ class FSSpecFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
 
 # Register for functional API for backward compatibility
-IterDataPipe.register_datapipe_as_function("open_file_by_fsspec", FSSpecFileOpenerIterDataPipe)
+IterDataPipe.register_datapipe_as_function(
+    "open_file_by_fsspec", FSSpecFileOpenerIterDataPipe
+)
 
 
 @functional_datapipe("save_by_fsspec")

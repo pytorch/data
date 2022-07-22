@@ -38,7 +38,9 @@ def get_name(path_and_stream):
 # Then, reset the DataPipe and return a tuple of two lists
 # 1. A list of elements yielded before the reset
 # 2. A list of all elements of the DataPipe after the reset
-def reset_after_n_next_calls(datapipe: IterDataPipe[T_co], n: int) -> Tuple[List[T_co], List[T_co]]:
+def reset_after_n_next_calls(
+    datapipe: IterDataPipe[T_co], n: int
+) -> Tuple[List[T_co], List[T_co]]:
     it = iter(datapipe)
     res_before_reset = []
     for _ in range(n):
@@ -56,18 +58,24 @@ def create_temp_dir(dir=None):
 def create_temp_files(temp_dir, prefix=1, empty=True):
     temp_dir_path = temp_dir.name
 
-    with tempfile.NamedTemporaryFile(dir=temp_dir_path, delete=False, prefix=str(prefix), suffix=".txt") as f:
+    with tempfile.NamedTemporaryFile(
+        dir=temp_dir_path, delete=False, prefix=str(prefix), suffix=".txt"
+    ) as f:
         temp_file1_name = f.name
     with open(temp_file1_name, "w") as f1:
         f1.write("0123456789abcdef")
 
-    with tempfile.NamedTemporaryFile(dir=temp_dir_path, delete=False, prefix=str(prefix + 1), suffix=".byte") as f:
+    with tempfile.NamedTemporaryFile(
+        dir=temp_dir_path, delete=False, prefix=str(prefix + 1), suffix=".byte"
+    ) as f:
         temp_file2_name = f.name
     with open(temp_file2_name, "wb") as f2:
         f2.write(b"0123456789abcdef")
 
     if empty:
-        with tempfile.NamedTemporaryFile(dir=temp_dir_path, delete=False, prefix=str(prefix + 2), suffix=".empty") as f:
+        with tempfile.NamedTemporaryFile(
+            dir=temp_dir_path, delete=False, prefix=str(prefix + 2), suffix=".empty"
+        ) as f:
             temp_file3_name = f.name
         return temp_file1_name, temp_file2_name, temp_file3_name
 
@@ -81,12 +89,14 @@ def check_hash_fn(filepath, expected_hash, hash_type="md5"):
     elif hash_type == "md5":
         hash_fn = hashlib.md5()
     else:
-        raise ValueError("Invalid hash_type requested, should be one of {}".format(["sha256", "md5"]))
+        raise ValueError(
+            "Invalid hash_type requested, should be one of {}".format(["sha256", "md5"])
+        )
 
     with open(filepath, "rb") as f:
-        chunk = f.read(1024 ** 2)
+        chunk = f.read(1024**2)
         while chunk:
             hash_fn.update(chunk)
-            chunk = f.read(1024 ** 2)
+            chunk = f.read(1024**2)
 
     return hash_fn.hexdigest() == expected_hash

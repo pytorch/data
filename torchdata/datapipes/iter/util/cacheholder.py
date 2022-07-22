@@ -64,7 +64,9 @@ class InMemoryCacheHolderIterDataPipe(IterDataPipe[T_co]):
     size: Optional[int] = None
     idx: int
 
-    def __init__(self, source_dp: IterDataPipe[T_co], size: Optional[int] = None) -> None:
+    def __init__(
+        self, source_dp: IterDataPipe[T_co], size: Optional[int] = None
+    ) -> None:
         self.source_dp: IterDataPipe[T_co] = source_dp
         # cache size in MB
         if size is not None:
@@ -101,7 +103,9 @@ class InMemoryCacheHolderIterDataPipe(IterDataPipe[T_co]):
             if self.cache:
                 return self.idx + len(self.cache)
             else:
-                raise TypeError(f"{type(self).__name__} instance doesn't have valid length until the cache is loaded.")
+                raise TypeError(
+                    f"{type(self).__name__} instance doesn't have valid length until the cache is loaded."
+                )
 
 
 def _generator_to_list(gen_fn):
@@ -126,10 +130,10 @@ def _hash_check(filepath, hash_dict, hash_type):
     # TODO(634): Line above will require all readers (Win) to obtain proper locks,
     # I'm putting it on hold as we need to modify PyTorch core codebase heavily.
     with open(filepath, "rb") as f:
-        chunk = f.read(1024 ** 2)
+        chunk = f.read(1024**2)
         while chunk:
             hash_func.update(chunk)
-            chunk = f.read(1024 ** 2)
+            chunk = f.read(1024**2)
 
     return hash_func.hexdigest() == hash_dict[filepath]
 
@@ -185,11 +189,24 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
 
         if filepath_fn is not None:
             _check_unpickable_fn(filepath_fn)
-        filepath_fn = _generator_to_list(filepath_fn) if inspect.isgeneratorfunction(filepath_fn) else filepath_fn
+        filepath_fn = (
+            _generator_to_list(filepath_fn)
+            if inspect.isgeneratorfunction(filepath_fn)
+            else filepath_fn
+        )
 
         if hash_dict is not None and hash_type not in ("sha256", "md5"):
-            raise ValueError("Invalid hash_type requested, should be one of {}".format(("sha256", "md5")))
-        OnDiskCacheHolderIterDataPipe._temp_dict[self] = (filepath_fn, hash_dict, hash_type, extra_check_fn)
+            raise ValueError(
+                "Invalid hash_type requested, should be one of {}".format(
+                    ("sha256", "md5")
+                )
+            )
+        OnDiskCacheHolderIterDataPipe._temp_dict[self] = (
+            filepath_fn,
+            hash_dict,
+            hash_type,
+            extra_check_fn,
+        )
 
         self._end_caching_flag: bool = False
 
@@ -218,7 +235,9 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
             cached_file_exists = True
             if not os.path.exists(filepath):
                 cached_file_exists = False
-            elif hash_dict is not None and not _hash_check(filepath, hash_dict, hash_type):
+            elif hash_dict is not None and not _hash_check(
+                filepath, hash_dict, hash_type
+            ):
                 cached_file_exists = False
             elif extra_check_fn is not None and not extra_check_fn(filepath):
                 cached_file_exists = False
@@ -229,7 +248,9 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                 if not os.path.exists(dirname):
                     os.makedirs(dirname)
 
-                with portalocker.Lock(promise_filepath, "a+", flags=portalocker.LockFlags.EXCLUSIVE) as promise_fh:
+                with portalocker.Lock(
+                    promise_filepath, "a+", flags=portalocker.LockFlags.EXCLUSIVE
+                ) as promise_fh:
                     promise_fh.seek(0)
                     data = promise_fh.read()
                     # TODO(635): Potentially there is old .promise file from previous failed run, we
@@ -246,7 +267,12 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         return result
 
     def _end_caching(self):
-        filepath_fn, hash_dict, hash_type, extra_check_fn = OnDiskCacheHolderIterDataPipe._temp_dict.pop(self)
+        (
+            filepath_fn,
+            hash_dict,
+            hash_type,
+            extra_check_fn,
+        ) = OnDiskCacheHolderIterDataPipe._temp_dict.pop(self)
 
         todo_dp, cached_dp = self.source_datapipe.demux(
             2,
@@ -330,7 +356,9 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
                     # Workaround about Windows not letting to delete file, while it is open by another process
                     retry = True
                     if time.time() - start > PROMISE_FILE_DELETE_TIMEOUT:
-                        raise Exception("Timeout while trying to recover from the ", type(e), e)
+                        raise Exception(
+                            "Timeout while trying to recover from the ", type(e), e
+                        )
                     time.sleep(PROMISE_FILE_DELETE_RETRY_INTERVAL)
         else:
             warnings.warn(
@@ -392,19 +420,39 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
         >>> cache_dp = HttpReader(cache_dp).end_caching(mode="wb", filepath_fn=_filepath_fn)
     """
 
-    def __new__(cls, datapipe, mode="wb", filepath_fn=None, *, same_filepath_fn=False, skip_read=False, timeout=300):
+    def __new__(
+        cls,
+        datapipe,
+        mode="wb",
+        filepath_fn=None,
+        *,
+        same_filepath_fn=False,
+        skip_read=False,
+        timeout=300,
+    ):
         if filepath_fn is not None and same_filepath_fn:
-            raise ValueError("`filepath_fn` is mutually exclusive with `same_filepath_fn`")
+            raise ValueError(
+                "`filepath_fn` is mutually exclusive with `same_filepath_fn`"
+            )
 
         graph = traverse(datapipe, only_datapipe=True)
         # Get the last CacheHolder
         cache_holder = EndOnDiskCacheHolderIterDataPipe._recursive_search(graph)
         if cache_holder is None:
-            raise RuntimeError("Expected `OnDiskCacheHolder` existing in pipeline when `end_caching` is invoked")
+            raise RuntimeError(
+                "Expected `OnDiskCacheHolder` existing in pipeline when `end_caching` is invoked"
+            )
         if cache_holder._end_caching_flag:
-            raise RuntimeError("`end_caching` can only be invoked once per `OnDiskCacheHolder`")
+            raise RuntimeError(
+                "`end_caching` can only be invoked once per `OnDiskCacheHolder`"
+            )
 
-        _filepath_fn, _hash_dict, _hash_type, _ = OnDiskCacheHolderIterDataPipe._temp_dict[cache_holder]
+        (
+            _filepath_fn,
+            _hash_dict,
+            _hash_type,
+            _,
+        ) = OnDiskCacheHolderIterDataPipe._temp_dict[cache_holder]
         cached_dp = cache_holder._end_caching()
         cached_dp = _WaitPendingCacheItemIterDataPipe(cached_dp, timeout=timeout)
         cached_dp = FileLister(cached_dp, recursive=True)

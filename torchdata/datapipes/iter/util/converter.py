@@ -50,7 +50,9 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
 
     def __init__(self, datapipe: IterDataPipe, key_value_fn: Optional[Callable] = None):
         if not isinstance(datapipe, IterDataPipe):
-            raise TypeError(f"IterToMapConverter can only apply on IterDataPipe, but found {type(datapipe)}")
+            raise TypeError(
+                f"IterToMapConverter can only apply on IterDataPipe, but found {type(datapipe)}"
+            )
         self.datapipe = datapipe
         if key_value_fn is not None:
             _check_unpickable_fn(key_value_fn)
@@ -65,12 +67,18 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
             try:
                 length = len(inp)
             except TypeError:
-                raise TypeError(f"Cannot convert dictionary update element {type(inp)} ({inp}) to a sequence")
+                raise TypeError(
+                    f"Cannot convert dictionary update element {type(inp)} ({inp}) to a sequence"
+                )
             if length != 2:
-                raise ValueError(f"dictionary update sequence element has length {length}, 2 is required")
+                raise ValueError(
+                    f"dictionary update sequence element has length {length}, 2 is required"
+                )
             key, value = inp
             if key in self._map:
-                warnings.warn(f"Found duplicate key {key}. Please check your `key_value_fn`")
+                warnings.warn(
+                    f"Found duplicate key {key}. Please check your `key_value_fn`"
+                )
             self._map[key] = value
 
     def __getitem__(self, index):
@@ -126,4 +134,6 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
 
 # Register for functional API
 # See https://github.com/pytorch/data/issues/200
-IterDataPipe.register_datapipe_as_function("to_map_datapipe", IterToMapConverterMapDataPipe)
+IterDataPipe.register_datapipe_as_function(
+    "to_map_datapipe", IterToMapConverterMapDataPipe
+)

@@ -49,7 +49,9 @@ class UnZipperMapDataPipe(MapDataPipe):
         columns_to_skip: Optional[Sequence[int]] = None,
     ):
         if sequence_length < 1:
-            raise ValueError(f"Expected `sequence_length` larger than 0, but {sequence_length} is found")
+            raise ValueError(
+                f"Expected `sequence_length` larger than 0, but {sequence_length} is found"
+            )
         if columns_to_skip is None:
             instance_ids = list(range(sequence_length))
         else:

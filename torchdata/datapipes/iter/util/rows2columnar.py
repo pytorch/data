@@ -50,7 +50,11 @@ class Rows2ColumnarIterDataPipe(IterDataPipe[Dict]):
     """
     column_names: List[str]
 
-    def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], column_names: List[str] = None) -> None:
+    def __init__(
+        self,
+        source_datapipe: IterDataPipe[List[Union[Dict, List]]],
+        column_names: List[str] = None,
+    ) -> None:
         self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
         self.column_names: List[str] = [] if column_names is None else column_names
 

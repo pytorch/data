@@ -11,7 +11,13 @@ from itertools import chain
 
 import expecttest
 from _utils._common_utils_for_test import create_temp_dir, reset_after_n_next_calls
-from torchdata.datapipes.iter import DataFrameMaker, FileLister, FileOpener, IterableWrapper, ParquetDataFrameLoader
+from torchdata.datapipes.iter import (
+    DataFrameMaker,
+    FileLister,
+    FileOpener,
+    IterableWrapper,
+    ParquetDataFrameLoader,
+)
 
 try:
     import torcharrow
@@ -107,7 +113,9 @@ class TestDataFrame(expecttest.TestCase):
 
         # Reset Test:
         n_elements_before_reset = 1
-        res_before_reset, res_after_reset = reset_after_n_next_calls(df_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            df_dp, n_elements_before_reset
+        )
         for exp_df, act_df in zip(expected_dfs[:1], res_before_reset):
             self._compare_dataframes(exp_df, act_df)
         for exp_df, act_df in zip(expected_dfs, res_after_reset):
@@ -127,7 +135,11 @@ class TestDataFrame(expecttest.TestCase):
         # Functional Test: Correctly generate TorchArrow DataFrame from CSV
         DTYPE = dt.Struct([dt.Field("key", dt.string), dt.Field("item", dt.string)])
         df_dp = csv_dict_parser_dp.dataframe(dtype=DTYPE, columns=["key", "item"])
-        expected_dfs = [torcharrow.dataframe([{"key": "a", "item": "1"}, {"key": "b", "item": "2"}], dtype=DTYPE)]
+        expected_dfs = [
+            torcharrow.dataframe(
+                [{"key": "a", "item": "1"}, {"key": "b", "item": "2"}], dtype=DTYPE
+            )
+        ]
         for exp_df, act_df in zip(expected_dfs, list(df_dp)):
             self._compare_dataframes(exp_df, act_df)
 
@@ -153,7 +165,11 @@ class TestDataFrame(expecttest.TestCase):
         # Functional Test: correctly read from a Parquet file that was a merged DataFrame
         merged_source_dp = FileLister(self.temp_dir.name, masks="merged.parquet")
         merged_parquet_df_dp = ParquetDataFrameLoader(merged_source_dp, dtype=DTYPE)
-        expected_merged_dfs = [torcharrow.dataframe([(i,) for i in chain(range(10), range(100))], dtype=DTYPE)]
+        expected_merged_dfs = [
+            torcharrow.dataframe(
+                [(i,) for i in chain(range(10), range(100))], dtype=DTYPE
+            )
+        ]
         for exp_df, act_df in zip(expected_merged_dfs, list(merged_parquet_df_dp)):
             self._compare_dataframes(exp_df, act_df)
 
@@ -163,7 +179,9 @@ class TestDataFrame(expecttest.TestCase):
 
         # Reset Test:
         n_elements_before_reset = 1
-        res_before_reset, res_after_reset = reset_after_n_next_calls(parquet_df_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            parquet_df_dp, n_elements_before_reset
+        )
         for exp_df, act_df in zip(expected_dfs[:1], res_before_reset):
             self._compare_dataframes(exp_df, act_df)
         for exp_df, act_df in zip(expected_dfs, res_after_reset):

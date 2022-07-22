@@ -10,7 +10,11 @@ import warnings
 
 import expecttest
 
-from _utils._common_utils_for_test import create_temp_dir, create_temp_files, reset_after_n_next_calls
+from _utils._common_utils_for_test import (
+    create_temp_dir,
+    create_temp_files,
+    reset_after_n_next_calls,
+)
 
 from torchdata.datapipes.iter import HuggingFaceHubReader, IterableWrapper
 
@@ -43,11 +47,15 @@ class TestHuggingFaceHubReader(expecttest.TestCase):
             self.temp_sub_dir_2.cleanup()
             self.temp_dir_2.cleanup()
         except Exception as e:
-            warnings.warn(f"HuggingFace datasets was not able to cleanup temp dir due to {e}")
+            warnings.warn(
+                f"HuggingFace datasets was not able to cleanup temp dir due to {e}"
+            )
 
     @skipIfNoDatasets
     def test_huggingface_hubreader(self):
-        datapipe = HuggingFaceHubReader(dataset="lhoestq/demo1", revision="main", streaming=True)
+        datapipe = HuggingFaceHubReader(
+            dataset="lhoestq/demo1", revision="main", streaming=True
+        )
         elem = next(iter(datapipe))
         assert type(elem) is dict
         assert elem["package_name"] == "com.mantz_it.rfanalyzer"

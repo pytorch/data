@@ -10,7 +10,11 @@ from pathlib import Path
 
 from torchdata.datapipes.iter import FileOpener, HttpReader, IterableWrapper
 
-from .utils import _add_docstring_header, _create_dataset_directory, _wrap_split_argument
+from .utils import (
+    _add_docstring_header,
+    _create_dataset_directory,
+    _wrap_split_argument,
+)
 
 URL = "http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
 

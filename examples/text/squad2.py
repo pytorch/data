@@ -7,9 +7,18 @@
 import os
 from functools import partial
 
-from torchdata.datapipes.iter import FileOpener, HttpReader, IterableWrapper, IterDataPipe
+from torchdata.datapipes.iter import (
+    FileOpener,
+    HttpReader,
+    IterableWrapper,
+    IterDataPipe,
+)
 
-from .utils import _add_docstring_header, _create_dataset_directory, _wrap_split_argument
+from .utils import (
+    _add_docstring_header,
+    _create_dataset_directory,
+    _wrap_split_argument,
+)
 
 URL = {
     "train": "https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v2.0.json",
@@ -46,7 +55,9 @@ class _ParseSQuADQAData(IterDataPipe):
                     for layer3 in layer2["qas"]:
                         _context, _question = layer2["context"], layer3["question"]
                         _answers = [item["text"] for item in layer3["answers"]]
-                        _answer_start = [item["answer_start"] for item in layer3["answers"]]
+                        _answer_start = [
+                            item["answer_start"] for item in layer3["answers"]
+                        ]
                         if len(_answers) == 0:
                             _answers = [""]
                             _answer_start = [-1]

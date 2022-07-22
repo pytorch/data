@@ -61,7 +61,11 @@ class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, U]]):
         self.rewind: bool = rewind
 
         if self.hash_type not in ["sha256", "md5"]:
-            raise ValueError("Invalid hash_type requested, should be one of {}".format(["sha256", "md5"]))
+            raise ValueError(
+                "Invalid hash_type requested, should be one of {}".format(
+                    ["sha256", "md5"]
+                )
+            )
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for file_name, data in self.source_datapipe:

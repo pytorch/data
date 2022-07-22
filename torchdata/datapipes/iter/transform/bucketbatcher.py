@@ -110,7 +110,11 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         # Shuffle by pool_size
         if bucket_num > 1 or sort_key is None:
             if use_in_batch_shuffle:
-                datapipe = datapipe.batch(batch_size=pool_size, drop_last=False).in_batch_shuffle().unbatch()
+                datapipe = (
+                    datapipe.batch(batch_size=pool_size, drop_last=False)
+                    .in_batch_shuffle()
+                    .unbatch()
+                )
             else:
                 datapipe = datapipe.shuffle(buffer_size=pool_size)
         # Sort by bucket_size if sort_key is given
@@ -122,7 +126,11 @@ class BucketBatcherIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         if sort_key is not None:
             # In-batch shuffle each bucket seems not that useful, it seems misleading since .batch is called prior.
             if use_in_batch_shuffle:
-                datapipe = datapipe.batch(batch_size=bucket_num, drop_last=False).in_batch_shuffle().unbatch()
+                datapipe = (
+                    datapipe.batch(batch_size=bucket_num, drop_last=False)
+                    .in_batch_shuffle()
+                    .unbatch()
+                )
             else:
                 datapipe = datapipe.shuffle(buffer_size=bucket_size)
         return datapipe
@@ -194,11 +202,17 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
             max_len = max_token_count
 
         if min_len < 0 or min_len > max_len:
-            raise ValueError("``min_len`` should be larger than 0 and equal to or smaller than ``max_len``.")
+            raise ValueError(
+                "``min_len`` should be larger than 0 and equal to or smaller than ``max_len``."
+            )
         if max_len > max_token_count:
-            raise ValueError("``max_token_count`` must be equal to or greater than ``max_len``.")
+            raise ValueError(
+                "``max_token_count`` must be equal to or greater than ``max_len``."
+            )
         datapipe = datapipe.map(partial(_token_len_fn, len_fn=len_fn))
-        datapipe = datapipe.filter(partial(_token_filter_fn, min_len=min_len, max_len=max_len))
+        datapipe = datapipe.filter(
+            partial(_token_filter_fn, min_len=min_len, max_len=max_len)
+        )
         if buffer_size <= 0:
             raise ValueError("'buffer_size' is required to be a positive integer.")
         self.datapipe = datapipe

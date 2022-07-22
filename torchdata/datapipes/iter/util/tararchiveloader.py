@@ -46,7 +46,12 @@ class TarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         b'0123456789abcdef'
     """
 
-    def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], mode: str = "r:*", length: int = -1) -> None:
+    def __init__(
+        self,
+        datapipe: Iterable[Tuple[str, BufferedIOBase]],
+        mode: str = "r:*",
+        length: int = -1,
+    ) -> None:
         super().__init__()
         self.datapipe: Iterable[Tuple[str, BufferedIOBase]] = datapipe
         self.mode: str = mode
@@ -57,20 +62,30 @@ class TarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
             validate_pathname_binary_tuple(data)
             pathname, data_stream = data
             try:
-                reading_mode = self.mode if data_stream.seekable() else self.mode.replace(":", "|")
+                reading_mode = (
+                    self.mode if data_stream.seekable() else self.mode.replace(":", "|")
+                )
                 # typing.cast is used here to silence mypy's type checker
-                tar = tarfile.open(fileobj=cast(Optional[IO[bytes]], data_stream), mode=reading_mode)
+                tar = tarfile.open(
+                    fileobj=cast(Optional[IO[bytes]], data_stream), mode=reading_mode
+                )
                 for tarinfo in tar:
                     if not tarinfo.isfile():
                         continue
                     extracted_fobj = tar.extractfile(tarinfo)
                     if extracted_fobj is None:
-                        warnings.warn(f"failed to extract file {tarinfo.name} from source tarfile {pathname}")
+                        warnings.warn(
+                            f"failed to extract file {tarinfo.name} from source tarfile {pathname}"
+                        )
                         raise tarfile.ExtractError
-                    inner_pathname = os.path.normpath(os.path.join(pathname, tarinfo.name))
+                    inner_pathname = os.path.normpath(
+                        os.path.join(pathname, tarinfo.name)
+                    )
                     yield inner_pathname, StreamWrapper(extracted_fobj, data_stream, name=inner_pathname)  # type: ignore[misc]
             except Exception as e:
-                warnings.warn(f"Unable to extract files from corrupted tarfile stream {pathname} due to: {e}, abort!")
+                warnings.warn(
+                    f"Unable to extract files from corrupted tarfile stream {pathname} due to: {e}, abort!"
+                )
                 raise e
             finally:
                 if isinstance(data_stream, StreamWrapper):
@@ -88,7 +103,12 @@ class TarArchiveReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     Please use ``TarArchiveLoader`` or ``.load_from_tar`` instead.
     """
 
-    def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], mode: str = "r:*", length: int = -1):
+    def __new__(
+        cls,
+        datapipe: Iterable[Tuple[str, BufferedIOBase]],
+        mode: str = "r:*",
+        length: int = -1,
+    ):
         _deprecation_warning(
             cls.__name__,
             deprecation_version="0.4",

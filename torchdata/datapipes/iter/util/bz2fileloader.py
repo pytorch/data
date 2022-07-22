@@ -42,7 +42,9 @@ class Bz2FileLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         b'0123456789abcdef'
     """
 
-    def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1) -> None:
+    def __init__(
+        self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1
+    ) -> None:
         super().__init__()
         self.datapipe: Iterable[Tuple[str, BufferedIOBase]] = datapipe
         self.length: int = length
@@ -56,7 +58,9 @@ class Bz2FileLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                 new_pathname = pathname.rstrip(".bz2")
                 yield new_pathname, StreamWrapper(extracted_fobj, data_stream, name=new_pathname)  # type: ignore[misc]
             except Exception as e:
-                warnings.warn(f"Unable to extract files from corrupted bzip2 stream {pathname} due to: {e}, abort!")
+                warnings.warn(
+                    f"Unable to extract files from corrupted bzip2 stream {pathname} due to: {e}, abort!"
+                )
                 raise e
             finally:
                 if isinstance(data_stream, StreamWrapper):

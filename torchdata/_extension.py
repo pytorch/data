@@ -20,7 +20,10 @@ def _init_extension():
     #       we need to add logic to load dll path on Windows
     #       See: https://github.com/pytorch/pytorch/blob/master/torch/__init__.py#L56-L140
 
-    loader_details = (importlib.machinery.ExtensionFileLoader, importlib.machinery.EXTENSION_SUFFIXES)
+    loader_details = (
+        importlib.machinery.ExtensionFileLoader,
+        importlib.machinery.EXTENSION_SUFFIXES,
+    )
 
     extfinder = importlib.machinery.FileFinder(lib_dir, loader_details)  # type: ignore[arg-type]
     ext_specs = extfinder.find_spec("_torchdata")

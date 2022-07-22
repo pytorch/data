@@ -74,12 +74,18 @@ def update_file(file_name):
             with open(file_name, "w") as f_out:
                 for line_number, line in enumerate(f_inp.readlines()):
                     if not re.search(r"ignore-todo", line, re.IGNORECASE):
-                        match = re.search(r"(.*?)#\s*todo\s*(\([^)]+\)){0,1}:{0,1}(.*)", line, re.IGNORECASE)
+                        match = re.search(
+                            r"(.*?)#\s*todo\s*(\([^)]+\)){0,1}:{0,1}(.*)",
+                            line,
+                            re.IGNORECASE,
+                        )
                         if match:
                             # print(line)
                             prefix = match.group(1)
                             text = match.group(3)
-                            issue_id = generate_issue_id(str(match.group(2)), text, file_name, line_number + 1)
+                            issue_id = generate_issue_id(
+                                str(match.group(2)), text, file_name, line_number + 1
+                            )
                             line = f"{prefix}# TODO({issue_id}):{text}\n"  # ignore-todo
                     f_out.write(line)
     except Exception as e:

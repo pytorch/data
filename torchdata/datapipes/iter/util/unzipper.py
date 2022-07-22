@@ -6,7 +6,10 @@
 
 from typing import List, Optional, Sequence, TypeVar
 
-from torch.utils.data.datapipes.iter.combining import _ChildDataPipe, _ForkerIterDataPipe
+from torch.utils.data.datapipes.iter.combining import (
+    _ChildDataPipe,
+    _ForkerIterDataPipe,
+)
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
@@ -70,7 +73,9 @@ class UnZipperIterDataPipe(IterDataPipe[T]):
 
 
 class _UnZipperIterDataPipe(_ForkerIterDataPipe):
-    def __init__(self, datapipe: IterDataPipe, instance_ids: List[int], buffer_size: int = 1000):
+    def __init__(
+        self, datapipe: IterDataPipe, instance_ids: List[int], buffer_size: int = 1000
+    ):
         super().__init__(datapipe, len(instance_ids), buffer_size)  # type: ignore[arg-type]
         self.instance_ids = instance_ids
 

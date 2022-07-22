@@ -17,10 +17,18 @@ except ImportError:
 
 
 def _get_response_from_huggingface_hub(
-    dataset: str, split: str, revision: str, streaming: bool, data_files: Optional[Dict[str, str]]
+    dataset: str,
+    split: str,
+    revision: str,
+    streaming: bool,
+    data_files: Optional[Dict[str, str]],
 ) -> Iterator[Any]:
     hf_dataset = datasets.load_dataset(
-        dataset, split=split, revision=revision, streaming=streaming, data_files=data_files
+        dataset,
+        split=split,
+        revision=revision,
+        streaming=streaming,
+        data_files=data_files,
     )
     return iter(hf_dataset)
 

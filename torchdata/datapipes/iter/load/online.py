@@ -48,7 +48,9 @@ def _get_response_from_http(
     except HTTPError as e:
         raise Exception(f"Could not get the file. [HTTP Error] {e.response}.")
     except RequestException as e:
-        raise Exception(f"Could not get the file at {url}. [RequestException] {e.response}.")
+        raise Exception(
+            f"Could not get the file at {url}. [RequestException] {e.response}."
+        )
     except Exception:
         raise
 
@@ -80,7 +82,10 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     """
 
     def __init__(
-        self, source_datapipe: IterDataPipe[str], timeout: Optional[float] = None, **kwargs: Optional[Dict[str, Any]]
+        self,
+        source_datapipe: IterDataPipe[str],
+        timeout: Optional[float] = None,
+        **kwargs: Optional[Dict[str, Any]],
     ) -> None:
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.timeout = timeout
@@ -89,7 +94,9 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for url in self.source_datapipe:
             if self.query_params:
-                yield _get_response_from_http(url, timeout=self.timeout, **self.query_params)
+                yield _get_response_from_http(
+                    url, timeout=self.timeout, **self.query_params
+                )
             else:
                 yield _get_response_from_http(url, timeout=self.timeout)
 
@@ -102,7 +109,9 @@ def _extract_gdrive_api_response(content: str) -> Optional[str]:
     return match["api_response"] if match is not None else None
 
 
-def _get_response_from_google_drive(url: str, *, timeout: Optional[float]) -> Tuple[str, StreamWrapper]:
+def _get_response_from_google_drive(
+    url: str, *, timeout: Optional[float]
+) -> Tuple[str, StreamWrapper]:
     confirm_token = None
 
     with requests.Session() as session:
@@ -120,7 +129,9 @@ def _get_response_from_google_drive(url: str, *, timeout: Optional[float]) -> Tu
             if api_response == "Virus scan warning":
                 confirm_token = "t"
             elif api_response == "Quota exceeded":
-                raise RuntimeError(f"Google drive link {url} is currently unavailable, because the quota was exceeded.")
+                raise RuntimeError(
+                    f"Google drive link {url} is currently unavailable, because the quota was exceeded."
+                )
 
         if confirm_token:
             url = url + "&confirm=" + confirm_token
@@ -138,7 +149,9 @@ def _get_response_from_google_drive(url: str, *, timeout: Optional[float]) -> Tu
                 "of that page."
             )
 
-        filename = re.findall('filename="(.+)"', response.headers["content-disposition"])
+        filename = re.findall(
+            'filename="(.+)"', response.headers["content-disposition"]
+        )
         if filename is None:
             raise RuntimeError("Filename could not be autodetected")
 
@@ -169,7 +182,9 @@ class GDriveReaderDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     """
     source_datapipe: IterDataPipe[str]
 
-    def __init__(self, source_datapipe: IterDataPipe[str], *, timeout: Optional[float] = None) -> None:
+    def __init__(
+        self, source_datapipe: IterDataPipe[str], *, timeout: Optional[float] = None
+    ) -> None:
         self.source_datapipe = source_datapipe
         self.timeout = timeout
 
@@ -205,7 +220,9 @@ class OnlineReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     """
     source_datapipe: IterDataPipe[str]
 
-    def __init__(self, source_datapipe: IterDataPipe[str], *, timeout: Optional[float] = None) -> None:
+    def __init__(
+        self, source_datapipe: IterDataPipe[str], *, timeout: Optional[float] = None
+    ) -> None:
         self.source_datapipe = source_datapipe
         self.timeout = timeout
 

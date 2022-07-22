@@ -15,7 +15,10 @@ from torchdata.dataloader2 import (
     PrototypeMultiProcessingReadingService,
     ReadingServiceInterface,
 )
-from torchdata.dataloader2.dataloader2 import READING_SERVICE_STATE_KEY_NAME, SERIALIZED_DATAPIPE_KEY_NAME
+from torchdata.dataloader2.dataloader2 import (
+    READING_SERVICE_STATE_KEY_NAME,
+    SERIALIZED_DATAPIPE_KEY_NAME,
+)
 from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 
 
@@ -52,7 +55,9 @@ class DataLoader2Test(TestCase):
     def test_dataloader2_reading_service(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
         reading_service = TestReadingService()
-        data_loader = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
+        data_loader = DataLoader2(
+            datapipe=test_data_pipe, reading_service=reading_service
+        )
 
         expected_batch = 0
         for batch in iter(data_loader):
@@ -62,7 +67,9 @@ class DataLoader2Test(TestCase):
     def test_dataloader2_multi_process_reading_service(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
         reading_service = MultiProcessingReadingService()
-        data_loader = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
+        data_loader = DataLoader2(
+            datapipe=test_data_pipe, reading_service=reading_service
+        )
 
         expected_batch = 0
         for batch in iter(data_loader):
@@ -72,7 +79,9 @@ class DataLoader2Test(TestCase):
     def test_dataloader2_load_state_dict(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
         reading_service = TestReadingService()
-        data_loader = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
+        data_loader = DataLoader2(
+            datapipe=test_data_pipe, reading_service=reading_service
+        )
 
         batch = next(iter(data_loader))
         self.assertEqual(batch, 0)
@@ -84,12 +93,16 @@ class DataLoader2Test(TestCase):
         data_loader.shutdown()
 
         test_data_pipe_2 = IterableWrapper(range(5))
-        restored_data_loader = DataLoader2(datapipe=test_data_pipe_2, reading_service=reading_service)
+        restored_data_loader = DataLoader2(
+            datapipe=test_data_pipe_2, reading_service=reading_service
+        )
         restored_data_loader.load_state_dict(state)
 
         restored_data_loader_datapipe = restored_data_loader.datapipe
         deserialized_datapipe = pickle.loads(state[SERIALIZED_DATAPIPE_KEY_NAME])
-        for batch_1, batch_2 in zip(restored_data_loader_datapipe, deserialized_datapipe):
+        for batch_1, batch_2 in zip(
+            restored_data_loader_datapipe, deserialized_datapipe
+        ):
             self.assertEqual(batch_1, batch_2)
 
         self.assertNotEqual(
@@ -147,7 +160,9 @@ class DataLoader2ConsistencyTest(TestCase):
 
     def test_dataloader2_batch_collate(self) -> None:
         dp: IterDataPipe = IterableWrapper(range(100)).batch(2).sharding_filter().collate(self._no_op)  # type: ignore[assignment]
-        expected = self._collect_data(dp, reading_service_gen=self._get_no_reading_service)
+        expected = self._collect_data(
+            dp, reading_service_gen=self._get_no_reading_service
+        )
 
         reading_service_generators = (
             self._get_mp_reading_service,

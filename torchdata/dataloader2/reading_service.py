@@ -150,15 +150,25 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             return datapipe
         for worker_id in range(self.num_workers):
             # TODO(617): Separate into function, because we also need to apply distributed seed and call it inside process
-            call_inside_process = functools.partial(self.init_datapipe_process, self.num_workers, worker_id)
+            call_inside_process = functools.partial(
+                self.init_datapipe_process, self.num_workers, worker_id
+            )
             ctx = mp.get_context(self.multiprocessing_context)
-            (process, req_queue, res_queue) = communication.eventloop.SpawnProcessForDataPipeline(
+            (
+                process,
+                req_queue,
+                res_queue,
+            ) = communication.eventloop.SpawnProcessForDataPipeline(
                 ctx, datapipe, call_inside_process
             )
             process.start()
-            self.processes.append((process, req_queue, res_queue))  # These queues are independent
+            self.processes.append(
+                (process, req_queue, res_queue)
+            )  # These queues are independent
             local_datapipe = communication.iter.QueueWrapper(
-                communication.protocol.IterDataPipeQueueProtocolClient(req_queue, res_queue)
+                communication.protocol.IterDataPipeQueueProtocolClient(
+                    req_queue, res_queue
+                )
             )
             self.datapipes.append(local_datapipe)
 
@@ -231,6 +241,10 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         return IterableWrapper(self.dl_)  # type: ignore[return-value]
 
     def finalize(self) -> None:
-        if self.persistent_workers and self.dl_ is not None and self.dl_._iterator is not None:
+        if (
+            self.persistent_workers
+            and self.dl_ is not None
+            and self.dl_._iterator is not None
+        ):
             self.dl_._iterator._shutdown_workers()  # type: ignore[attr-defined]
             self.dl_._iterator = None

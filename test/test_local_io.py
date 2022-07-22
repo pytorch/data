@@ -24,7 +24,12 @@ from json.decoder import JSONDecodeError
 
 import expecttest
 
-from _utils._common_utils_for_test import create_temp_dir, create_temp_files, get_name, reset_after_n_next_calls
+from _utils._common_utils_for_test import (
+    create_temp_dir,
+    create_temp_files,
+    get_name,
+    reset_after_n_next_calls,
+)
 
 from torch.utils.data import DataLoader
 
@@ -106,7 +111,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             self.temp_sub_dir_2.cleanup()
             self.temp_dir_2.cleanup()
         except Exception as e:
-            warnings.warn(f"TestDataPipeLocalIO was not able to cleanup temp dir due to {e}")
+            warnings.warn(
+                f"TestDataPipeLocalIO was not able to cleanup temp dir due to {e}"
+            )
 
     def _custom_files_set_up(self, files):
         for fname, content in files.items():
@@ -114,7 +121,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             with open(temp_file_path, "w") as f:
                 f.write(content)
 
-    def _compressed_files_comparison_helper(self, expected_files, result, check_length: bool = True):
+    def _compressed_files_comparison_helper(
+        self, expected_files, result, check_length: bool = True
+    ):
         if check_length:
             self.assertEqual(len(expected_files), len(result))
         for res, expected_file in itertools.zip_longest(result, expected_files):
@@ -124,7 +133,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
                 self.assertEqual(res[1].read(), f.read())
             res[1].close()
 
-    def _unordered_compressed_files_comparison_helper(self, expected_files, result, check_length: bool = True):
+    def _unordered_compressed_files_comparison_helper(
+        self, expected_files, result, check_length: bool = True
+    ):
         expected_names_to_files = {os.path.basename(f): f for f in expected_files}
         if check_length:
             self.assertEqual(len(expected_files), len(result))
@@ -142,7 +153,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         csv_files = {"1.csv": "key,item\na,1\nb,2", "empty.csv": "", "empty2.csv": "\n"}
         self._custom_files_set_up(csv_files)
-        datapipe1 = IterableWrapper([make_path(fname) for fname in ["1.csv", "empty.csv", "empty2.csv"]])
+        datapipe1 = IterableWrapper(
+            [make_path(fname) for fname in ["1.csv", "empty.csv", "empty2.csv"]]
+        )
         datapipe2 = FileOpener(datapipe1, mode="b")
         datapipe3 = datapipe2.map(get_name)
 
@@ -158,7 +171,12 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         # Functional Test: yield one row at time from each file with file name, skipping over empty content
         csv_parser_dp = datapipe3.parse_csv(return_path=True)
-        expected_res = [("1.csv", ["key", "item"]), ("1.csv", ["a", "1"]), ("1.csv", ["b", "2"]), ("empty2.csv", [])]
+        expected_res = [
+            ("1.csv", ["key", "item"]),
+            ("1.csv", ["a", "1"]),
+            ("1.csv", ["b", "2"]),
+            ("empty2.csv", []),
+        ]
         self.assertEqual(expected_res, list(csv_parser_dp))
 
         # Functional Test: yield one row at time from each file as tuple instead of list, skipping over empty content
@@ -169,8 +187,15 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Reset Test:
         csv_parser_dp = CSVParser(datapipe3, return_path=True)
         n_elements_before_reset = 2
-        expected_res = [("1.csv", ["key", "item"]), ("1.csv", ["a", "1"]), ("1.csv", ["b", "2"]), ("empty2.csv", [])]
-        res_before_reset, res_after_reset = reset_after_n_next_calls(csv_parser_dp, n_elements_before_reset)
+        expected_res = [
+            ("1.csv", ["key", "item"]),
+            ("1.csv", ["a", "1"]),
+            ("1.csv", ["b", "2"]),
+            ("empty2.csv", []),
+        ]
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            csv_parser_dp, n_elements_before_reset
+        )
         self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
         self.assertEqual(expected_res, res_after_reset)
 
@@ -200,14 +225,19 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         # Functional Test: yield one row at a time as dict with file name, and the first row being the header (key)
         csv_dict_parser_dp = datapipe3.parse_csv_as_dict(return_path=True)
-        expected_res3 = [("1.csv", {"key": "a", "item": "1"}), ("1.csv", {"key": "b", "item": "2"})]
+        expected_res3 = [
+            ("1.csv", {"key": "a", "item": "1"}),
+            ("1.csv", {"key": "b", "item": "2"}),
+        ]
         self.assertEqual(expected_res3, list(csv_dict_parser_dp))
 
         # Reset Test
         csv_dict_parser_dp = CSVDictParser(datapipe3)
         expected_res4 = [{"key": "a", "item": "1"}, {"key": "b", "item": "2"}]
         n_elements_before_reset = 1
-        res_before_reset, res_after_reset = reset_after_n_next_calls(csv_dict_parser_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            csv_dict_parser_dp, n_elements_before_reset
+        )
         self.assertEqual(expected_res4[:n_elements_before_reset], res_before_reset)
         self.assertEqual(expected_res4, res_after_reset)
 
@@ -235,13 +265,17 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         expected_res = list(datapipe2)
 
         # Functional Test: Ensure the DataPipe values are unchanged if the hashes are the same
-        for (expected_path, expected_stream), (actual_path, actual_stream) in zip(expected_res, hash_check_dp):
+        for (expected_path, expected_stream), (actual_path, actual_stream) in zip(
+            expected_res, hash_check_dp
+        ):
             self.assertEqual(expected_path, actual_path)
             self.assertEqual(expected_stream.read(), actual_stream.read())
 
         # Functional Test: Ensure the rewind option works, and the stream is empty when there is no rewind
         hash_check_dp_no_reset = HashChecker(datapipe2, hash_dict, rewind=False)
-        for (expected_path, _), (actual_path, actual_stream) in zip(expected_res, hash_check_dp_no_reset):
+        for (expected_path, _), (actual_path, actual_stream) in zip(
+            expected_res, hash_check_dp_no_reset
+        ):
             self.assertEqual(expected_path, actual_path)
             self.assertEqual(b"", actual_stream.read())
 
@@ -261,16 +295,24 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         fill_hash_dict()  # Reset the dict with correct values because we changed it in the last test case
         hash_check_dp = datapipe2.check_hash(hash_dict)
         n_elements_before_reset = 2
-        res_before_reset, res_after_reset = reset_after_n_next_calls(hash_check_dp, n_elements_before_reset)
-        for (expected_path, expected_stream), (actual_path, actual_stream) in zip(datapipe2, res_before_reset):
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            hash_check_dp, n_elements_before_reset
+        )
+        for (expected_path, expected_stream), (actual_path, actual_stream) in zip(
+            datapipe2, res_before_reset
+        ):
             self.assertEqual(expected_path, actual_path)
             self.assertEqual(expected_stream.read(), actual_stream.read())
-        for (expected_path, expected_stream), (actual_path, actual_stream) in zip(datapipe2, res_after_reset):
+        for (expected_path, expected_stream), (actual_path, actual_stream) in zip(
+            datapipe2, res_after_reset
+        ):
             self.assertEqual(expected_path, actual_path)
             self.assertEqual(expected_stream.read(), actual_stream.read())
 
         # __len__ Test: returns the length of source DataPipe
-        with self.assertRaisesRegex(TypeError, "FileOpenerIterDataPipe instance doesn't have valid length"):
+        with self.assertRaisesRegex(
+            TypeError, "FileOpenerIterDataPipe instance doesn't have valid length"
+        ):
             len(hash_check_dp)
 
     def test_json_parser_iterdatapipe(self):
@@ -286,7 +328,12 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             "2.json": '{"__complex__": true, "real": 1, "imag": 2}',
         }
         self._custom_files_set_up(json_files)
-        datapipe1 = IterableWrapper([f"{self.temp_dir.name}/{fname}" for fname in ["empty.json", "1.json", "2.json"]])
+        datapipe1 = IterableWrapper(
+            [
+                f"{self.temp_dir.name}/{fname}"
+                for fname in ["empty.json", "1.json", "2.json"]
+            ]
+        )
         datapipe2 = FileOpener(datapipe1, mode="b")
         datapipe3 = datapipe2.map(get_name)
         datapipe_empty = datapipe3.filter(is_empty_json)
@@ -309,7 +356,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Reset Test:
         json_dp = JsonParser(datapipe_nonempty)
         n_elements_before_reset = 1
-        res_before_reset, res_after_reset = reset_after_n_next_calls(json_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            json_dp, n_elements_before_reset
+        )
         self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
         self.assertEqual(expected_res, res_after_reset)
 
@@ -329,9 +378,13 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Functional Test: Saving some data
         name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
         source_dp = IterableWrapper(sorted(name_to_data.items()))
-        saver_dp = source_dp.save_to_disk(filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
+        saver_dp = source_dp.save_to_disk(
+            filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb"
+        )
         res_file_paths = list(saver_dp)
-        expected_paths = [filepath_fn(self.temp_dir.name, name) for name in name_to_data.keys()]
+        expected_paths = [
+            filepath_fn(self.temp_dir.name, name) for name in name_to_data.keys()
+        ]
         self.assertEqual(expected_paths, res_file_paths)
         for name in name_to_data.keys():
             p = filepath_fn(self.temp_dir.name, name)
@@ -339,11 +392,19 @@ class TestDataPipeLocalIO(expecttest.TestCase):
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # Reset Test:
-        saver_dp = Saver(source_dp, filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
+        saver_dp = Saver(
+            source_dp, filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb"
+        )
         n_elements_before_reset = 2
-        res_before_reset, res_after_reset = reset_after_n_next_calls(saver_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            saver_dp, n_elements_before_reset
+        )
         self.assertEqual(
-            [filepath_fn(self.temp_dir.name, "1.txt"), filepath_fn(self.temp_dir.name, "2.txt")], res_before_reset
+            [
+                filepath_fn(self.temp_dir.name, "1.txt"),
+                filepath_fn(self.temp_dir.name, "2.txt"),
+            ],
+            res_before_reset,
         )
         self.assertEqual(expected_paths, res_after_reset)
         for name in name_to_data.keys():
@@ -380,8 +441,12 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         gz_reader_dp = TarArchiveLoader(datapipe_gz_2)
 
         # Functional Test: Read extracted files before reaching the end of the tarfile
-        self._compressed_files_comparison_helper(self.temp_files, tar_loader_dp, check_length=False)
-        self._compressed_files_comparison_helper(self.temp_files, gz_reader_dp, check_length=False)
+        self._compressed_files_comparison_helper(
+            self.temp_files, tar_loader_dp, check_length=False
+        )
+        self._compressed_files_comparison_helper(
+            self.temp_files, gz_reader_dp, check_length=False
+        )
 
         # Functional Test: Read extracted files after reaching the end of the tarfile
         data_refs = list(tar_loader_dp)
@@ -392,9 +457,13 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Reset Test: reset the DataPipe after reading part of it
         tar_loader_dp = datapipe2.load_from_tar()
         n_elements_before_reset = 1
-        res_before_reset, res_after_reset = reset_after_n_next_calls(tar_loader_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            tar_loader_dp, n_elements_before_reset
+        )
         # Check result accumulated before reset
-        self._compressed_files_comparison_helper(self.temp_files[:n_elements_before_reset], res_before_reset)
+        self._compressed_files_comparison_helper(
+            self.temp_files[:n_elements_before_reset], res_before_reset
+        )
         # Check result accumulated after reset
         self._compressed_files_comparison_helper(self.temp_files, res_after_reset)
 
@@ -405,9 +474,15 @@ class TestDataPipeLocalIO(expecttest.TestCase):
     def _write_test_zip_files(self):
         path = os.path.join(self.temp_dir.name, "test_zip.zip")
         with zipfile.ZipFile(path, "w") as myzip:
-            myzip.write(self.temp_files[0], arcname=os.path.basename(self.temp_files[0]))
-            myzip.write(self.temp_files[1], arcname=os.path.basename(self.temp_files[1]))
-            myzip.write(self.temp_files[2], arcname=os.path.basename(self.temp_files[2]))
+            myzip.write(
+                self.temp_files[0], arcname=os.path.basename(self.temp_files[0])
+            )
+            myzip.write(
+                self.temp_files[1], arcname=os.path.basename(self.temp_files[1])
+            )
+            myzip.write(
+                self.temp_files[2], arcname=os.path.basename(self.temp_files[2])
+            )
 
     def test_zip_archive_reader_iterdatapipe(self):
         self._write_test_zip_files()
@@ -416,7 +491,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         zip_loader_dp = ZipArchiveLoader(datapipe2)
 
         # Functional Test: read extracted files before reaching the end of the zipfile
-        self._compressed_files_comparison_helper(self.temp_files, zip_loader_dp, check_length=False)
+        self._compressed_files_comparison_helper(
+            self.temp_files, zip_loader_dp, check_length=False
+        )
 
         # Functional Test: read extracted files after reaching the end of the zipile
         data_refs = list(zip_loader_dp)
@@ -425,9 +502,13 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Reset Test: reset the DataPipe after reading part of it
         zip_loader_dp = datapipe2.load_from_zip()
         n_elements_before_reset = 1
-        res_before_reset, res_after_reset = reset_after_n_next_calls(zip_loader_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            zip_loader_dp, n_elements_before_reset
+        )
         # Check the results accumulated before reset
-        self._compressed_files_comparison_helper(self.temp_files[:n_elements_before_reset], res_before_reset)
+        self._compressed_files_comparison_helper(
+            self.temp_files[:n_elements_before_reset], res_before_reset
+        )
         # Check the results accumulated after reset
         self._compressed_files_comparison_helper(self.temp_files, res_after_reset)
 
@@ -452,7 +533,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         xz_loader_dp = XzFileLoader(datapipe2)
 
         # Functional Test: Read extracted files before reaching the end of the xzfile
-        self._unordered_compressed_files_comparison_helper(self.temp_files, xz_loader_dp, check_length=False)
+        self._unordered_compressed_files_comparison_helper(
+            self.temp_files, xz_loader_dp, check_length=False
+        )
 
         # Functional Test: Read extracted files after reaching the end of the xzfile
         data_refs = list(xz_loader_dp)
@@ -461,12 +544,18 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Reset Test: reset the DataPipe after reading part of it
         xz_loader_dp = datapipe2.load_from_xz()
         n_elements_before_reset = 1
-        res_before_reset, res_after_reset = reset_after_n_next_calls(xz_loader_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            xz_loader_dp, n_elements_before_reset
+        )
         # Check result accumulated before reset
         self.assertEqual(n_elements_before_reset, len(res_before_reset))
-        self._unordered_compressed_files_comparison_helper(self.temp_files, res_before_reset, check_length=False)
+        self._unordered_compressed_files_comparison_helper(
+            self.temp_files, res_before_reset, check_length=False
+        )
         # Check result accumulated after reset
-        self._unordered_compressed_files_comparison_helper(self.temp_files, res_after_reset)
+        self._unordered_compressed_files_comparison_helper(
+            self.temp_files, res_after_reset
+        )
 
         # Reset Test: Ensure the order is consistent between iterations
         for r1, r2 in zip(list(xz_loader_dp), list(xz_loader_dp)):
@@ -491,7 +580,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         bz2_loader_dp = Bz2FileLoader(fileopen_dp)
 
         # Functional Test: Read extracted files before reaching the end of the bz2file
-        self._unordered_compressed_files_comparison_helper(self.temp_files, bz2_loader_dp, check_length=False)
+        self._unordered_compressed_files_comparison_helper(
+            self.temp_files, bz2_loader_dp, check_length=False
+        )
 
         # Functional Test: Read extracted files after reaching the end of the bz2file
         data_refs = list(bz2_loader_dp)
@@ -500,12 +591,18 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Reset Test: reset the DataPipe after reading part of it
         bz2_loader_dp = fileopen_dp.load_from_bz2()
         n_elements_before_reset = 1
-        res_before_reset, res_after_reset = reset_after_n_next_calls(bz2_loader_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            bz2_loader_dp, n_elements_before_reset
+        )
         # Check result accumulated before reset
         self.assertEqual(n_elements_before_reset, len(res_before_reset))
-        self._unordered_compressed_files_comparison_helper(self.temp_files, res_before_reset, check_length=False)
+        self._unordered_compressed_files_comparison_helper(
+            self.temp_files, res_before_reset, check_length=False
+        )
         # Check result accumulated after reset
-        self._unordered_compressed_files_comparison_helper(self.temp_files, res_after_reset)
+        self._unordered_compressed_files_comparison_helper(
+            self.temp_files, res_after_reset
+        )
 
         # Reset Test: Ensure the order is consistent between iterations
 
@@ -579,7 +676,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         for _, zip_stream in zip_decompress_dp:
             for fname in self.temp_files:
                 with open(fname, "rb") as f:
-                    self.assertEqual(f.read(), zip_stream.read(name=os.path.basename(fname)))
+                    self.assertEqual(
+                        f.read(), zip_stream.read(name=os.path.basename(fname))
+                    )
 
         # Functional Test: work with .xz files
         xz_file_dp = FileLister(self.temp_dir.name, "*.xz")
@@ -619,7 +718,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         # Reset Test: Ensure the order is consistent between iterations
         n_elements_before_reset = 2
-        res_before_reset, res_after_reset = reset_after_n_next_calls(xz_decompress_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            xz_decompress_dp, n_elements_before_reset
+        )
         self._decompressor_xz_test_helper(res_before_reset)
         self._decompressor_xz_test_helper(res_after_reset)
 
@@ -630,7 +731,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
     def _write_text_files(self):
         name_to_data = {"1.text": b"DATA", "2.text": b"DATA", "3.text": b"DATA"}
         source_dp = IterableWrapper(sorted(name_to_data.items()))
-        saver_dp = source_dp.save_to_disk(filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
+        saver_dp = source_dp.save_to_disk(
+            filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb"
+        )
         list(saver_dp)
 
     @staticmethod
@@ -649,7 +752,13 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             dp = dp.end_caching(mode="t", filepath_fn=_noop, timeout=120)
             dp = FileOpener(dp)
             dp = StreamReader(dp)
-            dl = DataLoader(dp, num_workers=10, multiprocessing_context="spawn", batch_size=1, collate_fn=_unbatch)
+            dl = DataLoader(
+                dp,
+                num_workers=10,
+                multiprocessing_context="spawn",
+                batch_size=1,
+                collate_fn=_unbatch,
+            )
             result = list(dl)
             all_files = []
             for (_, _, filenames) in os.walk(tmpdirname):
@@ -662,8 +771,16 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             for f in os.listdir(tmpdirname):
                 os.remove(os.path.join(tmpdirname, f))
 
-            dp = CacheTimeout(2)(dp)  # Calling adapter manually to work with classic DataLoader
-            dl = DataLoader(dp, num_workers=10, multiprocessing_context="spawn", batch_size=1, collate_fn=_unbatch)
+            dp = CacheTimeout(2)(
+                dp
+            )  # Calling adapter manually to work with classic DataLoader
+            dl = DataLoader(
+                dp,
+                num_workers=10,
+                multiprocessing_context="spawn",
+                batch_size=1,
+                collate_fn=_unbatch,
+            )
             with self.assertRaisesRegex(Exception, "OnDiskCache Exception"):
                 result = list(dl)
 
@@ -685,7 +802,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
     @skipIfNoIoPath
     def test_io_path_file_lister_iterdatapipe_with_list(self):
-        datapipe = IoPathFileLister(root=[self.temp_sub_dir.name, self.temp_sub_dir_2.name])
+        datapipe = IoPathFileLister(
+            root=[self.temp_sub_dir.name, self.temp_sub_dir_2.name]
+        )
 
         file_lister = list(datapipe)
         file_lister.sort()
@@ -716,7 +835,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         iopath_file_opener_dp = lister_dp.open_files_by_iopath(mode="rb")
 
         n_elements_before_reset = 2
-        res_before_reset, res_after_reset = reset_after_n_next_calls(iopath_file_opener_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            iopath_file_opener_dp, n_elements_before_reset
+        )
         self.assertEqual(2, len(res_before_reset))
         self.assertEqual(3, len(res_after_reset))
         for _name, stream in res_before_reset:
@@ -729,9 +850,13 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Functional Test: Saving some data
         name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
         source_dp = IterableWrapper(sorted(name_to_data.items()))
-        saver_dp = source_dp.save_by_iopath(filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
+        saver_dp = source_dp.save_by_iopath(
+            filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb"
+        )
         res_file_paths = list(saver_dp)
-        expected_paths = [filepath_fn(self.temp_dir.name, name) for name in name_to_data.keys()]
+        expected_paths = [
+            filepath_fn(self.temp_dir.name, name) for name in name_to_data.keys()
+        ]
         self.assertEqual(expected_paths, res_file_paths)
         for name in name_to_data.keys():
             p = filepath_fn(self.temp_dir.name, name)
@@ -739,11 +864,19 @@ class TestDataPipeLocalIO(expecttest.TestCase):
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # Reset Test:
-        saver_dp = IoPathSaver(source_dp, filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
+        saver_dp = IoPathSaver(
+            source_dp, filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb"
+        )
         n_elements_before_reset = 2
-        res_before_reset, res_after_reset = reset_after_n_next_calls(saver_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            saver_dp, n_elements_before_reset
+        )
         self.assertEqual(
-            [filepath_fn(self.temp_dir.name, "1.txt"), filepath_fn(self.temp_dir.name, "2.txt")], res_before_reset
+            [
+                filepath_fn(self.temp_dir.name, "1.txt"),
+                filepath_fn(self.temp_dir.name, "2.txt"),
+            ],
+            res_before_reset,
         )
         self.assertEqual(expected_paths, res_after_reset)
         for name in name_to_data.keys():
@@ -757,13 +890,20 @@ class TestDataPipeLocalIO(expecttest.TestCase):
     @skipIfNoIoPath
     def test_io_path_saver_file_lock(self):
         # Same filename with different name
-        name_to_data = {"1.txt": b"DATA1", "1.txt": b"DATA2", "2.txt": b"DATA3", "2.txt": b"DATA4"}  # noqa: F601
+        name_to_data = {
+            "1.txt": b"DATA1",
+            "1.txt": b"DATA2",
+            "2.txt": b"DATA3",
+            "2.txt": b"DATA4",
+        }  # noqa: F601
 
         # Add sharding_filter to shard data into 2
         source_dp = IterableWrapper(list(name_to_data.items())).sharding_filter()
 
         # Use appending as the mode
-        saver_dp = source_dp.save_by_iopath(filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="ab")
+        saver_dp = source_dp.save_by_iopath(
+            filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="ab"
+        )
 
         import torch.utils.data.graph_settings
 
@@ -771,7 +911,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
         num_workers = 2
         line_lengths = []
-        dl = DataLoader(saver_dp, num_workers=num_workers, multiprocessing_context="spawn")
+        dl = DataLoader(
+            saver_dp, num_workers=num_workers, multiprocessing_context="spawn"
+        )
         for filename in dl:
             with open(filename[0]) as f:
                 lines = f.readlines()
@@ -784,13 +926,25 @@ class TestDataPipeLocalIO(expecttest.TestCase):
     def _write_test_rar_files(self):
         # `rarfile` can only read but not write .rar archives so we use to system utilities
         rar_archive_name = os.path.join(self.temp_dir.name, "test_rar")
-        subprocess.run(("rar", "a", rar_archive_name + ".rar", *self.temp_files), check=True)
+        subprocess.run(
+            ("rar", "a", rar_archive_name + ".rar", *self.temp_files), check=True
+        )
 
         # Nested RAR
-        subprocess.run(("rar", "a", rar_archive_name + "1.rar", self.temp_files[0]), check=True)
-        subprocess.run(("rar", "a", rar_archive_name + "2.rar", *self.temp_files[1:]), check=True)
         subprocess.run(
-            ("rar", "a", rar_archive_name + "_nested.rar", rar_archive_name + "1.rar", rar_archive_name + "2.rar"),
+            ("rar", "a", rar_archive_name + "1.rar", self.temp_files[0]), check=True
+        )
+        subprocess.run(
+            ("rar", "a", rar_archive_name + "2.rar", *self.temp_files[1:]), check=True
+        )
+        subprocess.run(
+            (
+                "rar",
+                "a",
+                rar_archive_name + "_nested.rar",
+                rar_archive_name + "1.rar",
+                rar_archive_name + "2.rar",
+            ),
             check=True,
         )
 
@@ -808,7 +962,9 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         rar_loader_dp = RarArchiveLoader(datapipe2)
 
         # Functional Test: read extracted files before reaching the end of the rarfile
-        self._unordered_compressed_files_comparison_helper(self.temp_files, rar_loader_dp, check_length=False)
+        self._unordered_compressed_files_comparison_helper(
+            self.temp_files, rar_loader_dp, check_length=False
+        )
 
         # Functional Test: read extracted files after reaching the end of the rarfile
         data_refs = list(rar_loader_dp)
@@ -817,18 +973,26 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Reset Test: reset the DataPipe after reading part of it
         rar_loader_dp = datapipe2.load_from_rar()
         n_elements_before_reset = 2
-        res_before_reset, res_after_reset = reset_after_n_next_calls(rar_loader_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            rar_loader_dp, n_elements_before_reset
+        )
         # Check the results accumulated before reset
-        self._unordered_compressed_files_comparison_helper(self.temp_files[:n_elements_before_reset], res_before_reset)
+        self._unordered_compressed_files_comparison_helper(
+            self.temp_files[:n_elements_before_reset], res_before_reset
+        )
         # Check the results accumulated after reset
-        self._unordered_compressed_files_comparison_helper(self.temp_files, res_after_reset)
+        self._unordered_compressed_files_comparison_helper(
+            self.temp_files, res_after_reset
+        )
 
         # __len__ Test: doesn't have valid length
         with self.assertRaisesRegex(TypeError, "instance doesn't have valid length"):
             len(rar_loader_dp)
 
         # Nested RAR
-        datapipe1 = IterableWrapper([os.path.join(self.temp_dir.name, "test_rar_nested.rar")])
+        datapipe1 = IterableWrapper(
+            [os.path.join(self.temp_dir.name, "test_rar_nested.rar")]
+        )
         datapipe2 = FileOpener(datapipe1, mode="b")
         rar_loader_dp_1 = RarArchiveLoader(datapipe2)
         rar_loader_dp_2 = RarArchiveLoader(rar_loader_dp_1)
@@ -837,13 +1001,17 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             list(rar_loader_dp_2)
 
         # Nested RAR in TAR
-        datapipe1 = IterableWrapper([os.path.join(self.temp_dir.name, "test_rar_nested.tar")])
+        datapipe1 = IterableWrapper(
+            [os.path.join(self.temp_dir.name, "test_rar_nested.tar")]
+        )
         datapipe2 = FileOpener(datapipe1, mode="b")
         tar_loader_dp = TarArchiveLoader(datapipe2)
         rar_loader_dp = RarArchiveLoader(tar_loader_dp)
 
         # Functional Test: read extracted files before reaching the end of the rarfile
-        self._unordered_compressed_files_comparison_helper(self.temp_files, rar_loader_dp, check_length=False)
+        self._unordered_compressed_files_comparison_helper(
+            self.temp_files, rar_loader_dp, check_length=False
+        )
 
         # Functional Test: read extracted files after reaching the end of the rarfile
         data_refs = list(rar_loader_dp)

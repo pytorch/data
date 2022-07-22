@@ -36,7 +36,9 @@ skipIfNoPROTOBUF = unittest.skipIf(not HAS_PROTOBUF, "no google protobuf")
 
 class TestDataPipeTFRecord(expecttest.TestCase):
     def setUp(self):
-        self.temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_fakedata", "tfrecord")
+        self.temp_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "_fakedata", "tfrecord"
+        )
 
     def assertArrayEqual(self, arr1, arr2):
         if isinstance(arr1, list):
@@ -142,9 +144,15 @@ class TestDataPipeTFRecord(expecttest.TestCase):
         tfrecord_parser = TFRecordLoader(datapipe2)
         expected_res = final_expected_res
         n_elements_before_reset = 2
-        res_before_reset, res_after_reset = reset_after_n_next_calls(tfrecord_parser, n_elements_before_reset)
-        self.assertEqual(len(expected_res[:n_elements_before_reset]), len(res_before_reset))
-        for true_data, loaded_data in zip(expected_res[:n_elements_before_reset], res_before_reset):
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            tfrecord_parser, n_elements_before_reset
+        )
+        self.assertEqual(
+            len(expected_res[:n_elements_before_reset]), len(res_before_reset)
+        )
+        for true_data, loaded_data in zip(
+            expected_res[:n_elements_before_reset], res_before_reset
+        ):
             self.assertSetEqual(set(true_data.keys()), set(loaded_data.keys()))
             for key in ["x_float", "x_int"]:
                 self.assertArrayEqual(true_data[key], loaded_data[key])
@@ -173,12 +181,19 @@ class TestDataPipeTFRecord(expecttest.TestCase):
         self.assertEqual(len(result), 4)
         expected_res = final_expected_res = list(self._ground_truth_seq_data())
         for (true_data_ctx, true_data_seq), loaded_data in zip(expected_res, result):
-            self.assertSetEqual(set(true_data_ctx.keys()).union(true_data_seq.keys()), set(loaded_data.keys()))
+            self.assertSetEqual(
+                set(true_data_ctx.keys()).union(true_data_seq.keys()),
+                set(loaded_data.keys()),
+            )
             for key in ["x_float", "x_int"]:
                 self.assertArrayEqual(true_data_ctx[key], loaded_data[key])
-                self.assertEqual(len(true_data_seq[key + "_seq"]), len(loaded_data[key + "_seq"]))
+                self.assertEqual(
+                    len(true_data_seq[key + "_seq"]), len(loaded_data[key + "_seq"])
+                )
                 self.assertIsInstance(loaded_data[key + "_seq"], list)
-                for a1, a2 in zip(true_data_seq[key + "_seq"], loaded_data[key + "_seq"]):
+                for a1, a2 in zip(
+                    true_data_seq[key + "_seq"], loaded_data[key + "_seq"]
+                ):
                     self.assertArrayEqual(a1, a2)
             self.assertEqual(true_data_ctx["x_byte"], loaded_data["x_byte"])
             self.assertListEqual(true_data_seq["x_byte_seq"], loaded_data["x_byte_seq"])
@@ -213,7 +228,10 @@ class TestDataPipeTFRecord(expecttest.TestCase):
             for x, z in self._ground_truth_seq_data()
         ]
         for (true_data_ctx, true_data_seq), loaded_data in zip(expected_res, result):
-            self.assertSetEqual(set(true_data_ctx.keys()).union(true_data_seq.keys()), set(loaded_data.keys()))
+            self.assertSetEqual(
+                set(true_data_ctx.keys()).union(true_data_seq.keys()),
+                set(loaded_data.keys()),
+            )
             for key in ["x_float", "x_int"]:
                 l_loaded_data = loaded_data[key]
                 if key == "x_float":
@@ -221,7 +239,9 @@ class TestDataPipeTFRecord(expecttest.TestCase):
                 else:
                     l_loaded_data = l_loaded_data.int()
                 self.assertArrayEqual(true_data_ctx[key], l_loaded_data)
-                self.assertArrayEqual(true_data_seq[key + "_seq"], loaded_data[key + "_seq"])
+                self.assertArrayEqual(
+                    true_data_seq[key + "_seq"], loaded_data[key + "_seq"]
+                )
             self.assertEqual(true_data_ctx["x_byte"], loaded_data["x_byte"])
             self.assertListEqual(true_data_seq["x_byte_seq"], loaded_data["x_byte_seq"])
 
@@ -246,7 +266,11 @@ class TestDataPipeTFRecord(expecttest.TestCase):
         # Functional Test: raises error if missing spec feature
         with self.assertRaises(RuntimeError):
             tfrecord_parser = datapipe2.load_from_tfrecord(
-                {"x_float_unknown": ((5, 2), torch.float64), "x_int": ((5, 2), torch.int32), "x_byte": None}
+                {
+                    "x_float_unknown": ((5, 2), torch.float64),
+                    "x_int": ((5, 2), torch.int32),
+                    "x_byte": None,
+                }
             )
             result = list(tfrecord_parser)
 
@@ -254,28 +278,48 @@ class TestDataPipeTFRecord(expecttest.TestCase):
         tfrecord_parser = TFRecordLoader(datapipe2)
         expected_res = final_expected_res
         n_elements_before_reset = 2
-        res_before_reset, res_after_reset = reset_after_n_next_calls(tfrecord_parser, n_elements_before_reset)
-        self.assertEqual(len(expected_res[:n_elements_before_reset]), len(res_before_reset))
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            tfrecord_parser, n_elements_before_reset
+        )
+        self.assertEqual(
+            len(expected_res[:n_elements_before_reset]), len(res_before_reset)
+        )
         for (true_data_ctx, true_data_seq), loaded_data in zip(
             expected_res[:n_elements_before_reset], res_before_reset
         ):
-            self.assertSetEqual(set(true_data_ctx.keys()).union(true_data_seq.keys()), set(loaded_data.keys()))
+            self.assertSetEqual(
+                set(true_data_ctx.keys()).union(true_data_seq.keys()),
+                set(loaded_data.keys()),
+            )
             for key in ["x_float", "x_int"]:
                 self.assertArrayEqual(true_data_ctx[key], loaded_data[key])
-                self.assertEqual(len(true_data_seq[key + "_seq"]), len(loaded_data[key + "_seq"]))
+                self.assertEqual(
+                    len(true_data_seq[key + "_seq"]), len(loaded_data[key + "_seq"])
+                )
                 self.assertIsInstance(loaded_data[key + "_seq"], list)
-                for a1, a2 in zip(true_data_seq[key + "_seq"], loaded_data[key + "_seq"]):
+                for a1, a2 in zip(
+                    true_data_seq[key + "_seq"], loaded_data[key + "_seq"]
+                ):
                     self.assertArrayEqual(a1, a2)
             self.assertEqual(true_data_ctx["x_byte"], loaded_data["x_byte"])
             self.assertListEqual(true_data_seq["x_byte_seq"], loaded_data["x_byte_seq"])
         self.assertEqual(len(expected_res), len(res_after_reset))
-        for (true_data_ctx, true_data_seq), loaded_data in zip(expected_res, res_after_reset):
-            self.assertSetEqual(set(true_data_ctx.keys()).union(true_data_seq.keys()), set(loaded_data.keys()))
+        for (true_data_ctx, true_data_seq), loaded_data in zip(
+            expected_res, res_after_reset
+        ):
+            self.assertSetEqual(
+                set(true_data_ctx.keys()).union(true_data_seq.keys()),
+                set(loaded_data.keys()),
+            )
             for key in ["x_float", "x_int"]:
                 self.assertArrayEqual(true_data_ctx[key], loaded_data[key])
-                self.assertEqual(len(true_data_seq[key + "_seq"]), len(loaded_data[key + "_seq"]))
+                self.assertEqual(
+                    len(true_data_seq[key + "_seq"]), len(loaded_data[key + "_seq"])
+                )
                 self.assertIsInstance(loaded_data[key + "_seq"], list)
-                for a1, a2 in zip(true_data_seq[key + "_seq"], loaded_data[key + "_seq"]):
+                for a1, a2 in zip(
+                    true_data_seq[key + "_seq"], loaded_data[key + "_seq"]
+                ):
                     self.assertArrayEqual(a1, a2)
             self.assertEqual(true_data_ctx["x_byte"], loaded_data["x_byte"])
             self.assertListEqual(true_data_seq["x_byte_seq"], loaded_data["x_byte_seq"])

@@ -47,7 +47,9 @@ class Shuffle(Adapter):
         self.enable = enable
 
     def __call__(self, datapipe: DataPipe) -> DataPipe:
-        return torch.utils.data.graph_settings.apply_shuffle_settings(datapipe, shuffle=self.enable)
+        return torch.utils.data.graph_settings.apply_shuffle_settings(
+            datapipe, shuffle=self.enable
+        )
 
 
 class CacheTimeout(Adapter):
@@ -70,7 +72,11 @@ class CacheTimeout(Adapter):
     def __call__(self, datapipe: DataPipe) -> DataPipe:
         graph = torch.utils.data.graph.traverse(datapipe, only_datapipe=True)
         all_pipes = torch.utils.data.graph_settings.get_all_graph_pipes(graph)
-        cache_locks = {pipe for pipe in all_pipes if isinstance(pipe, _WaitPendingCacheItemIterDataPipe)}
+        cache_locks = {
+            pipe
+            for pipe in all_pipes
+            if isinstance(pipe, _WaitPendingCacheItemIterDataPipe)
+        }
 
         for cache_lock in cache_locks:
             cache_lock.set_timeout(self.timeout)

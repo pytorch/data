@@ -45,7 +45,9 @@ class HeaderIterDataPipe(IterDataPipe[T_co]):
                 yield value
             else:
                 break
-        self.length = min(i, self.limit)  # We know length with certainty when we reach here
+        self.length = min(
+            i, self.limit
+        )  # We know length with certainty when we reach here
 
     def __len__(self) -> int:
         if self.length != -1:

@@ -65,7 +65,9 @@ class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
         b'0123456789abcdef'
     """
 
-    def __init__(self, datapipe: IterDataPipe[Tuple[str, io.BufferedIOBase]], *, length: int = -1):
+    def __init__(
+        self, datapipe: IterDataPipe[Tuple[str, io.BufferedIOBase]], *, length: int = -1
+    ):
         try:
             import rarfile
         except ImportError as error:
@@ -93,7 +95,8 @@ class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
             validate_pathname_binary_tuple(data)
             path, stream = data
             if isinstance(stream, rarfile.RarExtFile) or (
-                isinstance(stream, StreamWrapper) and isinstance(stream.file_obj, rarfile.RarExtFile)
+                isinstance(stream, StreamWrapper)
+                and isinstance(stream.file_obj, rarfile.RarExtFile)
             ):
                 raise ValueError(
                     f"Nested RAR archive is not supported by {type(self).__name__}. Please extract outer archive first."

@@ -12,7 +12,11 @@ NUMBER_OF_FILES = 3
 FILES = [
     ("bytes", "bt", "{fn}_0123456789abcdef\n", True),
     ("csv", "csv", "key,item\n0,{fn}_0\n1,{fn}_1\n"),
-    ("json", "json", '{{"{fn}_0": [{{"{fn}_01": 1}}, {{"{fn}_02": 2}}], "{fn}_1": 1}}\n'),
+    (
+        "json",
+        "json",
+        '{{"{fn}_0": [{{"{fn}_01": 1}}, {{"{fn}_02": 2}}], "{fn}_1": 1}}\n',
+    ),
     ("txt", "txt", "{fn}_0123456789abcdef\n"),
 ]
 
@@ -50,15 +54,25 @@ def create_tfrecord_files(path: str):
             record_bytes = tf.train.Example(
                 features=tf.train.Features(
                     feature={
-                        "x_float": tf.train.Feature(float_list=tf.train.FloatList(value=x)),
-                        "x_int": tf.train.Feature(int64_list=tf.train.Int64List(value=tf.cast(x * 10, "int64"))),
-                        "x_byte": tf.train.Feature(bytes_list=tf.train.BytesList(value=[b"test str"])),
+                        "x_float": tf.train.Feature(
+                            float_list=tf.train.FloatList(value=x)
+                        ),
+                        "x_int": tf.train.Feature(
+                            int64_list=tf.train.Int64List(
+                                value=tf.cast(x * 10, "int64")
+                            )
+                        ),
+                        "x_byte": tf.train.Feature(
+                            bytes_list=tf.train.BytesList(value=[b"test str"])
+                        ),
                     }
                 )
             ).SerializeToString()
             writer.write(record_bytes)
 
-    with tf.io.TFRecordWriter(os.path.join(path, "sequence_example.tfrecord")) as writer:
+    with tf.io.TFRecordWriter(
+        os.path.join(path, "sequence_example.tfrecord")
+    ) as writer:
         for i in range(4):
             x = tf.range(i * 10, (i + 1) * 10)
             rep = 2 * i + 3
@@ -66,22 +80,44 @@ def create_tfrecord_files(path: str):
             record_bytes = tf.train.SequenceExample(
                 context=tf.train.Features(
                     feature={
-                        "x_float": tf.train.Feature(float_list=tf.train.FloatList(value=x)),
-                        "x_int": tf.train.Feature(int64_list=tf.train.Int64List(value=tf.cast(x * 10, "int64"))),
-                        "x_byte": tf.train.Feature(bytes_list=tf.train.BytesList(value=[b"test str"])),
+                        "x_float": tf.train.Feature(
+                            float_list=tf.train.FloatList(value=x)
+                        ),
+                        "x_int": tf.train.Feature(
+                            int64_list=tf.train.Int64List(
+                                value=tf.cast(x * 10, "int64")
+                            )
+                        ),
+                        "x_byte": tf.train.Feature(
+                            bytes_list=tf.train.BytesList(value=[b"test str"])
+                        ),
                     }
                 ),
                 feature_lists=tf.train.FeatureLists(
                     feature_list={
                         "x_float_seq": tf.train.FeatureList(
-                            feature=[tf.train.Feature(float_list=tf.train.FloatList(value=x))] * rep
+                            feature=[
+                                tf.train.Feature(float_list=tf.train.FloatList(value=x))
+                            ]
+                            * rep
                         ),
                         "x_int_seq": tf.train.FeatureList(
-                            feature=[tf.train.Feature(int64_list=tf.train.Int64List(value=tf.cast(x * 10, "int64")))]
+                            feature=[
+                                tf.train.Feature(
+                                    int64_list=tf.train.Int64List(
+                                        value=tf.cast(x * 10, "int64")
+                                    )
+                                )
+                            ]
                             * rep
                         ),
                         "x_byte_seq": tf.train.FeatureList(
-                            feature=[tf.train.Feature(bytes_list=tf.train.BytesList(value=[b"test str"]))] * rep
+                            feature=[
+                                tf.train.Feature(
+                                    bytes_list=tf.train.BytesList(value=[b"test str"])
+                                )
+                            ]
+                            * rep
                         ),
                     }
                 ),
