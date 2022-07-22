@@ -30,7 +30,9 @@ class TestDataPipePeriod(expecttest.TestCase):
         self.assertTrue(line != b"")
 
         # Reset Test: gdrive_reader_dp has been read, but we reset when calling check_hash()
-        check_cache_dp = gdrive_reader_dp.check_hash({expected_file_name: expected_MD5_hash}, "md5", rewind=False)
+        check_cache_dp = gdrive_reader_dp.check_hash(
+            {expected_file_name: expected_MD5_hash}, "md5", rewind=False
+        )
         it = iter(check_cache_dp)
         path, stream = next(it)
         self.assertEqual(expected_file_name, os.path.basename(path))
@@ -72,17 +74,25 @@ class TestDataPipePeriod(expecttest.TestCase):
         self.assertTrue(line != b"")
 
         # Reset Test: reset online_reader_dp by calling check_hash
-        check_cache_dp = online_reader_dp.check_hash(file_hash_dict, "md5", rewind=False)
+        check_cache_dp = online_reader_dp.check_hash(
+            file_hash_dict, "md5", rewind=False
+        )
         it = iter(check_cache_dp)
         path, stream = next(it)
         self.assertEqual(expected_license_file_name, os.path.basename(path))
         self.assertTrue(io.BufferedReader, type(stream))
 
         # Functional Test: works with multiple URLs of different sources
-        online_reader_dp = OnlineReader(IterableWrapper([license_file_url, amazon_review_url]))
-        check_cache_dp = online_reader_dp.check_hash(file_hash_dict, "md5", rewind=False)
+        online_reader_dp = OnlineReader(
+            IterableWrapper([license_file_url, amazon_review_url])
+        )
+        check_cache_dp = online_reader_dp.check_hash(
+            file_hash_dict, "md5", rewind=False
+        )
         it = iter(check_cache_dp)
-        for expected_file_name, (path, stream) in zip([expected_license_file_name, expected_amazon_file_name], it):
+        for expected_file_name, (path, stream) in zip(
+            [expected_license_file_name, expected_amazon_file_name], it
+        ):
             self.assertEqual(expected_file_name, os.path.basename(path))
             self.assertTrue(io.BufferedReader, type(stream))
 

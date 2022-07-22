@@ -44,9 +44,19 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
         ...     pass
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], length: int = -1, request_timeout_ms=-1, region="") -> None:
-        if not hasattr(torchdata, "_torchdata") or not hasattr(torchdata._torchdata, "S3Handler"):
-            raise ModuleNotFoundError("TorchData must be built with BUILD_S3=1 to use this datapipe.")
+    def __init__(
+        self,
+        source_datapipe: IterDataPipe[str],
+        length: int = -1,
+        request_timeout_ms=-1,
+        region="",
+    ) -> None:
+        if not hasattr(torchdata, "_torchdata") or not hasattr(
+            torchdata._torchdata, "S3Handler"
+        ):
+            raise ModuleNotFoundError(
+                "TorchData must be built with BUILD_S3=1 to use this datapipe."
+            )
 
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.length: int = length
@@ -110,8 +120,12 @@ class S3FileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         buffer_size=None,
         multi_part_download=None,
     ) -> None:
-        if not hasattr(torchdata, "_torchdata") or not hasattr(torchdata._torchdata, "S3Handler"):
-            raise ModuleNotFoundError("TorchData must be built with BUILD_S3=1 to use this datapipe.")
+        if not hasattr(torchdata, "_torchdata") or not hasattr(
+            torchdata._torchdata, "S3Handler"
+        ):
+            raise ModuleNotFoundError(
+                "TorchData must be built with BUILD_S3=1 to use this datapipe."
+            )
 
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.handler = torchdata._torchdata.S3Handler(request_timeout_ms, region)

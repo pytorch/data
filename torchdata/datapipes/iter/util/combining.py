@@ -63,7 +63,9 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
         merge_fn: Optional[Callable] = None,
     ) -> None:
         if not isinstance(ref_datapipe, IterDataPipe):
-            raise TypeError(f"ref_datapipe must be a IterDataPipe, but its type is {type(ref_datapipe)} instead.")
+            raise TypeError(
+                f"ref_datapipe must be a IterDataPipe, but its type is {type(ref_datapipe)} instead."
+            )
         self.source_datapipe = source_datapipe
         self.ref_datapipe = ref_datapipe
         _check_unpickable_fn(key_fn)
@@ -76,7 +78,9 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
             _check_unpickable_fn(merge_fn)
         self.merge_fn = merge_fn
         if buffer_size is not None and buffer_size <= 0:
-            raise ValueError("'buffer_size' is required to be either None or a positive integer.")
+            raise ValueError(
+                "'buffer_size' is required to be either None or a positive integer."
+            )
         self.buffer_size: int = buffer_size
         self.buffer: OrderedDict = OrderedDict()
 
@@ -97,7 +101,10 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
                     ref_key = self.ref_key_fn(ref_data)
                     if ref_key in self.buffer:
                         raise ValueError("Duplicate key is found in reference DataPipe")
-                    if self.buffer_size is not None and len(self.buffer) > self.buffer_size:
+                    if (
+                        self.buffer_size is not None
+                        and len(self.buffer) > self.buffer_size
+                    ):
                         if warn_once_flag:
                             warn_once_flag = False
                             warnings.warn(
@@ -106,7 +113,11 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
                             )
                         self.buffer.popitem(last=False)
                     self.buffer[ref_key] = ref_data
-                res = self.merge_fn(data, self.buffer.pop(key)) if self.merge_fn else (data, self.buffer.pop(key))
+                res = (
+                    self.merge_fn(data, self.buffer.pop(key))
+                    if self.merge_fn
+                    else (data, self.buffer.pop(key))
+                )
                 if self.keep_key:
                     yield key, res
                 else:
@@ -193,7 +204,9 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
         merge_fn: Optional[Callable] = None,
     ):
         if not isinstance(map_datapipe, MapDataPipe):
-            raise TypeError(f"map_datapipe must be a MapDataPipe, but its type is {type(map_datapipe)} instead.")
+            raise TypeError(
+                f"map_datapipe must be a MapDataPipe, but its type is {type(map_datapipe)} instead."
+            )
         self.source_iterdatapipe: IterDataPipe = source_iterdatapipe
         self.map_datapipe: MapDataPipe = map_datapipe
         _check_unpickable_fn(key_fn)
@@ -209,7 +222,9 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
             try:
                 map_item = self.map_datapipe[key]
             except (KeyError, IndexError):
-                raise KeyError(f"key_fn maps {item} to {key}, which is not a valid key in the given MapDataPipe.")
+                raise KeyError(
+                    f"key_fn maps {item} to {key}, which is not a valid key in the given MapDataPipe."
+                )
             yield self.merge_fn(item, map_item) if self.merge_fn else (item, map_item)
 
     def __len__(self) -> int:

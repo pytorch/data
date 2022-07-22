@@ -34,7 +34,10 @@ def _get_build(var, default=False):
     if val in trues:
         return True
     if val not in falses:
-        print(f"WARNING: Unexpected environment variable value `{var}={val}`. " f"Expected one of {trues + falses}")
+        print(
+            f"WARNING: Unexpected environment variable value `{var}={val}`. "
+            f"Expected one of {trues + falses}"
+        )
     return False
 
 
@@ -122,8 +125,12 @@ class CMakeBuild(build_ext):
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
-        subprocess.check_call(["cmake", str(_ROOT_DIR)] + cmake_args, cwd=self.build_temp)
-        subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=self.build_temp)
+        subprocess.check_call(
+            ["cmake", str(_ROOT_DIR)] + cmake_args, cwd=self.build_temp
+        )
+        subprocess.check_call(
+            ["cmake", "--build", "."] + build_args, cwd=self.build_temp
+        )
 
     def get_ext_filename(self, fullname):
         ext_filename = super().get_ext_filename(fullname)

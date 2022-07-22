@@ -49,7 +49,9 @@ def _check_submodules():
             sys.exit(1)
 
     def not_exists_or_empty(folder):
-        return not os.path.exists(folder) or (os.path.isdir(folder) and len(os.listdir(folder)) == 0)
+        return not os.path.exists(folder) or (
+            os.path.isdir(folder) and len(os.listdir(folder)) == 0
+        )
 
     if bool(os.getenv("USE_SYSTEM_LIBS", False)):
         return
@@ -61,7 +63,9 @@ def _check_submodules():
 
             print(" --- Trying to initialize submodules")
             start = time.time()
-            subprocess.check_call(["git", "submodule", "update", "--init", "--recursive"], cwd=ROOT_DIR)
+            subprocess.check_call(
+                ["git", "submodule", "update", "--init", "--recursive"], cwd=ROOT_DIR
+            )
             end = time.time()
             print(f" --- Submodule initialization took {end - start:.2f} sec")
         except Exception:
@@ -69,7 +73,17 @@ def _check_submodules():
             print("Please run:\n\tgit submodule update --init --recursive --jobs 0")
             sys.exit(1)
     for folder in folders:
-        check_for_files(folder, ["CMakeLists.txt", "Makefile", "setup.py", "LICENSE", "LICENSE.md", "LICENSE.txt"])
+        check_for_files(
+            folder,
+            [
+                "CMakeLists.txt",
+                "Makefile",
+                "setup.py",
+                "LICENSE",
+                "LICENSE.md",
+                "LICENSE.txt",
+            ],
+        )
 
 
 def _get_version():
@@ -78,7 +92,11 @@ def _get_version():
 
     sha = "Unknown"
     try:
-        sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=str(ROOT_DIR)).decode("ascii").strip()
+        sha = (
+            subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=str(ROOT_DIR))
+            .decode("ascii")
+            .strip()
+        )
     except Exception:
         pass
 
@@ -187,7 +205,9 @@ if __name__ == "__main__":
             ],
         },
         # Package Info
-        packages=find_packages(exclude=["test*", "examples*", "tools*", "torchdata.csrc*", "build*"]),
+        packages=find_packages(
+            exclude=["test*", "examples*", "tools*", "torchdata.csrc*", "build*"]
+        ),
         zip_safe=False,
         # C++ Extension Modules
         ext_modules=get_ext_modules(),

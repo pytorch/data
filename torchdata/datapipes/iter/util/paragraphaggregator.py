@@ -42,7 +42,11 @@ class ParagraphAggregatorIterDataPipe(IterDataPipe[Tuple[str, str]]):
         [('file1', 'Line1 Line2'), ('file2', 'Line2,1 Line2,2 Line2,3')]
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[Tuple[str, T_co]], joiner: Callable = _default_line_join) -> None:
+    def __init__(
+        self,
+        source_datapipe: IterDataPipe[Tuple[str, T_co]],
+        joiner: Callable = _default_line_join,
+    ) -> None:
         self.source_datapipe: IterDataPipe[Tuple[str, T_co]] = source_datapipe
         _check_unpickable_fn(joiner)
         self.joiner: Callable = joiner

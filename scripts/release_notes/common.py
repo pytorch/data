@@ -58,7 +58,9 @@ def features_to_dict(features):
 
 def run(command):
     """Returns (return-code, stdout, stderr)"""
-    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    p = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+    )
     output, err = p.communicate()
     rc = p.returncode
     enc = locale.getpreferredencoding()
@@ -113,11 +115,15 @@ headers = {"Authorization": f"token {token}"}
 
 
 def run_query(query):
-    request = requests.post("https://api.github.com/graphql", json={"query": query}, headers=headers)
+    request = requests.post(
+        "https://api.github.com/graphql", json={"query": query}, headers=headers
+    )
     if request.status_code == 200:
         return request.json()
     else:
-        raise Exception(f"Query failed to run by returning code of {request.status_code}. {query}")
+        raise Exception(
+            f"Query failed to run by returning code of {request.status_code}. {query}"
+        )
 
 
 def gh_labels(pr_number):

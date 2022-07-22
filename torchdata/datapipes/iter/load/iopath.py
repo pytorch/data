@@ -118,7 +118,9 @@ class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         >>> file_dp = datapipe.open_files_by_iopath()
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r", pathmgr=None) -> None:
+    def __init__(
+        self, source_datapipe: IterDataPipe[str], mode: str = "r", pathmgr=None
+    ) -> None:
         if iopath is None:
             raise ModuleNotFoundError(
                 "Package `iopath` is required to be installed to use this datapipe."
@@ -143,7 +145,9 @@ class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
 
 # Register for functional API for backward compatibility
-IterDataPipe.register_datapipe_as_function("open_file_by_iopath", IoPathFileOpenerIterDataPipe)
+IterDataPipe.register_datapipe_as_function(
+    "open_file_by_iopath", IoPathFileOpenerIterDataPipe
+)
 
 
 @functional_datapipe("save_by_iopath")

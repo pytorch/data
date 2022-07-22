@@ -87,7 +87,9 @@ class BatchMapperIterDataPipe(IterDataPipe[T_co]):
             yield from self._apply_fn(batch)
 
     def __len__(self) -> int:
-        raise TypeError(f"{type(self).__name__}'s length relies on the output of its function.")
+        raise TypeError(
+            f"{type(self).__name__}'s length relies on the output of its function."
+        )
 
 
 @functional_datapipe("flatmap")
@@ -136,4 +138,6 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
             yield from self._apply_fn(d)
 
     def __len__(self) -> int:
-        raise TypeError(f"{type(self).__name__}'s length relies on the output of its function.")
+        raise TypeError(
+            f"{type(self).__name__}'s length relies on the output of its function."
+        )

@@ -55,16 +55,23 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         try:
             self.temp_dir.cleanup()
         except Exception as e:
-            warnings.warn(f"TestDataPipeRemoteIO was not able to cleanup temp dir due to {e}")
+            warnings.warn(
+                f"TestDataPipeRemoteIO was not able to cleanup temp dir due to {e}"
+            )
 
     def test_http_reader_iterdatapipe(self):
 
         file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
         expected_file_name = "LICENSE"
         expected_MD5_hash = "bb9675028dd39d2dd2bf71002b93e66c"
-        query_params = {"auth": ("fake_username", "fake_password"), "allow_redirects": True}
+        query_params = {
+            "auth": ("fake_username", "fake_password"),
+            "allow_redirects": True,
+        }
         timeout = 120
-        http_reader_dp = HttpReader(IterableWrapper([file_url]), timeout=timeout, **query_params)
+        http_reader_dp = HttpReader(
+            IterableWrapper([file_url]), timeout=timeout, **query_params
+        )
 
         # Functional Test: test if the Http Reader can download and read properly
         reader_dp = http_reader_dp.readlines()
@@ -74,7 +81,9 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         self.assertTrue(b"BSD" in line)
 
         # Reset Test: http_reader_dp has been read, but we reset when calling check_hash()
-        check_cache_dp = http_reader_dp.check_hash({file_url: expected_MD5_hash}, "md5", rewind=False)
+        check_cache_dp = http_reader_dp.check_hash(
+            {file_url: expected_MD5_hash}, "md5", rewind=False
+        )
         it = iter(check_cache_dp)
         path, stream = next(it)
         self.assertEqual(expected_file_name, os.path.basename(path))
@@ -97,7 +106,9 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
 
         tar_file_dp = IterableWrapper([tar_file_url])
 
-        with self.assertRaisesRegex(RuntimeError, "Expected `OnDiskCacheHolder` existing"):
+        with self.assertRaisesRegex(
+            RuntimeError, "Expected `OnDiskCacheHolder` existing"
+        ):
             _ = tar_file_dp.end_caching()
 
         def _filepath_fn(url):
@@ -119,7 +130,9 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
 
         # Both filepath_fn and same_filepath_fn are set
         with self.assertRaisesRegex(ValueError, "`filepath_fn` is mutually"):
-            _ = tar_cache_dp.end_caching(mode="wb", filepath_fn=_filepath_fn, same_filepath_fn=True)
+            _ = tar_cache_dp.end_caching(
+                mode="wb", filepath_fn=_filepath_fn, same_filepath_fn=True
+            )
 
         tar_cache_dp = tar_cache_dp.end_caching(mode="wb", same_filepath_fn=True)
 
@@ -142,7 +155,9 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         self.assertTrue(check_hash_fn(expected_file_name, expected_MD5_hash))
 
         # Call `end_caching` again
-        with self.assertRaisesRegex(RuntimeError, "`end_caching` can only be invoked once"):
+        with self.assertRaisesRegex(
+            RuntimeError, "`end_caching` can only be invoked once"
+        ):
             _ = tar_cache_dp.end_caching()
 
         # Multiple filepaths
@@ -166,7 +181,9 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
 
         file_cache_dp = file_cache_dp.map(fn=_read_and_decode, input_col=1)
 
-        file_cache_dp = EndOnDiskCacheHolder(file_cache_dp, mode="w", filepath_fn=_csv_filepath_fn, skip_read=True)
+        file_cache_dp = EndOnDiskCacheHolder(
+            file_cache_dp, mode="w", filepath_fn=_csv_filepath_fn, skip_read=True
+        )
 
         cached_it = iter(file_cache_dp)
         for expected_csv_path in _gen_filepath_fn(expected_file_name):
@@ -184,12 +201,17 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         root_dir = "temp"
 
         file_cache_dp = OnDiskCacheHolder(
-            tar_cache_dp, filepath_fn=lambda tar_path: os.path.join(os.path.dirname(tar_path), root_dir)
+            tar_cache_dp,
+            filepath_fn=lambda tar_path: os.path.join(
+                os.path.dirname(tar_path), root_dir
+            ),
         )
         file_cache_dp = FileOpener(file_cache_dp, mode="rb").load_from_tar()
         file_cache_dp = file_cache_dp.end_caching(
             mode="wb",
-            filepath_fn=lambda file_path: os.path.join(self.temp_dir.name, root_dir, os.path.basename(file_path)),
+            filepath_fn=lambda file_path: os.path.join(
+                self.temp_dir.name, root_dir, os.path.basename(file_path)
+            ),
         )
 
         cached_it = iter(file_cache_dp)
@@ -207,8 +229,16 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             self.assertEqual(expected_csv_path, csv_path)
 
         if not IS_WINDOWS:
-            dl = DataLoader(file_cache_dp, num_workers=3, multiprocessing_context="fork", batch_size=1)
-            expected = [[os.path.join(self.temp_dir.name, root_dir, f"{i}.csv")] for i in range(3)] * 3
+            dl = DataLoader(
+                file_cache_dp,
+                num_workers=3,
+                multiprocessing_context="fork",
+                batch_size=1,
+            )
+            expected = [
+                [os.path.join(self.temp_dir.name, root_dir, f"{i}.csv")]
+                for i in range(3)
+            ] * 3
             res = list(dl)
             self.assertEqual(sorted(expected), sorted(res))
 
@@ -232,16 +262,22 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             self.assertEqual(sum(1 for _ in fsspec_lister_dp), num, f"{urls} failed")
 
         url = "s3://ai2-public-datasets/charades/"
-        fsspec_loader_dp = FSSpecFileOpener(FSSpecFileLister(IterableWrapper([url]), anon=True), anon=True)
+        fsspec_loader_dp = FSSpecFileOpener(
+            FSSpecFileLister(IterableWrapper([url]), anon=True), anon=True
+        )
         res = list(fsspec_loader_dp)
         self.assertEqual(len(res), 18, f"{input} failed")
 
     @skipIfAWS
     def test_disabled_s3_io_iterdatapipe(self):
         file_urls = ["s3://ai2-public-datasets"]
-        with self.assertRaisesRegex(ModuleNotFoundError, "TorchData must be built with"):
+        with self.assertRaisesRegex(
+            ModuleNotFoundError, "TorchData must be built with"
+        ):
             _ = S3FileLister(IterableWrapper(file_urls))
-        with self.assertRaisesRegex(ModuleNotFoundError, "TorchData must be built with"):
+        with self.assertRaisesRegex(
+            ModuleNotFoundError, "TorchData must be built with"
+        ):
             _ = S3FileLoader(IterableWrapper(file_urls))
 
     @skipIfNoAWS
@@ -283,7 +319,9 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         ]
         for input in input_list:
             s3_lister_dp = S3FileLister(IterableWrapper(input[0]), region="us-west-2")
-            self.assertEqual(sum(1 for _ in s3_lister_dp), input[1], f"{input[0]} failed")
+            self.assertEqual(
+                sum(1 for _ in s3_lister_dp), input[1], f"{input[0]} failed"
+            )
 
         # S3FileLister: prefixes + different region
         file_urls = [

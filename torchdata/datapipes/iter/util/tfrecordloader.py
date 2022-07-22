@@ -8,7 +8,18 @@ import struct
 import warnings
 from functools import partial
 from io import BufferedIOBase
-from typing import Any, cast, Dict, Iterable, Iterator, List, NamedTuple, Optional, Tuple, Union
+from typing import (
+    Any,
+    cast,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    NamedTuple,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import torch
 
@@ -135,7 +146,10 @@ def _reshape_list(value, shape):
             assert len(value) == shape[0]
             return value
         dim_size = len(value) // shape[0]
-        return [_reshape(value[i * dim_size : (i + 1) * dim_size], shape[1:]) for i in range(dim_size)]
+        return [
+            _reshape(value[i * dim_size : (i + 1) * dim_size], shape[1:])
+            for i in range(dim_size)
+        ]
 
     return _reshape(flat_list, shape)
 
@@ -153,7 +167,9 @@ def _apply_feature_spec(value, feature_spec):
     return value
 
 
-def _parse_tfrecord_features(features, spec: Optional[TFRecordExampleSpec]) -> Dict[str, torch.Tensor]:
+def _parse_tfrecord_features(
+    features, spec: Optional[TFRecordExampleSpec]
+) -> Dict[str, torch.Tensor]:
     result = dict()
     features = features.feature
     for key in features.keys():
@@ -165,7 +181,9 @@ def _parse_tfrecord_features(features, spec: Optional[TFRecordExampleSpec]) -> D
     return result
 
 
-def parse_tfrecord_sequence_example(example, spec: Optional[TFRecordExampleSpec]) -> TFRecordExample:
+def parse_tfrecord_sequence_example(
+    example, spec: Optional[TFRecordExampleSpec]
+) -> TFRecordExample:
     # Parse context features
     result = cast(TFRecordExample, _parse_tfrecord_features(example.context, spec))
 
@@ -182,7 +200,9 @@ def parse_tfrecord_sequence_example(example, spec: Optional[TFRecordExampleSpec]
                 "TFRecord example's key {key} is contained in both the context and feature lists. This is not supported."
             )
 
-        value: Union[torch.Tensor, List[Any]] = list(map(partial(process_feature), feature))
+        value: Union[torch.Tensor, List[Any]] = list(
+            map(partial(process_feature), feature)
+        )
 
         # For known torch dtypes, we stack the list features
         if feature_spec is not None and isinstance(feature_spec[1], torch.dtype):
@@ -190,7 +210,9 @@ def parse_tfrecord_sequence_example(example, spec: Optional[TFRecordExampleSpec]
         value = _apply_feature_spec(value, feature_spec)
         result[key] = value
     if spec is not None and len(result.keys()) != len(spec.keys()):
-        raise RuntimeError(f"Example is missing some required keys: {sorted(result.keys())} != {sorted(spec.keys())}")
+        raise RuntimeError(
+            f"Example is missing some required keys: {sorted(result.keys())} != {sorted(spec.keys())}"
+        )
     return result
 
 
@@ -247,7 +269,9 @@ class TFRecordLoaderIterDataPipe(IterDataPipe[TFRecordExample]):
                     example.ParseFromString(example_bytes)  # type: ignore
                     yield parse_tfrecord_sequence_example(example, self.spec)
             except RuntimeError as e:
-                warnings.warn(f"Unable to read from corrupted tfrecord stream {pathname} due to: {e}, abort!")
+                warnings.warn(
+                    f"Unable to read from corrupted tfrecord stream {pathname} due to: {e}, abort!"
+                )
                 raise e
 
     def __len__(self) -> int:

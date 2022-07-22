@@ -8,7 +8,18 @@
 This file contains the data pipeline to read from a TSV file and output a DataFrame.
 """
 
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 import torcharrow as ta
@@ -30,7 +41,14 @@ from torch.utils.data import get_worker_info
 from torch.utils.data.datapipes.dataframe.dataframes import CaptureLikeMock
 from torcharrow import functional
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
-from torchdata.datapipes.iter import Batcher, CSVParser, IoPathFileOpener, IterableWrapper, IterDataPipe, Mapper
+from torchdata.datapipes.iter import (
+    Batcher,
+    CSVParser,
+    IoPathFileOpener,
+    IterableWrapper,
+    IterDataPipe,
+    Mapper,
+)
 
 PATH_MANAGER_KEY = "torchrec"
 T = TypeVar("T")
@@ -47,19 +65,33 @@ DTYPE = dt.Struct(
         dt.Field("labels", dt.int8),
         dt.Field(
             "dense_features",
-            dt.Struct([dt.Field(int_name, dt.Int32(nullable=True)) for int_name in DEFAULT_INT_NAMES]),
+            dt.Struct(
+                [
+                    dt.Field(int_name, dt.Int32(nullable=True))
+                    for int_name in DEFAULT_INT_NAMES
+                ]
+            ),
         ),
         dt.Field(
             "sparse_features",
-            dt.Struct([dt.Field(cat_name, dt.Int32(nullable=True)) for cat_name in DEFAULT_CAT_NAMES]),
+            dt.Struct(
+                [
+                    dt.Field(cat_name, dt.Int32(nullable=True))
+                    for cat_name in DEFAULT_CAT_NAMES
+                ]
+            ),
         ),
     ]
 )
 
 
-def _torcharrow_row_mapper(row: List[str]) -> Tuple[int, Tuple[int, ...], Tuple[int, ...]]:
+def _torcharrow_row_mapper(
+    row: List[str],
+) -> Tuple[int, Tuple[int, ...], Tuple[int, ...]]:
     label = int(safe_cast(row[0], int, 0))
-    dense = tuple(int(safe_cast(row[i], int, 0)) for i in range(1, 1 + INT_FEATURE_COUNT))
+    dense = tuple(
+        int(safe_cast(row[i], int, 0)) for i in range(1, 1 + INT_FEATURE_COUNT)
+    )
     sparse = tuple(
         int(safe_cast(row[i], str, "0") or "0", 16)
         for i in range(1 + INT_FEATURE_COUNT, 1 + INT_FEATURE_COUNT + CAT_FEATURE_COUNT)
@@ -104,7 +136,9 @@ def criteo_dataframes_from_tsv(
 def _default_row_mapper(example: List[str]) -> Dict[str, Union[int, str]]:
     column_names = reversed(DEFAULT_COLUMN_NAMES)
     column_type_casters = reversed(COLUMN_TYPE_CASTERS)
-    return {next(column_names): next(column_type_casters)(val) for val in reversed(example)}
+    return {
+        next(column_names): next(column_type_casters)(val) for val in reversed(example)
+    }
 
 
 class CriteoIterDataPipe(IterDataPipe):
@@ -147,9 +181,15 @@ class CriteoIterDataPipe(IterDataPipe):
         worker_info = get_worker_info()
         paths = self.paths
         if worker_info is not None:
-            paths = (path for (idx, path) in enumerate(paths) if idx % worker_info.num_workers == worker_info.id)
+            paths = (
+                path
+                for (idx, path) in enumerate(paths)
+                if idx % worker_info.num_workers == worker_info.id
+            )
         paths = IterableWrapper(paths)
-        datapipe = IoPathFileOpener(paths, mode="r", pathmgr=PathManagerFactory().get(PATH_MANAGER_KEY))
+        datapipe = IoPathFileOpener(
+            paths, mode="r", pathmgr=PathManagerFactory().get(PATH_MANAGER_KEY)
+        )
         datapipe = CSVParser(datapipe, delimiter="\t")
         if self.row_mapper:
             datapipe = Mapper(datapipe, self.row_mapper)
@@ -169,7 +209,9 @@ df["sparse_features"] = df["sparse_features"].fill_null(0)
 # accept StreamDataFrame
 with CaptureLikeMock("torcharrow.functional.array_constructor"):
     for field in df["sparse_features"].columns:
-        df["sparse_features"][field] = functional.array_constructor(df["sparse_features"][field])
+        df["sparse_features"][field] = functional.array_constructor(
+            df["sparse_features"][field]
+        )
 
 df["dense_features"] = (df["dense_features"] + 3).log()
 df["labels"] = df["labels"].cast(dt.int32)

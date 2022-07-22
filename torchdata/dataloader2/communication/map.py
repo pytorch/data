@@ -49,10 +49,14 @@ class NonBlockingMap(MapDataPipe):
                 NonBlockingMap.not_available_hook()
 
     def nonblocking_len(self):
-        raise NotImplementedError("nonblocking_len is not implemented for %s" % self.__class__)
+        raise NotImplementedError(
+            "nonblocking_len is not implemented for %s" % self.__class__
+        )
 
     def nonblocking_getitem(self, index):
-        raise NotImplementedError("nonblocking_getitem is not implemented for %s" % self.__class__)
+        raise NotImplementedError(
+            "nonblocking_getitem is not implemented for %s" % self.__class__
+        )
 
     @staticmethod
     def register_not_available_hook(hook_function):
@@ -83,7 +87,9 @@ def EnsureNonBlockingMapDataPipe(validated_datapipe):
     return validated_datapipe
 
 
-def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_request_get=False):
+def DataPipeBehindQueues(
+    source_datapipe, protocol, full_stop=False, blocking_request_get=False
+):
     """
     Indefinitely iterates over req_queue and passing values from source_datapipe to res_queue
     If raise_stop is true, raises exception when StopIteration received from the source_datapipe
@@ -136,7 +142,9 @@ class QueueWrapperForMap(NonBlockingMap):
     """
 
     def __init__(self, protocol, response_wait_time=0.00001):
-        if not isinstance(protocol, communication.protocol.MapDataPipeQueueProtocolClient):
+        if not isinstance(
+            protocol, communication.protocol.MapDataPipeQueueProtocolClient
+        ):
             raise Exception("Got", protocol)
         self.protocol = protocol
         self.counter = 0
@@ -145,11 +153,15 @@ class QueueWrapperForMap(NonBlockingMap):
 
     def nonblocking_getitem(self, index):
         if self._stop_iteration:
-            raise Exception("`getitem` or `nonblocking_getitem` called after receiving StopIteration")
+            raise Exception(
+                "`getitem` or `nonblocking_getitem` called after receiving StopIteration"
+            )
         if self.protocol.can_take_request():
             self.protocol.request_item(index)
         try:
-            response = self.protocol.get_response_item(block=True, timeout=self._response_wait_time)
+            response = self.protocol.get_response_item(
+                block=True, timeout=self._response_wait_time
+            )
         except communication.protocol.EmptyQueue:
             raise NotAvailable
         if isinstance(response, communication.messages.StopIterationResponse):
@@ -159,11 +171,15 @@ class QueueWrapperForMap(NonBlockingMap):
 
     def nonblocking_len(self):
         if self._stop_iteration:
-            raise Exception("`len` or `nonblocking_len` called after receiving StopIteration")
+            raise Exception(
+                "`len` or `nonblocking_len` called after receiving StopIteration"
+            )
         if self.protocol.can_take_request():
             self.protocol.request_len()
         try:
-            response = self.protocol.get_response_len(block=True, timeout=self._response_wait_time)
+            response = self.protocol.get_response_len(
+                block=True, timeout=self._response_wait_time
+            )
         except communication.protocol.EmptyQueue:
             raise NotAvailable
         return response.len

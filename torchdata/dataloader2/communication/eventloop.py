@@ -41,7 +41,9 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_locally_fn=
         pipe_type = communication.map  # type: ignore[misc]
         protocol_type = communication.protocol.MapDataPipeQueueProtocolServer  # type: ignore[assignment]
     else:
-        raise Exception("Only supports IterDataPipe or MapDataPipe, got", source_datapipe)
+        raise Exception(
+            "Only supports IterDataPipe or MapDataPipe, got", source_datapipe
+        )
 
     # torch.utils.data.graph_settings.apply_sharding(source_datapipe, self.num_workers, worker_id)
 
@@ -56,7 +58,8 @@ def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe, call_locally_fn=N
     req_queue = multiprocessing_ctx.Queue()
     res_queue = multiprocessing_ctx.Queue()
     process = multiprocessing_ctx.Process(
-        target=DataPipeToQueuesLoop, args=(datapipe, req_queue, res_queue, call_locally_fn)
+        target=DataPipeToQueuesLoop,
+        args=(datapipe, req_queue, res_queue, call_locally_fn),
     )
     return process, req_queue, res_queue
 
@@ -79,7 +82,14 @@ def SpawnThreadForDataPipeline(datapipe):
                 raise Exception("Unable to dill DataPipe to make thread local copy", de)
 
         else:
-            raise Exception("Unable to pickle DataPipe to make thread local copy (consider installing `dill`)", pe)
+            raise Exception(
+                "Unable to pickle DataPipe to make thread local copy (consider installing `dill`)",
+                pe,
+            )
 
-    process = threading.Thread(target=DataPipeToQueuesLoop, args=(new_datapipe, req_queue, res_queue), daemon=True)
+    process = threading.Thread(
+        target=DataPipeToQueuesLoop,
+        args=(new_datapipe, req_queue, res_queue),
+        daemon=True,
+    )
     return process, req_queue, res_queue, new_datapipe

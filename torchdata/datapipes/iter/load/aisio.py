@@ -61,7 +61,9 @@ class AISFileListerIterDataPipe(IterDataPipe[str]):
         ...     pass
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], url: str, length: int = -1) -> None:
+    def __init__(
+        self, source_datapipe: IterDataPipe[str], url: str, length: int = -1
+    ) -> None:
         _assert_aistore()
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.length: int = length
@@ -70,9 +72,13 @@ class AISFileListerIterDataPipe(IterDataPipe[str]):
     def __iter__(self) -> Iterator[str]:
         for prefix in self.source_datapipe:
             provider, bck_name, prefix = parse_url(prefix)
-            obj_iter = self.client.list_objects_iter(bck_name=bck_name, provider=provider, prefix=prefix)
+            obj_iter = self.client.list_objects_iter(
+                bck_name=bck_name, provider=provider, prefix=prefix
+            )
             for entry in obj_iter:
-                yield unparse_url(provider=provider, bck_name=bck_name, obj_name=entry.name)
+                yield unparse_url(
+                    provider=provider, bck_name=bck_name, obj_name=entry.name
+                )
 
     def __len__(self) -> int:
         if self.length == -1:
@@ -109,7 +115,9 @@ class AISFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         ...     pass
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], url: str, length: int = -1) -> None:
+    def __init__(
+        self, source_datapipe: IterDataPipe[str], url: str, length: int = -1
+    ) -> None:
         _assert_aistore()
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.length = length
@@ -119,7 +127,11 @@ class AISFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         for url in self.source_datapipe:
             provider, bck_name, obj_name = parse_url(url)
             yield url, StreamWrapper(
-                BytesIO(self.client.get_object(bck_name=bck_name, provider=provider, obj_name=obj_name).read_all())
+                BytesIO(
+                    self.client.get_object(
+                        bck_name=bck_name, provider=provider, obj_name=obj_name
+                    ).read_all()
+                )
             )
 
     def __len__(self) -> int:

@@ -30,7 +30,9 @@ class EnumeratorIterDataPipe(IterDataPipe[Tuple[int, K]]):
         [(0, 'a'), (1, 'b'), (2, 'c')]
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[K], starting_index: int = 0) -> None:
+    def __init__(
+        self, source_datapipe: IterDataPipe[K], starting_index: int = 0
+    ) -> None:
         self.source_datapipe: IterDataPipe[K] = source_datapipe
         self.starting_index = starting_index
 
@@ -60,7 +62,9 @@ class IndexAdderIterDataPipe(IterDataPipe[Dict]):
         [{'a': 1, 'b': 2, 'order': 0}, {'c': 3, 'a': 1, 'order': 1}]
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[Dict], index_name: str = "index") -> None:
+    def __init__(
+        self, source_datapipe: IterDataPipe[Dict], index_name: str = "index"
+    ) -> None:
         self.source_datapipe = source_datapipe
         self.index_name = index_name
 
@@ -70,7 +74,9 @@ class IndexAdderIterDataPipe(IterDataPipe[Dict]):
                 row_or_batch[self.index_name] = i
                 yield row_or_batch
             else:
-                raise NotImplementedError("We only support adding index to row or batch in dict type")
+                raise NotImplementedError(
+                    "We only support adding index to row or batch in dict type"
+                )
 
     def __len__(self) -> int:
         return len(self.source_datapipe)

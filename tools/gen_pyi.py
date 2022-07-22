@@ -36,12 +36,18 @@ def gen_pyi() -> None:
     # Base __init__ file
     iter_init_base = get_lines_base_file(
         os.path.join(DATAPIPE_DIR, "iter/__init__.py"),
-        {"from torch.utils.data import IterDataPipe", "# Copyright (c) Facebook, Inc. and its affiliates."},
+        {
+            "from torch.utils.data import IterDataPipe",
+            "# Copyright (c) Facebook, Inc. and its affiliates.",
+        },
     )
 
     map_init_base = get_lines_base_file(
         os.path.join(DATAPIPE_DIR, "map/__init__.py"),
-        {"from torch.utils.data import MapDataPipe", "# Copyright (c) Facebook, Inc. and its affiliates."},
+        {
+            "from torch.utils.data import MapDataPipe",
+            "# Copyright (c) Facebook, Inc. and its affiliates.",
+        },
     )
 
     # Core Definitions
@@ -77,7 +83,12 @@ def gen_pyi() -> None:
         "extract": "IterDataPipe",
         "to_map_datapipe": "MapDataPipe",
     }
-    iter_method_name_exclusion: Set[str] = {"def extract", "read_from_tar", "read_from_xz", "read_from_zip"}
+    iter_method_name_exclusion: Set[str] = {
+        "def extract",
+        "read_from_tar",
+        "read_from_xz",
+        "read_from_zip",
+    }
 
     td_iter_method_definitions = get_method_definitions(
         iterDP_file_paths,
@@ -89,12 +100,17 @@ def gen_pyi() -> None:
     )
 
     td_iter_method_definitions = [
-        s for s in td_iter_method_definitions if all(ex not in s for ex in iter_method_name_exclusion)
+        s
+        for s in td_iter_method_definitions
+        if all(ex not in s for ex in iter_method_name_exclusion)
     ]
 
     iter_method_definitions = core_iter_method_definitions + td_iter_method_definitions
 
-    iter_replacements = [("${init_base}", iter_init_base, 0), ("${IterDataPipeMethods}", iter_method_definitions, 4)]
+    iter_replacements = [
+        ("${init_base}", iter_init_base, 0),
+        ("${IterDataPipeMethods}", iter_method_definitions, 4),
+    ]
 
     gen_from_template(
         dir=str(DATAPIPE_DIR),
@@ -123,12 +139,17 @@ def gen_pyi() -> None:
     )
 
     td_map_method_definitions = [
-        s for s in td_map_method_definitions if all(ex not in s for ex in map_method_name_exclusion)
+        s
+        for s in td_map_method_definitions
+        if all(ex not in s for ex in map_method_name_exclusion)
     ]
 
     map_method_definitions = core_map_method_definitions + td_map_method_definitions
 
-    map_replacements = [("${init_base}", map_init_base, 0), ("${MapDataPipeMethods}", map_method_definitions, 4)]
+    map_replacements = [
+        ("${init_base}", map_init_base, 0),
+        ("${MapDataPipeMethods}", map_method_definitions, 4),
+    ]
 
     gen_from_template(
         dir=str(DATAPIPE_DIR),

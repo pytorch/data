@@ -58,7 +58,9 @@ class ObtainCategories(IterDataPipe):
 
 
 class AttributeCategories(IterDataPipe):
-    def __init__(self, listfiles_dp, categories_dp, parse_category_fn=get_category_name) -> None:
+    def __init__(
+        self, listfiles_dp, categories_dp, parse_category_fn=get_category_name
+    ) -> None:
         self.listfiles_dp = listfiles_dp
         self.categories_dp = categories_dp
         self.parse_category_fn = parse_category_fn
@@ -85,12 +87,16 @@ def MyImageFolder(root=IMAGES_ROOT, transform=None):
         list_files_0 = FileLister(root=IMAGES_ROOT, recursive=True)
         list_files_1 = FileLister(root=IMAGES_ROOT, recursive=True).sharding_filter()
     else:
-        list_files_0, list_files_1 = FileLister(root=IMAGES_ROOT, recursive=True).fork(2)
+        list_files_0, list_files_1 = FileLister(root=IMAGES_ROOT, recursive=True).fork(
+            2
+        )
         list_files_1 = list_files_1.sharding_filter()
 
     categories = ObtainCategories(list_files_0)
     with_categories = AttributeCategories(list_files_1, categories)
-    using_default_loader = with_categories.map(lambda x: (torchvision.datasets.folder.default_loader(x[0]), x[1]))
+    using_default_loader = with_categories.map(
+        lambda x: (torchvision.datasets.folder.default_loader(x[0]), x[1])
+    )
     transformed = using_default_loader.map(lambda x: (transform(x[0]), x[1]))
     return transformed
 
@@ -139,7 +145,9 @@ def stream_to_pil(stream):
 
 def MyHTTPImageFolder(transform=None):
     # HTTP Protocol doesn't support listing files, so we had to provide it explicitly
-    list_files = ExpandURLPatternDataPipe(HTTP_PATH_CAT) + ExpandURLPatternDataPipe(HTTP_PATH_DOG)
+    list_files = ExpandURLPatternDataPipe(HTTP_PATH_CAT) + ExpandURLPatternDataPipe(
+        HTTP_PATH_DOG
+    )
 
     list_files_0, list_files_1 = list_files.fork(2)
     list_files_1 = list_files_1.sharding_filter().shuffle()
@@ -148,7 +156,9 @@ def MyHTTPImageFolder(transform=None):
 
     loaded_files = HttpReader(list_files_1)
 
-    with_categories = AttributeCategories(loaded_files, categories, parse_category_fn=get_category_name_url)
+    with_categories = AttributeCategories(
+        loaded_files, categories, parse_category_fn=get_category_name_url
+    )
     pil_images = with_categories.map(lambda x: (x[0], stream_to_pil(x[1]), x[2]))
     transformed = pil_images.map(lambda x: (transform(x[1]), x[2]))
     return transformed
@@ -156,7 +166,9 @@ def MyHTTPImageFolder(transform=None):
 
 if __name__ == "__main__":
     dataset = datasets.ImageFolder(root=IMAGES_ROOT, transform=data_transform)
-    dl = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
+    dl = DataLoader(
+        dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS
+    )
     items = list(dl)
     assert len(items) == 6
 

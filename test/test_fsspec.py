@@ -10,9 +10,19 @@ import warnings
 
 import expecttest
 
-from _utils._common_utils_for_test import create_temp_dir, create_temp_files, reset_after_n_next_calls
+from _utils._common_utils_for_test import (
+    create_temp_dir,
+    create_temp_files,
+    reset_after_n_next_calls,
+)
 
-from torchdata.datapipes.iter import FileLister, FSSpecFileLister, FSSpecFileOpener, FSSpecSaver, IterableWrapper
+from torchdata.datapipes.iter import (
+    FileLister,
+    FSSpecFileLister,
+    FSSpecFileOpener,
+    FSSpecSaver,
+    IterableWrapper,
+)
 
 try:
     import fsspec
@@ -42,7 +52,9 @@ class TestDataPipeFSSpec(expecttest.TestCase):
             self.temp_sub_dir_2.cleanup()
             self.temp_dir_2.cleanup()
         except Exception as e:
-            warnings.warn(f"TestDataPipeFSSpec was not able to cleanup temp dir due to {e}")
+            warnings.warn(
+                f"TestDataPipeFSSpec was not able to cleanup temp dir due to {e}"
+            )
 
     def _write_text_files(self):
         def filepath_fn(name: str) -> str:
@@ -61,7 +73,10 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         for path in datapipe:
             self.assertIn(
                 path.split("://")[1],
-                {fsspec.implementations.local.make_path_posix(file) for file in self.temp_sub_files},
+                {
+                    fsspec.implementations.local.make_path_posix(file)
+                    for file in self.temp_sub_files
+                },
             )
 
         # checks for functional API
@@ -70,12 +85,20 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         for path in datapipe:
             self.assertIn(
                 path.split("://")[1],
-                {fsspec.implementations.local.make_path_posix(file) for file in self.temp_sub_files},
+                {
+                    fsspec.implementations.local.make_path_posix(file)
+                    for file in self.temp_sub_files
+                },
             )
 
     @skipIfNoFSSpec
     def test_fsspec_file_lister_iterdatapipe_with_list(self):
-        datapipe = FSSpecFileLister(root=["file://" + self.temp_sub_dir.name, "file://" + self.temp_sub_dir_2.name])
+        datapipe = FSSpecFileLister(
+            root=[
+                "file://" + self.temp_sub_dir.name,
+                "file://" + self.temp_sub_dir_2.name,
+            ]
+        )
 
         # check all file paths within sub_folder are listed
         file_lister = list(map(lambda path: path.split("://")[1], datapipe))
@@ -92,7 +115,9 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         self.assertEqual(file_lister, temp_files)
 
         # checks for functional API
-        datapipe = IterableWrapper(["file://" + self.temp_sub_dir.name, "file://" + self.temp_sub_dir_2.name])
+        datapipe = IterableWrapper(
+            ["file://" + self.temp_sub_dir.name, "file://" + self.temp_sub_dir_2.name]
+        )
         datapipe = datapipe.list_files_by_fsspec()
         res = list(map(lambda path: path.split("://")[1], datapipe))
         res.sort()
@@ -120,7 +145,9 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         fsspec_file_opener_dp = lister_dp.open_files_by_fsspec(mode="rb")
 
         n_elements_before_reset = 2
-        res_before_reset, res_after_reset = reset_after_n_next_calls(fsspec_file_opener_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            fsspec_file_opener_dp, n_elements_before_reset
+        )
         self.assertEqual(2, len(res_before_reset))
         self.assertEqual(3, len(res_after_reset))
         for _name, stream in res_before_reset:
@@ -148,7 +175,9 @@ class TestDataPipeFSSpec(expecttest.TestCase):
         # Reset Test:
         saver_dp = FSSpecSaver(source_dp, filepath_fn=filepath_fn, mode="wb")
         n_elements_before_reset = 2
-        res_before_reset, res_after_reset = reset_after_n_next_calls(saver_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(
+            saver_dp, n_elements_before_reset
+        )
         self.assertEqual([filepath_fn("1.txt"), filepath_fn("2.txt")], res_before_reset)
         self.assertEqual(expected_paths, res_after_reset)
         for name in name_to_data.keys():

@@ -8,7 +8,12 @@ import unittest
 
 import expecttest
 from torchdata.datapipes.iter import MapToIterConverter
-from torchdata.datapipes.map import InMemoryCacheHolder, MapDataPipe, SequenceWrapper, UnZipper
+from torchdata.datapipes.map import (
+    InMemoryCacheHolder,
+    MapDataPipe,
+    SequenceWrapper,
+    UnZipper,
+)
 
 
 class TestMapDataPipe(expecttest.TestCase):
@@ -66,8 +71,12 @@ class TestMapDataPipe(expecttest.TestCase):
         cache_dp = InMemoryCacheHolder(source_dp)  # type: ignore[arg-type]
         res1 = list(cache_dp)
         res2 = list(cache_dp)
-        self.assertTrue(id(source) == id(cache) for source, cache in zip(source_dp, res1))
-        self.assertTrue(id(source) == id(cache) for source, cache in zip(source_dp, res2))
+        self.assertTrue(
+            id(source) == id(cache) for source, cache in zip(source_dp, res1)
+        )
+        self.assertTrue(
+            id(source) == id(cache) for source, cache in zip(source_dp, res2)
+        )
 
         # __len__ Test: inherits length from source_dp
         self.assertEqual(10, len(cache_dp))

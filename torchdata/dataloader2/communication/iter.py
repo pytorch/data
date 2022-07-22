@@ -58,10 +58,14 @@ class NonBlocking(IterDataPipe):
                     NonBlocking.not_available_hook()
 
     def nonblocking_next(self):
-        raise NotImplementedError("nonblocking_next is not implemented for %s" % self.__class__)
+        raise NotImplementedError(
+            "nonblocking_next is not implemented for %s" % self.__class__
+        )
 
     def reset_iterator(self):
-        raise NotImplementedError("reset_iterator is not implemented for %s" % self.__class__)
+        raise NotImplementedError(
+            "reset_iterator is not implemented for %s" % self.__class__
+        )
 
     @staticmethod
     def register_not_available_hook(hook_function):
@@ -96,7 +100,9 @@ def EnsureNonBlockingDataPipe(validated_datapipe):
     return validated_datapipe
 
 
-def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_request_get=False):
+def DataPipeBehindQueues(
+    source_datapipe, protocol, full_stop=False, blocking_request_get=False
+):
     """
     Indefinitely iterates over req_queue and passing values from source_datapipe to res_queue
     If raise_stop is true, raises exception when StopIteration received from the source_datapipe
@@ -155,7 +161,9 @@ class QueueWrapper(NonBlocking):
     """
 
     def __init__(self, protocol, response_wait_time=0.00001):
-        if not isinstance(protocol, communication.protocol.IterDataPipeQueueProtocolClient):
+        if not isinstance(
+            protocol, communication.protocol.IterDataPipeQueueProtocolClient
+        ):
             raise Exception("Got", protocol)
         self.protocol = protocol
         self.counter = 0
@@ -176,11 +184,15 @@ class QueueWrapper(NonBlocking):
 
     def nonblocking_next(self):
         if self._stop_iteration:
-            raise Exception("`next` or `nonblocking_next` called after receiving StopIteration")
+            raise Exception(
+                "`next` or `nonblocking_next` called after receiving StopIteration"
+            )
         if self.protocol.can_take_request():
             self.protocol.request_next()
         try:
-            response = self.protocol.get_response_next(block=True, timeout=self._response_wait_time)
+            response = self.protocol.get_response_next(
+                block=True, timeout=self._response_wait_time
+            )
         except communication.protocol.EmptyQueue:
             raise NotAvailable
         if isinstance(response, communication.messages.StopIterationResponse):

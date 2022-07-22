@@ -107,7 +107,9 @@ def Caltech101(root=ROOT):
     images_dp = Filter(images_dp, is_not_rogue_image)
     images_dp = RoutedDecoder(images_dp, imagehandler("pil"))
 
-    dp = IterKeyZipper(images_dp, anns_dp, images_key_fn, ref_key_fn=anns_key_fn, buffer_size=None)
+    dp = IterKeyZipper(
+        images_dp, anns_dp, images_key_fn, ref_key_fn=anns_key_fn, buffer_size=None
+    )
     return Mapper(dp, collate_sample)
 
 

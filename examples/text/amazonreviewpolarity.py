@@ -65,7 +65,9 @@ def AmazonReviewPolarity(root, split):
     # the files before saving them. `.on_disk_cache` merely indicates that caching will take place, but the
     # content of the previous DataPipe is unchanged. Therefore, `cache_compressed_dp` still contains URL(s).
     cache_compressed_dp = url_dp.on_disk_cache(
-        filepath_fn=partial(_path_fn, root), hash_dict={_path_fn(root): MD5}, hash_type="md5"
+        filepath_fn=partial(_path_fn, root),
+        hash_dict={_path_fn(root): MD5},
+        hash_type="md5",
     )
 
     # `GDriveReader` takes in URLs to GDrives files, and yields a tuple of file name and IO stream.
@@ -74,11 +76,15 @@ def AmazonReviewPolarity(root, split):
     # `.end_caching` saves the previous DataPipe's outputs onto the disk. In this case,
     # the results from GDriveReader (i.e. the downloaded compressed archive) will be saved onto the disk.
     # Upon saving the results, the DataPipe returns the paths to the cached files.
-    cache_compressed_dp = cache_compressed_dp.end_caching(mode="wb", same_filepath_fn=True)
+    cache_compressed_dp = cache_compressed_dp.end_caching(
+        mode="wb", same_filepath_fn=True
+    )
 
     # Again, `.on_disk_cache` is invoked again here and the subsequent DataPipe operations (until `.end_caching`)
     # will be saved onto the disk. At this point, `cache_decompressed_dp` contains paths to the cached files.
-    cache_decompressed_dp = cache_compressed_dp.on_disk_cache(filepath_fn=partial(_cache_path_fn, root, split))
+    cache_decompressed_dp = cache_compressed_dp.on_disk_cache(
+        filepath_fn=partial(_cache_path_fn, root, split)
+    )
 
     # Opens the cache files using `FileOpener`
     cache_decompressed_dp = FileOpener(cache_decompressed_dp, mode="b")
@@ -90,7 +96,9 @@ def AmazonReviewPolarity(root, split):
     cache_decompressed_dp = cache_decompressed_dp.filter(partial(_filter_fn, split))
 
     # ".end_caching" saves the decompressed file onto disks and yields the path to the file.
-    cache_decompressed_dp = cache_decompressed_dp.end_caching(mode="wb", same_filepath_fn=True)
+    cache_decompressed_dp = cache_decompressed_dp.end_caching(
+        mode="wb", same_filepath_fn=True
+    )
 
     # Opens the decompressed file.
     data_dp = FileOpener(cache_decompressed_dp, mode="b")

@@ -34,7 +34,9 @@ class MapToIterConverterIterDataPipe(IterDataPipe):
     # to materialize ``indices`` and store it.
     def __init__(self, datapipe: MapDataPipe, indices: Optional[List] = None):
         if not isinstance(datapipe, MapDataPipe):
-            raise TypeError(f"MapToIterConverter can only apply on MapDataPipe, but found {type(datapipe)}")
+            raise TypeError(
+                f"MapToIterConverter can only apply on MapDataPipe, but found {type(datapipe)}"
+            )
         self.datapipe: MapDataPipe = datapipe
         self.indices = indices if indices else range(len(datapipe))
 
@@ -46,4 +48,6 @@ class MapToIterConverterIterDataPipe(IterDataPipe):
         return len(self.indices)
 
 
-MapDataPipe.register_datapipe_as_function("to_iter_datapipe", MapToIterConverterIterDataPipe)
+MapDataPipe.register_datapipe_as_function(
+    "to_iter_datapipe", MapToIterConverterIterDataPipe
+)

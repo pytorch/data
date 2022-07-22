@@ -3,6 +3,7 @@
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
+
 # TODO(597): This file can be moved to the dataframe parent directory once Torcharrow
 # is open sourced
 
@@ -22,7 +23,12 @@ class TorcharrowWrapper:
         if not columns or len(columns) == 0:
             column_names = [f"col{i}" for i in range(len(columnar_data))]
 
-        return ta.dataframe({column_name: ta.Column(value) for column_name, value in zip(column_names, columnar_data)})
+        return ta.dataframe(
+            {
+                column_name: ta.Column(value)
+                for column_name, value in zip(column_names, columnar_data)
+            }
+        )
 
     @classmethod
     def is_dataframe(cls, data: Union[ta.DataFrame, ta.Column]):

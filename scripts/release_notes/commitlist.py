@@ -36,7 +36,9 @@ class Commit:
         )
 
     def __repr__(self):
-        return f"Commit({self.commit_hash}, {self.category}, {self.topic}, {self.title})"
+        return (
+            f"Commit({self.commit_hash}, {self.category}, {self.topic}, {self.title})"
+        )
 
 
 class CommitList:
@@ -53,7 +55,9 @@ class CommitList:
     @staticmethod
     def create_new(path, base_version, new_version):
         if os.path.exists(path):
-            raise ValueError("Attempted to create a new commitlist but one exists already!")
+            raise ValueError(
+                "Attempted to create a new commitlist but one exists already!"
+            )
         commits = CommitList.get_commits_between(base_version, new_version)
         return CommitList(path, commits)
 
@@ -73,7 +77,9 @@ class CommitList:
         with open(path, "w") as csvfile:
             writer = csv.writer(csvfile)
             for commit in rows:
-                writer.writerow([commit.commit_hash, commit.category, commit.topic, commit.title])
+                writer.writerow(
+                    [commit.commit_hash, commit.category, commit.topic, commit.title]
+                )
 
     def keywordInFile(file, keywords):
         for key in keywords:
@@ -144,7 +150,10 @@ class CommitList:
 
         log_lines = commits.split("\n")
         hashes, titles = zip(*[log_line.split(" ", 1) for log_line in log_lines])
-        return [CommitList.categorize(commit_hash, title) for commit_hash, title in zip(hashes, titles)]
+        return [
+            CommitList.categorize(commit_hash, title)
+            for commit_hash, title in zip(hashes, titles)
+        ]
 
     def filter(self, *, category=None, topic=None):
         commits = self.commits
