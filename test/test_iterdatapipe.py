@@ -21,9 +21,11 @@ from _utils._common_utils_for_test import IDP_NoLen, reset_after_n_next_calls
 from torchdata.datapipes.iter import (
     BucketBatcher,
     Cycler,
+    FileDecoder,
     Header,
     IndexAdder,
     InMemoryCacheHolder,
+    IncrementalShuffler,
     IterableWrapper,
     IterDataPipe,
     IterKeyZipper,
@@ -31,8 +33,12 @@ from torchdata.datapipes.iter import (
     MapKeyZipper,
     MaxTokenBucketizer,
     ParagraphAggregator,
+    PipeOpener,
+    RenameKeys,
+    ExtractKeys,
     Rows2Columnar,
     SampleMultiplexer,
+    ShardExpander,
     UnZipper,
 )
 from torchdata.datapipes.map import MapDataPipe, SequenceWrapper
@@ -911,6 +917,71 @@ class TestIterDataPipe(expecttest.TestCase):
         with self.assertRaises(TypeError):
             len(output_dp)
 
+    def test_shardexpand(self):
+
+        # Functional Test: ensure expansion generates the right number of shards
+        stage1 = IterableWrapper(["ds-{000000..000009}.tar"])
+        print(list(iter(stage1)))
+        stage2 = ShardExpander(stage1)
+        output = list(iter(stage2))
+        assert len(output) == 10
+
+    def test_decoder(self):
+
+        # Functional Test: verify that decoders are invoked and results handled correctly
+        def decode_junk(_):
+            return "junk"
+
+        stage1 = IterableWrapper([
+            ("test000.bin", io.BytesIO(b"000")),
+            ("test000.txt", io.BytesIO(b"000")),
+            ("test000.jnk", io.BytesIO(b"")),
+            ("test001.bin", io.BytesIO(b"001")),
+            ("test001.txt", io.BytesIO(b"001")),
+        ])
+        stage2 = FileDecoder(stage1, ("*.jnk", decode_junk))
+        output = list(iter(stage2))
+        assert len(output) == 5
+        assert output[1][1] == "000"
+        assert output[2][1] == "junk"
+
+    def test_renamer(self):
+
+        # Functional Test: verify that renaming by patterns yields correct output
+        stage1 = IterableWrapper([
+            {"1.txt": "1", "1.bin": "1b"},
+            {"2.txt": "2", "2.bin": "2b"},
+        ])
+        stage2 = RenameKeys(stage1, t="*.txt", b="*.bin")
+        output = list(iter(stage2))
+        assert len(output) == 2
+        assert set(output[0].keys()) == set(["t", "b"])
+
+    def test_extractor(self):
+
+        # Functional Test: verify that extracting by patterns yields correct output
+        stage1 = IterableWrapper([
+            {"1.txt": "1", "1.bin": "1b"},
+            {"2.txt": "2", "2.bin": "2b"},
+        ])
+        stage2 = ExtractKeys(stage1, "*.txt", "*.bin")
+        output = list(iter(stage2))
+        assert len(output) == 2
+        assert output[0][0] == "1"
+        assert output[0][1] == "1b"
+
+    def test_incshuffle(self):
+
+        # Functional Test: verify that shuffling preserves all elements
+        for initial in [3, 10, 17, 167, 1000, 1500]:
+            for buffer in [3, 6, 10, 19, 223, 1000, 1001, 1500]:
+                for n in [10, 100, 1000]:
+                    stage1 = IterableWrapper(range(n))
+                    stage2 = IncrementalShuffler(stage1, initial=initial, buffer_size=buffer)
+                    output = list(iter(stage2))
+                    assert len(output) == n
+                    assert set(output) == set(range(n))
+
     def test_zip_longest_iterdatapipe(self):
 
         # Functional Test: raises TypeError when an input is not of type `IterDataPipe`
@@ -944,7 +1015,6 @@ class TestIterDataPipe(expecttest.TestCase):
 
         # __len__ Test: length matches the length of the shortest input
         self.assertEqual(len(output_dp), 10)
-
 
 if __name__ == "__main__":
     unittest.main()
