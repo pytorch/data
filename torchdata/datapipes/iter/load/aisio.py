@@ -4,11 +4,9 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from io import BytesIO
 from typing import Iterator, Tuple
 
 from torchdata.datapipes import functional_datapipe
-
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
 
@@ -17,16 +15,34 @@ try:
     from aistore.pytorch.utils import parse_url, unparse_url
 
     HAS_AIS = True
+
 except ImportError:
     HAS_AIS = False
+
+try:
+    import aistore
+    from packaging.version import parse as parse_version
+
+    AIS_VERSION_CHECK = parse_version(aistore.__version__) >= parse_version("1.0.2")
+
+except (ImportError, AttributeError):
+    AIS_VERSION_CHECK = False
 
 
 def _assert_aistore() -> None:
     if not HAS_AIS:
         raise ModuleNotFoundError(
-            "Package `aistore` is required to be installed to use this datapipe."
-            "Please run `pip install aistore` or `conda install aistore` to install the package"
+            "Package `aistore` (>=1.0.2) is required to be installed to use this datapipe."
+            "Please run `pip install --upgrade aistore` or `conda install aistore` to install the package"
             "For more info visit: https://github.com/NVIDIA/aistore/blob/master/sdk/python/"
+        )
+
+
+def _assert_aistore_version() -> None:
+    if not AIS_VERSION_CHECK:
+        raise ImportError(
+            "AIStore version >= 1.0.2 required"
+            "Please run `pip install --upgrade aistore` or `conda update aistore` to install the latest version"
         )
 
 
@@ -63,6 +79,7 @@ class AISFileListerIterDataPipe(IterDataPipe[str]):
 
     def __init__(self, source_datapipe: IterDataPipe[str], url: str, length: int = -1) -> None:
         _assert_aistore()
+        _assert_aistore_version()
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.length: int = length
         self.client = Client(url)
@@ -70,7 +87,7 @@ class AISFileListerIterDataPipe(IterDataPipe[str]):
     def __iter__(self) -> Iterator[str]:
         for prefix in self.source_datapipe:
             provider, bck_name, prefix = parse_url(prefix)
-            obj_iter = self.client.list_objects_iter(bck_name=bck_name, provider=provider, prefix=prefix)
+            obj_iter = self.client.bucket(bck_name, provider).list_objects_iter(prefix=prefix)
             for entry in obj_iter:
                 yield unparse_url(provider=provider, bck_name=bck_name, obj_name=entry.name)
 
@@ -111,6 +128,7 @@ class AISFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     def __init__(self, source_datapipe: IterDataPipe[str], url: str, length: int = -1) -> None:
         _assert_aistore()
+        _assert_aistore_version()
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.length = length
         self.client = Client(url)
@@ -119,7 +137,7 @@ class AISFileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         for url in self.source_datapipe:
             provider, bck_name, obj_name = parse_url(url)
             yield url, StreamWrapper(
-                BytesIO(self.client.get_object(bck_name=bck_name, provider=provider, obj_name=obj_name).read_all())
+                self.client.bucket(bck_name=bck_name, provider=provider).object(obj_name=obj_name).get().raw()
             )
 
     def __len__(self) -> int:
