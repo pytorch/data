@@ -57,9 +57,7 @@ class TarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
             validate_pathname_binary_tuple(data)
             pathname, data_stream = data
             try:
-                if isinstance(data_stream, tarfile.TarFile):
-                    tar = data_stream
-                elif isinstance(data_stream, StreamWrapper) and isinstance(data_stream.file_obj, tarfile.TarFile):
+                if isinstance(data_stream, StreamWrapper) and isinstance(data_stream.file_obj, tarfile.TarFile):
                     tar = data_stream.file_obj
                 else:
                     reading_mode = (
