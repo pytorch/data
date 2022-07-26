@@ -432,6 +432,9 @@ jobs:
           elif [[ $TARGET_FOLDER == tags/* ]]; then
             TARGET_FOLDER=${TARGET_FOLDER:5}
           elif [[ $TARGET_FOLDER == v* ]] && [[ ${{ inputs.pre_dev_release }} == false ]]; then
+            if [[ $TARGET_FOLDER == v*.*.* ]]; then
+              TARGET_FOLDER=${TARGET_FOLDER%.*}
+            fi
             TARGET_FOLDER=${TARGET_FOLDER:1}
           fi
           echo "::set-output name=value::$TARGET_FOLDER"
