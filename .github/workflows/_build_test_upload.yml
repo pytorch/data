@@ -400,7 +400,7 @@ jobs:
         run: |
           conda install -yq anaconda-client
           conda install -c conda-forge -yq jq
-  
+
           if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
             CONDA_CHANNEL=pytorch
             CONDA_TOKEN=${CONDA_PYTORCHBOT_TOKEN}
@@ -411,7 +411,7 @@ jobs:
             CONDA_CHANNEL=pytorch-${{ needs.get_release_type.outputs.type }}
             CONDA_TOKEN=${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}
           fi
-  
+
           if [[ ${{ needs.get_release_type.outputs.type }} == 'nightly' ]]; then
             # Loop over all platforms [win-64, osx-64, linux-64]
             for subdir in $(find . -type f -name '*torchdata*.tar.bz2' | sed -r 's|/[^/]+$||' | uniq | cut -f2 -d/) ; do
@@ -440,7 +440,7 @@ jobs:
           else
             anaconda -t "${CONDA_TOKEN}" upload ./*/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
           fi
-  
+
   build_docs:
     if: |
       always() && inputs.branch != '' &&
@@ -474,14 +474,14 @@ jobs:
           else
             PYTORCH_VERSION=torch==${{ inputs.pytorch_version }}
           fi
-  
+
           PIP_CHANNEL=${{ needs.get_release_type.outputs.type }}
           if [[ $PIP_CHANNEL == 'official' ]]; then
             pip3 install "$PYTORCH_VERSION" -f https://download.pytorch.org/whl/torch_stable.html
           else
             pip3 install --pre "$PYTORCH_VERSION" -f "https://download.pytorch.org/whl/$PIP_CHANNEL/torch_$PIP_CHANNEL.html"
           fi
-  
+
           pip3 install -r requirements.txt
           python3 setup.py install
       - name: Check env
