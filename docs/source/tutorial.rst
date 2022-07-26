@@ -147,7 +147,7 @@ each worker will independently return all samples. In this case, there are 10 ro
 batch size of 5, that gives us 6 batches per worker. With 2 workers, we get 12 total batches from the ``DataLoader``.
 
 In order for DataPipe sharding to work with ``DataLoader``, we need to add the following. It is crucial to add
-`ShardingFilter` after `Shuffler` to ensure that all worker processes have the same order of data for sharding.
+``ShardingFilter`` after ``Shuffler`` to ensure that all worker processes have the same order of data for sharding.
 
 .. code:: python
 
@@ -169,6 +169,9 @@ Note:
 
 - Place ``ShardingFilter`` (``datapipe.sharding_filter``) as early as possible in the pipeline, especially before expensive
   operations such as decoding, in order to avoid repeating these expensive operations across worker/distributed processes.
+- There may be cases where placing ``Shuffler`` earlier in the pipeline lead to worse performance, because some
+  operations (e.g. decompression) are faster with sequential reading. In those cases, we recommend decompressing
+  the files prior to shuffling (potentially prior to any data loading).
 
 
 You can find more DataPipe implementation examples for various research domains `on this page <examples.html>`_.
