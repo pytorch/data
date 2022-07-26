@@ -383,6 +383,11 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self._compressed_files_comparison_helper(self.temp_files, tar_loader_dp, check_length=False)
         self._compressed_files_comparison_helper(self.temp_files, gz_reader_dp, check_length=False)
 
+        # Load from decompressed file stream
+        decomp_dp = datapipe_gz_2.decompress()
+        decomp_reader_dp = TarArchiveLoader(decomp_dp)
+        self._compressed_files_comparison_helper(self.temp_files, decomp_reader_dp, check_length=False)
+
         # Functional Test: Read extracted files after reaching the end of the tarfile
         data_refs = list(tar_loader_dp)
         self._compressed_files_comparison_helper(self.temp_files, data_refs)
