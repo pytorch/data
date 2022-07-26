@@ -37,7 +37,8 @@ The following table is the corresponding `torchdata` binaries with pre-compiled 
 | ------------------ | ------------------ | ------------------ |
 | Linux              | :heavy_check_mark: | :heavy_check_mark: |
 | Windows            | :heavy_check_mark: | :x:                |
-| MacOS              | :heavy_check_mark: | :heavy_check_mark: |
+| MacOS (x86_64)     | :heavy_check_mark: | :heavy_check_mark: |
+| MacOS (arm64)      | :heavy_check_mark: | :heavy_check_mark: |
 
 ### Manylinux
 
