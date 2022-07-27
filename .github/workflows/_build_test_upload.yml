@@ -62,22 +62,46 @@ jobs:
           - macos-latest
           - ubuntu-latest
           - windows-latest
+          - macos-m1-12
         python-version:
           - 3.7
           - 3.8
           - 3.9
           - "3.10"
+        # Python 3.7 is not officially provided on Apple Silicon
+        exclude:
+          - os: macos-m1-12
+            python-version: 3.7
     steps:
-      - name: Setup Python ${{ matrix.python-version }}
-        if: ${{ ! startsWith( matrix.os, 'ubuntu' ) }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: Checkout Source Repository
         uses: actions/checkout@v2
         with:
           ref: ${{ inputs.branch }}
           submodules: recursive
+      - name: Setup Python ${{ matrix.python-version }}
+        if: ${{ startsWith( matrix.os, 'windows' ) }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Conda on MacOS
+        if: ${{ startsWith( matrix.os, 'macos' ) }}
+        shell: bash -l {0}
+        run: |
+          mkdir -p ~/miniconda3
+          if ${{ startsWith( matrix.os, 'macos-m1' ) }}; then
+            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/miniconda3/miniconda.sh
+          else
+            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o ~/miniconda3/miniconda.sh
+          fi
+          bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+          rm -rf ~/miniconda3/miniconda.sh
+          echo "$(dirname ~)/$(basename ~)/miniconda3/bin" >> $GITHUB_PATH
+      - name: Setup Python ${{ matrix.python-version }} on MacOS
+        if: ${{ startsWith( matrix.os, 'macos' ) }}
+        shell: bash -l {0}
+        run: |
+          conda init bash
+          conda create -y --name wheel_build_env python=${{ matrix.python-version }}
       - name: Setup msbuild on Windows
         if: startsWith( matrix.os, 'windows' )
         uses: microsoft/setup-msbuild@v1.1
@@ -87,7 +111,7 @@ jobs:
         with:
           arch: x64
       - name: Install Build Dependency
-        shell: bash
+        shell: bash -l {0}
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
@@ -99,16 +123,20 @@ jobs:
             # Install static OpenSSL/libcrypto library
             ./packaging/manylinux/install_openssl_curl.sh
           else
+            if ${{ startsWith( matrix.os, 'macos' ) }}; then
+              conda activate wheel_build_env
+            fi
             pip install cmake ninja
             echo "/home/runner/.local/bin" >> $GITHUB_PATH
           fi
       - name: Install PyTorch and Build TorchData Wheel
-        shell: bash
+        shell: bash -l {0}
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
           BUILD_S3: 1
         run: |
+          set -ex
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
             source packaging/manylinux/python_helper.sh
             # Docker path is /__w by default
@@ -121,15 +149,21 @@ jobs:
             export CMAKE_PREFIX_PATH="$OPENSSL_ROOT_DIR:$CURL_ROOT_DIR:$CMAKE_PREFIX_PATH"
             export STATIC_DEPS=TRUE
           fi
+          if ${{ startsWith( matrix.os, 'macos' ) }}; then
+            conda activate wheel_build_env
+          fi
           packaging/build_wheel.sh
       - name: Validate TorchData Wheel
-        shell: bash
+        shell: bash -l {0}
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
             source packaging/manylinux/python_helper.sh
             pip3 install auditwheel
+          fi
+          if ${{ startsWith( matrix.os, 'macos' ) }}; then
+            conda activate wheel_build_env
           fi
           pip3 install pkginfo
           for pkg in dist/torchdata*.whl; do
@@ -145,21 +179,27 @@ jobs:
             mv wheelhouse dist
           fi
       - name: Install TorchData Wheel
-        shell: bash
+        shell: bash -l {0}
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
             source packaging/manylinux/python_helper.sh
           fi
+          if ${{ startsWith( matrix.os, 'macos' ) }}; then
+            conda activate wheel_build_env
+          fi
           pip3 install dist/torchdata*.whl
       - name: Run DataPipes Tests with pytest
-        shell: bash
+        shell: bash -l {0}
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
             source packaging/manylinux/python_helper.sh
+          fi
+          if ${{ startsWith( matrix.os, 'macos' ) }}; then
+            conda activate wheel_build_env
           fi
           pip3 install -r test/requirements.txt
           pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
@@ -233,22 +273,47 @@ jobs:
           - macos-latest
           - ubuntu-latest
           - windows-latest
+          - macos-m1-12
         python-version:
           - 3.7
           - 3.8
           - 3.9
           - "3.10"
+        # Python 3.7 is not officially provided on Apple Silicon
+        exclude:
+          - os: macos-m1-12
+            python-version: 3.7
     steps:
-      - name: Create Conda Env
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-          activate-environment: conda_build_env
       - name: Checkout Source Repository
         uses: actions/checkout@v2
         with:
           ref: ${{ inputs.branch }}
           submodules: recursive
+      - name: Create Conda Env
+        if: ${{ ! startsWith( matrix.os, 'macos' ) }}
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: conda_build_env
+      - name: Install Conda on MacOS
+        if: ${{ startsWith( matrix.os, 'macos' ) }}
+        shell: bash -l {0}
+        run: |
+          mkdir -p ~/miniconda3
+          if ${{ startsWith( matrix.os, 'macos-m1' ) }}; then
+            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/miniconda3/miniconda.sh
+          else
+            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o ~/miniconda3/miniconda.sh
+          fi
+          bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+          rm -rf ~/miniconda3/miniconda.sh
+          echo "$(dirname ~)/$(basename ~)/miniconda3/bin" >> $GITHUB_PATH
+      - name: Create Conda Env on MacOS
+        if: ${{ startsWith( matrix.os, 'macos' ) }}
+        shell: bash -l {0}
+        run: |
+          conda init bash
+          conda create -y --name conda_build_env python=${{ matrix.python-version }}
       - name: Setup additional system libraries
         if: startsWith( matrix.os, 'ubuntu' )
         run: |
@@ -256,7 +321,7 @@ jobs:
           sudo apt update
           sudo apt install libssl-dev libcurl4-openssl-dev zlib1g-dev
       - name: Determine if build AWSSDK
-        shell: bash
+        shell: bash -l {0}
         run: |
           if ${{ startsWith( matrix.os, 'windows' ) }}; then
             BUILD_S3=0
@@ -272,6 +337,7 @@ jobs:
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
           BUILD_S3: ${{ steps.build_s3.outputs.value }}
         run: |
+          set -ex
           conda activate conda_build_env
           conda install -yq conda-build -c conda-forge
           packaging/build_conda.sh
@@ -279,6 +345,7 @@ jobs:
       - name: Install TorchData Conda Package
         shell: bash -l {0}
         run: |
+          conda activate conda_build_env
           if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
             CONDA_CHANNEL=pytorch
           else
@@ -288,6 +355,7 @@ jobs:
       - name: Run DataPipes Tests with pytest
         shell: bash -l {0}
         run: |
+          conda activate conda_build_env
           pip3 install -r test/requirements.txt
           pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Conda Package to Github
@@ -324,7 +392,7 @@ jobs:
         run: ls -lh ./*/torchdata-*.tar.bz2
       - name: Upload Packages to Conda
         if: steps.trigger_upload.outputs.value == 'true'
-        shell: bash
+        shell: bash -l {0}
         env:
           CONDA_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_PYTORCHBOT_TOKEN }}
           CONDA_NIGHTLY_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_NIGHTLY_PYTORCHBOT_TOKEN }}
