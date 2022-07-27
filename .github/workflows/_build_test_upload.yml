@@ -341,12 +341,21 @@ jobs:
           conda activate conda_build_env
           conda install -yq conda-build -c conda-forge
           packaging/build_conda.sh
+          conda index ./conda-bld
       - name: Install TorchData Conda Package
         shell: bash -l {0}
-        run: conda install --offline conda-bld/*/torchdata-*.tar.bz2
-      - name: Run DataPipes Tests with pytest
-        shell: bash
         run: |
+          conda activate conda_build_env
+          if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
+            CONDA_CHANNEL=pytorch
+          else
+            CONDA_CHANNEL=pytorch-${{ needs.get_release_type.outputs.type }}
+          fi
+          conda install pytorch torchdata cpuonly -c $(pwd)/conda-bld/ -c "$CONDA_CHANNEL"
+      - name: Run DataPipes Tests with pytest
+        shell: bash -l {0}
+        run: |
+          conda activate conda_build_env
           pip3 install -r test/requirements.txt
           pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Conda Package to Github
