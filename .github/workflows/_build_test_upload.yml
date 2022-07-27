@@ -345,6 +345,7 @@ jobs:
       - name: Install TorchData Conda Package
         shell: bash -l {0}
         run: |
+          conda activate conda_build_env
           if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
             CONDA_CHANNEL=pytorch
           else
@@ -354,6 +355,7 @@ jobs:
       - name: Run DataPipes Tests with pytest
         shell: bash -l {0}
         run: |
+          conda activate conda_build_env
           pip3 install -r test/requirements.txt
           pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Conda Package to Github
