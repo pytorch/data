@@ -398,6 +398,9 @@ jobs:
           CONDA_NIGHTLY_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_NIGHTLY_PYTORCHBOT_TOKEN }}
           CONDA_TEST_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_TEST_PYTORCHBOT_TOKEN }}
         run: |
+          conda create -y --name conda_upload_env
+          conda activate conda_upload_env
+
           conda install -yq anaconda-client
           conda install -c conda-forge -yq jq
 
