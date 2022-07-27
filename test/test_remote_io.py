@@ -284,7 +284,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             "s3://aft-vbi-pds/bin-images/111",
             "s3://aft-vbi-pds/bin-images/222",
         ]
-        s3_lister_dp = S3FileLister(IterableWrapper(file_urls), region="us-east-1")
+        s3_lister_dp = S3FileLister(IterableWrapper(file_urls), request_timeout_ms=10000, region="us-east-1")
         self.assertEqual(sum(1 for _ in s3_lister_dp), 2212, f"{input} failed")
 
         # S3FileLister: incorrect inputs
