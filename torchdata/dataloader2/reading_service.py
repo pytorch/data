@@ -146,10 +146,11 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         if self.num_workers == 0:
-            # TODO(616): Warn and recommend usage of InPorcessReadingService
+            # TODO(616): Warn and recommend usage of InProcessReadingService
             return datapipe
         for worker_id in range(self.num_workers):
-            # TODO(617): Separate into function, because we also need to apply distributed seed and call it inside process
+            # TODO(617): Separate into function, because we also need to apply distributed seed
+            #            and call it inside process
             call_inside_process = functools.partial(self.init_datapipe_process, self.num_workers, worker_id)
             ctx = mp.get_context(self.multiprocessing_context)
             (process, req_queue, res_queue) = communication.eventloop.SpawnProcessForDataPipeline(

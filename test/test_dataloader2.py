@@ -9,6 +9,8 @@ import pickle
 import unittest
 from unittest import TestCase
 
+from torch.utils.data.graph import DataPipe
+
 from torchdata.dataloader2 import (
     DataLoader2,
     MultiProcessingReadingService,
@@ -20,14 +22,14 @@ from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 
 
 class TestReadingService(ReadingServiceInterface):
-    def initialize(self, dp: IterDataPipe) -> IterDataPipe:
+    def initialize(self, dp: DataPipe) -> DataPipe:
         return dp
 
 
 class DataLoader2Test(TestCase):
     def test_dataloader2(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
-        data_loader = DataLoader2(datapipe=test_data_pipe)
+        data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe)
 
         expected_batch = 0
         for batch in iter(data_loader):
@@ -36,12 +38,12 @@ class DataLoader2Test(TestCase):
 
     def test_dataloader2_shutdown(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
-        data_loader = DataLoader2(datapipe=test_data_pipe)
+        data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe)
         data_loader.shutdown()
 
     def test_dataloader2_state_dict(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
-        data_loader = DataLoader2(datapipe=test_data_pipe)
+        data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe)
 
         state = data_loader.state_dict()
         self.assertIsNotNone(state)
@@ -52,7 +54,7 @@ class DataLoader2Test(TestCase):
     def test_dataloader2_reading_service(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
         reading_service = TestReadingService()
-        data_loader = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
+        data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
 
         expected_batch = 0
         for batch in iter(data_loader):
@@ -62,7 +64,7 @@ class DataLoader2Test(TestCase):
     def test_dataloader2_multi_process_reading_service(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
         reading_service = MultiProcessingReadingService()
-        data_loader = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
+        data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
 
         expected_batch = 0
         for batch in iter(data_loader):
@@ -72,7 +74,7 @@ class DataLoader2Test(TestCase):
     def test_dataloader2_load_state_dict(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
         reading_service = TestReadingService()
-        data_loader = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
+        data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
 
         batch = next(iter(data_loader))
         self.assertEqual(batch, 0)
@@ -84,7 +86,7 @@ class DataLoader2Test(TestCase):
         data_loader.shutdown()
 
         test_data_pipe_2 = IterableWrapper(range(5))
-        restored_data_loader = DataLoader2(datapipe=test_data_pipe_2, reading_service=reading_service)
+        restored_data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe_2, reading_service=reading_service)
         restored_data_loader.load_state_dict(state)
 
         restored_data_loader_datapipe = restored_data_loader.datapipe
@@ -103,6 +105,27 @@ class DataLoader2Test(TestCase):
         )
 
         restored_data_loader.shutdown()
+
+    def test_dataloader2_reset(self) -> None:
+
+        test_data_pipe = IterableWrapper(range(10))
+        reading_services = [None, TestReadingService(), MultiProcessingReadingService(num_workers=1)]
+
+        for reading_service in reading_services:
+            data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
+
+            # Functional Test: Ensure multiple sequential reads of DL2 is possible
+            self.assertEqual(list(range(10)), list(data_loader))  # [0, ..., 10]`
+            self.assertEqual(list(range(10)), list(data_loader))  # [0, ..., 10]`
+            self.assertEqual(list(range(10)), list(data_loader))  # [0, ..., 10]`
+
+            # Functional Test: Ensure that the creation of a new iterator invalidates the old one
+            it1 = iter(data_loader)
+            self.assertEqual(0, next(it1))
+            it2 = iter(data_loader)
+            self.assertEqual(0, next(it2))
+            with self.assertRaisesRegex(RuntimeError, "iterator has been invalidated"):
+                print(next(it1))
 
 
 class DataLoader2ConsistencyTest(TestCase):
