@@ -115,17 +115,20 @@ class DataLoader2Test(TestCase):
             data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
 
             # Functional Test: Ensure multiple sequential reads of DL2 is possible
-            self.assertEqual(list(range(10)), list(data_loader))  # [0, ..., 10]`
-            self.assertEqual(list(range(10)), list(data_loader))  # [0, ..., 10]`
-            self.assertEqual(list(range(10)), list(data_loader))  # [0, ..., 10]`
+            self.assertEqual(list(range(10)), list(data_loader))
+            self.assertEqual(list(range(10)), list(data_loader))
+            self.assertEqual(list(range(10)), list(data_loader))
 
             # Functional Test: Ensure that the creation of a new iterator invalidates the old one
             it1 = iter(data_loader)
             self.assertEqual(0, next(it1))
+            self.assertEqual(1, next(it1))
             it2 = iter(data_loader)
             self.assertEqual(0, next(it2))
+            self.assertEqual(1, next(it2))
             with self.assertRaisesRegex(RuntimeError, "iterator has been invalidated"):
-                print(next(it1))
+                next(it1)
+            self.assertEqual(list(range(2, 10)), list(it2))
 
 
 class DataLoader2ConsistencyTest(TestCase):

@@ -70,9 +70,11 @@ class _DataLoader2Iterator(Iterator):
 
     def __getattr__(self, name):
         """
-        To delegate operations such as `limit`, `pause`, `resume`, `__getstate__`
+        To delegate operations to ``dataloader._datapipe_iter``.
         """
-        return getattr(self.dataloader, name)
+        if self.dataloader._datapipe_iter is None:
+            raise AttributeError
+        return getattr(self.dataloader_datapipe_iter, name)
 
 
 class DataLoader2(Generic[T_co]):
