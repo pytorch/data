@@ -60,6 +60,8 @@ class _DataLoader2Iterator(Iterator):
                     self.dataloader.reading_service.finalize_iteration()
                 raise
         else:
+            if self.dataloader.reading_service is not None:
+                self.dataloader.reading_service.finalize_iteration()
             raise RuntimeError(
                 "This iterator has been invalidated because another iterator has been created "
                 "from the same DataLoader2.\n"
@@ -127,15 +129,6 @@ class DataLoader2(Generic[T_co]):
 
         self.valid_iterator_id = 0 if self.valid_iterator_id is None else self.valid_iterator_id + 1
         return _DataLoader2Iterator(self, self.valid_iterator_id)
-
-    def __getattr__(self, name: str) -> Any:
-        """
-        Delegate methods (e.g. `limit`, `pause`, `resume`, etc) to the iterator
-        created by the ReadingService and DataPipe.
-        """
-        if self._datapipe_iter is None:
-            raise AttributeError
-        return getattr(self._datapipe_iter, name)
 
     def __del__(self) -> None:
         self.shutdown()
