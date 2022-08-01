@@ -43,7 +43,7 @@ class ConcurrencySpec:
     persistent_workers: bool = False
 
 
-class _DataLoader2Iterator(Iterator):
+class DataLoader2Iterator(Iterator):
     def __init__(self, dataloader: "DataLoader2", iterator_id: int):
         self.dataloader = dataloader
         self.iterator_id = iterator_id
@@ -128,7 +128,7 @@ class DataLoader2(Generic[T_co]):
             self._reset_iter = False
 
         self.valid_iterator_id = 0 if self.valid_iterator_id is None else self.valid_iterator_id + 1
-        return _DataLoader2Iterator(self, self.valid_iterator_id)
+        return DataLoader2Iterator(self, self.valid_iterator_id)
 
     def __del__(self) -> None:
         self.shutdown()
