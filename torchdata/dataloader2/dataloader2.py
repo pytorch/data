@@ -76,7 +76,7 @@ class _DataLoader2Iterator(Iterator):
         """
         if self.dataloader._datapipe_iter is None:
             raise AttributeError
-        return getattr(self.dataloader_datapipe_iter, name)
+        return getattr(self.dataloader._datapipe_iter, name)
 
 
 class DataLoader2(Generic[T_co]):
