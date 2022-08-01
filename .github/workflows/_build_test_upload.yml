@@ -55,6 +55,8 @@ jobs:
     needs: get_release_type
     runs-on: ${{ matrix.os }}
     container: ${{ startsWith( matrix.os, 'ubuntu' ) && 'pytorch/manylinux-cpu' || null }}
+    env:
+      MINICONDA_INSTALL_PATH_MACOS: ${{ runner.temp }}/miniconda
     strategy:
       fail-fast: false
       matrix:
@@ -87,15 +89,15 @@ jobs:
         if: ${{ startsWith( matrix.os, 'macos' ) }}
         shell: bash -l {0}
         run: |
-          mkdir -p ~/miniconda3
+          mkdir -p "${MINICONDA_INSTALL_PATH_MACOS}"
           if ${{ startsWith( matrix.os, 'macos-m1' ) }}; then
-            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/miniconda3/miniconda.sh
+            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh"
           else
-            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o ~/miniconda3/miniconda.sh
+            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh"
           fi
-          bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+          bash "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh" -b -u -p "${MINICONDA_INSTALL_PATH_MACOS}"
           rm -rf ~/miniconda3/miniconda.sh
-          echo "$(dirname ~)/$(basename ~)/miniconda3/bin" >> $GITHUB_PATH
+          echo "${MINICONDA_INSTALL_PATH_MACOS}/bin" >> $GITHUB_PATH
       - name: Setup Python ${{ matrix.python-version }} on MacOS
         if: ${{ startsWith( matrix.os, 'macos' ) }}
         shell: bash -l {0}
@@ -283,6 +285,9 @@ jobs:
         exclude:
           - os: macos-m1-12
             python-version: 3.7
+    env:
+      MINICONDA_INSTALL_PATH_MACOS: ${{ runner.temp }}/miniconda
+      CONDA_ENV_PATH: ${{ runner.temp }}/conda_build_env
     steps:
       - name: Checkout Source Repository
         uses: actions/checkout@v2
@@ -294,26 +299,26 @@ jobs:
         uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: ${{ matrix.python-version }}
-          activate-environment: conda_build_env
+          activate-environment: ${{ env.CONDA_ENV_PATH }}
       - name: Install Conda on MacOS
         if: ${{ startsWith( matrix.os, 'macos' ) }}
         shell: bash -l {0}
         run: |
-          mkdir -p ~/miniconda3
+          mkdir -p "${MINICONDA_INSTALL_PATH_MACOS}"
           if ${{ startsWith( matrix.os, 'macos-m1' ) }}; then
-            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/miniconda3/miniconda.sh
+            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh"
           else
-            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o ~/miniconda3/miniconda.sh
+            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh"
           fi
-          bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+          bash "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh" -b -u -p "${MINICONDA_INSTALL_PATH_MACOS}"
           rm -rf ~/miniconda3/miniconda.sh
-          echo "$(dirname ~)/$(basename ~)/miniconda3/bin" >> $GITHUB_PATH
+          echo "${MINICONDA_INSTALL_PATH_MACOS}/bin" >> $GITHUB_PATH
       - name: Create Conda Env on MacOS
         if: ${{ startsWith( matrix.os, 'macos' ) }}
         shell: bash -l {0}
         run: |
           conda init bash
-          conda create -y --name conda_build_env python=${{ matrix.python-version }}
+          conda create -y -p "${CONDA_ENV_PATH}" python=${{ matrix.python-version }}
       - name: Setup additional system libraries
         if: startsWith( matrix.os, 'ubuntu' )
         run: |
@@ -338,14 +343,14 @@ jobs:
           BUILD_S3: ${{ steps.build_s3.outputs.value }}
         run: |
           set -ex
-          conda activate conda_build_env
+          conda activate "${CONDA_ENV_PATH}"
           conda install -yq conda-build -c conda-forge
           packaging/build_conda.sh
           conda index ./conda-bld
       - name: Install TorchData Conda Package
         shell: bash -l {0}
         run: |
-          conda activate conda_build_env
+          conda activate "${CONDA_ENV_PATH}"
           if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
             CONDA_CHANNEL=pytorch
           else
@@ -355,7 +360,7 @@ jobs:
       - name: Run DataPipes Tests with pytest
         shell: bash -l {0}
         run: |
-          conda activate conda_build_env
+          conda activate "${CONDA_ENV_PATH}"
           pip3 install -r test/requirements.txt
           pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Conda Package to Github
