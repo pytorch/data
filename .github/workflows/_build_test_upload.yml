@@ -55,8 +55,6 @@ jobs:
     needs: get_release_type
     runs-on: ${{ matrix.os }}
     container: ${{ startsWith( matrix.os, 'ubuntu' ) && 'pytorch/manylinux-cpu' || null }}
-    env:
-      MINICONDA_INSTALL_PATH_MACOS: ${{ runner.temp }}/miniconda
     strategy:
       fail-fast: false
       matrix:
@@ -85,6 +83,10 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Add temp runner environment variables
+        shell: bash -l {0}
+        run: |
+          echo "MINICONDA_INSTALL_PATH_MACOS=${RUNNER_TEMP}/miniconda" >> "${GITHUB_ENV}"
       - name: Install Conda on MacOS
         if: ${{ startsWith( matrix.os, 'macos' ) }}
         shell: bash -l {0}
@@ -285,15 +287,17 @@ jobs:
         exclude:
           - os: macos-m1-12
             python-version: 3.7
-    env:
-      MINICONDA_INSTALL_PATH_MACOS: ${{ runner.temp }}/miniconda
-      CONDA_ENV_PATH: ${{ runner.temp }}/conda_build_env
     steps:
       - name: Checkout Source Repository
         uses: actions/checkout@v2
         with:
           ref: ${{ inputs.branch }}
           submodules: recursive
+      - name: Add temp runner environment variables
+        shell: bash -l {0}
+        run: |
+          echo "MINICONDA_INSTALL_PATH_MACOS=${RUNNER_TEMP}/miniconda" >> "${GITHUB_ENV}"
+          echo "CONDA_ENV_PATH=${RUNNER_TEMP}/conda_build_env" >> "${GITHUB_ENV}"
       - name: Create Conda Env
         if: ${{ ! startsWith( matrix.os, 'macos' ) }}
         uses: conda-incubator/setup-miniconda@v2
