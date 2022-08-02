@@ -96,7 +96,7 @@ jobs:
             curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh"
           fi
           bash "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh" -b -u -p "${MINICONDA_INSTALL_PATH_MACOS}"
-          rm -rf ~/miniconda3/miniconda.sh
+          rm -rf "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh"
           echo "${MINICONDA_INSTALL_PATH_MACOS}/bin" >> $GITHUB_PATH
       - name: Setup Python ${{ matrix.python-version }} on MacOS
         if: ${{ startsWith( matrix.os, 'macos' ) }}
@@ -311,7 +311,7 @@ jobs:
             curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh"
           fi
           bash "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh" -b -u -p "${MINICONDA_INSTALL_PATH_MACOS}"
-          rm -rf ~/miniconda3/miniconda.sh
+          rm -rf "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh"
           echo "${MINICONDA_INSTALL_PATH_MACOS}/bin" >> $GITHUB_PATH
       - name: Create Conda Env on MacOS
         if: ${{ startsWith( matrix.os, 'macos' ) }}
