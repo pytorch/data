@@ -42,6 +42,18 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
         >>> map_dp = source_dp.to_map_datapipe()
         >>> list(map_dp)
         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        >>> source_dp2 = IterableWrapper([('a', 1), ('b', 2), ('c', 1)])
+        >>> map_dp2 = source_dp2.to_map_datapipe()
+        >>> map_dp2['a']
+        1
+        >>> def row_to_tuple(row):
+        >>>     label = row[0]
+        >>>     data = row[1:]
+        >>>     return label, data
+        >>> source_dp3 = IterableWrapper([('a', 1, 1, 1, 1, 1, 1), ('b', 2, 2, 2, 2, 2, 2), ('c', 3, 3, 3, 3, 3, 3)])
+        >>> map_dp3 = source_dp3.to_map_datapipe(key_value_fn=row_to_tuple)
+        >>> map_dp3['a']
+        (1, 1, 1, 1, 1, 1)
     """
     datapipe: IterDataPipe
     key_value_fn: Optional[Callable]

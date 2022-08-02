@@ -27,6 +27,10 @@ class MapToIterConverterIterDataPipe(IterDataPipe):
         >>> iter_dp = source_dp.to_iter_datapipe()
         >>> list(iter_dp)
         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        >>> source_dp2 = SequenceWrapper({'a': 1, 'b': 2, 'c': 3})
+        >>> iter_dp2 = source_dp2.to_iter_datapipe(indices=['a', 'b', 'c'])
+        >>> list(iter_dp2)
+        [1, 2, 3]
     """
 
     # Note that ``indices`` has ``Optional[List]`` instead of ``Optional[Iterable]`` as type because a generator
