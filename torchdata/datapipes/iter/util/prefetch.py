@@ -150,6 +150,13 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
             self._cv.notify()
 
     def __iter__(self) -> Iterator[T_co]:
+        if not (dist.is_available() and dist.is_initialized()):
+            raise RuntimeError(
+                "Torch Distributed is required to be initialized"
+            )
+        self._process_group = dist.new_group(backend="gloo")
+        self._world_size = dist.get_world_size()
+
         assert self._executor is None
 
         if not (dist.is_available() and dist.is_initialized()):
@@ -194,3 +201,23 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
             self._error = None
             self._sync_counter = torch.tensor([0], dtype=torch.int32)
             self._done_callback = False
+
+    def __getstate__(self):
+        if IterDataPipe.getstate_hook is not None:
+            return IterDataPipe.getstate_hook(self)
+        state = (
+            self.datapipe,
+            self.timeout,
+        )
+        return state
+
+    def __setstate__(self, state):
+        self.datapipe, self.timeout = state
+        self._process_group = None
+        self._world_size = 1
+        self._lock = threading.RLock()
+        self._cv = threading.Condition(lock=self._lock)
+        self._executor = None
+        self._error = None
+        self._sync_counter = torch.tensor([0], dtype=torch.int32)
+        self._done_callback = False
