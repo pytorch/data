@@ -32,7 +32,6 @@ on:
 
 jobs:
   get_release_type:
-    if: inputs.branch != ''
     runs-on: ubuntu-latest
     outputs:
       type: ${{ steps.get_release_type.outputs.type }}
@@ -43,13 +42,8 @@ jobs:
             RELEASE_TYPE=official
           elif [[ ${{ inputs.branch }} == release/* ]] && [[ ${{ inputs.pre_dev_release }} == true ]]; then
             RELEASE_TYPE=test
-          elif [[ ${{ inputs.branch }} == main ]] && [[ ${{ inputs.pre_dev_release }} == true ]]; then
-            RELEASE_TYPE=nightly
           else
-            echo "Invalid combination of inputs!"
-            echo "  branch: ${{ inputs.branch }}"
-            echo "  pre_dev_release: ${{ inputs.pre_dev_release }}"
-            exit 1
+            RELEASE_TYPE=nightly
           fi
           echo "Release Type: $RELEASE_TYPE"
           echo "::set-output name=type::$RELEASE_TYPE"
