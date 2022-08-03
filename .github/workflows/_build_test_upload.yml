@@ -12,6 +12,10 @@ on:
       pytorch_version:
         required: true
         type: string
+      do-upload:
+        required: false
+        default: true
+        type: boolean
     secrets:
       PYTORCH_BINARY_AWS_ACCESS_KEY_ID:
         required: true
@@ -215,7 +219,7 @@ jobs:
           path: dist/torchdata*.whl
 
   wheel_upload:
-    if: always() && inputs.branch != ''
+    if: always() && inputs.branch != '' && inputs.do-upload == true
     needs: [get_release_type, wheel_build_test]
     runs-on: ubuntu-latest
     outputs:
@@ -375,7 +379,7 @@ jobs:
           path: conda-bld/*/torchdata-*.tar.bz2
 
   conda_upload:
-    if: always() && inputs.branch != ''
+    if: always() && inputs.branch != '' && inputs.do-upload == true
     needs: [get_release_type, conda_build_test]
     runs-on: ubuntu-latest
     container: continuumio/miniconda3
