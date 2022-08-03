@@ -1,0 +1,21 @@
+name: Test Release Pipelines
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/pull_release.yml
+      - .github/workflows/_build_test_upload.yml
+
+jobs:
+  build_test_upload:
+    if: github.repository == 'pytorch/data'
+    uses: ./.github/workflows/_build_test_upload.yml
+    with:
+      branch: ""
+      pre_dev_release: true
+      pytorch_version: ""
+      do-upload: false
+    secrets:
+      PYTORCH_BINARY_AWS_ACCESS_KEY_ID: ""
+      PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY: ""
+      CONDA_TEST_PYTORCHBOT_TOKEN: ""
