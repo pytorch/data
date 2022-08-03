@@ -6,14 +6,14 @@
 
 import threading
 
-import torch
-import torch.distributed as dist
-
 from collections import deque
-from concurrent.futures import ThreadPoolExecutor, TimeoutError, Future
+from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError
 from dataclasses import dataclass
 from functools import partial
 from typing import Callable, Deque, Iterator, Optional, TypeVar
+
+import torch
+import torch.distributed as dist
 
 from torchdata._constants import default_timeout_in_s
 from torchdata.datapipes import functional_datapipe
@@ -117,6 +117,7 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
         datapipe: IterDataPipe that needs to be synchronized
         timeout: Timeout for prefetching data in seconds. Default value equals to 30 minutes
     """
+
     def __init__(self, datapipe: IterDataPipe, timeout=default_timeout_in_s):
         self.datapipe = datapipe
         self.timeout = timeout
@@ -126,7 +127,7 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
 
         self._lock = threading.RLock()
         self._cv = threading.Condition(lock=self._lock)
-        self._executor = None
+        self._executor: Optional[_PrefetchExecutor] = None
         # Use single values rather than deques for the following variables
         # because fullsync only prefetches 1 element
         self._error = None
@@ -137,7 +138,7 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
         with self._cv:
             if exp.has_error():
                 if not isinstance(exp.error, StopIteration):
-                    self._error = exp.error
+                    self._error = exp.error  # type: ignore[assignment]
                 self._sync_counter = torch.tensor([0], dtype=torch.int32)
             else:
                 self._sync_counter = torch.tensor([1], dtype=torch.int32)
@@ -151,28 +152,18 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
 
     def __iter__(self) -> Iterator[T_co]:
         if not (dist.is_available() and dist.is_initialized()):
-            raise RuntimeError(
-                "Torch Distributed is required to be initialized"
-            )
+            raise RuntimeError("Torch Distributed is required to be initialized")
         self._process_group = dist.new_group(backend="gloo")
         self._world_size = dist.get_world_size()
 
         assert self._executor is None
 
         if not (dist.is_available() and dist.is_initialized()):
-            raise RuntimeError(
-                "Torch Distributed is required to be initialized"
-            )
+            raise RuntimeError("Torch Distributed is required to be initialized")
         self._process_group = dist.new_group(backend="gloo")
         self._world_size = dist.get_world_size()
 
-        self._executor = _PrefetchExecutor(
-            iter(self.datapipe),
-            1,
-            self._callback_fn,
-            self.timeout
-        )
-
+        self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)
         while True:
             with self._cv:
                 is_success = self._cv.wait_for(
@@ -186,7 +177,7 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
                 if bool(self._sync_counter < self._world_size):
                     break
                 self._done_callback = False
-                data = self._executor.return_next()
+                data = self._executor.return_next()  # type: ignore[attr-defined]
             if isinstance(data, _EndOfPrefetch):
                 break
             yield data
