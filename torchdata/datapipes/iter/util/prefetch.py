@@ -151,11 +151,6 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
             self._cv.notify()
 
     def __iter__(self) -> Iterator[T_co]:
-        if not (dist.is_available() and dist.is_initialized()):
-            raise RuntimeError("Torch Distributed is required to be initialized")
-        self._process_group = dist.new_group(backend="gloo")
-        self._world_size = dist.get_world_size()
-
         assert self._executor is None
 
         if not (dist.is_available() and dist.is_initialized()):
