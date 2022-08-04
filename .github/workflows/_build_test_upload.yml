@@ -43,7 +43,11 @@ jobs:
           elif [[ "${{ inputs.branch }}" == release/* ]] && [[ ${{ inputs.pre_dev_release }} == true ]]; then
             RELEASE_TYPE=test
           else
-            RELEASE_TYPE=nightly
+            if [[ "${{ github.base_ref }}" == release/* ]]; then
+              RELEASE_TYPE=test
+            else
+              RELEASE_TYPE=nightly
+            fi
           fi
           echo "Release Type: $RELEASE_TYPE"
           echo "::set-output name=type::$RELEASE_TYPE"
