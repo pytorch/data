@@ -13,7 +13,7 @@ jobs:
     with:
       branch: ""
       pre_dev_release: true
-      pytorch_version: ""
+      pytorch_version: "1.12.1"
       do-upload: false
     secrets:
       PYTORCH_BINARY_AWS_ACCESS_KEY_ID: ""
