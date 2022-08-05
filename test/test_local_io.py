@@ -34,6 +34,7 @@ from torchdata.datapipes.iter import (
     CSVDictParser,
     CSVParser,
     Decompressor,
+    FileCache,
     FileLister,
     FileOpener,
     HashChecker,
@@ -908,6 +909,23 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         assert len(items) == nsamples
         assert items[0][".txt"] == "text0"
         assert items[9][".bin"] == "bin9"
+
+
+    def test_filecache(self) -> None:
+        nfiles = 100
+        testdata = b"hello, world"
+        dest = os.path.join(self.temp_dir.name, "testdata")
+        with open(dest, "wb") as stream:
+            stream.write(testdata)
+        stage1 = IterableWrapper([dest] * nfiles)
+        stage2 = FileOpener(stage1, mode="b")
+        stage3 = FileCache(stage2, cachedir=os.path.join(self.temp_dir.name, "_cache"))
+        count = 0
+        for path, stream in stage3:
+            data = stream.read()
+            count += 1
+            assert data == testdata
+        assert count == nfiles
 
 
 if __name__ == "__main__":
