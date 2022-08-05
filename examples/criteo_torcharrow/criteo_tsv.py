@@ -159,14 +159,12 @@ class CriteoIterDataPipe(IterDataPipe):
 # Creating DataFrame from TSV File
 df = criteo_dataframes_from_tsv("day_11_first_3k_rows_original.tsv")
 
-# TODO(596): Optimize this operation
 df = df.shuffle()
 
 df["dense_features"] = df["dense_features"].fill_null(0)
 df["sparse_features"] = df["sparse_features"].fill_null(0)
 
-# This Mock going to to removed as hackathon followup, when torcharrow.functional will
-# accept StreamDataFrame
+# Remove CaptureLikeMock hen torcharrow.functional will accept StreamDataFrame
 with CaptureLikeMock("torcharrow.functional.array_constructor"):
     for field in df["sparse_features"].columns:
         df["sparse_features"][field] = functional.array_constructor(df["sparse_features"][field])
