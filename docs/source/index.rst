@@ -45,6 +45,7 @@ Features described in this documentation are classified by release status:
 
    tutorial.rst
    examples.rst
+   webdataset.rst
 
 
 .. toctree::
