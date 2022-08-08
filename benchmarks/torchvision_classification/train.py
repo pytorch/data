@@ -10,7 +10,7 @@ import torch.utils.data
 import torchvision
 import utils
 from torch import nn
-from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService, adapter
+from torchdata.dataloader2 import adapter, DataLoader2, MultiProcessingReadingService
 
 
 def train_one_epoch(model, criterion, optimizer, data_loader, device, epoch, args):
@@ -191,7 +191,7 @@ def main(args):
         utils.mkdir(args.output_dir)
 
     utils.init_distributed_mode(args)
-    print("\n".join("%s: %s" % (k, str(v)) for k, v in sorted(dict(vars(args)).items())))
+    print("\n".join(f"{k}: {str(v)}" for k, v in sorted(dict(vars(args)).items())))
 
     device = torch.device(args.device)
 

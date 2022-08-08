@@ -1,6 +1,5 @@
 import torch
-from torchvision.transforms import autoaugment, transforms
-from torchvision.transforms.functional import InterpolationMode
+from torchvision.transforms import transforms
 
 
 class ClassificationPresetTrain:

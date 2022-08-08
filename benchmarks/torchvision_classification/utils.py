@@ -1,11 +1,8 @@
-import copy
 import datetime
 import errno
-import hashlib
 import os
 import time
-from collections import defaultdict, deque, OrderedDict
-from typing import List, Optional, Tuple
+from collections import defaultdict, deque
 
 import torch
 import torch.distributed as dist
