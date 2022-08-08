@@ -29,3 +29,10 @@ def safe_cast(val: T, dest_type: Callable[[T], T], default: T) -> T:
         return dest_type(val)
     except ValueError:
         return default
+
+
+def safe_hex_to_int(num):
+    try:
+        return int(safe_cast(num, str, "0") or "0", 16)
+    except Exception:
+        return float("NaN")

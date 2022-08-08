@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 # TODO(597): This file can be moved to the dataframe parent directory once Torcharrow
-# is open sourced
+#            is open sourced
 
 from typing import Iterable, List, Optional, Union
 
