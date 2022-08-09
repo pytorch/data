@@ -945,6 +945,38 @@ class TestIterDataPipe(expecttest.TestCase):
         # __len__ Test: length matches the length of the shortest input
         self.assertEqual(len(output_dp), 10)
 
+    def test_random_splitter_iterdatapipe(self):
+
+        n_epoch = 2
+
+        # Functional Test: Split results are the same across epochs
+        dp = IterableWrapper(range(10))
+        train, validation = dp.random_split(total_length=10, weights=[0.5, 0.5], seed=0)
+        results = []
+        for _ in range(n_epoch):
+            res = list(train)
+            self.assertEqual(5, len(res))
+            results.append(res)
+        self.assertEqual(results[0], results[1])
+        valid_res = list(validation)
+        self.assertEqual(5, len(valid_res))
+        self.assertEqual(list(range(10)), sorted(results[0] + valid_res))
+
+        # Functional Test: DataPipe can split into 3 DataPipes
+        dp = IterableWrapper(range(10))
+        train, validation, test = dp.random_split(total_length=10, weights=[0.6, 0.2, 0.2], seed=0)
+        results = []
+        for _ in range(n_epoch):
+            res = list(train)
+            self.assertEqual(6, len(res))
+            results.append(res)
+        self.assertEqual(results[0], results[1])
+        valid_res = list(validation)
+        self.assertEqual(2, len(valid_res))
+        test_res = list(test)
+        self.assertEqual(2, len(test_res))
+        self.assertEqual(list(range(10)), sorted(results[0] + valid_res + test_res))
+
 
 if __name__ == "__main__":
     unittest.main()
