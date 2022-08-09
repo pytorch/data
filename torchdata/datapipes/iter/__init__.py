@@ -67,6 +67,7 @@ from torchdata.datapipes.iter.transform.bucketbatcher import (
 )
 from torchdata.datapipes.iter.transform.callable import (
     BatchMapperIterDataPipe as BatchMapper,
+    DropperIterDataPipe as Dropper,
     FlatMapperIterDataPipe as FlatMapper,
 )
 from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
@@ -143,6 +144,7 @@ __all__ = [
     "DataFrameMaker",
     "Decompressor",
     "Demultiplexer",
+    "Dropper",
     "EndOnDiskCacheHolder",
     "Enumerator",
     "Extractor",
