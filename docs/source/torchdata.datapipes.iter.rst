@@ -1,3 +1,4 @@
+
 Iterable-style DataPipes
 ==========================
 
@@ -178,6 +179,7 @@ A miscellaneous set of DataPipes with different functionalities.
     IterableWrapper
     MapToIterConverter
     OnDiskCacheHolder
+    RandomSplitter
     ShardingFilter
 
 Selecting DataPipes
