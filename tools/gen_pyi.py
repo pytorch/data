@@ -71,6 +71,7 @@ def gen_pyi() -> None:
         "dataframe": "torcharrow.DataFrame",
         "end_caching": "IterDataPipe",
         "unzip": "List[IterDataPipe]",
+        "random_split": "List[IterDataPipe]",
         "read_from_tar": "IterDataPipe",
         "read_from_xz": "IterDataPipe",
         "read_from_zip": "IterDataPipe",
