@@ -52,6 +52,13 @@ class DataLoader2Test(TestCase):
             self.assertEqual(batch, expected_batch)
             expected_batch += 1
 
+    def test_dataloader2_len(self) -> None:
+        test_data_pipe = IterableWrapper(range(3))
+        data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe)
+        self.assertEqual(3, len(data_loader))
+        it = iter(data_loader)
+        self.assertEqual(3, len(it))  # type: ignore[arg-type]
+
     def test_dataloader2_shutdown(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
         data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe)
