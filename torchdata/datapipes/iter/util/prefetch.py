@@ -133,6 +133,8 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
     """
 
     def __init__(self, datapipe: IterDataPipe, timeout=default_timeout_in_s):
+        if not dist.is_available():
+            raise RuntimeError("Torch Distributed is required to be available")
         self.datapipe = datapipe
         self.timeout = timeout
 
