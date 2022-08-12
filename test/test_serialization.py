@@ -188,6 +188,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.Cycler, None, (2,), {}),
             (iterdp.DataFrameMaker, IterableWrapper([(i,) for i in range(3)]), (), {"dtype": DTYPE}),
             (iterdp.Decompressor, None, (), {}),
+            (iterdp.Dropper, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), ([1]), {}),
             (iterdp.Enumerator, None, (2,), {}),
             (iterdp.FlatMapper, None, (_fake_fn_ls,), {}),
             (iterdp.FSSpecFileLister, ".", (), {}),

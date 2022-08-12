@@ -945,6 +945,54 @@ class TestIterDataPipe(expecttest.TestCase):
         # __len__ Test: length matches the length of the shortest input
         self.assertEqual(len(output_dp), 10)
 
+    def test_drop_iterdatapipe(self):
+        # tuple tests
+        input_dp = IterableWrapper([(0, 1, 2), (3, 4, 5), (6, 7, 8)])
+
+        # Functional Test: single index drop for tuple elements
+        drop_dp = input_dp.drop(1)
+        self.assertEqual([(0, 2), (3, 5), (6, 8)], list(drop_dp))
+
+        # Functional Test: multiple indices drop for tuple elements
+        drop_dp = input_dp.drop([0, 2])
+        self.assertEqual([(1,), (4,), (7,)], list(drop_dp))
+
+        # dict tests
+        input_dp = IterableWrapper([{"a": 1, "b": 2, "c": 3}, {"a": 3, "b": 4, "c": 5}, {"a": 5, "b": 6, "c": 7}])
+
+        # Functional Test: single key drop for dict elements
+        drop_dp = input_dp.drop("a")
+        self.assertEqual([{"b": 2, "c": 3}, {"b": 4, "c": 5}, {"b": 6, "c": 7}], list(drop_dp))
+
+        # Functional Test: multiple key drop for dict elements
+        drop_dp = input_dp.drop(["a", "b"])
+        self.assertEqual([{"c": 3}, {"c": 5}, {"c": 7}], list(drop_dp))
+
+        # list tests
+        input_dp = IterableWrapper([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+
+        # Functional Test: single key drop for list elements
+        drop_dp = input_dp.drop(2)
+        self.assertEqual([[0, 1], [3, 4], [6, 7]], list(drop_dp))
+
+        # Functional Test: multiple key drop for list elements
+        drop_dp = input_dp.drop([0, 1])
+        self.assertEqual([[2], [5], [8]], list(drop_dp))
+
+        # Reset Test:
+        n_elements_before_reset = 2
+        input_dp = IterableWrapper([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+        drop_dp = input_dp.drop([0, 1])
+        expected_res = [[2], [5], [8]]
+        res_before_reset, res_after_reset = reset_after_n_next_calls(drop_dp, n_elements_before_reset)
+        self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_res, res_after_reset)
+
+        # __len__ Test:
+        input_dp = IterableWrapper([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+        drop_dp = input_dp.drop([0, 1])
+        self.assertEqual(3, len(drop_dp))
+
 
 if __name__ == "__main__":
     unittest.main()
