@@ -5,12 +5,12 @@
 # LICENSE file in the root directory of this source tree.
 
 import random
-from typing import Dict, TypeVar, Union
+from typing import Dict, Optional, TypeVar, Union
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
-T = TypeVar("K")
+T = TypeVar("T")
 
 
 @functional_datapipe("random_split")
@@ -19,22 +19,29 @@ class RandomSplitterIterDataPipe(IterDataPipe):
     Randomly split samples from a source DataPipe into groups(functional name: ``random_split``).
     Since there is no buffer, only ONE group of samples (i.e. one child DataPipe) can be iterated through
     at any time. Attempts to iterate through multiple of them simultaneously will fail.
-    Note that multiple iterations of this DataPipe will yield the same split for consistency across epochs.
+    Note that by default, multiple iterations of this DataPipe will yield the same split for consistency across epochs.
 
     Args:
         source_datapipe: Iterable DataPipe being split
-        total_length: Length of the source
+        total_length: Length of the ``source_datapipe``
         weights: Dict of weights; the length of this list determines how many output DataPipes there will be.
-        seed: random seed used to determine the split
+        _seed: random _seed used to determine the randomness of the split
+        target: Optional key (that must exist in ``weights``) to indicate the specific group to return.
+            If set to the default ``None``, returns ``List[IterDataPipe]``.
+            If target is specified, returns ``IterDataPipe``.
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
         >>> dp = IterableWrapper(range(10))
-        >>> train, valid = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, seed=0)
+        >>> train, valid = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, _seed=0)
         >>> list(train)
         [2, 3, 5, 7, 8]
         >>> list(valid)
         [0, 1, 4, 6, 9]
+        >>> # You can also specify a target key if you only need a specific group of samples
+        >>> train = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, _seed=0, target='train')
+        >>> list(train)
+        [2, 3, 5, 7, 8]
     """
 
     def __new__(
@@ -43,9 +50,16 @@ class RandomSplitterIterDataPipe(IterDataPipe):
         total_length: int,
         weights: Dict[T, Union[int, float]],
         seed,
+        target: Optional[T] = None,
     ):
         container = _RandomSplitterIterDataPipe(source_datapipe, total_length, weights, seed)
-        return [SplitterIterator(container, k) for k in list(weights.keys())]
+        if target is None:
+            return [SplitterIterator(container, k) for k in list(weights.keys())]
+        else:
+            if target in weights.keys():
+                return SplitterIterator(container, target)
+            else:
+                raise KeyError(f"`target={target}` does not match any key in `weights`.")
 
 
 class _RandomSplitterIterDataPipe(IterDataPipe):
@@ -58,15 +72,15 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
     ):
         self.source_datapipe = source_datapipe
         self.total_length = total_length
-        self.seed = seed
+        self._seed = seed
         self.norm_weights = self.normalize_weights(weights, total_length)
         self.keys = list(weights.keys())
         self.key_to_index = {k: i for i, k in enumerate(self.keys)}
         self.weights = [self.norm_weights[k] for k in self.keys]
-        self.rng = random.Random(self.seed)
+        self._rng = random.Random(self._seed)
 
     def draw(self):
-        selected_key = self.rng.choices(self.keys, self.weights)[0]
+        selected_key = self._rng.choices(self.keys, self.weights)[0]
         self.weights[self.key_to_index[selected_key]] -= 1
         return selected_key
 
@@ -76,11 +90,15 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
         return {k: round(float(w) * total_length / total_weight) for k, w in weights.items()}
 
     def reset(self):
-        self.rng = random.Random(self.seed)
+        self._rng = random.Random(self._seed)
         self.weights = [self.norm_weights[k] for k in self.keys]
 
+    def set_seed(self, seed):
+        self._seed = seed
+        self.reset()
 
-class SplitterIterator:
+
+class SplitterIterator(IterDataPipe):
     def __init__(self, main_datapipe: _RandomSplitterIterDataPipe, target: T):
         self.main_datapipe = main_datapipe
         self.target = target
@@ -90,3 +108,9 @@ class SplitterIterator:
         for sample in self.main_datapipe.source_datapipe:
             if self.main_datapipe.draw() == self.target:
                 yield sample
+
+    def __len__(self):
+        return self.main_datapipe.norm_weights[self.target]
+
+    def set_seed(self, seed):
+        self.main_datapipe.set_seed(seed)

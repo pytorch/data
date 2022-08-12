@@ -67,6 +67,7 @@ from torchdata.datapipes.iter.transform.bucketbatcher import (
 )
 from torchdata.datapipes.iter.transform.callable import (
     BatchMapperIterDataPipe as BatchMapper,
+    DropperIterDataPipe as Dropper,
     FlatMapperIterDataPipe as FlatMapper,
 )
 from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
@@ -102,6 +103,7 @@ from torchdata.datapipes.iter.util.plain_text_reader import (
     CSVParserIterDataPipe as CSVParser,
     LineReaderIterDataPipe as LineReader,
 )
+from torchdata.datapipes.iter.util.prefetch import FullSyncIterDataPipe as FullSync
 from torchdata.datapipes.iter.util.randomsplitter import RandomSplitterIterDataPipe as RandomSplitter
 from torchdata.datapipes.iter.util.rararchiveloader import RarArchiveLoaderIterDataPipe as RarArchiveLoader
 from torchdata.datapipes.iter.util.rows2columnar import Rows2ColumnarIterDataPipe as Rows2Columnar
@@ -144,6 +146,7 @@ __all__ = [
     "DataFrameMaker",
     "Decompressor",
     "Demultiplexer",
+    "Dropper",
     "EndOnDiskCacheHolder",
     "Enumerator",
     "Extractor",
@@ -155,6 +158,7 @@ __all__ = [
     "Filter",
     "FlatMapper",
     "Forker",
+    "FullSync",
     "GDriveReader",
     "Grouper",
     "HashChecker",

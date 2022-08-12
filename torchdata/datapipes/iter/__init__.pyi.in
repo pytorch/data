@@ -8,17 +8,19 @@ ${init_base}
 # classes/objects here, even though we are not injecting extra code into them at the moment.
 
 from .util.decompressor import CompressionType
+from torchdata._constants import default_timeout_in_s
 from torchdata.datapipes.map import MapDataPipe
 from torch.utils.data import DataChunk, IterableDataset, default_collate
 from torch.utils.data.datapipes._typing import _DataPipeMeta
 
-from typing import Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union, Hashable
 
 try:
     import torcharrow
 except ImportError:
     torcharrow = None
 
+T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
 
 class IterDataPipe(IterableDataset[T_co], metaclass=_DataPipeMeta):
