@@ -1053,7 +1053,7 @@ class TestIterDataPipe(expecttest.TestCase):
         it_train = iter(train)
         next(it_train)
         valid.set_seed(1)
-        with self.assertRaisesRegex(RuntimeError, "iterator has been invalidated"):
+        with self.assertRaisesRegex(RuntimeError, "Seed has been set"):
             next(it_train)
 
         # Functional Test: Raise exception if both children are used at the same time
