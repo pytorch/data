@@ -19,13 +19,15 @@ class RandomSplitterIterDataPipe(IterDataPipe):
     Randomly split samples from a source DataPipe into groups(functional name: ``random_split``).
     Since there is no buffer, only ONE group of samples (i.e. one child DataPipe) can be iterated through
     at any time. Attempts to iterate through multiple of them simultaneously will fail.
+
     Note that by default, multiple iterations of this DataPipe will yield the same split for consistency across epochs.
+    You can invoke ``set_seed`` on the output(s) to update the seed whenever needed (such as per epoch).
 
     Args:
         source_datapipe: Iterable DataPipe being split
         total_length: Length of the ``source_datapipe``
         weights: Dict of weights; the length of this list determines how many output DataPipes there will be.
-        _seed: random _seed used to determine the randomness of the split
+        seed: random _seed used to determine the randomness of the split
         target: Optional key (that must exist in ``weights``) to indicate the specific group to return.
             If set to the default ``None``, returns ``List[IterDataPipe]``.
             If target is specified, returns ``IterDataPipe``.
@@ -33,15 +35,19 @@ class RandomSplitterIterDataPipe(IterDataPipe):
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
         >>> dp = IterableWrapper(range(10))
-        >>> train, valid = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, _seed=0)
+        >>> train, valid = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, seed=0)
         >>> list(train)
         [2, 3, 5, 7, 8]
         >>> list(valid)
         [0, 1, 4, 6, 9]
         >>> # You can also specify a target key if you only need a specific group of samples
-        >>> train = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, _seed=0, target='train')
+        >>> train = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, seed=0, target='train')
         >>> list(train)
         [2, 3, 5, 7, 8]
+        >>> # Be careful to use the same seed as before when specifying `target` to get the correct split.
+        >>> valid = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, seed=0, target='valid')
+        >>> list(valid)
+        [0, 1, 4, 6, 9]
     """
 
     def __new__(
