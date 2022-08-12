@@ -1047,6 +1047,15 @@ class TestIterDataPipe(expecttest.TestCase):
         train.set_seed(1)
         self.assertNotEqual(results2[0], list(train))
 
+        # Functional Test: `set_seed` invalidates existing iterators.
+        dp = IterableWrapper(range(10))
+        train, valid = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, seed=0)
+        it_train = iter(train)
+        next(it_train)
+        valid.set_seed(1)
+        with self.assertRaisesRegex(RuntimeError, "iterator has been invalidated"):
+            next(it_train)
+
         # Functional Test: Raise exception if both children are used at the same time
         dp = IterableWrapper(range(10))
         train, valid = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, seed=0)

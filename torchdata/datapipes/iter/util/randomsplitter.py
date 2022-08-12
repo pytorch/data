@@ -76,7 +76,7 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
         weights: Dict[T, Union[int, float]],
         seed,
     ):
-        self.source_datapipe = source_datapipe
+        self.source_datapipe: IterDataPipe = source_datapipe
         self.total_length = total_length
         self._seed = seed
         self.norm_weights = self.normalize_weights(weights, total_length)
@@ -100,7 +100,11 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
         self.weights = [self.norm_weights[k] for k in self.keys]
 
     def set_seed(self, seed):
+        """
+        Update the `seed`. In the process, it invalidates all previous iterators; new iterator(s) must be created.
+        """
         self._seed = seed
+        self.source_datapipe._valid_iterator_id += 1  # type: ignore[attr-defined]
         self.reset()
 
 
@@ -119,4 +123,7 @@ class SplitterIterator(IterDataPipe):
         return self.main_datapipe.norm_weights[self.target]
 
     def set_seed(self, seed):
+        """
+        Update the `seed`. In the process, it invalidates all previous iterators; new iterator(s) must be created.
+        """
         self.main_datapipe.set_seed(seed)
