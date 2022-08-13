@@ -69,6 +69,7 @@ from torchdata.datapipes.iter.transform.callable import (
     BatchMapperIterDataPipe as BatchMapper,
     DropperIterDataPipe as Dropper,
     FlatMapperIterDataPipe as FlatMapper,
+    FlattenIterDataPipe as Flatten,
     ISliceIterDataPipe as ISlicer,
 )
 from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
@@ -157,6 +158,7 @@ __all__ = [
     "FileOpener",
     "Filter",
     "FlatMapper",
+    "Flatten",
     "Forker",
     "FullSync",
     "GDriveReader",

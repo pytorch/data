@@ -194,6 +194,7 @@ These DataPipes helps you select specific samples within a DataPipe.
     Header
     Dropper
     ISlicer
+    Flatten
 
 Text DataPipes
 -----------------------------

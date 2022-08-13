@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import warnings
+from itertools import chain
 from typing import Callable, Hashable, Iterator, List, Optional, Sized, TypeVar, Union
 
 from torch.utils.data import functional_datapipe, IterDataPipe
@@ -278,6 +279,87 @@ class ISliceIterDataPipe(IterDataPipe[T_co]):
                     )
 
             yield new_item  # type: ignore[misc]
+
+    def __len__(self) -> int:
+        if isinstance(self.datapipe, Sized):
+            return len(self.datapipe)
+        raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
+
+
+@functional_datapipe("flatten")
+class FlattenIterDataPipe(IterDataPipe[T_co]):
+    r"""
+    returns a flattened copy of the input DataPipe based on provided indices (functional name: ``flatten``).
+
+    Args:
+        datapipe: IterDataPipe with iterable elements
+        indices: a single index/key for the item to flatten from an iterator item or a list of indices/keys to be flattened
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> dp = IterableWrapper([(0, 10, (100, 1000)), (1, 11, (111, 1001)), (2, 12, (122, 1002)), (3, 13, (133, 1003)), (4, 14, (144, 1004))])
+        >>> flatten_dp = dp.flatten(2)
+        >>> list(flatten_dp)
+        [(0, 10, 100, 1000), (1, 11, 111, 1001), (2, 12, 122, 1002), (3, 13, 133, 1003), (4, 14, 144, 1004)]
+    """
+    datapipe: IterDataPipe
+    indices = None
+
+    def __init__(
+        self,
+        datapipe: IterDataPipe,
+        indices: Optional[Union[Hashable, List[Hashable]]] = None,
+    ) -> None:
+        super().__init__()
+        self.datapipe = datapipe
+        if indices:
+            if isinstance(indices, list):
+                self.indices = set(indices)
+            else:
+                self.indices = {indices}
+
+    def __iter__(self) -> Iterator[T_co]:
+        for old_item in self.datapipe:
+            if self.indices:
+                if isinstance(old_item, dict):
+                    new_item = {}  # type: ignore[assignment]
+                    for k, v in old_item.items():
+                        if k in self.indices:
+                            for k_sub, v_sub in v.items():
+                                new_item[k_sub] = v_sub
+                        else:
+                            new_item[k] = v
+                else:
+                    is_tuple = False
+                    new_item = []  # type: ignore[assignment]
+                    if isinstance(old_item, tuple):
+                        is_tuple = True
+                        old_item = list(old_item)
+                    for i, item in enumerate(old_item):
+                        if i in self.indices:
+                            new_item.extend(list(item))  # type: ignore[attr-defined]
+                        else:
+                            new_item.append(item)  # type: ignore[attr-defined]
+                    if is_tuple:
+                        new_item = tuple(new_item)  # type: ignore[assignment]
+
+                # check to make sure all indices requested were in the item. warn if not
+                try:
+                    for index in self.indices:
+                        old_item[index]
+                except (IndexError, KeyError):
+                    warnings.warn(
+                        "At least one index in the filter is not present in the item being returned,"
+                        " please be aware that expected columns/keys may be missing."
+                    )
+
+                yield new_item  # type: ignore[misc]
+
+            else:
+                if isinstance(old_item, dict):
+                    yield from chain(old_item.items())
+                else:
+                    yield from chain(old_item)
 
     def __len__(self) -> int:
         if isinstance(self.datapipe, Sized):

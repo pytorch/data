@@ -192,6 +192,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.ISlicer, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), ([1]), {}),
             (iterdp.Enumerator, None, (2,), {}),
             (iterdp.FlatMapper, None, (_fake_fn_ls,), {}),
+            (iterdp.Flatten, IterableWrapper([(0, (0, 1)), (0, (0, 1)), (0, (0, 1)), (0, (0, 1))]), ([1]), {}),
             (iterdp.FSSpecFileLister, ".", (), {}),
             (iterdp.FSSpecFileOpener, None, (), {}),
             (
