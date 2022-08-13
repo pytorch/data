@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import warnings
-from typing import Callable, Hashable, Iterator, List, Sized, TypeVar, Union
+from typing import Callable, Hashable, Iterator, List, Optional, Sized, TypeVar, Union
 
 from torch.utils.data import functional_datapipe, IterDataPipe
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
@@ -198,6 +198,84 @@ class DropperIterDataPipe(IterDataPipe[T_co]):
                     "At least one index in the filter is not present in the item being returned,"
                     " please be aware that expected columns/keys may be missing."
                 )
+
+            yield new_item  # type: ignore[misc]
+
+    def __len__(self) -> int:
+        if isinstance(self.datapipe, Sized):
+            return len(self.datapipe)
+        raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
+
+
+@functional_datapipe("islice")
+class ISliceIterDataPipe(IterDataPipe[T_co]):
+    r"""
+    returns a slice of elements in input DataPipe via start/stop/step or indices (functional name: ``islice``).
+
+    Args:
+        datapipe: IterDataPipe with iterable elements
+        index: a single start index for the slice or a list of indices to be returned instead of a start/stop slice
+        stop: the slice stop. ignored if index is a list
+        step: step to be taken from start to stop. ignored if index is a list
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> dp = IterableWrapper([(0, 10, 100), (1, 11, 111), (2, 12, 122), (3, 13, 133), (4, 14, 144)])
+        >>> islice_dp = dp.islice(0, 2)
+        >>> list(islice_dp)
+        [(0, 10), (1, 11), (2, 12), (3, 13), (4, 14)]
+    """
+    datapipe: IterDataPipe
+
+    def __init__(
+        self,
+        datapipe: IterDataPipe,
+        index: Union[int, List[Hashable]],
+        stop: Optional[int] = None,
+        step: Optional[int] = None,
+    ) -> None:
+        super().__init__()
+        self.datapipe = datapipe
+
+        self.index = index
+        self.stop = stop
+        self.step = step
+
+    def __iter__(self) -> Iterator[T_co]:
+        for old_item in self.datapipe:
+            if isinstance(old_item, tuple):
+                if isinstance(self.index, list):
+                    new_item = tuple(x for i, x in enumerate(old_item) if i in self.index)  # type: ignore[assignment]
+                else:
+                    new_item = old_item[self.index : self.stop : self.step]  # type: ignore[assignment]
+            elif isinstance(old_item, list):
+                if isinstance(self.index, list):
+                    new_item = [x for i, x in enumerate(old_item) if i in self.index]  # type: ignore[assignment]
+                else:
+                    new_item = old_item[self.index : self.stop : self.step]  # type: ignore[assignment]
+            elif isinstance(old_item, dict):
+                if isinstance(self.index, list):
+                    new_item = {k: v for (k, v) in old_item.items() if k in self.index}  # type: ignore[assignment]
+                else:
+                    new_keys = list(old_item.keys())[self.index : self.stop : self.step]
+                    new_item = {k: v for (k, v) in old_item.items() if k in new_keys}  # type: ignore[assignment]
+            else:
+                new_item = old_item
+                warnings.warn(
+                    "The next item was not an iterable and cannot be filtered, "
+                    "please be aware that no filter was done or new item created."
+                )
+
+            if isinstance(self.index, list):
+                # check to make sure all indices requested were in the item. warn if not
+                try:
+                    for i in self.index:
+                        old_item[i]
+                except (IndexError, KeyError):
+                    warnings.warn(
+                        "At least one index in the filter is not present in the item being returned,"
+                        " please be aware that expected columns/keys may be missing."
+                    )
 
             yield new_item  # type: ignore[misc]
 
