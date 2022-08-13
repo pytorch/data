@@ -69,6 +69,7 @@ from torchdata.datapipes.iter.transform.callable import (
     BatchMapperIterDataPipe as BatchMapper,
     DropperIterDataPipe as Dropper,
     FlatMapperIterDataPipe as FlatMapper,
+    ISliceIterDataPipe as ISlicer,
 )
 from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
 from torchdata.datapipes.iter.util.cacheholder import (
@@ -164,6 +165,7 @@ __all__ = [
     "Header",
     "HttpReader",
     "HuggingFaceHubReader",
+    "ISlicer",
     "InBatchShuffler",
     "InMemoryCacheHolder",
     "IndexAdder",
