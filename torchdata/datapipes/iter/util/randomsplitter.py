@@ -53,11 +53,19 @@ class RandomSplitterIterDataPipe(IterDataPipe):
     def __new__(
         cls,
         source_datapipe: IterDataPipe,
-        total_length: int,
         weights: Dict[T, Union[int, float]],
         seed,
+        total_length: Optional[int] = None,
         target: Optional[T] = None,
     ):
+        if total_length is None:
+            try:
+                total_length = len(source_datapipe)
+            except TypeError:
+                raise TypeError(
+                    "RandomSplitter needs `total_length`, but it is unable to infer it from "
+                    f"the `source_datapipe`: {source_datapipe}."
+                )
         container = _RandomSplitterIterDataPipe(source_datapipe, total_length, weights, seed)
         if target is None:
             return [SplitterIterator(container, k) for k in list(weights.keys())]

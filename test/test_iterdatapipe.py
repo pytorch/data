@@ -1010,9 +1010,9 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual(5, len(valid_res))
         self.assertEqual(list(range(10)), sorted(results[0] + valid_res))
 
-        # Functional Test: DataPipe can split into 3 DataPipes
+        # Functional Test: DataPipe can split into 3 DataPipes, and infer `total_length` when not given
         dp = IterableWrapper(range(10))
-        train, valid, test = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.2, "test": 0.2}, seed=0)
+        train, valid, test = dp.random_split(weights={"train": 0.5, "valid": 0.2, "test": 0.2}, seed=0)
         results = []
         for _ in range(n_epoch):
             res = list(train)
@@ -1029,6 +1029,11 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual(6, len(train))
         self.assertEqual(2, len(valid))
         self.assertEqual(2, len(test))
+
+        # Functional Test: Error when `total_length` cannot be inferred
+        nolen_dp = IDP_NoLen(range(10))
+        with self.assertRaisesRegex(TypeError, "needs `total_length`"):
+            _, __ = nolen_dp.random_split(weights={"train": 0.5, "valid": 0.5}, seed=0)  # type: ignore[call-arg]
 
         # Functional Test: `target` must match a key in the `weights` dict
         dp = IterableWrapper(range(10))
