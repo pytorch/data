@@ -1,3 +1,10 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
+
 import datetime
 import os
 import time
@@ -10,7 +17,7 @@ import torch.utils.data
 import torchvision
 import utils
 from torch import nn
-from torchdata.dataloader2 import adapter, DataLoader2, MultiProcessingReadingService
+from torchdata.dataloader2 import adapter, DataLoader2, PrototypeMultiProcessingReadingService
 
 
 def train_one_epoch(model, criterion, optimizer, data_loader, device, epoch, args):
@@ -87,21 +94,54 @@ def evaluate(model, criterion, data_loader, device, args, print_freq=100, log_su
     return metric_logger.acc1.global_avg
 
 
-def create_data_loaders(args):
+def parse_dataset_args(args) -> str:
+    """
+    Parse arguments and return the dataset directory path.
+    """
+
     print(f"file-system = {args.fs}")
 
-    if args.fs == "fsx":
+    fs_arg_str = args.fs.lower()
+
+    if fs_arg_str == "fsx":
         dataset_dir = "/datasets01"
-    elif args.fs == "fsx_isolated":
+    elif fs_arg_str == "fsx_isolated":
         dataset_dir = "/fsx_isolated"
-    elif args.fs == "ontap":
+    elif fs_arg_str == "ontap":
         dataset_dir = "/datasets01_ontap"
-    elif args.fs == "ontap_isolated":
+    elif fs_arg_str == "ontap_isolated":
         dataset_dir = "/ontap_isolated"
     else:
         raise ValueError(f"bad args.fs, got {args.fs}")
 
-    dataset_dir += "/imagenet_full_size/061417/"
+    ds_arg_str = args.dataset.lower()
+
+    if ds_arg_str == "tinyimagenet":  # This works but isn't in `torchvision` library
+        dataset_dir += "/tinyimagenet/081318/"
+    elif ds_arg_str == "cifar10":
+        # TODO: This one isn't in `ontap` yet
+        raise NotImplementedError("CIFAR10 data not on disk")
+    elif ds_arg_str == "imagenette":
+        # TODO: This one isn't in `ontap` yet
+        raise NotImplementedError("Imagenette data not on disk")
+    elif ds_arg_str == "imagenet":  # This works
+        dataset_dir += "/imagenet_full_size/061417/"
+    elif ds_arg_str == "imagenet22k":
+        # TODO: Directory needs to have the `train` `val` split
+        raise NotImplementedError("imagenet-22k needs train/val split")
+        dataset_dir += "/imagenet-22k/062717/"
+    elif ds_arg_str == "lsun":
+        # TODO: This one isn't in `ontap` yet
+        raise NotImplementedError("LSUN data not on disk")
+    else:
+        raise ValueError(f"bad args.dataset, got {args.dataset}")
+    return dataset_dir
+
+
+def create_data_loaders(args):
+
+    dataset_dir = parse_dataset_args(args)
+
     train_dir = os.path.join(dataset_dir, "train")
     val_dir = os.path.join(dataset_dir, "val")
 
@@ -172,13 +212,13 @@ def create_data_loaders(args):
         train_data_loader = DataLoader2(
             train_dataset,
             datapipe_adapter_fn=adapter.Shuffle(),
-            reading_service=MultiProcessingReadingService(num_workers=args.workers),
+            reading_service=PrototypeMultiProcessingReadingService(num_workers=args.workers),
         )
 
         val_dataset = val_dataset.batch(args.batch_size, drop_last=True).collate()  # TODO: Do we need drop_last here?
         val_data_loader = DataLoader2(
             val_dataset,
-            reading_service=MultiProcessingReadingService(num_workers=args.workers),
+            reading_service=PrototypeMultiProcessingReadingService(num_workers=args.workers),
         )
     else:
         raise ValueError(f"invalid data-loader param. Got {args.data_loader}")
@@ -259,6 +299,7 @@ def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description="PyTorch Classification Training", add_help=add_help)
 
     parser.add_argument("--fs", default="fsx", type=str)
+    parser.add_argument("--dataset", default="imagenet", type=str, help="dataset name")
     parser.add_argument("--model", default="resnet18", type=str, help="model name")
     parser.add_argument("--device", default="cuda", type=str, help="device (Use cuda or cpu Default: cuda)")
     parser.add_argument(
@@ -313,7 +354,7 @@ def get_args_parser(add_help=True):
         action="store_true",
         help="whether to use a fake dataset where all images are pre-loaded in RAM and already transformed. "
         "Mostly useful to benchmark how fast a model training would be without data-loading bottlenecks."
-        "Acc results are irrevant because we don't cache the entire dataset, only a very small fraction of it.",
+        "Acc results are irrelevant because we don't cache the entire dataset, only a very small fraction of it.",
     )
     parser.add_argument(
         "--data-loading-only",
@@ -328,7 +369,7 @@ def get_args_parser(add_help=True):
         "and the dataset will produce random tensors instead. We "
         "need to create random tensors because without transforms, the images would still be PIL images "
         "and they wouldn't be of the required size."
-        "Obviously, Acc resuts will not be relevant.",
+        "Obviously, Acc results will not be relevant.",
     )
 
     parser.add_argument(

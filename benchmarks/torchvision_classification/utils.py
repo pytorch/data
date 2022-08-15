@@ -1,3 +1,10 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
+
 import datetime
 import errno
 import os
@@ -115,7 +122,12 @@ class MetricLogger:
         iter_time = SmoothedValue(fmt="{avg:.4f}")
         data_time = SmoothedValue(fmt="{avg:.4f}")
         model_time = SmoothedValue(fmt="{avg:.4f}")
-        space_fmt = ":" + str(len(str(len(iterable)))) + "d"
+        try:
+            length_iterable = len(iterable)
+        except TypeError:
+            # TODO: Hard-coding for now since DLv2 doesn't support __len__. There is an open PR to fix this.
+            length_iterable = 1251
+        space_fmt = ":" + str(len(str(length_iterable))) + "d"
         if torch.cuda.is_available():
             log_msg = self.delimiter.join(
                 [
@@ -142,13 +154,13 @@ class MetricLogger:
             iter_time.update(ttime)
             model_time.update(ttime - dtime)
             if i % print_freq == 0:
-                eta_seconds = iter_time.global_avg * (len(iterable) - i)
+                eta_seconds = iter_time.global_avg * (length_iterable - i)
                 eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
                 if torch.cuda.is_available():
                     print(
                         log_msg.format(
                             i,
-                            len(iterable),
+                            length_iterable,
                             eta=eta_string,
                             meters=str(self),
                             time=str(iter_time),
@@ -160,7 +172,12 @@ class MetricLogger:
                 else:
                     print(
                         log_msg.format(
-                            i, len(iterable), eta=eta_string, meters=str(self), time=str(iter_time), data=str(data_time)
+                            i,
+                            length_iterable,
+                            eta=eta_string,
+                            meters=str(self),
+                            time=str(iter_time),
+                            data=str(data_time),
                         )
                     )
             i += 1
