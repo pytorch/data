@@ -84,7 +84,6 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
         self.key_to_index = {k: i for i, k in enumerate(self.keys)}
         self.weights = [self.norm_weights[k] for k in self.keys]
         self._rng = random.Random(self._seed)
-        self._seed_set = False
 
     def draw(self):
         selected_key = self._rng.choices(self.keys, self.weights)[0]
@@ -99,15 +98,12 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
     def reset(self):
         self._rng = random.Random(self._seed)
         self.weights = [self.norm_weights[k] for k in self.keys]
-        self._seed_set = False
 
     def set_seed(self, seed):
         """
-        Update the `seed`. In the process, it invalidates all previous iterators; new iterator(s) must be created.
+        Update the `seed`. The new `seed` will be used in the next iteration.
         """
         self._seed = seed
-        self.reset()
-        self._seed_set = True
 
 
 class SplitterIterator(IterDataPipe):
@@ -118,8 +114,6 @@ class SplitterIterator(IterDataPipe):
     def __iter__(self):
         self.main_datapipe.reset()
         for sample in self.main_datapipe.source_datapipe:
-            if self.main_datapipe._seed_set:
-                raise RuntimeError("Seed has been set in the middle of iteration. Please create new iterator(s).")
             if self.main_datapipe.draw() == self.target:
                 yield sample
 
@@ -128,6 +122,6 @@ class SplitterIterator(IterDataPipe):
 
     def set_seed(self, seed):
         """
-        Update the `seed`. In the process, it invalidates all previous iterators; new iterator(s) must be created.
+        Update the `seed`. The new `seed` will be used in the next iteration.
         """
         self.main_datapipe.set_seed(seed)

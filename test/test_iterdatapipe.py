@@ -1030,6 +1030,13 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual(2, len(valid))
         self.assertEqual(2, len(test))
 
+        # Functional Test: `target` must match a key in the `weights` dict
+        dp = IterableWrapper(range(10))
+        with self.assertRaisesRegex(KeyError, "does not match any key"):
+            _ = dp.random_split(
+                total_length=10, weights={"train": 0.5, "valid": 0.2, "test": 0.2}, seed=0, target="NOTINDICT"
+            )
+
         # Functional Test: `target` is specified, and match the results from before
         dp = IterableWrapper(range(10))
         train = dp.random_split(
@@ -1045,16 +1052,17 @@ class TestIterDataPipe(expecttest.TestCase):
 
         # Functional Test: `set_seed` works and change split result
         train.set_seed(1)
-        self.assertNotEqual(results2[0], list(train))
+        seed_1_res = list(train)
+        self.assertNotEqual(results2[0], seed_1_res)
 
-        # Functional Test: `set_seed` invalidates existing iterators.
-        dp = IterableWrapper(range(10))
-        train, valid = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, seed=0)
-        it_train = iter(train)
-        next(it_train)
-        valid.set_seed(1)
-        with self.assertRaisesRegex(RuntimeError, "Seed has been set"):
-            next(it_train)
+        # Functional Test: `set_seed` doesn't impact the current iteration, only the next one
+        temp_res = []
+        for i, x in enumerate(train):
+            temp_res.append(x)
+            if i == 3:
+                train.set_seed(0)
+        self.assertEqual(seed_1_res, temp_res)  # The current iteration should equal seed 1 result
+        self.assertEqual(results2[0], list(train))  # The next iteration should equal seed 0 result
 
         # Functional Test: Raise exception if both children are used at the same time
         dp = IterableWrapper(range(10))
