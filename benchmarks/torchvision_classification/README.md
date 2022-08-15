@@ -15,10 +15,10 @@ The datasets are readily available for certain AWS cluster. The instructions for
 The following command
 
 ```sh
-PYTHONPATH=$PYTHONPATH:pwd python -u ~/slurm/run_with_submitit.py \
+PYTHONPATH=$PYTHONPATH:pwd python -u ./run_with_submitit.py \
   --ngpus 8 --nodes 1 \
   --model mobilenet_v3_large --epochs 5 --batch-size 128 --workers 12 \
-  --ds-type dp --fs ontap --data-loader V2
+  --ds-type dp --fs ontap --data-loader V2 --dataset
 ```
 
 ### Parameters
@@ -39,7 +39,7 @@ For `train.py` (with complete list is within that file):
 - `fs` - file system; either `ontap` (faster and more common) or `fsx`
 - `output-dir` - path to save outputs
 
-### Datasets
+## Datasets
 
 ### Vision
 

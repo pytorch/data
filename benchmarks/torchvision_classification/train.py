@@ -116,7 +116,8 @@ def parse_dataset_args(args) -> str:
 
     ds_arg_str = args.dataset.lower()
 
-    if ds_arg_str == "tinyimagenet":  # This works but isn't in `torchvision` library
+    if ds_arg_str == "tinyimagenet":  # Data are there but need to change `make_dp` in helpers.py for it to work
+        # TODO: Need to change datapipe setup
         dataset_dir += "/tinyimagenet/081318/"
     elif ds_arg_str == "cifar10":
         # TODO: This one isn't in `ontap` yet
