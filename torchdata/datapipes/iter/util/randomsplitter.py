@@ -25,7 +25,8 @@ class RandomSplitterIterDataPipe(IterDataPipe):
 
     Args:
         source_datapipe: Iterable DataPipe being split
-        total_length: Length of the ``source_datapipe``
+        total_length: Length of the ``source_datapipe``, optional but providing an integer is highly encouraged,
+            because not all ``IterDataPipe`` has ``len``, espeically ones that can be easily known in advance.
         weights: Dict of weights; the length of this list determines how many output DataPipes there will be.
         seed: random _seed used to determine the randomness of the split
         target: Optional key (that must exist in ``weights``) to indicate the specific group to return.
@@ -60,6 +61,8 @@ class RandomSplitterIterDataPipe(IterDataPipe):
     ):
         if total_length is None:
             try:
+                # TODO: This is an issue for DataPipes which only have runtime lengths. Revisit to see if this
+                #       is problematic.
                 total_length = len(source_datapipe)
             except TypeError:
                 raise TypeError(
@@ -112,6 +115,35 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
         Update the `seed`. The new `seed` will be used in the next iteration.
         """
         self._seed = seed
+
+    def __getstate__(self):
+        if IterDataPipe.getstate_hook is not None:
+            return IterDataPipe.getstate_hook(self)
+        state = (
+            self.source_datapipe,
+            self.total_length,
+            self._seed,
+            self.norm_weights,
+            self.keys,
+            self.key_to_index,
+            self.weights,
+            self._rng.getstate(),
+        )
+        return state
+
+    def __setstate__(self, state):
+        (
+            self.source_datapipe,
+            self.total_length,
+            self._seed,
+            self.norm_weights,
+            self.keys,
+            self.key_to_index,
+            self.weights,
+            rng_state,
+        ) = state
+        self._rng = random.Random()
+        self._rng.setstate(rng_state)
 
 
 class SplitterIterator(IterDataPipe):
