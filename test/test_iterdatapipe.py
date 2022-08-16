@@ -993,71 +993,59 @@ class TestIterDataPipe(expecttest.TestCase):
         drop_dp = input_dp.drop([0, 1])
         self.assertEqual(3, len(drop_dp))
 
-    def test_islice_iterdatapipe(self):
+    def test_slice_iterdatapipe(self):
         # tuple tests
         input_dp = IterableWrapper([(0, 1, 2), (3, 4, 5), (6, 7, 8)])
 
         # Functional Test: slice with no stop and no step for tuple
-        islice_dp = input_dp.islice(1)
-        self.assertEqual([(1, 2), (4, 5), (7, 8)], list(islice_dp))
+        slice_dp = input_dp.slice(1)
+        self.assertEqual([(1, 2), (4, 5), (7, 8)], list(slice_dp))
 
         # Functional Test: slice with no step for tuple
-        islice_dp = input_dp.islice(0, 2)
-        self.assertEqual([(0, 1), (3, 4), (6, 7)], list(islice_dp))
+        slice_dp = input_dp.slice(0, 2)
+        self.assertEqual([(0, 1), (3, 4), (6, 7)], list(slice_dp))
 
         # Functional Test: slice with step for tuple
-        islice_dp = input_dp.islice(0, 2, 2)
-        self.assertEqual([(0,), (3,), (6,)], list(islice_dp))
+        slice_dp = input_dp.slice(0, 2, 2)
+        self.assertEqual([(0,), (3,), (6,)], list(slice_dp))
 
         # Functional Test: filter with list of indices for tuple
-        islice_dp = input_dp.islice([0, 1])
-        self.assertEqual([(0, 1), (3, 4), (6, 7)], list(islice_dp))
+        slice_dp = input_dp.slice([0, 1])
+        self.assertEqual([(0, 1), (3, 4), (6, 7)], list(slice_dp))
 
         # list tests
         input_dp = IterableWrapper([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
 
         # Functional Test: slice with no stop and no step for list
-        islice_dp = input_dp.islice(1)
-        self.assertEqual([[1, 2], [4, 5], [7, 8]], list(islice_dp))
+        slice_dp = input_dp.slice(1)
+        self.assertEqual([[1, 2], [4, 5], [7, 8]], list(slice_dp))
 
         # Functional Test: slice with no step for list
-        islice_dp = input_dp.islice(0, 2)
-        self.assertEqual([[0, 1], [3, 4], [6, 7]], list(islice_dp))
+        slice_dp = input_dp.slice(0, 2)
+        self.assertEqual([[0, 1], [3, 4], [6, 7]], list(slice_dp))
 
         # Functional Test: filter with list of indices for list
-        islice_dp = input_dp.islice(0, 2)
-        self.assertEqual([[0, 1], [3, 4], [6, 7]], list(islice_dp))
+        slice_dp = input_dp.slice(0, 2)
+        self.assertEqual([[0, 1], [3, 4], [6, 7]], list(slice_dp))
 
         # dict tests
         input_dp = IterableWrapper([{"a": 1, "b": 2, "c": 3}, {"a": 3, "b": 4, "c": 5}, {"a": 5, "b": 6, "c": 7}])
 
-        # Functional Test: slice with no stop and no step for dict
-        islice_dp = input_dp.islice(1)
-        self.assertEqual([{"b": 2, "c": 3}, {"b": 4, "c": 5}, {"b": 6, "c": 7}], list(islice_dp))
-
-        # Functional Test: slice with no step for dict
-        islice_dp = input_dp.islice(0, 2)
-        self.assertEqual([{"a": 1, "b": 2}, {"a": 3, "b": 4}, {"a": 5, "b": 6}], list(islice_dp))
-
-        # Functional Test: slice with step for dict
-        islice_dp = input_dp.islice(0, 2, 2)
-        self.assertEqual([{"a": 1}, {"a": 3}, {"a": 5}], list(islice_dp))
-
         # Functional Test: filter with list of indices for dict
-        islice_dp = input_dp.islice(["a", "b"])
-        self.assertEqual([{"a": 1, "b": 2}, {"a": 3, "b": 4}, {"a": 5, "b": 6}], list(islice_dp))
+        slice_dp = input_dp.slice(["a", "b"])
+        self.assertEqual([{"a": 1, "b": 2}, {"a": 3, "b": 4}, {"a": 5, "b": 6}], list(slice_dp))
 
         # __len__ Test:
         input_dp = IterableWrapper([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
-        islice_dp = input_dp.islice(0, 2)
-        self.assertEqual(3, len(islice_dp))
+        slice_dp = input_dp.slice(0, 2)
+        self.assertEqual(3, len(slice_dp))
 
         # Reset Test:
         n_elements_before_reset = 2
         input_dp = IterableWrapper([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
-        islice_dp = input_dp.islice([2])
+        slice_dp = input_dp.slice([2])
         expected_res = [[2], [5], [8]]
-        res_before_reset, res_after_reset = reset_after_n_next_calls(islice_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(slice_dp, n_elements_before_reset)
         self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
         self.assertEqual(expected_res, res_after_reset)
 
@@ -1075,9 +1063,9 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual([(0, 10, 1, 2, 3), (4, 14, 5, 6, 7), (8, 18, 9, 10, 11)], list(flatten_dp))
 
         # Functional Test: flatten all iters in the datapipe one level (no argument)
-        input_dp = IterableWrapper([(0, 1, 2), (3, 4, 5), (6, 7, 8)])
+        input_dp = IterableWrapper([(0, (1, 2)), (3, (4, 5)), (6, (7, 8))])
         flatten_dp = input_dp.flatten()
-        self.assertEqual([0, 1, 2, 3, 4, 5, 6, 7, 8], list(flatten_dp))
+        self.assertEqual([(0, 1, 2), (3, 4, 5), (6, 7, 8)], list(flatten_dp))
 
         # list tests
 
@@ -1092,9 +1080,14 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual([[0, 10, 1, 2, 3], [4, 14, 5, 6, 7], [8, 18, 9, 10, 11]], list(flatten_dp))
 
         # Functional Test: flatten all iters in the datapipe one level (no argument)
-        input_dp = IterableWrapper([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+        input_dp = IterableWrapper([[0, [1, 2]], [3, [4, 5]], [6, [7, 8]]])
         flatten_dp = input_dp.flatten()
-        self.assertEqual([0, 1, 2, 3, 4, 5, 6, 7, 8], list(flatten_dp))
+        self.assertEqual([[0, 1, 2], [3, 4, 5], [6, 7, 8]], list(flatten_dp))
+
+        # Functional Test: string test, flatten all iters in the datapipe one level (no argument)
+        input_dp = IterableWrapper([["zero", ["one", "2"]], ["3", ["4", "5"]], ["6", ["7", "8"]]])
+        flatten_dp = input_dp.flatten()
+        self.assertEqual([["zero", "one", "2"], ["3", "4", "5"], ["6", "7", "8"]], list(flatten_dp))
 
         # dict tests
 
@@ -1102,6 +1095,13 @@ class TestIterDataPipe(expecttest.TestCase):
         input_dp = IterableWrapper([{"a": 1, "b": 2, "c": {"d": 3, "e": 4}}, {"a": 5, "b": 6, "c": {"d": 7, "e": 8}}])
         flatten_dp = input_dp.flatten("c")
         self.assertEqual([{"a": 1, "b": 2, "d": 3, "e": 4}, {"a": 5, "b": 6, "d": 7, "e": 8}], list(flatten_dp))
+
+        # Functional Test: flatten for an index already flat
+        input_dp = IterableWrapper([{"a": 1, "b": 2, "c": {"d": 9, "e": 10}}, {"a": 5, "b": 6, "c": {"d": 7, "e": 8}}])
+        flatten_dp = input_dp.flatten("a")
+        self.assertEqual(
+            [{"a": 1, "b": 2, "c": {"d": 9, "e": 10}}, {"a": 5, "b": 6, "c": {"d": 7, "e": 8}}], list(flatten_dp)
+        )
 
         # Functional Test: flatten for list of indices
         input_dp = IterableWrapper(
@@ -1116,10 +1116,20 @@ class TestIterDataPipe(expecttest.TestCase):
         )
 
         # Functional Test: flatten all iters in the datapipe one level (no argument)
-        input_dp = IterableWrapper([{"a": 1, "b": 2, "c": 3, "d": 4}, {"a": 5, "b": 6, "c": 7, "d": 8}])
+        input_dp = IterableWrapper([{"a": 1, "b": 2, "c": {"d": 3, "e": 4}}, {"a": 5, "b": 6, "c": {"d": 7, "e": 8}}])
+        flatten_dp = input_dp.flatten()
+        self.assertEqual([{"a": 1, "b": 2, "d": 3, "e": 4}, {"a": 5, "b": 6, "d": 7, "e": 8}], list(flatten_dp))
+
+        # Functional Test: flatten all iters one level, multiple iters
+        input_dp = IterableWrapper(
+            [
+                {"a": {"f": 10, "g": 11}, "b": 2, "c": {"d": 3, "e": 4}},
+                {"a": {"f": 10, "g": 11}, "b": 6, "c": {"d": 7, "e": 8}},
+            ]
+        )
         flatten_dp = input_dp.flatten()
         self.assertEqual(
-            [("a", 1), ("b", 2), ("c", 3), ("d", 4), ("a", 5), ("b", 6), ("c", 7), ("d", 8)], list(flatten_dp)
+            [{"f": 10, "g": 11, "b": 2, "d": 3, "e": 4}, {"f": 10, "g": 11, "b": 6, "d": 7, "e": 8}], list(flatten_dp)
         )
 
         # __len__ Test:
