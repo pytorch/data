@@ -1,0 +1,63 @@
+name: Run Benchmark
+on:
+  # run every day at 2:15am
+  schedule:
+    - cron:  '15 02 * * *'
+  pull_request:
+
+
+jobs:
+  benchmark:
+    if: ${{ (github.repository_owner == 'pytorch' && contains(github.event.pull_request.body, 'RUN_BENCHMARK')) || github.event_name  == 'schedule' }}
+    # Replace this by the custom AWS machine we will create instead
+    runs-on: ubuntu-latest
+    steps:
+    - name: Setup Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+        architecture: x64
+    - name: Get PyTorch Channel
+      shell: bash
+      run: |
+        if [[ "${{ github.base_ref }}" == release/* ]] || [[ "${{ github.ref }}" == refs/heads/release/* ]] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          PT_CHANNEL="https://download.pytorch.org/whl/test/cpu/torch_test.html"
+        else
+          PT_CHANNEL="https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html"
+        fi
+        echo "::set-output name=value::$PT_CHANNEL"
+      id: pytorch_channel
+    - name: Setup additional system libraries
+      if: startsWith( matrix.os, 'ubuntu' )
+      run: |
+        sudo add-apt-repository multiverse
+        sudo apt update
+        sudo apt install rar unrar libssl-dev libcurl4-openssl-dev zlib1g-dev
+    - name: Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Check out source repository
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Install dependencies
+      run: |
+        pip3 install -r requirements.txt
+        pip3 install --pre torch -f "${{ steps.pytorch_channel.outputs.value }}"
+        pip3 install cmake ninja
+        echo "/home/runner/.local/bin" >> $GITHUB_PATH
+    - name: Build TorchData
+      run: |
+        python setup.py install
+      env:
+        BUILD_S3: 1
+    - name: Install test requirements
+      run: pip3 install -r test/requirements.txt
+    - name: Run Benchmarks
+      run: python benchmarks/torchvision_classification/train.py > results.txt
+    - name: Save benchmark artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: Benchmark artifact
+        path: results.txt
