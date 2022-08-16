@@ -28,15 +28,10 @@ jobs:
         echo "::set-output name=value::$PT_CHANNEL"
       id: pytorch_channel
     - name: Setup additional system libraries
-      if: startsWith( matrix.os, 'ubuntu' )
       run: |
         sudo add-apt-repository multiverse
         sudo apt update
         sudo apt install rar unrar libssl-dev libcurl4-openssl-dev zlib1g-dev
-    - name: Setup Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
     - name: Check out source repository
       uses: actions/checkout@v2
       with:
