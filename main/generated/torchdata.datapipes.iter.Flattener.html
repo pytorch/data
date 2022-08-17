@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>HashChecker &mdash; TorchData main documentation</title>
+  <title>Flattener &mdash; TorchData main documentation</title>
   
 
   
@@ -33,8 +33,8 @@
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="InMemoryCacheHolder" href="torchdata.datapipes.iter.InMemoryCacheHolder.html" />
-    <link rel="prev" title="EndOnDiskCacheHolder" href="torchdata.datapipes.iter.EndOnDiskCacheHolder.html" />
+    <link rel="next" title="CSVDictParser" href="torchdata.datapipes.iter.CSVDictParser.html" />
+    <link rel="prev" title="Slicer" href="torchdata.datapipes.iter.Slicer.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -290,13 +290,13 @@
         
           <li><a href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a> &gt;</li>
         
-      <li>HashChecker</li>
+      <li>Flattener</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/generated/torchdata.datapipes.iter.HashChecker.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/generated/torchdata.datapipes.iter.Flattener.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -322,39 +322,35 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="hashchecker">
-<h1>HashChecker<a class="headerlink" href="#hashchecker" title="Permalink to this heading">¶</a></h1>
+  <section id="flattener">
+<h1>Flattener<a class="headerlink" href="#flattener" title="Permalink to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="torchdata.datapipes.iter.HashChecker">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">HashChecker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">IOBase</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hash_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hash_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'sha256'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rewind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.HashChecker" title="Permalink to this definition">¶</a></dt>
-<dd><p>Computes and checks the hash of each file, from an input DataPipe of tuples of file name and
-data/stream (functional name: <code class="docutils literal notranslate"><span class="pre">check_hash</span></code>). If the hashes match the given hash
-in the dictionary, it yields a tuple of file name and data/stream. Otherwise, it will raise an error.</p>
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.Flattener">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Flattener</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Hashable</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Hashable</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.Flattener" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns a flattened copy of the input DataPipe at the per sample/element level based on provided indices (functional name: <code class="docutils literal notranslate"><span class="pre">flatten</span></code>).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>no args will flatten each item in the datapipe 1 level</p>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>source_datapipe</strong> – IterDataPipe with tuples of file name and data/stream</p></li>
-<li><p><strong>hash_dict</strong> – Dictionary that maps file names to their corresponding hashes</p></li>
-<li><p><strong>hash_type</strong> – The type of hash function to apply</p></li>
-<li><p><strong>rewind</strong> – Rewind the stream after using the stream to compute the hash (this
-does not work with non-seekable stream, e.g. HTTP)</p></li>
+<li><p><strong>datapipe</strong> – IterDataPipe with iterable elements</p></li>
+<li><p><strong>indices</strong> – a single index/key for the item to flatten from an iterator item or a list of indices/keys to be flattened</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span><span class="p">,</span> <span class="n">FileOpener</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">expected_MD5_hash</span> <span class="o">=</span> <span class="s2">&quot;bb9675028dd39d2dd2bf71002b93e66c&quot;</span>
-<span class="go">File is from &quot;https://raw.githubusercontent.com/pytorch/data/main/LICENSE&quot;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">file_dp</span> <span class="o">=</span> <span class="n">FileOpener</span><span class="p">(</span><span class="n">IterableWrapper</span><span class="p">([</span><span class="s2">&quot;LICENSE.txt&quot;</span><span class="p">]),</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;rb&#39;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># An exception is only raised when the hash doesn&#39;t match, otherwise (path, stream) is returned</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">check_hash_dp</span> <span class="o">=</span> <span class="n">file_dp</span><span class="o">.</span><span class="n">check_hash</span><span class="p">({</span><span class="s2">&quot;LICENSE.txt&quot;</span><span class="p">:</span> <span class="n">expected_MD5_hash</span><span class="p">},</span> <span class="s2">&quot;md5&quot;</span><span class="p">,</span> <span class="n">rewind</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">reader_dp</span> <span class="o">=</span> <span class="n">check_hash_dp</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">it</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">reader_dp</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span><span class="p">,</span> <span class="n">line</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">it</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span>
-<span class="go">LICENSE.txt</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">line</span>
-<span class="go">b&#39;BSD 3-Clause License&#39;</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="mi">1001</span><span class="p">)),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="p">(</span><span class="mi">122</span><span class="p">,</span> <span class="mi">1002</span><span class="p">)),</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="p">(</span><span class="mi">133</span><span class="p">,</span> <span class="mi">1003</span><span class="p">)),</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="p">(</span><span class="mi">144</span><span class="p">,</span> <span class="mi">1004</span><span class="p">))])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">flatten_dp</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">flatten_dp</span><span class="p">)</span>
+<span class="go">[(0, 10, 100, 1000), (1, 11, 111, 1001), (2, 12, 122, 1002), (3, 13, 133, 1003), (4, 14, 144, 1004)]</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)),</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">)),</span> <span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">))])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">flatten_dp</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">flatten_dp</span><span class="p">)</span>
+<span class="go">[(0, 1, 2), (3, 4, 5), (6, 7, 8)]</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -369,10 +365,10 @@ does not work with non-seekable stream, e.g. HTTP)</p></li>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="torchdata.datapipes.iter.InMemoryCacheHolder.html" class="btn btn-neutral float-right" title="InMemoryCacheHolder" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.datapipes.iter.CSVDictParser.html" class="btn btn-neutral float-right" title="CSVDictParser" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.iter.EndOnDiskCacheHolder.html" class="btn btn-neutral" title="EndOnDiskCacheHolder" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="torchdata.datapipes.iter.Slicer.html" class="btn btn-neutral" title="Slicer" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -404,7 +400,7 @@ does not work with non-seekable stream, e.g. HTTP)</p></li>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">HashChecker</a></li>
+<li><a class="reference internal" href="#">Flattener</a></li>
 </ul>
 
             </div>
