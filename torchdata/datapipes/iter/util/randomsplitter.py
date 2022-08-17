@@ -32,6 +32,9 @@ class RandomSplitterIterDataPipe(IterDataPipe):
         target: Optional key (that must exist in ``weights``) to indicate the specific group to return.
             If set to the default ``None``, returns ``List[IterDataPipe]``.
             If target is specified, returns ``IterDataPipe``.
+        fixed_seed: defaults to ``True``, which means the method ``set_seed`` will have no effect and the ``seed``
+            will stay the same between epochs when used with ``DataLoader``. If ``False``, ``set_seed`` changes
+            the ``seed``, and ``DataLoader`` will provide a different ``seed`` for every epoch.
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
@@ -58,6 +61,7 @@ class RandomSplitterIterDataPipe(IterDataPipe):
         seed,
         total_length: Optional[int] = None,
         target: Optional[T] = None,
+        fixed_seed: bool = True,
     ):
         if total_length is None:
             try:
@@ -69,7 +73,7 @@ class RandomSplitterIterDataPipe(IterDataPipe):
                     "RandomSplitter needs `total_length`, but it is unable to infer it from "
                     f"the `source_datapipe`: {source_datapipe}."
                 )
-        container = _RandomSplitterIterDataPipe(source_datapipe, total_length, weights, seed)
+        container = _RandomSplitterIterDataPipe(source_datapipe, total_length, weights, seed, fixed_seed)
         if target is None:
             return [SplitterIterator(container, k) for k in list(weights.keys())]
         else:
@@ -86,6 +90,7 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
         total_length: int,
         weights: Dict[T, Union[int, float]],
         seed,
+        fixed_seed,
     ):
         self.source_datapipe: IterDataPipe = source_datapipe
         self.total_length = total_length
@@ -95,6 +100,7 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
         self.key_to_index = {k: i for i, k in enumerate(self.keys)}
         self.weights = [self.norm_weights[k] for k in self.keys]
         self._rng = random.Random(self._seed)
+        self.fixed_seed = fixed_seed
 
     def draw(self):
         selected_key = self._rng.choices(self.keys, self.weights)[0]
@@ -114,7 +120,9 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
         """
         Update the `seed`. The new `seed` will be used in the next iteration.
         """
-        self._seed = seed
+        if not self.fixed_seed:
+            self._seed = seed
+        return self
 
     def __getstate__(self):
         if IterDataPipe.getstate_hook is not None:
@@ -165,3 +173,4 @@ class SplitterIterator(IterDataPipe):
         Update the `seed`. The new `seed` will be used in the next iteration.
         """
         self.main_datapipe.set_seed(seed)
+        return self
