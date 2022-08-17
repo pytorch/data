@@ -1055,17 +1055,17 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual(results2[0], results2[1])
         self.assertEqual(results, results2)
 
-        # Functional Test: `set_seed` works and change split result
-        train.set_seed(1)
+        # Functional Test: `override_seed` works and change split result
+        train.override_seed(1)
         seed_1_res = list(train)
         self.assertNotEqual(results2[0], seed_1_res)
 
-        # Functional Test: `set_seed` doesn't impact the current iteration, only the next one
+        # Functional Test: `override_seed` doesn't impact the current iteration, only the next one
         temp_res = []
         for i, x in enumerate(train):
             temp_res.append(x)
             if i == 3:
-                train.set_seed(0)
+                train.override_seed(0)
         self.assertEqual(seed_1_res, temp_res)  # The current iteration should equal seed 1 result
         self.assertEqual(results2[0], list(train))  # The next iteration should equal seed 0 result
 

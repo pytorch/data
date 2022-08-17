@@ -21,20 +21,17 @@ class RandomSplitterIterDataPipe(IterDataPipe):
     at any time. Attempts to iterate through multiple of them simultaneously will fail.
 
     Note that by default, multiple iterations of this DataPipe will yield the same split for consistency across epochs.
-    You can invoke ``set_seed`` on the output(s) to update the seed whenever needed (such as per epoch).
+    You can invoke ``override_seed`` on the output(s) to update the seed whenever needed (such as per epoch).
 
     Args:
         source_datapipe: Iterable DataPipe being split
-        total_length: Length of the ``source_datapipe``, optional but providing an integer is highly encouraged,
-            because not all ``IterDataPipe`` has ``len``, espeically ones that can be easily known in advance.
         weights: Dict of weights; the length of this list determines how many output DataPipes there will be.
         seed: random _seed used to determine the randomness of the split
+        total_length: Length of the ``source_datapipe``, optional but providing an integer is highly encouraged,
+            because not all ``IterDataPipe`` has ``len``, espeically ones that can be easily known in advance.
         target: Optional key (that must exist in ``weights``) to indicate the specific group to return.
             If set to the default ``None``, returns ``List[IterDataPipe]``.
             If target is specified, returns ``IterDataPipe``.
-        fixed_seed: defaults to ``True``, which means the method ``set_seed`` will have no effect and the ``seed``
-            will stay the same between epochs when used with ``DataLoader``. If ``False``, ``set_seed`` changes
-            the ``seed``, and ``DataLoader`` will provide a different ``seed`` for every epoch.
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
@@ -61,7 +58,6 @@ class RandomSplitterIterDataPipe(IterDataPipe):
         seed,
         total_length: Optional[int] = None,
         target: Optional[T] = None,
-        fixed_seed: bool = True,
     ):
         if total_length is None:
             try:
@@ -73,7 +69,7 @@ class RandomSplitterIterDataPipe(IterDataPipe):
                     "RandomSplitter needs `total_length`, but it is unable to infer it from "
                     f"the `source_datapipe`: {source_datapipe}."
                 )
-        container = _RandomSplitterIterDataPipe(source_datapipe, total_length, weights, seed, fixed_seed)
+        container = _RandomSplitterIterDataPipe(source_datapipe, total_length, weights, seed)
         if target is None:
             return [SplitterIterator(container, k) for k in list(weights.keys())]
         else:
@@ -90,7 +86,6 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
         total_length: int,
         weights: Dict[T, Union[int, float]],
         seed,
-        fixed_seed,
     ):
         self.source_datapipe: IterDataPipe = source_datapipe
         self.total_length = total_length
@@ -100,7 +95,6 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
         self.key_to_index = {k: i for i, k in enumerate(self.keys)}
         self.weights = [self.norm_weights[k] for k in self.keys]
         self._rng = random.Random(self._seed)
-        self.fixed_seed = fixed_seed
 
     def draw(self):
         selected_key = self._rng.choices(self.keys, self.weights)[0]
@@ -116,12 +110,11 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
         self._rng = random.Random(self._seed)
         self.weights = [self.norm_weights[k] for k in self.keys]
 
-    def set_seed(self, seed):
+    def override_seed(self, seed):
         """
         Update the `seed`. The new `seed` will be used in the next iteration.
         """
-        if not self.fixed_seed:
-            self._seed = seed
+        self._seed = seed
         return self
 
     def __getstate__(self):
@@ -168,9 +161,9 @@ class SplitterIterator(IterDataPipe):
     def __len__(self):
         return self.main_datapipe.norm_weights[self.target]
 
-    def set_seed(self, seed):
+    def override_seed(self, seed):
         """
         Update the `seed`. The new `seed` will be used in the next iteration.
         """
-        self.main_datapipe.set_seed(seed)
+        self.main_datapipe.override_seed(seed)
         return self
