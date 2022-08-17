@@ -21,7 +21,8 @@ class RandomSplitterIterDataPipe(IterDataPipe):
     at any time. Attempts to iterate through multiple of them simultaneously will fail.
 
     Note that by default, multiple iterations of this DataPipe will yield the same split for consistency across epochs.
-    You can invoke ``override_seed`` on the output(s) to update the seed whenever needed (such as per epoch).
+    You can invoke ``override_seed`` on the output(s) to update the seed whenever needed (such as per epoch to
+    get a different split per epoch).
 
     Args:
         source_datapipe: Iterable DataPipe being split
@@ -163,7 +164,8 @@ class SplitterIterator(IterDataPipe):
 
     def override_seed(self, seed):
         """
-        Update the `seed`. The new `seed` will be used in the next iteration.
+        Update the `seed`. The new `seed` will be used in the next iteration. For use cases that require a different
+        split for each epoch, you call this method before or after the epoch as necessary.
         """
         self.main_datapipe.override_seed(seed)
         return self
