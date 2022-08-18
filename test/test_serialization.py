@@ -165,6 +165,8 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         self._serialization_test_helper(dp2, use_dill=use_dill)
 
     def test_serializable(self):
+        # A tuple of 4 objects
+        # (DataPipeConstructor, custom_input_datapipe=None, dp_args=(), dp_kwargs={})
         picklable_datapipes: List = [
             (iterdp.BatchMapper, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), (_fake_batch_fn, 2, 1), {}),
             (iterdp.BucketBatcher, IterableWrapper([0, 0, 0, 0, 0, 0, 0]), (5,), {}),
@@ -191,6 +193,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.Dropper, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), ([1]), {}),
             (iterdp.Enumerator, None, (2,), {}),
             (iterdp.FlatMapper, None, (_fake_fn_ls,), {}),
+            (iterdp.Flattener, IterableWrapper([(0, (0, 1)), (0, (0, 1)), (0, (0, 1)), (0, (0, 1))]), ([1]), {}),
             (iterdp.FSSpecFileLister, ".", (), {}),
             (iterdp.FSSpecFileOpener, None, (), {}),
             (
@@ -233,6 +236,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (),
                 {},
             ),
+            (iterdp.LengthSetter, None, (3,), {}),
             (
                 iterdp.LineReader,
                 IterableWrapper(
@@ -283,6 +287,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (),
                 {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)},
             ),
+            (iterdp.Slicer, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), ([1]), {}),
             (iterdp.TarArchiveLoader, None, (), {}),
             # TODO(594): Add serialization tests for optional DataPipe
             #  (iterdp.TFRecordLoader, None, (), {}),

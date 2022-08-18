@@ -6,6 +6,7 @@
 
 
 import pickle
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict, Generic, Iterable, Iterator, Optional, TypeVar, Union
 
@@ -80,6 +81,19 @@ class DataLoader2Iterator(Iterator):
 
 
 class DataLoader2(Generic[T_co]):
+    """
+    DataLoader2. Given a DataPipe, a ReadingService and adapter function(s), this provides an iterable over
+    the given DataPipe.
+
+    Args:
+        datapipe (Dataset): DataPipe from which to load the data.
+        datapipe_adapter_fn (Iterable[Adapter] or Adapter, optional): Adapter function(s) that will be applied
+            to the DataPipe (default: ``None``).
+        reading_service (ReadingServiceInterface, optional): defines how DataLoader2 should execute operations over
+            the DataPipe, e.g. multiprocessing/distributed (default: ``None``). A deepcopy of this will be made during
+            initialization, allowing the input to be re-used in a different DataLoader2.
+    """
+
     def __init__(
         self,
         datapipe: DataPipe,
@@ -97,7 +111,7 @@ class DataLoader2(Generic[T_co]):
             self.datapipe_adapter_fns = datapipe_adapter_fn
         else:
             self.datapipe_adapter_fns = [datapipe_adapter_fn]
-        self.reading_service = reading_service
+        self.reading_service = deepcopy(reading_service)
         self.reading_service_state: Optional[bytes] = None  # is not `None` when `load_state_dict` is called
         self._terminated: bool = False
         self.valid_iterator_id: Optional[int] = None

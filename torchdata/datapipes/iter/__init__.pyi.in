@@ -8,6 +8,7 @@ ${init_base}
 # classes/objects here, even though we are not injecting extra code into them at the moment.
 
 from .util.decompressor import CompressionType
+from torchdata._constants import default_timeout_in_s
 from torchdata.datapipes.map import MapDataPipe
 from torch.utils.data import DataChunk, IterableDataset, default_collate
 from torch.utils.data.datapipes._typing import _DataPipeMeta
