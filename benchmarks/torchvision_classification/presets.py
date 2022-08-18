@@ -6,6 +6,7 @@ class ClassificationPresetTrain:
     def __init__(
         self,
         *,
+        on_pil_images,
         crop_size,
         mean=(0.485, 0.456, 0.406),
         std=(0.229, 0.224, 0.225),
@@ -17,7 +18,7 @@ class ClassificationPresetTrain:
 
         trans.extend(
             [
-                transforms.PILToTensor(),
+                transforms.PILToTensor() if on_pil_images else torch.nn.Identity(),
                 transforms.ConvertImageDtype(torch.float),
                 transforms.Normalize(mean=mean, std=std),
             ]
@@ -32,6 +33,7 @@ class ClassificationPresetTrain:
 class ClassificationPresetEval:
     def __init__(
         self,
+        on_pil_images,
         *,
         crop_size,
         resize_size=256,
@@ -43,7 +45,8 @@ class ClassificationPresetEval:
             [
                 transforms.Resize(resize_size),
                 transforms.CenterCrop(crop_size),
-                transforms.PILToTensor(),
+                transforms.PILToTensor() if on_pil_images else torch.nn.Identity(),
+                transforms.ConvertImageDtype(torch.float),
                 transforms.ConvertImageDtype(torch.float),
                 transforms.Normalize(mean=mean, std=std),
             ]
