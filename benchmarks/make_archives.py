@@ -19,9 +19,9 @@ parser.add_argument(
 parser.add_argument("--archive-size", type=int, default=500, help="Number of samples per archive")
 parser.add_argument("--shuffle", type=bool, default=True, help="Whether to shuffle the samples within each archive")
 
-# The archive determines whether we use `tar.add`, `pickle.dump` or `torch.save`
-# to write an archive. `torch.save` relies on pickle in the backend but
-# has a special handling for tensors (which is maybe faster???):
+# The archive parameter determines whether we use `tar.add`, `pickle.dump` or
+# `torch.save` to write an archive. `torch.save` relies on pickle in the backend
+# but has a special handling for tensors (which is maybe faster???):
 # - tar: each tar file contains files. Each file is the original encoded jpeg
 #   file. To avoid storing labels in separate files, we write the corresponding
 #   label in each file name in the archive. This is ugly, but OK at this stage.
