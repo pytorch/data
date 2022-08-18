@@ -47,7 +47,6 @@ class ClassificationPresetEval:
                 transforms.CenterCrop(crop_size),
                 transforms.PILToTensor() if on_pil_images else torch.nn.Identity(),
                 transforms.ConvertImageDtype(torch.float),
-                transforms.ConvertImageDtype(torch.float),
                 transforms.Normalize(mean=mean, std=std),
             ]
         )
