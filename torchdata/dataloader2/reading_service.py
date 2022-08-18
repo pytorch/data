@@ -43,7 +43,7 @@ class ReadingServiceInterface(ABC):
 
     def finalize(self) -> None:
         """
-        ReadingService cleanup states.
+        ReadingService cleans up states.
         Called in DataLoader shutdown and __del__
 
         Example:
@@ -53,7 +53,7 @@ class ReadingServiceInterface(ABC):
 
     def initialize_iteration(self) -> None:
         """
-        ReadingService spin up service.
+        ReadingService spins up service.
         Called at the beginning of every time getting DataLoader iterator.
 
         Example:
@@ -63,12 +63,20 @@ class ReadingServiceInterface(ABC):
 
     def finalize_iteration(self) -> None:
         """
-        ReadingService end service.
+        ReadingService ends service.
 
         Example:
             MultiprocessingReadingService cleans up processes.
         """
         pass
+
+    def get_datapipe_length(self) -> Optional[int]:
+        """
+        Called by DataLoader to return the length of the DataPipe. Output should be
+        ``None`` if the length is not available for any reason. This can
+        vary by multiprocessing/distributed setting, but the output value should
+        not depend on whether iteration has begun or not.
+        """
 
 
 class CheckpointableReadingServiceInterface(ReadingServiceInterface):
@@ -137,6 +145,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         self.multiprocessing_context = multiprocessing_context
         self.processes = []
         self.datapipes = []
+        self._length: Optional[int] = None
 
     @staticmethod
     def init_datapipe_process(num_workers, worker_id, datapipe):
@@ -145,6 +154,10 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
 
     def initialize(self, datapipe: DataPipe) -> DataPipe:
+        try:
+            self._length = len(datapipe)
+        except TypeError:
+            pass
         if self.num_workers == 0:
             # TODO(616): Warn and recommend usage of InProcessReadingService
             return datapipe
@@ -186,6 +199,9 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
         self.processes = []
 
+    def get_datapipe_length(self) -> Optional[int]:
+        return self._length
+
 
 class MultiProcessingReadingService(ReadingServiceInterface):
     num_workers: int
@@ -213,6 +229,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         self.prefetch_factor = prefetch_factor
         self.persistent_workers = persistent_workers
         self.dl_: Optional[DataLoader] = None
+        self._length: Optional[int] = None
 
     # Wrap the DataLoader with IterableWrapper to respect type annotation
     def initialize(self, datapipe: DataPipe) -> DataPipe:
@@ -229,9 +246,16 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             collate_fn=_collate_no_op,
             batch_size=1,  # This reading service assume batching is done via DataPipe
         )
+        try:
+            self._length = len(self.dl_)
+        except TypeError:
+            self._length = None
         return IterableWrapper(self.dl_)  # type: ignore[return-value]
 
     def finalize(self) -> None:
         if self.persistent_workers and self.dl_ is not None and self.dl_._iterator is not None:
             self.dl_._iterator._shutdown_workers()  # type: ignore[attr-defined]
             self.dl_._iterator = None
+
+    def get_datapipe_length(self) -> Optional[int]:
+        return self._length

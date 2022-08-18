@@ -21,6 +21,10 @@ from torchdata.dataloader2.dataloader2 import READING_SERVICE_STATE_KEY_NAME, SE
 from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 
 
+def _filter_fn(x: int):
+    return x < 5
+
+
 class _ReadingServiceWrapper:
     def __init__(self, dp):
         self.dp = dp
@@ -53,11 +57,31 @@ class DataLoader2Test(TestCase):
             expected_batch += 1
 
     def test_dataloader2_len(self) -> None:
-        test_data_pipe = IterableWrapper(range(3))
-        data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe)
-        self.assertEqual(3, len(data_loader))
-        it = iter(data_loader)
-        self.assertEqual(3, len(it))  # type: ignore[arg-type]
+
+        reading_services = (
+            None,
+            MultiProcessingReadingService(num_workers=2),
+            PrototypeMultiProcessingReadingService(num_workers=2),
+        )
+
+        sharding_dp = IterableWrapper(range(10)).sharding_filter()
+        filter_dp = IterableWrapper(range(10)).filter(_filter_fn)
+
+        for rs in reading_services:
+            # Functional Test: Case with sharding
+            data_loader_sharding: DataLoader2 = DataLoader2(datapipe=sharding_dp, reading_service=rs)
+            # Call `__len__` before initialization
+            self.assertEqual(10, len(data_loader_sharding))
+            _it = iter(data_loader_sharding)
+            # Length should stay the same after calling `__iter__`
+            self.assertEqual(10, len(data_loader_sharding))
+            list(_it)
+            self.assertEqual(10, len(data_loader_sharding))
+
+            # Functional Test: Case with filter
+            data_loader_filter: DataLoader2 = DataLoader2(datapipe=filter_dp, reading_service=rs)
+            with self.assertRaisesRegex(RuntimeError, "Unable to retrieve the length of the DataPipe"):
+                print(len(data_loader_filter))
 
     def test_dataloader2_shutdown(self) -> None:
         test_data_pipe = IterableWrapper(range(3))

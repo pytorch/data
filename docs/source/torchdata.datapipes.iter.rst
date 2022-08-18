@@ -176,6 +176,7 @@ A miscellaneous set of DataPipes with different functionalities.
     HashChecker
     InMemoryCacheHolder
     IterableWrapper
+    LengthSetter
     MapToIterConverter
     OnDiskCacheHolder
     ShardingFilter
@@ -193,6 +194,8 @@ These DataPipes helps you select specific samples within a DataPipe.
     Filter
     Header
     Dropper
+    Slicer
+    Flattener
 
 Text DataPipes
 -----------------------------
