@@ -10,6 +10,8 @@ import random
 from functools import partial
 from typing import Callable, Iterator, List, Optional, TypeVar
 
+import torch
+
 from torchdata.datapipes import DataChunk, functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
@@ -37,14 +39,60 @@ class InBatchShufflerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
 
     def __init__(self, datapipe: IterDataPipe[DataChunk[T_co]]):
         self.datapipe = datapipe
+        self._enabled = True
+        self._seed: Optional[int] = None
+        self._rng = random.Random()
+
+    def set_shuffle(self, shuffle=True):
+        self._enabled = shuffle
+        return self
+
+    def set_seed(self, seed: int):
+        self._seed = seed
+        return self
 
     def __iter__(self) -> Iterator[DataChunk[T_co]]:
-        for batch in self.datapipe:
-            random.shuffle(batch)
-            yield batch
+        if not self._enabled:
+            for batch in self.datapipe:
+                yield batch
+        else:
+            for batch in self.datapipe:
+                new_batch = self._rng.sample(batch, len(batch))
+                yield DataChunk(new_batch)
+
+    def reset(self) -> None:
+        if self._enabled and self._seed is None:
+            self._seed = int(torch.empty((), dtype=torch.int64).random_().item())
+        self._rng.seed(self._seed)
+        self._seed = None
 
     def __len__(self) -> int:
         return len(self.datapipe)
+
+    def __getstate__(self):
+        if IterDataPipe.getstate_hook is not None:
+            return IterDataPipe.getstate_hook(self)
+        state = (
+            self.datapipe,
+            self._enabled,
+            self._seed,
+            self._rng.getstate(),
+            self._valid_iterator_id,
+            self._number_of_samples_yielded,
+        )
+        return state
+
+    def __setstate__(self, state):
+        (
+            self.datapipe,
+            self._enabled,
+            self._seed,
+            rng_state,
+            self._valid_iterator_id,
+            self._number_of_samples_yielded,
+        ) = state
+        self._rng = random.Random()
+        self._rng.setstate(rng_state)
 
 
 @functional_datapipe("bucketbatch")
