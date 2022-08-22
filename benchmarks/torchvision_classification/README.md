@@ -18,7 +18,7 @@ The following command
 PYTHONPATH=$PYTHONPATH:pwd python -u ./run_with_submitit.py \
   --ngpus 8 --nodes 1 \
   --model mobilenet_v3_large --epochs 5 --batch-size 128 --workers 12 \
-  --ds-type dp --fs ontap --data-loader V2 --dataset
+  --ds-type dp --fs ontap --data-loader V2 --dataset imagenet
 ```
 
 ### Parameters

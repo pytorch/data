@@ -49,7 +49,7 @@ def _decode(path, root, category_to_int):
     category = Path(path).relative_to(root).parts[0]
 
     image = Image.open(path).convert("RGB")
-    label = category_to_int(category)
+    label = category_to_int[category]
 
     return image, label
 
