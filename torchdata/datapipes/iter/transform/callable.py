@@ -99,6 +99,7 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
 
     Note:
         The output from ``fn`` must be a Sequence. Otherwise, an error will be raised.
+        If no ``fn``, source DataPipe will be just flattened vertically.
 
     Args:
         datapipe: Source IterDataPipe
@@ -116,9 +117,11 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
     datapipe: IterDataPipe
     fn: Callable
 
-    def __init__(self, datapipe: IterDataPipe, fn: Callable, input_col=None) -> None:
+    def __init__(self, datapipe: IterDataPipe, fn: Callable = None, input_col=None) -> None:
         self.datapipe = datapipe
 
+        if fn is None:
+            fn = self._no_op_fn
         _check_unpickable_fn(fn)
         self.fn = fn  # type: ignore[assignment]
         self.input_col = input_col
@@ -138,6 +141,9 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
 
     def __len__(self) -> int:
         raise TypeError(f"{type(self).__name__}'s length relies on the output of its function.")
+
+    def _no_op_fn(self, e):
+        return e
 
 
 @functional_datapipe("drop")
