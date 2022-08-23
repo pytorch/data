@@ -9,6 +9,7 @@ from typing import Callable, Hashable, Iterator, List, Optional, Set, Sized, Typ
 
 from torch.utils.data import functional_datapipe, IterDataPipe
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
+from torchdata.datapipes.utils.common import _no_op_fn
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -99,7 +100,7 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
 
     Note:
         The output from ``fn`` must be a Sequence. Otherwise, an error will be raised.
-        If no ``fn``, source DataPipe will be just flattened vertically.
+        If ``fn`` is ``None``, source DataPipe will be just flattened vertically.
 
     Args:
         datapipe: Source IterDataPipe
@@ -113,6 +114,11 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
         >>> flatmapped_dp = source_dp.flatmap(fn)
         >>> list(flatmapped_dp)
         [0, 0, 1, 10, 2, 20, 3, 30, 4, 40]
+        >>>
+        >>> source_dp = IterableWrapper([[1, 2, 3], [4, 5, 6]])
+        >>> flatmapped_dp = source_dp.flatmap()
+        >>> list(flatmapped_dp)
+        [1, 2, 3, 4, 5, 6]
     """
     datapipe: IterDataPipe
     fn: Callable
@@ -121,7 +127,7 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
         self.datapipe = datapipe
 
         if fn is None:
-            fn = self._no_op_fn
+            fn = _no_op_fn
         _check_unpickable_fn(fn)
         self.fn = fn  # type: ignore[assignment]
         self.input_col = input_col
@@ -141,9 +147,6 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
 
     def __len__(self) -> int:
         raise TypeError(f"{type(self).__name__}'s length relies on the output of its function.")
-
-    def _no_op_fn(self, e):
-        return e
 
 
 @functional_datapipe("drop")
