@@ -58,7 +58,8 @@ class CyclerIterDataPipe(IterDataPipe[T_co]):
 class RepeaterIterDataPipe(IterDataPipe[T_co]):
     """
     Repeatedly yield each element of source DataPipe for the specified number of times before
-    moving onto the next element (functional name: ``repeat``).
+    moving onto the next element (functional name: ``repeat``). Note that no copy is made in this DataPipe,
+    the same element is yielded repeatedly.
 
     If you would like to yield the whole DataPipe in order multiple times, use :class:`.Cycler`.
 
