@@ -24,5 +24,11 @@ def validate_pathname_binary_tuple(data: Tuple[str, IOBase]):
         )
 
 
-def _no_op_fn(e):
-    return e
+def _no_op_fn(*args):
+    """
+    No-operation function, returns passed arguments , always as iterable.
+    """
+    if len(args) == 1 and isinstance(args[0], (list, tuple)):
+        return args[0]
+    else:
+        return args
