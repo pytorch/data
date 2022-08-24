@@ -68,10 +68,12 @@ class LengthSetterIterDataPipe(IterDataPipe[T_co]):
     r"""
     Set the length attribute of the DataPipe, which is returned by ``__len__`` (functional name: ``set_length``).
     This can be used after DataPipes whose final length cannot be known in advance (e.g. ``filter``). If you
-    know the final length with certainty, you can manually set it for usages by DataLoader or other DataPipes.
+    know the final length with certainty, you can manually set it, which can then be used by
+    DataLoader or other DataPipes.
 
-    This DataPipe differs from :class:`.Header` in that this doesn't restrict the number of elements that
-    can be yielded from the DataPipe; this is strictly used for setting an attribute so that it can be used later.
+    Note:
+        This DataPipe differs from :class:`.Header` in that this doesn't restrict the number of elements that
+        can be yielded from the DataPipe; this is strictly used for setting an attribute so that it can be used later.
 
     Args:
         source_datapipe: a DataPipe
@@ -79,11 +81,16 @@ class LengthSetterIterDataPipe(IterDataPipe[T_co]):
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
-        >>> dp = IterableWrapper(range(10)).filter(lambda x: x < 5).set_length(5)
-        >>> list(dp)
+        >>> dp = IterableWrapper(range(10)).filter(lambda x: x < 5).set_length(3)
+        >>> list(dp)  # Notice that the number of elements yielded is unchanged
         [0, 1, 2, 3, 4]
         >>> len(dp)
-        5
+        3
+        >>> header_dp = IterableWrapper(range(10)).filter(lambda x: x < 5).header(3)
+        >>> list(header_dp)  # Use `.header()` if you want to limit the number of elements yielded
+        [0, 1, 2]
+        >>> len(header_dp)
+        3
     """
 
     def __init__(self, source_datapipe: IterDataPipe[T_co], length: int) -> None:

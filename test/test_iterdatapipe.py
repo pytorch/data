@@ -31,6 +31,7 @@ from torchdata.datapipes.iter import (
     MapKeyZipper,
     MaxTokenBucketizer,
     ParagraphAggregator,
+    Repeater,
     Rows2Columnar,
     SampleMultiplexer,
     UnZipper,
@@ -256,6 +257,31 @@ class TestIterDataPipe(expecttest.TestCase):
         # __len__ Test: returns the length of source DataPipe
         result_dp = source_dp.zip_with_map(map_dp, odd_even)
         self.assertEqual(len(source_dp), len(result_dp))
+
+    def test_repeater_iterdatapipe(self) -> None:
+        import itertools
+
+        source_dp = IterableWrapper(range(5))
+
+        # Functional Test: repeat for correct number of times
+        repeater_dp = source_dp.repeat(3)
+        self.assertEqual(
+            list(itertools.chain.from_iterable(itertools.repeat(x, 3) for x in range(5))), list(repeater_dp)
+        )
+
+        # Functional Test: `times` must be > 1
+        with self.assertRaisesRegex(ValueError, "The number of repetition must be > 1"):
+            source_dp.repeat(1)
+
+        # Reset Test:
+        repeater_dp = Repeater(source_dp, times=2)
+        n_elements_before_reset = 4
+        res_before_reset, res_after_reset = reset_after_n_next_calls(repeater_dp, n_elements_before_reset)
+        self.assertEqual([0, 0, 1, 1], res_before_reset)
+        self.assertEqual(list(itertools.chain.from_iterable(itertools.repeat(x, 2) for x in range(5))), res_after_reset)
+
+        # __len__ Test: returns correct length
+        self.assertEqual(10, len(repeater_dp))
 
     def test_cycler_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(5))
