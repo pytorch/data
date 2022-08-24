@@ -7,5 +7,6 @@
 from torch.utils.data.datapipes.utils.common import StreamWrapper
 
 from ._visualization import to_graph
+from .janitor import janitor
 
-__all__ = ["StreamWrapper", "to_graph"]
+__all__ = ["StreamWrapper", "janitor", "to_graph"]

@@ -188,8 +188,10 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.Cycler, None, (2,), {}),
             (iterdp.DataFrameMaker, IterableWrapper([(i,) for i in range(3)]), (), {"dtype": DTYPE}),
             (iterdp.Decompressor, None, (), {}),
+            (iterdp.Dropper, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), ([1]), {}),
             (iterdp.Enumerator, None, (2,), {}),
             (iterdp.FlatMapper, None, (_fake_fn_ls,), {}),
+            (iterdp.Flattener, IterableWrapper([(0, (0, 1)), (0, (0, 1)), (0, (0, 1)), (0, (0, 1))]), ([1]), {}),
             (iterdp.FSSpecFileLister, ".", (), {}),
             (iterdp.FSSpecFileOpener, None, (), {}),
             (
@@ -203,7 +205,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.Header, None, (3,), {}),
             (iterdp.HttpReader, None, (), {}),
             (iterdp.HuggingFaceHubReader, None, (), {}),
-            # TODO (ejguan): Deterministic serialization is required
+            # TODO(593): (ejguan): Deterministic serialization is required
             #  (iterdp.InBatchShuffler, IterableWrapper(range(10)).batch(3), (), {}),
             (iterdp.InMemoryCacheHolder, None, (), {}),
             (iterdp.IndexAdder, IterableWrapper([{"a": 1, "b": 2}, {"c": 3, "a": 1}]), ("label",), {}),
@@ -275,6 +277,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (),
                 {},
             ),
+            (iterdp.Repeater, None, (2,), {}),
             (iterdp.SampleMultiplexer, {IterableWrapper([0] * 10): 0.5, IterableWrapper([1] * 10): 0.5}, (), {}),
             (
                 iterdp.Saver,
@@ -282,8 +285,9 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (),
                 {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)},
             ),
+            (iterdp.Slicer, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), ([1]), {}),
             (iterdp.TarArchiveLoader, None, (), {}),
-            # TODO: Add serialization tests for optional DataPipe
+            # TODO(594): Add serialization tests for optional DataPipe
             #  (iterdp.TFRecordLoader, None, (), {}),
             (iterdp.UnZipper, IterableWrapper([(i, i + 10) for i in range(10)]), (), {"sequence_length": 2}),
             (iterdp.WebDataset, IterableWrapper([("foo.txt", b"1"), ("bar.txt", b"2")]), (), {}),
@@ -374,15 +378,13 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             else:
                 dp_no_attribute_error = (iterdp.OnDiskCacheHolder,)
                 try:
-                    with warnings.catch_warnings(record=True) as wa:
+                    with self.assertWarnsRegex(UserWarning, r"^Local function is not supported by pickle"):
                         datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
-                        self.assertEqual(len(wa), 1)
-                        self.assertRegex(str(wa[0].message), r"^Lambda function is not supported for pickle")
-                        if isinstance(datapipe, dp_no_attribute_error):
+                    if isinstance(datapipe, dp_no_attribute_error):
+                        _ = pickle.dumps(datapipe)
+                    else:
+                        with self.assertRaises(AttributeError):
                             _ = pickle.dumps(datapipe)
-                        else:
-                            with self.assertRaises(AttributeError):
-                                _ = pickle.dumps(datapipe)
                 except Exception as e:
                     print(f"{dpipe} is failing.")
                     raise e

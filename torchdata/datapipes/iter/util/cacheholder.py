@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import functools
 import hashlib
 import inspect
 import os.path
@@ -27,7 +26,7 @@ except ImportError as e:
     raise
 
 
-from torch.utils.data.datapipes.utils.common import _check_lambda_fn, DILL_AVAILABLE
+from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, DILL_AVAILABLE
 
 from torch.utils.data.graph import traverse
 from torchdata.datapipes import functional_datapipe
@@ -124,7 +123,7 @@ def _hash_check(filepath, hash_dict, hash_type):
         hash_func = hashlib.md5()
 
     # with portalocker.Lock(filepath, "rb", flags=portalocker.LockFlags.SHARED) as f:
-    # TODO(VitalyFedyunin): Line above will require all readers (Win) to obtain proper locks,
+    # TODO(634): Line above will require all readers (Win) to obtain proper locks,
     # I'm putting it on hold as we need to modify PyTorch core codebase heavily.
     with open(filepath, "rb") as f:
         chunk = f.read(1024 ** 2)
@@ -184,7 +183,8 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     ):
         self.source_datapipe = source_datapipe
 
-        _check_lambda_fn(filepath_fn)
+        if filepath_fn is not None:
+            _check_unpickable_fn(filepath_fn)
         filepath_fn = _generator_to_list(filepath_fn) if inspect.isgeneratorfunction(filepath_fn) else filepath_fn
 
         if hash_dict is not None and hash_type not in ("sha256", "md5"):
@@ -232,7 +232,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                 with portalocker.Lock(promise_filepath, "a+", flags=portalocker.LockFlags.EXCLUSIVE) as promise_fh:
                     promise_fh.seek(0)
                     data = promise_fh.read()
-                    # TODO(VitalyFedyunin): Potentially there is old .promise file from previous failed run, we
+                    # TODO(635): Potentially there is old .promise file from previous failed run, we
                     # need to somehow propagate uniq session id for dataloader, save and compare it here,
                     # raising error
                     file_exists = len(data) > 0
@@ -291,17 +291,26 @@ def _is_promise_pending(promise_filename):
     return os.path.exists(promise_filename)
 
 
-def _wait_promise_fn(timeout, filename):
-    promise_filename = _find_promise_file(filename)
-    start = time.time()
-    while _is_promise_pending(promise_filename):
-        time.sleep(0.01)
-        if time.time() - start > timeout:
-            raise Exception(
-                f"OnDiskCache Exception: {filename} expected to be written by different process, "
-                + f"but file is not ready in {timeout} seconds."
-            )
-    return filename
+class _WaitPendingCacheItemIterDataPipe(IterDataPipe):
+    def __init__(self, source_datapipe, timeout=300):
+        self.source_datapipe = source_datapipe
+        self.timeout = timeout
+
+    def set_timeout(self, timeout):
+        self.timeout = timeout
+
+    def __iter__(self):
+        for filename in self.source_datapipe:
+            promise_filename = _find_promise_file(filename)
+            start = time.time()
+            while _is_promise_pending(promise_filename):
+                time.sleep(0.01)
+                if time.time() - start > self.timeout:
+                    raise Exception(
+                        f"OnDiskCache Exception: {filename} expected to be written by different process, "
+                        + f"but file is not ready in {self.timeout} seconds."
+                    )
+            yield filename
 
 
 class _FulfilledPromisesIterDataPipe(IterDataPipe):
@@ -332,7 +341,7 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
         old_promise_filename = None
         old_filename = None
         first_entry = True
-        # TODO(VitalyFedyunin): Limit buffer size here. It is only contains file names from archive,
+        # TODO(636): Limit buffer size here. It is only contains file names from archive,
         # but better be save than sorry.
         buffer: List[Any] = []
         for filename in self.source_datapipe:
@@ -397,7 +406,7 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
 
         _filepath_fn, _hash_dict, _hash_type, _ = OnDiskCacheHolderIterDataPipe._temp_dict[cache_holder]
         cached_dp = cache_holder._end_caching()
-        cached_dp = cached_dp.map(functools.partial(_wait_promise_fn, timeout))
+        cached_dp = _WaitPendingCacheItemIterDataPipe(cached_dp, timeout=timeout)
         cached_dp = FileLister(cached_dp, recursive=True)
 
         if same_filepath_fn:
@@ -425,12 +434,12 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
 
     @staticmethod
     def _recursive_search(graph):
-        for dp in graph.keys():
+        for dp, _ in graph.values():
             # Find the closest CacheHolder
             if isinstance(dp, OnDiskCacheHolderIterDataPipe):
                 return dp
-        for dp in graph.values():
-            res = EndOnDiskCacheHolderIterDataPipe._recursive_search(dp)
+        for _, sub_graph in graph.values():
+            res = EndOnDiskCacheHolderIterDataPipe._recursive_search(sub_graph)
             if res is not None:
                 return res
         return None

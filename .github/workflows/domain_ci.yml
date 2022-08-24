@@ -3,13 +3,11 @@ on:
   push:
     branches:
       - main
-      - release/*
   pull_request:
     branches:
       - main
       # For PR created by ghstack
       - gh/*/*/base
-      # - release/*
 
 jobs:
   torchvision:

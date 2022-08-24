@@ -9,7 +9,7 @@ import warnings
 from typing import Callable, Dict, Optional
 
 from torch.utils.data import IterDataPipe, MapDataPipe
-from torch.utils.data.datapipes.utils.common import _check_lambda_fn, DILL_AVAILABLE
+from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, DILL_AVAILABLE
 
 if DILL_AVAILABLE:
     import dill
@@ -42,6 +42,18 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
         >>> map_dp = source_dp.to_map_datapipe()
         >>> list(map_dp)
         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        >>> source_dp2 = IterableWrapper([('a', 1), ('b', 2), ('c', 1)])
+        >>> map_dp2 = source_dp2.to_map_datapipe()
+        >>> map_dp2['a']
+        1
+        >>> def row_to_tuple(row):
+        >>>     label = row[0]
+        >>>     data = row[1:]
+        >>>     return label, data
+        >>> source_dp3 = IterableWrapper([('a', 1, 1, 1, 1, 1, 1), ('b', 2, 2, 2, 2, 2, 2), ('c', 3, 3, 3, 3, 3, 3)])
+        >>> map_dp3 = source_dp3.to_map_datapipe(key_value_fn=row_to_tuple)
+        >>> map_dp3['a']
+        (1, 1, 1, 1, 1, 1)
     """
     datapipe: IterDataPipe
     key_value_fn: Optional[Callable]
@@ -52,7 +64,8 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
         if not isinstance(datapipe, IterDataPipe):
             raise TypeError(f"IterToMapConverter can only apply on IterDataPipe, but found {type(datapipe)}")
         self.datapipe = datapipe
-        _check_lambda_fn(key_value_fn)
+        if key_value_fn is not None:
+            _check_unpickable_fn(key_value_fn)
         self.key_value_fn = key_value_fn  # type: ignore[assignment]
         self._map = None
         self._length = -1

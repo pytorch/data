@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from .dataloader2 import DataLoader2
+from .dataloader2 import DataLoader2, DataLoader2Iterator
 from .error import PauseIteration
 from .reading_service import (
     MultiProcessingReadingService,
@@ -17,6 +17,7 @@ from .shuffle_spec import ShuffleSpec
 
 __all__ = [
     "DataLoader2",
+    "DataLoader2Iterator",
     "MultiProcessingReadingService",
     "PauseIteration",
     "Prototype2MultiProcessingReadingService",

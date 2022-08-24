@@ -73,7 +73,7 @@ For this example, we will first have a helper function that generates some CSV f
 
     def generate_csv(file_label, num_rows: int = 5000, num_features: int = 20) -> None:
         fieldnames = ['label'] + [f'c{i}' for i in range(num_features)]
-        writer = csv.DictWriter(open(f"sample_data{file_label}.csv", "w"), fieldnames=fieldnames)
+        writer = csv.DictWriter(open(f"sample_data{file_label}.csv", "w", newline=''), fieldnames=fieldnames)
         writer.writeheader()
         for i in range(num_rows):
             row_data = {col: random.random() for col in fieldnames}
@@ -146,8 +146,7 @@ The reason why ``n_sample = 12`` is because ``ShardingFilter`` (``datapipe.shard
 each worker will independently return all samples. In this case, there are 10 rows per file and 3 files, with a
 batch size of 5, that gives us 6 batches per worker. With 2 workers, we get 12 total batches from the ``DataLoader``.
 
-In order for DataPipe sharding to work with ``DataLoader``, we need to add the following. It is crucial to add
-`ShardingFilter` after `Shuffler` to ensure that all worker processes have the same order of data for sharding.
+In order for DataPipe sharding to work with ``DataLoader``, we need to add the following.
 
 .. code:: python
 
@@ -169,9 +168,18 @@ Note:
 
 - Place ``ShardingFilter`` (``datapipe.sharding_filter``) as early as possible in the pipeline, especially before expensive
   operations such as decoding, in order to avoid repeating these expensive operations across worker/distributed processes.
+- For the data source that needs to be sharded, it is crucial to add ``Shuffler`` before ``ShardingFilter``
+  to ensure data are globally shuffled before splitted into shards. Otherwise, each worker process would
+  always process the same shard of data for all epochs. And, it means each batch would only consist of data
+  from the same shard, which leads to low accuracy during training. However, it doesn't apply to the data
+  source that has already been sharded for each multi-/distributed process, since ``ShardingFilter`` is no
+  longer required to be presented in the pipeline.
+- There may be cases where placing ``Shuffler`` earlier in the pipeline lead to worse performance, because some
+  operations (e.g. decompression) are faster with sequential reading. In those cases, we recommend decompressing
+  the files prior to shuffling (potentially prior to any data loading).
 
 
-You can find more DataPipe implementation examples for various research domains `on this page <torchexamples.html>`_.
+You can find more DataPipe implementation examples for various research domains `on this page <examples.html>`_.
 
 
 Implementing a Custom DataPipe

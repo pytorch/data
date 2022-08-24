@@ -68,6 +68,7 @@ These DataPipes help to augment your samples.
     Cycler
     Enumerator
     IndexAdder
+    Repeater
 
 Combinatorial DataPipes
 -----------------------------
@@ -130,6 +131,8 @@ saving files, and listing the files in directories).
     :toctree: generated/
     :template: datapipe.rst
 
+    AISFileLister
+    AISFileLoader
     FSSpecFileLister
     FSSpecFileOpener
     FSSpecSaver
@@ -190,6 +193,9 @@ These DataPipes helps you select specific samples within a DataPipe.
 
     Filter
     Header
+    Dropper
+    Slicer
+    Flattener
 
 Text DataPipes
 -----------------------------

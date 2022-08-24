@@ -18,7 +18,7 @@ from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
 
 
-# TODO: Remove this helper function when https://bugs.python.org/issue42627 is resolved
+# TODO(642): Remove this helper function when https://bugs.python.org/issue42627 is resolved
 def _get_proxies() -> Optional[Dict[str, str]]:
     import os
 
@@ -43,6 +43,7 @@ def _get_response_from_http(
                 r = session.get(url, stream=True, proxies=proxies, **query_params)  # type: ignore[arg-type]
             else:
                 r = session.get(url, timeout=timeout, stream=True, proxies=proxies, **query_params)  # type: ignore[arg-type]
+        r.raise_for_status()
         return url, StreamWrapper(r.raw)
     except HTTPError as e:
         raise Exception(f"Could not get the file. [HTTP Error] {e.response}.")
@@ -130,7 +131,12 @@ def _get_response_from_google_drive(url: str, *, timeout: Optional[float]) -> Tu
             response = session.get(url, timeout=timeout, stream=True)
 
         if "content-disposition" not in response.headers:
-            raise RuntimeError("Internal error: headers don't contain content-disposition.")
+            raise RuntimeError(
+                "Internal error: headers don't contain content-disposition. This is usually caused by "
+                "using a sharing/viewing link instead of a download link. Click 'Download' on the "
+                "Google Drive page, which should redirect you to a download page, and use the link "
+                "of that page."
+            )
 
         filename = re.findall('filename="(.+)"', response.headers["content-disposition"])
         if filename is None:
