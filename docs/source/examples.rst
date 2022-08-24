@@ -56,13 +56,13 @@ Vision
 
 Caltech 101
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-The `Caltech 101 dataset <http://www.vision.caltech.edu/Image_Datasets/Caltech101/>`_ contains pictures of objects
+The `Caltech 101 dataset <https://data.caltech.edu/records/20086>`_ contains pictures of objects
 belonging to 101 categories. Here is the
 `DataPipe implementation of Caltech 101 <https://github.com/pytorch/data/blob/main/examples/vision/caltech101.py>`_.
 
 Caltech 256
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-The `Caltech 256 dataset <http://www.vision.caltech.edu/Image_Datasets/Caltech256/>`_ contains 30607 images
+The `Caltech 256 dataset <https://data.caltech.edu/records/20087>`_ contains 30607 images
 from 256 categories. Here is the
 `DataPipe implementation of Caltech 256 <https://github.com/pytorch/data/blob/main/examples/vision/caltech256.py>`_.
 
@@ -83,7 +83,6 @@ those `vision datasets here <https://github.com/pytorch/vision/tree/main/torchvi
 
 Note that these implementations are currently in the prototype phase, but they should be fully supported
 in the coming months. Nonetheless, they demonstrate the different ways DataPipes can be used for data loading.
-
 
 Recommender System
 ---------------------------------
@@ -123,3 +122,16 @@ Implementing a rolling window custom `DataPipe` for timeseries forecasting tasks
 Here is the
 `DataPipe implementation of a rolling window 
 <https://github.com/tcapelle/torchdata/blob/main/02_Custom_timeseries_datapipe.ipynb>`_.
+
+
+Using AIStore
+-------------------------
+
+Caltech 256 and Microsoft COCO (community example)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Listing and loading data from AIS buckets (buckets that are not 3rd party backend-based) and remote cloud buckets (3rd party 
+backend-based cloud buckets) using `AISFileLister <https://pytorch.org/data/main/generated/torchdata.datapipes.iter.AISFileLister.html#aisfilelister>`_ and `AISFileLoader <https://pytorch.org/data/main/generated/torchdata.datapipes.iter.AISFileLoader.html#torchdata.datapipes.iter.AISFileLoader>`_.
+
+Here is an `example which uses AISIO DataPipe <https://github.com/pytorch/data/blob/main/examples/aistore/aisio_usage_example.ipynb>`_ for the `Caltech-256 Object Category Dataset <https://data.caltech.edu/records/20087>`_ containing 256 object categories and a total 
+of 30607 images stored on an AIS bucket and the `Microsoft COCO Dataset <https://cocodataset.org/#home>`_ which has 330K images with over 200K 
+labels of more than 1.5 million object instances across 80 object categories stored on Google Cloud.

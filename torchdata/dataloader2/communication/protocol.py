@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 from torchdata.dataloader2 import communication
 
 
@@ -58,11 +64,11 @@ class ProtocolServer(Protocol):
             raise Exception("Trying to get next request, while having one unserved")
         try:
             response = self.request_queue.get(block=block)
-        except Exception:  # TODO: Catch only timeout exceptions
+        except Exception:  # TODO(625): Catch only timeout exceptions
             raise EmptyQueue("queue is empty")
         self._req_received = response
         return response
-        # TODO: Validate supported requests
+        # TODO(626): Validate supported requests
 
     def response_terminate(self):
         if not self.have_pending_request():
@@ -183,7 +189,7 @@ class IterDataPipeQueueProtocolClient(ProtocolClient):
     def get_response_reset_iterator(self, block=False):
         try:
             response = self.response_queue.get(block=block)
-        except Exception:  # TODO: Catch only timeout exceptions
+        except Exception:  # TODO(627): Catch only timeout exceptions
             raise EmptyQueue("queue is empty")
         self.request_served(response)
 
@@ -195,9 +201,9 @@ class IterDataPipeQueueProtocolClient(ProtocolClient):
             raise Exception("Can not expect any response without submitted request")
         try:
             response = self.response_queue.get(block=block, timeout=timeout)
-        except Exception:  # TODO: Catch only timeout exceptions
+        except Exception:  # TODO(628): Catch only timeout exceptions
             raise EmptyQueue("queue is empty")
         self.request_served(response)
 
-        # TODO(VitalyFedyunin): Add possible response types validation here
+        # TODO(629): Add possible response types validation here
         return response

@@ -13,14 +13,15 @@ from typing import Any, Callable, List, Optional
 
 import torch
 from torch.utils.data import DataLoader
+from torch.utils.data.graph import DataPipe
 
 from torchdata.dataloader2 import communication
-from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
+from torchdata.datapipes.iter import IterableWrapper
 
 
 class ReadingServiceInterface(ABC):
     @abstractmethod
-    def initialize(self, datapipe: IterDataPipe) -> IterDataPipe:
+    def initialize(self, datapipe: DataPipe) -> DataPipe:
         """
         ReadingService traverses datapipe graph, finds executable part,
         adapts into its own datapipe, and replaces in datapipe graph.
@@ -28,10 +29,10 @@ class ReadingServiceInterface(ABC):
         Called once in creating DataLoader iterator at first time.
 
         Args:
-            datapipe: IterDataPipe. Original datapipe.
+            datapipe: DataPipe. Original datapipe.
 
         Return:
-            Adapated IterDataPipe.
+            Adapted DataPipe.
 
         Example:
             MultiProcessingReadingService finds information about sharding,
@@ -81,7 +82,7 @@ class CheckpointableReadingServiceInterface(ReadingServiceInterface):
         pass
 
     @abstractmethod
-    def restore(self, datapipe: IterDataPipe, serialized_state: bytes) -> IterDataPipe:
+    def restore(self, datapipe: DataPipe, serialized_state: bytes) -> DataPipe:
         """
         ReadingService adapts datapipe and consume serialized state.
 
@@ -103,31 +104,26 @@ class _IterateQueueDataPipes:
         self.datapipes = datapipes
 
     def __iter__(self):
-        # TODO(VitalyFedyunin): This can traverse pipes in any order, so undeterministic
-        not_available = False
+        # TODO(612): This is slow as it does not sends data requests ahead.
         exclude_datapipes: List[Any] = []
         while len(exclude_datapipes) < len(self.datapipes):
             for dp in self.datapipes:
                 if dp not in exclude_datapipes:
-                    try:
-                        value = dp.nonblocking_next()
-                        yield value
-                    except StopIteration:
-                        exclude_datapipes.append(dp)
-                    except communication.iter.NotAvailable:
-                        not_available = True
-            if not_available:
-                time.sleep(0.001)
+                    forever = True
+                    while forever:
+                        try:
+                            value = dp.nonblocking_next()
+                            yield value
+                            forever = False
+                        except StopIteration:
+                            exclude_datapipes.append(dp)
+                            forever = False
+                        except communication.iter.NotAvailable:
+                            time.sleep(0.001)
 
 
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     num_workers: int
-    #   pin_memory: bool
-    #   timeout: float
-    #   worker_init_fn: Optional[Callable[[int], None]]
-    #   prefetch_factor: int
-    #   persistent_workers: bool
-
     processes: List
     datapipes: List
 
@@ -137,23 +133,24 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         multiprocessing_context=None,
     ) -> None:
         self.num_workers = num_workers
-        # TODO(VitalyFedyunin): Should be one of 'fork', 'spawn'
+        # TODO(613): Should be one of 'fork', 'spawn'
         self.multiprocessing_context = multiprocessing_context
         self.processes = []
         self.datapipes = []
 
     @staticmethod
     def init_datapipe_process(num_workers, worker_id, datapipe):
-        # TODO(VitalyFedyunin): Add distributed support
-        # TODO(VitalyFedyunin): Add shuffle determinism support
+        # TODO(614): Add distributed support
+        # TODO(615): Add shuffle determinism support
         torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
 
-    def initialize(self, datapipe: IterDataPipe) -> IterDataPipe:
+    def initialize(self, datapipe: DataPipe) -> DataPipe:
         if self.num_workers == 0:
-            # TODO(VitalyFedyunin): Warn and recommend usage of InPorcessReadingService
+            # TODO(616): Warn and recommend usage of InProcessReadingService
             return datapipe
         for worker_id in range(self.num_workers):
-            # TODO(VitalyFedyunin): Separate into function, because we also need to apply distributed seed and call it inside process
+            # TODO(617): Separate into function, because we also need to apply distributed seed
+            #            and call it inside process
             call_inside_process = functools.partial(self.init_datapipe_process, self.num_workers, worker_id)
             ctx = mp.get_context(self.multiprocessing_context)
             (process, req_queue, res_queue) = communication.eventloop.SpawnProcessForDataPipeline(
@@ -176,10 +173,10 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         self.finalize()
 
     def finalize(self) -> None:
-        # TODO(VitalyFedyunin): Check if anyone stuck with messages
+        # TODO(618): Check if anyone stuck with messages
         def clean_me(process, req_queue, res_queue):
-            # TODO(VitalyFedyunin): Can send terminations simulteniously
-            # TODO(VitalyFedyunin): Make termination a function of QueueWrapperDataPipe (similar to reset)
+            # TODO(619): Can send terminations simultaneously
+            # TODO(620): Make termination a function of QueueWrapperDataPipe (similar to reset)
             req_queue.put(communication.messages.TerminateRequest())
             _ = res_queue.get()
             process.join()
@@ -218,7 +215,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         self.dl_: Optional[DataLoader] = None
 
     # Wrap the DataLoader with IterableWrapper to respect type annotation
-    def initialize(self, datapipe: IterDataPipe) -> IterDataPipe:
+    def initialize(self, datapipe: DataPipe) -> DataPipe:
         self.dl_ = DataLoader(
             datapipe,
             num_workers=self.num_workers,
@@ -228,7 +225,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             multiprocessing_context=self.multiprocessing_context,
             prefetch_factor=self.prefetch_factor,
             persistent_workers=self.persistent_workers,
-            # TODO: `collate_fn` is necessary until we stop using DLv1 https://github.com/pytorch/data/issues/530
+            # TODO(621): `collate_fn` is necessary until we stop using DLv1 https://github.com/pytorch/data/issues/530
             collate_fn=_collate_no_op,
             batch_size=1,  # This reading service assume batching is done via DataPipe
         )

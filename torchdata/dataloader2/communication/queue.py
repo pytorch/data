@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import threading
 import time
 
@@ -20,7 +26,7 @@ class LocalQueue:
         self.items.append(item)
 
     def get(self, block=True, timeout=0):
-        # TODO(VitalyFedyunin): Add support of block and timeout arguments
+        # TODO(622): Add support of block and timeout arguments
         LocalQueue.ops += 1
         if not len(self.items):
             LocalQueue.empty += 1
@@ -40,12 +46,12 @@ class ThreadingQueue:
             self.items.append(item)
 
     def get(self, block=True, timeout=0):
-        # TODO(VitalyFedyunin): Add support of block and timeout arguments
+        # TODO(623): Add support of block and timeout arguments
         while True:
             with self.lock:
                 if len(self.items) > 0:
                     return self.items.pop()
             if not block:
                 raise Exception("Not available")
-            # TODO(VitalyFedyunin): Figure out what to do if nothing in the queue
+            # TODO(624): Figure out what to do if nothing in the queue
             time.sleep(0.000001)
