@@ -68,6 +68,7 @@ These DataPipes help to augment your samples.
     Cycler
     Enumerator
     IndexAdder
+    Repeater
 
 Combinatorial DataPipes
 -----------------------------
