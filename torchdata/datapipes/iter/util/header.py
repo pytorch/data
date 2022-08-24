@@ -95,6 +95,7 @@ class LengthSetterIterDataPipe(IterDataPipe[T_co]):
 
     def __init__(self, source_datapipe: IterDataPipe[T_co], length: int) -> None:
         self.source_datapipe: IterDataPipe[T_co] = source_datapipe
+        assert length >= 0
         self.length: int = length
 
     def __iter__(self) -> Iterator[T_co]:

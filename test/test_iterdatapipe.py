@@ -1179,6 +1179,9 @@ class TestIterDataPipe(expecttest.TestCase):
         dp: IterDataPipe = input_dp.set_length(3)
         self.assertEqual(list(range(10)), list(dp))
 
+        with self.assertRaises(AssertionError):
+            input_dp.set_length(-1)
+
         # __len__ Test: Length is as specified and propagates through
         dp = input_dp.set_length(3).map(lambda x: x + 1)
         self.assertEqual(3, len(dp))
