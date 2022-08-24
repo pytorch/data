@@ -6,7 +6,6 @@
 
 
 import pickle
-from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict, Generic, Iterable, Iterator, Optional, TypeVar, Union
 
@@ -111,7 +110,7 @@ class DataLoader2(Generic[T_co]):
             self.datapipe_adapter_fns = datapipe_adapter_fn
         else:
             self.datapipe_adapter_fns = [datapipe_adapter_fn]
-        self.reading_service = deepcopy(reading_service)
+        self.reading_service = self._copy(reading_service)
         self.reading_service_state: Optional[bytes] = None  # is not `None` when `load_state_dict` is called
         self._terminated: bool = False
         self.valid_iterator_id: Optional[int] = None
@@ -146,6 +145,14 @@ class DataLoader2(Generic[T_co]):
 
     def __del__(self) -> None:
         self.shutdown()
+
+    @staticmethod
+    def _copy(obj):
+        """
+        Standardized way for DataLoader2 to copy an object when needed, such as for DataPipe/ReadingService.
+        This uses `pickle` to serialize/deserialize to create the copy.
+        """
+        return pickle.loads(pickle.dumps(obj))
 
     def shutdown(self) -> None:
         if not self._reset_iter:
