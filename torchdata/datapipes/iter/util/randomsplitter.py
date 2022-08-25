@@ -91,42 +91,31 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
         self.source_datapipe: IterDataPipe = source_datapipe
         self.total_length: int = total_length
         self._seed = seed
-        self.norm_weights: Dict[T, int] = self.normalize_weights(weights, total_length)
         self.keys: List[T] = list(weights.keys())
         self.key_to_index: Dict[T, int] = {k: i for i, k in enumerate(self.keys)}
-        self.weights: List[int] = [self.norm_weights[k] for k in self.keys]
-        self.remaining_length: int = self.total_length
+        self.norm_weights: List[float] = self.normalize_weights([weights[k] for k in self.keys], total_length)
+        self.weights: List[float] = self.norm_weights.copy()
         self._rng = random.Random(self._seed)
 
     def draw(self) -> T:
         selected_key = self._rng.choices(self.keys, self.weights)[0]
         index = self.key_to_index[selected_key]
         self.weights[index] -= 1
-        self.remaining_length -= 1
-        # Normalization is necessary if a weight becomes negative (all samples are drawn for that key)
-        if self.weights[index] < 0 and self.remaining_length > 0:
+        if self.weights[index] < 0:
             self.weights[index] = 0
-            self.weights = self.normalize_weights(self.weights, self.remaining_length)
         return selected_key
 
     @staticmethod
-    def normalize_weights(weights, total_length: int):
+    def normalize_weights(weights: List[float], total_length: int) -> List[float]:
         """
-        Given a ``List`` or a ``Dict`` of weights, normalize them according to ``total_length``.
+        Given a ``List`` of weights, normalize them according to ``total_length``.
         """
-        if isinstance(weights, dict):
-            total_weight = sum(weights.values())
-            return {k: float(w) * total_length / total_weight for k, w in weights.items()}
-        elif isinstance(weights, list):
-            total_weight = sum(weights)
-            return [float(w) * total_length / total_weight for w in weights]
-        else:
-            raise RuntimeError("`weights` must be a list or a dicts.")
+        total_weight = sum(weights)
+        return [float(w) * total_length / total_weight for w in weights]
 
     def reset(self) -> None:
         self._rng = random.Random(self._seed)
-        self.weights = [self.norm_weights[k] for k in self.keys]
-        self.remaining_length = self.total_length
+        self.weights = self.norm_weights.copy()
 
     def override_seed(self, seed):
         """
