@@ -1172,6 +1172,28 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
         self.assertEqual(expected_res, res_after_reset)
 
+    def test_length_setter_iterdatapipe(self):
+        input_dp = IterableWrapper(range(10))
+
+        # Functional Test: Setting length doesn't change the content of the DataPipe
+        dp: IterDataPipe = input_dp.set_length(3)
+        self.assertEqual(list(range(10)), list(dp))
+
+        with self.assertRaises(AssertionError):
+            input_dp.set_length(-1)
+
+        # __len__ Test: Length is as specified and propagates through
+        dp = input_dp.set_length(3).map(lambda x: x + 1)
+        self.assertEqual(3, len(dp))
+
+        # Reset Test:
+        n_elements_before_reset = 2
+        dp = input_dp.set_length(3)
+        expected_res = list(range(10))
+        res_before_reset, res_after_reset = reset_after_n_next_calls(dp, n_elements_before_reset)
+        self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_res, res_after_reset)
+
 
 if __name__ == "__main__":
     unittest.main()
