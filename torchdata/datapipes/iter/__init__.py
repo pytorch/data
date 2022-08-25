@@ -92,7 +92,7 @@ from torchdata.datapipes.iter.util.decompressor import (
     ExtractorIterDataPipe as Extractor,
 )
 from torchdata.datapipes.iter.util.hashchecker import HashCheckerIterDataPipe as HashChecker
-from torchdata.datapipes.iter.util.header import HeaderIterDataPipe as Header
+from torchdata.datapipes.iter.util.header import HeaderIterDataPipe as Header, LengthSetterIterDataPipe as LengthSetter
 from torchdata.datapipes.iter.util.indexadder import (
     EnumeratorIterDataPipe as Enumerator,
     IndexAdderIterDataPipe as IndexAdder,
@@ -177,6 +177,7 @@ __all__ = [
     "IterKeyZipper",
     "IterableWrapper",
     "JsonParser",
+    "LengthSetter",
     "LineReader",
     "MapKeyZipper",
     "MapToIterConverter",
