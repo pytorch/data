@@ -9,9 +9,20 @@ from typing import Callable, Hashable, Iterator, List, Optional, Set, Sized, Typ
 
 from torch.utils.data import functional_datapipe, IterDataPipe
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
-from torchdata.datapipes.utils.common import _no_op_fn
 
 T_co = TypeVar("T_co", covariant=True)
+
+
+def _no_op_fn(*args):
+    """
+    No-operation function, returns passed arguments , always as iterable.
+    """
+    if len(args) == 1:
+        try:
+            return iter(args[0])
+        except TypeError:
+            pass
+    return args
 
 
 @functional_datapipe("map_batches")

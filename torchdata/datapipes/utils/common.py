@@ -22,13 +22,3 @@ def validate_pathname_binary_tuple(data: Tuple[str, IOBase]):
             f"binary stream within the tuple should have IOBase or"
             f"its subclasses as type, but it is type {type(data[1])}"
         )
-
-
-def _no_op_fn(*args):
-    """
-    No-operation function, returns passed arguments , always as iterable.
-    """
-    if len(args) == 1 and isinstance(args[0], (list, tuple)):
-        return args[0]
-    else:
-        return args
