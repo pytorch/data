@@ -1211,6 +1211,10 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual(5, len(valid_res))
         self.assertEqual(list(range(10)), sorted(results[0] + valid_res))
 
+        # Functional Test: lengths can be known in advance because it splits evenly into integers.
+        self.assertEqual(5, len(train))
+        self.assertEqual(5, len(valid))
+
         # Functional Test: DataPipe can split into 3 DataPipes, and infer `total_length` when not given
         dp = IterableWrapper(range(10))
         train, valid, test = dp.random_split(weights={"train": 0.6, "valid": 0.2, "test": 0.2}, seed=0)
@@ -1226,10 +1230,20 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual(2, len(test_res))
         self.assertEqual(list(range(10)), sorted(results[0] + valid_res + test_res))
 
+        # Functional Test: lengths can be known in advance because it splits evenly into integers.
+        self.assertEqual(6, len(train))
+        self.assertEqual(2, len(valid))
+        self.assertEqual(2, len(test))
+
+        # Functional Test: Split can work even when weights do not split evenly into integers.
         dp = IterableWrapper(range(13))
         train, valid, test = dp.random_split(weights={"train": 0.6, "valid": 0.2, "test": 0.2}, seed=0)
         res = list(train) + list(valid) + list(test)
         self.assertEqual(list(range(13)), sorted(res))
+
+        # Functional Test: lengths can be known in advance because it splits evenly into integers.
+        with self.assertRaisesRegex(TypeError, "Lengths of the split cannot be known in advance"):
+            len(train)
 
         # Functional Test: Error when `total_length` cannot be inferred
         nolen_dp = IDP_NoLen(range(10))

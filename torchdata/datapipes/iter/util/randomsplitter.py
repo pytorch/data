@@ -3,7 +3,6 @@
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
-
 import random
 from typing import Dict, List, Optional, TypeVar, Union
 
@@ -27,6 +26,8 @@ class RandomSplitterIterDataPipe(IterDataPipe):
     Args:
         source_datapipe: Iterable DataPipe being split
         weights: Dict of weights; the length of this list determines how many output DataPipes there will be.
+            It is recommended to provide integer weights that sum up to ``total_length``, which allows
+            resulting DataPipes' length values to be known in advance.
         seed: random _seed used to determine the randomness of the split
         total_length: Length of the ``source_datapipe``, optional but providing an integer is highly encouraged,
             because not all ``IterDataPipe`` has ``len``, espeically ones that can be easily known in advance.
@@ -90,19 +91,23 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
     ):
         self.source_datapipe: IterDataPipe = source_datapipe
         self.total_length: int = total_length
+        self.remaining_length: int = total_length
         self._seed = seed
         self.keys: List[T] = list(weights.keys())
         self.key_to_index: Dict[T, int] = {k: i for i, k in enumerate(self.keys)}
         self.norm_weights: List[float] = self.normalize_weights([weights[k] for k in self.keys], total_length)
         self.weights: List[float] = self.norm_weights.copy()
         self._rng = random.Random(self._seed)
+        self._lengths: List[int] = []
 
     def draw(self) -> T:
         selected_key = self._rng.choices(self.keys, self.weights)[0]
         index = self.key_to_index[selected_key]
         self.weights[index] -= 1
+        self.remaining_length -= 1
         if self.weights[index] < 0:
             self.weights[index] = 0
+            self.weights = self.normalize_weights(self.weights, self.remaining_length)
         return selected_key
 
     @staticmethod
@@ -116,6 +121,7 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
     def reset(self) -> None:
         self._rng = random.Random(self._seed)
         self.weights = self.norm_weights.copy()
+        self.remaining_length = self.total_length
 
     def override_seed(self, seed):
         """
@@ -153,6 +159,19 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
         self._rng = random.Random()
         self._rng.setstate(rng_state)
 
+    def get_length(self, target: T) -> int:
+        if not self._lengths:
+            if all(w.is_integer() for w in self.norm_weights) and sum(self.norm_weights) == self.total_length:
+                self._lengths = [int(w) for w in self.norm_weights]
+            else:
+                raise TypeError(
+                    "Lengths of the split cannot be known in advance. Please supply "
+                    "integer `weights` that sum up to `total_length`.\nAlternatively, "
+                    "use `datapipe.set_length(LENGTH)` to manually set the desired length."
+                )
+        index = self.key_to_index[target]
+        return self._lengths[index]
+
 
 class SplitterIterator(IterDataPipe):
     def __init__(self, main_datapipe: _RandomSplitterIterDataPipe, target: T):
@@ -172,3 +191,6 @@ class SplitterIterator(IterDataPipe):
         """
         self.main_datapipe.override_seed(seed)
         return self
+
+    def __len__(self):
+        return self.main_datapipe.get_length(self.target)
