@@ -20,13 +20,26 @@ from torchdata.datapipes.iter import IterableWrapper
 
 
 class ReadingServiceInterface(ABC):
+    """
+    ReadingService must be picklable prior to ``initialize``
+    being called. This is because a copy of it will be
+    created by DataLoader2 to avoid the situation where the same
+    ReadingService object is used by multiple DataLoader2 and its internal
+    state will be modifiable by each of them.
+
+    As a result, certain initialization steps may need to take place within the
+    ``initialize`` method rather than ``__init__`` of the ReadingService class.
+    """
+
     @abstractmethod
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         """
         ReadingService traverses datapipe graph, finds executable part,
         adapts into its own datapipe, and replaces in datapipe graph.
 
-        Called once in creating DataLoader iterator at first time.
+        Called once when creating DataLoader iterator for the first time.
+        Prior to calling this method, the ReadingService object
+        must be picklable.
 
         Args:
             datapipe: DataPipe. Original datapipe.
