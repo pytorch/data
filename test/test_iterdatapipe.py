@@ -1226,6 +1226,11 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual(2, len(test_res))
         self.assertEqual(list(range(10)), sorted(results[0] + valid_res + test_res))
 
+        dp = IterableWrapper(range(13))
+        train, valid, test = dp.random_split(weights={"train": 0.6, "valid": 0.2, "test": 0.2}, seed=0)
+        res = list(train) + list(valid) + list(test)
+        self.assertEqual(list(range(13)), sorted(res))
+
         # Functional Test: Error when `total_length` cannot be inferred
         nolen_dp = IDP_NoLen(range(10))
         with self.assertRaisesRegex(TypeError, "needs `total_length`"):
