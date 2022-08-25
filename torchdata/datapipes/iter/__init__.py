@@ -69,6 +69,8 @@ from torchdata.datapipes.iter.transform.callable import (
     BatchMapperIterDataPipe as BatchMapper,
     DropperIterDataPipe as Dropper,
     FlatMapperIterDataPipe as FlatMapper,
+    FlattenIterDataPipe as Flattener,
+    SliceIterDataPipe as Slicer,
 )
 from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
 from torchdata.datapipes.iter.util.cacheholder import (
@@ -80,7 +82,7 @@ from torchdata.datapipes.iter.util.combining import (
     IterKeyZipperIterDataPipe as IterKeyZipper,
     MapKeyZipperIterDataPipe as MapKeyZipper,
 )
-from torchdata.datapipes.iter.util.cycler import CyclerIterDataPipe as Cycler
+from torchdata.datapipes.iter.util.cycler import CyclerIterDataPipe as Cycler, RepeaterIterDataPipe as Repeater
 from torchdata.datapipes.iter.util.dataframemaker import (
     DataFrameMakerIterDataPipe as DataFrameMaker,
     ParquetDFLoaderIterDataPipe as ParquetDataFrameLoader,
@@ -90,7 +92,7 @@ from torchdata.datapipes.iter.util.decompressor import (
     ExtractorIterDataPipe as Extractor,
 )
 from torchdata.datapipes.iter.util.hashchecker import HashCheckerIterDataPipe as HashChecker
-from torchdata.datapipes.iter.util.header import HeaderIterDataPipe as Header
+from torchdata.datapipes.iter.util.header import HeaderIterDataPipe as Header, LengthSetterIterDataPipe as LengthSetter
 from torchdata.datapipes.iter.util.indexadder import (
     EnumeratorIterDataPipe as Enumerator,
     IndexAdderIterDataPipe as IndexAdder,
@@ -156,6 +158,7 @@ __all__ = [
     "FileOpener",
     "Filter",
     "FlatMapper",
+    "Flattener",
     "Forker",
     "FullSync",
     "GDriveReader",
@@ -174,6 +177,7 @@ __all__ = [
     "IterKeyZipper",
     "IterableWrapper",
     "JsonParser",
+    "LengthSetter",
     "LineReader",
     "MapKeyZipper",
     "MapToIterConverter",
@@ -186,6 +190,7 @@ __all__ = [
     "ParagraphAggregator",
     "ParquetDataFrameLoader",
     "RarArchiveLoader",
+    "Repeater",
     "RoutedDecoder",
     "Rows2Columnar",
     "S3FileLister",
@@ -195,6 +200,7 @@ __all__ = [
     "Saver",
     "ShardingFilter",
     "Shuffler",
+    "Slicer",
     "StreamReader",
     "TFRecordLoader",
     "TarArchiveLoader",
