@@ -99,43 +99,50 @@ def parse_dataset_args(args) -> str:
     Parse arguments and return the dataset directory path.
     """
 
-    print(f"file-system = {args.fs}")
-
     fs_arg_str = args.fs.lower()
-
-    if fs_arg_str == "fsx":
-        dataset_dir = "/datasets01"
-    elif fs_arg_str == "fsx_isolated":
-        dataset_dir = "/fsx_isolated"
-    elif fs_arg_str == "ontap":
-        dataset_dir = "/datasets01_ontap"
-    elif fs_arg_str == "ontap_isolated":
-        dataset_dir = "/ontap_isolated"
-    else:
-        raise ValueError(f"bad args.fs, got {args.fs}")
-
     ds_arg_str = args.dataset.lower()
+    print(f"file-system = {fs_arg_str}")
+    print(f"dataset = {ds_arg_str}")
 
-    if ds_arg_str == "tinyimagenet":  # Data are there but need to change `make_dp` in helpers.py for it to work
-        # TODO: Need to change datapipe setup
-        dataset_dir += "/tinyimagenet/081318/"
-    elif ds_arg_str == "cifar10":
-        # TODO: This one isn't in `ontap` yet
-        raise NotImplementedError("CIFAR10 data not on disk")
-    elif ds_arg_str == "imagenette":
-        # TODO: This one isn't in `ontap` yet
-        raise NotImplementedError("Imagenette data not on disk")
-    elif ds_arg_str == "imagenet":  # This works
-        dataset_dir += "/imagenet_full_size/061417/"
-    elif ds_arg_str == "imagenet22k":
-        # TODO: Directory needs to have the `train` `val` split
-        raise NotImplementedError("imagenet-22k needs train/val split")
-        dataset_dir += "/imagenet-22k/062717/"
-    elif ds_arg_str == "lsun":
-        # TODO: This one isn't in `ontap` yet
-        raise NotImplementedError("LSUN data not on disk")
-    else:
-        raise ValueError(f"bad args.dataset, got {args.dataset}")
+    # Custom is for running on custom AWS instance
+    if fs_arg_str == "custom":
+        dataset_dir = "~/benchmark_datasets"
+        if ds_arg_str == "cifar":
+            dataset_dir += "/CIFAR-10-images-master/"
+        else:
+            raise ValueError(f"bad args.dataset, got {ds_arg_str}")
+    else:  # Assume we are running on internal AWS cluster
+        if fs_arg_str == "fsx":
+            dataset_dir = "/datasets01"
+        elif fs_arg_str == "fsx_isolated":
+            dataset_dir = "/fsx_isolated"
+        elif fs_arg_str == "ontap":
+            dataset_dir = "/datasets01_ontap"
+        elif fs_arg_str == "ontap_isolated":
+            dataset_dir = "/ontap_isolated"
+        else:
+            raise ValueError(f"bad args.fs, got {fs_arg_str}")
+
+        if ds_arg_str == "tinyimagenet":  # Data are there but need to change `make_dp` in helpers.py for it to work
+            # TODO: Need to change datapipe setup
+            dataset_dir += "/tinyimagenet/081318/"
+        elif ds_arg_str == "cifar10":
+            # TODO: This one isn't in `ontap` yet
+            raise NotImplementedError("CIFAR10 data not on disk")
+        elif ds_arg_str == "imagenette":
+            # TODO: This one isn't in `ontap` yet
+            raise NotImplementedError("Imagenette data not on disk")
+        elif ds_arg_str == "imagenet":  # This works
+            dataset_dir += "/imagenet_full_size/061417/"
+        elif ds_arg_str == "imagenet22k":
+            # TODO: Directory needs to have the `train` `val` split
+            raise NotImplementedError("imagenet-22k needs train/val split")
+            dataset_dir += "/imagenet-22k/062717/"
+        elif ds_arg_str == "lsun":
+            # TODO: This one isn't in `ontap` yet
+            raise NotImplementedError("LSUN data not on disk")
+        else:
+            raise ValueError(f"bad args.dataset, got {ds_arg_str}")
     return dataset_dir
 
 
