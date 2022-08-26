@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>BatchMapper &mdash; TorchData main documentation</title>
+  <title>LengthSetter &mdash; TorchData main documentation</title>
   
 
   
@@ -33,8 +33,8 @@
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="FlatMapper" href="torchdata.datapipes.iter.FlatMapper.html" />
-    <link rel="prev" title="Saver" href="torchdata.datapipes.iter.Saver.html" />
+    <link rel="next" title="MapToIterConverter" href="torchdata.datapipes.iter.MapToIterConverter.html" />
+    <link rel="prev" title="IterableWrapper" href="torchdata.datapipes.iter.IterableWrapper.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -290,13 +290,13 @@
         
           <li><a href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a> &gt;</li>
         
-      <li>BatchMapper</li>
+      <li>LengthSetter</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/generated/torchdata.datapipes.iter.BatchMapper.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/generated/torchdata.datapipes.iter.LengthSetter.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -322,44 +322,42 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="batchmapper">
-<h1>BatchMapper<a class="headerlink" href="#batchmapper" title="Permalink to this heading">¶</a></h1>
+  <section id="lengthsetter">
+<h1>LengthSetter<a class="headerlink" href="#lengthsetter" title="Permalink to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="torchdata.datapipes.iter.BatchMapper">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">BatchMapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.BatchMapper" title="Permalink to this definition">¶</a></dt>
-<dd><p>Combines elements from the source DataPipe to batches and applies a function
-over each batch, then flattens the outpus to a single, unnested IterDataPipe
-(functional name: <code class="docutils literal notranslate"><span class="pre">map_batches</span></code>).</p>
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.LengthSetter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">LengthSetter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T_co</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.LengthSetter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the length attribute of the DataPipe, which is returned by <code class="docutils literal notranslate"><span class="pre">__len__</span></code> (functional name: <code class="docutils literal notranslate"><span class="pre">set_length</span></code>).
+This can be used after DataPipes whose final length cannot be known in advance (e.g. <code class="docutils literal notranslate"><span class="pre">filter</span></code>). If you
+know the final length with certainty, you can manually set it, which can then be used by
+DataLoader or other DataPipes.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This DataPipe differs from <a class="reference internal" href="torchdata.datapipes.iter.Header.html#torchdata.datapipes.iter.Header" title="torchdata.datapipes.iter.Header"><code class="xref py py-class docutils literal notranslate"><span class="pre">Header</span></code></a> in that this doesn’t restrict the number of elements that
+can be yielded from the DataPipe; this is strictly used for setting an attribute so that it can be used later.</p>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>datapipe</strong> – Source IterDataPipe</p></li>
-<li><p><strong>fn</strong> – The function to be applied to each batch of data</p></li>
-<li><p><strong>batch_size</strong> – The size of batch to be aggregated from <code class="docutils literal notranslate"><span class="pre">datapipe</span></code></p></li>
-<li><p><strong>input_col</strong> – Index or indices of data which <code class="docutils literal notranslate"><span class="pre">fn</span></code> is applied, such as:
-- <code class="docutils literal notranslate"><span class="pre">None</span></code> as default to apply <code class="docutils literal notranslate"><span class="pre">fn</span></code> to the data directly.
-- Integer(s) is used for list/tuple.
-- Key(s) is used for dict.</p></li>
+<li><p><strong>source_datapipe</strong> – a DataPipe</p></li>
+<li><p><strong>length</strong> – the integer value that will be set as the length</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Example</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">fn</span><span class="p">(</span><span class="n">batch</span><span class="p">):</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="p">[</span><span class="n">d</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">source_dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">)))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">mapped_dp</span> <span class="o">=</span> <span class="n">source_dp</span><span class="o">.</span><span class="n">map_batches</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">mapped_dp</span><span class="p">)</span>
-<span class="go">[1, 2, 3, 4, 5]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">set_length</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">dp</span><span class="p">)</span>  <span class="c1"># Notice that the number of elements yielded is unchanged</span>
+<span class="go">[0, 1, 2, 3, 4]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">dp</span><span class="p">)</span>
+<span class="go">3</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">header_dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">header</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">header_dp</span><span class="p">)</span>  <span class="c1"># Use `.header()` if you want to limit the number of elements yielded</span>
+<span class="go">[0, 1, 2]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">header_dp</span><span class="p">)</span>
+<span class="go">3</span>
 </pre></div>
 </div>
-<p class="rubric">Notes</p>
-<p>Compared with <code class="docutils literal notranslate"><span class="pre">map</span></code>, the reason that <code class="docutils literal notranslate"><span class="pre">map_batches</span></code> doesn’t take
-<code class="docutils literal notranslate"><span class="pre">output_col</span></code> argument is the size of <code class="docutils literal notranslate"><span class="pre">fn</span></code> output is not guaranteed
-to be the same as input batch. With different size, this operation cannot
-assign data back to original data structure.</p>
-<p>And, this operation is introduced based on the use case from <cite>TorchText</cite>.
-A pybinded C++ vectorized function can be applied for efficiency.</p>
 </dd></dl>
 
 </section>
@@ -372,10 +370,10 @@ A pybinded C++ vectorized function can be applied for efficiency.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="torchdata.datapipes.iter.FlatMapper.html" class="btn btn-neutral float-right" title="FlatMapper" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.datapipes.iter.MapToIterConverter.html" class="btn btn-neutral float-right" title="MapToIterConverter" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.iter.Saver.html" class="btn btn-neutral" title="Saver" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="torchdata.datapipes.iter.IterableWrapper.html" class="btn btn-neutral" title="IterableWrapper" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -407,7 +405,7 @@ A pybinded C++ vectorized function can be applied for efficiency.</p>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">BatchMapper</a></li>
+<li><a class="reference internal" href="#">LengthSetter</a></li>
 </ul>
 
             </div>
