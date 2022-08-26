@@ -28,6 +28,7 @@ def train_one_epoch(model, criterion, optimizer, data_loader, device, epoch, arg
 
     header = f"Epoch: [{epoch}]"
     for i, (image, target) in enumerate(metric_logger.log_every(data_loader, args.print_freq, header)):
+        print(f"{i = }")
         if args.data_loading_only:
             continue
 
