@@ -68,6 +68,7 @@ These DataPipes help to augment your samples.
     Cycler
     Enumerator
     IndexAdder
+    Repeater
 
 Combinatorial DataPipes
 -----------------------------
@@ -176,6 +177,7 @@ A miscellaneous set of DataPipes with different functionalities.
     HashChecker
     InMemoryCacheHolder
     IterableWrapper
+    LengthSetter
     MapToIterConverter
     OnDiskCacheHolder
     ShardingFilter

@@ -165,6 +165,8 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         self._serialization_test_helper(dp2, use_dill=use_dill)
 
     def test_serializable(self):
+        # A tuple of 4 objects
+        # (DataPipeConstructor, custom_input_datapipe=None, dp_args=(), dp_kwargs={})
         picklable_datapipes: List = [
             (iterdp.BatchMapper, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), (_fake_batch_fn, 2, 1), {}),
             (iterdp.BucketBatcher, IterableWrapper([0, 0, 0, 0, 0, 0, 0]), (5,), {}),
@@ -234,6 +236,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (),
                 {},
             ),
+            (iterdp.LengthSetter, None, (3,), {}),
             (
                 iterdp.LineReader,
                 IterableWrapper(
@@ -277,6 +280,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (),
                 {},
             ),
+            (iterdp.Repeater, None, (2,), {}),
             (iterdp.SampleMultiplexer, {IterableWrapper([0] * 10): 0.5, IterableWrapper([1] * 10): 0.5}, (), {}),
             (
                 iterdp.Saver,
