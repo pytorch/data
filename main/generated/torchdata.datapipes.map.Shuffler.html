@@ -327,7 +327,7 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.map.Shuffler">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.map.</span></span><span class="sig-name descname"><span class="pre">Shuffler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T_co</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.map.Shuffler" title="Permalink to this definition">¶</a></dt>
-<dd><p>Shuffle the input DataPipe via its indices (functional name: <code class="docutils literal notranslate"><span class="pre">shuffle</span></code>).</p>
+<dd><p>Shuffle the input MapDataPipe via its indices (functional name: <code class="docutils literal notranslate"><span class="pre">shuffle</span></code>).</p>
 <p>When it is used with <code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader</span></code>, the methods to
 set up random seed are different based on <code class="xref py py-attr docutils literal notranslate"><span class="pre">num_workers</span></code>.</p>
 <p>For single-process mode (<code class="xref py py-attr docutils literal notranslate"><span class="pre">num_workers</span> <span class="pre">==</span> <span class="pre">0</span></code>), the random seed is set before
@@ -346,10 +346,23 @@ for each worker process.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># xdoctest: +SKIP</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.map</span> <span class="kn">import</span> <span class="n">SequenceWrapper</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">SequenceWrapper</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">shuffle_dp</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">shuffle_dp</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span><span class="o">.</span><span class="n">set_seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">shuffle_dp</span><span class="p">)</span>
-<span class="go">[0, 4, 1, 6, 3, 2, 9, 5, 7, 8]</span>
+<span class="go">[7, 8, 1, 5, 3, 4, 2, 0, 9, 6]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">shuffle_dp</span><span class="p">)</span>
+<span class="go">[6, 1, 9, 5, 2, 4, 7, 3, 8, 0]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Reset seed for Shuffler</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">shuffle_dp</span> <span class="o">=</span> <span class="n">shuffle_dp</span><span class="o">.</span><span class="n">set_seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">shuffle_dp</span><span class="p">)</span>
+<span class="go">[7, 8, 1, 5, 3, 4, 2, 0, 9, 6]</span>
 </pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Even thought this <code class="docutils literal notranslate"><span class="pre">shuffle</span></code> operation takes a <code class="docutils literal notranslate"><span class="pre">MapDataPipe</span></code> as the input, it would return an
+<code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> rather than a <code class="docutils literal notranslate"><span class="pre">MapDataPipe</span></code>, because <code class="docutils literal notranslate"><span class="pre">MapDataPipe</span></code> should be non-sensitive to
+the order of data order for the sake of random reads, but <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> depends on the order
+of data during data-processing.</p>
 </div>
 </dd></dl>
 
