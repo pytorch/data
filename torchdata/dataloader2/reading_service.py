@@ -17,11 +17,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data.graph import DataPipe
 
 from torchdata.dataloader2 import communication
-<<<<<<< HEAD
-from torchdata.datapipes.iter import IterableWrapper
-=======
 from torchdata.datapipes.iter import IterableWrapper, IterDataPipe, ShardingFilter
->>>>>>> fc9480c2 (Second prototype to do pre-sharding work in single process)
 
 
 class ReadingServiceInterface(ABC):
@@ -221,24 +217,24 @@ class Prototype2MultiProcessingReadingService(ReadingServiceInterface):
         # torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
 
         # DO nothing as we shard in separate process now
-        pass
+        return datapipe
 
     @staticmethod
     def connect_sharding_datapipe_to_queue(req_queue, res_queue, call_after_fn, datapipe):
-        print("reconnect to ", req_queue, res_queue)
-        shard_dp = self.get_sharding_datapipe(datapipe)
+        shard_dp = Prototype2MultiProcessingReadingService.get_sharding_datapipe(datapipe)
         queue_consume_datapipe = communication.iter.QueueWrapper(
             communication.protocol.IterDataPipeQueueProtocolClient(req_queue, res_queue)
         )
-        datapipe = graph.replace_dp(datapipe, shard_dp, queue_consume_datapipe)
-        call_after_fn(datapipe)
+        graph_traverse = graph.traverse(datapipe)
+        datapipe_graph = graph.replace_dp(graph_traverse, shard_dp, queue_consume_datapipe)
+        datapipe = list(datapipe_graph.values())[0][0]
+        datapipe = call_after_fn(datapipe)
+        return datapipe
 
     @staticmethod
-    def get_sharding_datapipe(graph):
-        graph_traverse = graph.traverse(graph)
-        print(graph_traverse)
+    def get_sharding_datapipe(datapipe):
+        graph_traverse = graph.traverse(datapipe)
         shard_dps = graph.find_dps(graph_traverse, ShardingFilter)
-        print(shard_dps)
         assert len(shard_dps) == 1
         return shard_dps[0]
 
@@ -259,10 +255,12 @@ class Prototype2MultiProcessingReadingService(ReadingServiceInterface):
         for pipe_id, pipe in enumerate(forked_dps):
             sharded_dp = pipe.sharding_filter()
             sharded_dp.apply_sharding(self.num_workers, pipe_id)
-        call_inside_process = functools.partial(self.init_datapipe_process, 1, 0)
+            sharded_forked_dps.append(sharded_dp)
+        call_inside_process = None  # functools.partial(self.init_datapipe_process, 1, 0)
         process, pipes_and_queues = communication.eventloop.SpawnProcessForMultipleDataPipelines(
-            ctx, forked_dps, call_inside_process
+            ctx, sharded_forked_dps, call_inside_process
         )
+        process.start()
         # Take care about termination of the separate process
         for _, req_queue, res_queue in pipes_and_queues:
             self.processes.append((process, req_queue, res_queue))
@@ -296,14 +294,14 @@ class Prototype2MultiProcessingReadingService(ReadingServiceInterface):
         self.finalize()
 
     def finalize(self) -> None:
+        join_processes = set()
         # TODO(VitalyFedyunin): Check if anyone stuck with messages
         for process, req_queue, res_queue in self.processes:
             req_queue.put(communication.messages.TerminateRequest())
-
-        for process, req_queue, res_queue in self.processes:
-            _ = res_queue.get()
+            join_processes.add(process)
+        # TODO(VitalyFedyunin): Collect termination responses (if needed)
+        for process in join_processes:
             process.join()
-
         self.processes = []
 
 
