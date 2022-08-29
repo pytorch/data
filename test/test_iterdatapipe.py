@@ -723,6 +723,7 @@ class TestIterDataPipe(expecttest.TestCase):
 
         flatmapped_dp = source_dp.flatmap(fn)
         expected_list = list(itertools.chain(*[(e, e * 10) for e in source_dp]))
+
         self.assertEqual(expected_list, list(flatmapped_dp))
 
         # Funtional Test: Specify input_col
@@ -738,6 +739,19 @@ class TestIterDataPipe(expecttest.TestCase):
 
         input_col_2_dp = tuple_source_dp.flatmap(mul_fn, input_col=(0, 2))
         self.assertEqual(list(itertools.chain(*[(-2, 2) for _ in range(20)])), list(input_col_2_dp))
+
+        # flatmap with no fn specified
+        default_dp = tuple_source_dp.flatmap()
+        self.assertEqual(list(itertools.chain(*[(n - 1, n, n + 1) for n in range(20)])), list(default_dp))
+
+        # flatmap with no fn specified, multiple input_col
+        default_dp = tuple_source_dp.flatmap(input_col=(0, 2))
+        self.assertEqual(list(itertools.chain(*[(n - 1, n + 1) for n in range(20)])), list(default_dp))
+
+        # flatmap with no fn specified, some special input
+        tuple_source_dp = IterableWrapper([[1, 2, [3, 4]], [5, 6, [7, 8]]])
+        default_dp = tuple_source_dp.flatmap(input_col=(0, 2))
+        self.assertEqual([1, [3, 4], 5, [7, 8]], list(default_dp))
 
         # Reset Test: reset the DataPipe after reading part of it
         n_elements_before_reset = 5
