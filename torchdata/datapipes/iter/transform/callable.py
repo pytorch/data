@@ -15,13 +15,10 @@ T_co = TypeVar("T_co", covariant=True)
 
 def _no_op_fn(*args):
     """
-    No-operation function, returns passed arguments , always as iterable.
+    No-operation function, returns passed arguments.
     """
     if len(args) == 1:
-        try:
-            return iter(args[0])
-        except TypeError:
-            pass
+        return args[0]
     return args
 
 
@@ -111,7 +108,7 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
 
     Note:
         The output from ``fn`` must be a Sequence. Otherwise, an error will be raised.
-        If ``fn`` is ``None``, source DataPipe will be just flattened vertically.
+        If ``fn`` is ``None``, source DataPipe will be just flattened vertically, provided that items can be unpacked.
 
     Args:
         datapipe: Source IterDataPipe
