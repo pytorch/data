@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data.graph import DataPipe
 
 from torchdata.dataloader2 import communication
-from torchdata.datapipes.iter import IterableWrapper, IterDataPipe, ShardingFilter
+from torchdata.datapipes.iter import IterableWrapper, ShardingFilter
 
 
 class ReadingServiceInterface(ABC):
@@ -144,6 +144,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         # TODO(614): Add distributed support
         # TODO(615): Add shuffle determinism support
         torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
+        return datapipe
 
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         if self.num_workers == 0:
@@ -238,8 +239,10 @@ class Prototype2MultiProcessingReadingService(ReadingServiceInterface):
         assert len(shard_dps) == 1
         return shard_dps[0]
 
-    def initialize(self, datapipe: IterDataPipe) -> IterDataPipe:
-
+    def initialize(self, datapipe: DataPipe) -> DataPipe:
+        # TODO(VitalyFedyunin): Must have one and only one sharding pipe.
+        # The separate process should only have one pipe connected to other parts of the graph.
+        # If one of the conditions is not met, roll back to parallel processes.
         if self.num_workers == 0:
             # TODO(VitalyFedyunin): Warn and recommend usage of InPorcessReadingService
             return datapipe
