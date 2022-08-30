@@ -147,6 +147,21 @@ def parse_dataset_args(args) -> str:
     return dataset_dir
 
 
+def get_num_classes(args):
+    ds_arg_str = args.dataset.lower()
+
+    if ds_arg_str == "cifar":
+        return 10
+    elif ds_arg_str == "tinyimagenet":
+        return 200
+    elif ds_arg_str == "imagenet":
+        return 1000
+    elif ds_arg_str == "imagenet22k":
+        return 21841
+    else:
+        raise RuntimeError(f"Unknown number of classes for {ds_arg_str}, please define in `train.py`.")
+
+
 def create_data_loaders(args):
 
     dataset_dir = parse_dataset_args(args)
@@ -218,6 +233,7 @@ def create_data_loaders(args):
         # But maybe it would be more efficient to do that before, so that the transforms can work on batches??
 
         train_dataset = train_dataset.batch(args.batch_size, drop_last=True).collate()
+
         train_data_loader = DataLoader2(
             train_dataset,
             datapipe_adapter_fn=adapter.Shuffle(),
@@ -252,7 +268,7 @@ def main(args):
 
     train_data_loader, val_data_loader, train_sampler = create_data_loaders(args)
 
-    num_classes = 1000  # I'm lazy. TODO change this
+    num_classes = get_num_classes(args)
 
     print("Creating model")
     model = torchvision.models.__dict__[args.model](weights=args.weights, num_classes=num_classes)

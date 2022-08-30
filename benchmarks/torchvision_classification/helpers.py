@@ -42,7 +42,10 @@ class _LenSetter(IterDataPipe):
 
     def __len__(self):
         # TODO The // world_size part shouldn't be needed. See https://github.com/pytorch/data/issues/533
-        return self.size // dist.get_world_size()
+        if dist.is_available():
+            return self.size // dist.get_world_size()
+        else:
+            return self.size
 
 
 def _decode(path, root, category_to_int):
