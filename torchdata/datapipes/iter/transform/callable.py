@@ -13,6 +13,15 @@ from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
 T_co = TypeVar("T_co", covariant=True)
 
 
+def _no_op_fn(*args):
+    """
+    No-operation function, returns passed arguments.
+    """
+    if len(args) == 1:
+        return args[0]
+    return args
+
+
 @functional_datapipe("map_batches")
 class BatchMapperIterDataPipe(IterDataPipe[T_co]):
     r"""
@@ -99,6 +108,7 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
 
     Note:
         The output from ``fn`` must be a Sequence. Otherwise, an error will be raised.
+        If ``fn`` is ``None``, source DataPipe will be just flattened vertically, provided that items can be unpacked.
 
     Args:
         datapipe: Source IterDataPipe
@@ -112,13 +122,20 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
         >>> flatmapped_dp = source_dp.flatmap(fn)
         >>> list(flatmapped_dp)
         [0, 0, 1, 10, 2, 20, 3, 30, 4, 40]
+        >>>
+        >>> source_dp = IterableWrapper([[1, 2, 3], [4, 5, 6]])
+        >>> flatmapped_dp = source_dp.flatmap()
+        >>> list(flatmapped_dp)
+        [1, 2, 3, 4, 5, 6]
     """
     datapipe: IterDataPipe
     fn: Callable
 
-    def __init__(self, datapipe: IterDataPipe, fn: Callable, input_col=None) -> None:
+    def __init__(self, datapipe: IterDataPipe, fn: Callable = None, input_col=None) -> None:
         self.datapipe = datapipe
 
+        if fn is None:
+            fn = _no_op_fn
         _check_unpickable_fn(fn)
         self.fn = fn  # type: ignore[assignment]
         self.input_col = input_col
