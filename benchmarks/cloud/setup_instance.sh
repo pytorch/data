@@ -42,6 +42,7 @@ python setup.py develop
 # Get data from S3
 cd ~
 mkdir benchmark_datasets
+mkdir benchmark_outputs
 cd benchmark_datasets
 # Ideally use "aws s3 cp s3://torchdatabenchmarkdatasets/CIFAR-10-images-master-repack.zip CIFAR-10-images-master-repack.zip"
 # TODO: Need to name "test" folder to "val"

@@ -1208,6 +1208,107 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
         self.assertEqual(expected_res, res_after_reset)
 
+    def test_random_splitter_iterdatapipe(self):
+
+        n_epoch = 2
+
+        # Functional Test: Split results are the same across epochs
+        dp = IterableWrapper(range(10))
+        train, valid = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, seed=0)
+        results = []
+        for _ in range(n_epoch):
+            res = list(train)
+            self.assertEqual(5, len(res))
+            results.append(res)
+        self.assertEqual(results[0], results[1])
+        valid_res = list(valid)
+        self.assertEqual(5, len(valid_res))
+        self.assertEqual(list(range(10)), sorted(results[0] + valid_res))
+
+        # Functional Test: lengths can be known in advance because it splits evenly into integers.
+        self.assertEqual(5, len(train))
+        self.assertEqual(5, len(valid))
+
+        # Functional Test: DataPipe can split into 3 DataPipes, and infer `total_length` when not given
+        dp = IterableWrapper(range(10))
+        train, valid, test = dp.random_split(weights={"train": 0.6, "valid": 0.2, "test": 0.2}, seed=0)
+        results = []
+        for _ in range(n_epoch):
+            res = list(train)
+            self.assertEqual(6, len(res))
+            results.append(res)
+        self.assertEqual(results[0], results[1])
+        valid_res = list(valid)
+        self.assertEqual(2, len(valid_res))
+        test_res = list(test)
+        self.assertEqual(2, len(test_res))
+        self.assertEqual(list(range(10)), sorted(results[0] + valid_res + test_res))
+
+        # Functional Test: lengths can be known in advance because it splits evenly into integers.
+        self.assertEqual(6, len(train))
+        self.assertEqual(2, len(valid))
+        self.assertEqual(2, len(test))
+
+        # Functional Test: Split can work even when weights do not split evenly into integers.
+        dp = IterableWrapper(range(13))
+        train, valid, test = dp.random_split(weights={"train": 0.6, "valid": 0.2, "test": 0.2}, seed=0)
+        res = list(train) + list(valid) + list(test)
+        self.assertEqual(list(range(13)), sorted(res))
+
+        # Functional Test: lengths can be known in advance because it splits evenly into integers.
+        with self.assertRaisesRegex(TypeError, "Lengths of the split cannot be known in advance"):
+            len(train)
+
+        # Functional Test: Error when `total_length` cannot be inferred
+        nolen_dp = IDP_NoLen(range(10))
+        with self.assertRaisesRegex(TypeError, "needs `total_length`"):
+            _, __ = nolen_dp.random_split(weights={"train": 0.5, "valid": 0.5}, seed=0)  # type: ignore[call-arg]
+
+        # Functional Test: `target` must match a key in the `weights` dict
+        dp = IterableWrapper(range(10))
+        with self.assertRaisesRegex(KeyError, "does not match any key"):
+            _ = dp.random_split(
+                total_length=10, weights={"train": 0.5, "valid": 0.2, "test": 0.2}, seed=0, target="NOTINDICT"
+            )
+
+        # Functional Test: `target` is specified, and match the results from before
+        dp = IterableWrapper(range(10))
+        train = dp.random_split(
+            total_length=10, weights={"train": 0.6, "valid": 0.2, "test": 0.2}, seed=0, target="train"
+        )
+        results2 = []
+        for _ in range(n_epoch):
+            res = list(train)
+            self.assertEqual(6, len(res))
+            results2.append(res)
+        self.assertEqual(results2[0], results2[1])
+        self.assertEqual(results, results2)
+
+        # Functional Test: `override_seed` works and change split result
+        train.override_seed(1)
+        seed_1_res = list(train)
+        self.assertNotEqual(results2[0], seed_1_res)
+
+        # Functional Test: `override_seed` doesn't impact the current iteration, only the next one
+        temp_res = []
+        for i, x in enumerate(train):
+            temp_res.append(x)
+            if i == 3:
+                train.override_seed(0)
+        self.assertEqual(seed_1_res, temp_res)  # The current iteration should equal seed 1 result
+        self.assertEqual(results2[0], list(train))  # The next iteration should equal seed 0 result
+
+        # Functional Test: Raise exception if both children are used at the same time
+        dp = IterableWrapper(range(10))
+        train, valid = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, seed=0)
+        it_train = iter(train)
+        next(it_train)
+        it_valid = iter(valid)  # This resets the DataPipe and invalidates the other iterator
+        next(it_valid)
+        with self.assertRaisesRegex(RuntimeError, "iterator has been invalidated"):
+            next(it_train)
+        next(it_valid)  # No error, can keep going
+
 
 if __name__ == "__main__":
     unittest.main()
