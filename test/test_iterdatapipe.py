@@ -905,12 +905,25 @@ class TestIterDataPipe(expecttest.TestCase):
 
     def test_shardexpand(self):
 
-        # Functional Test: ensure expansion generates the right number of shards
-        stage1 = IterableWrapper(["ds-{000000..000009}.tar"])
-        print(list(iter(stage1)))
-        stage2 = ShardExpander(stage1)
-        output = list(iter(stage2))
-        assert len(output) == 10
+        # Functional Test: ensure expansion generates the right outputs
+        def testexpand(s):
+            stage1 = IterableWrapper([s])
+            stage2 = ShardExpander(stage1)
+            return list(iter(stage2))
+        def myexpand(lo, hi, fmt):
+            return [fmt.format(i) for i in range(lo, hi)]
+        self.assertEqual(testexpand("ds-{000000..000009}.tar"), myexpand(0, 10, "ds-{:06d}.tar"))
+        self.assertEqual(testexpand("{0..9}"), myexpand(0, 10, "{}"))
+        self.assertEqual(testexpand("{0..999}"), myexpand(0, 1000, "{}"))
+        self.assertEqual(testexpand("{123..999}"), myexpand(123, 1000, "{}"))
+        self.assertEqual(testexpand("{000..999}"), myexpand(0, 1000, "{:03d}"))
+        with self.assertRaisesRegex(ValueError, r"must not start with 0"):
+            testexpand("{01..999}")
+        with self.assertRaisesRegex(ValueError, r"must be shorter"):
+            testexpand("{0000..999}")
+        with self.assertRaisesRegex(ValueError, r"bad range"):
+            testexpand("{999..123}")
+        self.assertEqual(testexpand("{0..1}{0..1}"), "00 01 10 11".split())
 
     def test_zip_longest_iterdatapipe(self):
 

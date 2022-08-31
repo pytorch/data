@@ -20,15 +20,21 @@ def shardexpand(s):
     rest = shardexpand(s[m.end() :])
     rng = s[m.start() + 1 : m.end() - 1]
     lohi = rng.split("..")
-    if len(lohi[0]) != len(lohi[1]):
-        raise ValueError("Shard specifications must have " + f"same number of digits for low and high values in {s}.")
+    if len(lohi[0]) == len(lohi[1]) and lohi[0].startswith("0"):
+        fmt = "{prefix}{i:0>{l}d}{r}"
+    elif len(lohi[0]) <= len(lohi[1]):
+        if lohi[0].startswith("0") and lohi[0] != "0":
+            raise ValueError("shardexpand: low bound must not start with 0 if low bound is shorter")
+        fmt = "{prefix}{i}{r}"
+    else:
+        raise ValueError("shardexpand: low bound must be shorter than high bound")
     lo, hi = [int(x) for x in lohi]
     if lo >= hi:
-        raise ValueError(f"Bad range in in shard spec {s}.")
+        raise ValueError(f"shardexpand: bad range in in shard spec {s}.")
     result = []
     for i in range(lo, hi + 1):
         for r in rest:
-            expanded = f"{prefix}{i:0>{len(lohi[1])}}{r}"
+            expanded = fmt.format(prefix=prefix, i=i, r=r, l=len(lohi[1]))
             result.append(expanded)
     return result
 
