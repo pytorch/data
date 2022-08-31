@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from fnmatch import fnmatch
-from typing import Dict, Iterator, Tuple
+from typing import Dict, Iterator, Tuple, Union
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -30,17 +30,19 @@ class ExtractKeysIterDataPipe(IterDataPipe[Dict]):
     """
 
     def __init__(
-        self, source_datapipe: IterDataPipe[Dict], *args, duplicate_is_error=True, ignore_missing=False
+        self, source_datapipe: IterDataPipe[Dict], *args, duplicate_is_error=True, ignore_missing=False, as_tuple=False
     ) -> None:
         super().__init__()
         self.source_datapipe: IterDataPipe[Dict] = source_datapipe
         self.duplicate_is_error = duplicate_is_error
         self.patterns = args
         self.ignore_missing = ignore_missing
+        self.as_tuple = as_tuple
 
-    def __iter__(self) -> Iterator[Tuple]:
+    def __iter__(self) -> Union[Iterator[Tuple], Iterator[Dict]]:
         for sample in self.source_datapipe:
             result = []
+            used = set()
             for pattern in self.patterns:
                 pattern = [pattern] if not isinstance(pattern, (list, tuple)) else pattern
                 matches = [x for x in sample.keys() if any(fnmatch(x, p) for p in pattern)]
@@ -48,12 +50,22 @@ class ExtractKeysIterDataPipe(IterDataPipe[Dict]):
                     if self.ignore_missing:
                         continue
                     else:
-                        raise ValueError(f"Cannot find {pattern} in sample keys {sample.keys()}.")
+                        raise ValueError(f"extract_keys: cannot find {pattern} in sample keys {sample.keys()}.")
                 if len(matches) > 1 and self.duplicate_is_error:
-                    raise ValueError(f"Multiple sample keys {sample.keys()} match {pattern}.")
+                    raise ValueError(f"extract_keys: multiple sample keys {sample.keys()} match {pattern}.")
+                if matches[0] in used and self.duplicate_is_error:
+                    raise ValueError(f"extract_keys: key {matches[0]} is selected twice.")
+                used.add(matches[0])
                 value = sample[matches[0]]
-                result.append(value)
-            yield tuple(result)
+                if self.as_tuple:
+                    result.append(value)
+                else:
+                    result.append((matches[0], value))
+            if self.as_tuple:
+                result = tuple(result)
+            else:
+                result = {k: v for k, v in result}
+            yield result
 
     def __len__(self) -> int:
         return len(self.source_datapipe)

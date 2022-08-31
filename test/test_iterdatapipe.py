@@ -910,11 +910,22 @@ class TestIterDataPipe(expecttest.TestCase):
             {"1.txt": "1", "1.bin": "1b"},
             {"2.txt": "2", "2.bin": "2b"},
         ])
+        stage2 = ExtractKeys(stage1, "*.txt", "*.bin", as_tuple=True)
+        output = list(iter(stage2))
+        self.assertEqual(output, [("1", "1b"), ("2", "2b")])
         stage2 = ExtractKeys(stage1, "*.txt", "*.bin")
         output = list(iter(stage2))
-        assert len(output) == 2
-        assert output[0][0] == "1"
-        assert output[0][1] == "1b"
+        self.assertEqual(output, [
+            {"1.txt": "1", "1.bin": "1b"},
+            {"2.txt": "2", "2.bin": "2b"},
+        ])
+        with self.assertRaisesRegex(ValueError, r"(?i)multiple sample keys"):
+            stage2 = ExtractKeys(stage1, "*")
+            output = list(iter(stage2))
+        with self.assertRaisesRegex(ValueError, r"selected twice"):
+            stage2 = ExtractKeys(stage1, "*.txt", "*t")
+            output = list(iter(stage2))
+
 
     def test_zip_longest_iterdatapipe(self):
 
