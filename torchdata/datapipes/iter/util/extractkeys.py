@@ -39,7 +39,7 @@ class ExtractKeysIterDataPipe(IterDataPipe[Dict]):
         self.ignore_missing = ignore_missing
         self.as_tuple = as_tuple
 
-    def __iter__(self) -> Union[Iterator[Tuple], Iterator[Dict]]:
+    def __iter__(self) -> Union[Iterator[Tuple], Iterator[Dict]]:  # type: ignore
         for sample in self.source_datapipe:
             result = []
             used = set()
@@ -62,10 +62,9 @@ class ExtractKeysIterDataPipe(IterDataPipe[Dict]):
                 else:
                     result.append((matches[0], value))
             if self.as_tuple:
-                result = tuple(result)
+                yield tuple(result)
             else:
-                result = {k: v for k, v in result}
-            yield result
+                yield {k: v for k, v in result}
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
