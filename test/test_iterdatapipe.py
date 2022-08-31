@@ -21,8 +21,8 @@ from _utils._common_utils_for_test import IDP_NoLen, reset_after_n_next_calls
 from torchdata.datapipes.iter import (
     BucketBatcher,
     Cycler,
+    ExtractKeys,
     Header,
-    InBatchShuffler,
     IndexAdder,
     InMemoryCacheHolder,
     IterableWrapper,
@@ -32,7 +32,7 @@ from torchdata.datapipes.iter import (
     MapKeyZipper,
     MaxTokenBucketizer,
     ParagraphAggregator,
-    ExtractKeys,
+    Repeater,
     Rows2Columnar,
     SampleMultiplexer,
     UnZipper,
@@ -106,6 +106,7 @@ class TestIterDataPipe(expecttest.TestCase):
 
         source_dp = IterableWrapper(range(10))
         ref_dp = IterableWrapper(range(20))
+        ref_dp2 = IterableWrapper(range(20))
 
         # Functional Test: Output should be a zip list of tuple
         zip_dp = source_dp.zip_with_iter(
@@ -115,7 +116,7 @@ class TestIterDataPipe(expecttest.TestCase):
 
         # Functional Test: keep_key=True, and key should show up as the first element
         zip_dp_w_key = source_dp.zip_with_iter(
-            ref_datapipe=ref_dp, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=True, buffer_size=10
+            ref_datapipe=ref_dp2, key_fn=lambda x: x, ref_key_fn=lambda x: x, keep_key=True, buffer_size=10
         )
         self.assertEqual([(i, (i, i)) for i in range(10)], list(zip_dp_w_key))
 
@@ -146,13 +147,13 @@ class TestIterDataPipe(expecttest.TestCase):
 
         # Without a custom merge function, there will be nested tuples
         zip_dp2 = zip_dp.zip_with_iter(
-            ref_datapipe=ref_dp, key_fn=lambda x: x[0], ref_key_fn=lambda x: x, keep_key=False, buffer_size=100
+            ref_datapipe=ref_dp2, key_fn=lambda x: x[0], ref_key_fn=lambda x: x, keep_key=False, buffer_size=100
         )
         self.assertEqual([((i, i), i) for i in range(10)], list(zip_dp2))
 
         # With a custom merge function, nesting can be prevented
         zip_dp2_w_merge = zip_dp.zip_with_iter(
-            ref_datapipe=ref_dp,
+            ref_datapipe=ref_dp2,
             key_fn=lambda x: x[0],
             ref_key_fn=lambda x: x,
             keep_key=False,
@@ -257,6 +258,31 @@ class TestIterDataPipe(expecttest.TestCase):
         # __len__ Test: returns the length of source DataPipe
         result_dp = source_dp.zip_with_map(map_dp, odd_even)
         self.assertEqual(len(source_dp), len(result_dp))
+
+    def test_repeater_iterdatapipe(self) -> None:
+        import itertools
+
+        source_dp = IterableWrapper(range(5))
+
+        # Functional Test: repeat for correct number of times
+        repeater_dp = source_dp.repeat(3)
+        self.assertEqual(
+            list(itertools.chain.from_iterable(itertools.repeat(x, 3) for x in range(5))), list(repeater_dp)
+        )
+
+        # Functional Test: `times` must be > 1
+        with self.assertRaisesRegex(ValueError, "The number of repetition must be > 1"):
+            source_dp.repeat(1)
+
+        # Reset Test:
+        repeater_dp = Repeater(source_dp, times=2)
+        n_elements_before_reset = 4
+        res_before_reset, res_after_reset = reset_after_n_next_calls(repeater_dp, n_elements_before_reset)
+        self.assertEqual([0, 0, 1, 1], res_before_reset)
+        self.assertEqual(list(itertools.chain.from_iterable(itertools.repeat(x, 2) for x in range(5))), res_after_reset)
+
+        # __len__ Test: returns correct length
+        self.assertEqual(10, len(repeater_dp))
 
     def test_cycler_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(5))
@@ -525,10 +551,11 @@ class TestIterDataPipe(expecttest.TestCase):
 
     def test_in_batch_shuffler_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(10)).batch(3)
+        source_dp2 = IterableWrapper(range(10)).batch(3)
 
         # Functional Test: drop last reduces length
         filtered_dp = source_dp.in_batch_shuffle()
-        for ret_batch, exp_batch in zip(filtered_dp, source_dp):
+        for ret_batch, exp_batch in zip(filtered_dp, source_dp2):
             ret_batch.sort()
             self.assertEqual(ret_batch, exp_batch)
 
@@ -697,6 +724,7 @@ class TestIterDataPipe(expecttest.TestCase):
 
         flatmapped_dp = source_dp.flatmap(fn)
         expected_list = list(itertools.chain(*[(e, e * 10) for e in source_dp]))
+
         self.assertEqual(expected_list, list(flatmapped_dp))
 
         # Funtional Test: Specify input_col
@@ -712,6 +740,19 @@ class TestIterDataPipe(expecttest.TestCase):
 
         input_col_2_dp = tuple_source_dp.flatmap(mul_fn, input_col=(0, 2))
         self.assertEqual(list(itertools.chain(*[(-2, 2) for _ in range(20)])), list(input_col_2_dp))
+
+        # flatmap with no fn specified
+        default_dp = tuple_source_dp.flatmap()
+        self.assertEqual(list(itertools.chain(*[(n - 1, n, n + 1) for n in range(20)])), list(default_dp))
+
+        # flatmap with no fn specified, multiple input_col
+        default_dp = tuple_source_dp.flatmap(input_col=(0, 2))
+        self.assertEqual(list(itertools.chain(*[(n - 1, n + 1) for n in range(20)])), list(default_dp))
+
+        # flatmap with no fn specified, some special input
+        tuple_source_dp = IterableWrapper([[1, 2, [3, 4]], [5, 6, [7, 8]]])
+        default_dp = tuple_source_dp.flatmap(input_col=(0, 2))
+        self.assertEqual([1, [3, 4], 5, [7, 8]], list(default_dp))
 
         # Reset Test: reset the DataPipe after reading part of it
         n_elements_before_reset = 5
@@ -744,7 +785,7 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual(list(range(10, 20)), list(dp2))
         self.assertEqual(list(range(20, 30)), list(dp3))
 
-        (dp2,) = source_dp.unzip(sequence_length=3, columns_to_skip=[0, 2])
+        (dp2,) = source_dp.unzip(sequence_length=3, columns_to_skip=[0, 2], buffer_size=0)
         self.assertEqual(list(range(10, 20)), list(dp2))
 
         source_dp = IterableWrapper([(i, i + 10, i + 20, i + 30) for i in range(10)])
@@ -754,37 +795,45 @@ class TestIterDataPipe(expecttest.TestCase):
 
         # Functional Test: one child DataPipe yields all value first, but buffer_size = 5 being too small, raises error
         source_dp = IterableWrapper([(i, i + 10) for i in range(10)])
-        dp1, dp2 = source_dp.unzip(sequence_length=2, buffer_size=5)
+        dp1, dp2 = source_dp.unzip(sequence_length=2, buffer_size=4)
         it1 = iter(dp1)
-        for _ in range(5):
+        for _ in range(4):
             next(it1)
         with self.assertRaises(BufferError):
             next(it1)
         with self.assertRaises(BufferError):
             list(dp2)
 
-        # Reset Test: reset the DataPipe after reading part of it
+        dp1, dp2 = source_dp.unzip(sequence_length=2, buffer_size=4)
+        with self.assertRaises(BufferError):
+            list(dp2)
+
+        # Reset Test: DataPipe resets when a new iterator is created, even if this datapipe hasn't been read
         dp1, dp2 = source_dp.unzip(sequence_length=2)
-        i1, i2 = iter(dp1), iter(dp2)
+        _ = iter(dp1)
         output2 = []
-        for i, n2 in enumerate(i2):
-            output2.append(n2)
-            if i == 4:
-                i1 = iter(dp1)  # Doesn't reset because i1 hasn't been read
-        self.assertEqual(list(range(10, 20)), output2)
+        with self.assertRaisesRegex(RuntimeError, r"iterator has been invalidated"):
+            for i, n2 in enumerate(dp2):
+                output2.append(n2)
+                if i == 4:
+                    _ = iter(dp1)  # This will reset all child DataPipes
+        self.assertEqual(list(range(10, 15)), output2)
 
         # Reset Test: DataPipe reset when some of it have been read
         dp1, dp2 = source_dp.unzip(sequence_length=2)
-        i1, i2 = iter(dp1), iter(dp2)
         output1, output2 = [], []
-        for i, (n1, n2) in enumerate(zip(i1, i2)):
+        for i, (n1, n2) in enumerate(zip(dp1, dp2)):
             output1.append(n1)
             output2.append(n2)
             if i == 4:
                 with warnings.catch_warnings(record=True) as wa:
-                    i1 = iter(dp1)  # Reset both all child DataPipe
+                    _ = iter(dp1)  # Reset both all child DataPipe
                     self.assertEqual(len(wa), 1)
                     self.assertRegex(str(wa[0].message), r"Some child DataPipes are not exhausted")
+                break
+        for n1, n2 in zip(dp1, dp2):
+            output1.append(n1)
+            output2.append(n2)
         self.assertEqual(list(range(5)) + list(range(10)), output1)
         self.assertEqual(list(range(10, 15)) + list(range(10, 20)), output2)
 
@@ -960,6 +1009,330 @@ class TestIterDataPipe(expecttest.TestCase):
 
         # __len__ Test: length matches the length of the shortest input
         self.assertEqual(len(output_dp), 10)
+
+    def test_drop_iterdatapipe(self):
+        # tuple tests
+        input_dp = IterableWrapper([(0, 1, 2), (3, 4, 5), (6, 7, 8)])
+
+        # Functional Test: single index drop for tuple elements
+        drop_dp = input_dp.drop(1)
+        self.assertEqual([(0, 2), (3, 5), (6, 8)], list(drop_dp))
+
+        # Functional Test: multiple indices drop for tuple elements
+        drop_dp = input_dp.drop([0, 2])
+        self.assertEqual([(1,), (4,), (7,)], list(drop_dp))
+
+        # dict tests
+        input_dp = IterableWrapper([{"a": 1, "b": 2, "c": 3}, {"a": 3, "b": 4, "c": 5}, {"a": 5, "b": 6, "c": 7}])
+
+        # Functional Test: single key drop for dict elements
+        drop_dp = input_dp.drop("a")
+        self.assertEqual([{"b": 2, "c": 3}, {"b": 4, "c": 5}, {"b": 6, "c": 7}], list(drop_dp))
+
+        # Functional Test: multiple key drop for dict elements
+        drop_dp = input_dp.drop(["a", "b"])
+        self.assertEqual([{"c": 3}, {"c": 5}, {"c": 7}], list(drop_dp))
+
+        # list tests
+        input_dp = IterableWrapper([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+
+        # Functional Test: single key drop for list elements
+        drop_dp = input_dp.drop(2)
+        self.assertEqual([[0, 1], [3, 4], [6, 7]], list(drop_dp))
+
+        # Functional Test: multiple key drop for list elements
+        drop_dp = input_dp.drop([0, 1])
+        self.assertEqual([[2], [5], [8]], list(drop_dp))
+
+        # Reset Test:
+        n_elements_before_reset = 2
+        input_dp = IterableWrapper([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+        drop_dp = input_dp.drop([0, 1])
+        expected_res = [[2], [5], [8]]
+        res_before_reset, res_after_reset = reset_after_n_next_calls(drop_dp, n_elements_before_reset)
+        self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_res, res_after_reset)
+
+        # __len__ Test:
+        input_dp = IterableWrapper([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+        drop_dp = input_dp.drop([0, 1])
+        self.assertEqual(3, len(drop_dp))
+
+    def test_slice_iterdatapipe(self):
+        # tuple tests
+        input_dp = IterableWrapper([(0, 1, 2), (3, 4, 5), (6, 7, 8)])
+
+        # Functional Test: slice with no stop and no step for tuple
+        slice_dp = input_dp.slice(1)
+        self.assertEqual([(1, 2), (4, 5), (7, 8)], list(slice_dp))
+
+        # Functional Test: slice with no step for tuple
+        slice_dp = input_dp.slice(0, 2)
+        self.assertEqual([(0, 1), (3, 4), (6, 7)], list(slice_dp))
+
+        # Functional Test: slice with step for tuple
+        slice_dp = input_dp.slice(0, 2, 2)
+        self.assertEqual([(0,), (3,), (6,)], list(slice_dp))
+
+        # Functional Test: filter with list of indices for tuple
+        slice_dp = input_dp.slice([0, 1])
+        self.assertEqual([(0, 1), (3, 4), (6, 7)], list(slice_dp))
+
+        # list tests
+        input_dp = IterableWrapper([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+
+        # Functional Test: slice with no stop and no step for list
+        slice_dp = input_dp.slice(1)
+        self.assertEqual([[1, 2], [4, 5], [7, 8]], list(slice_dp))
+
+        # Functional Test: slice with no step for list
+        slice_dp = input_dp.slice(0, 2)
+        self.assertEqual([[0, 1], [3, 4], [6, 7]], list(slice_dp))
+
+        # Functional Test: filter with list of indices for list
+        slice_dp = input_dp.slice(0, 2)
+        self.assertEqual([[0, 1], [3, 4], [6, 7]], list(slice_dp))
+
+        # dict tests
+        input_dp = IterableWrapper([{"a": 1, "b": 2, "c": 3}, {"a": 3, "b": 4, "c": 5}, {"a": 5, "b": 6, "c": 7}])
+
+        # Functional Test: filter with list of indices for dict
+        slice_dp = input_dp.slice(["a", "b"])
+        self.assertEqual([{"a": 1, "b": 2}, {"a": 3, "b": 4}, {"a": 5, "b": 6}], list(slice_dp))
+
+        # __len__ Test:
+        input_dp = IterableWrapper([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+        slice_dp = input_dp.slice(0, 2)
+        self.assertEqual(3, len(slice_dp))
+
+        # Reset Test:
+        n_elements_before_reset = 2
+        input_dp = IterableWrapper([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+        slice_dp = input_dp.slice([2])
+        expected_res = [[2], [5], [8]]
+        res_before_reset, res_after_reset = reset_after_n_next_calls(slice_dp, n_elements_before_reset)
+        self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_res, res_after_reset)
+
+    def test_flatten_iterdatapipe(self):
+        # tuple tests
+
+        # Functional Test: flatten for an index
+        input_dp = IterableWrapper([(0, 1, (2, 3)), (4, 5, (6, 7)), (8, 9, (10, 11))])
+        flatten_dp = input_dp.flatten(2)
+        self.assertEqual([(0, 1, 2, 3), (4, 5, 6, 7), (8, 9, 10, 11)], list(flatten_dp))
+
+        # Functional Test: flatten for list of indices
+        input_dp = IterableWrapper([((0, 10), 1, (2, 3)), ((4, 14), 5, (6, 7)), ((8, 18), 9, (10, 11))])
+        flatten_dp = input_dp.flatten([0, 2])
+        self.assertEqual([(0, 10, 1, 2, 3), (4, 14, 5, 6, 7), (8, 18, 9, 10, 11)], list(flatten_dp))
+
+        # Functional Test: flatten all iters in the datapipe one level (no argument)
+        input_dp = IterableWrapper([(0, (1, 2)), (3, (4, 5)), (6, (7, 8))])
+        flatten_dp = input_dp.flatten()
+        self.assertEqual([(0, 1, 2), (3, 4, 5), (6, 7, 8)], list(flatten_dp))
+
+        # list tests
+
+        # Functional Test: flatten for an index
+        input_dp = IterableWrapper([[0, 1, [2, 3]], [4, 5, [6, 7]], [8, 9, [10, 11]]])
+        flatten_dp = input_dp.flatten(2)
+        self.assertEqual([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]], list(flatten_dp))
+
+        # Functional Test: flatten for list of indices
+        input_dp = IterableWrapper([[[0, 10], 1, [2, 3]], [[4, 14], 5, [6, 7]], [[8, 18], 9, [10, 11]]])
+        flatten_dp = input_dp.flatten([0, 2])
+        self.assertEqual([[0, 10, 1, 2, 3], [4, 14, 5, 6, 7], [8, 18, 9, 10, 11]], list(flatten_dp))
+
+        # Functional Test: flatten all iters in the datapipe one level (no argument)
+        input_dp = IterableWrapper([[0, [1, 2]], [3, [4, 5]], [6, [7, 8]]])
+        flatten_dp = input_dp.flatten()
+        self.assertEqual([[0, 1, 2], [3, 4, 5], [6, 7, 8]], list(flatten_dp))
+
+        # Functional Test: string test, flatten all iters in the datapipe one level (no argument)
+        input_dp = IterableWrapper([["zero", ["one", "2"]], ["3", ["4", "5"]], ["6", ["7", "8"]]])
+        flatten_dp = input_dp.flatten()
+        self.assertEqual([["zero", "one", "2"], ["3", "4", "5"], ["6", "7", "8"]], list(flatten_dp))
+
+        # dict tests
+
+        # Functional Test: flatten for an index
+        input_dp = IterableWrapper([{"a": 1, "b": 2, "c": {"d": 3, "e": 4}}, {"a": 5, "b": 6, "c": {"d": 7, "e": 8}}])
+        flatten_dp = input_dp.flatten("c")
+        self.assertEqual([{"a": 1, "b": 2, "d": 3, "e": 4}, {"a": 5, "b": 6, "d": 7, "e": 8}], list(flatten_dp))
+
+        # Functional Test: flatten for an index already flat
+        input_dp = IterableWrapper([{"a": 1, "b": 2, "c": {"d": 9, "e": 10}}, {"a": 5, "b": 6, "c": {"d": 7, "e": 8}}])
+        flatten_dp = input_dp.flatten("a")
+        self.assertEqual(
+            [{"a": 1, "b": 2, "c": {"d": 9, "e": 10}}, {"a": 5, "b": 6, "c": {"d": 7, "e": 8}}], list(flatten_dp)
+        )
+
+        # Functional Test: flatten for list of indices
+        input_dp = IterableWrapper(
+            [
+                {"a": {"f": 10, "g": 11}, "b": 2, "c": {"d": 3, "e": 4}},
+                {"a": {"f": 10, "g": 11}, "b": 6, "c": {"d": 7, "e": 8}},
+            ]
+        )
+        flatten_dp = input_dp.flatten(["a", "c"])
+        self.assertEqual(
+            [{"f": 10, "g": 11, "b": 2, "d": 3, "e": 4}, {"f": 10, "g": 11, "b": 6, "d": 7, "e": 8}], list(flatten_dp)
+        )
+
+        # Functional Test: flatten all iters in the datapipe one level (no argument)
+        input_dp = IterableWrapper([{"a": 1, "b": 2, "c": {"d": 3, "e": 4}}, {"a": 5, "b": 6, "c": {"d": 7, "e": 8}}])
+        flatten_dp = input_dp.flatten()
+        self.assertEqual([{"a": 1, "b": 2, "d": 3, "e": 4}, {"a": 5, "b": 6, "d": 7, "e": 8}], list(flatten_dp))
+
+        # Functional Test: flatten all iters one level, multiple iters
+        input_dp = IterableWrapper(
+            [
+                {"a": {"f": 10, "g": 11}, "b": 2, "c": {"d": 3, "e": 4}},
+                {"a": {"f": 10, "g": 11}, "b": 6, "c": {"d": 7, "e": 8}},
+            ]
+        )
+        flatten_dp = input_dp.flatten()
+        self.assertEqual(
+            [{"f": 10, "g": 11, "b": 2, "d": 3, "e": 4}, {"f": 10, "g": 11, "b": 6, "d": 7, "e": 8}], list(flatten_dp)
+        )
+
+        # __len__ Test:
+        input_dp = IterableWrapper([(0, 1, (2, 3)), (4, 5, (6, 7)), (8, 9, (10, 11))])
+        flatten_dp = input_dp.flatten(2)
+        self.assertEqual(3, len(flatten_dp))
+
+        # Reset Test:
+        n_elements_before_reset = 2
+        input_dp = IterableWrapper([(0, 1, (2, 3)), (4, 5, (6, 7)), (8, 9, (10, 11))])
+        flatten_dp = input_dp.flatten(2)
+        expected_res = [(0, 1, 2, 3), (4, 5, 6, 7), (8, 9, 10, 11)]
+        res_before_reset, res_after_reset = reset_after_n_next_calls(flatten_dp, n_elements_before_reset)
+        self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_res, res_after_reset)
+
+    def test_length_setter_iterdatapipe(self):
+        input_dp = IterableWrapper(range(10))
+
+        # Functional Test: Setting length doesn't change the content of the DataPipe
+        dp: IterDataPipe = input_dp.set_length(3)
+        self.assertEqual(list(range(10)), list(dp))
+
+        with self.assertRaises(AssertionError):
+            input_dp.set_length(-1)
+
+        # __len__ Test: Length is as specified and propagates through
+        dp = input_dp.set_length(3).map(lambda x: x + 1)
+        self.assertEqual(3, len(dp))
+
+        # Reset Test:
+        n_elements_before_reset = 2
+        dp = input_dp.set_length(3)
+        expected_res = list(range(10))
+        res_before_reset, res_after_reset = reset_after_n_next_calls(dp, n_elements_before_reset)
+        self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_res, res_after_reset)
+
+    def test_random_splitter_iterdatapipe(self):
+
+        n_epoch = 2
+
+        # Functional Test: Split results are the same across epochs
+        dp = IterableWrapper(range(10))
+        train, valid = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, seed=0)
+        results = []
+        for _ in range(n_epoch):
+            res = list(train)
+            self.assertEqual(5, len(res))
+            results.append(res)
+        self.assertEqual(results[0], results[1])
+        valid_res = list(valid)
+        self.assertEqual(5, len(valid_res))
+        self.assertEqual(list(range(10)), sorted(results[0] + valid_res))
+
+        # Functional Test: lengths can be known in advance because it splits evenly into integers.
+        self.assertEqual(5, len(train))
+        self.assertEqual(5, len(valid))
+
+        # Functional Test: DataPipe can split into 3 DataPipes, and infer `total_length` when not given
+        dp = IterableWrapper(range(10))
+        train, valid, test = dp.random_split(weights={"train": 0.6, "valid": 0.2, "test": 0.2}, seed=0)
+        results = []
+        for _ in range(n_epoch):
+            res = list(train)
+            self.assertEqual(6, len(res))
+            results.append(res)
+        self.assertEqual(results[0], results[1])
+        valid_res = list(valid)
+        self.assertEqual(2, len(valid_res))
+        test_res = list(test)
+        self.assertEqual(2, len(test_res))
+        self.assertEqual(list(range(10)), sorted(results[0] + valid_res + test_res))
+
+        # Functional Test: lengths can be known in advance because it splits evenly into integers.
+        self.assertEqual(6, len(train))
+        self.assertEqual(2, len(valid))
+        self.assertEqual(2, len(test))
+
+        # Functional Test: Split can work even when weights do not split evenly into integers.
+        dp = IterableWrapper(range(13))
+        train, valid, test = dp.random_split(weights={"train": 0.6, "valid": 0.2, "test": 0.2}, seed=0)
+        res = list(train) + list(valid) + list(test)
+        self.assertEqual(list(range(13)), sorted(res))
+
+        # Functional Test: lengths can be known in advance because it splits evenly into integers.
+        with self.assertRaisesRegex(TypeError, "Lengths of the split cannot be known in advance"):
+            len(train)
+
+        # Functional Test: Error when `total_length` cannot be inferred
+        nolen_dp = IDP_NoLen(range(10))
+        with self.assertRaisesRegex(TypeError, "needs `total_length`"):
+            _, __ = nolen_dp.random_split(weights={"train": 0.5, "valid": 0.5}, seed=0)  # type: ignore[call-arg]
+
+        # Functional Test: `target` must match a key in the `weights` dict
+        dp = IterableWrapper(range(10))
+        with self.assertRaisesRegex(KeyError, "does not match any key"):
+            _ = dp.random_split(
+                total_length=10, weights={"train": 0.5, "valid": 0.2, "test": 0.2}, seed=0, target="NOTINDICT"
+            )
+
+        # Functional Test: `target` is specified, and match the results from before
+        dp = IterableWrapper(range(10))
+        train = dp.random_split(
+            total_length=10, weights={"train": 0.6, "valid": 0.2, "test": 0.2}, seed=0, target="train"
+        )
+        results2 = []
+        for _ in range(n_epoch):
+            res = list(train)
+            self.assertEqual(6, len(res))
+            results2.append(res)
+        self.assertEqual(results2[0], results2[1])
+        self.assertEqual(results, results2)
+
+        # Functional Test: `override_seed` works and change split result
+        train.override_seed(1)
+        seed_1_res = list(train)
+        self.assertNotEqual(results2[0], seed_1_res)
+
+        # Functional Test: `override_seed` doesn't impact the current iteration, only the next one
+        temp_res = []
+        for i, x in enumerate(train):
+            temp_res.append(x)
+            if i == 3:
+                train.override_seed(0)
+        self.assertEqual(seed_1_res, temp_res)  # The current iteration should equal seed 1 result
+        self.assertEqual(results2[0], list(train))  # The next iteration should equal seed 0 result
+
+        # Functional Test: Raise exception if both children are used at the same time
+        dp = IterableWrapper(range(10))
+        train, valid = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, seed=0)
+        it_train = iter(train)
+        next(it_train)
+        it_valid = iter(valid)  # This resets the DataPipe and invalidates the other iterator
+        next(it_valid)
+        with self.assertRaisesRegex(RuntimeError, "iterator has been invalidated"):
+            next(it_train)
+        next(it_valid)  # No error, can keep going
 
 
 if __name__ == "__main__":

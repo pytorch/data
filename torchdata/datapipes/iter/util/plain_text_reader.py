@@ -25,6 +25,7 @@ class PlainTextReaderHelper:
         encoding="utf-8",
         errors: str = "ignore",
         return_path: bool = False,
+        as_tuple: bool = False,
     ) -> None:
         if skip_lines < 0:
             raise ValueError("'skip_lines' is required to be a positive integer.")
@@ -34,6 +35,7 @@ class PlainTextReaderHelper:
         self._encoding = encoding
         self._errors = errors
         self._return_path = return_path
+        self._as_tuple = as_tuple
 
     def skip_lines(self, file: IO) -> Union[Iterator[bytes], Iterator[str]]:
         with contextlib.suppress(StopIteration):
@@ -67,6 +69,16 @@ class PlainTextReaderHelper:
             return
         for data in stream:
             yield path, data
+
+    def as_tuple(self, stream: Iterator[D]) -> Iterator[Union[D, Tuple]]:
+        if not self._as_tuple:
+            yield from stream
+            return
+        for data in stream:
+            if isinstance(data, list):
+                yield tuple(data)
+            else:
+                yield data
 
 
 @functional_datapipe("readlines")
@@ -136,6 +148,7 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
         encoding="utf-8",
         errors: str = "ignore",
         return_path: bool = True,
+        as_tuple: bool = False,
         **fmtparams,
     ) -> None:
         self.source_datapipe = source_datapipe
@@ -146,6 +159,7 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
             encoding=encoding,
             errors=errors,
             return_path=return_path,
+            as_tuple=as_tuple,
         )
         self.fmtparams = fmtparams
 
@@ -154,6 +168,7 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
             stream = self._helper.skip_lines(file)
             stream = self._helper.decode(stream)
             stream = self._csv_reader(stream, **self.fmtparams)
+            stream = self._helper.as_tuple(stream)  # type: ignore[assignment]
             yield from self._helper.return_path(stream, path=path)  # type: ignore[misc]
 
 
@@ -173,6 +188,7 @@ class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
         errors: the error handling scheme used while decoding
         return_path: if ``True``, each line will return a tuple of path and contents, rather
             than just the contents
+        as_tuple: if ``True``, each line will return a tuple instead of a list
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper, FileOpener
@@ -196,6 +212,7 @@ class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
         encoding: str = "utf-8",
         errors: str = "ignore",
         return_path: bool = False,
+        as_tuple: bool = False,
         **fmtparams,
     ) -> None:
         super().__init__(
@@ -206,6 +223,7 @@ class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
             encoding=encoding,
             errors=errors,
             return_path=return_path,
+            as_tuple=as_tuple,
             **fmtparams,
         )
 

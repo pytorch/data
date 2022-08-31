@@ -9,8 +9,6 @@ import os
 import re
 import threading
 
-import torch
-import torch.utils.data.backward_compatibility
 import torchvision.datasets as datasets
 import torchvision.datasets.folder
 import torchvision.transforms as transforms
@@ -168,7 +166,6 @@ if __name__ == "__main__":
         batch_size=BATCH_SIZE,
         shuffle=False,
         num_workers=NUM_WORKERS,
-        worker_init_fn=torch.utils.data.backward_compatibility.worker_init_fn,
     )
     items = list(dl)
     assert len(items) == 6
@@ -186,7 +183,6 @@ if __name__ == "__main__":
         batch_size=BATCH_SIZE,
         shuffle=False,
         num_workers=NUM_WORKERS,
-        worker_init_fn=torch.utils.data.backward_compatibility.worker_init_fn,
     )
 
     try:

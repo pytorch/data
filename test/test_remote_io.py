@@ -13,17 +13,38 @@ import expecttest
 
 import torchdata
 
-from _utils._common_utils_for_test import check_hash_fn, create_temp_dir
+from _utils._common_utils_for_test import check_hash_fn, create_temp_dir, IS_WINDOWS
+from torch.utils.data import DataLoader
 
 from torchdata.datapipes.iter import (
     EndOnDiskCacheHolder,
     FileOpener,
+    FSSpecFileLister,
+    FSSpecFileOpener,
     HttpReader,
     IterableWrapper,
     OnDiskCacheHolder,
     S3FileLister,
     S3FileLoader,
 )
+
+try:
+    import fsspec
+    import s3fs
+
+    HAS_FSSPEC_S3 = True
+except ImportError:
+    HAS_FSSPEC_S3 = False
+skipIfNoFSSpecS3 = unittest.skipIf(not HAS_FSSPEC_S3, "no FSSpec with S3fs")
+
+try:
+    from torchdata._torchdata import S3Handler
+
+    HAS_AWS = True
+except ImportError:
+    HAS_AWS = False
+skipIfAWS = unittest.skipIf(HAS_AWS, "AWSSDK Enabled")
+skipIfNoAWS = unittest.skipIf(not HAS_AWS, "No AWSSDK Enabled")
 
 
 class TestDataPipeRemoteIO(expecttest.TestCase):
@@ -61,6 +82,12 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
 
         # __len__ Test: returns the length of source DataPipe
         self.assertEqual(1, len(http_reader_dp))
+
+        # Error Test: test if the Http Reader raises an error when the url is invalid
+        error_url = "https://github.com/pytorch/data/this/url/dont/exist"
+        http_error_dp = HttpReader(IterableWrapper([error_url]), timeout=timeout)
+        with self.assertRaisesRegex(Exception, "[404]"):
+            next(iter(http_error_dp.readlines()))
 
     def test_on_disk_cache_holder_iterdatapipe(self):
         tar_file_url = "https://raw.githubusercontent.com/pytorch/data/main/test/_fakedata/csv.tar.gz"
@@ -143,8 +170,9 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
 
         cached_it = iter(file_cache_dp)
         for expected_csv_path in _gen_filepath_fn(expected_file_name):
-            # File doesn't exist on disk
-            self.assertFalse(os.path.exists(expected_csv_path))
+
+            # Check disabled due to some elements of prefetching inside of on_disck_cache
+            # self.assertFalse(os.path.exists(expected_csv_path))
 
             csv_path = next(cached_it)
 
@@ -167,8 +195,10 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         cached_it = iter(file_cache_dp)
         for i in range(3):
             expected_csv_path = os.path.join(self.temp_dir.name, root_dir, f"{i}.csv")
+
             # File doesn't exist on disk
-            self.assertFalse(os.path.exists(expected_csv_path))
+            # Check disabled due to some elements of prefetching inside of on_disck_cache
+            # self.assertFalse(os.path.exists(expected_csv_path))
 
             csv_path = next(cached_it)
 
@@ -176,22 +206,50 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             self.assertTrue(os.path.exists(expected_csv_path))
             self.assertEqual(expected_csv_path, csv_path)
 
-    def test_s3_io_iterdatapipe(self):
-        # sanity test
-        file_urls = ["s3://ai2-public-datasets"]
-        try:
-            s3_lister_dp = S3FileLister(IterableWrapper(file_urls))
-            s3_loader_dp = S3FileLoader(IterableWrapper(file_urls))
-        except ModuleNotFoundError:
-            warnings.warn(
-                "S3 IO datapipes or C++ extension '_torchdata' isn't built in the current 'torchdata' package"
-            )
-            return
+        if not IS_WINDOWS:
+            dl = DataLoader(file_cache_dp, num_workers=3, multiprocessing_context="fork", batch_size=1)
+            expected = [[os.path.join(self.temp_dir.name, root_dir, f"{i}.csv")] for i in range(3)] * 3
+            res = list(dl)
+            self.assertEqual(sorted(expected), sorted(res))
 
+    @skipIfNoFSSpecS3
+    def test_fsspec_io_iterdatapipe(self):
+        input_list = [
+            (["s3://ai2-public-datasets"], 39),  # bucket without '/'
+            (["s3://ai2-public-datasets/charades/"], 18),  # bucket with '/'
+            (
+                [
+                    "s3://ai2-public-datasets/charades/Charades_v1.zip",
+                    "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
+                    "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
+                    "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
+                ],
+                4,
+            ),  # multiple files
+        ]
+        for urls, num in input_list:
+            fsspec_lister_dp = FSSpecFileLister(IterableWrapper(urls), anon=True)
+            self.assertEqual(sum(1 for _ in fsspec_lister_dp), num, f"{urls} failed")
+
+        url = "s3://ai2-public-datasets/charades/"
+        fsspec_loader_dp = FSSpecFileOpener(FSSpecFileLister(IterableWrapper([url]), anon=True), anon=True)
+        res = list(fsspec_loader_dp)
+        self.assertEqual(len(res), 18, f"{input} failed")
+
+    @skipIfAWS
+    def test_disabled_s3_io_iterdatapipe(self):
+        file_urls = ["s3://ai2-public-datasets"]
+        with self.assertRaisesRegex(ModuleNotFoundError, "TorchData must be built with"):
+            _ = S3FileLister(IterableWrapper(file_urls))
+        with self.assertRaisesRegex(ModuleNotFoundError, "TorchData must be built with"):
+            _ = S3FileLoader(IterableWrapper(file_urls))
+
+    @skipIfNoAWS
+    def test_s3_io_iterdatapipe(self):
         # S3FileLister: different inputs
         input_list = [
-            [["s3://ai2-public-datasets"], 71],  # bucket without '/'
-            [["s3://ai2-public-datasets/"], 71],  # bucket with '/'
+            [["s3://ai2-public-datasets"], 77],  # bucket without '/'
+            [["s3://ai2-public-datasets/"], 77],  # bucket with '/'
             [["s3://ai2-public-datasets/charades"], 18],  # folder without '/'
             [["s3://ai2-public-datasets/charades/"], 18],  # folder without '/'
             [["s3://ai2-public-datasets/charad"], 18],  # prefix
@@ -232,7 +290,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             "s3://aft-vbi-pds/bin-images/111",
             "s3://aft-vbi-pds/bin-images/222",
         ]
-        s3_lister_dp = S3FileLister(IterableWrapper(file_urls), region="us-east-1")
+        s3_lister_dp = S3FileLister(IterableWrapper(file_urls), request_timeout_ms=10000, region="us-east-1")
         self.assertEqual(sum(1 for _ in s3_lister_dp), 2212, f"{input} failed")
 
         # S3FileLister: incorrect inputs

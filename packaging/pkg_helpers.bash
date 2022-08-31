@@ -105,9 +105,10 @@ setup_build_version() {
 }
 
 # Set some useful variables for OS X, if applicable
+# AWSSDK requires at lest 10.13
 setup_macos() {
   if [[ "$(uname)" == Darwin ]]; then
-    export MACOSX_DEPLOYMENT_TARGET=10.9 CC=clang CXX=clang++
+    export MACOSX_DEPLOYMENT_TARGET=10.13 CC=clang CXX=clang++
   fi
 }
 
@@ -153,7 +154,12 @@ setup_conda_pytorch_constraint() {
   CONDA_CHANNEL_FLAGS=${CONDA_CHANNEL_FLAGS:-}
   if [[ -z "$PYTORCH_VERSION" ]]; then
     export CONDA_CHANNEL_FLAGS="${CONDA_CHANNEL_FLAGS} -c pytorch-nightly"
-    export PYTORCH_VERSION="$(conda search --json 'pytorch[channel=pytorch-nightly]' | python -c "import sys, json, re; print(re.sub(r'\\+.*$', '', json.load(sys.stdin)['pytorch'][-1]['version']))")"
+    export PYTORCH_VERSION="$(conda search --json 'pytorch[channel=pytorch-nightly]' | \
+        python -c "import json, os, re, sys; cuver = os.environ.get('CU_VERSION'); \
+            pyver = os.environ.get('PYTHON_VERSION'); \
+            print(re.sub(r'\\+.*$', '',
+                [x['version'] for x in json.load(sys.stdin)['pytorch'] \
+                    if (x['platform'] == 'darwin' or cuver in x['fn']) and 'py' + pyver in x['fn']][-1]))")"
   else
     export CONDA_CHANNEL_FLAGS="${CONDA_CHANNEL_FLAGS} -c pytorch -c pytorch-${UPLOAD_CHANNEL}"
   fi
