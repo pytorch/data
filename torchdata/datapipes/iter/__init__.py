@@ -113,7 +113,7 @@ from torchdata.datapipes.iter.util.webdataset import (
     WebDatasetIterDataPipe as WebDataset,
 )
 from torchdata.datapipes.iter.util.renamekeys import (
-    RenameKeysIterDataPipe as RenameKeys,
+    KeyRenamerIterDataPipe as RenameKeys,
 )
 from torchdata.datapipes.iter.util.xzfileloader import (
     XzFileLoaderIterDataPipe as XzFileLoader,

@@ -910,7 +910,7 @@ class TestIterDataPipe(expecttest.TestCase):
             {"1.txt": "1", "1.bin": "1b"},
             {"2.txt": "2", "2.bin": "2b"},
         ])
-        stage2 = RenameKeys(stage1, t="*.txt", b="*.bin")
+        stage2 = stage1.rename_keys(t="*.txt", b="*.bin")
         output = list(iter(stage2))
         assert len(output) == 2
         assert set(output[0].keys()) == set(["t", "b"])

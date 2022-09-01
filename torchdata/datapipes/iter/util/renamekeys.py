@@ -13,7 +13,7 @@ from torchdata.datapipes.iter import IterDataPipe
 
 
 @functional_datapipe("rename_keys")
-class RenameKeysIterDataPipe(IterDataPipe[Dict]):
+class KeyRenamerIterDataPipe(IterDataPipe[Dict]):
     r"""
     Given a stream of dictionaries, rename keys using glob patterns.
 
