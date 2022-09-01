@@ -91,7 +91,7 @@ html_css_files = [
     "css/custom.css",
 ]
 
-# TODO: use regex to replace all "T" and "T_co" related signature
+# TODO(598): use regex to replace all "T" and "T_co" related signature
 signature_replacements = {
     "torch.utils.data.datapipes.datapipe.IterDataPipe": "IterDataPipe",
     "abc.IterDataPipe": "IterDataPipe",
@@ -142,3 +142,8 @@ def setup(app):
                 obj.__name__ = name
 
     app.connect("autodoc-process-signature", process_signature)
+
+
+intersphinx_mapping = {
+    "graphviz": ("https://graphviz.readthedocs.io/en/stable/", None),
+}

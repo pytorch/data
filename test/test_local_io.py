@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import bz2
+import functools
 import hashlib
 import io
 import itertools
@@ -12,15 +13,22 @@ import lzma
 import os
 import subprocess
 import tarfile
+import tempfile
+import time
 import unittest
 import warnings
 import zipfile
+from functools import partial
 
 from json.decoder import JSONDecodeError
 
 import expecttest
 
 from _utils._common_utils_for_test import create_temp_dir, create_temp_files, get_name, reset_after_n_next_calls
+
+from torch.utils.data import DataLoader
+
+from torchdata.dataloader2.adapter import CacheTimeout
 from torchdata.datapipes.iter import (
     Bz2FileLoader,
     CSVDictParser,
@@ -33,9 +41,11 @@ from torchdata.datapipes.iter import (
     IoPathFileOpener,
     IoPathSaver,
     IterableWrapper,
+    IterDataPipe,
     JsonParser,
     RarArchiveLoader,
     Saver,
+    StreamReader,
     TarArchiveLoader,
     WebDataset,
     XzFileLoader,
@@ -44,6 +54,7 @@ from torchdata.datapipes.iter import (
 
 try:
     import iopath
+    import torch
 
     HAS_IOPATH = True
 except ImportError:
@@ -64,6 +75,18 @@ except (ModuleNotFoundError, FileNotFoundError):
 skipIfNoRarTools = unittest.skipIf(not HAS_RAR_TOOLS, "no rar tools")
 
 
+def filepath_fn(temp_dir_name, name: str) -> str:
+    return os.path.join(temp_dir_name, os.path.basename(name))
+
+
+def _unbatch(x):
+    return x[0]
+
+
+def _noop(x):
+    return x
+
+
 class TestDataPipeLocalIO(expecttest.TestCase):
     def setUp(self):
         self.temp_dir = create_temp_dir()
@@ -71,10 +94,17 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self.temp_sub_dir = create_temp_dir(self.temp_dir.name)
         self.temp_sub_files = create_temp_files(self.temp_sub_dir, 4, False)
 
+        self.temp_dir_2 = create_temp_dir()
+        self.temp_files_2 = create_temp_files(self.temp_dir_2)
+        self.temp_sub_dir_2 = create_temp_dir(self.temp_dir_2.name)
+        self.temp_sub_files_2 = create_temp_files(self.temp_sub_dir_2, 4, False)
+
     def tearDown(self):
         try:
             self.temp_sub_dir.cleanup()
             self.temp_dir.cleanup()
+            self.temp_sub_dir_2.cleanup()
+            self.temp_dir_2.cleanup()
         except Exception as e:
             warnings.warn(f"TestDataPipeLocalIO was not able to cleanup temp dir due to {e}")
 
@@ -131,9 +161,15 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         expected_res = [("1.csv", ["key", "item"]), ("1.csv", ["a", "1"]), ("1.csv", ["b", "2"]), ("empty2.csv", [])]
         self.assertEqual(expected_res, list(csv_parser_dp))
 
+        # Functional Test: yield one row at time from each file as tuple instead of list, skipping over empty content
+        csv_parser_dp = datapipe3.parse_csv(as_tuple=True)
+        expected_res = [("key", "item"), ("a", "1"), ("b", "2"), ()]
+        self.assertEqual(expected_res, list(csv_parser_dp))
+
         # Reset Test:
         csv_parser_dp = CSVParser(datapipe3, return_path=True)
         n_elements_before_reset = 2
+        expected_res = [("1.csv", ["key", "item"]), ("1.csv", ["a", "1"]), ("1.csv", ["b", "2"]), ("empty2.csv", [])]
         res_before_reset, res_after_reset = reset_after_n_next_calls(csv_parser_dp, n_elements_before_reset)
         self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
         self.assertEqual(expected_res, res_after_reset)
@@ -196,14 +232,16 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         datapipe2 = FileOpener(datapipe1, mode="b")
         hash_check_dp = HashChecker(datapipe2, hash_dict)
 
+        expected_res = list(datapipe2)
+
         # Functional Test: Ensure the DataPipe values are unchanged if the hashes are the same
-        for (expected_path, expected_stream), (actual_path, actual_stream) in zip(datapipe2, hash_check_dp):
+        for (expected_path, expected_stream), (actual_path, actual_stream) in zip(expected_res, hash_check_dp):
             self.assertEqual(expected_path, actual_path)
             self.assertEqual(expected_stream.read(), actual_stream.read())
 
         # Functional Test: Ensure the rewind option works, and the stream is empty when there is no rewind
         hash_check_dp_no_reset = HashChecker(datapipe2, hash_dict, rewind=False)
-        for (expected_path, _), (actual_path, actual_stream) in zip(datapipe2, hash_check_dp_no_reset):
+        for (expected_path, _), (actual_path, actual_stream) in zip(expected_res, hash_check_dp_no_reset):
             self.assertEqual(expected_path, actual_path)
             self.assertEqual(b"", actual_stream.read())
 
@@ -279,30 +317,37 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "len"):
             len(json_dp)
 
-    def test_saver_iterdatapipe(self):
-        def filepath_fn(name: str) -> str:
-            return os.path.join(self.temp_dir.name, os.path.basename(name))
+        # kwargs Test:
+        json_dp = JsonParser(datapipe_nonempty, parse_int=str)
+        expected_res = [
+            ("1.json", ["foo", {"bar": ["baz", None, 1.0, "2"]}]),
+            ("2.json", {"__complex__": True, "real": "1", "imag": "2"}),
+        ]
+        self.assertEqual(expected_res, list(json_dp))
 
+    def test_saver_iterdatapipe(self):
         # Functional Test: Saving some data
         name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
         source_dp = IterableWrapper(sorted(name_to_data.items()))
-        saver_dp = source_dp.save_to_disk(filepath_fn=filepath_fn, mode="wb")
+        saver_dp = source_dp.save_to_disk(filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
         res_file_paths = list(saver_dp)
-        expected_paths = [filepath_fn(name) for name in name_to_data.keys()]
+        expected_paths = [filepath_fn(self.temp_dir.name, name) for name in name_to_data.keys()]
         self.assertEqual(expected_paths, res_file_paths)
         for name in name_to_data.keys():
-            p = filepath_fn(name)
+            p = filepath_fn(self.temp_dir.name, name)
             with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # Reset Test:
-        saver_dp = Saver(source_dp, filepath_fn=filepath_fn, mode="wb")
+        saver_dp = Saver(source_dp, filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(saver_dp, n_elements_before_reset)
-        self.assertEqual([filepath_fn("1.txt"), filepath_fn("2.txt")], res_before_reset)
+        self.assertEqual(
+            [filepath_fn(self.temp_dir.name, "1.txt"), filepath_fn(self.temp_dir.name, "2.txt")], res_before_reset
+        )
         self.assertEqual(expected_paths, res_after_reset)
         for name in name_to_data.keys():
-            p = filepath_fn(name)
+            p = filepath_fn(self.temp_dir.name, name)
             with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
@@ -337,6 +382,11 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Functional Test: Read extracted files before reaching the end of the tarfile
         self._compressed_files_comparison_helper(self.temp_files, tar_loader_dp, check_length=False)
         self._compressed_files_comparison_helper(self.temp_files, gz_reader_dp, check_length=False)
+
+        # Load from decompressed file stream
+        decomp_dp = datapipe_gz_2.decompress()
+        decomp_reader_dp = TarArchiveLoader(decomp_dp)
+        self._compressed_files_comparison_helper(self.temp_files, decomp_reader_dp, check_length=False)
 
         # Functional Test: Read extracted files after reaching the end of the tarfile
         data_refs = list(tar_loader_dp)
@@ -424,7 +474,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self._unordered_compressed_files_comparison_helper(self.temp_files, res_after_reset)
 
         # Reset Test: Ensure the order is consistent between iterations
-        for r1, r2 in zip(xz_loader_dp, xz_loader_dp):
+        for r1, r2 in zip(list(xz_loader_dp), list(xz_loader_dp)):
             self.assertEqual(r1[0], r2[0])
 
         # __len__ Test: doesn't have valid length
@@ -463,7 +513,8 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self._unordered_compressed_files_comparison_helper(self.temp_files, res_after_reset)
 
         # Reset Test: Ensure the order is consistent between iterations
-        for r1, r2 in zip(bz2_loader_dp, bz2_loader_dp):
+
+        for r1, r2 in zip(list(bz2_loader_dp), list(bz2_loader_dp)):
             self.assertEqual(r1[0], r2[0])
 
         # __len__ Test: doesn't have valid length
@@ -582,13 +633,44 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             len(tar_decompress_dp)
 
     def _write_text_files(self):
-        def filepath_fn(name: str) -> str:
-            return os.path.join(self.temp_dir.name, os.path.basename(name))
-
         name_to_data = {"1.text": b"DATA", "2.text": b"DATA", "3.text": b"DATA"}
         source_dp = IterableWrapper(sorted(name_to_data.items()))
-        saver_dp = source_dp.save_to_disk(filepath_fn=filepath_fn, mode="wb")
+        saver_dp = source_dp.save_to_disk(filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
         list(saver_dp)
+
+    @staticmethod
+    def _slow_fn(tmpdirname, x):
+        with open(os.path.join(tmpdirname, str(os.getpid())), "w") as pid_fh:
+            pid_fh.write("anything")
+        time.sleep(10)
+        return (x, "str")
+
+    def test_disk_cache_locks(self):
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            file_name = os.path.join(tmpdirname, "test.bin")
+            dp = IterableWrapper([file_name])
+            dp = dp.on_disk_cache(filepath_fn=_noop)
+            dp = dp.map(functools.partial(self._slow_fn, tmpdirname))
+            dp = dp.end_caching(mode="t", filepath_fn=_noop, timeout=120)
+            dp = FileOpener(dp)
+            dp = StreamReader(dp)
+            dl = DataLoader(dp, num_workers=10, multiprocessing_context="spawn", batch_size=1, collate_fn=_unbatch)
+            result = list(dl)
+            all_files = []
+            for (_, _, filenames) in os.walk(tmpdirname):
+                all_files += filenames
+            # We expect only two files, one with pid and 'downloaded' one
+            self.assertEqual(2, len(all_files))
+            self.assertEqual("str", result[0][1])
+
+            # cleanup cached files
+            for f in os.listdir(tmpdirname):
+                os.remove(os.path.join(tmpdirname, f))
+
+            dp = CacheTimeout(2)(dp)  # Calling adapter manually to work with classic DataLoader
+            dl = DataLoader(dp, num_workers=10, multiprocessing_context="spawn", batch_size=1, collate_fn=_unbatch)
+            with self.assertRaisesRegex(Exception, "OnDiskCache Exception"):
+                result = list(dl)
 
     # TODO(120): this test currently only covers reading from local
     # filesystem. It needs to be modified once test data can be stored on
@@ -600,6 +682,29 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # check all file paths within sub_folder are listed
         for path in datapipe:
             self.assertTrue(path in self.temp_sub_files)
+
+        datapipe = IterableWrapper([self.temp_sub_dir.name])
+        datapipe = datapipe.list_files_by_iopath()
+        for path in datapipe:
+            self.assertTrue(path in self.temp_sub_files)
+
+    @skipIfNoIoPath
+    def test_io_path_file_lister_iterdatapipe_with_list(self):
+        datapipe = IoPathFileLister(root=[self.temp_sub_dir.name, self.temp_sub_dir_2.name])
+
+        file_lister = list(datapipe)
+        file_lister.sort()
+        all_temp_files = list(self.temp_sub_files + self.temp_sub_files_2)
+        all_temp_files.sort()
+
+        # check all file paths within sub_folder are listed
+        self.assertEqual(file_lister, all_temp_files)
+
+        datapipe = IterableWrapper([self.temp_sub_dir.name, self.temp_sub_dir_2.name])
+        datapipe = datapipe.list_files_by_iopath()
+        results = list(datapipe)
+        results.sort()
+        self.assertEqual(results, all_temp_files)
 
     @skipIfNoIoPath
     def test_io_path_file_loader_iterdatapipe(self):
@@ -613,10 +718,10 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Reset Test: Ensure the resulting streams are still readable after the DataPipe is reset/exhausted
         self._write_text_files()
         lister_dp = FileLister(self.temp_dir.name, "*.text")
-        iopath_file_loader_dp = IoPathFileOpener(lister_dp, mode="rb")
+        iopath_file_opener_dp = lister_dp.open_files_by_iopath(mode="rb")
 
         n_elements_before_reset = 2
-        res_before_reset, res_after_reset = reset_after_n_next_calls(iopath_file_loader_dp, n_elements_before_reset)
+        res_before_reset, res_after_reset = reset_after_n_next_calls(iopath_file_opener_dp, n_elements_before_reset)
         self.assertEqual(2, len(res_before_reset))
         self.assertEqual(3, len(res_after_reset))
         for _name, stream in res_before_reset:
@@ -626,34 +731,60 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
     @skipIfNoIoPath
     def test_io_path_saver_iterdatapipe(self):
-        def filepath_fn(name: str) -> str:
-            return os.path.join(self.temp_dir.name, os.path.basename(name))
-
         # Functional Test: Saving some data
         name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
         source_dp = IterableWrapper(sorted(name_to_data.items()))
-        saver_dp = source_dp.save_by_iopath(filepath_fn=filepath_fn, mode="wb")
+        saver_dp = source_dp.save_by_iopath(filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
         res_file_paths = list(saver_dp)
-        expected_paths = [filepath_fn(name) for name in name_to_data.keys()]
+        expected_paths = [filepath_fn(self.temp_dir.name, name) for name in name_to_data.keys()]
         self.assertEqual(expected_paths, res_file_paths)
         for name in name_to_data.keys():
-            p = filepath_fn(name)
+            p = filepath_fn(self.temp_dir.name, name)
             with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # Reset Test:
-        saver_dp = IoPathSaver(source_dp, filepath_fn=filepath_fn, mode="wb")
+        saver_dp = IoPathSaver(source_dp, filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="wb")
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(saver_dp, n_elements_before_reset)
-        self.assertEqual([filepath_fn("1.txt"), filepath_fn("2.txt")], res_before_reset)
+        self.assertEqual(
+            [filepath_fn(self.temp_dir.name, "1.txt"), filepath_fn(self.temp_dir.name, "2.txt")], res_before_reset
+        )
         self.assertEqual(expected_paths, res_after_reset)
         for name in name_to_data.keys():
-            p = filepath_fn(name)
+            p = filepath_fn(self.temp_dir.name, name)
             with open(p) as f:
                 self.assertEqual(name_to_data[name], f.read().encode())
 
         # __len__ Test: returns the length of source DataPipe
         self.assertEqual(3, len(saver_dp))
+
+    @skipIfNoIoPath
+    def test_io_path_saver_file_lock(self):
+        # Same filename with different name
+        name_to_data = {"1.txt": b"DATA1", "1.txt": b"DATA2", "2.txt": b"DATA3", "2.txt": b"DATA4"}  # noqa: F601
+
+        # Add sharding_filter to shard data into 2
+        source_dp = IterableWrapper(list(name_to_data.items())).sharding_filter()
+
+        # Use appending as the mode
+        saver_dp = source_dp.save_by_iopath(filepath_fn=partial(filepath_fn, self.temp_dir.name), mode="ab")
+
+        import torch.utils.data.graph_settings
+
+        from torch.utils.data import DataLoader
+
+        num_workers = 2
+        line_lengths = []
+        dl = DataLoader(saver_dp, num_workers=num_workers, multiprocessing_context="spawn")
+        for filename in dl:
+            with open(filename[0]) as f:
+                lines = f.readlines()
+                x = len(lines)
+                line_lengths.append(x)
+                self.assertEqual(x, 1)
+
+        self.assertEqual(num_workers, len(line_lengths))
 
     def _write_test_rar_files(self):
         # `rarfile` can only read but not write .rar archives so we use to system utilities

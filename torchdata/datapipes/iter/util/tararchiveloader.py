@@ -57,8 +57,16 @@ class TarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
             validate_pathname_binary_tuple(data)
             pathname, data_stream = data
             try:
-                # typing.cast is used here to silence mypy's type checker
-                tar = tarfile.open(fileobj=cast(Optional[IO[bytes]], data_stream), mode=self.mode)
+                if isinstance(data_stream, StreamWrapper) and isinstance(data_stream.file_obj, tarfile.TarFile):
+                    tar = data_stream.file_obj
+                else:
+                    reading_mode = (
+                        self.mode
+                        if hasattr(data_stream, "seekable") and data_stream.seekable()
+                        else self.mode.replace(":", "|")
+                    )
+                    # typing.cast is used here to silence mypy's type checker
+                    tar = tarfile.open(fileobj=cast(Optional[IO[bytes]], data_stream), mode=reading_mode)
                 for tarinfo in tar:
                     if not tarinfo.isfile():
                         continue
@@ -67,10 +75,13 @@ class TarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                         warnings.warn(f"failed to extract file {tarinfo.name} from source tarfile {pathname}")
                         raise tarfile.ExtractError
                     inner_pathname = os.path.normpath(os.path.join(pathname, tarinfo.name))
-                    yield inner_pathname, StreamWrapper(extracted_fobj)  # type: ignore[misc]
+                    yield inner_pathname, StreamWrapper(extracted_fobj, data_stream, name=inner_pathname)  # type: ignore[misc]
             except Exception as e:
                 warnings.warn(f"Unable to extract files from corrupted tarfile stream {pathname} due to: {e}, abort!")
                 raise e
+            finally:
+                if isinstance(data_stream, StreamWrapper):
+                    data_stream.autoclose()
 
     def __len__(self) -> int:
         if self.length == -1:

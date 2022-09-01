@@ -11,12 +11,31 @@ if(BUILD_S3)
   # see https://github.com/actions/setup-python/issues/121#issuecomment-1014500503
   set(Python_FIND_FRAMEWORK "LAST")
 
-  if (WIN32)
+  if(WIN32)
       find_package(Python3 ${PYTHON_VERSION} EXACT COMPONENTS Interpreter Development)
     set(ADDITIONAL_ITEMS Python3::Python)
   else()
     find_package(Python3 COMPONENTS Interpreter Development)
   endif()
+
+  # AWSSDK Dependencies
+  if(WIN32)
+    set(AWSSDK_DEP_LIBRARIES "Userenv;version;ws2_32;Bcrypt;Wininet;winhttp;Crypt32;Secur32;NCrypt;Shlwapi")
+  elseif(APPLE)
+    set(AWSSDK_DEP_LIBRARIES pthread curl)
+  elseif(UNIX)
+    set(AWSSDK_DEP_LIBRARIES pthread)
+    if(STATIC_DEPS)
+      set(OPENSSL_USE_STATIC_LIBS TRUE)
+    endif()
+    include(FindZLIB)
+    list(APPEND AWSSDK_DEP_LIBRARIES ${ZLIB_LIBRARIES})
+    include(FindCURL)
+    list(APPEND AWSSDK_DEP_LIBRARIES ${CURL_LIBRARIES})
+    include(FindOpenSSL)
+    list(APPEND AWSSDK_DEP_LIBRARIES ${OPENSSL_SSL_LIBRARIES} ${OPENSSL_CRYPTO_LIBRARIES})
+  endif()
+  message(STATUS "AWSSDK DEPENDENCIES AWSSDK_DEP_LIBRARIES: ${AWSSDK_DEP_LIBRARIES}")
 
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -29,7 +48,7 @@ if(BUILD_S3)
   add_library(_torchdata MODULE ${EXTENSION_SOURCES})
 
   if(NOT USE_SYSTEM_AWS_SDK_CPP)
-    add_dependencies(_torchdata aws-cpp-sdk)
+    add_dependencies(_torchdata aws_sdk)
   endif()
 
   target_include_directories(
@@ -44,9 +63,10 @@ if(BUILD_S3)
   target_link_libraries(
     _torchdata
     PRIVATE
-    ${AWSSDK_LIBRARIES}
     ${Python_LIBRARIES}
     ${ADDITIONAL_ITEMS}
+    ${AWSSDK_LIBRARIES}
+    ${AWSSDK_DEP_LIBRARIES}
     )
 
   set_target_properties(_torchdata PROPERTIES PREFIX "")

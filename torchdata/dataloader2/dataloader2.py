@@ -7,9 +7,11 @@
 
 import pickle
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Generic, Iterator, Optional, TypeVar
+from typing import Any, Dict, Generic, Iterable, Iterator, Optional, TypeVar, Union
 
-from torch.utils.data import IterDataPipe
+from torch.utils.data.graph import DataPipe
+
+from torchdata.dataloader2.adapter import Adapter
 
 from .error import PauseIteration
 from .reading_service import CheckpointableReadingServiceInterface, ReadingServiceInterface
@@ -19,14 +21,14 @@ SERIALIZED_DATAPIPE_KEY_NAME = "serialized_datapipe"
 READING_SERVICE_STATE_KEY_NAME = "reading_service_state"
 
 
-def serialize_datapipe(datapipe: IterDataPipe) -> bytes:
+def serialize_datapipe(datapipe: DataPipe) -> bytes:
     try:
         return pickle.dumps(datapipe)
     except pickle.PickleError as e:
         raise NotImplementedError(f"Prototype only support pickle-able datapipes for checkpoint: {e}")
 
 
-def deserialize_datapipe(serialized_state: bytes) -> IterDataPipe:
+def deserialize_datapipe(serialized_state: bytes) -> DataPipe:
     try:
         return pickle.loads(serialized_state)
     except pickle.PickleError as e:
@@ -41,27 +43,69 @@ class ConcurrencySpec:
     persistent_workers: bool = False
 
 
+class DataLoader2Iterator(Iterator):
+    def __init__(self, dataloader: "DataLoader2", iterator_id: int):
+        self.dataloader = dataloader
+        self.iterator_id = iterator_id
+
+    def __next__(self) -> T_co:
+        if self.iterator_id == self.dataloader.valid_iterator_id:
+            self.dataloader._reset_iter = True
+            try:
+                return next(self.dataloader._datapipe_iter)  # type: ignore[arg-type]
+            except PauseIteration:
+                raise StopIteration
+            except StopIteration:
+                if self.dataloader.reading_service is not None:
+                    self.dataloader.reading_service.finalize_iteration()
+                raise
+        else:
+            if self.dataloader.reading_service is not None:
+                self.dataloader.reading_service.finalize_iteration()
+            raise RuntimeError(
+                "This iterator has been invalidated because another iterator has been created "
+                "from the same DataLoader2.\n"
+                "This may be caused multiple references to the same DataLoader2. "
+                "For feedback regarding this single iterator per DataLoader2 constraint, feel free "
+                "to comment on this issue: https://github.com/pytorch/data/issues/45."
+            )
+
+    def __getattr__(self, name):
+        """
+        To delegate operations to ``dataloader._datapipe_iter``.
+        """
+        if self.dataloader._datapipe_iter is None:
+            raise AttributeError
+        return getattr(self.dataloader._datapipe_iter, name)
+
+
 class DataLoader2(Generic[T_co]):
     def __init__(
         self,
-        datapipe: IterDataPipe,
-        # TODO: Change into Iterable[DPAdapter] and apply them sequentially for OSS use case
-        datapipe_adapter_fn: Optional[Callable[[IterDataPipe], IterDataPipe]] = None,
+        datapipe: DataPipe,
+        datapipe_adapter_fn: Optional[Union[Iterable[Adapter], Adapter]] = None,
         reading_service: Optional[ReadingServiceInterface] = None,
     ) -> None:
         self.datapipe = datapipe
         self._adapted: bool = False
         self._datapipe_iter: Optional[Iterator[T_co]] = None
-        self._reset_iter: bool = True
-        # TODO(VitalyFedyunin): Some ReadingServices might want to validate adapters, we can add this feature
-        self.datapipe_adapter_fn = datapipe_adapter_fn
+        self._reset_iter: bool = True  # Sets to `False` when __iter__ starts, and `True` when `StopIteration``
+        # TODO(630): Some ReadingServices might want to validate adapters, we can add this feature
+        if datapipe_adapter_fn is None:
+            self.datapipe_adapter_fns = None
+        elif isinstance(datapipe_adapter_fn, Iterable):
+            self.datapipe_adapter_fns = datapipe_adapter_fn
+        else:
+            self.datapipe_adapter_fns = [datapipe_adapter_fn]
         self.reading_service = reading_service
-        self.reading_service_state: Optional[bytes] = None
+        self.reading_service_state: Optional[bytes] = None  # is not `None` when `load_state_dict` is called
         self._terminated: bool = False
+        self.valid_iterator_id: Optional[int] = None
 
-        if self.datapipe_adapter_fn is not None:
-            self.datapipe = self.datapipe_adapter_fn(self.datapipe)
-        self._datapipe_before_reading_service_adapt: IterDataPipe = self.datapipe
+        if self.datapipe_adapter_fns is not None:
+            for adapter_fn in self.datapipe_adapter_fns:
+                self.datapipe = adapter_fn(self.datapipe)
+        self._datapipe_before_reading_service_adapt: DataPipe = self.datapipe
 
     def __iter__(self) -> Iterator[T_co]:
         if self._terminated:
@@ -81,28 +125,10 @@ class DataLoader2(Generic[T_co]):
                 self.reading_service.initialize_iteration()
 
             self._datapipe_iter = iter(self.datapipe)
-
             self._reset_iter = False
 
-        return self
-
-    def __next__(self) -> T_co:
-        if self._reset_iter:
-            raise StopIteration
-        try:
-            return next(self._datapipe_iter)  # type: ignore[arg-type]
-        except PauseIteration:
-            raise StopIteration
-        except StopIteration:
-            if self.reading_service is not None:
-                self.reading_service.finalize_iteration()
-            self._reset_iter = True
-            raise
-
-    def __getattr__(self, name: str) -> Any:
-        if self._datapipe_iter is None:
-            raise AttributeError
-        return getattr(self._datapipe_iter, name)
+        self.valid_iterator_id = 0 if self.valid_iterator_id is None else self.valid_iterator_id + 1
+        return DataLoader2Iterator(self, self.valid_iterator_id)
 
     def __del__(self) -> None:
         self.shutdown()
@@ -167,7 +193,10 @@ class DataLoader2(Generic[T_co]):
         # edge case checking
         # iterator has already been created: 1) iterator is just created 2) iterator is created and iter is exhausted
         if self._datapipe_iter is not None:
-            raise RuntimeError("DataLoaderV2 iterator has already been created, `load_state_dict()` can’t be called. Please create a new dataloader in order to use load state dict.")
+            raise RuntimeError(
+                "DataLoaderV2 iterator has already been created, `load_state_dict()` can’t be called. "
+                "Please create a new dataloader in order to use load state dict."
+            )
 
         serialized_datapipe = state[SERIALIZED_DATAPIPE_KEY_NAME]
         reading_service_state = state[READING_SERVICE_STATE_KEY_NAME]
@@ -180,6 +209,7 @@ class DataLoader2(Generic[T_co]):
         self.reading_service_state = reading_service_state
 
         # re-initialize datapipe_adapter_fn and _datapipe_before_reading_service_adapt
-        if self.datapipe_adapter_fn is not None:
-            self.datapipe = self.datapipe_adapter_fn(self.datapipe)
+        if self.datapipe_adapter_fns is not None:
+            for adapter_fn in self.datapipe_adapter_fns:
+                self.datapipe = adapter_fn(self.datapipe)
         self._datapipe_before_reading_service_adapt = self.datapipe
