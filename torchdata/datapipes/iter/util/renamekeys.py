@@ -6,7 +6,7 @@
 
 import re
 from fnmatch import fnmatch
-from typing import Dict, Iterator, List, Union
+from typing import Dict, Iterator, List, Union, Any
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -16,6 +16,11 @@ from torchdata.datapipes.iter import IterDataPipe
 class KeyRenamerIterDataPipe(IterDataPipe[Dict]):
     r"""
     Given a stream of dictionaries, rename keys using glob patterns.
+
+    This is used for quickly extracting relevant fields from a stream of dictionaries
+    and renaming them to a common format.
+
+    Note that if keys contain slashes, only the part after the last slash is matched.
 
     Args:
         source_datapipe: a DataPipe yielding a stream of dictionaries.
@@ -29,12 +34,20 @@ class KeyRenamerIterDataPipe(IterDataPipe[Dict]):
         a DataPipe yielding a stream of dictionaries.
 
     Examples:
-        >>> dp = IterableWrapper([{"/a/b.jpg": b"data"}]).rename_keys(image="*.jpg")
+        >>> dp = IterableWrapper([{"/a/b.jpg": b"data"}]).rename_keys(("image", "*.jpg"))
+        >>> list(dp)
+        [{'image': b'data'}]
+        >>> dp = IterableWrapper([
+            {"/a/b.input.jpg": b"data1", "/a/b.target.jpg": b"data2"},
+            {"/a/b.input.png": b"data1", "/a/b.target.png": b"data2"},
+        ]).rename_keys(input="*.input.*", output="*.target.*")
+        >>> list(dp)
+        [{'input': b'data1', 'target': b'data2'}, {'input': b'data1', 'target': b'data2'}]
     """
 
     def __init__(
         self,
-        source_datapipe: IterDataPipe[List[Union[Dict, List]]],
+        source_datapipe: IterDataPipe[Dict[Any, Any]],
         *args,
         keep_unselected=False,
         must_match=True,
@@ -42,6 +55,7 @@ class KeyRenamerIterDataPipe(IterDataPipe[Dict]):
         **kw,
     ) -> None:
         super().__init__()
+        assert not (keep_unselected and must_match)
         self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
         self.must_match = must_match
         self.keep_unselected = keep_unselected

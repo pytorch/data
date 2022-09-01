@@ -910,10 +910,41 @@ class TestIterDataPipe(expecttest.TestCase):
             {"1.txt": "1", "1.bin": "1b"},
             {"2.txt": "2", "2.bin": "2b"},
         ])
+        stage2 = stage1.rename_keys(("t", "*.txt"), ("b", "*.bin"))
+        output = list(iter(stage2))
+        self.assertEqual(output, [
+            {"t": "1", "b": "1b"},
+            {"t": "2", "b": "2b"},
+        ])
+
+        # Functional Test: verify that renaming by patterns yields correct output
         stage2 = stage1.rename_keys(t="*.txt", b="*.bin")
         output = list(iter(stage2))
-        assert len(output) == 2
-        assert set(output[0].keys()) == set(["t", "b"])
+        self.assertEqual(output, [
+            {"t": "1", "b": "1b"},
+            {"t": "2", "b": "2b"},
+        ])
+
+        # Functional test: verify that must_match raises a ValueError
+        with self.assertRaisesRegex(ValueError, r"Not all patterns"):
+            stage2 = stage1.rename_keys(t="*.txt", b="*.bin", c="*.csv", must_match=True)
+            output = list(iter(stage2))
+
+        # Functional test: verify that duplicate_is_error raises a ValueError
+        with self.assertRaisesRegex(ValueError, r"Duplicate value"):
+            stage2 = stage1.rename_keys(("t", "*.txt"), ("t", "*.bin"), duplicate_is_error=True)
+            output = list(iter(stage2))
+
+        # Functional test: verify more complex glob patterns
+        dp = IterableWrapper([
+            {"/a/b.input.jpg": b"data1", "/a/b.target.jpg": b"data2"},
+            {"/a/b.input.png": b"data1", "/a/b.target.png": b"data2"},
+        ]).rename_keys(input="*.input.*", target="*.target.*")
+        self.assertEqual(list(dp), [
+            {'input': b'data1', 'target': b'data2'},
+            {'input': b'data1', 'target': b'data2'}
+        ])
+
 
     def test_zip_longest_iterdatapipe(self):
 
