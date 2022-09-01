@@ -219,6 +219,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (),
                 {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)},
             ),
+            (iterdp.IterCallableWrapper, partial(range, 10), (), {}),
             (
                 iterdp.IterKeyZipper,
                 IterableWrapper([("a", 100), ("b", 200), ("c", 300)]),

@@ -25,6 +25,7 @@ from torchdata.datapipes.iter import (
     IndexAdder,
     InMemoryCacheHolder,
     IterableWrapper,
+    IterCallableWrapper,
     IterDataPipe,
     IterKeyZipper,
     LineReader,
@@ -1308,6 +1309,26 @@ class TestIterDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "iterator has been invalidated"):
             next(it_train)
         next(it_valid)  # No error, can keep going
+
+    def test_itercallablewrapper_iterdatapipe(self):
+        from functools import partial
+        from itertools import compress, dropwhile
+
+        # Functional Test:
+        data_dp = IterableWrapper(range(10))
+        selector_dp = IterableWrapper([1, 0] * 5)
+        compress_fn = partial(compress, data_dp, selector_dp)
+        compress_dp = IterCallableWrapper(compress_fn)
+        self.assertEqual(list(range(0, 10, 2)), list(compress_dp))
+        self.assertEqual(list(range(0, 10, 2)), list(compress_dp))
+
+        # Reset Test:
+        dropwhile_dp = IterCallableWrapper(partial(dropwhile, lambda x: x < 5, data_dp))
+        n_elements_before_reset = 3
+        expected_res = [5, 6, 7, 8, 9]
+        res_before_reset, res_after_reset = reset_after_n_next_calls(dropwhile_dp, n_elements_before_reset)
+        self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_res, res_after_reset)
 
 
 if __name__ == "__main__":

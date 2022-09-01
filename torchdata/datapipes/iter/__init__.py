@@ -97,6 +97,7 @@ from torchdata.datapipes.iter.util.indexadder import (
     EnumeratorIterDataPipe as Enumerator,
     IndexAdderIterDataPipe as IndexAdder,
 )
+from torchdata.datapipes.iter.util.itercallablewrapper import IterCallableWrapperIterDataPipe as IterCallableWrapper
 from torchdata.datapipes.iter.util.jsonparser import JsonParserIterDataPipe as JsonParser
 from torchdata.datapipes.iter.util.mux_longest import MultiplexerLongestIterDataPipe as MultiplexerLongest
 from torchdata.datapipes.iter.util.paragraphaggregator import ParagraphAggregatorIterDataPipe as ParagraphAggregator
