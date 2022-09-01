@@ -21,6 +21,9 @@ class ExtractKeysIterDataPipe(IterDataPipe[Dict]):
         duplicate_is_error: it is an error if the same key is selected twice (True)
         ignore_missing: skip any dictionaries where one or more patterns don't match (False)
         *args: list of glob patterns or list of glob patterns
+        duplicate_is_error: it is an error if the same key is selected twice (True)
+        ignore_missing: allow patterns not to match (i.e., incomplete outputs)
+        as_tuple: return a tuple instead of a dictionary
 
     Returns:
         a DataPipe yielding a stream of tuples
