@@ -24,18 +24,25 @@ INFINITE_BUFFER_SIZE = 1_000_000_000
 IMAGENET_TRAIN_LEN = 1_281_167
 IMAGENET_TEST_LEN = 50_000
 
+CIFAR_10_TRAIN_LEN = 50_000
+CIFAR_10_TEST_LEN = 10_000
+
 
 class _LenSetter(IterDataPipe):
     # TODO: Ideally, we woudn't need this extra class
     def __init__(self, dp, root):
         self.dp = dp
-
-        if "train" in str(root):
+        path = str(root).lower()
+        if "train" in path and "imagenet" in path:
             self.size = IMAGENET_TRAIN_LEN
-        elif "val" in str(root):
+        elif "val" in path and "imagenet" in path:
             self.size = IMAGENET_TEST_LEN
+        if "train" in path and "cifar-10" in path:
+            self.size = CIFAR_10_TRAIN_LEN
+        elif "val" in path and "cifar-10" in path:
+            self.size = CIFAR_10_TEST_LEN
         else:
-            raise ValueError("oops?")
+            raise ValueError("oops? in LenSetter")
 
     def __iter__(self):
         yield from self.dp

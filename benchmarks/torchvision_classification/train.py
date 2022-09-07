@@ -16,8 +16,9 @@ import torch
 import torch.utils.data
 import torchvision
 import utils
+from packaged_data_helpers import make_dp_from_packaged_data
 from torch import nn
-from torchdata.dataloader2 import adapter, DataLoader2, PrototypeMultiProcessingReadingService
+from torchdata.dataloader2 import adapter, DataLoader2, MultiProcessingReadingService
 
 
 def train_one_epoch(model, criterion, optimizer, data_loader, device, epoch, args):
@@ -109,7 +110,8 @@ def parse_dataset_args(args) -> str:
     if fs_arg_str == "custom":
         dataset_dir = "~/benchmark_datasets"
         if ds_arg_str == "cifar":
-            dataset_dir += "/CIFAR-10-images-master/"
+            # TODO: Need to update this for different package formats
+            dataset_dir += "/cifar/CIFAR-10-images-master/"
         else:
             raise ValueError(f"bad args.dataset, got {ds_arg_str}")
     else:  # Assume we are running on internal AWS cluster
@@ -166,8 +168,8 @@ def create_data_loaders(args):
 
     dataset_dir = parse_dataset_args(args)
 
-    train_dir = os.path.join(dataset_dir, "train")
-    val_dir = os.path.join(dataset_dir, "val")
+    train_dir = os.path.join(dataset_dir, "default/train")
+    val_dir = os.path.join(dataset_dir, "default/val")
 
     val_resize_size, val_crop_size, train_crop_size = args.val_resize_size, args.val_crop_size, args.train_crop_size
 
@@ -178,12 +180,30 @@ def create_data_loaders(args):
         val_preset = presets.ClassificationPresetEval(crop_size=val_crop_size, resize_size=val_resize_size)
 
     if args.ds_type == "dp":
-        builder = helpers.make_pre_loaded_dp if args.preload_ds else helpers.make_dp
-        train_dataset = builder(train_dir, transforms=train_preset)
-        val_dataset = builder(val_dir, transforms=val_preset)
+        dataformat_arg_str = args.data_format.lower()
+        if dataformat_arg_str == "":
+            builder = helpers.make_pre_loaded_dp if args.preload_ds else helpers.make_dp
+            train_dataset = builder(train_dir, transforms=train_preset)
+            val_dataset = builder(val_dir, transforms=val_preset)
 
-        train_sampler = val_sampler = None
-        train_shuffle = True
+            train_sampler = val_sampler = None
+            train_shuffle = True
+        elif dataformat_arg_str in ("pickle", "tar"):
+            train_dir = os.path.join(dataset_dir, f"{dataformat_arg_str}/train")
+            val_dir = os.path.join(dataset_dir, f"{dataformat_arg_str}/val")
+
+            archive_content = "bytesio" if dataformat_arg_str == "pickle" else None
+
+            train_dataset = make_dp_from_packaged_data(
+                root=train_dir, archive=dataformat_arg_str, archive_content=archive_content, transforms=train_preset
+            )
+            val_dataset = make_dp_from_packaged_data(
+                root=val_dir, archive=dataformat_arg_str, archive_content=archive_content, transforms=val_preset
+            )
+            train_sampler = val_sampler = None
+            train_shuffle = True
+        else:
+            raise ValueError(f"bad args.data_format, got {dataformat_arg_str}. Only 'tar' or 'pickle' for now.")
 
     elif args.ds_type == "iterable":
         train_dataset = torchvision.datasets.ImageFolder(train_dir, transform=train_preset)
@@ -232,18 +252,19 @@ def create_data_loaders(args):
         # Note: we are batching and collating here *after the transforms*, which is consistent with DLV1.
         # But maybe it would be more efficient to do that before, so that the transforms can work on batches??
 
-        train_dataset = train_dataset.batch(args.batch_size, drop_last=True).collate()
+        # TODO: Note that MultiProcessingReadingService will switch over to a newer version
 
+        train_dataset = train_dataset.batch(args.batch_size, drop_last=True).collate()
         train_data_loader = DataLoader2(
             train_dataset,
             datapipe_adapter_fn=adapter.Shuffle(),
-            reading_service=PrototypeMultiProcessingReadingService(num_workers=args.workers),
+            reading_service=MultiProcessingReadingService(num_workers=args.workers),
         )
 
         val_dataset = val_dataset.batch(args.batch_size, drop_last=True).collate()  # TODO: Do we need drop_last here?
         val_data_loader = DataLoader2(
             val_dataset,
-            reading_service=PrototypeMultiProcessingReadingService(num_workers=args.workers),
+            reading_service=MultiProcessingReadingService(num_workers=args.workers),
         )
     else:
         raise ValueError(f"invalid data-loader param. Got {args.data_loader}")
@@ -341,6 +362,7 @@ def get_args_parser(add_help=True):
 
     parser.add_argument("--print-freq", default=10, type=int, help="print frequency")
     parser.add_argument("--output-dir", default=".", type=str, help="path to save outputs")
+    parser.add_argument("--data-format", default="", type=str, help="data package format, only relevant for DataPipe")
 
     parser.add_argument(
         "--test-only",

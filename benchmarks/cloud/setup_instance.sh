@@ -14,7 +14,7 @@ sudo sh NVIDIA-Linux-x86_64-515.65.01.run
 export PATH=/usr/local/cuda-11.6/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda-11.6/lib64:$LD_LIBRARY_PATH
 
-# Install Nvidia cuDNN (Skip for now)
+# Install Nvidia cuDNN (not needed)
 #wget -q https://developer.download.nvidia.com/compute/redist/cudnn/v8.3.2/local_installers/11.5/cudnn-linux-x86_64-8.3.2.44_cuda11.5-archive.tar.xz \
 #     -O cudnn-linux-x86_64-8.3.2.44_cuda11.5-archive.tar.xz
 #
@@ -37,6 +37,8 @@ conda activate base
 # Use python3.8 by default
 conda install -y python=3.8
 conda install -y git-lfs cmake
+conda install -y -c conda-forge submitit
+
 
 # Install PyTorch
 conda install -y -c pytorch magma-cuda116
@@ -56,9 +58,17 @@ cd ~
 mkdir benchmark_datasets
 mkdir benchmark_outputs
 cd benchmark_datasets
-# Ideally use "aws s3 cp s3://torchdatabenchmarkdatasets/CIFAR-10-images-master-repack.zip CIFAR-10-images-master-repack.zip"
-wget https://torchdatabenchmarkdatasets.s3.amazonaws.com/CIFAR-10-images-master-repack.zip
-unzip CIFAR-10-images-master-repack.zip
+# Ideally use "aws s3 cp s3://torchdatabenchmarkdatasets.s3.amazonaws.com/cifar-10-default.tar.cz cifar-10-default.tar.cz"
+
+# Downloading CIFAR-10
+mkdir cifar-10
+cd cifar-10
+wget https://torchdatabenchmarkdatasets.s3.amazonaws.com/cifar-10-default.tar.cz
+wget https://torchdatabenchmarkdatasets.s3.amazonaws.com/cifar-10-pickle-bytesio.tar.cz
+wget https://torchdatabenchmarkdatasets.s3.amazonaws.com/cifar-10-tar-files.tar.cz
+tar -xf cifar-10-default.tar.cz
+tar -xf cifar-10-pickle-bytesio.tar.cz
+tar -xf cifar-10-tar-files.tar.cz
 
 
 # Run Benchmark
