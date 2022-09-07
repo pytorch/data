@@ -7,9 +7,12 @@
 
 import functools
 import multiprocessing as mp
+import os
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Callable, List, Optional
+
+from collections import deque
 
 import torch
 import torchdata.dataloader2.graph as graph
@@ -99,12 +102,12 @@ class CheckpointableReadingServiceInterface(ReadingServiceInterface):
 def _collate_no_op(batch):
     return batch[0]
 
-
-class _IterateQueueDataPipes:
+class _IterateQueueDataPipes_OLD:
     def __init__(self, datapipes):
         self.datapipes = datapipes
 
     def __iter__(self):
+        self.reset()
         # TODO(612): This is slow as it does not sends data requests ahead.
         exclude_datapipes: List[Any] = []
         while len(exclude_datapipes) < len(self.datapipes):
@@ -120,7 +123,107 @@ class _IterateQueueDataPipes:
                             exclude_datapipes.append(dp)
                             forever = False
                         except communication.iter.NotAvailable:
-                            time.sleep(0.001)
+                            time.sleep(0.00001)
+
+    def reset(self):
+        # NonBlocking DataPipes do not reset automatically, have to do it manually
+        for dp in self.datapipes:
+            dp.reset_iterator()
+
+
+class _IterateQueueDataPipes:
+    def __init__(self, datapipes):
+        self.datapipes = datapipes
+
+    def __iter__(self):
+        self.reset()
+        # TODO(612): This is hacky as it access .protocol field of the pipes also doesn't check protocols status (yet)
+        total_pipes = len(self.datapipes)
+        disabled_pipe = [False] * len(self.datapipes)
+        cnt_disabled_pipes = 0
+
+        for idx in range(total_pipes):
+            self.datapipes[idx].protocol.request_next()
+
+        while cnt_disabled_pipes < total_pipes:
+            for idx in range(total_pipes):
+                if not disabled_pipe[idx]:
+                    response = self.datapipes[idx].protocol.get_response_next(block=True)
+                    if isinstance(response, communication.messages.StopIterationResponse):
+                        disabled_pipe[idx] = True
+                        cnt_disabled_pipes += 1
+                        break
+                    if isinstance(response, communication.messages.InvalidStateResponse):
+                        raise communication.iter.InvalidStateResetRequired
+                    if isinstance(response, communication.messages.TerminateResponse):
+                        raise communication.iter.TerminateRequired
+                    self.datapipes[idx].protocol.request_next()
+                    yield response.value
+
+    def reset(self):
+        # print(os.getpid(), "ressreting owned non blcked datapipes")
+        # NonBlocking DataPipes do not reset automatically, have to do it manually
+        for dp in self.datapipes:
+            dp.reset_iterator()
+
+
+
+class _IterateQueueDataPipes_New:
+    def __init__(self, datapipes):
+        self.datapipes = datapipes
+
+    def __iter__(self):
+        self.reset()
+        # TODO(612): This is slow as it does not sends data requests ahead.
+        exclude_datapipes: List[Any] = []
+
+        datapipes_count = len(self.datapipes)
+        pre_pipe_buffer_len = 10
+        buffers = [ deque([], pre_pipe_buffer_len) for _ in range(datapipes_count)]
+        idx = 0
+        completed_datapipes = [False] * datapipes_count
+        active_datapipes = datapipes_count
+        buffer_elements = 0
+
+        # print('initial buffer', len(buffers[0]))
+
+        while active_datapipes or buffer_elements > 0:
+            if len(buffers[idx]):
+                value = buffers[idx].popleft()
+                yield value
+                idx = (idx + 1) % datapipes_count
+            else:
+                if completed_datapipes[idx]:
+                    idx = (idx + 1) % datapipes_count
+                else:
+                    prefetched = 0
+                    for i in range(datapipes_count * 2):
+                        new_idx = (idx + i) % datapipes_count
+                        if not completed_datapipes[new_idx]:
+                            if len(buffers[new_idx]) < pre_pipe_buffer_len:
+                                
+                                try:
+                                    value = self.datapipes[new_idx].nonblocking_next()
+                                    buffers[new_idx].append(value)
+                                    if new_idx == idx:
+                                        break
+                                    prefetched += 1
+                                except StopIteration:
+                                    completed_datapipes[new_idx] = True
+                                    active_datapipes -= 1
+                                except communication.iter.NotAvailable:
+                                    pass
+                    
+                    # if prefetched:
+                    #     print('prefetched', prefetched)
+                    time.sleep(0.0000001)
+
+
+    def reset(self):
+        # print(os.getpid(), "ressreting owned non blcked datapipes")
+        # NonBlocking DataPipes do not reset automatically, have to do it manually
+        for dp in self.datapipes:
+            dp.reset_iterator()
 
 
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
@@ -132,12 +235,14 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         self,
         num_workers: int = 0,
         multiprocessing_context=None,
+        post_adapter_fn = None,
     ) -> None:
         self.num_workers = num_workers
         # TODO(613): Should be one of 'fork', 'spawn'
         self.multiprocessing_context = multiprocessing_context
         self.processes = []
         self.datapipes = []
+        self.post_adapter_fn = post_adapter_fn
 
     @staticmethod
     def init_datapipe_process(num_workers, worker_id, datapipe):
@@ -165,7 +270,10 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             )
             self.datapipes.append(local_datapipe)
 
-        return IterableWrapper(_IterateQueueDataPipes(self.datapipes), deepcopy=False)  # type: ignore[return-value]
+        datapipe = IterableWrapper(_IterateQueueDataPipes(self.datapipes), deepcopy=False)  # type: ignore[return-value]
+        if self.post_adapter_fn is not None:
+            datapipe = self.post_adapter_fn(datapipe)
+        return datapipe
 
     def initialize_iteration(self) -> None:
         for dp in self.datapipes:
@@ -204,12 +312,15 @@ class Prototype2MultiProcessingReadingService(ReadingServiceInterface):
         self,
         num_workers: int = 0,
         multiprocessing_context=None,
+        post_adapter_fn=None,
     ) -> None:
         self.num_workers = num_workers
         # TODO(VitalyFedyunin): Should be one of 'fork', 'spawn'
         self.multiprocessing_context = multiprocessing_context
-        self.processes = []
+        self.processes_t0 = []
+        self.processes_t1 = []
         self.datapipes = []
+        self.post_adapter_fn = post_adapter_fn
 
     @staticmethod
     def init_datapipe_process(num_workers, worker_id, datapipe):
@@ -266,7 +377,7 @@ class Prototype2MultiProcessingReadingService(ReadingServiceInterface):
         process.start()
         # Take care about termination of the separate process
         for _, req_queue, res_queue in pipes_and_queues:
-            self.processes.append((process, req_queue, res_queue))
+            self.processes_t0.append((process, req_queue, res_queue))
 
         for worker_id, pipe_and_queues in zip(range(self.num_workers), pipes_and_queues):
 
@@ -281,31 +392,43 @@ class Prototype2MultiProcessingReadingService(ReadingServiceInterface):
                 ctx, datapipe, call_inside_process
             )
             process.start()
-            self.processes.append((process, req_queue, res_queue))  # These queues are independent
+            self.processes_t1.append((process, req_queue, res_queue))  # These queues are independent
             local_datapipe = communication.iter.QueueWrapper(
                 communication.protocol.IterDataPipeQueueProtocolClient(req_queue, res_queue)
             )
             self.datapipes.append(local_datapipe)
 
-        return IterableWrapper(_IterateQueueDataPipes(self.datapipes), deepcopy=False)  # type: ignore[return-value]
+        datapipe = IterableWrapper(_IterateQueueDataPipes(self.datapipes), deepcopy=False)
+        if self.post_adapter_fn is not None:
+            datapipe = self.post_adapter_fn(datapipe)
+        return datapipe  # type: ignore[return-value]
 
     def initialize_iteration(self) -> None:
-        for dp in self.datapipes:
-            dp.reset_iterator()
+        # for dp in self.datapipes:
+        #     dp.reset_iterator()
+        pass
 
     def __del__(self):
         self.finalize()
 
     def finalize(self) -> None:
-        join_processes = set()
-        # TODO(VitalyFedyunin): Check if anyone stuck with messages
-        for process, req_queue, res_queue in self.processes:
-            req_queue.put(communication.messages.TerminateRequest())
-            join_processes.add(process)
-        # TODO(VitalyFedyunin): Collect termination responses (if needed)
-        for process in join_processes:
-            process.join()
-        self.processes = []
+        def terminate(processes):
+            join_processes = set()
+            # TODO(VitalyFedyunin): Check if anyone stuck with messages
+            for process, req_queue, res_queue in processes:
+                # print(os.getpid(), " putting Terminate into queue of", process.pid)
+                req_queue.put(communication.messages.TerminateRequest())
+                join_processes.add(process)
+            # TODO(VitalyFedyunin): Collect termination responses (if needed)
+            for process in join_processes:
+                # print("joining ", process.pid)
+                process.join()
+            # TODO(VitalyFedyunin): Add join timeouts and force-kills
+
+        terminate(self.processes_t1)
+        self.processes_t1 = []
+        terminate(self.processes_t0)
+        self.processes_t0 = []
 
 
 class MultiProcessingReadingService(ReadingServiceInterface):

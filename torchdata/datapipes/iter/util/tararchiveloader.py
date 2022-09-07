@@ -8,6 +8,8 @@ import os
 import tarfile
 import warnings
 from io import BufferedIOBase
+from io import BytesIO
+
 from typing import cast, IO, Iterable, Iterator, Optional, Tuple
 
 from torch.utils.data.datapipes.utils.common import _deprecation_warning
@@ -66,7 +68,9 @@ class TarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                         else self.mode.replace(":", "|")
                     )
                     # typing.cast is used here to silence mypy's type checker
-                    tar = tarfile.open(fileobj=cast(Optional[IO[bytes]], data_stream), mode=reading_mode)
+                    # TODO(VitalyFedyunin): Check if casting reads entire file in memory
+                    # halt()
+                    tar = tarfile.open(fileobj=cast(Optional[IO[bytes]], data_stream), mode=reading_mode, bufsize=20000000240)
                 for tarinfo in tar:
                     if not tarinfo.isfile():
                         continue
@@ -75,7 +79,19 @@ class TarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
                         warnings.warn(f"failed to extract file {tarinfo.name} from source tarfile {pathname}")
                         raise tarfile.ExtractError
                     inner_pathname = os.path.normpath(os.path.join(pathname, tarinfo.name))
-                    yield inner_pathname, StreamWrapper(extracted_fobj, data_stream, name=inner_pathname)  # type: ignore[misc]
+                    if False:
+                        buffer = BytesIO(extracted_fobj.read())
+                        extracted_fobj.close()
+                        data = StreamWrapper(buffer, None, name=inner_pathname)
+                        yield inner_pathname, data
+                    elif False:
+                        buffer = extracted_fobj.read()
+                        extracted_fobj.close()
+                        # data = StreamWrapper(buffer, None, name=inner_pathname)
+                        yield inner_pathname, buffer
+                    else:
+                        yield inner_pathname, StreamWrapper(extracted_fobj, data_stream, name=inner_pathname)  # type: ignore[misc]
+                    # else:
             except Exception as e:
                 warnings.warn(f"Unable to extract files from corrupted tarfile stream {pathname} due to: {e}, abort!")
                 raise e

@@ -4,7 +4,14 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
+
 from torchdata.dataloader2 import communication
+
+
+def _protocol_log(*args):
+    if False:
+        print(os.getpid(), args)
 
 
 class Protocol:
@@ -26,6 +33,7 @@ class ProtocolClient(Protocol):
         self.request_queue = request_queue
         self.response_queue = response_queue
         self._req_sent = None
+        _protocol_log("Clinet", self, self.request_queue, self.response_queue)
 
     def can_take_request(self):
         return self._req_sent is None
@@ -55,6 +63,7 @@ class ProtocolServer(Protocol):
         self.request_queue = request_queue
         self.response_queue = response_queue
         self._req_received = None
+        _protocol_log("----> Server", self, self.request_queue, self.response_queue)
 
     def have_pending_request(self):
         return self._req_received is not None
@@ -67,6 +76,7 @@ class ProtocolServer(Protocol):
         except Exception:  # TODO(625): Catch only timeout exceptions
             raise EmptyQueue("queue is empty")
         self._req_received = response
+        # _protocol_log("Server received request", response)
         return response
         # TODO(626): Validate supported requests
 
@@ -150,6 +160,7 @@ class IterDataPipeQueueProtocolServer(ProtocolServer):
         if not isinstance(self._req_received, communication.messages.ResetIteratorRequest):
             raise Exception("Replaying with reset status to other type of message")
         self.response_queue.put(communication.messages.ResetIteratorResponse())
+        _protocol_log("server repried by ", communication.messages.ResetIteratorResponse())
         self._req_received = None
 
     def response_next(self, value):
@@ -174,10 +185,14 @@ class IterDataPipeQueueProtocolServer(ProtocolServer):
 class IterDataPipeQueueProtocolClient(ProtocolClient):
     def request_reset_iterator(self):
         if not self.can_take_request():
-            raise Exception("Can not reset while we are still waiting response for previous request")
+            raise Exception(os.getpid(), "Can not reset while we are still waiting response for previous request")
         request = communication.messages.ResetIteratorRequest()
         self.request_queue.put(request)
         self.request_sent(request)
+        # import os
+        # if 'exc' in os.environ:
+        #     raise Exception('requesut_reset_iterator called')
+        _protocol_log("request_reset_iterator")
 
     def request_next(self):
         if not self.can_take_request():
@@ -185,18 +200,21 @@ class IterDataPipeQueueProtocolClient(ProtocolClient):
         request = communication.messages.GetNextRequest()
         self.request_queue.put(request)
         self.request_sent(request)
+        _protocol_log("request_next")
 
     def get_response_reset_iterator(self, block=False):
+        # _protocol_log("get_response_reset_iterator")
         try:
             response = self.response_queue.get(block=block)
         except Exception:  # TODO(627): Catch only timeout exceptions
             raise EmptyQueue("queue is empty")
         self.request_served(response)
-
+        _protocol_log("get_response_reset_iterator OK")
         if not isinstance(response, communication.messages.ResetIteratorResponse):
             raise Exception("Invalid response received")
 
     def get_response_next(self, block=False, timeout=None):
+        # _protocol_log("get_response_next")
         if not self.waiting_for_response():
             raise Exception("Can not expect any response without submitted request")
         try:
@@ -204,6 +222,6 @@ class IterDataPipeQueueProtocolClient(ProtocolClient):
         except Exception:  # TODO(628): Catch only timeout exceptions
             raise EmptyQueue("queue is empty")
         self.request_served(response)
-
+        _protocol_log("get_response_next OK")
         # TODO(629): Add possible response types validation here
         return response
