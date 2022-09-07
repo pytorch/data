@@ -111,7 +111,7 @@ def parse_dataset_args(args) -> str:
         dataset_dir = "~/benchmark_datasets"
         if ds_arg_str == "cifar":
             # TODO: Need to update this for different package formats
-            dataset_dir += "/cifar/CIFAR-10-images-master/"
+            dataset_dir += "/cifar/"
         else:
             raise ValueError(f"bad args.dataset, got {ds_arg_str}")
     else:  # Assume we are running on internal AWS cluster
@@ -181,7 +181,7 @@ def create_data_loaders(args):
 
     if args.ds_type == "dp":
         dataformat_arg_str = args.data_format.lower()
-        if dataformat_arg_str == "":
+        if dataformat_arg_str in ("", "default"):
             builder = helpers.make_pre_loaded_dp if args.preload_ds else helpers.make_dp
             train_dataset = builder(train_dir, transforms=train_preset)
             val_dataset = builder(val_dir, transforms=val_preset)
