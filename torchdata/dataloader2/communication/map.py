@@ -83,7 +83,9 @@ def EnsureNonBlockingMapDataPipe(validated_datapipe):
     return validated_datapipe
 
 
-def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_request_get=False):
+def DataPipeBehindQueues(
+    source_datapipe, protocol, full_stop=False, blocking_request_get=False, resets_to_proceed=1, resets_counter=[]
+):
     """
     Indefinitely iterates over req_queue and passing values from source_datapipe to res_queue
     If raise_stop is true, raises exception when StopIteration received from the source_datapipe

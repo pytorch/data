@@ -42,10 +42,19 @@ def MultipleDataPipesToQueuesLoop(pipes_and_queues, call_locally_fn=None):
         raise Exception("MultipleDataPipesToQueuesLoop does not support call_locally_fn")
     torch.set_num_threads(1)
 
+    resets_counter = [0]
+
     iterators = []
     for source_datapipe, req_queue, res_queue in pipes_and_queues:
         iterators.append(
-            DataPipeToQueuesLoopIterator(source_datapipe, req_queue, res_queue, blocking_request_get=False)
+            DataPipeToQueuesLoopIterator(
+                source_datapipe,
+                req_queue,
+                res_queue,
+                blocking_request_get=False,
+                resets_to_proceed=len(pipes_and_queues),
+                resets_counter=resets_counter,
+            )
         )
 
     # TODO(VitalyFedyunin): Maybe better way to combine iterators
@@ -64,7 +73,9 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_locally_fn=
         pass
 
 
-def DataPipeToQueuesLoopIterator(source_datapipe, req_queue, res_queue, blocking_request_get=True):
+def DataPipeToQueuesLoopIterator(
+    source_datapipe, req_queue, res_queue, blocking_request_get=True, resets_to_proceed=1, resets_counter=[]
+):
     if isinstance(source_datapipe, IterDataPipe):
         pipe_type = communication.iter
         protocol_type = communication.protocol.IterDataPipeQueueProtocolServer
@@ -75,7 +86,11 @@ def DataPipeToQueuesLoopIterator(source_datapipe, req_queue, res_queue, blocking
         raise Exception("Only supports IterDataPipe or MapDataPipe, got", source_datapipe)
 
     for _ in pipe_type.DataPipeBehindQueues(
-        source_datapipe, protocol_type(req_queue, res_queue), blocking_request_get=blocking_request_get
+        source_datapipe,
+        protocol_type(req_queue, res_queue),
+        blocking_request_get=blocking_request_get,
+        resets_to_proceed=resets_to_proceed,
+        resets_counter=resets_counter,
     ):
         yield True
 
