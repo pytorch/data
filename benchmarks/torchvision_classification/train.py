@@ -108,10 +108,10 @@ def parse_dataset_args(args) -> str:
 
     # Custom is for running on custom AWS instance
     if fs_arg_str == "custom":
-        dataset_dir = "~/benchmark_datasets"
+        dataset_dir = "/home/ubuntu/benchmark_datasets"
         if ds_arg_str == "cifar":
             # TODO: Need to update this for different package formats
-            dataset_dir += "/cifar/"
+            dataset_dir += "/cifar-10/"
         else:
             raise ValueError(f"bad args.dataset, got {ds_arg_str}")
     else:  # Assume we are running on internal AWS cluster
@@ -181,18 +181,27 @@ def create_data_loaders(args):
 
     if args.ds_type == "dp":
         dataformat_arg_str = args.data_format.lower()
+        print("Dataset Type is DataPipe")
         if dataformat_arg_str in ("", "default"):
+            print("Dataset Format: Default")
+            print(f"{train_dir = }")
+            print(f"{val_dir = }")
+
             builder = helpers.make_pre_loaded_dp if args.preload_ds else helpers.make_dp
             train_dataset = builder(train_dir, transforms=train_preset)
             val_dataset = builder(val_dir, transforms=val_preset)
 
             train_sampler = val_sampler = None
             train_shuffle = True
-        elif dataformat_arg_str in ("pickle", "tar"):
+        elif dataformat_arg_str in ("pickle_bytesio", "tar"):
+            print(f"Dataset Format: {dataformat_arg_str}")
             train_dir = os.path.join(dataset_dir, f"{dataformat_arg_str}/train")
             val_dir = os.path.join(dataset_dir, f"{dataformat_arg_str}/val")
 
-            archive_content = "bytesio" if dataformat_arg_str == "pickle" else None
+            print(f"{train_dir = }")
+            print(f"{val_dir = }")
+
+            archive_content = "bytesio" if dataformat_arg_str == "pickle_bytesio" else None
 
             train_dataset = make_dp_from_packaged_data(
                 root=train_dir, archive=dataformat_arg_str, archive_content=archive_content, transforms=train_preset
@@ -203,7 +212,7 @@ def create_data_loaders(args):
             train_sampler = val_sampler = None
             train_shuffle = True
         else:
-            raise ValueError(f"bad args.data_format, got {dataformat_arg_str}. Only 'tar' or 'pickle' for now.")
+            raise ValueError(f"bad args.data_format, got {dataformat_arg_str}. Only 'tar' or 'pickle_bytesio' for now.")
 
     elif args.ds_type == "iterable":
         train_dataset = torchvision.datasets.ImageFolder(train_dir, transform=train_preset)

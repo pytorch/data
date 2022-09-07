@@ -122,11 +122,11 @@ class MetricLogger:
         iter_time = SmoothedValue(fmt="{avg:.4f}")
         data_time = SmoothedValue(fmt="{avg:.4f}")
         model_time = SmoothedValue(fmt="{avg:.4f}")
-        try:
-            length_iterable = len(iterable)
-        except TypeError:
-            # TODO: Hard-coding for now since DLv2 doesn't support __len__. There is an open PR to fix this.
-            length_iterable = 1251
+        # try:
+        length_iterable = len(iterable)
+        # except TypeError:
+        #     # TODO: Hard-coding for now since DLv2 doesn't support __len__. There is an open PR to fix this.
+        #     length_iterable = 1251
         space_fmt = ":" + str(len(str(length_iterable))) + "d"
         if torch.cuda.is_available():
             log_msg = self.delimiter.join(

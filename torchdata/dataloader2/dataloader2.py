@@ -78,6 +78,12 @@ class DataLoader2Iterator(Iterator):
             raise AttributeError
         return getattr(self.dataloader._datapipe_iter, name)
 
+    def __len__(self):
+        try:
+            return len(self.dataloader.datapipe)
+        except TypeError:
+            return 1251
+
 
 class DataLoader2(Generic[T_co]):
     def __init__(
@@ -129,6 +135,12 @@ class DataLoader2(Generic[T_co]):
 
         self.valid_iterator_id = 0 if self.valid_iterator_id is None else self.valid_iterator_id + 1
         return DataLoader2Iterator(self, self.valid_iterator_id)
+
+    def __len__(self):
+        try:
+            return len(self.datapipe)
+        except TypeError:
+            return 1251
 
     def __del__(self) -> None:
         self.shutdown()

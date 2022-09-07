@@ -29,7 +29,7 @@ CIFAR_10_TEST_LEN = 10_000
 
 
 class _LenSetter(IterDataPipe):
-    # TODO: Ideally, we woudn't need this extra class
+    # TODO: We can switch to `dp.set_length()`
     def __init__(self, dp, root):
         self.dp = dp
         path = str(root).lower()
@@ -49,10 +49,11 @@ class _LenSetter(IterDataPipe):
 
     def __len__(self):
         # TODO The // world_size part shouldn't be needed. See https://github.com/pytorch/data/issues/533
-        if dist.is_available():
-            return self.size // dist.get_world_size()
-        else:
-            return self.size
+        return self.size
+        # if dist.is_available():
+        #     return self.size // dist.get_world_size()
+        # else:
+        #     return self.size
 
 
 def _decode(path, root, category_to_int):
@@ -76,7 +77,6 @@ def make_dp(root, transforms):
     category_to_int = {category: i for (i, category) in enumerate(categories)}
 
     dp = FileLister(str(root), recursive=True, masks=["*.JPEG"])
-
     dp = dp.shuffle(buffer_size=INFINITE_BUFFER_SIZE).set_shuffle(False).sharding_filter()
     dp = dp.map(partial(_decode, root=root, category_to_int=category_to_int))
     dp = dp.map(partial(_apply_tranforms, transforms=transforms))

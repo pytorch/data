@@ -1,11 +1,14 @@
-import os
+# import os
 import pickle
 from functools import partial
 from pathlib import Path
 
 import torch
-from helpers import _apply_tranforms, _decode, _LenSetter as LenSetter
+from helpers import _apply_tranforms, _LenSetter as LenSetter
+from PIL import Image
 from torchdata.datapipes.iter import FileLister, FileOpener, IterDataPipe, TarArchiveLoader
+from torchvision import transforms
+from torchvision.io import decode_jpeg, ImageReadMode
 
 
 INFINITE_BUFFER_SIZE = 1_000_000_000
@@ -19,6 +22,21 @@ def _drop_label(data):
 def _read_tar_entry(data):
     _, io_stream = data
     return io_stream.read()
+
+
+def bytesio_to_tensor(bytesio):
+    return torch.frombuffer(bytesio.getbuffer(), dtype=torch.uint8)
+
+
+def decode(encoded_tensor):
+    try:
+        return decode_jpeg(encoded_tensor, mode=ImageReadMode.RGB)
+    except RuntimeError:
+        # Happens in ImageNet for ~20 CYMK images that can't be decoded with decode_jpeg()
+        # Asking for forgivness is better than blahblahlblah... BTW, hard
+        # disagree on this but anyway, the addition of the try/except statement
+        # doesn't impact benchmark results significantly, so we're fine.
+        return transforms.PILToTensor()(Image.fromarray(encoded_tensor.numpy()).convert("RGB"))
 
 
 class ConcaterIterable(IterDataPipe):
@@ -44,6 +62,7 @@ class ArchiveLoader(IterDataPipe):
 
 def _make_dp_from_tars(*, root, archive_size):
 
+    print("in _make_dp_from_tars")
     dp = FileLister(str(root), masks=[f"archive_{archive_size}*.tar"])
     dp = dp.shuffle(buffer_size=INFINITE_BUFFER_SIZE)  # inter-archive shuffling
     dp = FileOpener(dp, mode="b")
@@ -52,6 +71,10 @@ def _make_dp_from_tars(*, root, archive_size):
     dp = dp.sharding_filter()
 
     dp = dp.map(_read_tar_entry)
+
+    # TODO: Figure out how to decode and transform these
+    dp = dp.header(20)
+    print(list(dp))
     return dp
 
 
@@ -67,10 +90,13 @@ def _make_dp_from_archive(*, root, archive, archive_content, archive_size):
     """
     ext = "pt" if archive == "torch" else "pkl"
     dp = FileLister(str(root), masks=[f"archive_{archive_size}*{archive_content}*.{ext}"])
+    print(f"FileLister {dp}")
     dp = dp.shuffle(buffer_size=INFINITE_BUFFER_SIZE)  # inter-archive shuffling
     dp = ArchiveLoader(dp, loader=archive)
     dp = ConcaterIterable(dp)
     dp = dp.map(_drop_label)
+    print(f"dp.map(_drop_label) {dp}")
+
     dp = dp.shuffle(buffer_size=archive_size)  # intra-archive shuffling
 
     # TODO: we're sharding here but the big BytesIO or Tensors have already been
@@ -81,10 +107,11 @@ def _make_dp_from_archive(*, root, archive, archive_content, archive_size):
 
 
 def make_dp_from_packaged_data(*, root, archive=None, archive_content=None, archive_size=500, transforms=None):
-    if archive in ("pickle", "torch"):
+    if archive in ("pickle", "torch"):  # Assume to be BytesIO
         dp = _make_dp_from_archive(
             root=root, archive=archive, archive_content=archive_content, archive_size=archive_size
         )
+        dp = dp.map(bytesio_to_tensor).map(decode)
     elif archive == "tar":
         dp = _make_dp_from_tars(root=root, archive_size=archive_size)
     # elif archive == "webdataset":
@@ -94,11 +121,11 @@ def make_dp_from_packaged_data(*, root, archive=None, archive_content=None, arch
 
     # Decode
     root = Path(root).expanduser().resolve()
-    categories = sorted(entry.name for entry in os.scandir(root) if entry.is_dir())
-    category_to_int = {category: i for (i, category) in enumerate(categories)}
-    dp = dp.map(partial(_decode, root=root, category_to_int=category_to_int))
+    # categories = sorted(entry.name for entry in os.scandir(root) if entry.is_dir())
+    # category_to_int = {category: i for (i, category) in enumerate(categories)}
+    # dp = dp.map(partial(_decode, root=root, category_to_int=category_to_int))
 
-    if dp is not None:
+    if transforms is not None:
         dp = dp.map(partial(_apply_tranforms, transforms=transforms))
 
     dp = LenSetter(dp=dp, root=root)
