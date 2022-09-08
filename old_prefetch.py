@@ -7,7 +7,6 @@ import threading
 import time
 import argparse
 import warnings
-from collections import deque
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # from torchvision.datasets import ImageFolder
@@ -46,8 +45,7 @@ class _PrefetchData:
     def __init__(self, source_datapipe, buffer_size):
         self.run_prefetcher = True
         # TODO: Potential optimization is changing buffer from list to dequeue
-        # self.prefetch_buffer = []
-        self.prefetch_buffer = deque()
+        self.prefetch_buffer = []
         self.buffer_size = buffer_size
         self.source_datapipe = source_datapipe
 
@@ -95,9 +93,8 @@ class PrefetcherIterDataPipe(IterDataPipe):
                 self.thread.start()
                 while prefetch_data.run_prefetcher:
                     if len(prefetch_data.prefetch_buffer) > 0:
-                        # yield prefetch_data.prefetch_buffer[0]
-                        # prefetch_data.prefetch_buffer = prefetch_data.prefetch_buffer[1:]
-                        yield prefetch_data.prefetch_buffer.popleft()
+                        yield prefetch_data.prefetch_buffer[0]
+                        prefetch_data.prefetch_buffer = prefetch_data.prefetch_buffer[1:]
                     else:
                         # TODO: Calculate sleep interval based on previous availability speed
                         time.sleep(CONSUMER_SLEEP_INTERVAL)
@@ -265,45 +262,6 @@ def check_and_output_speed(prefix: str, function, rs, prefetch=None, dlv1=None, 
     print(f"change_in_memory_usage: {change_in_memory_usage:0.1f} MiBs\n")
     return prefix, function_name, rs_type, prefetch, total, items_len, speed, total_size, io_speed, int(change_in_memory_usage)
 
-def check_and_output_speed_ffcv(prefix: str, ffcv_loader):
-
-    prefetch = 50
-
-    rs_type = "FFCV"
-    initial_memory_usage = psutil.virtual_memory().used
-    max_memory_usage = initial_memory_usage
-
-    start = time.time()
-    # report = start  # Time since last report, create one every 60s
-    items_len = 0  # Number of items processed
-    total_size = 0  # Number of bytes processed
-    time_to_first = None
-    # print('starting iterations')
-    for img, label in ffcv_loader:
-        if items_len > 10 and time_to_first is None:
-            time_to_first = time.time() - start
-        size = 94525  # Unless I compute size of tensor here
-        total_size += size
-        items_len += 1
-        if psutil.virtual_memory().used > max_memory_usage:
-            max_memory_usage = psutil.virtual_memory().used
-
-    total = time.time() - start
-    speed = int(items_len / total)  # item per sec
-    function_name = "FFCV"
-
-    io_speed = int(total_size / total / 1024 / 1024)  # size MiBs per sec
-    total_size = int(total_size / 1024 / 1024)  # total size in MiBs
-    total = int(total)
-    n_md5 = 0
-    print(
-        f"{prefix} {function_name} and {rs_type} with prefetch {prefetch} | n_md5 {n_md5} results are: total time {total} sec, with {items_len} items at {speed} files per/sec. {total_size} MiB with io speed at {io_speed} MiBps"
-    )
-    change_in_memory_usage = (max_memory_usage - initial_memory_usage) / 1024 / 1024
-    print(f"initial_memory_usage: {initial_memory_usage / 1024 / 1024:0.1f} MiBs")
-    print(f"change_in_memory_usage: {change_in_memory_usage:0.1f} MiBs\n")
-    return prefix, function_name, rs_type, prefetch, total, items_len, speed, total_size, io_speed, int(change_in_memory_usage)
-
 
 def append_result(df, workers, n_tar_files, n_md5, fs, iteration,
                   columns, _prefix, fn_name, rs_type, prefetch, total, items_len, speed, total_size, io_speed, change_in_memory_usage):
@@ -336,20 +294,16 @@ def save_result(df, csv_name, path=""):
 def main(args):
     args_fs_str = args.fs.lower()
 
-    def tar_dp_n(path, n_items, n_md5, use_source_prefetch):
-        print(f"{use_source_prefetch = }")
+    def tar_dp_n(path, n_items, n_md5):
         tar_files = [f"{path}/images{i}.tar" for i in range(n_items)]
         dp = IterableWrapper(tar_files).shuffle().sharding_filter()
-        if use_source_prefetch:
-            dp = dp.open_files(mode="b").prefetch(5).load_from_tar(mode="r:")
-        else:
-            dp = dp.open_files(mode="b").load_from_tar(mode="r:")
+        dp = dp.open_files(mode="b").load_from_tar(mode="r:")
         dp = dp.map(map_read)
         dp = dp.map(partial(map_calculate_md5, n_md5=n_md5))
         return dp
 
-    def s3_dp(n_items, n_md5, use_source_prefetch):
-        print(f"{use_source_prefetch = }")
+    def s3_dp(n_items, n_md5):
+
         if args_fs_str in ("s3_4x", "s3_10x"):
             s3_path = f"s3://torchdatabenchmarkdatasets/{args_fs_str[3:]}images0.tar"
             print(s3_path)
@@ -359,11 +313,7 @@ def main(args):
 
         dp = IterableWrapper([s3_path] * n_items).shuffle().sharding_filter()
         # dp = dp.load_files_by_s3(region="us-east-1").load_from_tar(mode="r:")  # non-Streaming
-        # Streaming version
-        if use_source_prefetch:
-            dp = dp.open_files_by_fsspec(mode="rb", anon=True).prefetch(5).load_from_tar(mode="r|")
-        else:
-            dp = dp.open_files_by_fsspec(mode="rb", anon=True).load_from_tar(mode="r|")
+        dp = dp.open_files_by_fsspec(mode="rb", anon=True).load_from_tar(mode="r|")  # Streaming version
         # The same as tar_dp_n after
         dp = dp.map(map_read)
         dp = dp.map(partial(map_calculate_md5, n_md5=n_md5))
@@ -414,18 +364,17 @@ def main(args):
 
     if args.use_s3:
         print("Loading data from S3...")
-        dp_fn = partial(s3_dp, n_items=n_tar_files, n_md5=n_md5, use_source_prefetch=args.use_source_prefetch)
+        dp_fn = partial(s3_dp, n_items=n_tar_files, n_md5=n_md5)
         dp_fn.__name__ = "S3_Tar"
         args_fs_str = "s3" if "s3" not in args_fs_str else args_fs_str
     else:
         print("Loading data from disk...")
         print(f"{path = }")
         print(f"{image_folder_path = }")
-        dp_fn = partial(tar_dp_n, path=path, n_items=n_tar_files, n_md5=n_md5,
-                        use_source_prefetch=args.use_source_prefetch)
+        dp_fn = partial(tar_dp_n, path=path, n_items=n_tar_files, n_md5=n_md5)
         dp_fn.__name__ = "Tar"
 
-    for n_workers in [1, 4, 8]:  #[8, 12]:  # range(40, 88, 8):
+    for n_workers in [8, 12]:  # range(40, 88, 8):
         for n_prefetch in [n_prefetch]:  # The number of `n_prefetch` doesn't seem to influence the speed
 
             # Old DataLoader
@@ -436,12 +385,12 @@ def main(args):
             #     df = append_result(df, n_workers, n_tar_files, n_md5, args_fs_str, i, columns, *params)
 
             # New Prototype RS DataLoader2
-            # for i in range(1 + n_runs):  # 1 warm-up + n runs
-            #     new_rs = PrototypeMultiProcessingReadingService(num_workers=n_workers, post_adapter_fn=post_adapter_fn)
-            #     params = check_and_output_speed(f"[prefetch is True, {n_workers} workers]",
-            #                                     dp_fn, new_rs, prefetch=n_prefetch, n_md5=n_md5)
+            for i in range(1 + n_runs):  # 1 warm-up + n runs
+                new_rs = PrototypeMultiProcessingReadingService(num_workers=n_workers, post_adapter_fn=post_adapter_fn)
+                params = check_and_output_speed(f"[prefetch is True, {n_workers} workers]",
+                                                dp_fn, new_rs, prefetch=n_prefetch, n_md5=n_md5)
 
-            #     df = append_result(df, n_workers, n_tar_files, n_md5, args_fs_str, i, columns, *params)
+                df = append_result(df, n_workers, n_tar_files, n_md5, args_fs_str, i, columns, *params)
 
             # DLv1 with ImageFolder
             # TODO: Improvement - I can add a function to filter out paths that are not relevant
@@ -458,30 +407,6 @@ def main(args):
             #     params = check_and_output_speed(f"[DLv1 ImageFolder {n_workers} workers]",
             #                                     None, None, prefetch=n_prefetch, dlv1=dlv1, n_md5=n_md5)
             #     df = append_result(df, n_workers, n_tar_files, n_md5, args_fs_str, i, columns, *params)
-
-            # FFCV
-            try:
-                from ffcv.loader import Loader, OrderOption
-                from ffcv.transforms import ToTensor, ToDevice, ToTorchImage, Cutout
-                from ffcv.fields.decoders import IntDecoder, RandomResizedCropRGBImageDecoder
-            except Exception:
-                print("Fail to import FFCV")
-                raise
-
-
-            ffcv_path = "/fsx_isolated/ktse/source_data/ffcv_data/200.beton"
-            batch_size = 1
-            for i in range(1 + n_runs):  # 1 warm-up + n runs
-                from try_ffcv import pipelines
-                ffcv_dl = Loader(ffcv_path, batch_size=batch_size, num_workers=n_workers,
-                             order=OrderOption.QUASI_RANDOM, pipelines=pipelines, os_cache=False, drop_last=False,
-                             recompile=True)
-                params = check_and_output_speed_ffcv(f"[FFCV {n_workers} workers]", ffcv_loader=ffcv_dl)
-                n_md5 = 0
-                df = append_result(df, n_workers, n_tar_files, n_md5, args_fs_str, i, columns, *params)
-                del ffcv_dl
-                del pipelines
-
 
     # Save CSV
     print(df)
@@ -505,7 +430,5 @@ if __name__ == "__main__":
     parser.add_argument("--output-file", default="prefetch_result", type=str,
                         help="output csv file name")
     parser.add_argument("--use-s3", default=False, action="store_true", help="Load file from S3 instead of local")
-    parser.add_argument("--use-source-prefetch", default=False, action="store_true", help="Use source prefetch")
-    parser.add_argument("--use-ffcv", default=False, action="store_true", help="Use ffcv")
     args = parser.parse_args()
     main(args)
