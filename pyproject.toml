@@ -6,3 +6,11 @@ first_party_detection = false
 
 line-length = 120
 target-version = ["py37"]
+
+[build-system]
+requires = [
+	"setuptools",
+	"wheel",
+	"cmake",
+	"torch",
+]
