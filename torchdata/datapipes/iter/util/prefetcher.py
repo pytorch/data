@@ -7,6 +7,8 @@
 import threading
 import time
 
+from typing import Optional
+
 from torchdata.dataloader2 import communication
 
 from torchdata.datapipes import functional_datapipe
@@ -30,7 +32,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
     def __init__(self, source_datapipe, buffer_size=10):
         self.source_datapipe = source_datapipe
         self.buffer_size = buffer_size
-        self.thread = None
+        self.thread: Optional[threading.Thread] = None
 
     @staticmethod
     def thread_worker(prefetch_data):
@@ -74,8 +76,9 @@ class PrefetcherIterDataPipe(IterDataPipe):
                         time.sleep(CONSUMER_SLEEP_INTERVAL)
             finally:
                 prefetch_data.run_prefetcher = False
-                self.thread.join()
-                self.thread = None
+                if self.thread is not None:
+                    self.thread.join()
+                    self.thread = None
 
     # def __getstate__(self):
     #     """
