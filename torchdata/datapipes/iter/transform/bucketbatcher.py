@@ -61,10 +61,11 @@ class InBatchShufflerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
                 yield DataChunk(new_batch)
 
     def reset(self) -> None:
-        if self._enabled and self._seed is None:
-            self._seed = int(torch.empty((), dtype=torch.int64).random_().item())
-        self._rng.seed(self._seed)
-        self._seed = None
+        if self._enabled:
+            if self._seed is None:
+                self._seed = int(torch.empty((), dtype=torch.int64).random_().item())
+            self._rng.seed(self._seed)
+            self._seed = None
 
     def __len__(self) -> int:
         return len(self.datapipe)
