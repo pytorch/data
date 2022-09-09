@@ -10,7 +10,6 @@ import unittest
 import warnings
 
 from collections import defaultdict
-from re import I
 from typing import Dict
 
 import expecttest
