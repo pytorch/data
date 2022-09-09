@@ -10,6 +10,7 @@ import unittest
 import warnings
 
 from collections import defaultdict
+from re import I
 from typing import Dict
 
 import expecttest
@@ -257,6 +258,16 @@ class TestIterDataPipe(expecttest.TestCase):
         # __len__ Test: returns the length of source DataPipe
         result_dp = source_dp.zip_with_map(map_dp, odd_even)
         self.assertEqual(len(source_dp), len(result_dp))
+
+    def test_prefetcher_iterdatapipe(self) -> None:
+        source_dp = IterableWrapper(range(50000))
+        prefetched_dp = source_dp.prefetch(10)
+        # check if early termination resets child thread properly
+        for _, _ in zip(range(100), prefetched_dp):
+            pass
+        expected = list(source_dp)
+        actual = list(prefetched_dp)
+        self.assertEqual(expected, actual)
 
     def test_repeater_iterdatapipe(self) -> None:
         import itertools
