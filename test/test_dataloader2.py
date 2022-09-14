@@ -222,21 +222,30 @@ class DataLoader2ConsistencyTest(TestCase):
 class DataLoader2IntegrationTest(TestCase):
 
     @staticmethod
-    def _get_multi_reading_service():
+    def _get_mp_reading_service():
         return MultiProcessingReadingService(num_workers=2)
+
+    @staticmethod
+    def _get_proto_reading_service():
+        return PrototypeMultiProcessingReadingService(num_workers=2)
 
     def test_lazy_load(self):
         source_dp: IterDataPipe = IterableWrapper([(i, i) for i in range(10)])
         map_dp = source_dp.to_map_datapipe()
-        dl: DataLoader2 = DataLoader2(datapipe=map_dp, reading_service=self._get_multi_reading_service())
-        # Lazy loading
-        self.assertTrue(dl.datapipe._map is None)
-        
-        for _ in dl:
-            ...
 
-        # Lazy loading in multprocessing
-        self.assertTrue(dl.datapipe.__dict__['iterable'].dataset.__dict__['_datapipe']._map is None)
+        reading_service_generators = (
+            self._get_mp_reading_service,
+            self._get_proto_reading_service,
+        )
+        for reading_service_gen in reading_service_generators:
+            dl: DataLoader2 = DataLoader2(datapipe=map_dp, reading_service=reading_service_gen())
+            # Lazy loading
+            self.assertTrue(dl.datapipe._map is None)
+            it = iter(dl)
+            self.assertTrue(list(it), list(range(10)))
+
+            # Lazy loading in multprocessing
+            #self.assertTrue(dl.datapipe.__dict__['iterable'].dataset.__dict__['_datapipe']._map is None)
 
 
 if __name__ == "__main__":
