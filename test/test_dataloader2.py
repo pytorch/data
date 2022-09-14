@@ -242,10 +242,8 @@ class DataLoader2IntegrationTest(TestCase):
             # Lazy loading
             self.assertTrue(dl.datapipe._map is None)
             it = iter(dl)
-            self.assertTrue(list(it), list(range(10)))
-
-            # Lazy loading in multprocessing
-            #self.assertTrue(dl.datapipe.__dict__['iterable'].dataset.__dict__['_datapipe']._map is None)
+            self.assertTrue(dl.datapipe._map is None) # the main process should be
+            self.assertEqual(list(it), list(range(10)))
 
 
 if __name__ == "__main__":
