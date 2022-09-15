@@ -115,8 +115,6 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
         return self._length
 
     def __getstate__(self):
-        if self._map is None:
-            self._load_map()
         if DILL_AVAILABLE:
             dill_key_value_fn = dill.dumps(self.key_value_fn)
         else:
