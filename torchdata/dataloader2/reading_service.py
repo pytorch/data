@@ -7,7 +7,9 @@
 
 import functools
 import multiprocessing as mp
+import pickle
 import time
+
 from abc import ABC, abstractmethod
 from typing import Any, Callable, List, Optional
 
@@ -235,3 +237,49 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         if self.persistent_workers and self.dl_ is not None and self.dl_._iterator is not None:
             self.dl_._iterator._shutdown_workers()  # type: ignore[attr-defined]
             self.dl_._iterator = None
+
+
+class SequentialReadingService(CheckpointableReadingServiceInterface):
+    def __init__(self, *reading_service: ReadingServiceInterface):
+        self.reading_services = reading_service
+
+    def initialize(self, datapipe: DataPipe) -> DataPipe:
+        for rs in self.reading_services:
+            datapipe = rs.initialize(datapipe)
+        return datapipe
+
+    def initialize_iteration(self) -> None:
+        for rs in self.reading_services:
+            rs.initialize_iteration()
+
+    def finalize_iteration(self) -> None:
+        for rs in self.reading_services[::-1]:
+            rs.finalize_iteration()
+
+    def finalize(self) -> None:
+        for rs in self.reading_services[::-1]:
+            rs.finalize()
+
+    def checkpoint(self) -> bytes:
+        checkpoints = [None] * len(self.reading_services)
+        for idx in range(len(self.reading_services), -1, -1):
+            if not hasattr(self.reading_services[idx], "checkpoint"):
+                continue
+            try:
+                checkpoints[idx] = self.reading_services[idx].checkpoint()
+            except NotImplementedError:
+                pass
+        return pickle.dumps(checkpoints)
+
+    def restore(self, datapipe: DataPipe, serialized_state: bytes) -> DataPipe:
+        rs_states = pickle.loads(serialized_state)
+        assert len(rs_states) == len(self.reading_services)
+        for idx in range(len(self.reading_services)):
+            if not hasattr(self.reading_services[idx], "restore") or rs_states[idx] is None:
+                continue
+            try:
+                new_datapipe = self.reading_services[idx].restore(datapipe, rs_states[idx])
+            except NotImplementedError:
+                new_datapipe = datapipe
+            datapipe = new_datapipe
+        return datapipe
