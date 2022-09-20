@@ -25,6 +25,10 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
            until all files are iterated.
         3. ``request_timeout_ms`` and ``region`` will overwrite settings in the configuration file or
            environment variables.
+        4. For more details related to S3 IO DataPipe setup and AWS config, please see the `README file`_.
+
+    .. _README file:
+        https://github.com/pytorch/data/tree/main/torchdata/datapipes/iter/load#s3-io-datapipe-documentation
 
     Args:
         source_datapipe: a DataPipe that contains URLs/URL prefixes to s3 files
@@ -77,6 +81,10 @@ class S3FileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         1. ``source_datapipe`` **must** contain a list of valid S3 URLs.
         2. ``request_timeout_ms`` and ``region`` will overwrite settings in the
            configuration file or environment variables.
+        3. For more details related to S3 IO DataPipe setup and AWS config, please see the `README file`_.
+
+    .. _README file:
+        https://github.com/pytorch/data/tree/main/torchdata/datapipes/iter/load#s3-io-datapipe-documentation
 
     Args:
         source_datapipe: a DataPipe that contains URLs to s3 files
