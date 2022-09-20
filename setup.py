@@ -182,7 +182,6 @@ if __name__ == "__main__":
         ],
         package_data={
             "torchdata": [
-                "py.typed",
                 "datapipes/iter/*.pyi",
                 "datapipes/map/*.pyi",
             ],
