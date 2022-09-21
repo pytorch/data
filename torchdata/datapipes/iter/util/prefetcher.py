@@ -29,8 +29,10 @@ class _PrefetchData:
 
 @functional_datapipe("prefetch")
 class PrefetcherIterDataPipe(IterDataPipe):
-    def __init__(self, source_datapipe, buffer_size=10):
+    def __init__(self, source_datapipe, buffer_size: int = 10):
         self.source_datapipe = source_datapipe
+        if buffer_size <= 0:
+            raise ValueError("'buffer_size' is required to be a positive integer.")
         self.buffer_size = buffer_size
         self.thread: Optional[threading.Thread] = None
 
@@ -56,7 +58,6 @@ class PrefetcherIterDataPipe(IterDataPipe):
                 time.sleep(PRODUCER_SLEEP_INTERVAL)
 
     def __iter__(self):
-        self.reset()
         if self.buffer_size < 1:
             yield from self.source_datapipe
         else:
@@ -80,16 +81,20 @@ class PrefetcherIterDataPipe(IterDataPipe):
                     self.thread.join()
                     self.thread = None
 
-    # def __getstate__(self):
-    #     """
-    #     Getting state in threading enviroment requires next operations:
-    #         1) Stopping of the producer thread.
-    #         2) Saving buffer.
-    #         3) Adding lazy restart of producer thread when __next__ is called again
-    #           (this will guarantee that you only change state of the source_datapipe
-    #            after entire state of the graph is saved).
-    #     """
-    #     pass
+    def __getstate__(self):
+        """
+        Getting state in threading enviroment requires next operations:
+            1) Stopping of the producer thread.
+            2) Saving buffer.
+            3) Adding lazy restart of producer thread when __next__ is called again
+              (this will guarantee that you only change state of the source_datapipe
+               after entire state of the graph is saved).
+        """
+        # TODO: Update __getstate__ and __setstate__ to support snapshotting and restoration
+        return dict(source_datapipe=self.source_datapipe)
+
+    def __setstate__(self, state):
+        self.source_datapipe = state["source_datapipe"]
 
     def reset(self):
         if self.thread is not None:
