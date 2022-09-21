@@ -219,5 +219,25 @@ class DataLoader2ConsistencyTest(TestCase):
         pass
 
 
+class DataLoader2IntegrationTest(TestCase):
+    @staticmethod
+    def _get_mp_reading_service():
+        return MultiProcessingReadingService(num_workers=2)
+
+    def test_lazy_load(self):
+        source_dp: IterDataPipe = IterableWrapper([(i, i) for i in range(10)])
+        map_dp = source_dp.to_map_datapipe()
+
+        reading_service_generators = (self._get_mp_reading_service,)
+        for reading_service_gen in reading_service_generators:
+            dl: DataLoader2 = DataLoader2(datapipe=map_dp, reading_service=reading_service_gen())
+            # Lazy loading
+            self.assertTrue(dl.datapipe._map is None)
+            it = iter(dl)
+            self.assertEqual(list(it), list(range(10)))
+            # Lazy loading in multiprocessing
+            self.assertTrue(map_dp._map is None)
+
+
 if __name__ == "__main__":
     unittest.main()
