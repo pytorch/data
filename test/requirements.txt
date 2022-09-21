@@ -5,5 +5,8 @@ s3fs
 iopath == 0.1.9
 numpy
 rarfile
-protobuf < 4
+# TODO: Revert the change after protobuf (3.20.2) is fixed for MacOS Python 3.10
+# See: https://github.com/protocolbuffers/protobuf/issues/10571
+protobuf < 4; sys_platform != 'darwin' or python_version != '3.10'
+protobuf == 3.20.1; sys_platform == 'darwin' and python_version == '3.10'
 datasets
