@@ -4,6 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from queue import Empty as EmptyException
+
 from torchdata.dataloader2 import communication
 
 
@@ -64,7 +66,7 @@ class ProtocolServer(Protocol):
             raise Exception("Trying to get next request, while having one unserved")
         try:
             response = self.request_queue.get(block=block)
-        except Exception:  # TODO(625): Catch only timeout exceptions
+        except EmptyException:
             raise EmptyQueue("queue is empty")
         self._req_received = response
         return response
@@ -189,7 +191,7 @@ class IterDataPipeQueueProtocolClient(ProtocolClient):
     def get_response_reset_iterator(self, block=False):
         try:
             response = self.response_queue.get(block=block)
-        except Exception:  # TODO(627): Catch only timeout exceptions
+        except EmptyException:
             raise EmptyQueue("queue is empty")
         self.request_served(response)
 
@@ -201,7 +203,7 @@ class IterDataPipeQueueProtocolClient(ProtocolClient):
             raise Exception("Can not expect any response without submitted request")
         try:
             response = self.response_queue.get(block=block, timeout=timeout)
-        except Exception:  # TODO(628): Catch only timeout exceptions
+        except EmptyException:
             raise EmptyQueue("queue is empty")
         self.request_served(response)
 
