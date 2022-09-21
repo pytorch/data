@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data.graph import DataPipe
 
 from torchdata.dataloader2 import communication
-from torchdata.datapipes.iter import IterableWrapper
+from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 
 
 class ReadingServiceInterface(ABC):
@@ -98,15 +98,16 @@ def _collate_no_op(batch):
     return batch[0]
 
 
-class _IterateQueueDataPipes:
+class _IterateQueueDataPipes(IterDataPipe):
     def __init__(self, datapipes):
+        # TODO(VitalyFedyunin): Consider combining _IterateQueueDataPipes and QueueWrapper
+        # into one class, which supports any number of queues.
         self.datapipes = datapipes
         for dp in self.datapipes:
             if not isinstance(dp, communication.iter.QueueWrapper):
                 raise Exception("Source datapipes should be an instance of iter.QueueWrapper")
 
     def __iter__(self):
-        self.reset()
         total_pipes = len(self.datapipes)
         disabled_pipe = [False] * len(self.datapipes)
         cnt_disabled_pipes = 0
@@ -121,7 +122,7 @@ class _IterateQueueDataPipes:
                     if isinstance(response, communication.messages.StopIterationResponse):
                         disabled_pipe[idx] = True
                         cnt_disabled_pipes += 1
-                        break
+                        continue
                     if isinstance(response, communication.messages.InvalidStateResponse):
                         raise communication.iter.InvalidStateResetRequired
                     if isinstance(response, communication.messages.TerminateResponse):
@@ -180,7 +181,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             )
             self.datapipes.append(local_datapipe)
 
-        return IterableWrapper(_IterateQueueDataPipes(self.datapipes), deepcopy=False)  # type: ignore[return-value]
+        return _IterateQueueDataPipes(self.datapipes)  # type: ignore[return-value]
 
     def initialize_iteration(self) -> None:
         pass
