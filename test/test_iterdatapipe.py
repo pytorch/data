@@ -6,6 +6,7 @@
 
 import io
 import itertools
+import pickle
 import unittest
 import warnings
 
@@ -18,6 +19,8 @@ import torch.utils.data.datapipes.iter
 import torchdata
 
 from _utils._common_utils_for_test import IDP_NoLen, reset_after_n_next_calls
+
+from torch.utils.data.datapipes.utils.snapshot import _simple_graph_snapshot_restoration
 from torchdata.datapipes.iter import (
     BucketBatcher,
     Cycler,
@@ -548,29 +551,58 @@ class TestIterDataPipe(expecttest.TestCase):
         # __len__ Test: returns the sum of the lengths of the sources
         self.assertEqual(20, len(sample_mul_dp))
 
-    def test_in_batch_shuffler_iterdatapipe(self) -> None:
-        source_dp = IterableWrapper(range(10)).batch(3)
-        source_dp2 = IterableWrapper(range(10)).batch(3)
+    def test_in_batch_shuffler_iterdatapipe(self):
+        input_dp = IterableWrapper(list(range(23))).batch(3)
+        expected = list(input_dp)
 
-        # Functional Test: drop last reduces length
-        filtered_dp = source_dp.in_batch_shuffle()
-        for ret_batch, exp_batch in zip(filtered_dp, source_dp2):
-            ret_batch.sort()
-            self.assertEqual(ret_batch, exp_batch)
+        # Functional Test: No seed
+        shuffler_dp = input_dp.in_batch_shuffle()
+        for exp, res in zip(expected, shuffler_dp):
+            self.assertEqual(sorted(res), exp)
+
+        # Functional Test: With global seed
+        torch.manual_seed(123)
+        res = list(shuffler_dp)
+        torch.manual_seed(123)
+        self.assertEqual(list(shuffler_dp), res)
+
+        # Functional Test: Set seed
+        shuffler_dp = input_dp.in_batch_shuffle().set_seed(123)
+        res = list(shuffler_dp)
+        shuffler_dp.set_seed(123)
+        self.assertEqual(list(shuffler_dp), res)
+
+        # Functional Test: deactivate shuffling via set_shuffle
+        unshuffled_dp = shuffler_dp.set_shuffle(False)
+        self.assertEqual(list(unshuffled_dp), expected)
 
         # Reset Test:
-        n_elements_before_reset = 2
-        res_before_reset, res_after_reset = reset_after_n_next_calls(filtered_dp, n_elements_before_reset)
-        self.assertEqual(n_elements_before_reset, len(res_before_reset))
-        for ret_batch, exp_batch in zip(res_before_reset, source_dp):
-            ret_batch.sort()
-            self.assertEqual(ret_batch, exp_batch)
-        for ret_batch, exp_batch in zip(res_after_reset, source_dp):
-            ret_batch.sort()
-            self.assertEqual(ret_batch, exp_batch)
+        shuffler_dp = input_dp.in_batch_shuffle()
+        n_elements_before_reset = 5
+        res_before_reset, res_after_reset = reset_after_n_next_calls(shuffler_dp, n_elements_before_reset)
+        self.assertEqual(5, len(res_before_reset))
+        for exp, res in zip(expected, res_before_reset):
+            self.assertEqual(sorted(res), exp)
+        for exp, res in zip(expected, res_after_reset):
+            self.assertEqual(sorted(res), exp)
 
-        # __len__ Test: returns the number of batches
-        self.assertEqual(4, len(filtered_dp))
+        # __len__ Test: returns the length of the input DataPipe
+        shuffler_dp = input_dp.in_batch_shuffle()
+        self.assertEqual(8, len(shuffler_dp))
+
+        # Serialization Test
+        from torch.utils.data.datapipes._hook_iterator import _SnapshotState
+
+        shuffler_dp = input_dp.in_batch_shuffle()
+        it = iter(shuffler_dp)
+        for _ in range(2):
+            next(it)
+        shuffler_dp_copy = pickle.loads(pickle.dumps(shuffler_dp))
+        _simple_graph_snapshot_restoration(shuffler_dp_copy.datapipe, shuffler_dp.datapipe._number_of_samples_yielded)
+
+        exp = list(it)
+        shuffler_dp_copy._snapshot_state = _SnapshotState.Restored
+        self.assertEqual(exp, list(shuffler_dp_copy))
 
     def test_bucket_batcher_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(10))
