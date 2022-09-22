@@ -80,13 +80,27 @@ class DataLoader2Iterator(Iterator):
 
 
 class DataLoader2(Generic[T_co]):
+    """
+    DataLoader2. Given a DataPipe, a ReadingService and adapter function(s), this provides an iterable over
+    the given DataPipe.
+
+    Args:
+        datapipe (Dataset): DataPipe from which to load the data. A deepcopy of this will be made during
+            initialization, allowing the input to be re-used in a different DataLoader2 without sharing states.
+        datapipe_adapter_fn (Iterable[Adapter] or Adapter, optional): Adapter function(s) that will be applied
+            to the DataPipe (default: ``None``).
+        reading_service (ReadingServiceInterface, optional): defines how DataLoader2 should execute operations over
+            the DataPipe, e.g. multiprocessing/distributed (default: ``None``). A deepcopy of this will be made during
+            initialization, allowing the input to be re-used in a different DataLoader2 without sharing states.
+    """
+
     def __init__(
         self,
         datapipe: DataPipe,
         datapipe_adapter_fn: Optional[Union[Iterable[Adapter], Adapter]] = None,
         reading_service: Optional[ReadingServiceInterface] = None,
     ) -> None:
-        self.datapipe = datapipe
+        self.datapipe = self._copy(datapipe)
         self._adapted: bool = False
         self._datapipe_iter: Optional[Iterator[T_co]] = None
         self._reset_iter: bool = True  # Sets to `False` when __iter__ starts, and `True` when `StopIteration``
@@ -132,6 +146,14 @@ class DataLoader2(Generic[T_co]):
 
     def __del__(self) -> None:
         self.shutdown()
+
+    @staticmethod
+    def _copy(obj):
+        """
+        Standardized way for DataLoader2 to copy an object when needed, such as for DataPipe/ReadingService.
+        This uses `pickle` to serialize/deserialize to create the copy.
+        """
+        return pickle.loads(pickle.dumps(obj))
 
     def shutdown(self) -> None:
         if not self._reset_iter:
