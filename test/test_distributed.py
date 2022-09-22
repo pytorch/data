@@ -6,7 +6,6 @@
 
 
 import os
-import subprocess
 import unittest
 
 from functools import partial
@@ -162,16 +161,17 @@ class DistributedTest(TestCase):
     def test_elastic_training_dl2(self, backend) -> None:
         world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
         nnodes = 1
-        subprocess.run(
+        from torch.distributed import run
+
+        run.main(
             [
-                "torchrun",
+                "--run_path",
                 f"--nnodes={nnodes}",
                 f"--nproc_per_node={world_size}",
                 abs_path("bin/elastic_training.py"),
                 "--" + backend,
                 "--dl2",
             ],
-            check=True,
         )
 
     @backend_parametrize
@@ -187,16 +187,17 @@ class DistributedTest(TestCase):
     def test_elastic_training_dl1(self, backend) -> None:
         world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
         nnodes = 1
-        subprocess.run(
+        from torch.distributed import run
+
+        run.main(
             [
-                "torchrun",
+                "--run_path",
                 f"--nnodes={nnodes}",
                 f"--nproc_per_node={world_size}",
                 abs_path("bin/elastic_training.py"),
                 "--" + backend,
                 "--dl1",
             ],
-            check=True,
         )
 
 
