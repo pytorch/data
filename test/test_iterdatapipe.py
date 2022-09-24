@@ -703,6 +703,20 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual(res_before_reset, exp_before_reset)
         self.assertEqual(res_after_reset, exp_after_reset)
 
+        # Functional test: Padded tokens exceeding max_token_count
+        source_data = ["111", "1111", "11111"]  # 3, 4, 5
+        source_dp = IterableWrapper(source_data)
+        batch_dp = source_dp.max_token_bucketize(max_token_count=6)
+        exp_batch = [['111', '1111'], ['11111']]
+        self.assertEqual(list(batch_dp), exp_batch)
+
+        # Functional test: Padded tokens not exceeding max_token_count
+        source_data = ["111", "1111", "11111"]  # 3, 4, 5
+        source_dp = IterableWrapper(source_data)
+        batch_dp = source_dp.max_token_bucketize(max_token_count=6, padded_tokens=True)
+        exp_batch = [['111'], ['1111'], ['11111']]
+        self.assertEqual(list(batch_dp), exp_batch)
+
         # __len__ Test: returns the number of batches
         with self.assertRaises(TypeError):
             len(batch_dp)

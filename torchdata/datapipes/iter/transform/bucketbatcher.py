@@ -204,6 +204,9 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
     For an example in the audio domain, it may be batching samples with similar length. Then, given the
     ``max_token_count``, each batch may be concatenated to a Tensor with the same size and minimum padding.
 
+    If ``padded_tokens`` is set to `True`, a batch of samples will never exceed the given ``max_token_count``,
+    even if they are padded to equal length.
+
     Args:
         datapipe: Iterable DataPipe being batched
         max_token_count: Maximum length of total length of data in each batch
@@ -211,6 +214,8 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         min_len: Optional minimum length to be included into each batch
         max_len: Optional maximum length to be included into each batch.
         buffer_size: This restricts how many tokens are taken from prior DataPipe to bucketize
+        padded_tokens: If true, assume data will be padded to the largest length in bucket.
+
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
@@ -238,6 +243,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         min_len: int = 0,
         max_len: Optional[int] = None,
         buffer_size: int = 1000,
+        padded_tokens: bool = False
     ) -> None:
         if max_len is None:
             max_len = max_token_count
@@ -253,27 +259,37 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         self.datapipe = datapipe
         self.max_token_count = max_token_count
         self.buffer_size = buffer_size
+        self.padded_tokens = padded_tokens
 
     def __iter__(self) -> Iterator[DataChunk[T_co]]:
         buffer: List = []
         batch: List = []
         batch_size: int = 0
+        max_length: int = 0
         for d in self.datapipe:
             heapq.heappush(buffer, d)
             if len(buffer) == self.buffer_size:
                 length, token = heapq.heappop(buffer)
+                max_length = max(length, max_length)
+                if self.padded_tokens:
+                    length = max_length
                 if batch_size + length > self.max_token_count:
                     yield DataChunk(batch)
                     batch = []
                     batch_size = 0
+                    max_length = 0
                 batch.append(token)
                 batch_size += length
         while buffer:
             length, token = heapq.heappop(buffer)
+            max_length = max(length, max_length)
+            if self.padded_tokens:
+                length = max_length
             if batch_size + length > self.max_token_count:
                 yield DataChunk(batch)
                 batch = []
                 batch_size = 0
+                max_length = 0
             batch.append(token)
             batch_size += length
         if batch:
