@@ -243,7 +243,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         min_len: int = 0,
         max_len: Optional[int] = None,
         buffer_size: int = 1000,
-        padded_tokens: bool = False
+        padded_tokens: bool = False,
     ) -> None:
         if max_len is None:
             max_len = max_token_count
@@ -272,33 +272,31 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
                 length, token = heapq.heappop(buffer)
                 max_length = max(length, max_length)
                 if self.padded_tokens:
-                    length = max_length
-                if batch_size + length > self.max_token_count:
-                    yield DataChunk(batch)
-                    batch = []
-                    batch_size = 0
-                    max_length = 0
-                batch.append(token)
-                if self.padded_tokens:
-                    max_length = length # was set to 0 if we yielded
-                    batch_size = len(batch) * max_length
+                    new_batch_size = (len(batch) + 1) * max_length
                 else:
-                    batch_size += length
+                    new_batch_size = batch_size + length
+                if new_batch_size > self.max_token_count:
+                    yield DataChunk(batch)
+                    batch = [token]
+                    batch_size = length
+                    max_length = length
+                else:
+                    batch.append(token)
+                    batch_size = new_batch_size
         while buffer:
             length, token = heapq.heappop(buffer)
             max_length = max(length, max_length)
             if self.padded_tokens:
-                length = max_length
-            if batch_size + length > self.max_token_count:
-                yield DataChunk(batch)
-                batch = []
-                batch_size = 0
-                max_length = 0
-            batch.append(token)
-            if self.padded_tokens:
-                max_length = length  # was set to 0 if we yielded
-                batch_size = len(batch) * max_length
+                new_batch_size = (len(batch) + 1) * max_length
             else:
-                batch_size += length
+                new_batch_size = batch_size + length
+            if new_batch_size > self.max_token_count:
+                yield DataChunk(batch)
+                batch = [token]
+                batch_size = length
+                max_length = length
+            else:
+                batch.append(token)
+                batch_size = new_batch_size
         if batch:
             yield DataChunk(batch)
