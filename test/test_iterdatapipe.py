@@ -718,6 +718,13 @@ class TestIterDataPipe(expecttest.TestCase):
         exp_batch = [["111"], ["1111"], ["11111"]]
         self.assertEqual(list(batch_dp), exp_batch)
 
+        # Functional test: sample length exceeding max_token_count
+        source_data = ["111"]
+        source_dp = IterableWrapper(source_data)
+        batch_dp = source_dp.max_token_bucketize(max_token_count=2)
+        exp_batch = []
+        self.assertEqual(list(batch_dp), exp_batch)
+
         # __len__ Test: returns the number of batches
         with self.assertRaises(TypeError):
             len(batch_dp)
