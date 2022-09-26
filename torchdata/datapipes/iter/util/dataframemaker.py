@@ -150,14 +150,13 @@ class ParquetDFLoaderIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDat
                 yield torcharrow.from_arrow(row_group, dtype=self.dtype)
 
     def __getstate__(self):
-        if IterDataPipe.getstate_hook is not None:
-            return IterDataPipe.getstate_hook(self)
-
         if DILL_AVAILABLE:
             dill_dtype = dill.dumps(self.dtype)
         else:
             dill_dtype = self.dtype
         state = (self.source_dp, dill_dtype, self.columns, self.device, self.use_threads)
+        if IterDataPipe.getstate_hook is not None:
+            return IterDataPipe.getstate_hook(state)
         return state
 
     def __setstate__(self, state):
