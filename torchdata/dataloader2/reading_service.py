@@ -7,15 +7,21 @@
 
 import functools
 import multiprocessing as mp
+
 from abc import ABC, abstractmethod
+
+from datetime import timedelta
 from typing import Callable, List, Optional
 
 import torch
+import torch.distributed as dist
+
 from torch.utils.data import DataLoader
 from torch.utils.data.graph import DataPipe
 
+from torchdata._constants import default_timeout_in_s
 from torchdata.dataloader2 import communication
-from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
+from torchdata.datapipes.iter import FullSync, IterableWrapper, IterDataPipe
 
 
 class ReadingServiceInterface(ABC):
@@ -252,3 +258,72 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         if self.persistent_workers and self.dl_ is not None and self.dl_._iterator is not None:
             self.dl_._iterator._shutdown_workers()  # type: ignore[attr-defined]
             self.dl_._iterator = None
+
+
+class DistributedReadingService(ReadingServiceInterface):
+    r"""
+    ``DistributedReadingSerivce`` handles distributed sharding on the graph of ``DataPipe`` and
+    guarantee the randomness by sharing the same seed across the distributed processes.
+
+    Args:
+        timeout: Timeout for operations executed against the process group in seconds.
+            Default value equals 30 minutes.
+    """
+
+    def __init__(self, timeout: int = default_timeout_in_s):
+        if not dist.is_available():
+            raise RuntimeError("Torch Distributed is required to be available")
+        self._world_size: int = 1
+        self._rank: int = 0
+        self._datapipe: Optional[DataPipe] = None
+        self._timeout: int = timeout
+        self._pg: Optional[dist.ProcessGroup] = None
+
+    def initialize(self, datapipe: DataPipe) -> DataPipe:
+        r"""
+        Launches the ``gloo``-backend distributed process group. Carries out distributed sharding
+        on the graph of ``DataPipe`` and returnes the graph attached with a ``FullSyncIterDataPipe``
+        at the end.
+        """
+        if not (dist.is_available() and dist.is_initialized()):
+            raise RuntimeError("Torch Distributed is required to be initialized")
+        self._world_size = dist.get_world_size()
+        self._rank = dist.get_rank()
+        self._pg = dist.new_group(backend="gloo", timeout=timedelta(seconds=self._timeout))
+        torch.utils.data.graph_settings.apply_sharding(
+            datapipe,
+            self._world_size,
+            self._rank,
+        )
+        # Only append FullSyncIterDataPipe if it's not presented at the end of the pipeline
+        if not isinstance(datapipe, FullSync):
+            datapipe = datapipe.fullsync(self._timeout)
+        self._datapipe = datapipe
+        return datapipe
+
+    def initialize_iteration(self) -> None:
+        r"""
+        Shares the same seed from rank 0 to other ranks across the distributed processes
+        and apply the random seed to the graph of ``DataPipe``.
+        """
+        # TODO: Seed Generator should be moved to DataLoader2 after the API
+        #       change of initialize_iteration is landed.
+        seed = self._share_seed()
+        _seed_generator = torch.Generator()
+        _seed_generator.manual_seed(seed)
+        assert self._datapipe is not None
+        self._datapipe = torch.utils.data.graph_settings.apply_random_seed(
+            self._datapipe,
+            _seed_generator,
+        )
+
+    def _share_seed(self):
+        shared_seed = torch.empty((), dtype=torch.int64).random_()
+        dist.broadcast(shared_seed, src=0, group=self._pg)
+        return shared_seed.item()
+
+    def finalize(self) -> None:
+        r"""
+        Clean up the distributed process group.
+        """
+        self._pg = None
