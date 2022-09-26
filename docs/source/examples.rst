@@ -97,6 +97,10 @@ click through rate (CTR) prediction. You can find a prototype stage implementati
 Graphs, Meshes and Point Clouds
 -------------------------------
 
+TigerGraph (community example)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TigerGraph is a scalable graph data platform for AI and ML. You can find an `implementation <https://github.com/TigerGraph-DevLabs/torchdata_tutorial/blob/main/torchdata_example.ipynb>`_ of graph feature engineering and machine learning with DataPipes in TorchData and data stored in a TigerGraph database, which includes computing PageRank scores in-database, pulling graph data and features with multiple DataPipes, and training a neural network using graph features in PyTorch. 
+
 MoleculeNet (community example)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 `MoleculeNet <https://moleculenet.org/>`_ is a benchmark specially designed for testing machine learning methods of
