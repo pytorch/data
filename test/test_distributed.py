@@ -22,7 +22,6 @@ from torchdata.datapipes.iter import IterableWrapper
 from torchdata.datapipes.iter.util.prefetch import PrefetchTimeoutError
 
 TEST_MASTER_ADDR = "127.0.0.1"
-TEST_MASTER_PORT = "29500"
 DEFAULT_WORLD_SIZE = 2
 
 
@@ -46,9 +45,19 @@ def abs_path(path):
     return os.path.join(os.path.dirname(__file__), os.path.normpath(path))
 
 
+def _get_open_port():
+    import socket
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return str(port)
+
+
 def launch_distributed_training(backend, world_size, fn):
     os.environ["MASTER_ADDR"] = TEST_MASTER_ADDR
-    os.environ["MASTER_PORT"] = TEST_MASTER_PORT
+    os.environ["MASTER_PORT"] = _get_open_port()
     mp.spawn(
         fn,
         args=(
