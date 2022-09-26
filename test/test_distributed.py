@@ -6,6 +6,7 @@
 
 
 import os
+import sys
 import unittest
 
 from functools import partial
@@ -26,8 +27,6 @@ DEFAULT_WORLD_SIZE = 2
 
 
 if not dist.is_available():
-    import sys
-
     print("Distributed not available, skipping tests", file=sys.stderr)
     sys.exit(0)
 
@@ -192,6 +191,7 @@ class DistributedTest(TestCase):
         IS_WINDOWS,
         "Torch Elastic is not working properly on Windows. See: https://github.com/pytorch/pytorch/issues/85427",
     )
+    @unittest.skipIf(sys.version_info < (3, 8), "Torch Elastic requires Python >= 3.8")
     @backend_parametrize
     def test_elastic_training_dl1(self, backend) -> None:
         world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
