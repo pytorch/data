@@ -9,8 +9,6 @@ import pickle
 import unittest
 from unittest import TestCase
 
-from torch.utils.data.graph import DataPipe
-
 from torchdata.dataloader2 import (
     DataLoader2,
     MultiProcessingReadingService,
@@ -18,6 +16,8 @@ from torchdata.dataloader2 import (
     ReadingServiceInterface,
 )
 from torchdata.dataloader2.dataloader2 import READING_SERVICE_STATE_KEY_NAME, SERIALIZED_DATAPIPE_KEY_NAME
+
+from torchdata.dataloader2.graph import DataPipe
 from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 
 
