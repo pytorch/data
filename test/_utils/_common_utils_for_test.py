@@ -6,6 +6,7 @@
 
 import hashlib
 import os
+import platform
 import sys
 import tempfile
 from typing import List, Tuple, TypeVar
@@ -19,6 +20,8 @@ T_co = TypeVar("T_co", covariant=True)
 IS_LINUX = sys.platform == "linux"
 IS_WINDOWS = sys.platform == "win32"
 IS_MACOS = sys.platform == "darwin"
+
+IS_M1 = IS_MACOS and "arm" in platform.platform()
 
 
 class IDP_NoLen(IterDataPipe):
