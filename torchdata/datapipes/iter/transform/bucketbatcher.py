@@ -221,7 +221,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         min_len: Optional minimum length to be included into each batch
         max_len: Optional maximum length to be included into each batch.
         buffer_size: This restricts how many tokens are taken from prior DataPipe to bucketize
-        count_padding: If true, assume data will be padded to the largest length in batch in succeeding DataPipes.
+        include_padding: If true, assume data will be padded to the largest length in batch in succeeding DataPipes.
 
 
     Example:
@@ -250,7 +250,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         min_len: int = 0,
         max_len: Optional[int] = None,
         buffer_size: int = 1000,
-        count_padding: bool = False,
+        include_padding: bool = False,
     ) -> None:
         if max_len is None:
             max_len = max_token_count
@@ -266,7 +266,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         self.datapipe = datapipe
         self.max_token_count = max_token_count
         self.buffer_size = buffer_size
-        self.count_padding = count_padding
+        self.include_padding = include_padding
 
     def __iter__(self) -> Iterator[DataChunk[T_co]]:
         buffer: List = []
@@ -276,34 +276,35 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         for d in self.datapipe:
             heapq.heappush(buffer, d)
             if len(buffer) == self.buffer_size:
-                length, token = heapq.heappop(buffer)
-                max_length = max(length, max_length)
-                if self.count_padding:
-                    new_batch_size = (len(batch) + 1) * max_length
-                else:
-                    new_batch_size = batch_size + length
-                if new_batch_size > self.max_token_count:
-                    yield DataChunk(batch)
-                    batch = [token]
-                    batch_size = length
-                    max_length = length
-                else:
-                    batch.append(token)
-                    batch_size = new_batch_size
+                buffer, batch, batch_size, max_length, data_chunk = self._pop_buffer(
+                    buffer, batch, batch_size, max_length
+                )
+                if data_chunk is not None:
+                    yield data_chunk
         while buffer:
-            length, token = heapq.heappop(buffer)
-            max_length = max(length, max_length)
-            if self.count_padding:
-                new_batch_size = (len(batch) + 1) * max_length
-            else:
-                new_batch_size = batch_size + length
-            if new_batch_size > self.max_token_count:
-                yield DataChunk(batch)
-                batch = [token]
-                batch_size = length
-                max_length = length
-            else:
-                batch.append(token)
-                batch_size = new_batch_size
+            buffer, batch, batch_size, max_length, data_chunk = self._pop_buffer(buffer, batch, batch_size, max_length)
+            if data_chunk is not None:
+                yield data_chunk
         if batch:
             yield DataChunk(batch)
+
+    def _pop_buffer(self, buffer: List, batch: List, batch_size: int, max_length: int):
+        data_chunk_to_yield = None
+        length, token = heapq.heappop(buffer)
+
+        if self.include_padding:
+            max_length = max(length, max_length)
+            new_batch_size = (len(batch) + 1) * max_length
+        else:
+            new_batch_size = batch_size + length
+
+        if new_batch_size > self.max_token_count:
+            data_chunk_to_yield = DataChunk(batch)
+            batch = [token]
+            batch_size = length
+            max_length = length
+        else:
+            batch.append(token)
+            batch_size = new_batch_size
+
+        return buffer, batch, batch_size, max_length, data_chunk_to_yield
