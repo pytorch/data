@@ -204,8 +204,15 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
     For an example in the audio domain, it may be batching samples with similar length. Then, given the
     ``max_token_count``, each batch may be concatenated to a Tensor with the same size and minimum padding.
 
-    If ``padded_tokens`` is set to `True`, a batch of samples will never exceed the given ``max_token_count``,
-    even if they are padded to equal length.
+    If ``count_padding`` is set to ``True``, the token count of each batch includes the padding a succeeding
+    DataPipe could add. This guarentees that even after the batch is padded, ``max_token_count`` will not be exceeded.
+    This can prevent out-of-memory issues for data with large variations in length.
+
+    Note that batches are bucketized starting from the smallest size in a buffer.
+    This can limit the variablity of batches if ``buffer_size`` is large.
+    To increase variablity, apply ``torchdata.datapipes.iter.Shuffler`` before this DataPipe,
+    and keep ``buffer_size`` small.
+
 
     Args:
         datapipe: Iterable DataPipe being batched
@@ -214,7 +221,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         min_len: Optional minimum length to be included into each batch
         max_len: Optional maximum length to be included into each batch.
         buffer_size: This restricts how many tokens are taken from prior DataPipe to bucketize
-        padded_tokens: If true, assume data will be padded to the largest length in bucket.
+        count_padding: If true, assume data will be padded to the largest length in batch in succeeding DataPipes.
 
 
     Example:
@@ -243,7 +250,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         min_len: int = 0,
         max_len: Optional[int] = None,
         buffer_size: int = 1000,
-        padded_tokens: bool = False,
+        count_padding: bool = False,
     ) -> None:
         if max_len is None:
             max_len = max_token_count
@@ -259,7 +266,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         self.datapipe = datapipe
         self.max_token_count = max_token_count
         self.buffer_size = buffer_size
-        self.padded_tokens = padded_tokens
+        self.count_padding = count_padding
 
     def __iter__(self) -> Iterator[DataChunk[T_co]]:
         buffer: List = []
@@ -271,7 +278,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
             if len(buffer) == self.buffer_size:
                 length, token = heapq.heappop(buffer)
                 max_length = max(length, max_length)
-                if self.padded_tokens:
+                if self.count_padding:
                     new_batch_size = (len(batch) + 1) * max_length
                 else:
                     new_batch_size = batch_size + length
@@ -286,7 +293,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         while buffer:
             length, token = heapq.heappop(buffer)
             max_length = max(length, max_length)
-            if self.padded_tokens:
+            if self.count_padding:
                 new_batch_size = (len(batch) + 1) * max_length
             else:
                 new_batch_size = batch_size + length

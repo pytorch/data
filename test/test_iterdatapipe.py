@@ -714,7 +714,7 @@ class TestIterDataPipe(expecttest.TestCase):
         # Functional test: Padded tokens not exceeding max_token_count
         source_data = ["111", "1111", "11111"]  # 3, 4, 5
         source_dp = IterableWrapper(source_data)
-        batch_dp = source_dp.max_token_bucketize(max_token_count=7, padded_tokens=True)
+        batch_dp = source_dp.max_token_bucketize(max_token_count=7, count_padding=True)
         exp_batch = [["111"], ["1111"], ["11111"]]
         self.assertEqual(list(batch_dp), exp_batch)
 
