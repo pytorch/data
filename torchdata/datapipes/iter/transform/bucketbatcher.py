@@ -204,7 +204,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
     For an example in the audio domain, it may be batching samples with similar length. Then, given the
     ``max_token_count``, each batch may be concatenated to a Tensor with the same size and minimum padding.
 
-    If ``count_padding`` is set to ``True``, the token count of each batch includes the padding a succeeding
+    If ``include_padding`` is set to ``True``, the token count of each batch includes the padding a succeeding
     DataPipe could add. This guarentees that even after the batch is padded, ``max_token_count`` will not be exceeded.
     This can prevent out-of-memory issues for data with large variations in length.
 
