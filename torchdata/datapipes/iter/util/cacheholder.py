@@ -28,7 +28,7 @@ except ImportError as e:
 
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, DILL_AVAILABLE
 
-from torchdata.dataloader2.graph import traverse_dps
+from torch.utils.data.graph import traverse_dps
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import FileLister, IterDataPipe
 

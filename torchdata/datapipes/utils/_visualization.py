@@ -10,7 +10,7 @@ from collections import defaultdict
 from typing import Optional, Set, TYPE_CHECKING
 
 from torch.utils.data.datapipes.iter.combining import _ChildDataPipe, IterDataPipe
-from torchdata.dataloader2.graph import traverse_dps
+from torch.utils.data.graph import traverse_dps
 
 if TYPE_CHECKING:
     import graphviz
