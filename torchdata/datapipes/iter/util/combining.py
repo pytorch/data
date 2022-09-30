@@ -127,8 +127,6 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
         self.buffer = OrderedDict()
 
     def __getstate__(self):
-        if IterDataPipe.getstate_hook is not None:
-            return IterDataPipe.getstate_hook(self)
         state = (
             self.source_datapipe,
             self.ref_datapipe,
@@ -138,6 +136,8 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
             self.merge_fn,
             self.buffer_size,
         )
+        if IterDataPipe.getstate_hook is not None:
+            return IterDataPipe.getstate_hook(state)
         return state
 
     def __setstate__(self, state):

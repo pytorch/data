@@ -9,9 +9,13 @@ import pickle
 from dataclasses import dataclass
 from typing import Any, Dict, Generic, Iterable, Iterator, Optional, TypeVar, Union
 
-from torch.utils.data.graph import DataPipe
+from torch.utils.data.datapipes.datapipe import _IterDataPipeSerializationWrapper, _MapDataPipeSerializationWrapper
 
+from torch.utils.data.graph import DataPipe
 from torchdata.dataloader2.adapter import Adapter
+
+from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.map import MapDataPipe
 
 from .error import PauseIteration
 from .reading_service import CheckpointableReadingServiceInterface, ReadingServiceInterface
@@ -100,7 +104,7 @@ class DataLoader2(Generic[T_co]):
         datapipe_adapter_fn: Optional[Union[Iterable[Adapter], Adapter]] = None,
         reading_service: Optional[ReadingServiceInterface] = None,
     ) -> None:
-        self.datapipe = self._copy(datapipe)
+        self.datapipe = self._wrap_and_copy_dp(datapipe)
         self._adapted: bool = False
         self._datapipe_iter: Optional[Iterator[T_co]] = None
         self._reset_iter: bool = True  # Sets to `False` when __iter__ starts, and `True` when `StopIteration``
@@ -154,6 +158,20 @@ class DataLoader2(Generic[T_co]):
         This uses `pickle` to serialize/deserialize to create the copy.
         """
         return pickle.loads(pickle.dumps(obj))
+
+    @staticmethod
+    def _wrap_and_copy_dp(datapipe: DataPipe):
+        """
+        Wraps the DataPipe with the corresponding serialization wrapper.
+        Then, creates a copy with the class's static copy method.
+
+        """
+        wrapped_dp: DataPipe = datapipe
+        if isinstance(datapipe, IterDataPipe):
+            wrapped_dp = _IterDataPipeSerializationWrapper(datapipe)
+        elif isinstance(datapipe, MapDataPipe):
+            wrapped_dp = _MapDataPipeSerializationWrapper(datapipe)
+        return wrapped_dp
 
     def shutdown(self) -> None:
         if not self._reset_iter:
