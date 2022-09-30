@@ -210,7 +210,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
 
     Note that batches are bucketized starting from the smallest size in a buffer.
     This can limit the variablity of batches if ``buffer_size`` is large.
-    To increase variablity, apply ``torchdata.datapipes.iter.Shuffler`` before this DataPipe,
+    To increase variablity, apply ``torchdata.datapipes.iter.Shuffler`` before and after this DataPipe,
     and keep ``buffer_size`` small.
 
 
@@ -221,8 +221,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         min_len: Optional minimum length to be included into each batch
         max_len: Optional maximum length to be included into each batch.
         buffer_size: This restricts how many tokens are taken from prior DataPipe to bucketize
-        include_padding: If true, assume data will be padded to the largest length in batch in succeeding DataPipes.
-
+        include_padding: If True, the size of each batch includes the extra padding to the largest length in the batch.
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
