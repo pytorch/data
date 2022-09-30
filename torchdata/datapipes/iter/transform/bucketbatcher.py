@@ -71,8 +71,6 @@ class InBatchShufflerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         return len(self.datapipe)
 
     def __getstate__(self):
-        if IterDataPipe.getstate_hook is not None:
-            return IterDataPipe.getstate_hook(self)
         state = (
             self.datapipe,
             self._enabled,
@@ -81,6 +79,8 @@ class InBatchShufflerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
             self._valid_iterator_id,
             self._number_of_samples_yielded,
         )
+        if IterDataPipe.getstate_hook is not None:
+            return IterDataPipe.getstate_hook(state)
         return state
 
     def __setstate__(self, state):
