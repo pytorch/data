@@ -204,7 +204,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.5.0a0+a3e1427 ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.5.0a0+b87d215 ) &#x25BC</a>
     </div>
     
 
@@ -326,7 +326,7 @@
 <h1>MaxTokenBucketizer<a class="headerlink" href="#maxtokenbucketizer" title="Permalink to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.MaxTokenBucketizer">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">MaxTokenBucketizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">datapipe:</span> <span class="pre">~IterDataPipe[~T_co],</span> <span class="pre">max_token_count:</span> <span class="pre">int,</span> <span class="pre">len_fn:</span> <span class="pre">~Callable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_len_fn&gt;,</span> <span class="pre">min_len:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">0,</span> <span class="pre">max_len:</span> <span class="pre">~Optional[int]</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">buffer_size:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">1000</span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.MaxTokenBucketizer" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">MaxTokenBucketizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">datapipe:</span> <span class="pre">~IterDataPipe[~T_co],</span> <span class="pre">max_token_count:</span> <span class="pre">int,</span> <span class="pre">len_fn:</span> <span class="pre">~Callable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_len_fn&gt;,</span> <span class="pre">min_len:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">0,</span> <span class="pre">max_len:</span> <span class="pre">~Optional[int]</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">buffer_size:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">1000,</span> <span class="pre">include_padding:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.MaxTokenBucketizer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates mini-batches of data from a min-heap with limited size, and the total length of samples
 returned by <code class="docutils literal notranslate"><span class="pre">len_fn</span></code> within each batch will be limited by <code class="docutils literal notranslate"><span class="pre">max_token_count</span></code>
 (functional name: <code class="docutils literal notranslate"><span class="pre">max_token_bucketize</span></code>). If <code class="docutils literal notranslate"><span class="pre">min_len</span></code> or <code class="docutils literal notranslate"><span class="pre">max_len</span></code> is set, the samples with
@@ -336,6 +336,13 @@ Min-heap is used here to make sure the samples are sorted incrementally based on
 the total length of samples in each batch is guaranteed to be smaller than <code class="docutils literal notranslate"><span class="pre">max_token_count</span></code>.
 For an example in the audio domain, it may be batching samples with similar length. Then, given the
 <code class="docutils literal notranslate"><span class="pre">max_token_count</span></code>, each batch may be concatenated to a Tensor with the same size and minimum padding.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">include_padding</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, the token count of each batch includes the padding a succeeding
+DataPipe could add. This guarentees that even after the batch is padded, <code class="docutils literal notranslate"><span class="pre">max_token_count</span></code> will not be exceeded.
+This can prevent out-of-memory issues for data with large variations in length.</p>
+<p>Note that batches are bucketized starting from the smallest size in a buffer.
+This can limit the variablity of batches if <code class="docutils literal notranslate"><span class="pre">buffer_size</span></code> is large.
+To increase variablity, apply <code class="docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.Shuffler</span></code> before and after this DataPipe,
+and keep <code class="docutils literal notranslate"><span class="pre">buffer_size</span></code> small.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -345,6 +352,7 @@ For an example in the audio domain, it may be batching samples with similar leng
 <li><p><strong>min_len</strong> – Optional minimum length to be included into each batch</p></li>
 <li><p><strong>max_len</strong> – Optional maximum length to be included into each batch.</p></li>
 <li><p><strong>buffer_size</strong> – This restricts how many tokens are taken from prior DataPipe to bucketize</p></li>
+<li><p><strong>include_padding</strong> – If True, the size of each batch includes the extra padding to the largest length in the batch.</p></li>
 </ul>
 </dd>
 </dl>
