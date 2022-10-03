@@ -4,8 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import warnings
-
 from unittest import TestCase
 
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService, ReadingServiceInterface
@@ -21,10 +19,9 @@ class AdapterTest(TestCase):
         dl = DataLoader2(datapipe=dp)
         self.assertEqual(list(range(size)), list(dl))
 
-        with warnings.catch_warnings(record=True) as wa:
+        with self.assertWarns(Warning, msg="`shuffle=True` was set, but the datapipe does not contain a `Shuffler`."):
             dl = DataLoader2(datapipe=dp, datapipe_adapter_fn=Shuffle(True))
-            self.assertNotEqual(list(range(size)), list(dl))
-            self.assertEqual(1, len(wa))
+        self.assertNotEqual(list(range(size)), list(dl))
 
         dp = IterableWrapper(range(size)).shuffle()
 
