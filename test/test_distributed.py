@@ -6,6 +6,7 @@
 
 
 import os
+import sys
 import unittest
 
 from functools import partial
@@ -22,13 +23,10 @@ from torchdata.datapipes.iter import IterableWrapper
 from torchdata.datapipes.iter.util.prefetch import PrefetchTimeoutError
 
 TEST_MASTER_ADDR = "127.0.0.1"
-TEST_MASTER_PORT = "29500"
 DEFAULT_WORLD_SIZE = 2
 
 
 if not dist.is_available():
-    import sys
-
     print("Distributed not available, skipping tests", file=sys.stderr)
     sys.exit(0)
 
@@ -46,9 +44,19 @@ def abs_path(path):
     return os.path.join(os.path.dirname(__file__), os.path.normpath(path))
 
 
+def _get_open_port():
+    import socket
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return str(port)
+
+
 def launch_distributed_training(backend, world_size, fn):
     os.environ["MASTER_ADDR"] = TEST_MASTER_ADDR
-    os.environ["MASTER_PORT"] = TEST_MASTER_PORT
+    os.environ["MASTER_PORT"] = _get_open_port()
     mp.spawn(
         fn,
         args=(
@@ -183,6 +191,7 @@ class DistributedTest(TestCase):
         IS_WINDOWS,
         "Torch Elastic is not working properly on Windows. See: https://github.com/pytorch/pytorch/issues/85427",
     )
+    @unittest.skipIf(sys.version_info < (3, 8), "Torch Elastic requires Python >= 3.8")
     @backend_parametrize
     def test_elastic_training_dl1(self, backend) -> None:
         world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
