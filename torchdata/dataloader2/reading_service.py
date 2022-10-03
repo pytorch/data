@@ -17,10 +17,10 @@ import torch
 import torch.distributed as dist
 
 from torch.utils.data import DataLoader
-from torch.utils.data.graph import DataPipe
 
 from torchdata._constants import default_timeout_in_s
 from torchdata.dataloader2 import communication
+from torchdata.dataloader2.graph import DataPipe
 from torchdata.datapipes.iter import FullSync, IterableWrapper, IterDataPipe
 
 

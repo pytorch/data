@@ -9,9 +9,9 @@ import pickle
 from dataclasses import dataclass
 from typing import Any, Dict, Generic, Iterable, Iterator, Optional, TypeVar, Union
 
-from torch.utils.data.graph import DataPipe
-
 from torchdata.dataloader2.adapter import Adapter
+
+from torchdata.dataloader2.graph import DataPipe
 
 from .error import PauseIteration
 from .reading_service import CheckpointableReadingServiceInterface, ReadingServiceInterface
