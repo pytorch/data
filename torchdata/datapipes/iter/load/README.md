@@ -42,13 +42,16 @@ Please refer to the documentation:
 
 ### Note
 
+Your environment must be properly configured for AWS to use the DataPipes. It is possible to do that via the AWS Command
+Line Interface (`aws configure`).
+
 It's recommended to set up a detailed configuration file with the `AWS_CONFIG_FILE` environment variable. The following
 environment variables are also parsed: `HOME`, `S3_USE_HTTPS`, `S3_VERIFY_SSL`, `S3_ENDPOINT_URL`, `AWS_REGION` (would
 be overwritten by the `region` variable).
 
 ### Troubleshooting
 
-If you get `Access Denied`, it's very possibly a
+If you get `Access Denied` or no response, it's very possibly a
 [wrong region configuration](https://github.com/aws/aws-sdk-cpp/issues/1211) or an
 [accessing issue with `aws-sdk-cpp`](https://aws.amazon.com/premiumsupport/knowledge-center/s3-access-denied-aws-sdk/).
 
