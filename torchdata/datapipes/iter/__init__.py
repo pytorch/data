@@ -106,6 +106,7 @@ from torchdata.datapipes.iter.util.plain_text_reader import (
     LineReaderIterDataPipe as LineReader,
 )
 from torchdata.datapipes.iter.util.prefetch import FullSyncIterDataPipe as FullSync
+from torchdata.datapipes.iter.util.prefetcher import PrefetcherIterDataPipe as Prefetcher
 from torchdata.datapipes.iter.util.randomsplitter import RandomSplitterIterDataPipe as RandomSplitter
 from torchdata.datapipes.iter.util.rararchiveloader import RarArchiveLoaderIterDataPipe as RarArchiveLoader
 from torchdata.datapipes.iter.util.rows2columnar import Rows2ColumnarIterDataPipe as Rows2Columnar
@@ -190,6 +191,7 @@ __all__ = [
     "OnlineReader",
     "ParagraphAggregator",
     "ParquetDataFrameLoader",
+    "Prefetcher",
     "RandomSplitter",
     "RarArchiveLoader",
     "Repeater",
