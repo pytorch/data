@@ -67,11 +67,11 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
         else:
             self.datapipe = root
         self.masks = masks
-        self.kwargs = kwargs
+        self.kwargs_for_connection = kwargs
 
     def __iter__(self) -> Iterator[str]:
         for root in self.datapipe:
-            fs, path = fsspec.core.url_to_fs(root, **self.kwargs)
+            fs, path = fsspec.core.url_to_fs(root, **self.kwargs_for_connection)
 
             if isinstance(fs.protocol, str):
                 protocol_list = [fs.protocol]
@@ -128,18 +128,18 @@ class FSSpecFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     """
 
     def __init__(
-        self, source_datapipe: IterDataPipe[str], mode: str = "r", kwargs_for_open: Optional[Dict] = None, **kwargs
+        self, source_datapipe: IterDataPipe[str], mode: str = "r", *, kwargs_for_open: Optional[Dict] = None, **kwargs
     ) -> None:
         _assert_fsspec()
 
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.mode: str = mode
-        self.kwargs = kwargs
         self.kwargs_for_open = kwargs_for_open if kwargs_for_open is not None else {}
+        self.kwargs_for_connection = kwargs
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for file_uri in self.source_datapipe:
-            fs, path = fsspec.core.url_to_fs(file_uri, **self.kwargs)
+            fs, path = fsspec.core.url_to_fs(file_uri, **self.kwargs_for_connection)
             file = fs.open(path, self.mode, **self.kwargs_for_open)
             yield file_uri, StreamWrapper(file)
 
@@ -182,6 +182,7 @@ class FSSpecSaverIterDataPipe(IterDataPipe[str]):
         source_datapipe: IterDataPipe[Tuple[Any, U]],
         mode: str = "w",
         filepath_fn: Optional[Callable] = None,
+        *,
         kwargs_for_open: Optional[Dict] = None,
         **kwargs,
     ):
@@ -190,14 +191,15 @@ class FSSpecSaverIterDataPipe(IterDataPipe[str]):
         self.source_datapipe: IterDataPipe[Tuple[Any, U]] = source_datapipe
         self.mode: str = mode
         self.filepath_fn: Optional[Callable] = filepath_fn
-        self.kwargs = kwargs
         self.kwargs_for_open = kwargs_for_open if kwargs_for_open is not None else {}
+        self.kwargs_for_connection = kwargs
 
     def __iter__(self) -> Iterator[str]:
         for meta, data in self.source_datapipe:
             filepath = meta if self.filepath_fn is None else self.filepath_fn(meta)
-            fs, path = fsspec.core.url_to_fs(filepath, **self.kwargs)
+            fs, path = fsspec.core.url_to_fs(filepath, **self.kwargs_for_connection)
             with fs.open(path, self.mode, **self.kwargs_for_open) as f:
+                print(f)
                 f.write(data)
             yield filepath
 
