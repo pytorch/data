@@ -34,7 +34,17 @@ class NotAvailable(Exception):
 class InvalidStateResetRequired(Exception):
     """
     Returned by DataPipe when it is expecting to get reset request,
-    for example RouterDataPipe expecting all workers to request reset'
+    for example RouterDataPipe expecting all workers to request reset.
+    """
+
+    pass
+
+
+class TerminateRequired(Exception):
+    """
+    Returned by DataPipe when it is expecting to get terminate request,
+    for example it got terminate request from other source and at the process
+    of stopping.
     """
 
     pass
