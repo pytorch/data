@@ -7,6 +7,7 @@
 import io
 import itertools
 import pickle
+import string
 import unittest
 import warnings
 
@@ -32,6 +33,7 @@ from torchdata.datapipes.iter import (
     IterKeyZipper,
     LineReader,
     MapKeyZipper,
+    MapTemplate,
     MaxTokenBucketizer,
     ParagraphAggregator,
     Repeater,
@@ -67,7 +69,77 @@ def test_torchdata_pytorch_consistency() -> None:
         raise AssertionError(msg + "\n".join(sorted(missing_datapipes)))
 
 
+class TestDP(MapTemplate):
+    def _map(self, data):
+        return data + 1
+
+
+def yield_from_range(x):
+    yield from range(x)
+
+
+def convert_to_dict(data):
+    res = {}
+    for idx, el in enumerate(data):
+        res[string.ascii_lowercase[idx]] = el
+    return res
+
+
 class TestIterDataPipe(expecttest.TestCase):
+    def test_maptemplate(self):
+        source_dp = IterableWrapper(range(10))
+        modified_dp = TestDP(source_dp)
+        expected = [i + 1 for i in range(10)]
+        self.assertEqual(expected, list(modified_dp))
+
+        source_dp_2 = IterableWrapper(range(10))
+        source_dp = IterableWrapper(range(10)).zip(source_dp_2)
+        modified_dp = TestDP(source_dp, input_col=0)
+        expected = [(i + 1, i) for i in range(10)]
+        self.assertEqual(expected, list(modified_dp))
+
+        source_dp_2 = IterableWrapper(range(10))
+        source_dp = IterableWrapper(range(10)).zip(source_dp_2)
+        modified_dp = TestDP(source_dp, input_col=1)
+        expected = [(i, i + 1) for i in range(10)]
+        self.assertEqual(expected, list(modified_dp))
+
+        source_dp_2 = IterableWrapper(range(10))
+        source_dp = IterableWrapper(range(10)).zip(source_dp_2)
+        modified_dp = TestDP(source_dp, input_col=1, output_col=-1)
+        expected = [(i, i, i + 1) for i in range(10)]
+        self.assertEqual(expected, list(modified_dp))
+
+        source_dp_2 = IterableWrapper(range(10))
+        source_dp = IterableWrapper(range(10)).zip(source_dp_2)
+        modified_dp = source_dp.map(convert_to_dict)
+        modified_dp = TestDP(modified_dp, input_col="b", output_col="new")
+        expected = [
+            {"a": 0, "b": 0, "new": 1},
+            {"a": 1, "b": 1, "new": 2},
+            {"a": 2, "b": 2, "new": 3},
+            {"a": 3, "b": 3, "new": 4},
+            {"a": 4, "b": 4, "new": 5},
+            {"a": 5, "b": 5, "new": 6},
+            {"a": 6, "b": 6, "new": 7},
+            {"a": 7, "b": 7, "new": 8},
+            {"a": 8, "b": 8, "new": 9},
+            {"a": 9, "b": 9, "new": 10},
+        ]
+        self.assertEqual(expected, list(modified_dp))
+
+    def test_flatmapper_proto(self):
+        source_dp = IterableWrapper(range(4))
+        modified_dp = source_dp.flatmap_proto(fn=yield_from_range)
+        expected = [0, 0, 1, 0, 1, 2]
+        self.assertEqual(expected, list(modified_dp))
+
+        source_dp_2 = IterableWrapper(range(4))
+        source_dp = IterableWrapper(range(4)).zip(source_dp_2)
+        modified_dp = source_dp.flatmap_proto(fn=yield_from_range, input_col=0)
+        expected = [(0, 1), (0, 2), (1, 2), (0, 3), (1, 3), (2, 3)]
+        self.assertEqual(expected, list(modified_dp))
+
     def test_in_memory_cache_holder_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(10))
         cache_dp = source_dp.in_memory_cache(size=5)

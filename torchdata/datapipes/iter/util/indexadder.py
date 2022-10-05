@@ -12,6 +12,7 @@ from torchdata.datapipes.iter import IterDataPipe
 K = TypeVar("K")
 
 
+# TODO(VitalyFedyunin): Candidate for MapTemplate but need to handle state properly
 @functional_datapipe("enumerate")
 class EnumeratorIterDataPipe(IterDataPipe[Tuple[int, K]]):
     r"""
@@ -41,6 +42,7 @@ class EnumeratorIterDataPipe(IterDataPipe[Tuple[int, K]]):
         return len(self.source_datapipe)
 
 
+# TODO(VitalyFedyunin): Candidate for MapTemplate but need to handle state properly
 @functional_datapipe("add_index")
 class IndexAdderIterDataPipe(IterDataPipe[Dict]):
     r"""

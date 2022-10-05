@@ -4,7 +4,10 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
+
 import warnings
+
 from typing import Callable, Hashable, Iterator, List, Optional, Set, Sized, TypeVar, Union
 
 from torch.utils.data import functional_datapipe, IterDataPipe
@@ -160,6 +163,115 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
 
     def __len__(self) -> int:
         raise TypeError(f"{type(self).__name__}'s length relies on the output of its function.")
+
+
+# TODO(VitalyFedyunin): Replacing FlatMapperIterDataPipe will require BC breaking change of input_col behaviour
+@functional_datapipe("flatmap_proto")
+class FlatMapperProtoIterDataPipe(IterDataPipe[T_co]):
+    r"""
+    Applies a function over each item from the source DataPipe, then
+    flattens the outputs to a single, unnested IterDataPipe (functional name: ``flatmap``).
+
+    Note:
+        The output from ``fn`` must be a Sequence. Otherwise, an error will be raised.
+        If ``fn`` is ``None``, source DataPipe will be just flattened vertically, provided that items can be unpacked.
+
+    Args:
+        datapipe: Source IterDataPipe
+        fn: the function to be applied to each element in the DataPipe, the output must be a Sequence
+        input_col: Index or indices of data which ``fn`` is applied, such as:
+            - ``None`` as default to apply ``fn`` to the data directly.
+            - Integer(s) is/are used for list/tuple.
+            - Key(s) is/are used for dict.
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> def fn(e):
+        >>>     return [e, e * 10]
+        >>> source_dp = IterableWrapper(list(range(5)))
+        >>> flatmapped_dp = source_dp.flatmap(fn)
+        >>> list(flatmapped_dp)
+        [0, 0, 1, 10, 2, 20, 3, 30, 4, 40]
+        >>>
+        >>> source_dp = IterableWrapper([[1, 2, 3], [4, 5, 6]])
+        >>> flatmapped_dp = source_dp.flatmap()
+        >>> list(flatmapped_dp)
+        [1, 2, 3, 4, 5, 6]
+    """
+    datapipe: IterDataPipe
+    fn: Callable
+
+    def __init__(
+        self,
+        datapipe: IterDataPipe,
+        fn: Callable,
+        input_col=None,
+        output_col=None,
+        length: int = -1,
+    ) -> None:
+        super().__init__()
+        self.datapipe = datapipe
+        self.length = length
+
+        _check_unpickable_fn(fn)
+        self.fn = fn  # type: ignore[assignment]
+
+        self.input_col = input_col
+        if input_col is None and output_col is not None:
+            raise ValueError("`output_col` must be None when `input_col` is None.")
+        if isinstance(output_col, (list, tuple)):
+            if len(output_col) > 1:
+                raise ValueError("`output_col` must be a single-element list or tuple")
+            output_col = output_col[0]
+        self.output_col = output_col
+
+    def _apply_fn(self, data):
+        # TODO(VitalyFedyunin): Can be unified with _apply_fn of MapperProtoIterDataPipe
+        if self.input_col is None and self.output_col is None:
+            yield from self.fn(data)
+            return
+
+        if self.input_col is None:
+            res = self.fn(data)
+        elif isinstance(self.input_col, (list, tuple)):
+            args = tuple(data[col] for col in self.input_col)
+            res = self.fn(*args)
+        else:
+            res = self.fn(data[self.input_col])
+
+        # Copy tuple to list and run in-place modification because tuple is immutable.
+        if isinstance(data, tuple):
+            t_flag = True
+            data = list(data)
+        else:
+            t_flag = False
+
+        for res_line in res:
+            data_copy = copy.deepcopy(data)
+            if self.output_col is None:
+                if isinstance(self.input_col, (list, tuple)):
+                    data_copy[self.input_col[0]] = res_line
+                    for idx in sorted(self.input_col[1:], reverse=True):
+                        del data_copy[idx]
+                else:
+                    data_copy[self.input_col] = res_line
+            else:
+                if self.output_col == -1:
+                    data_copy.append(res_line)
+                else:
+                    data_copy[self.output_col] = res_line
+
+            # Convert list back to tuple
+            yield tuple(data_copy) if t_flag else data_copy
+
+    def __iter__(self) -> Iterator[T_co]:
+        for data in self.datapipe:
+            yield from self._apply_fn(data)
+
+    def __len__(self) -> int:
+        if self.length != -1:
+            return self.length
+        raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
 
 
 @functional_datapipe("drop")

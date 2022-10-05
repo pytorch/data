@@ -69,6 +69,7 @@ from torchdata.datapipes.iter.transform.callable import (
     BatchMapperIterDataPipe as BatchMapper,
     DropperIterDataPipe as Dropper,
     FlatMapperIterDataPipe as FlatMapper,
+    FlatMapperProtoIterDataPipe as FlatMapperProto,
     FlattenIterDataPipe as Flattener,
     SliceIterDataPipe as Slicer,
 )
@@ -81,6 +82,10 @@ from torchdata.datapipes.iter.util.cacheholder import (
 from torchdata.datapipes.iter.util.combining import (
     IterKeyZipperIterDataPipe as IterKeyZipper,
     MapKeyZipperIterDataPipe as MapKeyZipper,
+)
+from torchdata.datapipes.iter.util.common import (
+    FlatMapTemplateIterDataPipe as FlatMapTemplate,
+    MapTemplateIterDataPipe as MapTemplate,
 )
 from torchdata.datapipes.iter.util.cycler import CyclerIterDataPipe as Cycler, RepeaterIterDataPipe as Repeater
 from torchdata.datapipes.iter.util.dataframemaker import (
@@ -159,7 +164,9 @@ __all__ = [
     "FileLister",
     "FileOpener",
     "Filter",
+    "FlatMapTemplate",
     "FlatMapper",
+    "FlatMapperProto",
     "Flattener",
     "Forker",
     "FullSync",
@@ -182,6 +189,7 @@ __all__ = [
     "LengthSetter",
     "LineReader",
     "MapKeyZipper",
+    "MapTemplate",
     "MapToIterConverter",
     "Mapper",
     "MaxTokenBucketizer",

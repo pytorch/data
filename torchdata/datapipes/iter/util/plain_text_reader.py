@@ -81,6 +81,7 @@ class PlainTextReaderHelper:
                 yield data
 
 
+# TODO(VitalyFedyunin): Candidate for FlatMapTemplate
 @functional_datapipe("readlines")
 class LineReaderIterDataPipe(IterDataPipe[Union[Str_Or_Bytes, Tuple[str, Str_Or_Bytes]]]):
     r"""
@@ -172,6 +173,7 @@ class _CSVBaseParserIterDataPipe(IterDataPipe):
             yield from self._helper.return_path(stream, path=path)  # type: ignore[misc]
 
 
+# TODO(VitalyFedyunin): Candidate for FlatMapTemplate
 @functional_datapipe("parse_csv")
 class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
     r"""

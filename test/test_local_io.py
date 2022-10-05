@@ -325,6 +325,23 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         ]
         self.assertEqual(expected_res, list(json_dp))
 
+        def as_dict(data):
+            return {"file_name": data[0], "stream": data[1]}
+
+        dict_dp = datapipe_nonempty.map(as_dict)
+        parsed_dp = dict_dp.parse_json_files(input_col="stream", output_col="json")
+
+        def trim_dict(data):
+            del data["stream"]
+            return data
+
+        parsed_dp = parsed_dp.map(trim_dict)
+        expected_res = [
+            {"file_name": "1.json", "json": ["foo", {"bar": ["baz", None, 1.0, 2]}]},
+            {"file_name": "2.json", "json": {"__complex__": True, "real": 1, "imag": 2}},
+        ]
+        self.assertEqual(expected_res, list(parsed_dp))
+
     def test_saver_iterdatapipe(self):
         # Functional Test: Saving some data
         name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
