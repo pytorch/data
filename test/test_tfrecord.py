@@ -13,7 +13,7 @@ import expecttest
 
 import torch
 
-from _utils._common_utils_for_test import reset_after_n_next_calls
+from _utils._common_utils_for_test import IS_M1, reset_after_n_next_calls
 from torchdata.datapipes.iter import (
     FileLister,
     FileOpener,
@@ -65,6 +65,9 @@ class TestDataPipeTFRecord(expecttest.TestCase):
             }
 
     @skipIfNoPROTOBUF
+    @unittest.skipIf(
+        IS_M1, "Protobuf 3.19.* is not supported on MacOS M1, but Tensorflow is incompatible with Protobuf 4"
+    )
     @torch.no_grad()
     def test_tfrecord_loader_example_iterdatapipe(self):
         filename = f"{self.temp_dir}/example.tfrecord"
@@ -161,6 +164,9 @@ class TestDataPipeTFRecord(expecttest.TestCase):
             len(tfrecord_parser)
 
     @skipIfNoPROTOBUF
+    @unittest.skipIf(
+        IS_M1, "Protobuf 3.19.* is not supported on MacOS M1, but Tensorflow is incompatible with Protobuf 4"
+    )
     @torch.no_grad()
     def test_tfrecord_loader_sequence_example_iterdatapipe(self):
         filename = f"{self.temp_dir}/sequence_example.tfrecord"

@@ -7,6 +7,7 @@ ${init_base}
 # Note that, for mypy, .pyi file takes precedent over .py file, such that we must define the interface for other
 # classes/objects here, even though we are not injecting extra code into them at the moment.
 
+from torchdata.datapipes.iter import IterDataPipe
 from torch.utils.data import DataChunk, Dataset
 from torch.utils.data.datapipes._typing import _DataPipeMeta
 
