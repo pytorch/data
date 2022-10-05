@@ -44,6 +44,14 @@ T_co = TypeVar("T_co", covariant=True)
 PROMISE_FILE_DELETE_TIMEOUT = 30
 PROMISE_FILE_DELETE_RETRY_INTERVAL = 0.005
 
+from enum import IntEnum
+
+
+class CacheState(IntEnum):
+    UNCACHED = 0
+    CACHED_SINGLE_ENTITY = 1
+    CACHED_MULTIPLE_ENTITIES = 2
+
 
 @functional_datapipe("in_memory_cache")
 class InMemoryCacheHolderIterDataPipe(IterDataPipe[T_co]):
@@ -225,12 +233,12 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     @staticmethod
     def _cache_check_fn(data, filepath_fn, hash_dict, hash_type, extra_check_fn):
         filepath = data if filepath_fn is None else filepath_fn(data)
-        result = 1
         assert not isinstance(filepath, (list, tuple))  # BC breaking, now only str is accepted as return
 
+        result = CacheState.CACHED_SINGLE_ENTITY
         cached_file_exists = True
         if os.path.exists(_get_list_filename(filepath)):
-            return 2
+            return int(CacheState.CACHED_MULTIPLE_ENTITIES)
         if not os.path.exists(filepath):
             cached_file_exists = False
         elif hash_dict is not None and not _hash_check(filepath, hash_dict, hash_type):
@@ -254,7 +262,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                 # raising error
                 file_exists = len(data) > 0
                 if not file_exists:
-                    result = 0
+                    result = CacheState.UNCACHED
                     promise_fh.seek(0)
                     data = promise_fh.read()
                     # TODO(635): Potentially there is old .promise file from previous failed run, we
@@ -262,13 +270,12 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                     # raising error
                     file_exists = len(data) > 0
                     if not file_exists:
-                        result = False
                         promise_fh.seek(0)
                         promise_fh.write("[dataloader session uid]")
                         promise_fh.truncate()
                         promise_fh.flush()
 
-        return result
+        return int(result)
 
     def _end_caching(self):
         filepath_fn, hash_dict, hash_type, extra_check_fn = OnDiskCacheHolderIterDataPipe._temp_dict.pop(self)
@@ -307,12 +314,6 @@ def _read_str(fd):
 
 def _find_promise_file(filename):
     promise_filename = _promise_filename(filename)
-    # while not os.path.exists(promise_filename):
-    #     dirname = os.path.dirname(promise_filename)
-    #     if dirname == os.path.dirname(dirname):
-    #         promise_filename = _promise_filename(filename)
-    #         break
-    #     promise_filename = _promise_filename(dirname)
     return promise_filename
 
 
@@ -418,13 +419,7 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
             )
 
     def __iter__(self):
-        # old_promise_filename = None
-        # old_filename = None
-        # first_entry = True
         last_record_uuid = None
-        # TODO(VitalyFedyunin): Limit buffer size here. It is only contains file names from archive,
-        # but better be safe than sorry.
-        # buffer: List[Any] = []
         one_to_many_detected = False
         one_to_one_detected = False
 
@@ -512,7 +507,6 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
         cached_dp = cached_dp.map(functools.partial(_wait_promise_fn, timeout))
         one_many_cached_dp = one_many_cached_dp.map(functools.partial(_wait_promise_fn, timeout), input_col=0)
         one_many_cached_dp = one_many_cached_dp.map(lambda x: x[1])
-        # cached_dp = FileLister(cached_dp, recursive=True)
 
         memory_cell_dp = cache_holder.source_datapipe
 
