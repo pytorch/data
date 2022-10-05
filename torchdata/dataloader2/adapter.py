@@ -8,7 +8,7 @@ from abc import abstractmethod
 
 import torch
 
-from torch.utils.data.graph import DataPipe
+from torchdata.dataloader2.graph import DataPipe, traverse_dps
 from torchdata.datapipes.iter.util.cacheholder import _WaitPendingCacheItemIterDataPipe
 
 
@@ -68,7 +68,7 @@ class CacheTimeout(Adapter):
         self.timeout = timeout
 
     def __call__(self, datapipe: DataPipe) -> DataPipe:
-        graph = torch.utils.data.graph.traverse(datapipe, only_datapipe=True)
+        graph = traverse_dps(datapipe)
         all_pipes = torch.utils.data.graph_settings.get_all_graph_pipes(graph)
         cache_locks = {pipe for pipe in all_pipes if isinstance(pipe, _WaitPendingCacheItemIterDataPipe)}
 

@@ -123,7 +123,7 @@ class DataLoader2(Generic[T_co]):
         if self.datapipe_adapter_fns is not None:
             for adapter_fn in self.datapipe_adapter_fns:
                 self.datapipe = adapter_fn(self.datapipe)
-        self._datapipe_before_reading_service_adapt: DataPipe = self.datapipe
+        self._datapipe_before_reading_service_adapt: DataPipe = self._copy(self.datapipe)
 
     def __iter__(self) -> Iterator[T_co]:
         if self._terminated:
@@ -171,7 +171,7 @@ class DataLoader2(Generic[T_co]):
             wrapped_dp = _IterDataPipeSerializationWrapper(datapipe)
         elif isinstance(datapipe, MapDataPipe):
             wrapped_dp = _MapDataPipeSerializationWrapper(datapipe)
-        return wrapped_dp
+        return DataLoader2._copy(wrapped_dp)
 
     def shutdown(self) -> None:
         if not self._reset_iter:

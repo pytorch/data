@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from torch.utils.data.graph import DataPipe, DataPipeGraph, traverse
+from torchdata.dataloader2.graph import DataPipe, DataPipeGraph, traverse_dps
 
 from torchdata.datapipes.iter import ShardingFilter, Shuffler
 
@@ -14,7 +14,7 @@ def _check_shuffle_before_sharding(datapipe: DataPipe) -> bool:
     This function will check if a ``shuffle`` operation is presented before each
     ``sharding_filter`` operation for every single path in the ``DataPipe`` graph.
     """
-    graph: DataPipeGraph = traverse(datapipe)  # type: ignore[arg-type]
+    graph: DataPipeGraph = traverse_dps(datapipe)  # type: ignore[arg-type]
     return _check_shuffler_before_sharding_helper(graph)
 
 

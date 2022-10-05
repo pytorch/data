@@ -261,6 +261,16 @@ class TestIterDataPipe(expecttest.TestCase):
         result_dp = source_dp.zip_with_map(map_dp, odd_even)
         self.assertEqual(len(source_dp), len(result_dp))
 
+    def test_prefetcher_iterdatapipe(self) -> None:
+        source_dp = IterableWrapper(range(50000))
+        prefetched_dp = source_dp.prefetch(10)
+        # check if early termination resets child thread properly
+        for _, _ in zip(range(100), prefetched_dp):
+            pass
+        expected = list(source_dp)
+        actual = list(prefetched_dp)
+        self.assertEqual(expected, actual)
+
     def test_repeater_iterdatapipe(self) -> None:
         import itertools
 
@@ -702,6 +712,28 @@ class TestIterDataPipe(expecttest.TestCase):
         exp_after_reset = [["1", "2", "11"], ["22", "111"], ["222"], ["1111"], ["2222"], ["11111"], ["22222"]]
         self.assertEqual(res_before_reset, exp_before_reset)
         self.assertEqual(res_after_reset, exp_after_reset)
+
+        # Functional test: Padded tokens exceeding max_token_count
+        source_data = ["111", "1111", "11111"]  # 3, 4, 5
+        source_dp = IterableWrapper(source_data)
+        batch_dp = source_dp.max_token_bucketize(max_token_count=7)
+        exp_batch = [["111", "1111"], ["11111"]]
+
+        self.assertEqual(list(batch_dp), exp_batch)
+
+        # Functional test: Padded tokens not exceeding max_token_count
+        source_data = ["111", "111", "111", "1111"]  # 3, 3, 3, 4
+        source_dp = IterableWrapper(source_data)
+        batch_dp = source_dp.max_token_bucketize(max_token_count=7, include_padding=True)
+        exp_batch = [["111", "111"], ["111"], ["1111"]]
+        self.assertEqual(list(batch_dp), exp_batch)
+
+        # Functional test: sample length exceeding max_token_count
+        source_data = ["111"]
+        source_dp = IterableWrapper(source_data)
+        batch_dp = source_dp.max_token_bucketize(max_token_count=2)
+        exp_batch = []
+        self.assertEqual(list(batch_dp), exp_batch)
 
         # __len__ Test: returns the number of batches
         with self.assertRaises(TypeError):

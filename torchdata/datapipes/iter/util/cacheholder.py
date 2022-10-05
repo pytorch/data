@@ -28,7 +28,7 @@ except ImportError as e:
 
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, DILL_AVAILABLE
 
-from torch.utils.data.graph import traverse
+from torch.utils.data.graph import traverse_dps
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import FileLister, IterDataPipe
 
@@ -396,7 +396,7 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
         if filepath_fn is not None and same_filepath_fn:
             raise ValueError("`filepath_fn` is mutually exclusive with `same_filepath_fn`")
 
-        graph = traverse(datapipe, only_datapipe=True)
+        graph = traverse_dps(datapipe)
         # Get the last CacheHolder
         cache_holder = EndOnDiskCacheHolderIterDataPipe._recursive_search(graph)
         if cache_holder is None:
