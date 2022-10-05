@@ -1,5 +1,5 @@
 name: 📚 Documentation
-description: Report an issue related to inline documnetation
+description: Report an issue related to inline documentation
 
 body:
   - type: textarea

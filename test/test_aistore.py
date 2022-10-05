@@ -17,20 +17,20 @@ try:
 
     AIS_CLUSTER_ENDPT = "http://localhost:8080"
 
-    HAS_AIS = Client(AIS_CLUSTER_ENDPT).is_aistore_running()
+    HAS_AIS = Client(AIS_CLUSTER_ENDPT).cluster().is_aistore_running()
 except (ImportError, ConnectionError):
     HAS_AIS = False
 skipIfNoAIS = unittest.skipIf(not HAS_AIS, "AIS not running or library not installed")
 
 
 @skipIfNoAIS
-class TestDataPipeLocalIO(unittest.TestCase):
+class TestAIStoreIODataPipe(unittest.TestCase):
     def setUp(self):
         # initialize client and create new bucket
         self.client = Client(AIS_CLUSTER_ENDPT)
         letters = string.ascii_lowercase
         self.bck_name = "".join(random.choice(letters) for _ in range(10))
-        self.client.create_bucket(self.bck_name)
+        self.client.bucket(self.bck_name).create()
         # create temp files
         num_objs = 10
 
@@ -42,7 +42,7 @@ class TestDataPipeLocalIO(unittest.TestCase):
             with tempfile.NamedTemporaryFile() as file:
                 file.write(content)
                 file.flush()
-                self.client.put_object(self.bck_name, obj_name, file.name)
+                self.client.bucket(self.bck_name).object(obj_name).put(file.name)
 
         # create 10 objects in the `/`dir
         for i in range(num_objs):
@@ -52,12 +52,12 @@ class TestDataPipeLocalIO(unittest.TestCase):
             with tempfile.NamedTemporaryFile() as file:
                 file.write(content)
                 file.flush()
-                self.client.put_object(self.bck_name, obj_name, file.name)
+                self.client.bucket(self.bck_name).object(obj_name).put(file.name)
 
     def tearDown(self):
         # Try to destroy bucket and its items
         try:
-            self.client.destroy_bucket(self.bck_name)
+            self.client.bucket(self.bck_name).delete()
         except ErrBckNotFound:
             pass
 

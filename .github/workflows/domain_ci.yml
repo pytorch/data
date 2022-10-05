@@ -56,7 +56,7 @@ jobs:
           path: vision
 
       - name: Run torchvision builtin datasets tests
-        run: pytest --no-header -v vision/test/test_prototype_builtin_datasets.py
+        run: pytest --no-header -v vision/test/test_prototype_datasets_builtin.py
 
   torchtext:
     if: ${{ github.repository_owner == 'pytorch' }}
