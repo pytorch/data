@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import functools
 import hashlib
 import inspect
 import os.path
@@ -15,7 +14,7 @@ import warnings
 
 from collections import deque
 from functools import partial
-from typing import Callable, Deque, Dict, Iterator, Optional, TypeVar
+from typing import Any, Callable, Deque, Dict, Iterator, List, Optional, Tuple, TypeVar
 
 try:
     import portalocker
@@ -45,6 +44,10 @@ PROMISE_FILE_DELETE_TIMEOUT = 30
 PROMISE_FILE_DELETE_RETRY_INTERVAL = 0.005
 
 from enum import IntEnum
+
+
+def pid_say(*args):
+    print(os.getpid(), ":::", *args)
 
 
 class CacheState(IntEnum):
@@ -122,19 +125,6 @@ def _generator_to_list(gen_fn):
     return list_fn
 
 
-def _wait_promise_fn(timeout, filename):
-    promise_filename = _find_promise_file(filename)
-    start = time.time()
-    while _is_promise_pending(promise_filename):
-        time.sleep(0.01)
-        if time.time() - start > timeout:
-            raise Exception(
-                f"OnDiskCache Exception: {filename} expected to be written by different process, "
-                + f"but file is not ready in {timeout} seconds."
-            )
-    return filename
-
-
 def _hash_check(filepath, hash_dict, hash_type):
 
     if filepath not in hash_dict:
@@ -157,8 +147,8 @@ def _hash_check(filepath, hash_dict, hash_type):
     return hash_func.hexdigest() == hash_dict[filepath]
 
 
-def _promise_filename(filename):
-    return filename + ".promise"
+def _promise_filename(filename, cache_uuid):
+    return filename + ".promise." + str(cache_uuid)
 
 
 @functional_datapipe("on_disk_cache")
@@ -214,7 +204,8 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
 
         if hash_dict is not None and hash_type not in ("sha256", "md5"):
             raise ValueError("Invalid hash_type requested, should be one of {}".format(("sha256", "md5")))
-        OnDiskCacheHolderIterDataPipe._temp_dict[self] = (filepath_fn, hash_dict, hash_type, extra_check_fn)
+        self._uuid = uuid.uuid4()
+        OnDiskCacheHolderIterDataPipe._temp_dict[self] = (filepath_fn, hash_dict, hash_type, extra_check_fn, self._uuid)
 
         self._end_caching_flag: bool = False
 
@@ -231,13 +222,14 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
     # Since Demux is using this function, we should not attach it to OnDiskCacheHolder instance.
     # Otherwise, it would cause infinite recursion in graph traversal
     @staticmethod
-    def _cache_check_fn(data, filepath_fn, hash_dict, hash_type, extra_check_fn):
+    def _cache_check_fn(data, filepath_fn, hash_dict, hash_type, extra_check_fn, cache_uuid):
         filepath = data if filepath_fn is None else filepath_fn(data)
         assert not isinstance(filepath, (list, tuple))  # BC breaking, now only str is accepted as return
 
         result = CacheState.CACHED_SINGLE_ENTITY
         cached_file_exists = True
         if os.path.exists(_get_list_filename(filepath)):
+            pid_say(f"check result for {filepath} is CACHED_MULTIPLE_ENTITIES")
             return int(CacheState.CACHED_MULTIPLE_ENTITIES)
         if not os.path.exists(filepath):
             cached_file_exists = False
@@ -249,7 +241,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
             cached_file_exists = False
         print(f"check result for {filepath} is {cached_file_exists}")
         if not cached_file_exists:
-            promise_filepath = _promise_filename(filepath)
+            promise_filepath = _promise_filename(filepath, cache_uuid)
             dirname = os.path.dirname(promise_filepath)
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
@@ -275,10 +267,13 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                         promise_fh.truncate()
                         promise_fh.flush()
 
+        print(f"check results for  {filepath} is {result}")
         return int(result)
 
     def _end_caching(self):
-        filepath_fn, hash_dict, hash_type, extra_check_fn = OnDiskCacheHolderIterDataPipe._temp_dict.pop(self)
+        filepath_fn, hash_dict, hash_type, extra_check_fn, cache_uuid = OnDiskCacheHolderIterDataPipe._temp_dict.pop(
+            self
+        )
 
         todo_dp, cached_dp, one_many_cached_dp = self.source_datapipe.demux(
             3,
@@ -288,6 +283,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                 hash_dict=hash_dict,
                 hash_type=hash_type,
                 extra_check_fn=extra_check_fn,
+                cache_uuid=cache_uuid,
             ),
         )
         # Cached: keep filepath(s)
@@ -312,26 +308,27 @@ def _read_str(fd):
     return "".join(fd)
 
 
-def _find_promise_file(filename):
-    promise_filename = _promise_filename(filename)
-    return promise_filename
-
-
 def _is_promise_pending(promise_filename):
     return os.path.exists(promise_filename)
 
 
 class _WaitPendingCacheItemIterDataPipe(IterDataPipe):
-    def __init__(self, source_datapipe, timeout=300):
+    def __init__(self, source_datapipe, timeout=300, input_col=None, cache_uuid=None):
         self.source_datapipe = source_datapipe
         self.timeout = timeout
+        self.input_col = input_col
+        self._cache_uuid = cache_uuid
 
     def set_timeout(self, timeout):
         self.timeout = timeout
 
     def __iter__(self):
-        for filename in self.source_datapipe:
-            promise_filename = _find_promise_file(filename)
+        for data in self.source_datapipe:
+            if self.input_col is not None:
+                filename = data[self.input_col]
+            else:
+                filename = data
+            promise_filename = _promise_filename(filename, self._cache_uuid)
             start = time.time()
             while _is_promise_pending(promise_filename):
                 time.sleep(0.01)
@@ -340,14 +337,14 @@ class _WaitPendingCacheItemIterDataPipe(IterDataPipe):
                         f"OnDiskCache Exception: {filename} expected to be written by different process, "
                         + f"but file is not ready in {self.timeout} seconds."
                     )
-            yield filename
+            yield data
 
 
 @functional_datapipe("memory_cell")
 class _MemoryCellIterDataPipe(IterDataPipe):
     def __init__(self, source_datapipe, remember_elements=10):
         self.source_datapipe = source_datapipe
-        self.buffer = [None for i in range(remember_elements)]
+        self.buffer: List[Tuple[Any, Any]] = [(None, None) for i in range(remember_elements)]
         self.remember_elements = remember_elements
         self.buffer_pos = -1
         # TODO(VitalyFedyunin): Make it friendly to save/restore state
@@ -392,10 +389,11 @@ class _ExtractFilesFromList(IterDataPipe):
 
 
 class _FulfilledPromisesIterDataPipe(IterDataPipe):
-    def __init__(self, source_datapipe, memory_cell_dp, first_filepath_fn):
+    def __init__(self, source_datapipe, memory_cell_dp, first_filepath_fn, cache_uuid):
         self.source_datapipe = source_datapipe
         self.memory_cell_dp = memory_cell_dp
         self.first_filepath_fn = first_filepath_fn
+        self._cache_uuid = cache_uuid
 
     @staticmethod
     def _del_promise_file(promise_filename, filename):
@@ -423,40 +421,52 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
         one_to_many_detected = False
         one_to_one_detected = False
 
-        def fulfill_old_promises(buffer, last_record_uuid, first_filepath_fn):
+        def fulfill_old_promises(buffer, last_record_uuid, first_filepath_fn, cache_uuid):
             for old_rec_uuid, old_rec in buffer:
                 original_file_name = first_filepath_fn(old_rec)
-                old_promise_filename = _find_promise_file(original_file_name)
+                old_promise_filename = _promise_filename(original_file_name, cache_uuid)
+                pid_say(f"fulfill_old_promises will detele {old_promise_filename} for {original_file_name}")
                 self._del_promise_file(old_promise_filename, original_file_name)
                 if old_rec_uuid == last_record_uuid:
                     break
                 # TODO(VitalyFedyunin): If no match found, that means we exceeded length of memory_cell
                 # and there is aggressive amount 1-to-zero cases, raise error and explain how to fix
 
-        for filename in self.source_datapipe:
-            rec_uuid, record = self.memory_cell_dp.get_last()
-            original_file_name = self.first_filepath_fn(record)
-            # TODO(VitalyFedyunin): For debug mode we can detect duplicate keys situations here and warn user
-            if original_file_name != filename:
-                one_to_many_detected = True
-                if one_to_one_detected:
-                    raise Exception("DIsovered different keys when one-to-one mode previously assumed")
-                # We are dealing with one-to-many situation now
-                with open(_get_list_filename(original_file_name), "a") as fh:
-                    fh.write(f"{filename}\n")
-            else:
-                one_to_one_detected = True
-                if one_to_many_detected:
-                    # Keys should be always the same (1-1 situation) or always different (1-many) sutuation
-                    raise Exception("first key somehow equal to secondary key")
-            print(f"{filename} generateed from rec {rec_uuid} {record}")
-            if rec_uuid != last_record_uuid:
-                fulfill_old_promises(self.memory_cell_dp.get_buffer()[1:], last_record_uuid, self.first_filepath_fn)
-                last_record_uuid = rec_uuid
-            yield filename
+        try:
 
-        if last_record_uuid is not None:
-            fulfill_old_promises(self.memory_cell_dp.get_buffer(), last_record_uuid, self.first_filepath_fn)
+            for filename in self.source_datapipe:
+                rec_uuid, record = self.memory_cell_dp.get_last()
+                original_file_name = self.first_filepath_fn(record)
+                # TODO(VitalyFedyunin): For debug mode we can detect duplicate keys situations here and warn user
+                if original_file_name != filename:
+                    pid_say("One to Many detected")
+                    one_to_many_detected = True
+                    if one_to_one_detected:
+                        raise Exception("Disovered different keys when one-to-one mode previously assumed")
+                    # We are dealing with one-to-many situation now
+                    with open(_get_list_filename(original_file_name), "a") as fh:
+                        fh.write(f"{filename}\n")
+                else:
+                    pid_say("One to One detected")
+                    one_to_one_detected = True
+                    if one_to_many_detected:
+                        # Keys should be always the same (1-1 situation) or always different (1-many) sutuation
+                        raise Exception("first key somehow equal to secondary key")
+                pid_say(f"{filename} generateed from rec {rec_uuid} {record}")
+                if rec_uuid != last_record_uuid:
+                    fulfill_old_promises(
+                        self.memory_cell_dp.get_buffer()[1:], last_record_uuid, self.first_filepath_fn, self._cache_uuid
+                    )
+                    last_record_uuid = rec_uuid
+                yield filename
+            pid_say("source completed")
+
+        finally:
+            pid_say("cleanup promises")
+            if last_record_uuid is not None:
+                fulfill_old_promises(
+                    self.memory_cell_dp.get_buffer(), last_record_uuid, self.first_filepath_fn, self._cache_uuid
+                )
 
 
 @functional_datapipe("end_caching")
@@ -502,12 +512,15 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
         if cache_holder._end_caching_flag:
             raise RuntimeError("`end_caching` can only be invoked once per `OnDiskCacheHolder`")
 
-        first_filepath_fn, _hash_dict, _hash_type, _ = OnDiskCacheHolderIterDataPipe._temp_dict[cache_holder]
+        first_filepath_fn, _hash_dict, _hash_type, _, cache_uuid = OnDiskCacheHolderIterDataPipe._temp_dict[
+            cache_holder
+        ]
         cached_dp, one_many_cached_dp = cache_holder._end_caching()
-        cached_dp = cached_dp.map(functools.partial(_wait_promise_fn, timeout))
-        one_many_cached_dp = one_many_cached_dp.map(functools.partial(_wait_promise_fn, timeout), input_col=0)
+        cached_dp = _WaitPendingCacheItemIterDataPipe(cached_dp, timeout=timeout, cache_uuid=cache_uuid)
+        one_many_cached_dp = _WaitPendingCacheItemIterDataPipe(
+            one_many_cached_dp, timeout=timeout, cache_uuid=cache_uuid, input_col=0
+        )
         one_many_cached_dp = one_many_cached_dp.map(lambda x: x[1])
-
         memory_cell_dp = cache_holder.source_datapipe
 
         if same_filepath_fn:
@@ -537,7 +550,7 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
             todo_dp = todo_dp.check_hash(_hash_dict, _hash_type)
 
         todo_dp = todo_dp.save_to_disk(mode=mode)
-        todo_dp = _FulfilledPromisesIterDataPipe(todo_dp, memory_cell_dp, first_filepath_fn)
+        todo_dp = _FulfilledPromisesIterDataPipe(todo_dp, memory_cell_dp, first_filepath_fn, cache_uuid=cache_uuid)
 
         # TODO(VitalyFedyunin): This impacts determinism for partial cache situations
         return todo_dp.concat(cached_dp).concat(one_many_cached_dp)
