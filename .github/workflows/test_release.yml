@@ -27,9 +27,9 @@ jobs:
     if: github.repository == 'pytorch/data' && startsWith(github.ref_name, 'release/')
     uses: ./.github/workflows/_build_test_upload.yml
     with:
-      branch: ""
+      branch: "release/0.5"
       pre_dev_release: true
-      pytorch_version: ""
+      pytorch_version: "1.13.0"
     secrets:
       PYTORCH_BINARY_AWS_ACCESS_KEY_ID: ${{ secrets.PYTORCH_BINARY_AWS_ACCESS_KEY_ID }}
       PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY: ${{ secrets.PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY }}
