@@ -7,7 +7,7 @@
 import os
 import posixpath
 
-from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, Tuple, Union
 
 from torch.utils.data.datapipes.utils.common import match_masks
 
@@ -67,11 +67,11 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
         else:
             self.datapipe = root
         self.masks = masks
-        self.kwargs = kwargs
+        self.kwargs_for_connection = kwargs
 
     def __iter__(self) -> Iterator[str]:
         for root in self.datapipe:
-            fs, path = fsspec.core.url_to_fs(root, **self.kwargs)
+            fs, path = fsspec.core.url_to_fs(root, **self.kwargs_for_connection)
 
             if isinstance(fs.protocol, str):
                 protocol_list = [fs.protocol]
@@ -117,7 +117,8 @@ class FSSpecFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Args:
         source_datapipe: Iterable DataPipe that provides the pathnames or URLs
         mode: An optional string that specifies the mode in which the file is opened (``"r"`` by default)
-        kwargs: Extra options that make sense to a particular storage connection,
+        kwargs_for_open: Optional Dict to specify kwargs for opening files (``fs.open()``)
+        kwargs: Extra options that are used to establish a particular storage connection,
             e.g. host, port, username, password, etc.
 
     Example:
@@ -126,17 +127,20 @@ class FSSpecFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         >>> file_dp = datapipe.open_files_by_fsspec()
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r", **kwargs) -> None:
+    def __init__(
+        self, source_datapipe: IterDataPipe[str], mode: str = "r", *, kwargs_for_open: Optional[Dict] = None, **kwargs
+    ) -> None:
         _assert_fsspec()
 
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.mode: str = mode
-        self.kwargs = kwargs
+        self.kwargs_for_open = kwargs_for_open if kwargs_for_open is not None else {}
+        self.kwargs_for_connection = kwargs
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for file_uri in self.source_datapipe:
-            fs, path = fsspec.core.url_to_fs(file_uri, **self.kwargs)
-            file = fs.open(path, self.mode)
+            fs, path = fsspec.core.url_to_fs(file_uri, **self.kwargs_for_connection)
+            file = fs.open(path, self.mode, **self.kwargs_for_open)
             yield file_uri, StreamWrapper(file)
 
     def __len__(self) -> int:
@@ -158,8 +162,10 @@ class FSSpecSaverIterDataPipe(IterDataPipe[str]):
         source_datapipe: Iterable DataPipe with tuples of metadata and data
         mode: Mode in which the file will be opened for write the data (``"w"`` by default)
         filepath_fn: Function that takes in metadata and returns the target path of the new file
-        kwargs: Extra options that make sense to a particular storage connection,
+        kwargs_for_open: Optional Dict to specify kwargs for opening files (``fs.open()``)
+        kwargs: Extra options that are used to establish a particular storage connection,
             e.g. host, port, username, password, etc.
+
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
@@ -176,6 +182,8 @@ class FSSpecSaverIterDataPipe(IterDataPipe[str]):
         source_datapipe: IterDataPipe[Tuple[Any, U]],
         mode: str = "w",
         filepath_fn: Optional[Callable] = None,
+        *,
+        kwargs_for_open: Optional[Dict] = None,
         **kwargs,
     ):
         _assert_fsspec()
@@ -183,13 +191,15 @@ class FSSpecSaverIterDataPipe(IterDataPipe[str]):
         self.source_datapipe: IterDataPipe[Tuple[Any, U]] = source_datapipe
         self.mode: str = mode
         self.filepath_fn: Optional[Callable] = filepath_fn
-        self.kwargs = kwargs
+        self.kwargs_for_open = kwargs_for_open if kwargs_for_open is not None else {}
+        self.kwargs_for_connection = kwargs
 
     def __iter__(self) -> Iterator[str]:
         for meta, data in self.source_datapipe:
             filepath = meta if self.filepath_fn is None else self.filepath_fn(meta)
-            fs, path = fsspec.core.url_to_fs(filepath, **self.kwargs)
-            with fs.open(path, self.mode) as f:
+            fs, path = fsspec.core.url_to_fs(filepath, **self.kwargs_for_connection)
+            with fs.open(path, self.mode, **self.kwargs_for_open) as f:
+                print(f)
                 f.write(data)
             yield filepath
 
