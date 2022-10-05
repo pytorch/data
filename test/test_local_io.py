@@ -27,6 +27,8 @@ import expecttest
 from _utils._common_utils_for_test import create_temp_dir, create_temp_files, get_name, reset_after_n_next_calls
 
 from torch.utils.data import DataLoader
+
+from torchdata.dataloader2.adapter import CacheTimeout
 from torchdata.datapipes.iter import (
     Bz2FileLoader,
     CSVDictParser,
@@ -159,9 +161,15 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         expected_res = [("1.csv", ["key", "item"]), ("1.csv", ["a", "1"]), ("1.csv", ["b", "2"]), ("empty2.csv", [])]
         self.assertEqual(expected_res, list(csv_parser_dp))
 
+        # Functional Test: yield one row at time from each file as tuple instead of list, skipping over empty content
+        csv_parser_dp = datapipe3.parse_csv(as_tuple=True)
+        expected_res = [("key", "item"), ("a", "1"), ("b", "2"), ()]
+        self.assertEqual(expected_res, list(csv_parser_dp))
+
         # Reset Test:
         csv_parser_dp = CSVParser(datapipe3, return_path=True)
         n_elements_before_reset = 2
+        expected_res = [("1.csv", ["key", "item"]), ("1.csv", ["a", "1"]), ("1.csv", ["b", "2"]), ("empty2.csv", [])]
         res_before_reset, res_after_reset = reset_after_n_next_calls(csv_parser_dp, n_elements_before_reset)
         self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
         self.assertEqual(expected_res, res_after_reset)
@@ -391,6 +399,11 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Functional Test: Read extracted files before reaching the end of the tarfile
         self._compressed_files_comparison_helper(self.temp_files, tar_loader_dp, check_length=False)
         self._compressed_files_comparison_helper(self.temp_files, gz_reader_dp, check_length=False)
+
+        # Load from decompressed file stream
+        decomp_dp = datapipe_gz_2.decompress()
+        decomp_reader_dp = TarArchiveLoader(decomp_dp)
+        self._compressed_files_comparison_helper(self.temp_files, decomp_reader_dp, check_length=False)
 
         # Functional Test: Read extracted files after reaching the end of the tarfile
         data_refs = list(tar_loader_dp)
@@ -646,7 +659,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
     def _slow_fn(tmpdirname, x):
         with open(os.path.join(tmpdirname, str(os.getpid())), "w") as pid_fh:
             pid_fh.write("anything")
-        time.sleep(2)
+        time.sleep(10)
         return (x, "str")
 
     def test_disk_cache_locks(self):
@@ -666,6 +679,15 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             # We expect only two files, one with pid and 'downloaded' one
             self.assertEqual(2, len(all_files))
             self.assertEqual("str", result[0][1])
+
+            # cleanup cached files
+            for f in os.listdir(tmpdirname):
+                os.remove(os.path.join(tmpdirname, f))
+
+            dp = CacheTimeout(2)(dp)  # Calling adapter manually to work with classic DataLoader
+            dl = DataLoader(dp, num_workers=10, multiprocessing_context="spawn", batch_size=1, collate_fn=_unbatch)
+            with self.assertRaisesRegex(Exception, "OnDiskCache Exception"):
+                result = list(dl)
 
     # TODO(120): this test currently only covers reading from local
     # filesystem. It needs to be modified once test data can be stored on

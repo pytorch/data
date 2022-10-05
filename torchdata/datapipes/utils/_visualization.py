@@ -10,7 +10,7 @@ from collections import defaultdict
 from typing import Optional, Set, TYPE_CHECKING
 
 from torch.utils.data.datapipes.iter.combining import _ChildDataPipe, IterDataPipe
-from torch.utils.data.graph import traverse
+from torch.utils.data.graph import traverse_dps
 
 if TYPE_CHECKING:
     import graphviz
@@ -117,7 +117,7 @@ def to_nodes(dp, *, debug: bool) -> Set[Node]:
 
         return nodes
 
-    return aggregate(recurse(traverse(dp, only_datapipe=True)))
+    return aggregate(recurse(traverse_dps(dp)))
 
 
 def to_graph(dp, *, debug: bool = False) -> "graphviz.Digraph":

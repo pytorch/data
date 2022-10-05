@@ -43,7 +43,7 @@ TFRecordFeatureSpec = Tuple[Tuple[int, ...], torch.dtype]
 TFRecordExampleSpec = Dict[str, TFRecordFeatureSpec]
 
 #  Note, reccursive types not supported by mypy at the moment
-#  TODO: uncomment as soon as it becomes supported
+# TODO(640): uncomment as soon as it becomes supported
 #  https://github.com/python/mypy/issues/731
 #  BinaryData = Union[str, List['BinaryData']]
 TFRecordBinaryData = Union[str, List[str], List[List[str]], List[List[List[Any]]]]
@@ -87,7 +87,7 @@ def iterate_tfrecord_file(data: BufferedIOBase) -> Iterator[memoryview]:
         if data.readinto(crc_bytes) != 4:
             raise RuntimeError("Invalid tfrecord file: failed to read the end token.")
 
-        # TODO: check CRC
+        # TODO(641): check CRC
         yield data_bytes_view
 
 

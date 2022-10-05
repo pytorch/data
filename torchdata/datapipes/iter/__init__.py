@@ -67,7 +67,10 @@ from torchdata.datapipes.iter.transform.bucketbatcher import (
 )
 from torchdata.datapipes.iter.transform.callable import (
     BatchMapperIterDataPipe as BatchMapper,
+    DropperIterDataPipe as Dropper,
     FlatMapperIterDataPipe as FlatMapper,
+    FlattenIterDataPipe as Flattener,
+    SliceIterDataPipe as Slicer,
 )
 from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
 from torchdata.datapipes.iter.util.cacheholder import (
@@ -79,11 +82,11 @@ from torchdata.datapipes.iter.util.combining import (
     IterKeyZipperIterDataPipe as IterKeyZipper,
     MapKeyZipperIterDataPipe as MapKeyZipper,
 )
+from torchdata.datapipes.iter.util.cycler import CyclerIterDataPipe as Cycler, RepeaterIterDataPipe as Repeater
 from torchdata.datapipes.iter.util.common import (
     FlatMapTemplateIterDataPipe as FlatMapTemplate,
     MapTemplateIterDataPipe as MapTemplate,
 )
-from torchdata.datapipes.iter.util.cycler import CyclerIterDataPipe as Cycler
 from torchdata.datapipes.iter.util.dataframemaker import (
     DataFrameMakerIterDataPipe as DataFrameMaker,
     ParquetDFLoaderIterDataPipe as ParquetDataFrameLoader,
@@ -93,7 +96,7 @@ from torchdata.datapipes.iter.util.decompressor import (
     ExtractorIterDataPipe as Extractor,
 )
 from torchdata.datapipes.iter.util.hashchecker import HashCheckerIterDataPipe as HashChecker
-from torchdata.datapipes.iter.util.header import HeaderIterDataPipe as Header
+from torchdata.datapipes.iter.util.header import HeaderIterDataPipe as Header, LengthSetterIterDataPipe as LengthSetter
 from torchdata.datapipes.iter.util.indexadder import (
     EnumeratorIterDataPipe as Enumerator,
     IndexAdderIterDataPipe as IndexAdder,
@@ -106,6 +109,9 @@ from torchdata.datapipes.iter.util.plain_text_reader import (
     CSVParserIterDataPipe as CSVParser,
     LineReaderIterDataPipe as LineReader,
 )
+from torchdata.datapipes.iter.util.prefetch import FullSyncIterDataPipe as FullSync
+from torchdata.datapipes.iter.util.prefetcher import PrefetcherIterDataPipe as Prefetcher
+from torchdata.datapipes.iter.util.randomsplitter import RandomSplitterIterDataPipe as RandomSplitter
 from torchdata.datapipes.iter.util.rararchiveloader import RarArchiveLoaderIterDataPipe as RarArchiveLoader
 from torchdata.datapipes.iter.util.rows2columnar import Rows2ColumnarIterDataPipe as Rows2Columnar
 from torchdata.datapipes.iter.util.samplemultiplexer import SampleMultiplexerDataPipe as SampleMultiplexer
@@ -147,6 +153,7 @@ __all__ = [
     "DataFrameMaker",
     "Decompressor",
     "Demultiplexer",
+    "Dropper",
     "EndOnDiskCacheHolder",
     "Enumerator",
     "Extractor",
@@ -158,7 +165,9 @@ __all__ = [
     "Filter",
     "FlatMapTemplate",
     "FlatMapper",
+    "Flattener",
     "Forker",
+    "FullSync",
     "GDriveReader",
     "Grouper",
     "HashChecker",
@@ -175,6 +184,7 @@ __all__ = [
     "IterKeyZipper",
     "IterableWrapper",
     "JsonParser",
+    "LengthSetter",
     "LineReader",
     "MapKeyZipper",
     "MapTemplate",
@@ -187,7 +197,10 @@ __all__ = [
     "OnlineReader",
     "ParagraphAggregator",
     "ParquetDataFrameLoader",
+    "Prefetcher",
+    "RandomSplitter",
     "RarArchiveLoader",
+    "Repeater",
     "RoutedDecoder",
     "Rows2Columnar",
     "S3FileLister",
@@ -197,6 +210,7 @@ __all__ = [
     "Saver",
     "ShardingFilter",
     "Shuffler",
+    "Slicer",
     "StreamReader",
     "TFRecordLoader",
     "TarArchiveLoader",

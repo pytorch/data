@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import functools
 import hashlib
 import inspect
 import os.path
@@ -30,7 +29,7 @@ except ImportError as e:
 
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, DILL_AVAILABLE
 
-from torch.utils.data.graph import traverse
+from torch.utils.data.graph import traverse_dps
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import FileLister, IterDataPipe
 
@@ -125,7 +124,7 @@ def _hash_check(filepath, hash_dict, hash_type):
         hash_func = hashlib.md5()
 
     # with portalocker.Lock(filepath, "rb", flags=portalocker.LockFlags.SHARED) as f:
-    # TODO(VitalyFedyunin): Line above will require all readers (Win) to obtain proper locks,
+    # TODO(634): Line above will require all readers (Win) to obtain proper locks,
     # I'm putting it on hold as we need to modify PyTorch core codebase heavily.
     with open(filepath, "rb") as f:
         chunk = f.read(1024 ** 2)
@@ -243,9 +242,17 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                 if not file_exists:
                     result = 0
                     promise_fh.seek(0)
-                    promise_fh.write("[dataloader session uid]")
-                    promise_fh.truncate()
-                    promise_fh.flush()
+                    data = promise_fh.read()
+                    # TODO(635): Potentially there is old .promise file from previous failed run, we
+                    # need to somehow propagate uniq session id for dataloader, save and compare it here,
+                    # raising error
+                    file_exists = len(data) > 0
+                    if not file_exists:
+                        result = False
+                        promise_fh.seek(0)
+                        promise_fh.write("[dataloader session uid]")
+                        promise_fh.truncate()
+                        promise_fh.flush()
 
         return result
 
@@ -299,17 +306,26 @@ def _is_promise_pending(promise_filename):
     return os.path.exists(promise_filename)
 
 
-def _wait_promise_fn(timeout, filename):
-    promise_filename = _find_promise_file(filename)
-    start = time.time()
-    while _is_promise_pending(promise_filename):
-        time.sleep(0.01)
-        if time.time() - start > timeout:
-            raise Exception(
-                f"OnDiskCache Exception: {filename} expected to be written by different process, "
-                + f"but file is not ready in {timeout} seconds."
-            )
-    return filename
+class _WaitPendingCacheItemIterDataPipe(IterDataPipe):
+    def __init__(self, source_datapipe, timeout=300):
+        self.source_datapipe = source_datapipe
+        self.timeout = timeout
+
+    def set_timeout(self, timeout):
+        self.timeout = timeout
+
+    def __iter__(self):
+        for filename in self.source_datapipe:
+            promise_filename = _find_promise_file(filename)
+            start = time.time()
+            while _is_promise_pending(promise_filename):
+                time.sleep(0.01)
+                if time.time() - start > self.timeout:
+                    raise Exception(
+                        f"OnDiskCache Exception: {filename} expected to be written by different process, "
+                        + f"but file is not ready in {self.timeout} seconds."
+                    )
+            yield filename
 
 
 @functional_datapipe("memory_cell")
@@ -405,10 +421,13 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
                 self._del_promise_file(old_promise_filename, original_file_name)
                 if old_rec_uuid == last_record_uuid:
                     break
+                # TODO(VitalyFedyunin): If no match found, that means we exceeded length of memory_cell 
+                # and there is aggressive amount 1-to-zero cases, raise error and explain how to fix 
 
         for filename in self.source_datapipe:
             rec_uuid, record = self.memory_cell_dp.get_last()
             original_file_name = self.first_filepath_fn(record)
+            # TODO(VitalyFedyunin): For debug mode we can detect duplicate keys situations here and warn user
             if original_file_name != filename:
                 one_to_many_detected = True
                 if one_to_one_detected:
@@ -466,7 +485,7 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
         if filepath_fn is not None and same_filepath_fn:
             raise ValueError("`filepath_fn` is mutually exclusive with `same_filepath_fn`")
 
-        graph = traverse(datapipe, only_datapipe=True)
+        graph = traverse_dps(datapipe)
         # Get the last CacheHolder
         cache_holder = EndOnDiskCacheHolderIterDataPipe._recursive_search(graph)
         if cache_holder is None:
@@ -517,12 +536,12 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
 
     @staticmethod
     def _recursive_search(graph):
-        for dp in graph.keys():
+        for dp, _ in graph.values():
             # Find the closest CacheHolder
             if isinstance(dp, OnDiskCacheHolderIterDataPipe):
                 return dp
-        for dp in graph.values():
-            res = EndOnDiskCacheHolderIterDataPipe._recursive_search(dp)
+        for _, sub_graph in graph.values():
+            res = EndOnDiskCacheHolderIterDataPipe._recursive_search(sub_graph)
             if res is not None:
                 return res
         return None
