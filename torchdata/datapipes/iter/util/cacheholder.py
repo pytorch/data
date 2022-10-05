@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import functools
 import hashlib
 import inspect
 import os.path
@@ -14,7 +15,7 @@ import warnings
 
 from collections import deque
 from functools import partial
-from typing import Any, Callable, Deque, Dict, Iterator, List, Optional, TypeVar
+from typing import Callable, Deque, Dict, Iterator, Optional, TypeVar
 
 try:
     import portalocker
@@ -31,7 +32,7 @@ from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, DILL_A
 
 from torch.utils.data.graph import traverse_dps
 from torchdata.datapipes import functional_datapipe
-from torchdata.datapipes.iter import FileLister, IterDataPipe
+from torchdata.datapipes.iter import IterDataPipe
 
 if DILL_AVAILABLE:
     import dill
@@ -111,6 +112,19 @@ def _generator_to_list(gen_fn):
         return list(gen)
 
     return list_fn
+
+
+def _wait_promise_fn(timeout, filename):
+    promise_filename = _find_promise_file(filename)
+    start = time.time()
+    while _is_promise_pending(promise_filename):
+        time.sleep(0.01)
+        if time.time() - start > timeout:
+            raise Exception(
+                f"OnDiskCache Exception: {filename} expected to be written by different process, "
+                + f"but file is not ready in {timeout} seconds."
+            )
+    return filename
 
 
 def _hash_check(filepath, hash_dict, hash_type):
@@ -421,8 +435,8 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
                 self._del_promise_file(old_promise_filename, original_file_name)
                 if old_rec_uuid == last_record_uuid:
                     break
-                # TODO(VitalyFedyunin): If no match found, that means we exceeded length of memory_cell 
-                # and there is aggressive amount 1-to-zero cases, raise error and explain how to fix 
+                # TODO(VitalyFedyunin): If no match found, that means we exceeded length of memory_cell
+                # and there is aggressive amount 1-to-zero cases, raise error and explain how to fix
 
         for filename in self.source_datapipe:
             rec_uuid, record = self.memory_cell_dp.get_last()

@@ -82,11 +82,11 @@ from torchdata.datapipes.iter.util.combining import (
     IterKeyZipperIterDataPipe as IterKeyZipper,
     MapKeyZipperIterDataPipe as MapKeyZipper,
 )
-from torchdata.datapipes.iter.util.cycler import CyclerIterDataPipe as Cycler, RepeaterIterDataPipe as Repeater
 from torchdata.datapipes.iter.util.common import (
     FlatMapTemplateIterDataPipe as FlatMapTemplate,
     MapTemplateIterDataPipe as MapTemplate,
 )
+from torchdata.datapipes.iter.util.cycler import CyclerIterDataPipe as Cycler, RepeaterIterDataPipe as Repeater
 from torchdata.datapipes.iter.util.dataframemaker import (
     DataFrameMakerIterDataPipe as DataFrameMaker,
     ParquetDFLoaderIterDataPipe as ParquetDataFrameLoader,
