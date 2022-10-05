@@ -69,6 +69,7 @@ from torchdata.datapipes.iter.transform.callable import (
     BatchMapperIterDataPipe as BatchMapper,
     DropperIterDataPipe as Dropper,
     FlatMapperIterDataPipe as FlatMapper,
+    FlatMapperProtoIterDataPipe as FlatMapperProto,
     FlattenIterDataPipe as Flattener,
     SliceIterDataPipe as Slicer,
 )
@@ -165,6 +166,7 @@ __all__ = [
     "Filter",
     "FlatMapTemplate",
     "FlatMapper",
+    "FlatMapperProto",
     "Flattener",
     "Forker",
     "FullSync",
