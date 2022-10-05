@@ -31,7 +31,7 @@ from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, DILL_A
 
 from torch.utils.data.graph import traverse_dps
 from torchdata.datapipes import functional_datapipe
-from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 
 if DILL_AVAILABLE:
     import dill
@@ -208,6 +208,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         OnDiskCacheHolderIterDataPipe._temp_dict[self] = (filepath_fn, hash_dict, hash_type, extra_check_fn, self._uuid)
 
         self._end_caching_flag: bool = False
+        self._download_everything = False  # This is internal field used for load testing only
 
     def __iter__(self):
         if self._end_caching_flag:
@@ -275,17 +276,29 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
             self
         )
 
-        todo_dp, cached_dp, one_many_cached_dp = self.source_datapipe.demux(
-            3,
-            partial(
-                OnDiskCacheHolderIterDataPipe._cache_check_fn,
-                filepath_fn=filepath_fn,
-                hash_dict=hash_dict,
-                hash_type=hash_type,
-                extra_check_fn=extra_check_fn,
-                cache_uuid=cache_uuid,
-            ),
-        )
+        todo_dp: Any
+        cached_dp: Any
+        one_many_cached_dp: Any
+
+        if self._download_everything:
+
+            todo_dp = self.source_datapipe
+            cached_dp = IterableWrapper([])
+            one_many_cached_dp = IterableWrapper([])
+
+        else:
+
+            todo_dp, cached_dp, one_many_cached_dp = self.source_datapipe.demux(
+                3,
+                partial(
+                    OnDiskCacheHolderIterDataPipe._cache_check_fn,
+                    filepath_fn=filepath_fn,
+                    hash_dict=hash_dict,
+                    hash_type=hash_type,
+                    extra_check_fn=extra_check_fn,
+                    cache_uuid=cache_uuid,
+                ),
+            )
         # Cached: keep filepath(s)
         cached_dp = cached_dp.map(fn=filepath_fn)
 
@@ -344,7 +357,7 @@ class _WaitPendingCacheItemIterDataPipe(IterDataPipe):
 class _MemoryCellIterDataPipe(IterDataPipe):
     def __init__(self, source_datapipe, remember_elements=10):
         self.source_datapipe = source_datapipe
-        self.buffer: List[Tuple[Any, Any]] = [(None, None) for i in range(remember_elements)]
+        self.buffer: List[Optional[Tuple[Any, Any]]] = [None for i in range(remember_elements)]
         self.remember_elements = remember_elements
         self.buffer_pos = -1
         # TODO(VitalyFedyunin): Make it friendly to save/restore state

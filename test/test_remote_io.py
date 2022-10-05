@@ -191,6 +191,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         file_cache_dp = OnDiskCacheHolder(
             tar_cache_dp, filepath_fn=lambda tar_path: os.path.join(os.path.dirname(tar_path), root_dir)
         )
+        remember_cache_dp_object = file_cache_dp
         file_cache_dp = FileOpener(file_cache_dp, mode="rb").load_from_tar()
 
         def debug_filepath(file_path):
@@ -225,6 +226,13 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         if not IS_WINDOWS:
             dl = DataLoader(file_cache_dp, num_workers=3, multiprocessing_context="fork", batch_size=1)
             expected = [[os.path.join(self.temp_dir.name, root_dir, f"{i}.csv")] for i in range(3)] * 3
+            res = list(dl)
+            self.assertEqual(sorted(expected), sorted(res))
+
+            remember_cache_dp_object._download_everything = True
+            workers = 100
+            dl = DataLoader(file_cache_dp, num_workers=workers, multiprocessing_context="fork", batch_size=1)
+            expected = [[os.path.join(self.temp_dir.name, root_dir, f"{i}.csv")] for i in range(3)] * workers
             res = list(dl)
             self.assertEqual(sorted(expected), sorted(res))
 
