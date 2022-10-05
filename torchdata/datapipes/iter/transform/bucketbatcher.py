@@ -10,6 +10,8 @@ import random
 from functools import partial
 from typing import Callable, Iterator, List, Optional, TypeVar
 
+import torch
+
 from torchdata.datapipes import DataChunk, functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
@@ -37,14 +39,61 @@ class InBatchShufflerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
 
     def __init__(self, datapipe: IterDataPipe[DataChunk[T_co]]):
         self.datapipe = datapipe
+        self._enabled = True
+        self._seed: Optional[int] = None
+        self._rng = random.Random()
+
+    def set_shuffle(self, shuffle=True):
+        self._enabled = shuffle
+        return self
+
+    def set_seed(self, seed: int):
+        self._seed = seed
+        return self
 
     def __iter__(self) -> Iterator[DataChunk[T_co]]:
-        for batch in self.datapipe:
-            random.shuffle(batch)
-            yield batch
+        if not self._enabled:
+            for batch in self.datapipe:
+                yield batch
+        else:
+            for batch in self.datapipe:
+                new_batch = self._rng.sample(batch, len(batch))
+                yield DataChunk(new_batch)
+
+    def reset(self) -> None:
+        if self._enabled:
+            if self._seed is None:
+                self._seed = int(torch.empty((), dtype=torch.int64).random_().item())
+            self._rng.seed(self._seed)
+            self._seed = None
 
     def __len__(self) -> int:
         return len(self.datapipe)
+
+    def __getstate__(self):
+        state = (
+            self.datapipe,
+            self._enabled,
+            self._seed,
+            self._rng.getstate(),
+            self._valid_iterator_id,
+            self._number_of_samples_yielded,
+        )
+        if IterDataPipe.getstate_hook is not None:
+            return IterDataPipe.getstate_hook(state)
+        return state
+
+    def __setstate__(self, state):
+        (
+            self.datapipe,
+            self._enabled,
+            self._seed,
+            rng_state,
+            self._valid_iterator_id,
+            self._number_of_samples_yielded,
+        ) = state
+        self._rng = random.Random()
+        self._rng.setstate(rng_state)
 
 
 @functional_datapipe("bucketbatch")
@@ -155,6 +204,16 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
     For an example in the audio domain, it may be batching samples with similar length. Then, given the
     ``max_token_count``, each batch may be concatenated to a Tensor with the same size and minimum padding.
 
+    If ``include_padding`` is set to ``True``, the token count of each batch includes the padding a succeeding
+    DataPipe could add. This guarentees that even after the batch is padded, ``max_token_count`` will not be exceeded.
+    This can prevent out-of-memory issues for data with large variations in length.
+
+    Note that batches are bucketized starting from the smallest size in a buffer.
+    This can limit the variablity of batches if ``buffer_size`` is large.
+    To increase variablity, apply ``torchdata.datapipes.iter.Shuffler`` before and after this DataPipe,
+    and keep ``buffer_size`` small.
+
+
     Args:
         datapipe: Iterable DataPipe being batched
         max_token_count: Maximum length of total length of data in each batch
@@ -162,6 +221,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         min_len: Optional minimum length to be included into each batch
         max_len: Optional maximum length to be included into each batch.
         buffer_size: This restricts how many tokens are taken from prior DataPipe to bucketize
+        include_padding: If True, the size of each batch includes the extra padding to the largest length in the batch.
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
@@ -189,6 +249,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         min_len: int = 0,
         max_len: Optional[int] = None,
         buffer_size: int = 1000,
+        include_padding: bool = False,
     ) -> None:
         if max_len is None:
             max_len = max_token_count
@@ -204,28 +265,45 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         self.datapipe = datapipe
         self.max_token_count = max_token_count
         self.buffer_size = buffer_size
+        self.include_padding = include_padding
 
     def __iter__(self) -> Iterator[DataChunk[T_co]]:
         buffer: List = []
         batch: List = []
         batch_size: int = 0
+        max_length: int = 0
         for d in self.datapipe:
             heapq.heappush(buffer, d)
             if len(buffer) == self.buffer_size:
-                length, token = heapq.heappop(buffer)
-                if batch_size + length > self.max_token_count:
-                    yield DataChunk(batch)
-                    batch = []
-                    batch_size = 0
-                batch.append(token)
-                batch_size += length
+                buffer, batch, batch_size, max_length, data_chunk = self._pop_buffer(
+                    buffer, batch, batch_size, max_length
+                )
+                if data_chunk is not None:
+                    yield data_chunk
         while buffer:
-            length, token = heapq.heappop(buffer)
-            if batch_size + length > self.max_token_count:
-                yield DataChunk(batch)
-                batch = []
-                batch_size = 0
-            batch.append(token)
-            batch_size += length
+            buffer, batch, batch_size, max_length, data_chunk = self._pop_buffer(buffer, batch, batch_size, max_length)
+            if data_chunk is not None:
+                yield data_chunk
         if batch:
             yield DataChunk(batch)
+
+    def _pop_buffer(self, buffer: List, batch: List, batch_size: int, max_length: int):
+        data_chunk_to_yield = None
+        length, token = heapq.heappop(buffer)
+
+        if self.include_padding:
+            max_length = max(length, max_length)
+            new_batch_size = (len(batch) + 1) * max_length
+        else:
+            new_batch_size = batch_size + length
+
+        if new_batch_size > self.max_token_count:
+            data_chunk_to_yield = DataChunk(batch)
+            batch = [token]
+            batch_size = length
+            max_length = length
+        else:
+            batch.append(token)
+            batch_size = new_batch_size
+
+        return buffer, batch, batch_size, max_length, data_chunk_to_yield

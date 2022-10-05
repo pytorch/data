@@ -83,6 +83,12 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         # __len__ Test: returns the length of source DataPipe
         self.assertEqual(1, len(http_reader_dp))
 
+        # Error Test: test if the Http Reader raises an error when the url is invalid
+        error_url = "https://github.com/pytorch/data/this/url/dont/exist"
+        http_error_dp = HttpReader(IterableWrapper([error_url]), timeout=timeout)
+        with self.assertRaisesRegex(Exception, "[404]"):
+            next(iter(http_error_dp.readlines()))
+
     def test_on_disk_cache_holder_iterdatapipe(self):
         tar_file_url = "https://raw.githubusercontent.com/pytorch/data/main/test/_fakedata/csv.tar.gz"
         expected_file_name = os.path.join(self.temp_dir.name, "csv.tar.gz")
@@ -284,7 +290,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             "s3://aft-vbi-pds/bin-images/111",
             "s3://aft-vbi-pds/bin-images/222",
         ]
-        s3_lister_dp = S3FileLister(IterableWrapper(file_urls), region="us-east-1")
+        s3_lister_dp = S3FileLister(IterableWrapper(file_urls), request_timeout_ms=10000, region="us-east-1")
         self.assertEqual(sum(1 for _ in s3_lister_dp), 2212, f"{input} failed")
 
         # S3FileLister: incorrect inputs
