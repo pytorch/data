@@ -657,11 +657,13 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
     @staticmethod
     def _slow_fn(tmpdirname, x):
+        print("running slow function on", x)
         import os
 
         with open(os.path.join(tmpdirname, str(os.getpid())), "w") as pid_fh:
             pid_fh.write("anything")
         time.sleep(10)
+        print("completed slow function on", x)
         return (x, "str")
 
     def test_disk_cache_locks(self):
@@ -685,6 +687,8 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             # cleanup cached files
             for f in os.listdir(tmpdirname):
                 os.remove(os.path.join(tmpdirname, f))
+            print("-----------------------------------------------")
+            print("now testing timeput situation")
 
             dp = CacheTimeout(2)(dp)  # Calling adapter manually to work with classic DataLoader
             dl = DataLoader(dp, num_workers=10, multiprocessing_context="spawn", batch_size=1, collate_fn=_unbatch)

@@ -46,6 +46,10 @@ PROMISE_FILE_DELETE_RETRY_INTERVAL = 0.005
 from enum import IntEnum
 
 
+def pid_say(*args):
+    print(os.getpid(), ":::", *args)
+
+
 class CacheState(IntEnum):
     UNCACHED = 0
     CACHED_SINGLE_ENTITY = 1
@@ -230,6 +234,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         result = CacheState.CACHED_SINGLE_ENTITY
         cached_file_exists = True
         if os.path.exists(_get_list_filename(filepath)):
+            pid_say(f"check result for {filepath} is CACHED_MULTIPLE_ENTITIES")
             return int(CacheState.CACHED_MULTIPLE_ENTITIES)
         if not os.path.exists(filepath):
             cached_file_exists = False
@@ -239,6 +244,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         elif extra_check_fn is not None and not extra_check_fn(filepath):
             # TODO: It is safer to assume that entire cache is compromised and require user to wipe it
             cached_file_exists = False
+        print(f"check result for {filepath} is {cached_file_exists}")
         if not cached_file_exists:
             promise_filepath = _promise_filename(filepath, cache_uuid)
             dirname = os.path.dirname(promise_filepath)
@@ -266,6 +272,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
                         promise_fh.truncate()
                         promise_fh.flush()
 
+        print(f"check results for  {filepath} is {result}")
         return int(result)
 
     def _end_caching(self):
@@ -390,9 +397,11 @@ class _ExtractFilesFromList(IterDataPipe):
 
     def __iter__(self):
         for filename in self.source_datapipe:
+            print("Extracting files from list ", _get_list_filename(filename))
             with open(_get_list_filename(filename)) as fh:
                 for line in fh:
                     inner_file_name = line.rstrip()
+                    print("extracted file ", inner_file_name)
                     yield filename, inner_file_name
 
 
@@ -405,6 +414,7 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
 
     @staticmethod
     def _del_promise_file(promise_filename, filename):
+        print(f"Removing {promise_filename} for {filename}")
         if os.path.exists(promise_filename):
             retry = True
             start = time.time()
@@ -432,6 +442,7 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
             for old_rec_uuid, old_rec in buffer:
                 original_file_name = first_filepath_fn(old_rec)
                 old_promise_filename = _promise_filename(original_file_name, cache_uuid)
+                pid_say(f"fulfill_old_promises will detele {old_promise_filename} for {original_file_name}")
                 self._del_promise_file(old_promise_filename, original_file_name)
                 if old_rec_uuid == last_record_uuid:
                     break
@@ -445,6 +456,7 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
                 original_file_name = self.first_filepath_fn(record)
                 # TODO(VitalyFedyunin): For debug mode we can detect duplicate keys situations here and warn user
                 if original_file_name != filename:
+                    pid_say("One to Many detected")
                     one_to_many_detected = True
                     if one_to_one_detected:
                         raise Exception("Disovered different keys when one-to-one mode previously assumed")
@@ -452,17 +464,22 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
                     with open(_get_list_filename(original_file_name), "a") as fh:
                         fh.write(f"{filename}\n")
                 else:
+                    pid_say("One to One detected")
                     one_to_one_detected = True
                     if one_to_many_detected:
                         # Keys should be always the same (1-1 situation) or always different (1-many) sutuation
                         raise Exception("first key somehow equal to secondary key")
+                pid_say(f"{filename} generateed from rec {rec_uuid} {record}")
                 if rec_uuid != last_record_uuid:
                     fulfill_old_promises(
                         self.memory_cell_dp.get_buffer()[1:], last_record_uuid, self.first_filepath_fn, self._cache_uuid
                     )
                     last_record_uuid = rec_uuid
                 yield filename
+            pid_say("source completed")
+
         finally:
+            pid_say("cleanup promises")
             if last_record_uuid is not None:
                 fulfill_old_promises(
                     self.memory_cell_dp.get_buffer(), last_record_uuid, self.first_filepath_fn, self._cache_uuid
@@ -533,8 +550,16 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
             else:
                 todo_dp = todo_dp.map(fn=_read_bytes, input_col=1)
 
+        def dbg(prefix, data):
+            print(prefix, data)
+            return data
+
         if filepath_fn is not None:
-            todo_dp = todo_dp.map(fn=filepath_fn, input_col=0)
+            todo_dp = (
+                todo_dp.map(partial(dbg, "original name"), input_col=0)
+                .map(fn=filepath_fn, input_col=0)
+                .map(partial(dbg, "generated name"), input_col=0)
+            )
 
         # Extra hash check here when hash is provided.
         # And, raise Error if data returned from prior operations doesn't meet hash
