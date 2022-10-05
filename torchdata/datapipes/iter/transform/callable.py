@@ -11,7 +11,7 @@ import warnings
 from typing import Callable, Hashable, Iterator, List, Optional, Set, Sized, TypeVar, Union
 
 from torch.utils.data import functional_datapipe, IterDataPipe
-from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
+from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, validate_input_col
 
 T_co = TypeVar("T_co", covariant=True)
 
