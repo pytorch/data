@@ -3,9 +3,6 @@
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
-
-from abc import abstractmethod
-
 from typing import Iterable, TypeVar
 
 from torchdata.datapipes.iter import FlatMapperProto, Mapper
@@ -18,7 +15,7 @@ class MapTemplateIterDataPipe(Mapper[T_co]):
         fn = self._map
         super().__init__(source_datapipe, fn=fn, input_col=input_col, output_col=output_col)
 
-    @abstractmethod
+    # TODO(VitalyFedyunin): Make it @abstractmethod, and make compatible with more strict typing of child classes
     def _map(self, *args, **kwargs) -> T_co:
         raise NotImplementedError
 
@@ -28,6 +25,6 @@ class FlatMapTemplateIterDataPipe(FlatMapperProto[T_co]):
         fn = self._flatmap
         super().__init__(source_datapipe, fn=fn, input_col=input_col, output_col=output_col, length=length)
 
-    @abstractmethod
+    # TODO(VitalyFedyunin): Make it @abstractmethod, and make compatible with more strict typing of child classes
     def _flatmap(self, *args, **kwargs) -> Iterable[T_co]:
         raise NotImplementedError
