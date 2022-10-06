@@ -315,11 +315,12 @@ with ``"s3://BUCKET_NAME"`` to ``FSSpecFileLister``.
     dp = IterableWrapper(["s3://BUCKET_NAME"]).list_files_by_fsspec()
 
 You can also open files using ``FSSpecFileOpener`` and stream them (if supported by the file format).
-Note that you can also provide additional parameters via the argument ``kwargs_for_open``, such as
-accessing specific bucket version.
+Note that you can also provide additional parameters via the argument ``kwargs_for_open``; this can be
+useful for purposes such as accessing specific bucket version. The supported arguments vary by
+the (cloud) file system that you are accessing.
 
 In the example below, we are streaming the archive by using ``.load_from_tar(mode="r|")``
-(in contrast with ``mode="r:"``). That allows us to start processing data inside the archive
+(in contrast with ``mode="r:"``). That allows us to begin processing data inside the archive
 without downloading the whole archive into memory first.
 
 .. code:: python
