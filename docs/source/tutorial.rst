@@ -294,3 +294,76 @@ The stack of DataPipes can then be constructed using their functional forms (rec
 
 In the above example, ``datapipes1`` and ``datapipes2`` represent the exact same stack of ``IterDataPipe``\s. We
 recommend using the functional form of DataPipes.
+
+Working with Cloud Storage Providers
+---------------------------------------------
+
+Accessing AWS S3 with `fsspec` DataPipes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This requires the installation of the libraries ``fsspec``
+(`documentation <https://filesystem-spec.readthedocs.io/en/latest/>`_) and ``s3fs``
+(`s3fs GitHub repo <https://github.com/fsspec/s3fs>`_).
+
+You can list out the files within a S3 bucket directory by passing a path that starts
+with ``"s3://BUCKET_NAME"`` to ``FSSpecFileLister``.
+
+.. code:: python
+
+    from torchdata.datapipes.iter import IterableWrapper
+
+    dp = IterableWrapper(["s3://BUCKET_NAME"]).list_files_by_fsspec()
+
+You can also open files using ``FSSpecFileOpener`` and stream them (if supported by the file format).
+Note that you can also provide additional parameters via the argument ``kwargs_for_open``, such as
+accessing specific bucket version.
+
+In the example below, we are streaming the archive by using ``.load_from_tar(mode="r|")``
+(in contrast with ``mode="r:"``). That allows us to start processing data inside the archive
+without downloading the whole archive into memory first.
+
+.. code:: python
+
+    from torchdata.datapipes.iter import IterableWrapper
+    dp = IterableWrapper(["s3://BUCKET_NAME/DIRECTORY/1.tar"])
+    dp = dp.open_files_by_fsspec(mode="rb", anon=True).load_from_tar(mode="r|") # Streaming version
+    # The rest of data processing logic goes here
+
+
+Finally, ``FSSpecFileSaver`` is also available for writing data to cloud.
+
+Accessing Google Cloud Storage (GCS) with ``fsspec`` DataPipes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This requires the installation of the libraries ``fsspec``
+(`documentation <https://filesystem-spec.readthedocs.io/en/latest/>`_) and ``gcsfs``
+(`gcsfs GitHub repo <https://github.com/fsspec/gcsfs>`_).
+
+You can list out the files within a GCS bucket directory by specifying a path that starts
+with ``"gcs://BUCKET_NAME"``. The bucket name in the example below is ``uspto-pair``.
+
+.. code:: python
+
+    from torchdata.datapipes.iter import IterableWrapper
+
+    dp = IterableWrapper(["gcs://uspto-pair/"]).list_files_by_fsspec()
+    print(list(dp))
+    # ['gcs://uspto-pair/applications', 'gcs://uspto-pair/docs', 'gcs://uspto-pair/prosecution-history-docs']
+
+Here is an example of loading a zip file ``05900035.zip`` from a bucket named ``uspto-pair`` inside the
+directory ``applications``.
+
+.. code:: python
+
+    from torchdata.datapipes.iter import IterableWrapper
+
+    dp = IterableWrapper(["gcs://uspto-pair/applications/05900035.zip"]) \
+            .open_files_by_fsspec(mode="rb") \
+            .load_from_zip()
+    # Logic to process those archive files come after
+    for path, filestream in dp:
+        print(path, filestream)
+    # gcs:/uspto-pair/applications/05900035.zip/05900035/README.txt, StreamWrapper<...>
+    # gcs:/uspto-pair/applications/05900035.zip/05900035/05900035-address_and_attorney_agent.tsv, StreamWrapper<...>
+    # gcs:/uspto-pair/applications/05900035.zip/05900035/05900035-application_data.tsv, StreamWrapper<...>
+    # gcs:/uspto-pair/applications/05900035.zip/05900035/05900035-continuity_data.tsv, StreamWrapper<...>
+    # gcs:/uspto-pair/applications/05900035.zip/05900035/05900035-transaction_history.tsv, StreamWrapper<...>
