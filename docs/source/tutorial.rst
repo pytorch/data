@@ -298,7 +298,7 @@ recommend using the functional form of DataPipes.
 Working with Cloud Storage Providers
 ---------------------------------------------
 
-Accessing AWS S3 with `fsspec` DataPipes
+Accessing AWS S3 with ``fsspec`` DataPipes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This requires the installation of the libraries ``fsspec``
