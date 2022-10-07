@@ -37,7 +37,8 @@ def _assert_fsspec() -> None:
 class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
     r"""
     Lists the contents of the directory at the provided ``root`` pathname or URL,
-    and yields the full pathname or URL for each file within the directory.
+    and yields the full pathname or URL for each file within the
+    directory (functional name: ``list_files_by_fsspec``).
 
     Args:
         root: The root `fsspec` path directory or list of path directories to list files from
