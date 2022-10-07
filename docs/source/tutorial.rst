@@ -298,6 +298,14 @@ recommend using the functional form of DataPipes.
 Working with Cloud Storage Providers
 ---------------------------------------------
 
+In this section, we show examples accessing AWS S3 and Google Cloud Storage with built-in``fsspec`` DataPipes.
+Although only those two providers are discussed here, with additional libraries, ``fsspec`` DataPipes
+should allow you to connect with other storage systems as well (`list of known
+implementations <https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations>`_).
+
+Let us know on GitHub if you have a request for support for other cloud storage providers,
+or you have code examples to share with the community.
+
 Accessing AWS S3 with ``fsspec`` DataPipes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -306,7 +314,8 @@ This requires the installation of the libraries ``fsspec``
 (`s3fs GitHub repo <https://github.com/fsspec/s3fs>`_).
 
 You can list out the files within a S3 bucket directory by passing a path that starts
-with ``"s3://BUCKET_NAME"`` to ``FSSpecFileLister``.
+with ``"s3://BUCKET_NAME"`` to
+`FSSpecFileLister <generated/torchdata.datapipes.iter.FSSpecFileLister.html>`_ (``.list_files_by_fsspec(...)``).
 
 .. code:: python
 
@@ -314,13 +323,19 @@ with ``"s3://BUCKET_NAME"`` to ``FSSpecFileLister``.
 
     dp = IterableWrapper(["s3://BUCKET_NAME"]).list_files_by_fsspec()
 
-You can also open files using ``FSSpecFileOpener`` and stream them (if supported by the file format).
-Note that you can also provide additional parameters via the argument ``kwargs_for_open``; this can be
-useful for purposes such as accessing specific bucket version. The supported arguments vary by
-the (cloud) file system that you are accessing.
+You can also open files using `FSSpecFileOpener <generated/torchdata.datapipes.iter.FSSpecFileOpener.html>`_
+(``.open_files_by_fsspec(...)``) and stream them
+(if supported by the file format).
 
-In the example below, we are streaming the archive by using ``.load_from_tar(mode="r|")``
-(in contrast with ``mode="r:"``). That allows us to begin processing data inside the archive
+Note that you can also provide additional parameters via
+the argument ``kwargs_for_open``. This can be useful for purposes such as accessing specific
+bucket version, which you can do so by passing in ``{version_id: 'SOMEVERSIONID'}`` (more `details
+about S3 bucket version awareness <https://s3fs.readthedocs.io/en/latest/#bucket-version-awareness>`_
+by ``s3fs``). The supported arguments vary by the (cloud) file system that you are accessing.
+
+In the example below, we are streaming the archive by using
+`TarArchiveLoader <generated/torchdata.datapipes.iter.TarArchiveLoader.html#>`_ (``.load_from_tar(mode="r|")``),
+in contrast with the usual ``mode="r:"``. This allows us to begin processing data inside the archive
 without downloading the whole archive into memory first.
 
 .. code:: python
@@ -331,7 +346,8 @@ without downloading the whole archive into memory first.
     # The rest of data processing logic goes here
 
 
-Finally, ``FSSpecFileSaver`` is also available for writing data to cloud.
+Finally, `FSSpecFileSaver <generated/torchdata.datapipes.iter.FSSpecSaver.html>`_
+is also available for writing data to cloud.
 
 Accessing Google Cloud Storage (GCS) with ``fsspec`` DataPipes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -360,7 +376,7 @@ directory ``applications``.
     dp = IterableWrapper(["gcs://uspto-pair/applications/05900035.zip"]) \
             .open_files_by_fsspec(mode="rb") \
             .load_from_zip()
-    # Logic to process those archive files come after
+    # Logic to process those archive files comes after
     for path, filestream in dp:
         print(path, filestream)
     # gcs:/uspto-pair/applications/05900035.zip/05900035/README.txt, StreamWrapper<...>
