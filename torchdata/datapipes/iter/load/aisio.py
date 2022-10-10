@@ -54,15 +54,15 @@ class AISFileListerIterDataPipe(IterDataPipe[str]):
     Acceptable prefixes include but not limited to - `ais://bucket-name`, `ais://bucket-name/`
 
     Note:
-    -   This function also supports files from multiple backends (`aws://..`, `gcp://..`, `azure://..`, etc)
-    -   Input must be a list and direct URLs are not supported.
-    -   length is -1 by default, all calls to len() are invalid as
-        not all items are iterated at the start.
-    -   This internally uses AIStore Python SDK.
+        - This function also supports files from multiple backends (`aws://..`, `gcp://..`, `azure://..`, etc)
+        - Input must be a list and direct URLs are not supported.
+        - length is -1 by default, all calls to len() are invalid as
+            not all items are iterated at the start.
+        - This internally uses AIStore Python SDK.
 
     Args:
         source_datapipe(IterDataPipe[str]): a DataPipe that contains URLs/URL
-                                            prefixes to objects on AIS
+            prefixes to objects on AIS
         url(str): AIStore endpoint
         length(int): length of the datapipe
 
