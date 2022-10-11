@@ -156,6 +156,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     num_workers: int
     processes: List
     datapipes: List
+    datapipes_iterator: Optional[_IterateQueueDataPipes]
 
     def __init__(
         self,
@@ -203,12 +204,13 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             )
             self.datapipes.append(local_datapipe)
 
-        self.datapipes_iterator = _IterateQueueDataPipes(self.datapipes)  # type: ignore[return-value]
-        return self.datapipes_iterator
+        self.datapipes_iterator = _IterateQueueDataPipes(self.datapipes)
+        return self.datapipes_iterator  # type: ignore[return-value]
 
     def initialize_iteration(self) -> None:
         args = None
-        self.datapipes_iterator.reset_epoch(args=args)
+        if self.datapipes_iterator is not None:
+            self.datapipes_iterator.reset_epoch(args=args)
 
     def __del__(self):
         self.finalize()

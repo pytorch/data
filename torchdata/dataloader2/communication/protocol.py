@@ -83,6 +83,14 @@ class ProtocolServer(Protocol):
         self.response_queue.put(communication.messages.TerminateResponse())
         self._req_received = None
 
+    def response_reset_epoch(self):
+        if not self.have_pending_request():
+            raise Exception("Attempting to reply with pending request")
+        if not isinstance(self._req_received, communication.messages.ResetEpochRequest):
+            raise Exception("Replaying with reset epoch status to other type of message")
+        self.response_queue.put(communication.messages.ResetEpochResponse())
+        self._req_received = None
+
 
 class MapDataPipeQueueProtocolServer(ProtocolServer):
     def response_item(self, key, value):
@@ -162,14 +170,6 @@ class IterDataPipeQueueProtocolServer(ProtocolServer):
         if not isinstance(self._req_received, communication.messages.ResetIteratorRequest):
             raise Exception("Replaying with reset status to other type of message")
         self.response_queue.put(communication.messages.ResetIteratorResponse())
-        self._req_received = None
-
-    def response_reset_epoch(self):
-        if not self.have_pending_request():
-            raise Exception("Attempting to reply with pending request")
-        if not isinstance(self._req_received, communication.messages.ResetEpochRequest):
-            raise Exception("Replaying with reset epoch status to other type of message")
-        self.response_queue.put(communication.messages.ResetEpochResponse())
         self._req_received = None
 
     def response_next(self, value):
