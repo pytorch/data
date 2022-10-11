@@ -4,11 +4,14 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import time
 import types
 
 from torch.utils.data import IterDataPipe
 from torchdata.dataloader2 import communication
+
+# from torchdata.dataloader2.communication.iter import InvalidStateResetRequired
 
 DEFAULT_NON_BLOCKING_SLEEP = 0.001
 
@@ -34,19 +37,13 @@ class NotAvailable(Exception):
 class InvalidStateResetRequired(Exception):
     """
     Returned by DataPipe when it is expecting to get reset request,
-    for example RouterDataPipe expecting all workers to request reset.
+    for example RouterDataPipe expecting all workers to request reset'
     """
 
     pass
 
 
 class TerminateRequired(Exception):
-    """
-    Returned by DataPipe when it is expecting to get terminate request,
-    for example it got terminate request from other source and at the process
-    of stopping.
-    """
-
     pass
 
 
@@ -106,7 +103,9 @@ def EnsureNonBlockingDataPipe(validated_datapipe):
     return validated_datapipe
 
 
-def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_request_get=False):
+def DataPipeBehindQueues(
+    source_datapipe, protocol, full_stop=False, blocking_request_get=False, resets_to_proceed=1, resets_counter=[]
+):
     """
     Indefinitely iterates over req_queue and passing values from source_datapipe to res_queue
     If raise_stop is true, raises exception when StopIteration received from the source_datapipe
@@ -127,6 +126,18 @@ def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_re
             source_datapipe.reset_iterator()
             protocol.response_reset_iterator()
 
+            # if resets_to_proceed > 1:
+            #     print(os.getpid(), f"Received one of {resets_to_proceed} reset requests, waiting others to unblock")
+            #     if resets_counter[0] == resets_to_proceed:
+            #         resets_counter[0] = 0
+            #     resets_counter[0] += 1
+            #     while resets_counter[0] < resets_to_proceed:
+            #         print(os.getpid(), "waiting for reset counters", resets_counter)
+            #         yield True
+            #         time.sleep(1)
+            #     print(os.getpid(), f" Collected {resets_to_proceed} resets")
+            #     # resets_counter[0] = 0
+
         elif isinstance(request, communication.messages.TerminateRequest):
             forever = False
             protocol.response_terminate()
@@ -145,7 +156,8 @@ def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_re
                     else:
                         yield True
                     break
-                except InvalidStateResetRequired:
+                except (InvalidStateResetRequired, RuntimeError):
+                    print(os.getpid(), "Non blocking failed with Invalid state")
                     protocol.response_invalid_state()
                     if full_stop:
                         forever = False
@@ -191,11 +203,18 @@ class QueueWrapper(NonBlocking):
             self.protocol.request_next()
         try:
             response = self.protocol.get_response_next(block=True, timeout=self._response_wait_time)
+            # response = self.protocol.get_response_next(block=True)
         except communication.protocol.EmptyQueue:
             raise NotAvailable
+        # print(os.getpid(), "got response from q", response)
         if isinstance(response, communication.messages.StopIterationResponse):
             self._stop_iteration = True
             raise StopIteration
         if isinstance(response, communication.messages.InvalidStateResponse):
-            raise NotAvailable
+            self._stop_iteration = True
+            raise communication.iter.InvalidStateResetRequired
+        if isinstance(response, communication.messages.TerminateResponse):
+            # This will happen with terminate sent directly into the queue on exit
+            self._stop_iteration = True
+            raise communication.iter.TerminateRequired
         return response.value

@@ -6,6 +6,7 @@
 
 import pickle
 import threading
+import time
 
 import torch
 
@@ -30,10 +31,51 @@ __all__ = [
     "SpawnThreadForDataPipeline",
 ]
 
+TIME_SLEEP_BETWEEN_CHECKING_DIFFERENT_QUEUES = 0.00000001
+
+# TODO(VitalyFedyunin): Find better names to the two functions below as they are separate thread/process/work-items
+# TODO(VitalyFedyunin): Can combine Multiple and Single functions by checking size of pipes_and_queues and deciding block/non-block.
+
+
+def MultipleDataPipesToQueuesLoop(pipes_and_queues, call_locally_fn=None):
+    if call_locally_fn is not None:
+        raise Exception("MultipleDataPipesToQueuesLoop does not support call_locally_fn")
+    torch.set_num_threads(1)
+
+    resets_counter = [0]
+
+    iterators = []
+    for source_datapipe, req_queue, res_queue in pipes_and_queues:
+        iterators.append(
+            DataPipeToQueuesLoopIterator(
+                source_datapipe,
+                req_queue,
+                res_queue,
+                blocking_request_get=False,
+                resets_to_proceed=len(pipes_and_queues),
+                resets_counter=resets_counter,
+            )
+        )
+
+    # TODO(VitalyFedyunin): Maybe better way to combine iterators
+    for _ in zip(*iterators):
+        # TODO(VitalyFedyunin): Check python MP implementation why this sleep impacts queues statuses
+        # This magical sleep allows mp queue messages to travel faster
+        time.sleep(TIME_SLEEP_BETWEEN_CHECKING_DIFFERENT_QUEUES)
+        pass
+
 
 def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_locally_fn=None):
     if call_locally_fn is not None:
-        call_locally_fn(source_datapipe)
+        source_datapipe = call_locally_fn(source_datapipe)
+    torch.set_num_threads(1)
+    for _ in DataPipeToQueuesLoopIterator(source_datapipe, req_queue, res_queue, blocking_request_get=True):
+        pass
+
+
+def DataPipeToQueuesLoopIterator(
+    source_datapipe, req_queue, res_queue, blocking_request_get=True, resets_to_proceed=1, resets_counter=[]
+):
     if isinstance(source_datapipe, IterDataPipe):
         pipe_type = communication.iter
         protocol_type = communication.protocol.IterDataPipeQueueProtocolServer
@@ -43,13 +85,14 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_locally_fn=
     else:
         raise Exception("Only supports IterDataPipe or MapDataPipe, got", source_datapipe)
 
-    # torch.utils.data.graph_settings.apply_sharding(source_datapipe, self.num_workers, worker_id)
-
-    torch.set_num_threads(1)
     for _ in pipe_type.DataPipeBehindQueues(
-        source_datapipe, protocol_type(req_queue, res_queue), blocking_request_get=True
+        source_datapipe,
+        protocol_type(req_queue, res_queue),
+        blocking_request_get=blocking_request_get,
+        resets_to_proceed=resets_to_proceed,
+        resets_counter=resets_counter,
     ):
-        pass
+        yield True
 
 
 def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe, call_locally_fn=None):
@@ -59,6 +102,19 @@ def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe, call_locally_fn=N
         target=DataPipeToQueuesLoop, args=(datapipe, req_queue, res_queue, call_locally_fn)
     )
     return process, req_queue, res_queue
+
+
+def SpawnProcessForMultipleDataPipelines(multiprocessing_ctx, datapipes, call_locally_fn=None):
+    pipes_and_queues = []
+    for dp in datapipes:
+        req_queue = multiprocessing_ctx.Queue()
+        res_queue = multiprocessing_ctx.Queue()
+        pipes_and_queues.append((dp, req_queue, res_queue))
+
+    process = multiprocessing_ctx.Process(
+        target=MultipleDataPipesToQueuesLoop, args=(pipes_and_queues, call_locally_fn)
+    )
+    return process, pipes_and_queues
 
 
 def SpawnThreadForDataPipeline(datapipe):
