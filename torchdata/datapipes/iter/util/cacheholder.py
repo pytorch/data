@@ -440,6 +440,7 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
                 original_file_name = self.first_filepath_fn(record)
                 # TODO(VitalyFedyunin): For debug mode we can detect duplicate keys situations here and warn user
                 if original_file_name != filename:
+                    # Situations when every archive unpacks to single file only are also considered as 1-M
                     one_to_many_detected = True
                     if one_to_one_detected:
                         raise Exception("Disovered different keys when one-to-one mode previously assumed")
@@ -462,6 +463,10 @@ class _FulfilledPromisesIterDataPipe(IterDataPipe):
                 fulfill_old_promises(
                     self.memory_cell_dp.get_buffer(), last_record_uuid, self.first_filepath_fn, self._cache_uuid
                 )
+
+
+def _leave_second(x):
+    return x[1]
 
 
 @functional_datapipe("end_caching")
@@ -515,7 +520,7 @@ class EndOnDiskCacheHolderIterDataPipe(IterDataPipe):
         one_many_cached_dp = _WaitPendingCacheItemIterDataPipe(
             one_many_cached_dp, timeout=timeout, cache_uuid=cache_uuid, input_col=0
         )
-        one_many_cached_dp = one_many_cached_dp.map(lambda x: x[1])
+        one_many_cached_dp = one_many_cached_dp.map(_leave_second)
         memory_cell_dp = cache_holder.source_datapipe
 
         if same_filepath_fn:
