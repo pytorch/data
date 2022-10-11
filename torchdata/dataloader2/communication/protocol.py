@@ -120,7 +120,7 @@ class MapDataPipeQueueProtocolClient(ProtocolClient):
         self.request_queue.put(request)
         self.request_sent(request)
 
-    def request_reset_epoch(self, args):
+    def request_reset_epoch(self, *args):
         if not self.can_take_request():
             raise Exception("Can not reset while we are still waiting response for previous request")
         request = communication.messages.ResetEpochRequest(args)
@@ -199,7 +199,7 @@ class IterDataPipeQueueProtocolClient(ProtocolClient):
         self.request_queue.put(request)
         self.request_sent(request)
 
-    def request_reset_epoch(self, args):
+    def request_reset_epoch(self, *args):
         if not self.can_take_request():
             raise Exception("Can not reset while we are still waiting response for previous request")
         request = communication.messages.ResetEpochRequest(args)

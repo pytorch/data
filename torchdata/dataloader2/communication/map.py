@@ -102,7 +102,7 @@ def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_re
 
         if isinstance(request, communication.messages.ResetEpochRequest):
             if reset_epoch_fn is not None:
-                reset_epoch_fn(source_datapipe, request.args)
+                reset_epoch_fn(source_datapipe, *request.args)
             protocol.response_reset_epoch()
 
         elif isinstance(request, communication.messages.TerminateRequest):

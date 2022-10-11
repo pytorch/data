@@ -145,18 +145,18 @@ class _IterateQueueDataPipes(IterDataPipe):
         for dp in self.datapipes:
             dp.reset_iterator()
 
-    def reset_epoch(self, args):
+    def reset_epoch(self, *args):
         for dp in self.datapipes:
             dp.protocol.discard_existing_request()
         for dp in self.datapipes:
-            dp.protocol.request_reset_epoch(args)
+            dp.protocol.request_reset_epoch(*args)
 
 
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     num_workers: int
     processes: List
     datapipes: List
-    datapipes_iterator: Optional[_IterateQueueDataPipes]
+    combined_datapipes: Optional[_IterateQueueDataPipes]
 
     def __init__(
         self,
@@ -168,7 +168,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         self.multiprocessing_context = multiprocessing_context
         self.processes = []
         self.datapipes = []
-        self.datapipes_iterator = None
+        self.combined_datapipes = None
 
     @staticmethod
     def init_datapipe_process(num_workers, worker_id, datapipe):
@@ -177,7 +177,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
 
     @staticmethod
-    def call_on_epoch_reset(datapipe, args):
+    def call_on_epoch_reset(datapipe, *args):
         # This function will receive worker local copy of datapipe and args value from initialize_iteration
         pass
 
@@ -204,13 +204,12 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             )
             self.datapipes.append(local_datapipe)
 
-        self.datapipes_iterator = _IterateQueueDataPipes(self.datapipes)
-        return self.datapipes_iterator  # type: ignore[return-value]
+        self.combined_datapipes = _IterateQueueDataPipes(self.datapipes)
+        return self.combined_datapipes  # type: ignore[return-value]
 
     def initialize_iteration(self) -> None:
-        args = None
-        if self.datapipes_iterator is not None:
-            self.datapipes_iterator.reset_epoch(args=args)
+        if self.combined_datapipes is not None:
+            self.combined_datapipes.reset_epoch()
 
     def __del__(self):
         self.finalize()
