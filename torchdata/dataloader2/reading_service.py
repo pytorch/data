@@ -180,6 +180,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             (process, req_queue, res_queue) = communication.eventloop.SpawnProcessForDataPipeline(
                 ctx, datapipe, call_inside_process
             )
+            process.daemon = True
             process.start()
             self.processes.append((process, req_queue, res_queue))  # These queues are independent
             local_datapipe = communication.iter.QueueWrapper(
