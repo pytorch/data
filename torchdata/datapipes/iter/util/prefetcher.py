@@ -91,10 +91,12 @@ class PrefetcherIterDataPipe(IterDataPipe):
                after entire state of the graph is saved).
         """
         # TODO: Update __getstate__ and __setstate__ to support snapshotting and restoration
-        return dict(source_datapipe=self.source_datapipe)
+        return dict(source_datapipe=self.source_datapipe, buffer_size=self.buffer_size)
 
     def __setstate__(self, state):
         self.source_datapipe = state["source_datapipe"]
+        self.buffer_size = state["buffer_size"]
+        self.thread = None
 
     def reset(self):
         if self.thread is not None:
