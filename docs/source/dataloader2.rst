@@ -1,4 +1,4 @@
-New DataLoader
+DataLoader2
 ================================
 
 .. automodule:: torchdata.dataloader2
@@ -41,34 +41,38 @@ The followings are interfaces for custom ``ReadingService``.
 .. autoclass:: ReadingServiceInterface
     :members:
 
+The checkpoint/snapshotting feature is a work in progress. Here is the preliminary interface (small changes are likely):
+
 .. autoclass:: CheckpointableReadingServiceInterface
     :members:
 
-A sequence of graph utilities are provided to help users to define their own ``ReadingService`` and modify the graph:
+And, graph utility functions are provided in ``torchdata.dataloader.graph`` to help users to define their own ``ReadingService`` and modify the graph:
+
+.. module:: torchdata.dataloader2.graph
 
 .. autosummary::
     :nosignatures:
     :toctree: generated/
     :template: function.rst
 
-    torchdata.dataloader2.graph.traverse_dps
-    torchdata.dataloader2.graph.find_dps
-    torchdata.dataloader2.graph.replace_dp
-    torchdata.dataloader2.graph.remove_dp
+    traverse_dps
+    find_dps
+    replace_dp
+    remove_dp
 
 Adapter
 --------
 
 ``Adapter`` is used to configure, modify and extend the ``DataPipe`` graph in :class:`DataLoader2`. It allows in-place
 modification or replace the pre-assembled ``DataPipe`` graph provided by PyTorch domains. For example, ``Shuffle(False)`` can be
-provided to :class:`DataLoader2`, which would disable any of ``shuffle`` operations in the ``DataPipes`` graph.
+provided to :class:`DataLoader2`, which would disable any ``shuffle`` operations in the ``DataPipes`` graph.
 
 .. module:: torchdata.dataloader2.adapter
 
 .. autoclass:: Adapter
     :special-members: __call__
 
-Here are the list of :class:`Adapter` provided by TorchData:
+Here are the list of :class:`Adapter` provided by TorchData in ``torchdata.dataloader2.adapter``:
 
 .. autosummary::
     :nosignatures:
@@ -83,8 +87,7 @@ And, we will provide more ``Adapters`` to cover data-processing options:
 - ``PinMemory``: Attach a ``DataPipe`` at the end of the data-processing graph that coverts output data to ``torch.Tensor`` in pinned memory.
 - ``FullSync``: Attach a ``DataPipe`` to make sure the data-processing graph synchronized between distributed processes to prevent hanging.
 - ``ShardingPolicy``: Modify sharding policy if ``sharding_filter`` is presented in the ``DataPipe`` graph.
-- ``PrefetchPolicy``
-- ``InvalidateCache``
+- ``PrefetchPolicy``, ``InvalidateCache``, etc.
 
 If you have feature requests about the ``Adapters`` you'd like to be provided, please open a GitHub issue. For specific
 needs, ``DataLoader2`` also accepts any custom ``Adapter`` as long as it inherits from the ``Adapter`` class.
