@@ -145,6 +145,12 @@ class _IterateQueueDataPipes(IterDataPipe):
         for dp in self.datapipes:
             dp.reset_iterator()
 
+    def reset_epoch(self, args):
+        for dp in self.datapipes:
+            dp.protocol.discard_existing_request()
+        for dp in self.datapipes:
+            dp.protocol.request_reset_epoch(args)
+
 
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     num_workers: int
@@ -161,12 +167,18 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         self.multiprocessing_context = multiprocessing_context
         self.processes = []
         self.datapipes = []
+        self.datapipes_iterator = None
 
     @staticmethod
     def init_datapipe_process(num_workers, worker_id, datapipe):
         # TODO(614): Add distributed support
         # TODO(615): Add shuffle determinism support
         torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
+
+    @staticmethod
+    def call_on_epoch_reset(datapipe, args):
+        # This function will receive worker local copy of datapipe and args value from initialize_iteration
+        pass
 
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         if self.num_workers == 0:
@@ -176,9 +188,13 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             # TODO(617): Separate into function, because we also need to apply distributed seed
             #            and call it inside process
             call_inside_process = functools.partial(self.init_datapipe_process, self.num_workers, worker_id)
+            call_on_epoch_reset = self.call_on_epoch_reset
             ctx = mp.get_context(self.multiprocessing_context)
             (process, req_queue, res_queue) = communication.eventloop.SpawnProcessForDataPipeline(
-                ctx, datapipe, call_inside_process
+                ctx,
+                datapipe,
+                call_inside_process,
+                call_on_epoch_reset,
             )
             process.start()
             self.processes.append((process, req_queue, res_queue))  # These queues are independent
@@ -187,10 +203,12 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             )
             self.datapipes.append(local_datapipe)
 
-        return _IterateQueueDataPipes(self.datapipes)  # type: ignore[return-value]
+        self.datapipes_iterator = _IterateQueueDataPipes(self.datapipes)  # type: ignore[return-value]
+        return self.datapipes_iterator
 
     def initialize_iteration(self) -> None:
-        pass
+        args = None
+        self.datapipes_iterator.reset_epoch(args=args)
 
     def __del__(self):
         self.finalize()
