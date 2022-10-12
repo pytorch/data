@@ -6,6 +6,7 @@
 
 
 import os
+import queue
 import sys
 import unittest
 
@@ -18,7 +19,7 @@ import torch.multiprocessing as mp
 from torch.testing._internal.common_utils import instantiate_parametrized_tests, IS_WINDOWS, parametrize
 from torch.utils.data import DataLoader
 
-from torchdata.dataloader2 import DataLoader2, DistributedReadingService
+from torchdata.dataloader2 import DataLoader2, DistributedReadingService, PrototypeMultiProcessingReadingService
 from torchdata.datapipes.iter import IterableWrapper
 from torchdata.datapipes.iter.util.prefetch import PrefetchTimeoutError
 
@@ -32,8 +33,8 @@ if not dist.is_available():
 
 
 _backends = ["gloo"]
-if dist.is_mpi_available():
-    _backends.append("mpi")
+#  if dist.is_mpi_available():
+#      _backends.append("mpi")
 if dist.is_nccl_available() and torch.cuda.device_count() > 0:
     _backends.append("nccl")
 
@@ -54,23 +55,47 @@ def _get_open_port():
     return str(port)
 
 
-def launch_distributed_training(backend, world_size, fn):
+class EndOfData:
+    pass
+
+
+# TODO(ejguan): Use queue for all distributed tests
+def launch_distributed_training(backend, world_size, *args, fn):
     os.environ["MASTER_ADDR"] = TEST_MASTER_ADDR
     os.environ["MASTER_PORT"] = _get_open_port()
-    mp.spawn(
-        fn,
-        args=(
-            world_size,
-            backend,
-        ),
-        nprocs=world_size,
-        join=True,
-    )
+    ctx = mp.get_context("spawn")
+    q = ctx.Queue()
+    ps = []
+    for rank in range(world_size):
+        p = ctx.Process(
+            target=fn,
+            args=(
+                rank,
+                world_size,
+                backend,
+                q,
+                *args,
+            ),
+        )
+        p.start()
+        ps.append(p)
+    res = []
+    while True:
+        try:
+            d = q.get()
+            if isinstance(d, EndOfData):
+                break
+            res.append(d)
+        except queue.Empty:
+            continue
+    for p in ps:
+        p.join()
+    return res
 
 
 class DistributedTest(TestCase):
     @staticmethod
-    def _test_fullsync(rank, world_size, backend):
+    def _test_fullsync(rank, world_size, backend, q):
         dist.init_process_group(backend, rank=rank, world_size=world_size)
         # Use a prime number to make sure uneven data sharding
         data_length = 23
@@ -94,10 +119,16 @@ class DistributedTest(TestCase):
         except Exception as e:
             assert isinstance(e, PrefetchTimeoutError)
 
+        pg = dist.new_group(backend="gloo")
+        end_tensor = torch.tensor([rank], dtype=torch.int64)
+        dist.all_reduce(end_tensor, group=pg)
+        if rank == 0:
+            q.put(EndOfData())
+
     @backend_parametrize
     def test_fullsync(self, backend) -> None:
         world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
-        launch_distributed_training(backend, world_size, DistributedTest._test_fullsync)
+        launch_distributed_training(backend, world_size, fn=DistributedTest._test_fullsync)
 
     @staticmethod
     def _get_dataloader(data_length: int, dl2: bool, shuffle: bool, rs=None):
@@ -118,7 +149,7 @@ class DistributedTest(TestCase):
         return dl
 
     @staticmethod
-    def _test_distributed_training(dl2, rank, world_size, backend):
+    def _test_distributed_training(dl2, rank, world_size, backend, q):
         dist.init_process_group(backend, rank=rank, world_size=world_size)
         # Use a prime number to make sure uneven data sharding
         data_length = 23
@@ -156,10 +187,16 @@ class DistributedTest(TestCase):
         assert len(results[0]) == len(results[2])
         assert results[0] != results[2]
 
+        pg = dist.new_group(backend="gloo")
+        end_tensor = torch.tensor([rank], dtype=torch.int64)
+        dist.all_reduce(end_tensor, group=pg)
+        if rank == 0:
+            q.put(EndOfData())
+
     @backend_parametrize
     def test_distributed_dl2(self, backend) -> None:
         world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
-        launch_distributed_training(backend, world_size, partial(DistributedTest._test_distributed_training, True))
+        launch_distributed_training(backend, world_size, fn=partial(DistributedTest._test_distributed_training, True))
 
     @unittest.skipIf(
         IS_WINDOWS,
@@ -185,7 +222,7 @@ class DistributedTest(TestCase):
     @backend_parametrize
     def test_distributed_dl1(self, backend) -> None:
         world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
-        launch_distributed_training(backend, world_size, partial(DistributedTest._test_distributed_training, False))
+        launch_distributed_training(backend, world_size, fn=partial(DistributedTest._test_distributed_training, False))
 
     @unittest.skipIf(
         IS_WINDOWS,
@@ -208,6 +245,78 @@ class DistributedTest(TestCase):
                 "--dl1",
             ],
         )
+
+    @staticmethod
+    def _test_proto_distributed_training(rank, world_size, backend, q, num_workers):
+        dist.init_process_group(backend, rank=rank, world_size=world_size)
+        # Balanced data
+        data_length = world_size * 8
+        if num_workers > 0:
+            data_length *= num_workers
+
+        data_source = IterableWrapper(list(range(data_length)))
+        dp = data_source.shuffle().sharding_filter()
+        rs = PrototypeMultiProcessingReadingService(num_workers=num_workers)
+        dl = DataLoader2(dp, reading_service=rs)
+
+        # No seed
+        res = []
+        for d in dl:
+            res.append(d)
+            # Simulate training synchronization
+            dist.barrier()
+        q.put((0, rank, res))
+
+        # Shuffle with seed
+        for epoch in range(2):
+            res = []
+            torch.manual_seed(123)
+            for d in dl:
+                res.append(d)
+                # Simulate training synchronization
+                dist.barrier()
+            q.put((epoch + 1, rank, res))
+
+        # Different seed
+        res = []
+        torch.manual_seed(321)
+        for d in dl:
+            res.append(d)
+            # Simulate training synchronization
+            dist.barrier()
+        q.put((3, rank, res))
+
+        pg = dist.new_group(backend="gloo")
+        end_tensor = torch.tensor([rank], dtype=torch.int64)
+        dist.all_reduce(end_tensor, group=pg)
+        if rank == 0:
+            q.put(EndOfData())
+
+    @backend_parametrize
+    @parametrize("num_workers", [0, 8])
+    def test_proto_rs_dl2(self, backend, num_workers) -> None:
+        world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
+        res = launch_distributed_training(
+            backend, world_size, num_workers, fn=DistributedTest._test_proto_distributed_training
+        )
+        result = ({}, {}, {}, {})
+        for epoch, rank, r in res:
+            result[epoch][rank] = r
+        # Same Seed
+        self.assertEqual(result[1], result[2])
+        # Different Seeds
+        self.assertNotEqual(result[1], result[3])
+
+        # Mutually exclusive and collectively exhaustive with/without seed
+        data_length = world_size * 8
+        if num_workers > 0:
+            data_length *= num_workers
+        exp = list(range(data_length))
+        for res in result:
+            concat_res = []
+            for r in res.values():
+                concat_res.extend(r)
+            self.assertEqual(sorted(concat_res), exp)
 
 
 instantiate_parametrized_tests(DistributedTest)

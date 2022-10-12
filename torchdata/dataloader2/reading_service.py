@@ -107,7 +107,7 @@ def _collate_no_op(batch):
 
 
 def _generate_random_seed(rng: Optional[torch.Generator] = None, dtype: torch.dtype = torch.int64) -> torch.Tensor:
-    return torch.empty((), dtype=dtype).random_(rng)
+    return torch.empty((), dtype=dtype).random_(generator=rng)
 
 
 class _IterateQueueDataPipes(IterDataPipe):
@@ -218,10 +218,14 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         global_worker_id = worker_id * world_size + rank
         worker_seed_generator.manual_seed(shared_seed + global_worker_id)
 
+        import random
+
         py_seed = _generate_random_seed(worker_seed_generator).item()
         random.seed(py_seed)
+
         torch_seed = _generate_random_seed(worker_seed_generator).item()
         torch.manual_seed(torch_seed)
+
         if HAS_NUMPY:
             # Numpy only accepts uint32 as the seed
             np_seed = _generate_random_seed(worker_seed_generator, torch.int32).item()
@@ -277,10 +281,11 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
     def initialize_iteration(self) -> None:
         shared_seed = _generate_random_seed()
-        if isinstance(self._pg, dist.ProcessGroup):
+        if self._pg is not None:
             dist.broadcast(shared_seed, src=0, group=self._pg)
+        shared_seed = shared_seed.item()
         _seed_generator = torch.Generator()
-        _seed_generator.manual_seed(seed)
+        _seed_generator.manual_seed(shared_seed)
         torch.utils.data.graph_settings.apply_random_seed(
             self.end_datapipe,
             _seed_generator,
@@ -294,7 +299,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             else:
                 end_datapipe = self.end_datapipe
             # Send the shared seed to subprocesses
-            end_datapipe.reset_epoch(shared_seed.item())
+            end_datapipe.reset_epoch(shared_seed)
             end_datapipe.reset()
         # In-process (num_workers == 0)
         else:
