@@ -31,7 +31,7 @@ __all__ = [
 ]
 
 
-def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_locally_fn=None):
+def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_locally_fn=None, call_on_reset_epoch=None):
     if call_locally_fn is not None:
         call_locally_fn(source_datapipe)
     if isinstance(source_datapipe, IterDataPipe):
@@ -43,20 +43,21 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_locally_fn=
     else:
         raise Exception("Only supports IterDataPipe or MapDataPipe, got", source_datapipe)
 
-    # torch.utils.data.graph_settings.apply_sharding(source_datapipe, self.num_workers, worker_id)
-
     torch.set_num_threads(1)
     for _ in pipe_type.DataPipeBehindQueues(
-        source_datapipe, protocol_type(req_queue, res_queue), blocking_request_get=True
+        source_datapipe,
+        protocol_type(req_queue, res_queue),
+        blocking_request_get=True,
+        reset_epoch_fn=call_on_reset_epoch,
     ):
         pass
 
 
-def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe, call_locally_fn=None):
+def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe, call_locally_fn=None, call_on_reset_epoch=None):
     req_queue = multiprocessing_ctx.Queue()
     res_queue = multiprocessing_ctx.Queue()
     process = multiprocessing_ctx.Process(
-        target=DataPipeToQueuesLoop, args=(datapipe, req_queue, res_queue, call_locally_fn)
+        target=DataPipeToQueuesLoop, args=(datapipe, req_queue, res_queue, call_locally_fn, call_on_reset_epoch)
     )
     return process, req_queue, res_queue
 
