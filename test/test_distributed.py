@@ -33,8 +33,8 @@ if not dist.is_available():
 
 
 _backends = ["gloo"]
-#  if dist.is_mpi_available():
-#      _backends.append("mpi")
+if dist.is_mpi_available():
+    _backends.append("mpi")
 if dist.is_nccl_available() and torch.cuda.device_count() > 0:
     _backends.append("nccl")
 
