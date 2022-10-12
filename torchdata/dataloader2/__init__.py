@@ -8,6 +8,7 @@
 from .dataloader2 import DataLoader2, DataLoader2Iterator
 from .error import PauseIteration
 from .reading_service import (
+    CheckpointableReadingServiceInterface,
     DistributedReadingService,
     MultiProcessingReadingService,
     PrototypeMultiProcessingReadingService,
@@ -16,6 +17,7 @@ from .reading_service import (
 from .shuffle_spec import ShuffleSpec
 
 __all__ = [
+    "CheckpointableReadingServiceInterface",
     "DataLoader2",
     "DataLoader2Iterator",
     "DistributedReadingService",

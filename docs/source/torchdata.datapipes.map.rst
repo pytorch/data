@@ -32,7 +32,7 @@ MapDataPipes
 .. autosummary::
     :nosignatures:
     :toctree: generated/
-    :template: datapipe.rst
+    :template: class_template.rst
 
     Batcher
     Concater
