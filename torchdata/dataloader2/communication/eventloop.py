@@ -31,9 +31,9 @@ __all__ = [
 ]
 
 
-def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_locally_fn=None, call_on_reset_epoch=None):
-    if call_locally_fn is not None:
-        call_locally_fn(source_datapipe)
+def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_on_process_init=None, call_on_epoch_reset=None):
+    if call_on_process_init is not None:
+        call_on_process_init(source_datapipe)
     if isinstance(source_datapipe, IterDataPipe):
         pipe_type = communication.iter
         protocol_type = communication.protocol.IterDataPipeQueueProtocolServer
@@ -48,16 +48,16 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_locally_fn=
         source_datapipe,
         protocol_type(req_queue, res_queue),
         blocking_request_get=True,
-        reset_epoch_fn=call_on_reset_epoch,
+        reset_epoch_fn=call_on_epoch_reset,
     ):
         pass
 
 
-def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe, call_locally_fn=None, call_on_reset_epoch=None):
+def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe, call_on_process_init=None, call_on_epoch_reset=None):
     req_queue = multiprocessing_ctx.Queue()
     res_queue = multiprocessing_ctx.Queue()
     process = multiprocessing_ctx.Process(
-        target=DataPipeToQueuesLoop, args=(datapipe, req_queue, res_queue, call_locally_fn, call_on_reset_epoch)
+        target=DataPipeToQueuesLoop, args=(datapipe, req_queue, res_queue, call_on_process_init, call_on_epoch_reset)
     )
     return process, req_queue, res_queue
 

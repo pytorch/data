@@ -23,6 +23,13 @@ from torchdata.dataloader2 import communication
 from torchdata.dataloader2.graph import DataPipe
 from torchdata.datapipes.iter import FullSync, IterableWrapper, IterDataPipe
 
+try:
+    import numpy
+
+    HAS_NUMPY = True
+except ModuleNotFoundError:
+    HAS_NUMPY = False
+
 
 class ReadingServiceInterface(ABC):
     r"""
@@ -99,6 +106,10 @@ def _collate_no_op(batch):
     return batch[0]
 
 
+def _generate_random_seed(rng: Optional[torch.Generator] = None, dtype: torch.dtype = torch.int64) -> torch.Tensor:
+    return torch.empty((), dtype=dtype).random_(rng)
+
+
 class _IterateQueueDataPipes(IterDataPipe):
     def __init__(self, datapipes):
         # TODO(VitalyFedyunin): Consider combining _IterateQueueDataPipes and QueueWrapper
@@ -162,7 +173,11 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     num_workers: int
     processes: List
     datapipes: List
-    combined_datapipes: Optional[IterDataPipe]
+    end_datapipe: Optional[DataPipe]
+    _mp: bool
+    _pg: Optional[dist.ProcessGroup]
+    _world_size: int
+    _rank: int
 
     def __init__(
         self,
@@ -178,18 +193,41 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         self.prefetch_mainloop = prefetch_mainloop
         self.processes = []
         self.datapipes = []
-        self.combined_datapipes = None
+        self.end_datapipe = None
+        self._mp = num_workers > 0
+        self._pg = None
+        self._world_size = 1
+        self._rank = 0
 
     @staticmethod
-    def init_datapipe_process(num_workers, worker_id, datapipe):
-        # TODO(614): Add distributed support
-        # TODO(615): Add shuffle determinism support
-        torch.utils.data.graph_settings.apply_sharding(datapipe, num_workers, worker_id)
+    def _process_init_fn(world_size, rank, num_workers, worker_id, datapipe):
+        global_worker_id = worker_id * world_size + rank
+        total_num_workers = num_workers * world_size
+        torch.utils.data.graph_settings.apply_sharding(datapipe, total_num_workers, global_worker_id)
 
     @staticmethod
-    def call_on_epoch_reset(datapipe, *args):
+    def _process_reset_fn(world_size, rank, num_workers, worker_id, datapipe, shared_seed, *args):
         # This function will receive worker local copy of datapipe and args value from initialize_iteration
-        pass
+        worker_seed_generator = torch.Generator()
+        worker_seed_generator.manual_seed(shared_seed)
+        torch.utils.data.graph_settings.apply_random_seed(
+            datapipe,
+            worker_seed_generator,
+        )
+        # Set different seeds across distributed workers
+        global_worker_id = worker_id * world_size + rank
+        worker_seed_generator.manual_seed(shared_seed + global_worker_id)
+
+        py_seed = _generate_random_seed(worker_seed_generator).item()
+        random.seed(py_seed)
+        torch_seed = _generate_random_seed(worker_seed_generator).item()
+        torch.manual_seed(torch_seed)
+        if HAS_NUMPY:
+            # Numpy only accepts uint32 as the seed
+            np_seed = _generate_random_seed(worker_seed_generator, torch.int32).item()
+            if np_seed < 0:
+                np_seed = 2 ** 32 + np_seed
+            numpy.random.seed(np_seed)
 
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         r"""
@@ -197,23 +235,31 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         separates graph by multiple pieces and reconnects it using queues.
         creates subprocesses.
         """
-        if self.num_workers == 0:
+        if dist.is_available() and dist.is_initialized():
+            self._world_size = dist.get_world_size()
+            self._rank = dist.get_rank()
+            self._pg = dist.new_group(backend="gloo")
+        if not self._mp:
             # TODO(616): Warn and recommend usage of InProcessReadingService
+            self._process_init_fn(self._world_size, self._rank, 1, 0, datapipe)
+            self.end_datapipe = datapipe
             return datapipe
 
         if self.prefetch_worker > 0:
             datapipe = datapipe.prefetch(self.prefetch_worker)
 
         for worker_id in range(self.num_workers):
-            # TODO(617): Separate into function, because we also need to apply distributed seed
-            #            and call it inside process
-            call_inside_process = functools.partial(self.init_datapipe_process, self.num_workers, worker_id)
-            call_on_epoch_reset = self.call_on_epoch_reset
+            call_on_process_init = functools.partial(
+                self._process_init_fn, self._world_size, self._rank, self.num_workers, worker_id
+            )
+            call_on_epoch_reset = functools.partial(
+                self._process_reset_fn, self._world_size, self._rank, self.num_workers, worker_id
+            )
             ctx = mp.get_context(self.multiprocessing_context)
             (process, req_queue, res_queue) = communication.eventloop.SpawnProcessForDataPipeline(
                 ctx,
                 datapipe,
-                call_inside_process,
+                call_on_process_init,
                 call_on_epoch_reset,
             )
             process.start()
@@ -223,21 +269,40 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             )
             self.datapipes.append(local_datapipe)
 
-        self.combined_datapipes = _IterateQueueDataPipes(self.datapipes)
+        end_datapipe = _IterateQueueDataPipes(self.datapipes)
         if self.prefetch_mainloop > 0:
-            self.combined_datapipes = self.combined_datapipes.prefetch(self.prefetch_mainloop)
-        return self.combined_datapipes  # type: ignore[return-value]
+            end_datapipe = end_datapipe.prefetch(self.prefetch_mainloop)
+        self.end_datapipe = end_datapipe
+        return end_datapipe
 
     def initialize_iteration(self) -> None:
-        if self.combined_datapipes is not None:
+        shared_seed = _generate_random_seed()
+        if isinstance(self._pg, dist.ProcessGroup):
+            dist.broadcast(shared_seed, src=0, group=self._pg)
+        _seed_generator = torch.Generator()
+        _seed_generator.manual_seed(seed)
+        torch.utils.data.graph_settings.apply_random_seed(
+            self.end_datapipe,
+            _seed_generator,
+        )
+
+        if self._mp:
             if self.prefetch_mainloop > 0:
                 # Stop prefetching first
-                self.combined_datapipes.reset()
-                self.combined_datapipes.source_datapipe.reset_epoch()
-                self.combined_datapipes.source_datapipe.reset()
+                self.end_datapipe.reset()
+                end_datapipe = self.end_datapipe.source_datapipe
             else:
-                self.combined_datapipes.reset_epoch()
-                self.combined_datapipes.reset()
+                end_datapipe = self.end_datapipe
+            # Send the shared seed to subprocesses
+            end_datapipe.reset_epoch(shared_seed.item())
+            end_datapipe.reset()
+        # In-process (num_workers == 0)
+        else:
+            # Technically speaking, we should call `_process_reset_fn` to reset global RNGs
+            # for data-related operations. However, it would pollute the state of global RNGs
+            # (random, torch and numpy), if users have already seeded them in the main process
+            # TODO(ejguan): This should be fixed by adding a method to isolate global RNGs
+            pass
 
     def __del__(self):
         self.finalize()
@@ -258,6 +323,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             clean_me(process, req_queue, res_queue)
 
         self.processes = []
+        self._pg = None
 
 
 class MultiProcessingReadingService(ReadingServiceInterface):
@@ -376,7 +442,7 @@ class DistributedReadingService(ReadingServiceInterface):
         )
 
     def _share_seed(self):
-        shared_seed = torch.empty((), dtype=torch.int64).random_()
+        shared_seed = _generate_random_seed()
         dist.broadcast(shared_seed, src=0, group=self._pg)
         return shared_seed.item()
 
