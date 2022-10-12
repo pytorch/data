@@ -131,6 +131,10 @@ class _IterateQueueDataPipes(IterDataPipe):
                         continue
                     if isinstance(response, communication.messages.InvalidStateResponse):
                         raise communication.iter.InvalidStateResetRequired
+                    if isinstance(response, communication.messages.WorkerExceptionResponse):
+                        print("received WorkerExceptionResponse")
+                        # halt()
+                        raise communication.iter.WorkerException(response.exception)
                     if isinstance(response, communication.messages.TerminateResponse):
                         raise communication.iter.TerminateRequired
                     self.datapipes[idx].protocol.request_next()

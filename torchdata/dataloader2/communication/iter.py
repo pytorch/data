@@ -40,6 +40,14 @@ class InvalidStateResetRequired(Exception):
     pass
 
 
+class WorkerException(Exception):
+    def __init__(self, exception):
+        self.exception = exception
+
+    def __str__(self):
+        return self.exception
+
+
 class TerminateRequired(Exception):
     """
     Returned by DataPipe when it is expecting to get terminate request,
@@ -123,40 +131,45 @@ def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_re
             yield True
             continue
 
-        if isinstance(request, communication.messages.ResetIteratorRequest):
-            source_datapipe.reset_iterator()
-            protocol.response_reset_iterator()
+        try:
+            if isinstance(request, communication.messages.ResetIteratorRequest):
+                source_datapipe.reset_iterator()
+                protocol.response_reset_iterator()
 
-        elif isinstance(request, communication.messages.TerminateRequest):
+            elif isinstance(request, communication.messages.TerminateRequest):
+                forever = False
+                protocol.response_terminate()
+
+            elif isinstance(request, communication.messages.GetNextRequest):
+                while forever:
+                    try:
+                        value = source_datapipe.nonblocking_next()
+                    except NotAvailable:
+                        yield True
+                        continue
+                    except StopIteration:
+                        protocol.response_stop_iteration()
+                        if full_stop:
+                            forever = False
+                        else:
+                            yield True
+                        break
+                    except InvalidStateResetRequired:
+                        protocol.response_invalid_state()
+                        if full_stop:
+                            forever = False
+                        else:
+                            yield True
+                        break
+                    protocol.response_next(value)
+                    yield True  # Returns control
+                    break
+            else:
+                raise Exception("Unrecognized type of request received", request)
+        except Exception as e:
             forever = False
-            protocol.response_terminate()
-
-        elif isinstance(request, communication.messages.GetNextRequest):
-            while forever:
-                try:
-                    value = source_datapipe.nonblocking_next()
-                except NotAvailable:
-                    yield True
-                    continue
-                except StopIteration:
-                    protocol.response_stop_iteration()
-                    if full_stop:
-                        forever = False
-                    else:
-                        yield True
-                    break
-                except InvalidStateResetRequired:
-                    protocol.response_invalid_state()
-                    if full_stop:
-                        forever = False
-                    else:
-                        yield True
-                    break
-                protocol.response_next(value)
-                yield True  # Returns control
-                break
-        else:
-            raise Exception("Unrecognized type of request received", request)
+            print("sending", str(e))
+            protocol.response_worker_exception(str(e))
 
 
 class QueueWrapper(NonBlocking):
@@ -198,4 +211,7 @@ class QueueWrapper(NonBlocking):
             raise StopIteration
         if isinstance(response, communication.messages.InvalidStateResponse):
             raise NotAvailable
+        if isinstance(response, communication.messages.WorkerExceptionResponse):
+            print("received WorkerExceptionResponse QW")
+            raise communication.iter.WorkerException(response.exception)
         return response.value

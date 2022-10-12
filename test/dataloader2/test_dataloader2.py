@@ -37,6 +37,18 @@ class _ReadingServiceWrapper:
         return 1
 
 
+class MakeMistakeDataPipe(IterDataPipe):
+    def __init__(self, source_datapipe, iteration=7):
+        self.source_datapipe = source_datapipe
+        self.iteration = iteration
+
+    def __iter__(self):
+        for i, x in enumerate(self.source_datapipe):
+            if i == self.iteration:
+                raise Exception("oops")
+            yield x
+
+
 class TestReadingService(ReadingServiceInterface):
     def initialize(self, dp: DataPipe) -> DataPipe:
         return _ReadingServiceWrapper(dp)  # type: ignore[return-value]
@@ -56,6 +68,14 @@ class DataLoader2Test(TestCase):
         test_data_pipe = IterableWrapper(range(3))
         data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe)
         data_loader.shutdown()
+
+    def test_passing_errors(self):
+        dp = IterableWrapper(range(1000)).sharding_filter()
+        dp = MakeMistakeDataPipe(dp)
+        rs = PrototypeMultiProcessingReadingService(num_workers=4)
+        dl = DataLoader2(dp, reading_service=rs)
+        for i in dl:
+            pass
 
     def test_dataloader2_state_dict(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
