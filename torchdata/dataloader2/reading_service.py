@@ -25,77 +25,72 @@ from torchdata.datapipes.iter import FullSync, IterableWrapper, IterDataPipe
 
 
 class ReadingServiceInterface(ABC):
+    r"""
+    Interface for ``ReadingService``. Please extend custom ``ReadingService`` based on this interface class.
+    """
+
     @abstractmethod
     def initialize(self, datapipe: DataPipe) -> DataPipe:
-        """
-        ReadingService traverses datapipe graph, finds executable part,
-        adapts into its own datapipe, and replaces in datapipe graph.
-
-        Called once in creating DataLoader iterator at first time.
+        r"""
+        ``ReadingService`` takes a ``DataPipe`` graph, adapts it into a new ``DataPipe`` graph based on the custom need.
+        Called once in creating ``DataLoader2`` iterator at first time.
 
         Args:
-            datapipe: DataPipe. Original datapipe.
+            datapipe: Original ``DataPipe`` graph.
 
         Return:
-            Adapted DataPipe.
-
-        Example:
-            MultiProcessingReadingService finds information about sharding,
-            separates graph by multiple pieces and reconnects it using queues.
-            Spawns processes/threads.
+            An adapted or a new ``DataPipe`` graph.
         """
         pass
 
     def finalize(self) -> None:
-        """
-        ReadingService cleanup states.
-        Called in DataLoader shutdown and __del__
-
-        Example:
-            MultiProcessingReadingService invalidate states & handle persistent worker.
+        r"""
+        ``ReadingService`` cleans up internal states and fully shuts down the service.
+        Called in ``DataLoader2``'s ``shutdown`` and ``__del__``.
         """
         pass
 
     def initialize_iteration(self) -> None:
-        """
-        ReadingService spin up service.
-        Called at the beginning of every time getting DataLoader iterator.
-
-        Example:
-            MultiProcessingReadingService starts prefetching items from the graph.
+        r"""
+        ``ReadingService`` spins up service for an epoch. Called at the beginning
+        of every time getting ``DataLoader2`` iterator.
         """
         pass
 
     def finalize_iteration(self) -> None:
-        """
-        ReadingService end service.
-
-        Example:
-            MultiprocessingReadingService cleans up processes.
+        r"""
+        ``ReadingService`` ends service after an epoch is finished. Called when
+        the iterator of ``DataLoader2`` is depleted.
         """
         pass
 
 
 class CheckpointableReadingServiceInterface(ReadingServiceInterface):
+    r"""
+    Extend ``ReadingServiceInterface`` with two additional methods to save/restore the state of the data-processing graph.
+    """
+
     @abstractmethod
     def checkpoint(self) -> bytes:
         """
-        ReadingService serialize backend states.
-        Called in DataLoader checkpoint.
+        ``ReadingService`` serializes the internal states. Called in ``DataLoader2.state_dict``.
         """
-
         pass
 
     @abstractmethod
     def restore(self, datapipe: DataPipe, serialized_state: bytes) -> DataPipe:
         """
-        ReadingService adapts datapipe and consume serialized state.
+        ``ReadingService`` adapts ``DataPipe`` graph based on the serialized state.
+        Called once in creating ``DataLoader2`` iterator at first time.
+        Counterpart of ``initialize``, which adapt ``DataPipe`` graph from scratch.
 
-        Called once in creating DataLoader iterator at first time.
-        Counterpart of `initialize`, which adapt datapipe from scratch.
+        Args:
+            datapipe: original ``DataPipe`` graph before adapted by ``ReadingService``
+            serialized_state: The serialized state of internal state used to restore the state
+                of the adapted ``DataPipe`` graph.
 
         Returns:
-            Adapted IterDataPipe.
+            Adapted ``DataPipe`` generated from the serialized state.
         """
         pass
 
@@ -153,6 +148,17 @@ class _IterateQueueDataPipes(IterDataPipe):
 
 
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
+    r"""
+    ``PrototypeMultiProcessingReadingService`` that spawns multiple subprocesses to iterate the ``DataPipe`` graph.
+    This ``ReadingService`` is still under prototype stage and will replace ``MultiProcessingReadingService`` eventually.
+
+    Args:
+        num_workers (int, optional): How many subprocesses to use for data loading.
+            ``0`` will be replaced by ``InProcessReadingService`` in the future.
+        multiprocessing_context (str, optional): Multiprocessing starting method.
+            If method is None then the default context is returned.
+            Otherwise method should be 'fork', 'spawn'.
+    """
     num_workers: int
     processes: List
     datapipes: List
@@ -182,6 +188,11 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         pass
 
     def initialize(self, datapipe: DataPipe) -> DataPipe:
+        r"""
+        ``MultiProcessingReadingService`` finds information about sharding,
+        separates graph by multiple pieces and reconnects it using queues.
+        creates subprocesses.
+        """
         if self.num_workers == 0:
             # TODO(616): Warn and recommend usage of InProcessReadingService
             return datapipe
@@ -215,6 +226,9 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         self.finalize()
 
     def finalize(self) -> None:
+        r"""
+        ``MultiProcessingReadingService`` invalidate states & properly exits all subprocesses.
+        """
         # TODO(618): Check if anyone stuck with messages
         def clean_me(process, req_queue, res_queue):
             # TODO(619): Can send terminations simultaneously
@@ -230,6 +244,14 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
 
 class MultiProcessingReadingService(ReadingServiceInterface):
+    r"""
+    ``MultiProcessingReadingService`` that utilizes ``torch.utils.data.DataLoader`` to
+    launch subprocesses for ``DataPipe`` graph. Please refers to documents of ``DataLoader``
+    in https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader for all arguments.
+
+    Note:
+        This ``ReadingService`` be replaced by :class:`PrototypeMultiProcessingReadingService`.
+    """
     num_workers: int
     pin_memory: bool
     timeout: float
@@ -323,7 +345,7 @@ class DistributedReadingService(ReadingServiceInterface):
     def initialize_iteration(self) -> None:
         r"""
         Shares the same seed from rank 0 to other ranks across the distributed processes
-        and apply the random seed to the graph of ``DataPipe``.
+        and apply the random seed to the ``DataPipe`` graph.
         """
         # TODO: Seed Generator should be moved to DataLoader2 after the API
         #       change of initialize_iteration is landed.
