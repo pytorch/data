@@ -272,21 +272,20 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             )
             self.datapipes.append(local_datapipe)
 
-        end_datapipe = _IterateQueueDataPipes(self.datapipes)
+        self.end_datapipe = _IterateQueueDataPipes(self.datapipes)  # type: ignore[assignment]
         if self.prefetch_mainloop > 0:
-            end_datapipe = end_datapipe.prefetch(self.prefetch_mainloop)
-        self.end_datapipe = end_datapipe
-        return end_datapipe
+            self.end_datapipe = self.end_datapipe.prefetch(self.prefetch_mainloop)
+        return self.end_datapipe  # type: ignore[return-value]
 
     def initialize_iteration(self) -> None:
         shared_seed = _generate_random_seed()
         if self._pg is not None:
             dist.broadcast(shared_seed, src=0, group=self._pg)
-        shared_seed = shared_seed.item()
+        shared_seed_int: int = shared_seed.item()  # type: ignore[assignment]
         _seed_generator = torch.Generator()
-        _seed_generator.manual_seed(shared_seed)
+        _seed_generator.manual_seed(shared_seed_int)
         torch.utils.data.graph_settings.apply_random_seed(
-            self.end_datapipe,
+            self.end_datapipe,  # type: ignore[arg-type]
             _seed_generator,
         )
 
@@ -298,7 +297,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             else:
                 end_datapipe = self.end_datapipe
             # Send the shared seed to subprocesses
-            end_datapipe.reset_epoch(shared_seed)
+            end_datapipe.reset_epoch(shared_seed_int)
             end_datapipe.reset()
         # In-process (num_workers == 0)
         else:

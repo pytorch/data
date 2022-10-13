@@ -7,11 +7,15 @@
 
 import os
 import queue
+import random
+import socket
 import sys
 import unittest
 
 from functools import partial
 from unittest import TestCase
+
+import numpy as np
 
 import torch
 import torch.distributed as dist
@@ -46,8 +50,6 @@ def abs_path(path):
 
 
 def _get_open_port():
-    import socket
-
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("", 0))
     port = s.getsockname()[1]
@@ -94,8 +96,13 @@ def launch_distributed_training(backend, world_size, *args, fn):
 
 
 def _dist_iterate_one_epoch(dl, seed=None):
+    r"""
+    Iterate a full epoch of DataLoader and set seeds for global RNGs if provided.
+    """
     if seed is not None:
         torch.manual_seed(seed)
+        random.seed(seed)
+        np.random.seed(seed)
     res = []
     for d in dl:
         res.append(d)
@@ -105,11 +112,25 @@ def _dist_iterate_one_epoch(dl, seed=None):
 
 
 def _finalize_distributed_queue(rank, q):
+    r"""
+    Synchronize all distributed processes to guarantee all data have been put into
+    the Multiprocessing Queue.
+    """
     pg = dist.new_group(backend="gloo")
     end_tensor = torch.tensor([rank], dtype=torch.int64)
     dist.all_reduce(end_tensor, group=pg)
     if rank == 0:
         q.put(TerminateSignal())
+
+
+def _random_fn(data):
+    r"""
+    Used to validate the randomness of subprocess-local RNGs are set deterministically.
+    """
+    py_random_num = random.randint(0, 2 ** 32)
+    np_random_num = np.random.randint(0, 2 ** 32)
+    torch_random_num = torch.randint(0, 2 ** 32, size=[]).item()
+    return (data, py_random_num, np_random_num, torch_random_num)
 
 
 def _test_proto_distributed_training(rank, world_size, backend, q, num_workers):
@@ -120,7 +141,7 @@ def _test_proto_distributed_training(rank, world_size, backend, q, num_workers):
         data_length *= num_workers
 
     data_source = IterableWrapper(list(range(data_length)))
-    dp = data_source.shuffle().sharding_filter()
+    dp = data_source.shuffle().sharding_filter().map(_random_fn)
     rs = PrototypeMultiProcessingReadingService(num_workers=num_workers)
     dl = DataLoader2(dp, reading_service=rs)
 
@@ -274,11 +295,16 @@ class DistributedTest(TestCase):
         res = launch_distributed_training(backend, world_size, num_workers, fn=_test_proto_distributed_training)
         result = ({}, {}, {}, {})
         for epoch, rank, r in res:
-            result[epoch][rank] = r
-        # Same Seed
+            d, *ran_nums = list(zip(*r))
+            result[epoch][rank] = (d, ran_nums)
+        # Same seed generate the same order of data and the same random state
         self.assertEqual(result[1], result[2])
-        # Different Seeds
-        self.assertNotEqual(result[1], result[3])
+        # Different seeds
+        for rank in range(world_size):
+            # Different shuffle order
+            self.assertNotEqual(result[1][rank][0], result[3][rank][0])
+            # Different subprocess-local random state
+            self.assertNotEqual(result[1][rank][1], result[3][rank][1])
 
         # Mutually exclusive and collectively exhaustive with/without seed
         data_length = world_size * 8
@@ -288,7 +314,7 @@ class DistributedTest(TestCase):
         for res in result:
             concat_res = []
             for r in res.values():
-                concat_res.extend(r)
+                concat_res.extend(r[0])
             self.assertEqual(sorted(concat_res), exp)
 
 
