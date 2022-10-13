@@ -11,8 +11,6 @@ import types
 from torch.utils.data import IterDataPipe
 from torchdata.dataloader2 import communication
 
-# from torchdata.dataloader2.communication.iter import InvalidStateResetRequired
-
 DEFAULT_NON_BLOCKING_SLEEP = 0.001
 
 __all__ = [
@@ -37,13 +35,19 @@ class NotAvailable(Exception):
 class InvalidStateResetRequired(Exception):
     """
     Returned by DataPipe when it is expecting to get reset request,
-    for example RouterDataPipe expecting all workers to request reset'
+    for example RouterDataPipe expecting all workers to request reset.
     """
 
     pass
 
 
 class TerminateRequired(Exception):
+    """
+    Returned by DataPipe when it is expecting to get terminate request,
+    for example it got terminate request from other source and at the process
+    of stopping.
+    """
+
     pass
 
 
@@ -126,18 +130,6 @@ def DataPipeBehindQueues(
             source_datapipe.reset_iterator()
             protocol.response_reset_iterator()
 
-            # if resets_to_proceed > 1:
-            #     print(os.getpid(), f"Received one of {resets_to_proceed} reset requests, waiting others to unblock")
-            #     if resets_counter[0] == resets_to_proceed:
-            #         resets_counter[0] = 0
-            #     resets_counter[0] += 1
-            #     while resets_counter[0] < resets_to_proceed:
-            #         print(os.getpid(), "waiting for reset counters", resets_counter)
-            #         yield True
-            #         time.sleep(1)
-            #     print(os.getpid(), f" Collected {resets_to_proceed} resets")
-            #     # resets_counter[0] = 0
-
         elif isinstance(request, communication.messages.TerminateRequest):
             forever = False
             protocol.response_terminate()
@@ -203,10 +195,8 @@ class QueueWrapper(NonBlocking):
             self.protocol.request_next()
         try:
             response = self.protocol.get_response_next(block=True, timeout=self._response_wait_time)
-            # response = self.protocol.get_response_next(block=True)
         except communication.protocol.EmptyQueue:
             raise NotAvailable
-        # print(os.getpid(), "got response from q", response)
         if isinstance(response, communication.messages.StopIterationResponse):
             self._stop_iteration = True
             raise StopIteration
