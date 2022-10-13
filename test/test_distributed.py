@@ -55,7 +55,7 @@ def _get_open_port():
     return str(port)
 
 
-class EndOfData:
+class TerminateSignal:
     pass
 
 
@@ -83,7 +83,7 @@ def launch_distributed_training(backend, world_size, *args, fn):
     while True:
         try:
             d = q.get()
-            if isinstance(d, EndOfData):
+            if isinstance(d, TerminateSignal):
                 break
             res.append(d)
         except queue.Empty:
@@ -91,6 +91,53 @@ def launch_distributed_training(backend, world_size, *args, fn):
     for p in ps:
         p.join()
     return res
+
+
+def _dist_iterate_one_epoch(dl, seed=None):
+    if seed is not None:
+        torch.manual_seed(seed)
+    res = []
+    for d in dl:
+        res.append(d)
+        # Simulate training synchronization
+        dist.barrier()
+    return res
+
+
+def _finalize_distributed_queue(rank, q):
+    pg = dist.new_group(backend="gloo")
+    end_tensor = torch.tensor([rank], dtype=torch.int64)
+    dist.all_reduce(end_tensor, group=pg)
+    if rank == 0:
+        q.put(TerminateSignal())
+
+
+def _test_proto_distributed_training(rank, world_size, backend, q, num_workers):
+    dist.init_process_group(backend, rank=rank, world_size=world_size)
+    # Balanced data
+    data_length = world_size * 8
+    if num_workers > 0:
+        data_length *= num_workers
+
+    data_source = IterableWrapper(list(range(data_length)))
+    dp = data_source.shuffle().sharding_filter()
+    rs = PrototypeMultiProcessingReadingService(num_workers=num_workers)
+    dl = DataLoader2(dp, reading_service=rs)
+
+    # No seed
+    res = _dist_iterate_one_epoch(dl, seed=None)
+    q.put((0, rank, res))
+
+    # Shuffle with seed
+    for epoch in range(2):
+        res = _dist_iterate_one_epoch(dl, seed=123)
+        q.put((epoch + 1, rank, res))
+
+    # Different seed
+    res = _dist_iterate_one_epoch(dl, seed=321)
+    q.put((3, rank, res))
+
+    _finalize_distributed_queue(rank, q)
 
 
 class DistributedTest(TestCase):
@@ -104,11 +151,7 @@ class DistributedTest(TestCase):
 
         dp1 = dp.fullsync()
         for _ in range(2):
-            res = []
-            for d in dp1:
-                res.append(d)
-                # Simulate training synchronization
-                dist.barrier()
+            res = _dist_iterate_one_epoch(dp1)
             assert res == list(range(rank, data_length // world_size * world_size, world_size))
 
         # Timeout Test
@@ -119,11 +162,7 @@ class DistributedTest(TestCase):
         except Exception as e:
             assert isinstance(e, PrefetchTimeoutError)
 
-        pg = dist.new_group(backend="gloo")
-        end_tensor = torch.tensor([rank], dtype=torch.int64)
-        dist.all_reduce(end_tensor, group=pg)
-        if rank == 0:
-            q.put(EndOfData())
+        _finalize_distributed_queue(rank, q)
 
     @backend_parametrize
     def test_fullsync(self, backend) -> None:
@@ -156,42 +195,24 @@ class DistributedTest(TestCase):
 
         # No shuffle
         dl = DistributedTest._get_dataloader(data_length, dl2=dl2, shuffle=False)
-        res = []
-        for d in dl:
-            res.append(d)
-            # Simulate training synchronization
-            dist.barrier()
+        res = _dist_iterate_one_epoch(dl)
         assert sorted(res) == list(range(rank, data_length // world_size * world_size, world_size))
 
         # Shuffle
         dl = DistributedTest._get_dataloader(data_length, dl2=dl2, shuffle=True)
         results = []
         for _ in range(2):
-            res = []
-            torch.manual_seed(123)
-            for d in dl:
-                res.append(d)
-                # Simulate training synchronization
-                dist.barrier()
+            res = _dist_iterate_one_epoch(dl, seed=123)
             results.append(res)
         assert results[0] == results[1]
 
         # Different seed
-        res = []
-        torch.manual_seed(321)
-        for d in dl:
-            res.append(d)
-            # Simulate training synchronization
-            dist.barrier()
+        res = _dist_iterate_one_epoch(dl, seed=321)
         results.append(res)
         assert len(results[0]) == len(results[2])
         assert results[0] != results[2]
 
-        pg = dist.new_group(backend="gloo")
-        end_tensor = torch.tensor([rank], dtype=torch.int64)
-        dist.all_reduce(end_tensor, group=pg)
-        if rank == 0:
-            q.put(EndOfData())
+        _finalize_distributed_queue(rank, q)
 
     @backend_parametrize
     def test_distributed_dl2(self, backend) -> None:
@@ -246,59 +267,11 @@ class DistributedTest(TestCase):
             ],
         )
 
-    @staticmethod
-    def _test_proto_distributed_training(rank, world_size, backend, q, num_workers):
-        dist.init_process_group(backend, rank=rank, world_size=world_size)
-        # Balanced data
-        data_length = world_size * 8
-        if num_workers > 0:
-            data_length *= num_workers
-
-        data_source = IterableWrapper(list(range(data_length)))
-        dp = data_source.shuffle().sharding_filter()
-        rs = PrototypeMultiProcessingReadingService(num_workers=num_workers)
-        dl = DataLoader2(dp, reading_service=rs)
-
-        # No seed
-        res = []
-        for d in dl:
-            res.append(d)
-            # Simulate training synchronization
-            dist.barrier()
-        q.put((0, rank, res))
-
-        # Shuffle with seed
-        for epoch in range(2):
-            res = []
-            torch.manual_seed(123)
-            for d in dl:
-                res.append(d)
-                # Simulate training synchronization
-                dist.barrier()
-            q.put((epoch + 1, rank, res))
-
-        # Different seed
-        res = []
-        torch.manual_seed(321)
-        for d in dl:
-            res.append(d)
-            # Simulate training synchronization
-            dist.barrier()
-        q.put((3, rank, res))
-
-        pg = dist.new_group(backend="gloo")
-        end_tensor = torch.tensor([rank], dtype=torch.int64)
-        dist.all_reduce(end_tensor, group=pg)
-        if rank == 0:
-            q.put(EndOfData())
-
     @backend_parametrize
     @parametrize("num_workers", [0, 8])
     def test_proto_rs_dl2(self, backend, num_workers) -> None:
         world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
-        res = launch_distributed_training(
-            backend, world_size, num_workers, fn=DistributedTest._test_proto_distributed_training
-        )
+        res = launch_distributed_training(backend, world_size, num_workers, fn=_test_proto_distributed_training)
         result = ({}, {}, {}, {})
         for epoch, rank, r in res:
             result[epoch][rank] = r

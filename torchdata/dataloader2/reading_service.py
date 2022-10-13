@@ -7,6 +7,7 @@
 
 import functools
 import multiprocessing as mp
+import random
 
 from abc import ABC, abstractmethod
 
@@ -206,7 +207,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         torch.utils.data.graph_settings.apply_sharding(datapipe, total_num_workers, global_worker_id)
 
     @staticmethod
-    def _process_reset_fn(world_size, rank, num_workers, worker_id, datapipe, shared_seed, *args):
+    def _process_reset_fn(world_size, rank, num_workers, worker_id, datapipe, shared_seed):
         # This function will receive worker local copy of datapipe and args value from initialize_iteration
         worker_seed_generator = torch.Generator()
         worker_seed_generator.manual_seed(shared_seed)
@@ -217,8 +218,6 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         # Set different seeds across distributed workers
         global_worker_id = worker_id * world_size + rank
         worker_seed_generator.manual_seed(shared_seed + global_worker_id)
-
-        import random
 
         py_seed = _generate_random_seed(worker_seed_generator).item()
         random.seed(py_seed)
