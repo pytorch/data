@@ -234,7 +234,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         r"""
-        ``MultiProcessingReadingService`` finds information about sharding,
+        ``PrototypeMultiProcessingReadingService`` finds information about sharding,
         separates graph by multiple pieces and reconnects it using queues.
         creates subprocesses.
         """
@@ -312,7 +312,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
     def finalize(self) -> None:
         r"""
-        ``MultiProcessingReadingService`` invalidate states & properly exits all subprocesses.
+        ``PrototypeMultiProcessingReadingService`` invalidate states & properly exits all subprocesses.
         """
         # TODO(618): Check if anyone stuck with messages
         def clean_me(process, req_queue, res_queue):
@@ -326,7 +326,10 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             clean_me(process, req_queue, res_queue)
 
         self.processes = []
-        self._pg = None
+
+        if self._pg is not None:
+            dist.destroy_process_group(self._pg)
+            self._pg = None
 
 
 class MultiProcessingReadingService(ReadingServiceInterface):
@@ -449,8 +452,13 @@ class DistributedReadingService(ReadingServiceInterface):
         dist.broadcast(shared_seed, src=0, group=self._pg)
         return shared_seed.item()
 
+    def __del__(self):
+        self.finalize()
+
     def finalize(self) -> None:
         r"""
         Clean up the distributed process group.
         """
-        self._pg = None
+        if self._pg is not None:
+            dist.destroy_process_group(self._pg)
+            self._pg = None

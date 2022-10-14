@@ -122,6 +122,8 @@ def _finalize_distributed_queue(rank, q):
     if rank == 0:
         q.put(TerminateSignal())
 
+    dist.destroy_process_group(pg)
+
 
 def _random_fn(data):
     r"""
@@ -159,6 +161,7 @@ def _test_proto_distributed_training(rank, world_size, backend, q, num_workers):
     q.put((3, rank, res))
 
     _finalize_distributed_queue(rank, q)
+    dl.shutdown()
 
 
 class DistributedTest(TestCase):
@@ -234,6 +237,8 @@ class DistributedTest(TestCase):
         assert results[0] != results[2]
 
         _finalize_distributed_queue(rank, q)
+        if dl2:
+            dl.shutdown()
 
     @backend_parametrize
     def test_distributed_dl2(self, backend) -> None:
