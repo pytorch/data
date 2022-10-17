@@ -9,7 +9,11 @@ import pickle
 from dataclasses import dataclass
 from typing import Any, Dict, Generic, Iterable, Iterator, Optional, TypeVar, Union
 
-from torch.utils.data.datapipes.datapipe import _IterDataPipeSerializationWrapper, _MapDataPipeSerializationWrapper
+from torch.utils.data.datapipes.datapipe import (
+    _DataPipeSerializationWrapper,
+    _IterDataPipeSerializationWrapper,
+    _MapDataPipeSerializationWrapper,
+)
 
 from torch.utils.data.graph import DataPipe
 from torchdata.dataloader2.adapter import Adapter
@@ -178,10 +182,11 @@ class DataLoader2(Generic[T_co]):
 
         """
         wrapped_dp: DataPipe = datapipe
-        if isinstance(datapipe, IterDataPipe):
-            wrapped_dp = _IterDataPipeSerializationWrapper(datapipe)
-        elif isinstance(datapipe, MapDataPipe):
-            wrapped_dp = _MapDataPipeSerializationWrapper(datapipe)
+        if not isinstance(datapipe, _DataPipeSerializationWrapper):
+            if isinstance(datapipe, IterDataPipe):
+                wrapped_dp = _IterDataPipeSerializationWrapper(datapipe)
+            elif isinstance(datapipe, MapDataPipe):
+                wrapped_dp = _MapDataPipeSerializationWrapper(datapipe)
         return DataLoader2._copy(wrapped_dp)
 
     def shutdown(self) -> None:
@@ -269,4 +274,4 @@ class DataLoader2(Generic[T_co]):
         if self.datapipe_adapter_fns is not None:
             for adapter_fn in self.datapipe_adapter_fns:
                 self.datapipe = adapter_fn(self.datapipe)
-        self._datapipe_before_reading_service_adapt = self.datapipe
+        self._datapipe_before_reading_service_adapt = self._copy(self.datapipe)
