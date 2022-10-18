@@ -12,7 +12,14 @@ import expecttest
 
 from _utils._common_utils_for_test import create_temp_dir, create_temp_files, reset_after_n_next_calls
 
-from torchdata.datapipes.iter import FileLister, FSSpecFileLister, FSSpecFileOpener, FSSpecSaver, IterableWrapper
+from torchdata.datapipes.iter import (
+    FileLister,
+    FSSpecFileLister,
+    FSSpecFileOpener,
+    FSSpecSaver,
+    IterableWrapper,
+    IterDataPipe,
+)
 
 try:
     import fsspec
@@ -55,7 +62,7 @@ class TestDataPipeFSSpec(expecttest.TestCase):
 
     @skipIfNoFSSpec
     def test_fsspec_file_lister_iterdatapipe(self):
-        datapipe = FSSpecFileLister(root="file://" + self.temp_sub_dir.name)
+        datapipe: IterDataPipe = FSSpecFileLister(root="file://" + self.temp_sub_dir.name)
 
         # check all file paths within sub_folder are listed
         for path in datapipe:
@@ -75,7 +82,9 @@ class TestDataPipeFSSpec(expecttest.TestCase):
 
     @skipIfNoFSSpec
     def test_fsspec_file_lister_iterdatapipe_with_list(self):
-        datapipe = FSSpecFileLister(root=["file://" + self.temp_sub_dir.name, "file://" + self.temp_sub_dir_2.name])
+        datapipe: IterDataPipe = FSSpecFileLister(
+            root=["file://" + self.temp_sub_dir.name, "file://" + self.temp_sub_dir_2.name]
+        )
 
         # check all file paths within sub_folder are listed
         file_lister = list(map(lambda path: path.split("://")[1], datapipe))
@@ -109,10 +118,15 @@ class TestDataPipeFSSpec(expecttest.TestCase):
     def test_fsspec_file_loader_iterdatapipe(self):
         datapipe1 = FSSpecFileLister(root="file://" + self.temp_sub_dir.name)
         datapipe2 = FSSpecFileOpener(datapipe1)
+        datapipe3 = FSSpecFileOpener(datapipe1, kwargs_for_open={"encoding": "cp037"})
 
         # check contents of file match
         for _, f in datapipe2:
             self.assertEqual(f.read(), "0123456789abcdef")
+
+        # Opened with a different encoding, hence NotEqual
+        for _, f in datapipe3:
+            self.assertNotEqual(f.read(), "0123456789abcdef")
 
         # Reset Test: Ensure the resulting streams are still readable after the DataPipe is reset/exhausted
         self._write_text_files()

@@ -8,7 +8,7 @@ from abc import abstractmethod
 
 import torch
 
-from torch.utils.data.graph import DataPipe
+from torchdata.dataloader2.graph import DataPipe, traverse_dps
 from torchdata.datapipes.iter.util.cacheholder import _WaitPendingCacheItemIterDataPipe
 
 
@@ -22,8 +22,22 @@ assert __all__ == sorted(__all__)
 
 
 class Adapter:
+    r"""
+    Adapter Base Class that follows python Callable protocol.
+    """
+
     @abstractmethod
     def __call__(self, datapipe: DataPipe) -> DataPipe:
+        r"""
+        Callable function that either runs in-place modification of
+        the ``DataPipe`` graph, or returns a new ``DataPipe`` graph.
+
+        Args:
+            datapipe: ``DataPipe`` that needs to be adapted.
+
+        Returns:
+            Adapted ``DataPipe`` or new ``DataPipe``.
+        """
         pass
 
 
@@ -32,10 +46,11 @@ class Shuffle(Adapter):
     Shuffle DataPipes adapter allows control over all existing Shuffler (``shuffle``) DataPipes in the graph.
 
     Args:
-        enable: Optional[Boolean] = True
-            Shuffle(enable = True) - enables all previously disabled Shuffler DataPipes. If none exists, it will add a new `shuffle` at the end of the graph.
-            Shuffle(enable = False) - disables all Shuffler DataPipes in the graph.
-            Shuffle(enable = None) - Is noop. Introduced for backward compatibility.
+        enable: Optional boolean argument to enable/disable shuffling in the ``DataPipe`` graph. True by default.
+
+            - True: Enables all previously disabled ``ShufflerDataPipes``. If none exists, it will add a new ``shuffle`` at the end of the graph.
+            - False: Disables all ``ShufflerDataPipes`` in the graph.
+            - None: No-op. Introduced for backward compatibility.
 
     Example:
         >>>  dp = IterableWrapper(range(size)).shuffle()
@@ -53,7 +68,7 @@ class Shuffle(Adapter):
 class CacheTimeout(Adapter):
     r"""
     CacheTimeout DataPipes adapter allows control over timeouts of all existing EndOnDiskCacheHolder (``end_caching``)
-    DataPipes in the graph. Usefull when cached pipeline takes to long to execute (ex. slow file downloading).
+    in the graph. Useful when cached pipeline takes too long to execute (ex. slow file downloading).
 
     Args:
         timeout: int - amount of seconds parallel processes will wait for cached files to appear.
@@ -68,7 +83,7 @@ class CacheTimeout(Adapter):
         self.timeout = timeout
 
     def __call__(self, datapipe: DataPipe) -> DataPipe:
-        graph = torch.utils.data.graph.traverse(datapipe, only_datapipe=True)
+        graph = traverse_dps(datapipe)
         all_pipes = torch.utils.data.graph_settings.get_all_graph_pipes(graph)
         cache_locks = {pipe for pipe in all_pipes if isinstance(pipe, _WaitPendingCacheItemIterDataPipe)}
 

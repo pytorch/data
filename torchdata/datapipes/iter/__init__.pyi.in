@@ -20,6 +20,7 @@ try:
 except ImportError:
     torcharrow = None
 
+T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
 
 class IterDataPipe(IterableDataset[T_co], metaclass=_DataPipeMeta):

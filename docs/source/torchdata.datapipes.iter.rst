@@ -1,3 +1,4 @@
+
 Iterable-style DataPipes
 ==========================
 
@@ -46,7 +47,7 @@ These DataPipes help opening and decompressing archive files of different format
 .. autosummary::
     :nosignatures:
     :toctree: generated/
-    :template: datapipe.rst
+    :template: class_template.rst
 
     Bz2FileLoader
     Decompressor
@@ -63,7 +64,7 @@ These DataPipes help to augment your samples.
 .. autosummary::
     :nosignatures:
     :toctree: generated/
-    :template: datapipe.rst
+    :template: class_template.rst
 
     Cycler
     Enumerator
@@ -77,7 +78,7 @@ These DataPipes help to perform combinatorial operations.
 .. autosummary::
     :nosignatures:
     :toctree: generated/
-    :template: datapipe.rst
+    :template: class_template.rst
 
     InBatchShuffler
     Sampler
@@ -90,7 +91,7 @@ These tend to involve multiple DataPipes, combining them or splitting one to man
 .. autosummary::
     :nosignatures:
     :toctree: generated/
-    :template: datapipe.rst
+    :template: class_template.rst
 
     Concater
     Demultiplexer
@@ -111,7 +112,7 @@ These DataPipes have you group samples within a DataPipe.
 .. autosummary::
     :nosignatures:
     :toctree: generated/
-    :template: datapipe.rst
+    :template: class_template.rst
 
     Batcher
     BucketBatcher
@@ -129,7 +130,7 @@ saving files, and listing the files in directories).
 .. autosummary::
     :nosignatures:
     :toctree: generated/
-    :template: datapipe.rst
+    :template: class_template.rst
 
     AISFileLister
     AISFileLoader
@@ -157,7 +158,7 @@ These DataPipes apply the a given function to each element in the DataPipe.
 .. autosummary::
     :nosignatures:
     :toctree: generated/
-    :template: datapipe.rst
+    :template: class_template.rst
 
     BatchMapper
     FlatMapper
@@ -170,7 +171,7 @@ A miscellaneous set of DataPipes with different functionalities.
 .. autosummary::
     :nosignatures:
     :toctree: generated/
-    :template: datapipe.rst
+    :template: class_template.rst
 
     DataFrameMaker
     EndOnDiskCacheHolder
@@ -180,6 +181,8 @@ A miscellaneous set of DataPipes with different functionalities.
     LengthSetter
     MapToIterConverter
     OnDiskCacheHolder
+    Prefetcher
+    RandomSplitter
     ShardingFilter
 
 Selecting DataPipes
@@ -190,7 +193,7 @@ These DataPipes helps you select specific samples within a DataPipe.
 .. autosummary::
     :nosignatures:
     :toctree: generated/
-    :template: datapipe.rst
+    :template: class_template.rst
 
     Filter
     Header
@@ -205,7 +208,7 @@ These DataPipes help you parse, read, and transform text files and data.
 .. autosummary::
     :nosignatures:
     :toctree: generated/
-    :template: datapipe.rst
+    :template: class_template.rst
 
     CSVDictParser
     CSVParser

@@ -49,19 +49,20 @@ def _assert_aistore_version() -> None:
 @functional_datapipe("list_files_by_ais")
 class AISFileListerIterDataPipe(IterDataPipe[str]):
     """
-    Iterable Datapipe that lists files from the AIStore backends with the given URL prefixes. (functional name: ``list_files_by_ais``).
+    Iterable Datapipe that lists files from the AIStore backends with the given URL prefixes
+    (functional name: ``list_files_by_ais``).
     Acceptable prefixes include but not limited to - `ais://bucket-name`, `ais://bucket-name/`
 
     Note:
-    -   This function also supports files from multiple backends (`aws://..`, `gcp://..`, `azure://..`, etc)
-    -   Input must be a list and direct URLs are not supported.
-    -   length is -1 by default, all calls to len() are invalid as
-        not all items are iterated at the start.
-    -   This internally uses AIStore Python SDK.
+        - This function also supports files from multiple backends (`aws://..`, `gcp://..`, `azure://..`, etc)
+        - Input must be a list and direct URLs are not supported.
+        - length is -1 by default, all calls to len() are invalid as
+            not all items are iterated at the start.
+        - This internally uses AIStore Python SDK.
 
     Args:
         source_datapipe(IterDataPipe[str]): a DataPipe that contains URLs/URL
-                                            prefixes to objects on AIS
+            prefixes to objects on AIS
         url(str): AIStore endpoint
         length(int): length of the datapipe
 

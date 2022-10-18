@@ -13,11 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: "3.7"
       - name: Check out source repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install lint utilities
         run: |
           pip install pre-commit
@@ -43,11 +43,11 @@ jobs:
           echo "::set-output name=value::$PT_CHANNEL"
         id: pytorch_channel
       - name: Setup Python environment
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.8
       - name: Check out source repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install PyTorch
         run: |
           pip3 install --pre torch -f "${{ steps.pytorch_channel.outputs.value }}"
