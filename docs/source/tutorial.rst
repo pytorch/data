@@ -401,7 +401,7 @@ can be used to list files in a directory in a container:
     from torchdata.datapipes.iter import IterableWrapper
 
     storage_options={'account_name': ACCOUNT_NAME, 'account_key': ACCOUNT_KEY}
-    dp = IterableWrapper(["abfs://CONTAINER/DIRECTORY"]).list_files_by_fsspec(**storage_options)
+    dp = IterableWrapper(['abfs://CONTAINER/DIRECTORY']).list_files_by_fsspec(**storage_options)
     print(list(dp))
     # ['abfs://container/directory/file1.txt', 'abfs://container/directory/file2.txt', ...]
 
@@ -415,7 +415,7 @@ directory ``curated/covid-19/ecdc_cases/latest``, belonging to account ``pandemi
 .. code:: python
 
     from torchdata.datapipes.iter import IterableWrapper
-    dp = IterableWrapper(["abfs://public/curated/covid-19/ecdc_cases/latest/ecdc_cases.csv"]) \
+    dp = IterableWrapper(['abfs://public/curated/covid-19/ecdc_cases/latest/ecdc_cases.csv']) \
             .open_files_by_fsspec(account_name='pandemicdatalake') \
             .parse_csv()
     print(list(dp)[:3])
