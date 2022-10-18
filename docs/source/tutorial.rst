@@ -298,7 +298,7 @@ recommend using the functional form of DataPipes.
 Working with Cloud Storage Providers
 ---------------------------------------------
 
-In this section, we show examples accessing AWS S3 and Google Cloud Storage with built-in ``fsspec`` DataPipes.
+In this section, we show examples accessing AWS S3, Google Cloud Storage, and Azure Cloud Storage with built-in ``fsspec`` DataPipes.
 Although only those two providers are discussed here, with additional libraries, ``fsspec`` DataPipes
 should allow you to connect with other storage systems as well (`list of known
 implementations <https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations>`_).
