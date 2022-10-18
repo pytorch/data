@@ -122,6 +122,28 @@ class DataLoader2Test(TestCase):
 
         restored_data_loader.shutdown()
 
+    def test_dataloader2_iterates_correctly(self) -> None:
+        test_data_pipe = IterableWrapper(range(10)).sharding_filter()
+        reading_services = [
+            None,
+            TestReadingService(),
+            MultiProcessingReadingService(num_workers=4),
+            PrototypeMultiProcessingReadingService(num_workers=4, prefetch_worker=0),
+        ]
+        for reading_service in reading_services:
+            data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
+            self.assertEqual(list(range(10)), list(data_loader))
+            self.assertEqual(list(range(10)), list(data_loader))
+            self.assertEqual(list(range(10)), list(data_loader))
+            actual = []
+            for i in data_loader:
+                actual.append(i)
+            self.assertEqual(list(range(10)), actual)
+            actual = []
+            for i in data_loader:
+                actual.append(i)
+            self.assertEqual(list(range(10)), actual)
+
     def test_dataloader2_reset(self) -> None:
 
         test_data_pipe = IterableWrapper(range(10))
