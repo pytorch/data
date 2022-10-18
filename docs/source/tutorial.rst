@@ -422,7 +422,5 @@ directory ``curated/covid-19/ecdc_cases/latest``, belonging to account ``pandemi
     # [['date_rep', 'day', ..., 'iso_country', 'daterep'], 
     # ['2020-12-14', '14', ..., 'AF', '2020-12-14'],
     # ['2020-12-13', '13', ..., 'AF', '2020-12-13']]
-
-
-If necessary, you can also access data in Azure Data Lake Storage Gen1 by using URIs staring with
- ``adl://`` and ``abfs://``, as described in `README of adlfs repo <https://github.com/fsspec/adlfs/blob/main/README.md>`_
+If necessary, you can also access data in Azure Data Lake Storage Gen1 by using URIs staring with 
+``adl://`` and ``abfs://``, as described in `README of adlfs repo <https://github.com/fsspec/adlfs/blob/main/README.md>`_
