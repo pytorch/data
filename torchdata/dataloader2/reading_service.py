@@ -162,16 +162,20 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     num_workers: int
     processes: List
     datapipes: List
-    combined_datapipes: Optional[_IterateQueueDataPipes]
+    combined_datapipes: Optional[IterDataPipe]
 
     def __init__(
         self,
         num_workers: int = 0,
         multiprocessing_context=None,
+        prefetch_worker: int = 10,
+        prefetch_mainloop: int = 10,
     ) -> None:
         self.num_workers = num_workers
         # TODO(613): Should be one of 'fork', 'spawn'
         self.multiprocessing_context = multiprocessing_context
+        self.prefetch_worker = prefetch_worker
+        self.prefetch_mainloop = prefetch_mainloop
         self.processes = []
         self.datapipes = []
         self.combined_datapipes = None
@@ -196,6 +200,10 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         if self.num_workers == 0:
             # TODO(616): Warn and recommend usage of InProcessReadingService
             return datapipe
+
+        if self.prefetch_worker > 0:
+            datapipe = datapipe.prefetch(self.prefetch_worker)
+
         for worker_id in range(self.num_workers):
             # TODO(617): Separate into function, because we also need to apply distributed seed
             #            and call it inside process
@@ -216,11 +224,20 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             self.datapipes.append(local_datapipe)
 
         self.combined_datapipes = _IterateQueueDataPipes(self.datapipes)
+        if self.prefetch_mainloop > 0:
+            self.combined_datapipes = self.combined_datapipes.prefetch(self.prefetch_mainloop)
         return self.combined_datapipes  # type: ignore[return-value]
 
     def initialize_iteration(self) -> None:
         if self.combined_datapipes is not None:
-            self.combined_datapipes.reset_epoch()
+            if self.prefetch_mainloop > 0:
+                # Stop prefetching first
+                self.combined_datapipes.reset()
+                self.combined_datapipes.source_datapipe.reset_epoch()
+                self.combined_datapipes.source_datapipe.reset()
+            else:
+                self.combined_datapipes.reset_epoch()
+                self.combined_datapipes.reset()
 
     def __del__(self):
         self.finalize()
