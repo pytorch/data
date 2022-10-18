@@ -6,6 +6,7 @@
 
 import io
 import itertools
+import pickle
 import unittest
 import warnings
 
@@ -18,6 +19,8 @@ import torch.utils.data.datapipes.iter
 import torchdata
 
 from _utils._common_utils_for_test import IDP_NoLen, reset_after_n_next_calls
+
+from torch.utils.data.datapipes.utils.snapshot import _simple_graph_snapshot_restoration
 from torchdata.datapipes.iter import (
     BucketBatcher,
     Cycler,
@@ -257,6 +260,16 @@ class TestIterDataPipe(expecttest.TestCase):
         # __len__ Test: returns the length of source DataPipe
         result_dp = source_dp.zip_with_map(map_dp, odd_even)
         self.assertEqual(len(source_dp), len(result_dp))
+
+    def test_prefetcher_iterdatapipe(self) -> None:
+        source_dp = IterableWrapper(range(50000))
+        prefetched_dp = source_dp.prefetch(10)
+        # check if early termination resets child thread properly
+        for _, _ in zip(range(100), prefetched_dp):
+            pass
+        expected = list(source_dp)
+        actual = list(prefetched_dp)
+        self.assertEqual(expected, actual)
 
     def test_repeater_iterdatapipe(self) -> None:
         import itertools
@@ -548,29 +561,58 @@ class TestIterDataPipe(expecttest.TestCase):
         # __len__ Test: returns the sum of the lengths of the sources
         self.assertEqual(20, len(sample_mul_dp))
 
-    def test_in_batch_shuffler_iterdatapipe(self) -> None:
-        source_dp = IterableWrapper(range(10)).batch(3)
-        source_dp2 = IterableWrapper(range(10)).batch(3)
+    def test_in_batch_shuffler_iterdatapipe(self):
+        input_dp = IterableWrapper(list(range(23))).batch(3)
+        expected = list(input_dp)
 
-        # Functional Test: drop last reduces length
-        filtered_dp = source_dp.in_batch_shuffle()
-        for ret_batch, exp_batch in zip(filtered_dp, source_dp2):
-            ret_batch.sort()
-            self.assertEqual(ret_batch, exp_batch)
+        # Functional Test: No seed
+        shuffler_dp = input_dp.in_batch_shuffle()
+        for exp, res in zip(expected, shuffler_dp):
+            self.assertEqual(sorted(res), exp)
+
+        # Functional Test: With global seed
+        torch.manual_seed(123)
+        res = list(shuffler_dp)
+        torch.manual_seed(123)
+        self.assertEqual(list(shuffler_dp), res)
+
+        # Functional Test: Set seed
+        shuffler_dp = input_dp.in_batch_shuffle().set_seed(123)
+        res = list(shuffler_dp)
+        shuffler_dp.set_seed(123)
+        self.assertEqual(list(shuffler_dp), res)
+
+        # Functional Test: deactivate shuffling via set_shuffle
+        unshuffled_dp = shuffler_dp.set_shuffle(False)
+        self.assertEqual(list(unshuffled_dp), expected)
 
         # Reset Test:
-        n_elements_before_reset = 2
-        res_before_reset, res_after_reset = reset_after_n_next_calls(filtered_dp, n_elements_before_reset)
-        self.assertEqual(n_elements_before_reset, len(res_before_reset))
-        for ret_batch, exp_batch in zip(res_before_reset, source_dp):
-            ret_batch.sort()
-            self.assertEqual(ret_batch, exp_batch)
-        for ret_batch, exp_batch in zip(res_after_reset, source_dp):
-            ret_batch.sort()
-            self.assertEqual(ret_batch, exp_batch)
+        shuffler_dp = input_dp.in_batch_shuffle()
+        n_elements_before_reset = 5
+        res_before_reset, res_after_reset = reset_after_n_next_calls(shuffler_dp, n_elements_before_reset)
+        self.assertEqual(5, len(res_before_reset))
+        for exp, res in zip(expected, res_before_reset):
+            self.assertEqual(sorted(res), exp)
+        for exp, res in zip(expected, res_after_reset):
+            self.assertEqual(sorted(res), exp)
 
-        # __len__ Test: returns the number of batches
-        self.assertEqual(4, len(filtered_dp))
+        # __len__ Test: returns the length of the input DataPipe
+        shuffler_dp = input_dp.in_batch_shuffle()
+        self.assertEqual(8, len(shuffler_dp))
+
+        # Serialization Test
+        from torch.utils.data.datapipes._hook_iterator import _SnapshotState
+
+        shuffler_dp = input_dp.in_batch_shuffle()
+        it = iter(shuffler_dp)
+        for _ in range(2):
+            next(it)
+        shuffler_dp_copy = pickle.loads(pickle.dumps(shuffler_dp))
+        _simple_graph_snapshot_restoration(shuffler_dp_copy.datapipe, shuffler_dp.datapipe._number_of_samples_yielded)
+
+        exp = list(it)
+        shuffler_dp_copy._snapshot_state = _SnapshotState.Restored
+        self.assertEqual(exp, list(shuffler_dp_copy))
 
     def test_bucket_batcher_iterdatapipe(self) -> None:
         source_dp = IterableWrapper(range(10))
@@ -671,6 +713,28 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual(res_before_reset, exp_before_reset)
         self.assertEqual(res_after_reset, exp_after_reset)
 
+        # Functional test: Padded tokens exceeding max_token_count
+        source_data = ["111", "1111", "11111"]  # 3, 4, 5
+        source_dp = IterableWrapper(source_data)
+        batch_dp = source_dp.max_token_bucketize(max_token_count=7)
+        exp_batch = [["111", "1111"], ["11111"]]
+
+        self.assertEqual(list(batch_dp), exp_batch)
+
+        # Functional test: Padded tokens not exceeding max_token_count
+        source_data = ["111", "111", "111", "1111"]  # 3, 3, 3, 4
+        source_dp = IterableWrapper(source_data)
+        batch_dp = source_dp.max_token_bucketize(max_token_count=7, include_padding=True)
+        exp_batch = [["111", "111"], ["111"], ["1111"]]
+        self.assertEqual(list(batch_dp), exp_batch)
+
+        # Functional test: sample length exceeding max_token_count
+        source_data = ["111"]
+        source_dp = IterableWrapper(source_data)
+        batch_dp = source_dp.max_token_bucketize(max_token_count=2)
+        exp_batch = []
+        self.assertEqual(list(batch_dp), exp_batch)
+
         # __len__ Test: returns the number of batches
         with self.assertRaises(TypeError):
             len(batch_dp)
@@ -723,6 +787,7 @@ class TestIterDataPipe(expecttest.TestCase):
 
         flatmapped_dp = source_dp.flatmap(fn)
         expected_list = list(itertools.chain(*[(e, e * 10) for e in source_dp]))
+
         self.assertEqual(expected_list, list(flatmapped_dp))
 
         # Funtional Test: Specify input_col
@@ -738,6 +803,19 @@ class TestIterDataPipe(expecttest.TestCase):
 
         input_col_2_dp = tuple_source_dp.flatmap(mul_fn, input_col=(0, 2))
         self.assertEqual(list(itertools.chain(*[(-2, 2) for _ in range(20)])), list(input_col_2_dp))
+
+        # flatmap with no fn specified
+        default_dp = tuple_source_dp.flatmap()
+        self.assertEqual(list(itertools.chain(*[(n - 1, n, n + 1) for n in range(20)])), list(default_dp))
+
+        # flatmap with no fn specified, multiple input_col
+        default_dp = tuple_source_dp.flatmap(input_col=(0, 2))
+        self.assertEqual(list(itertools.chain(*[(n - 1, n + 1) for n in range(20)])), list(default_dp))
+
+        # flatmap with no fn specified, some special input
+        tuple_source_dp = IterableWrapper([[1, 2, [3, 4]], [5, 6, [7, 8]]])
+        default_dp = tuple_source_dp.flatmap(input_col=(0, 2))
+        self.assertEqual([1, [3, 4], 5, [7, 8]], list(default_dp))
 
         # Reset Test: reset the DataPipe after reading part of it
         n_elements_before_reset = 5
@@ -1193,6 +1271,107 @@ class TestIterDataPipe(expecttest.TestCase):
         res_before_reset, res_after_reset = reset_after_n_next_calls(dp, n_elements_before_reset)
         self.assertEqual(expected_res[:n_elements_before_reset], res_before_reset)
         self.assertEqual(expected_res, res_after_reset)
+
+    def test_random_splitter_iterdatapipe(self):
+
+        n_epoch = 2
+
+        # Functional Test: Split results are the same across epochs
+        dp = IterableWrapper(range(10))
+        train, valid = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, seed=0)
+        results = []
+        for _ in range(n_epoch):
+            res = list(train)
+            self.assertEqual(5, len(res))
+            results.append(res)
+        self.assertEqual(results[0], results[1])
+        valid_res = list(valid)
+        self.assertEqual(5, len(valid_res))
+        self.assertEqual(list(range(10)), sorted(results[0] + valid_res))
+
+        # Functional Test: lengths can be known in advance because it splits evenly into integers.
+        self.assertEqual(5, len(train))
+        self.assertEqual(5, len(valid))
+
+        # Functional Test: DataPipe can split into 3 DataPipes, and infer `total_length` when not given
+        dp = IterableWrapper(range(10))
+        train, valid, test = dp.random_split(weights={"train": 0.6, "valid": 0.2, "test": 0.2}, seed=0)
+        results = []
+        for _ in range(n_epoch):
+            res = list(train)
+            self.assertEqual(6, len(res))
+            results.append(res)
+        self.assertEqual(results[0], results[1])
+        valid_res = list(valid)
+        self.assertEqual(2, len(valid_res))
+        test_res = list(test)
+        self.assertEqual(2, len(test_res))
+        self.assertEqual(list(range(10)), sorted(results[0] + valid_res + test_res))
+
+        # Functional Test: lengths can be known in advance because it splits evenly into integers.
+        self.assertEqual(6, len(train))
+        self.assertEqual(2, len(valid))
+        self.assertEqual(2, len(test))
+
+        # Functional Test: Split can work even when weights do not split evenly into integers.
+        dp = IterableWrapper(range(13))
+        train, valid, test = dp.random_split(weights={"train": 0.6, "valid": 0.2, "test": 0.2}, seed=0)
+        res = list(train) + list(valid) + list(test)
+        self.assertEqual(list(range(13)), sorted(res))
+
+        # Functional Test: lengths can be known in advance because it splits evenly into integers.
+        with self.assertRaisesRegex(TypeError, "Lengths of the split cannot be known in advance"):
+            len(train)
+
+        # Functional Test: Error when `total_length` cannot be inferred
+        nolen_dp = IDP_NoLen(range(10))
+        with self.assertRaisesRegex(TypeError, "needs `total_length`"):
+            _, __ = nolen_dp.random_split(weights={"train": 0.5, "valid": 0.5}, seed=0)  # type: ignore[call-arg]
+
+        # Functional Test: `target` must match a key in the `weights` dict
+        dp = IterableWrapper(range(10))
+        with self.assertRaisesRegex(KeyError, "does not match any key"):
+            _ = dp.random_split(
+                total_length=10, weights={"train": 0.5, "valid": 0.2, "test": 0.2}, seed=0, target="NOTINDICT"
+            )
+
+        # Functional Test: `target` is specified, and match the results from before
+        dp = IterableWrapper(range(10))
+        train = dp.random_split(
+            total_length=10, weights={"train": 0.6, "valid": 0.2, "test": 0.2}, seed=0, target="train"
+        )
+        results2 = []
+        for _ in range(n_epoch):
+            res = list(train)
+            self.assertEqual(6, len(res))
+            results2.append(res)
+        self.assertEqual(results2[0], results2[1])
+        self.assertEqual(results, results2)
+
+        # Functional Test: `override_seed` works and change split result
+        train.override_seed(1)
+        seed_1_res = list(train)
+        self.assertNotEqual(results2[0], seed_1_res)
+
+        # Functional Test: `override_seed` doesn't impact the current iteration, only the next one
+        temp_res = []
+        for i, x in enumerate(train):
+            temp_res.append(x)
+            if i == 3:
+                train.override_seed(0)
+        self.assertEqual(seed_1_res, temp_res)  # The current iteration should equal seed 1 result
+        self.assertEqual(results2[0], list(train))  # The next iteration should equal seed 0 result
+
+        # Functional Test: Raise exception if both children are used at the same time
+        dp = IterableWrapper(range(10))
+        train, valid = dp.random_split(total_length=10, weights={"train": 0.5, "valid": 0.5}, seed=0)
+        it_train = iter(train)
+        next(it_train)
+        it_valid = iter(valid)  # This resets the DataPipe and invalidates the other iterator
+        next(it_valid)
+        with self.assertRaisesRegex(RuntimeError, "iterator has been invalidated"):
+            next(it_train)
+        next(it_valid)  # No error, can keep going
 
 
 if __name__ == "__main__":

@@ -43,7 +43,7 @@ def _create_default_pathmanager():
 class IoPathFileListerIterDataPipe(IterDataPipe[str]):
     r"""
     Lists the contents of the directory at the provided ``root`` pathname or URL,
-    and yields the full pathname or URL for each file within the directory.
+    and yields the full pathname or URL for each file within the directory (functional name: ``list_files_by_iopath``).
 
     Args:
         root: The root local filepath or URL directory or list of roots to list files from

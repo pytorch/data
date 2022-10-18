@@ -13,7 +13,7 @@ import expecttest
 from _utils._common_utils_for_test import IS_WINDOWS
 from torch.utils.data import IterDataPipe
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService, ReadingServiceInterface
-from torchdata.dataloader2.graph import find_dps, remove_dp, replace_dp, traverse
+from torchdata.dataloader2.graph import find_dps, remove_dp, replace_dp, traverse_dps
 from torchdata.datapipes.iter import IterableWrapper, Mapper
 
 T_co = TypeVar("T_co", covariant=True)
@@ -37,7 +37,7 @@ class TempReadingService(ReadingServiceInterface):
     adaptors: List[IterDataPipe] = []
 
     def initialize(self, datapipe: IterDataPipe) -> IterDataPipe:
-        graph = traverse(datapipe, only_datapipe=True)
+        graph = traverse_dps(datapipe)
         dps = find_dps(graph, Mapper)
 
         for dp in reversed(dps):
@@ -78,7 +78,7 @@ class TestGraph(expecttest.TestCase):
         m2 = c1.map(_x_mult_2)
         dp = m2.zip(c2)
 
-        return traverse(dp, only_datapipe=True), (src_dp, m1, ub, dm, c1, c2, m2, dp)
+        return traverse_dps(dp), (src_dp, m1, ub, dm, c1, c2, m2, dp)
 
     def test_find_dps(self) -> None:
         graph, (_, m1, *_, m2, _) = self._get_datapipes()  # pyre-ignore
@@ -123,7 +123,7 @@ class TestGraph(expecttest.TestCase):
                 ],
             ]
         ]
-        self._validate_graph(traverse(dp, only_datapipe=True), exp_g1)
+        self._validate_graph(traverse_dps(dp), exp_g1)
 
         graph = replace_dp(graph, m2, new_dp2)
         exp_g2 = [
@@ -135,7 +135,7 @@ class TestGraph(expecttest.TestCase):
                 ],
             ]
         ]
-        self._validate_graph(traverse(dp, only_datapipe=True), exp_g2)
+        self._validate_graph(traverse_dps(dp), exp_g2)
 
         graph = replace_dp(graph, m1, new_dp3)
         exp_g3 = [
@@ -147,7 +147,7 @@ class TestGraph(expecttest.TestCase):
                 ],
             ]
         ]
-        self._validate_graph(traverse(dp, only_datapipe=True), exp_g3)
+        self._validate_graph(traverse_dps(dp), exp_g3)
 
     def test_remove_dps(self) -> None:
         # pyre-fixme[23]: Unable to unpack 3 values, 2 were expected.
@@ -164,11 +164,11 @@ class TestGraph(expecttest.TestCase):
 
         graph = remove_dp(graph, m1)
         exp_g1 = [[dp, [[m2, [[c1, [[dm, [[ub, [[src_dp, []]]]]]]]]], [c2, [[dm, [[ub, [[src_dp, []]]]]]]]]]]
-        self._validate_graph(traverse(dp, only_datapipe=True), exp_g1)
+        self._validate_graph(traverse_dps(dp), exp_g1)
 
         graph = remove_dp(graph, m2)
         exp_g2 = [[dp, [[c1, [[dm, [[ub, [[src_dp, []]]]]]]], [c2, [[dm, [[ub, [[src_dp, []]]]]]]]]]]
-        self._validate_graph(traverse(dp, only_datapipe=True), exp_g2)
+        self._validate_graph(traverse_dps(dp), exp_g2)
 
         with self.assertRaisesRegex(RuntimeError, "Cannot remove the source DataPipe"):
             remove_dp(graph, src_dp)
