@@ -391,7 +391,7 @@ Accessing Azure Blob storage with ``fsspec`` DataPipes
 This requires the installation of the libraries ``fsspec``
 (`documentation <https://filesystem-spec.readthedocs.io/en/latest/>`_) and ``adlfs``
 (`adlfs GitHub repo <https://github.com/fsspec/adlfs>`_).
-You can access data in Azure Data Lake Storage Gen2 by providing URIs staring with ``"abfs://"``. 
+You can access data in Azure Data Lake Storage Gen2 by providing URIs staring with ``abfs://``. 
 For example,
 `FSSpecFileLister <generated/torchdata.datapipes.iter.FSSpecFileLister.html>`_ (``.list_files_by_fsspec(...)``) 
 can be used to list files in a directory in a container:
@@ -403,13 +403,14 @@ can be used to list files in a directory in a container:
     storage_options={'account_name': ACCOUNT_NAME, 'account_key': ACCOUNT_KEY}
     dp = IterableWrapper(["abfs://CONTAINER/DIRECTORY"]).list_files_by_fsspec(**storage_options)
     print(list(dp))
+    # ['abfs://container/directory/file1.txt', 'abfs://container/directory/file2.txt', ...]
 
 You can also open files using `FSSpecFileOpener <generated/torchdata.datapipes.iter.FSSpecFileOpener.html>`_
 (``.open_files_by_fsspec(...)``) and stream them
 (if supported by the file format).
 
 Here is an example of loading a CSV file ``ecdc_cases.csv`` from a public container inside the
-directory ``curated/covid-19/ecdc_cases/latest``, belonging to account `pandemicdatalake`.
+directory ``curated/covid-19/ecdc_cases/latest``, belonging to account ``pandemicdatalake``.
 
 .. code:: python
 
@@ -423,5 +424,5 @@ directory ``curated/covid-19/ecdc_cases/latest``, belonging to account `pandemic
     # ['2020-12-13', '13', ..., 'AF', '2020-12-13']]
 
 
-If necessary, you can also access data in Azure Data Lake Storage Gen1 by using URIs staring with `adl://` and `abfs://`,
-as described in [README of adlfs repository](https://github.com/fsspec/adlfs/blob/main/README.md)
+If necessary, you can also access data in Azure Data Lake Storage Gen1 by using URIs staring with
+ ``adl://`` and ``abfs://``, as described in `README of adlfs repo <https://github.com/fsspec/adlfs/blob/main/README.md>`_
