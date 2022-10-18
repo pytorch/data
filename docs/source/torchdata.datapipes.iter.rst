@@ -181,6 +181,7 @@ A miscellaneous set of DataPipes with different functionalities.
     LengthSetter
     MapToIterConverter
     OnDiskCacheHolder
+    Prefetcher
     RandomSplitter
     ShardingFilter
 
