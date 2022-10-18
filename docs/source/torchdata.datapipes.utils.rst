@@ -24,7 +24,7 @@ File Object and Stream Utility
 .. autosummary::
     :nosignatures:
     :toctree: generated/
-    :template: datapipe.rst
+    :template: class_template.rst
 
     StreamWrapper
 

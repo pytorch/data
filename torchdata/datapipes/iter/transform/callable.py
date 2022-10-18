@@ -8,9 +8,18 @@ import warnings
 from typing import Callable, Hashable, Iterator, List, Optional, Set, Sized, TypeVar, Union
 
 from torch.utils.data import functional_datapipe, IterDataPipe
-from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
+from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, validate_input_col
 
 T_co = TypeVar("T_co", covariant=True)
+
+
+def _no_op_fn(*args):
+    """
+    No-operation function, returns passed arguments.
+    """
+    if len(args) == 1:
+        return args[0]
+    return args
 
 
 @functional_datapipe("map_batches")
@@ -99,10 +108,15 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
 
     Note:
         The output from ``fn`` must be a Sequence. Otherwise, an error will be raised.
+        If ``fn`` is ``None``, source DataPipe will be just flattened vertically, provided that items can be unpacked.
 
     Args:
         datapipe: Source IterDataPipe
         fn: the function to be applied to each element in the DataPipe, the output must be a Sequence
+        input_col: Index or indices of data which ``fn`` is applied, such as:
+            - ``None`` as default to apply ``fn`` to the data directly.
+            - Integer(s) is/are used for list/tuple.
+            - Key(s) is/are used for dict.
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
@@ -112,16 +126,24 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
         >>> flatmapped_dp = source_dp.flatmap(fn)
         >>> list(flatmapped_dp)
         [0, 0, 1, 10, 2, 20, 3, 30, 4, 40]
+        >>>
+        >>> source_dp = IterableWrapper([[1, 2, 3], [4, 5, 6]])
+        >>> flatmapped_dp = source_dp.flatmap()
+        >>> list(flatmapped_dp)
+        [1, 2, 3, 4, 5, 6]
     """
     datapipe: IterDataPipe
     fn: Callable
 
-    def __init__(self, datapipe: IterDataPipe, fn: Callable, input_col=None) -> None:
+    def __init__(self, datapipe: IterDataPipe, fn: Callable = None, input_col=None) -> None:
         self.datapipe = datapipe
 
+        if fn is None:
+            fn = _no_op_fn
         _check_unpickable_fn(fn)
         self.fn = fn  # type: ignore[assignment]
         self.input_col = input_col
+        validate_input_col(fn, input_col)
 
     def _apply_fn(self, data):
         if self.input_col is None:

@@ -9,8 +9,9 @@ This library is part of the `PyTorch
 <http://pytorch.org/>`_ project. PyTorch is an open source
 machine learning framework.
 
-:mod:`torchdata` is a prototype library of common modular data loading primitives for
-easily constructing flexible and performant data pipelines.
+:mod:`torchdata` is a Beta library of common modular data loading primitives for
+easily constructing flexible and performant data pipelines. And, there are
+a few features still in prototype stage.
 
 Features described in this documentation are classified by release status:
 
@@ -38,6 +39,7 @@ Features described in this documentation are classified by release status:
    torchdata.datapipes.iter.rst
    torchdata.datapipes.map.rst
    torchdata.datapipes.utils.rst
+   dataloader2.rst
 
 .. toctree::
    :maxdepth: 2
