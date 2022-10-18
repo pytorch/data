@@ -368,6 +368,7 @@ class DistributedReadingService(ReadingServiceInterface):
         self._datapipe: Optional[DataPipe] = None
         self._timeout: int = timeout
         self._pg: Optional[dist.ProcessGroup] = None
+        self._length: Optional[int] = None
 
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         r"""
@@ -389,6 +390,10 @@ class DistributedReadingService(ReadingServiceInterface):
         if not isinstance(datapipe, FullSync):
             datapipe = datapipe.fullsync(self._timeout)
         self._datapipe = datapipe
+        try:
+            self._length = len(datapipe)
+        except TypeError:
+            self._length = None
         return datapipe
 
     def initialize_iteration(self) -> None:
