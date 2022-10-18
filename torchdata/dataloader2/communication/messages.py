@@ -25,6 +25,17 @@ class ResetIteratorResponse(Response):
     pass
 
 
+class ResetEpochRequest(Request):
+    __slots__ = "args"
+
+    def __init__(self, args):
+        self.args = args
+
+
+class ResetEpochResponse(Response):
+    pass
+
+
 class TerminateRequest(Request):
     pass
 
