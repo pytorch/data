@@ -274,7 +274,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
         self.end_datapipe = _IterateQueueDataPipes(self.datapipes)  # type: ignore[assignment]
         if self.prefetch_mainloop > 0:
-            self.end_datapipe = self.end_datapipe.prefetch(self.prefetch_mainloop)
+            self.end_datapipe = self.end_datapipe.prefetch(self.prefetch_mainloop)  # type: ignore[union-attr]
         return self.end_datapipe  # type: ignore[return-value]
 
     def initialize_iteration(self) -> None:
@@ -289,11 +289,12 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             _seed_generator,
         )
 
+        assert self.end_datapipe is not None
         if self._mp:
             if self.prefetch_mainloop > 0:
                 # Stop prefetching first
-                self.end_datapipe.reset()
-                end_datapipe = self.end_datapipe.source_datapipe
+                self.end_datapipe.reset()  # type: ignore[union-attr]
+                end_datapipe: DataPipe = self.end_datapipe.source_datapipe
             else:
                 end_datapipe = self.end_datapipe
             # Send the shared seed to subprocesses
