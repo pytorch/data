@@ -76,13 +76,13 @@ jobs:
             python-version: 3.7
     steps:
       - name: Checkout Source Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ inputs.branch }}
           submodules: recursive
       - name: Setup Python ${{ matrix.python-version }}
         if: ${{ startsWith( matrix.os, 'windows' ) }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
       - name: Add temp runner environment variables
@@ -291,7 +291,7 @@ jobs:
             python-version: 3.7
     steps:
       - name: Checkout Source Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ inputs.branch }}
           submodules: recursive
@@ -463,11 +463,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup Python 3.8
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.8
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ inputs.branch }}
           submodules: recursive

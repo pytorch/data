@@ -49,7 +49,7 @@ jobs:
           sudo apt update
           sudo apt install rar unrar libssl-dev libcurl4-openssl-dev zlib1g-dev
       - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
       - name: Setup msbuild on Windows
@@ -61,7 +61,7 @@ jobs:
         with:
           arch: x64
       - name: Check out source repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: recursive
       - name: Install dependencies
