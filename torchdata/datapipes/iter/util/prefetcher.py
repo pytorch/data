@@ -102,6 +102,3 @@ class PrefetcherIterDataPipe(IterDataPipe):
         if self.thread is not None:
             self.prefetch_data.run_prefetcher = False
             self.thread.join()
-
-    def reset_iterator(self):
-        self.reset()
