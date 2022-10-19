@@ -118,6 +118,8 @@ signature_replacements = {
     "torchdata.datapipes.iter.util.header.T_co": "T_co",
     "<class 'torch.utils.data.datapipes.datapipe.DataChunk'>": "List",
     "typing.": "",
+    "Union[IterDataPipe, MapDataPipe]": "DataPipe",
+    "Dict[int, Tuple[DataPipe, DataPipeGraph]": "DataPipeGraph",
 }
 
 
