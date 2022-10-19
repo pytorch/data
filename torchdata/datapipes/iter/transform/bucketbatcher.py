@@ -220,7 +220,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         len_fn: Function to be applied to each element to get lengths. ``len(data)`` is used by default.
         min_len: Optional minimum length to be included into each batch
         max_len: Optional maximum length to be included into each batch.
-        buffer_size: This restricts how many tokens are taken from prior DataPipe to bucketize
+        buffer_size: This restricts how many samples are taken from prior DataPipe to bucketize
         include_padding: If True, the size of each batch includes the extra padding to the largest length in the batch.
 
     Example:
