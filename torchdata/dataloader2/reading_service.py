@@ -19,7 +19,7 @@ import torch.distributed as dist
 
 from torch.utils.data import DataLoader
 
-from torchdata._constants import default_timeout_in_s
+from torchdata._constants import default_dl2_worker_join_timeout_in_s, default_timeout_in_s
 from torchdata.dataloader2 import communication
 from torchdata.dataloader2.graph import DataPipe
 from torchdata.datapipes.iter import FullSync, IterableWrapper, IterDataPipe
@@ -322,7 +322,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             # TODO(620): Make termination a function of QueueWrapperDataPipe (similar to reset)
             req_queue.put(communication.messages.TerminateRequest())
             _ = res_queue.get()
-            process.join(20)
+            process.join(default_dl2_worker_join_timeout_in_s)
 
         for process, req_queue, res_queue in self.processes:
             try:
