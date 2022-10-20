@@ -67,6 +67,11 @@ class DataLoader2Iterator(Iterator[T_co]):
                 if self.dataloader.reading_service is not None:
                     self.dataloader.reading_service.finalize_iteration()
                 raise
+            except Exception:
+                if self.dataloader.reading_service is not None:
+                    self.dataloader.reading_service.finalize_iteration()
+                    self.dataloader.reading_service.finalize()
+                raise
         else:
             if self.dataloader.reading_service is not None:
                 self.dataloader.reading_service.finalize_iteration()
@@ -198,6 +203,7 @@ class DataLoader2(Generic[T_co]):
             self._datapipe_iter = None
         if not self._terminated:
             if self.reading_service is not None:
+                self.reading_service.finalize_iteration()
                 self.reading_service.finalize()
             self._terminated = True
 
