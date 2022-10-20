@@ -16,7 +16,7 @@ T = TypeVar("T")
 @functional_datapipe("random_split")
 class RandomSplitterIterDataPipe(IterDataPipe):
     r"""
-    Randomly split samples from a source DataPipe into groups(functional name: ``random_split``).
+    Randomly split samples from a source DataPipe into groups (functional name: ``random_split``).
     Since there is no buffer, only ONE group of samples (i.e. one child DataPipe) can be iterated through
     at any time. Attempts to iterate through multiple of them simultaneously will fail.
 
