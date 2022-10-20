@@ -1,67 +1,71 @@
 import argparse
 import hashlib
 import os
-
 import time
-
 from functools import partial
+from typing import Callable
 
 import pandas as pd
-
-# import matplotlib.pyplot as plt
-
 import psutil
-
 from torchdata.dataloader2 import DataLoader2, PrototypeMultiProcessingReadingService
 from torchdata.datapipes.iter import IterableWrapper
 
 
-def map_read(x):
+def map_read(t):
     """
     Read stream and close. Used for tar files.
+
+    Args:
+        t: (path, data_stream) tuple
     """
-    data = x[1].read()
-    x[1].close()
-    return x[0], data
+    data = t[1].read()
+    t[1].close()
+    return t[0], data
 
 
-def map_calculate_md5(x, n_md5):
+def map_calculate_md5(t, n_md5):
     """
-    Calculate MD5 hash of x[1]. Used by both DataPipes. This is like doing a transform.
-    Increasing the number of md5 calculation will determine how much CPU you eat up
-    (this is approximate for complexity of transforms).
-    Balancing between IO and CPU bound.
+    Calculate MD5 hash of data for `n_md5` number of times. Increasing the number of md5 calculation will determine
+    CPU usage (this is an approximate for the complexity of data transforms).
+
+    Args:
+        t: (path, data) tuple
+        n_md5: number of times to compute hash of the data
     """
+    path, data = t
     long_str = ""
-    for i in range(n_md5):
-        long_str += str(hashlib.md5(x[1]).hexdigest())
+    for _ in range(n_md5):
+        long_str += str(hashlib.md5(data).hexdigest())
     result = hashlib.md5(long_str.encode()).hexdigest()
-    size = len(x[1])
-    return x[0], str(result), size
+    size = len(data)
+    return path, str(result), size
 
 
-def check_and_output_speed(prefix: str, function, rs, n_prefetch, n_md5):
+def check_and_output_speed(prefix: str, create_dp_fn: Callable, n_prefetch: int, n_md5: int, n_workers: int):
     """
     Benchmark the speed of the prefetching setup and prints the results.
+
     Args:
         prefix: String indicating what is being executed
-        function: function that returns a DataPipe
-        rs: ReadingService for testing
+        create_dp_fn: function that returns a DataPipe
         n_prefetch: number of batches to prefetch
+        n_md5: number of times to compute hash of the data
     """
     initial_memory_usage = psutil.virtual_memory().used
     max_memory_usage = initial_memory_usage
 
-    dp = function()
+    dp = create_dp_fn()
 
     rs_type = "DataLoader2 w/ tar archives"
-    dl = DataLoader2(dp, reading_service=rs)
+    new_rs = PrototypeMultiProcessingReadingService(
+        num_workers=n_workers, prefetch_worker=n_prefetch, prefetch_mainloop=n_prefetch
+    )
+    dl: DataLoader2 = DataLoader2(dp, reading_service=new_rs)
 
     start = time.time()
     items_len = 0  # Number of items processed
     total_size = 0  # Number of bytes processed
     time_to_first = None
-    # print('starting iterations')
     for _name, _md5, size in dl:
         if items_len > 10 and time_to_first is None:
             time_to_first = time.time() - start
@@ -72,19 +76,20 @@ def check_and_output_speed(prefix: str, function, rs, n_prefetch, n_md5):
 
     total = time.time() - start
     speed = int(items_len / total)  # item per sec
-    function_name = function.__name__
+    function_name = create_dp_fn.__name__
 
     io_speed = int(total_size / total / 1024 / 1024)  # size MiBs per sec
     total_size = int(total_size / 1024 / 1024)  # total size in MiBs
     total = int(total)
     print(
-        f"{prefix} {function_name} and {rs_type} with n_prefetch {n_prefetch} | n_md5 {n_md5} results are: total time {total} sec, with {items_len} items at {speed} files per/sec. {total_size} MiB with io speed at {io_speed} MiBps"
+        f"{prefix} {function_name} and {rs_type} with n_prefetch {n_prefetch} | "
+        f"n_md5 {n_md5} results are: total time {total} sec, with {items_len} items at {speed} files per/sec. "
+        f"{total_size} MiB with io speed at {io_speed} MiBps"
     )
     change_in_memory_usage = (max_memory_usage - initial_memory_usage) / 1024 / 1024
     print(f"initial_memory_usage: {initial_memory_usage / 1024 / 1024:0.1f} MiBs")
     print(f"change_in_memory_usage: {change_in_memory_usage:0.1f} MiBs\n")
     return (
-        prefix,
         function_name,
         rs_type,
         n_prefetch,
@@ -105,7 +110,6 @@ def append_result(
     fs,
     iteration,
     columns,
-    _prefix,
     fn_name,
     rs_type,
     prefetch,
@@ -144,31 +148,25 @@ def append_result(
     )
 
 
-def save_result(df, csv_name, path=""):
-
-    # Save CSV, you can scp for the file afterwards
-    df.to_csv(os.path.join(path, f"{csv_name}.csv"))
-
-    # # Save Plot - we can plot it locally
-    # df.set_index("n_workers", inplace=True)
-    # df.groupby("RS Type")["io_speed (MB/s)"].plot(legend=True)
-    #
-    # plt.ylabel("IO Speed (MB/s)")
-    # plt.xticks(range(0, max_worker))
-    # plt.savefig(os.path.join(path, f"{img_name}.jpg"), dpi=300)
+def save_result(df, csv_name: str, directory: str = ""):
+    file_path = os.path.join(directory, f"{csv_name}.csv")
+    df.to_csv(file_path, mode="a")  # Append result
 
 
 def main(args):
     def get_datapipe(path, n_items, n_md5, use_source_prefetch, use_s3=False):
         if use_s3:
             dp = IterableWrapper([path] * n_items).shuffle().sharding_filter()
+            dp = dp.open_files_by_fsspec(mode="rb", anon=True)
+            if use_source_prefetch:
+                dp = dp.prefetch(5)
+            dp = dp.load_from_tar(mode="r|")
         else:
             tar_files = [f"{path}/images{i}.tar" for i in range(n_items)]
-            dp = IterableWrapper(tar_files).shuffle().sharding_filter()
-        if use_source_prefetch:
-            dp = dp.open_files_by_fsspec(mode="rb", anon=True).prefetch(5).load_from_tar(mode="r|")
-        else:
-            dp = dp.open_files_by_fsspec(mode="rb", anon=True).load_from_tar(mode="r|")
+            dp = IterableWrapper(tar_files).shuffle().sharding_filter().open_files(mode="b")
+            if use_source_prefetch:
+                dp = dp.prefetch(5)
+            dp = dp.load_from_tar(mode="r:")
         dp = dp.map(map_read)
         dp = dp.map(partial(map_calculate_md5, n_md5=n_md5))
         return dp
@@ -197,26 +195,25 @@ def main(args):
         fs_str = "s3"
         path = "s3://torchdatabenchmarkdatasets/images0.tar"
         dp_fn = partial(get_datapipe, path, args.n_tar_files, args.n_md5, args.use_source_prefetch, args.use_s3)
-        dp_fn.__name__ = "S3_Tar"
+        dp_fn.__name__ = "S3_Tar"  # type: ignore[attr-defined]
 
     else:
         print("Loading data from disk...")
         fs_str = "Local"
         path = "/home/ubuntu/source_data/large_images_tars"
         dp_fn = partial(get_datapipe, path, args.n_tar_files, args.n_md5, args.use_source_prefetch, args.use_s3)
-        dp_fn.__name__ = "Tar"
-    print(f"{path = }")
+        dp_fn.__name__ = "Tar"  # type: ignore[attr-defined]
+    # print(f"{path = }")
 
-    for n_workers in [2, 4, 8, 12]:
-        # New Prototype RS DataLoader2
+    for n_workers in [4, 8, 12]:
         for i in range(1 + args.n_epochs):  # 1 warm-up + n runs
-            new_rs = PrototypeMultiProcessingReadingService(
-                num_workers=n_workers, prefetch_worker=args.n_prefetch, prefetch_mainloop=args.n_prefetch
-            )
             params = check_and_output_speed(
-                f"[prefetch is True, {n_workers} workers]", dp_fn, new_rs, n_prefetch=args.n_prefetch, n_md5=args.n_md5
+                f"[prefetch is True, {n_workers} workers]",
+                dp_fn,
+                n_prefetch=args.n_prefetch,
+                n_md5=args.n_md5,
+                n_workers=n_workers,
             )
-
             df = append_result(df, n_workers, args.n_tar_files, args.n_md5, fs_str, i, columns, *params)
 
     # Save CSV
@@ -245,4 +242,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     main(args)
 
-# python benchmarks/cloud/aws_s3.py --n-tar-files 200 --n-epochs 3 --n-md5 22
+# python ~/data/benchmarks/cloud/aws_s3.py --n-tar-files 500 --n-epoch 1 --n-md5 22 &&
+# python ~/data/benchmarks/cloud/aws_s3.py --n-tar-files 500 --n-epoch 1 --n-md5 22 --use-s3 &&
+# python ~/data/benchmarks/cloud/aws_s3.py --n-tar-files 500 --n-epoch 1 --n-md5 54 &&
+# python ~/data/benchmarks/cloud/aws_s3.py --n-tar-files 500 --n-epoch 1 --n-md5 54 --use-s3 &&
+# python ~/data/benchmarks/cloud/aws_s3.py --n-tar-files 500 --n-epoch 1 --n-md5 77 &&
+# python ~/data/benchmarks/cloud/aws_s3.py --n-tar-files 500 --n-epoch 1 --n-md5 77 --use-s3
