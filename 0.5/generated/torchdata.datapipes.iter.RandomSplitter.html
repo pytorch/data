@@ -34,7 +34,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="ShardingFilter" href="torchdata.datapipes.iter.ShardingFilter.html" />
-    <link rel="prev" title="OnDiskCacheHolder" href="torchdata.datapipes.iter.OnDiskCacheHolder.html" />
+    <link rel="prev" title="Prefetcher" href="torchdata.datapipes.iter.Prefetcher.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -344,7 +344,7 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.RandomSplitter">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">RandomSplitter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">weights</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total_length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.RandomSplitter" title="Permalink to this definition">¶</a></dt>
-<dd><p>Randomly split samples from a source DataPipe into groups(functional name: <code class="docutils literal notranslate"><span class="pre">random_split</span></code>).
+<dd><p>Randomly split samples from a source DataPipe into groups (functional name: <code class="docutils literal notranslate"><span class="pre">random_split</span></code>).
 Since there is no buffer, only ONE group of samples (i.e. one child DataPipe) can be iterated through
 at any time. Attempts to iterate through multiple of them simultaneously will fail.</p>
 <p>Note that by default, multiple iterations of this DataPipe will yield the same split for consistency across epochs.
@@ -399,7 +399,7 @@ If target is specified, returns <code class="docutils literal notranslate"><span
         <a href="torchdata.datapipes.iter.ShardingFilter.html" class="btn btn-neutral float-right" title="ShardingFilter" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.iter.OnDiskCacheHolder.html" class="btn btn-neutral" title="OnDiskCacheHolder" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="torchdata.datapipes.iter.Prefetcher.html" class="btn btn-neutral" title="Prefetcher" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   

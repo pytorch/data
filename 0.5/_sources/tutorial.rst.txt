@@ -9,6 +9,7 @@ Suppose that we want to load data from CSV files with the following steps:
 - List all CSV files in a directory
 - Load CSV files
 - Parse CSV file and yield rows
+- Split our dataset into training and validation sets
 
 There are a few `built-in DataPipes <torchdata.datapipes.iter.html>`_ that can help us with the above operations.
 
@@ -19,6 +20,8 @@ There are a few `built-in DataPipes <torchdata.datapipes.iter.html>`_ that can h
   streams <generated/torchdata.datapipes.iter.FileOpener.html>`_
 - ``CSVParser`` - `consumes file streams, parses the CSV contents, and returns one parsed line at a
   time <generated/torchdata.datapipes.iter.CSVParser.html>`_
+- ``RandomSplitter`` - `randomly split samples from a source DataPipe into
+  groups <generated/torchdata.datapipes.iter.RandomSplitter.html>`_
 
 As an example, the source code for ``CSVParser`` looks something like this:
 
@@ -48,9 +51,14 @@ class constructors. A pipeline can be assembled as the following:
     datapipe = dp.iter.FileLister([FOLDER]).filter(filter_fn=lambda filename: filename.endswith('.csv'))
     datapipe = dp.iter.FileOpener(datapipe, mode='rt')
     datapipe = datapipe.parse_csv(delimiter=',')
+    N_ROWS = 10000  # total number of rows of data
+    train, valid = datapipe.random_split(total_length=N_ROWS, weights={"train": 0.5, "valid": 0.5}, seed=0)
 
-    for d in datapipe: # Iterating through the data
-         pass
+    for x in train:  # Iterating through the training dataset
+        pass
+
+    for y in valid:  # Iterating through the validation dataset
+        pass
 
 You can find the full list of built-in `IterDataPipes here <torchdata.datapipes.iter.html>`_ and
 `MapDataPipes here <torchdata.datapipes.map.html>`_.
@@ -298,7 +306,7 @@ recommend using the functional form of DataPipes.
 Working with Cloud Storage Providers
 ---------------------------------------------
 
-In this section, we show examples accessing AWS S3 and Google Cloud Storage with built-in``fsspec`` DataPipes.
+In this section, we show examples accessing AWS S3, Google Cloud Storage, and Azure Cloud Storage with built-in ``fsspec`` DataPipes.
 Although only those two providers are discussed here, with additional libraries, ``fsspec`` DataPipes
 should allow you to connect with other storage systems as well (`list of known
 implementations <https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations>`_).
@@ -384,3 +392,44 @@ directory ``applications``.
     # gcs:/uspto-pair/applications/05900035.zip/05900035/05900035-application_data.tsv, StreamWrapper<...>
     # gcs:/uspto-pair/applications/05900035.zip/05900035/05900035-continuity_data.tsv, StreamWrapper<...>
     # gcs:/uspto-pair/applications/05900035.zip/05900035/05900035-transaction_history.tsv, StreamWrapper<...>
+
+Accessing Azure Blob storage with ``fsspec`` DataPipes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This requires the installation of the libraries ``fsspec``
+(`documentation <https://filesystem-spec.readthedocs.io/en/latest/>`_) and ``adlfs``
+(`adlfs GitHub repo <https://github.com/fsspec/adlfs>`_).
+You can access data in Azure Data Lake Storage Gen2 by providing URIs staring with ``abfs://``. 
+For example,
+`FSSpecFileLister <generated/torchdata.datapipes.iter.FSSpecFileLister.html>`_ (``.list_files_by_fsspec(...)``) 
+can be used to list files in a directory in a container:
+
+.. code:: python
+
+    from torchdata.datapipes.iter import IterableWrapper
+
+    storage_options={'account_name': ACCOUNT_NAME, 'account_key': ACCOUNT_KEY}
+    dp = IterableWrapper(['abfs://CONTAINER/DIRECTORY']).list_files_by_fsspec(**storage_options)
+    print(list(dp))
+    # ['abfs://container/directory/file1.txt', 'abfs://container/directory/file2.txt', ...]
+
+You can also open files using `FSSpecFileOpener <generated/torchdata.datapipes.iter.FSSpecFileOpener.html>`_
+(``.open_files_by_fsspec(...)``) and stream them
+(if supported by the file format).
+
+Here is an example of loading a CSV file ``ecdc_cases.csv`` from a public container inside the
+directory ``curated/covid-19/ecdc_cases/latest``, belonging to account ``pandemicdatalake``.
+
+.. code:: python
+
+    from torchdata.datapipes.iter import IterableWrapper
+    dp = IterableWrapper(['abfs://public/curated/covid-19/ecdc_cases/latest/ecdc_cases.csv']) \
+            .open_files_by_fsspec(account_name='pandemicdatalake') \
+            .parse_csv()
+    print(list(dp)[:3])
+    # [['date_rep', 'day', ..., 'iso_country', 'daterep'], 
+    # ['2020-12-14', '14', ..., 'AF', '2020-12-14'],
+    # ['2020-12-13', '13', ..., 'AF', '2020-12-13']]
+
+If necessary, you can also access data in Azure Data Lake Storage Gen1 by using URIs staring with 
+``adl://`` and ``abfs://``, as described in `README of adlfs repo <https://github.com/fsspec/adlfs/blob/main/README.md>`_
