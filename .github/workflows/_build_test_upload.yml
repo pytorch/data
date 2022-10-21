@@ -272,7 +272,6 @@ jobs:
   conda_build_test:
     needs: get_release_type
     runs-on: ${{ matrix.os }}
-    container: ${{ startsWith( matrix.os, 'ubuntu' ) && 'pytorch/manylinux-cpu' || null }}
     strategy:
       fail-fast: false
       matrix:
