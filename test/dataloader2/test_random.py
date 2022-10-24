@@ -30,6 +30,7 @@ def _random_fn(data):
 
 
 class DeterminismTest(TestCase):
+    @unittest.skipIf(IS_WINDOWS, "Remove when https://github.com/pytorch/data/issues/857 is fixed")
     @parametrize("num_workers", [0, 8])
     def test_proto_rs_determinism(self, num_workers):
         data_length = 64
