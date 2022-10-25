@@ -1,0 +1,8 @@
+dependencies:
+  - pip:
+      - pytest
+      - expecttest
+      - fsspec
+      - s3fs
+      - numpy
+      - datasets
