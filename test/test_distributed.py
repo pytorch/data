@@ -293,6 +293,7 @@ class DistributedTest(TestCase):
             ],
         )
 
+    @unittest.skipIf(IS_WINDOWS, "Remove when https://github.com/pytorch/data/issues/857 is fixed")
     @backend_parametrize
     @parametrize("num_workers", [0, 8])
     def test_proto_rs_dl2(self, backend, num_workers) -> None:
