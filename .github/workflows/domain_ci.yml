@@ -46,7 +46,7 @@ jobs:
 
       - name: Extract torchvision ref
         id: torchvision
-        run: echo "::set-output name=ref::$(python -c 'import torchvision; print(torchvision.version.git_version)')"
+        run: echo "ref=$(python -c 'import torchvision; print(torchvision.version.git_version)')" >> $GITHUB_OUTPUT
 
       - name: Check out torchvision repository
         uses: actions/checkout@v3

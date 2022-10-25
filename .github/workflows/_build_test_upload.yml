@@ -50,7 +50,7 @@ jobs:
             fi
           fi
           echo "Release Type: $RELEASE_TYPE"
-          echo "::set-output name=type::$RELEASE_TYPE"
+          echo "type=$RELEASE_TYPE" >> $GITHUB_OUTPUT
         id: get_release_type
 
   wheel_build_test:
@@ -235,7 +235,7 @@ jobs:
             upload=true
             break
           done
-          echo "::set-output name=value::$upload"
+          echo "value=$upload" >> $GITHUB_OUTPUT
         id: trigger_upload
       - name: Display All TorchData Wheels
         if: steps.trigger_upload.outputs.value == 'true'
@@ -304,7 +304,7 @@ jobs:
           else
             BUILD_S3=1
           fi
-          echo "::set-output name=value::$BUILD_S3"
+          echo "value=$BUILD_S3" >> $GITHUB_OUTPUT
         id: build_s3
       - name: Add temp runner environment variables
         shell: bash -l {0}
@@ -403,7 +403,7 @@ jobs:
             upload=true
             break
           done
-          echo "::set-output name=value::$upload"
+          echo "value=$upload" >> $GITHUB_OUTPUT
         id: trigger_upload
       - name: Display All TorchData Conda Package
         if: steps.trigger_upload.outputs.value == 'true'
@@ -526,7 +526,7 @@ jobs:
             fi
             TARGET_FOLDER=${TARGET_FOLDER:1}
           fi
-          echo "::set-output name=value::$TARGET_FOLDER"
+          echo "value=$TARGET_FOLDER" >> $GITHUB_OUTPUT
         id: target_folder
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4.2.5
