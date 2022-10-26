@@ -27,6 +27,7 @@ from torchdata.datapipes.iter import (
     Header,
     IndexAdder,
     InMemoryCacheHolder,
+    IncrementalShuffler,
     IterableWrapper,
     IterDataPipe,
     IterKeyZipper,
@@ -1014,6 +1015,18 @@ class TestIterDataPipe(expecttest.TestCase):
         output_dp = input_dp1.mux_longest(input_dp_no_len)
         with self.assertRaises(TypeError):
             len(output_dp)
+
+    def test_incshuffle(self):
+
+        # Functional Test: verify that shuffling preserves all elements
+        for initial in [3, 10, 17, 167, 1000, 1500]:
+            for buffer in [3, 6, 10, 19, 223, 1000, 1001, 1500]:
+                for n in [10, 100, 1000]:
+                    stage1 = IterableWrapper(range(n))
+                    stage2 = IncrementalShuffler(stage1, initial=initial, buffer_size=buffer)
+                    output = list(iter(stage2))
+                    assert len(output) == n
+                    assert set(output) == set(range(n))
 
     def test_zip_longest_iterdatapipe(self):
 
