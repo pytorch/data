@@ -50,7 +50,7 @@ class ShardExpanderIterDataPipe(IterDataPipe[Dict]):
 
     Note that shard names can be expanded without any server transactions;
     this makes `shardexpand` reproducible and storage system independent
-    (unlike `ListFiles` etc.).
+    (unlike :class `.FileLister` etc.).
 
     Args:
         source_datapipe: a DataPipe yielding a stream of  pairs
@@ -67,6 +67,3 @@ class ShardExpanderIterDataPipe(IterDataPipe[Dict]):
         for path in self.source_datapipe:
             for expanded in shardexpand(path):
                 yield expanded
-
-    def __len__(self) -> int:
-        return len(self.source_datapipe)
