@@ -1023,8 +1023,10 @@ class TestIterDataPipe(expecttest.TestCase):
             stage1 = IterableWrapper([s])
             stage2 = ShardExpander(stage1)
             return list(iter(stage2))
+
         def myexpand(lo, hi, fmt):
             return [fmt.format(i) for i in range(lo, hi)]
+
         self.assertEqual(testexpand("ds-{000000..000009}.tar"), myexpand(0, 10, "ds-{:06d}.tar"))
         self.assertEqual(testexpand("{0..9}"), myexpand(0, 10, "{}"))
         self.assertEqual(testexpand("{0..999}"), myexpand(0, 1000, "{}"))
