@@ -5,42 +5,42 @@
 # LICENSE file in the root directory of this source tree.
 
 import re
-from typing import Dict, Iterator
+from typing import Iterator, List
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
 
-def shardexpand(s):
+def _shard_expand(s: str) -> List[str]:
     expansion = r"[{][0-9]+[.][.][0-9]+[}]"
     m = re.search(expansion, s)
     if not m:
         return [s]
     prefix = s[: m.start()]
-    rest = shardexpand(s[m.end() :])
+    rest = _shard_expand(s[m.end() :])
     rng = s[m.start() + 1 : m.end() - 1]
     lohi = rng.split("..")
     if len(lohi[0]) == len(lohi[1]) and lohi[0].startswith("0"):
         fmt = "{prefix}{i:0>{l}d}{r}"
     elif len(lohi[0]) <= len(lohi[1]):
         if lohi[0].startswith("0") and lohi[0] != "0":
-            raise ValueError("shardexpand: low bound must not start with 0 if low bound is shorter")
+            raise ValueError("shard_expand: low bound must not start with 0 if low bound is shorter")
         fmt = "{prefix}{i}{r}"
     else:
-        raise ValueError("shardexpand: low bound must be shorter than high bound")
-    lo, hi = [int(x) for x in lohi]
+        raise ValueError("shard_expand: low bound must be shorter than high bound")
+    lo, hi = (int(x) for x in lohi)
     if lo >= hi:
-        raise ValueError(f"shardexpand: bad range in in shard spec {s}.")
+        raise ValueError(f"shard_expand: bad range in in shard spec {s}.")
     result = []
     for i in range(lo, hi + 1):
         for r in rest:
-            expanded = fmt.format(prefix=prefix, i=i, r=r, l=len(lohi[1]))
+            expanded: str = fmt.format(prefix=prefix, i=i, r=r, l=len(lohi[1]))
             result.append(expanded)
     return result
 
 
 @functional_datapipe("shard_expand")
-class ShardExpanderIterDataPipe(IterDataPipe[Dict]):
+class ShardExpanderIterDataPipe(IterDataPipe[str]):
     r"""
     Expands incoming shard strings into shards.
 
@@ -76,5 +76,4 @@ class ShardExpanderIterDataPipe(IterDataPipe[Dict]):
 
     def __iter__(self) -> Iterator[str]:
         for path in self.source_datapipe:
-            for expanded in shardexpand(path):
-                yield expanded
+            yield from _shard_expand(path)
