@@ -1016,7 +1016,7 @@ class TestIterDataPipe(expecttest.TestCase):
         with self.assertRaises(TypeError):
             len(output_dp)
 
-    def test_shardexpand(self):
+    def test_shard_expand(self):
 
         # Functional Test: ensure expansion generates the right outputs
         def testexpand(s):
