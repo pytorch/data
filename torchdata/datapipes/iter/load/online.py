@@ -18,7 +18,7 @@ from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
 
 
-# TODO: Remove this helper function when https://bugs.python.org/issue42627 is resolved
+# TODO(642): Remove this helper function when https://bugs.python.org/issue42627 is resolved
 def _get_proxies() -> Optional[Dict[str, str]]:
     import os
 
@@ -40,9 +40,10 @@ def _get_response_from_http(
         with requests.Session() as session:
             proxies = _get_proxies()
             if timeout is None:
-                r = session.get(url, stream=True, proxies=proxies, **query_params)
+                r = session.get(url, stream=True, proxies=proxies, **query_params)  # type: ignore[arg-type]
             else:
-                r = session.get(url, timeout=timeout, stream=True, proxies=proxies, **query_params)
+                r = session.get(url, timeout=timeout, stream=True, proxies=proxies, **query_params)  # type: ignore[arg-type]
+        r.raise_for_status()
         return url, StreamWrapper(r.raw)
     except HTTPError as e:
         raise Exception(f"Could not get the file. [HTTP Error] {e.response}.")
@@ -96,6 +97,11 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         return len(self.source_datapipe)
 
 
+def _extract_gdrive_api_response(content: str) -> Optional[str]:
+    match = re.search("<title>Google Drive - (?P<api_response>.+?)</title>", content)
+    return match["api_response"] if match is not None else None
+
+
 def _get_response_from_google_drive(url: str, *, timeout: Optional[float]) -> Tuple[str, StreamWrapper]:
     confirm_token = None
 
@@ -104,11 +110,16 @@ def _get_response_from_google_drive(url: str, *, timeout: Optional[float]) -> Tu
             response = session.get(url, stream=True)
         else:
             response = session.get(url, timeout=timeout, stream=True)
+
         for k, v in response.cookies.items():
             if k.startswith("download_warning"):
                 confirm_token = v
-        if confirm_token is None:
-            if "Quota exceeded" in str(response.content):
+                break
+        else:
+            api_response = _extract_gdrive_api_response(response.text)
+            if api_response == "Virus scan warning":
+                confirm_token = "t"
+            elif api_response == "Quota exceeded":
                 raise RuntimeError(f"Google drive link {url} is currently unavailable, because the quota was exceeded.")
 
         if confirm_token:
@@ -120,7 +131,12 @@ def _get_response_from_google_drive(url: str, *, timeout: Optional[float]) -> Tu
             response = session.get(url, timeout=timeout, stream=True)
 
         if "content-disposition" not in response.headers:
-            raise RuntimeError("Internal error: headers don't contain content-disposition.")
+            raise RuntimeError(
+                "Internal error: headers don't contain content-disposition. This is usually caused by "
+                "using a sharing/viewing link instead of a download link. Click 'Download' on the "
+                "Google Drive page, which should redirect you to a download page, and use the link "
+                "of that page."
+            )
 
         filename = re.findall('filename="(.+)"', response.headers["content-disposition"])
         if filename is None:

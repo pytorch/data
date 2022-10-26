@@ -27,6 +27,11 @@ if DILL_AVAILABLE:
     dill.extend(use_dill=False)
 
 try:
+    import datasets
+except ImportError:
+    datasets = None
+
+try:
     import fsspec
 except ImportError:
     fsspec = None
@@ -74,6 +79,8 @@ def _filepath_fn(name: str, dir) -> str:
 
 def _filter_by_module_availability(datapipes):
     filter_set = set()
+    if datasets is None:
+        filter_set.update([iterdp.HuggingFaceHubReader])
     if fsspec is None:
         filter_set.update([iterdp.FSSpecFileLister, iterdp.FSSpecFileOpener, iterdp.FSSpecSaver])
     if iopath is None:
@@ -132,6 +139,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         _ = next(it)
         test_helper_fn(dp, use_dill)
         # 3. Testing for serialization after DataPipe is fully read
+        it = iter(dp)
         _ = list(it)
         test_helper_fn(dp, use_dill)
 
@@ -146,15 +154,19 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         self._serialization_test_helper(dp2, use_dill=use_dill)
         # 2.5. Testing for serialization after one child DataPipe is fully read
         #      (Only for DataPipes with children DataPipes)
+        it1 = iter(dp1)
         _ = list(it1)  # fully read one child
         self._serialization_test_helper(dp1, use_dill=use_dill)
         self._serialization_test_helper(dp2, use_dill=use_dill)
         # 3. Testing for serialization after DataPipe is fully read
+        it2 = iter(dp2)
         _ = list(it2)  # fully read the other child
         self._serialization_test_helper(dp1, use_dill=use_dill)
         self._serialization_test_helper(dp2, use_dill=use_dill)
 
     def test_serializable(self):
+        # A tuple of 4 objects
+        # (DataPipeConstructor, custom_input_datapipe=None, dp_args=(), dp_kwargs={})
         picklable_datapipes: List = [
             (iterdp.BatchMapper, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), (_fake_batch_fn, 2, 1), {}),
             (iterdp.BucketBatcher, IterableWrapper([0, 0, 0, 0, 0, 0, 0]), (5,), {}),
@@ -178,8 +190,10 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.Cycler, None, (2,), {}),
             (iterdp.DataFrameMaker, IterableWrapper([(i,) for i in range(3)]), (), {"dtype": DTYPE}),
             (iterdp.Decompressor, None, (), {}),
+            (iterdp.Dropper, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), ([1]), {}),
             (iterdp.Enumerator, None, (2,), {}),
             (iterdp.FlatMapper, None, (_fake_fn_ls,), {}),
+            (iterdp.Flattener, IterableWrapper([(0, (0, 1)), (0, (0, 1)), (0, (0, 1)), (0, (0, 1))]), ([1]), {}),
             (iterdp.FSSpecFileLister, ".", (), {}),
             (iterdp.FSSpecFileOpener, None, (), {}),
             (
@@ -192,7 +206,8 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.HashChecker, None, ({},), {}),
             (iterdp.Header, None, (3,), {}),
             (iterdp.HttpReader, None, (), {}),
-            # TODO (ejguan): Deterministic serialization is required
+            (iterdp.HuggingFaceHubReader, None, (), {}),
+            # TODO(593): (ejguan): Deterministic serialization is required
             #  (iterdp.InBatchShuffler, IterableWrapper(range(10)).batch(3), (), {}),
             (iterdp.InMemoryCacheHolder, None, (), {}),
             (iterdp.IndexAdder, IterableWrapper([{"a": 1, "b": 2}, {"c": 3, "a": 1}]), ("label",), {}),
@@ -221,6 +236,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (),
                 {},
             ),
+            (iterdp.LengthSetter, None, (3,), {}),
             (
                 iterdp.LineReader,
                 IterableWrapper(
@@ -264,6 +280,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (),
                 {},
             ),
+            (iterdp.Repeater, None, (2,), {}),
             (iterdp.SampleMultiplexer, {IterableWrapper([0] * 10): 0.5, IterableWrapper([1] * 10): 0.5}, (), {}),
             (
                 iterdp.Saver,
@@ -271,8 +288,10 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (),
                 {"mode": "wb", "filepath_fn": partial(_filepath_fn, dir=self.temp_dir.name)},
             ),
+            (iterdp.Slicer, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), ([1]), {}),
             (iterdp.TarArchiveLoader, None, (), {}),
-            (iterdp.TFRecordLoader, None, (), {}),
+            # TODO(594): Add serialization tests for optional DataPipe
+            #  (iterdp.TFRecordLoader, None, (), {}),
             (iterdp.UnZipper, IterableWrapper([(i, i + 10) for i in range(10)]), (), {"sequence_length": 2}),
             (iterdp.WebDataset, IterableWrapper([("foo.txt", b"1"), ("bar.txt", b"2")]), (), {}),
             (iterdp.XzFileLoader, None, (), {}),
@@ -294,6 +313,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             iterdp.IoPathFileOpener,
             iterdp.HashChecker,
             iterdp.HttpReader,
+            iterdp.HuggingFaceHubReader,
             iterdp.OnDiskCacheHolder,
             iterdp.OnlineReader,
             iterdp.ParquetDataFrameLoader,
@@ -361,15 +381,13 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             else:
                 dp_no_attribute_error = (iterdp.OnDiskCacheHolder,)
                 try:
-                    with warnings.catch_warnings(record=True) as wa:
+                    with self.assertWarnsRegex(UserWarning, r"^Local function is not supported by pickle"):
                         datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]
-                        self.assertEqual(len(wa), 1)
-                        self.assertRegex(str(wa[0].message), r"^Lambda function is not supported for pickle")
-                        if isinstance(datapipe, dp_no_attribute_error):
+                    if isinstance(datapipe, dp_no_attribute_error):
+                        _ = pickle.dumps(datapipe)
+                    else:
+                        with self.assertRaises(AttributeError):
                             _ = pickle.dumps(datapipe)
-                        else:
-                            with self.assertRaises(AttributeError):
-                                _ = pickle.dumps(datapipe)
                 except Exception as e:
                     print(f"{dpipe} is failing.")
                     raise e

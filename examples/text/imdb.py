@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
+from functools import partial
 from pathlib import Path
 
 from torchdata.datapipes.iter import FileOpener, HttpReader, IterableWrapper
@@ -25,6 +26,18 @@ _PATH = "aclImdb_v1.tar.gz"
 DATASET_NAME = "IMDB"
 
 
+def _path_fn(root, path):
+    return os.path.join(root, os.path.basename(path))
+
+
+def _filter_fn(split, t):
+    return Path(t[0]).parts[-3] == split and Path(t[0]).parts[-2] in ["pos", "neg"]
+
+
+def _file_to_sample(t):
+    return Path(t[0]).parts[-2], t[1].read().decode("utf-8")
+
+
 @_add_docstring_header(num_lines=NUM_LINES, num_classes=2)
 @_create_dataset_directory(dataset_name=DATASET_NAME)
 @_wrap_split_argument(("train", "test"))
@@ -39,8 +52,8 @@ def IMDB(root, split):
     url_dp = IterableWrapper([URL])
     # cache data on-disk
     cache_dp = url_dp.on_disk_cache(
-        filepath_fn=lambda x: os.path.join(root, os.path.basename(x)),
-        hash_dict={os.path.join(root, os.path.basename(URL)): MD5},
+        filepath_fn=partial(_path_fn, root),
+        hash_dict={_path_fn(root, URL): MD5},
         hash_type="md5",
     )
     cache_dp = HttpReader(cache_dp).end_caching(mode="wb", same_filepath_fn=True)
@@ -51,9 +64,7 @@ def IMDB(root, split):
     extracted_files = cache_dp.load_from_tar()
 
     # filter the files as applicable to create dataset for given split (train or test)
-    filter_files = extracted_files.filter(
-        lambda x: Path(x[0]).parts[-3] == split and Path(x[0]).parts[-2] in ["pos", "neg"]
-    )
+    filter_files = extracted_files.filter(partial(_filter_fn, split))
 
     # map the file to yield proper data samples
-    return filter_files.map(lambda x: (Path(x[0]).parts[-2], x[1].read().decode("utf-8")))
+    return filter_files.map(_file_to_sample)

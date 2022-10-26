@@ -13,11 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: "3.7"
       - name: Check out source repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install lint utilities
         run: |
           pip install pre-commit
@@ -32,25 +32,31 @@ jobs:
     if: ${{ github.repository_owner == 'pytorch' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Get PyTorch Channel
+        shell: bash
+        run: |
+          if [[ "${{ github.base_ref }}" == release/* ]] || [[ "${{ github.ref }}" == refs/heads/release/* ]] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            PT_CHANNEL="https://download.pytorch.org/whl/test/cpu/torch_test.html"
+          else
+            PT_CHANNEL="https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html"
+          fi
+          echo "::set-output name=value::$PT_CHANNEL"
+        id: pytorch_channel
       - name: Setup Python environment
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.8
       - name: Check out source repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install PyTorch
         run: |
-          set -eux
-          python -m pip install --pre torch -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html --user
+          pip3 install --pre torch -f "${{ steps.pytorch_channel.outputs.value }}"
       - name: Install dependencies
         run: |
-          set -eux
-          python -m pip install requests --user
-          python -m pip install mypy==0.812 --user
+          pip3 install requests mypy==0.812 graphviz numpy
       - name: Build TorchData
         run: |
-          set -eux
-          python setup.py develop --user
+          python setup.py develop
       - name: Run mypy
         env:
           MYPY_FORCE_COLOR: 1

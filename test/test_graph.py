@@ -13,7 +13,7 @@ import expecttest
 from _utils._common_utils_for_test import IS_WINDOWS
 from torch.utils.data import IterDataPipe
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService, ReadingServiceInterface
-from torchdata.dataloader2.graph import find_dps, remove_dp, replace_dp, traverse
+from torchdata.dataloader2.graph import find_dps, remove_dp, replace_dp, traverse_dps
 from torchdata.datapipes.iter import IterableWrapper, Mapper
 
 T_co = TypeVar("T_co", covariant=True)
@@ -28,11 +28,16 @@ class Adaptor(IterDataPipe[T_co]):
         yield from self.datapipe
 
 
+class DummyIterDataPipe(IterDataPipe[T_co]):
+    def __iter__(self) -> Iterator[T_co]:
+        yield from range(10)
+
+
 class TempReadingService(ReadingServiceInterface):
     adaptors: List[IterDataPipe] = []
 
     def initialize(self, datapipe: IterDataPipe) -> IterDataPipe:
-        graph = traverse(datapipe, only_datapipe=True)
+        graph = traverse_dps(datapipe)
         dps = find_dps(graph, Mapper)
 
         for dp in reversed(dps):
@@ -40,7 +45,7 @@ class TempReadingService(ReadingServiceInterface):
             self.adaptors.append(new_dp)
             graph = replace_dp(graph, dp, new_dp)
 
-        return list(graph.keys())[0]
+        return list(graph.values())[0][0]
 
     def initialize_iteration(self) -> None:
         for dp in self.adaptors:
@@ -51,17 +56,29 @@ class TempReadingService(ReadingServiceInterface):
             dp.started = False
 
 
+def _x_and_x_plus_5(x):
+    return [x, x + 5]
+
+
+def _x_mod_2(x):
+    return x % 2
+
+
+def _x_mult_2(x):
+    return x * 2
+
+
 class TestGraph(expecttest.TestCase):
     def _get_datapipes(self) -> Tuple[IterDataPipe, IterDataPipe, IterDataPipe]:
         src_dp = IterableWrapper(range(20))
-        m1 = src_dp.map(lambda x: [x, x + 5])
+        m1 = src_dp.map(_x_and_x_plus_5)
         ub = m1.unbatch()
-        c1, c2 = ub.demux(2, lambda x: x % 2)
+        c1, c2 = ub.demux(2, _x_mod_2)
         dm = c1.main_datapipe
-        m2 = c1.map(lambda x: x * 2)
+        m2 = c1.map(_x_mult_2)
         dp = m2.zip(c2)
 
-        return traverse(dp, only_datapipe=True), (src_dp, m1, ub, dm, c1, c2, m2, dp)
+        return traverse_dps(dp), (src_dp, m1, ub, dm, c1, c2, m2, dp)
 
     def test_find_dps(self) -> None:
         graph, (_, m1, *_, m2, _) = self._get_datapipes()  # pyre-ignore
@@ -71,6 +88,13 @@ class TestGraph(expecttest.TestCase):
         expected_dps = {m1, m2}
         for dp in dps:
             self.assertTrue(dp in expected_dps)
+
+    def _validate_graph(self, graph, nested_dp):
+        self.assertEqual(len(graph), len(nested_dp))
+        for dp_id, sub_nested_dp in zip(graph, nested_dp):
+            self.assertEqual(graph[dp_id][0], sub_nested_dp[0])
+            if len(graph[dp_id][1]) > 0:
+                self._validate_graph(graph[dp_id][1], sub_nested_dp[1])
 
     def test_replace_dps(self) -> None:
         # pyre-fixme[23]: Unable to unpack 3 values, 2 were expected.
@@ -87,26 +111,43 @@ class TestGraph(expecttest.TestCase):
 
         new_dp1 = Adaptor(m1)
         new_dp2 = Adaptor(m2)
+        new_dp3 = DummyIterDataPipe()
 
         graph = replace_dp(graph, m1, new_dp1)
-        exp_g1 = {
-            dp: {
-                m2: {c1: {dm: {ub: {new_dp1: {m1: {src_dp: {}}}}}}},
-                c2: {dm: {ub: {new_dp1: {m1: {src_dp: {}}}}}},
-            }
-        }
-        self.assertEqual(graph, exp_g1)
-        self.assertEqual(traverse(dp, only_datapipe=True), exp_g1)
+        exp_g1 = [
+            [
+                dp,
+                [
+                    [m2, [[c1, [[dm, [[ub, [[new_dp1, [[m1, [[src_dp, []]]]]]]]]]]]]],
+                    [c2, [[dm, [[ub, [[new_dp1, [[m1, [[src_dp, []]]]]]]]]]]],
+                ],
+            ]
+        ]
+        self._validate_graph(traverse_dps(dp), exp_g1)
 
         graph = replace_dp(graph, m2, new_dp2)
-        exp_g2 = {
-            dp: {
-                new_dp2: {m2: {c1: {dm: {ub: {new_dp1: {m1: {src_dp: {}}}}}}}},
-                c2: {dm: {ub: {new_dp1: {m1: {src_dp: {}}}}}},
-            }
-        }
-        self.assertEqual(graph, exp_g2)
-        self.assertEqual(traverse(dp, only_datapipe=True), exp_g2)
+        exp_g2 = [
+            [
+                dp,
+                [
+                    [new_dp2, [[m2, [[c1, [[dm, [[ub, [[new_dp1, [[m1, [[src_dp, []]]]]]]]]]]]]]]],
+                    [c2, [[dm, [[ub, [[new_dp1, [[m1, [[src_dp, []]]]]]]]]]]],
+                ],
+            ]
+        ]
+        self._validate_graph(traverse_dps(dp), exp_g2)
+
+        graph = replace_dp(graph, m1, new_dp3)
+        exp_g3 = [
+            [
+                dp,
+                [
+                    [new_dp2, [[m2, [[c1, [[dm, [[ub, [[new_dp1, [[new_dp3, []]]]]]]]]]]]]],
+                    [c2, [[dm, [[ub, [[new_dp1, [[new_dp3, []]]]]]]]]],
+                ],
+            ]
+        ]
+        self._validate_graph(traverse_dps(dp), exp_g3)
 
     def test_remove_dps(self) -> None:
         # pyre-fixme[23]: Unable to unpack 3 values, 2 were expected.
@@ -122,25 +163,17 @@ class TestGraph(expecttest.TestCase):
         ) = self._get_datapipes()
 
         graph = remove_dp(graph, m1)
-        exp_g1 = {dp: {m2: {c1: {dm: {ub: {src_dp: {}}}}}, c2: {dm: {ub: {src_dp: {}}}}}}
-        self.assertEqual(graph, exp_g1)
-        self.assertEqual(traverse(dp, only_datapipe=True), exp_g1)
+        exp_g1 = [[dp, [[m2, [[c1, [[dm, [[ub, [[src_dp, []]]]]]]]]], [c2, [[dm, [[ub, [[src_dp, []]]]]]]]]]]
+        self._validate_graph(traverse_dps(dp), exp_g1)
 
         graph = remove_dp(graph, m2)
-        exp_g2 = {dp: {c1: {dm: {ub: {src_dp: {}}}}, c2: {dm: {ub: {src_dp: {}}}}}}
-        self.assertEqual(graph, exp_g2)
-        self.assertEqual(traverse(dp, only_datapipe=True), exp_g2)
+        exp_g2 = [[dp, [[c1, [[dm, [[ub, [[src_dp, []]]]]]]], [c2, [[dm, [[ub, [[src_dp, []]]]]]]]]]]
+        self._validate_graph(traverse_dps(dp), exp_g2)
 
-        with self.assertRaisesRegex(
-            Exception,
-            "Cannot remove source DataPipe that is the first DataPipe in the pipeline",
-        ):
+        with self.assertRaisesRegex(RuntimeError, "Cannot remove the source DataPipe"):
             remove_dp(graph, src_dp)
 
-        with self.assertRaisesRegex(
-            Exception,
-            "Cannot remove a receiving DataPipe having multiple sending DataPipes",
-        ):
+        with self.assertRaisesRegex(RuntimeError, "Cannot remove the receiving DataPipe"):
             remove_dp(graph, dp)
 
     def test_reading_service(self) -> None:
@@ -155,7 +188,8 @@ class TestGraph(expecttest.TestCase):
         for new_dp in rs.adaptors:
             self.assertTrue(new_dp.started)
 
-        _ = list(it)
+        res = list(it)
+        self.assertEqual(len(res), 20)
 
         for new_dp in rs.adaptors:
             self.assertFalse(new_dp.started)
@@ -163,12 +197,7 @@ class TestGraph(expecttest.TestCase):
     @unittest.skipIf(IS_WINDOWS, "Fork is required for lambda")
     def test_multiprocessing_reading_service(self) -> None:
         _, (*_, dp) = self._get_datapipes()  # pyre-ignore
-
-        import torch.multiprocessing as mp
-
-        mp.set_start_method("fork")
-
-        rs = MultiProcessingReadingService(2, persistent_workers=True)
+        rs = MultiProcessingReadingService(2, persistent_workers=True, multiprocessing_context="fork")
         dl = DataLoader2(dp, reading_service=rs)
         d1 = list(dl)
         d2 = list(dl)

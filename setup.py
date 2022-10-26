@@ -98,18 +98,26 @@ def _export_version(version, sha):
         f.write(f"git_version = {repr(sha)}\n")
 
 
+def _get_requirements():
+    req_list = []
+    with Path("requirements.txt").open("r") as f:
+        for line in f:
+            req = line.strip()
+            if len(req) == 0 or req.startswith("#"):
+                continue
+            req_list.append(req)
+    return req_list
+
+
 # Use new version of torch on main branch
-pytorch_package_dep = "torch>1.11.0"
+pytorch_package_dep = "torch>1.12"
 if os.getenv("PYTORCH_VERSION"):
     pytorch_package_dep = pytorch_package_dep.split(">")[0]
     pytorch_package_dep += "==" + os.getenv("PYTORCH_VERSION")
 
 
-requirements = [
-    "urllib3 >= 1.25",
-    "requests",
-    pytorch_package_dep,
-]
+requirements = _get_requirements()
+requirements.append(pytorch_package_dep)
 
 
 class clean(distutils.command.clean.clean):
