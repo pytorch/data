@@ -24,6 +24,7 @@ from torch.utils.data.datapipes.utils.snapshot import _simple_graph_snapshot_res
 from torchdata.datapipes.iter import (
     BucketBatcher,
     Cycler,
+    ExtractKeys,
     Header,
     IndexAdder,
     InMemoryCacheHolder,
@@ -1014,6 +1015,30 @@ class TestIterDataPipe(expecttest.TestCase):
         output_dp = input_dp1.mux_longest(input_dp_no_len)
         with self.assertRaises(TypeError):
             len(output_dp)
+
+    def test_extractor(self):
+
+        # Functional Test: verify that extracting by patterns yields correct output
+        stage1 = IterableWrapper([
+            {"1.txt": "1", "1.bin": "1b"},
+            {"2.txt": "2", "2.bin": "2b"},
+        ])
+        stage2 = ExtractKeys(stage1, "*.txt", "*.bin", as_tuple=True)
+        output = list(iter(stage2))
+        self.assertEqual(output, [("1", "1b"), ("2", "2b")])
+        stage2 = ExtractKeys(stage1, "*.txt", "*.bin")
+        output = list(iter(stage2))
+        self.assertEqual(output, [
+            {"1.txt": "1", "1.bin": "1b"},
+            {"2.txt": "2", "2.bin": "2b"},
+        ])
+        with self.assertRaisesRegex(ValueError, r"(?i)multiple sample keys"):
+            stage2 = ExtractKeys(stage1, "*")
+            output = list(iter(stage2))
+        with self.assertRaisesRegex(ValueError, r"selected twice"):
+            stage2 = ExtractKeys(stage1, "*.txt", "*t")
+            output = list(iter(stage2))
+
 
     def test_zip_longest_iterdatapipe(self):
 
