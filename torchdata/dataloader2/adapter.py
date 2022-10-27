@@ -53,9 +53,21 @@ class Shuffle(Adapter):
             - None: No-op. Introduced for backward compatibility.
 
     Example:
-        >>>  dp = IterableWrapper(range(size)).shuffle()
-        >>>  dl = DataLoader2(dp, [Shuffle(False)])
-        >>>  self.assertEqual(list(range(size)), list(dl))
+
+    .. testsetup::
+
+        from torchdata.datapipes.iter import IterableWrapper
+        from torchdata.dataloader2 import DataLoader2
+        from torchdata.dataloader2.adapter import Shuffle
+
+        size = 12
+
+    .. testcode::
+
+        dp = IterableWrapper(range(size)).shuffle()
+        dl = DataLoader2(dp, [Shuffle(False)])
+        assert list(range(size)) == list(dl)
+
     """
 
     def __init__(self, enable=True):
