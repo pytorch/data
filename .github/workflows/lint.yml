@@ -2,6 +2,10 @@ name: Lint
 
 on:
   push:
+    branches:
+      - main
+      - release/*
+      -abhi-glitchhg
   pull_request:
 
 jobs:
