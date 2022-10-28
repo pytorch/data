@@ -45,7 +45,7 @@ TFRecordExampleSpec = Dict[str, TFRecordFeatureSpec]
 #  Note, reccursive types not supported by mypy at the moment
 # TODO(640): uncomment as soon as it becomes supported
 #  https://github.com/python/mypy/issues/731
-#  BinaryData = Union[str, List['BinaryData']]
+BinaryData = Union[str, List['BinaryData']]
 TFRecordBinaryData = Union[str, List[str], List[List[str]], List[List[List[Any]]]]
 TFRecordExampleFeature = Union[torch.Tensor, List[torch.Tensor], TFRecordBinaryData]
 TFRecordExample = Dict[str, TFRecordExampleFeature]

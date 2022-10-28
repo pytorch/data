@@ -2,9 +2,6 @@ name: Lint
 
 on:
   push:
-    branches:
-      - main
-      - release/*
   pull_request:
 
 jobs:
@@ -53,7 +50,7 @@ jobs:
           pip3 install --pre torch -f "${{ steps.pytorch_channel.outputs.value }}"
       - name: Install dependencies
         run: |
-          pip3 install requests mypy==0.812 graphviz numpy
+          pip3 install requests mypy==0.982 graphviz numpy
       - name: Build TorchData
         run: |
           python setup.py develop
