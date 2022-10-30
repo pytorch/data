@@ -104,6 +104,7 @@ class DataLoader2(Generic[T_co]):
     Args:
         datapipe (``IterDataPipe`` or ``MapDataPipe``): ``DataPipe`` from which to load the data. A deepcopy of this will be made during
             initialization, allowing the input to be re-used in a different ``DataLoader2`` without sharing states.
+            ``None`` can only be used together with ``load_state_dict`` right after DataLoader creation.
         datapipe_adapter_fn (``Iterable[Adapter]`` or ``Adapter``, optional): ``Adapter`` function(s) that will be applied
             to the DataPipe (default: ``None``).
         reading_service (ReadingServiceInterface, optional): defines how ``DataLoader2`` should execute operations over
@@ -113,11 +114,11 @@ class DataLoader2(Generic[T_co]):
 
     def __init__(
         self,
-        datapipe: DataPipe,
+        datapipe: Optional[DataPipe],
         datapipe_adapter_fn: Optional[Union[Iterable[Adapter], Adapter]] = None,
         reading_service: Optional[ReadingServiceInterface] = None,
     ) -> None:
-        self.datapipe = self._wrap_and_copy_dp(datapipe)
+        self.datapipe = self._wrap_and_copy_dp(datapipe) if datapipe is not None else None
         self._adapted: bool = False
         self._datapipe_iter: Optional[Iterator[T_co]] = None
         self._reset_iter: bool = True  # Sets to `False` when __iter__ starts, and `True` when `StopIteration``
@@ -145,6 +146,9 @@ class DataLoader2(Generic[T_co]):
         ``DataLoader2``. And, ``initialize_iteration`` and ``finalize_iterator`` will be
         invoked at the beginning and end of the iteration correspondingly.
         """
+        if self.datapipe is None:
+            raise Exception("Please provide datapipe or use load_state_dict to load datapipe from state")
+
         if self._terminated:
             raise Exception("Cannot iterate over the DataLoader as it has already been shut down")
 
