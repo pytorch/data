@@ -101,19 +101,13 @@ class DataLoader2Test(TestCase):
         self.assertIsNone(state[READING_SERVICE_STATE_KEY_NAME])
         data_loader.shutdown()
 
-        test_data_pipe_2 = IterableWrapper(range(5))
-        restored_data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe_2, reading_service=reading_service)
+        restored_data_loader: DataLoader2 = DataLoader2(datapipe=None, reading_service=reading_service)
         restored_data_loader.load_state_dict(state)
 
         restored_data_loader_datapipe = restored_data_loader.datapipe
         deserialized_datapipe = pickle.loads(state[SERIALIZED_DATAPIPE_KEY_NAME])
         for batch_1, batch_2 in zip(restored_data_loader_datapipe, deserialized_datapipe):
             self.assertEqual(batch_1, batch_2)
-
-        self.assertNotEqual(
-            len(restored_data_loader.datapipe),
-            len(test_data_pipe_2),
-        )
 
         self.assertEqual(
             restored_data_loader.reading_service_state,
