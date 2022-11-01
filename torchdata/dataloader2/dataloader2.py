@@ -134,7 +134,7 @@ class DataLoader2(Generic[T_co]):
         self._terminated: bool = False
         self.valid_iterator_id: Optional[int] = None
 
-        if self.datapipe_adapter_fns is not None:
+        if self.datapipe is not None and self.datapipe_adapter_fns is not None:
             for adapter_fn in self.datapipe_adapter_fns:
                 self.datapipe = adapter_fn(self.datapipe)
         self._datapipe_before_reading_service_adapt: DataPipe = self._copy(self.datapipe)
@@ -147,10 +147,10 @@ class DataLoader2(Generic[T_co]):
         invoked at the beginning and end of the iteration correspondingly.
         """
         if self.datapipe is None:
-            raise Exception("Please provide datapipe or use load_state_dict to load datapipe from state")
+            raise RuntimeError("Please provide datapipe or use load_state_dict to load datapipe from state")
 
         if self._terminated:
-            raise Exception("Cannot iterate over the DataLoader as it has already been shut down")
+            raise RuntimeError("Cannot iterate over the DataLoader as it has already been shut down")
 
         if self._reset_iter:
             if not self._adapted and self.reading_service is not None:
@@ -274,6 +274,7 @@ class DataLoader2(Generic[T_co]):
 
         # deserialize datapipe
         deserialized_datapipe = deserialize_datapipe(serialized_datapipe)
+        assert deserialized_datapipe is not None
 
         # override existing datapipe and reading service state
         self.datapipe = deserialized_datapipe
