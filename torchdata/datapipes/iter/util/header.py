@@ -36,7 +36,6 @@ class HeaderIterDataPipe(IterDataPipe[T_co]):
     def __init__(self, source_datapipe: IterDataPipe[T_co], limit: int = 10) -> None:
         self.source_datapipe: IterDataPipe[T_co] = source_datapipe
         self.limit: int = limit
-        self.length: int = -1
 
     def __iter__(self) -> Iterator[T_co]:
         i: int = 0
@@ -49,12 +48,9 @@ class HeaderIterDataPipe(IterDataPipe[T_co]):
         self.length = min(i, self.limit)  # We know length with certainty when we reach here
 
     def __len__(self) -> int:
-        if self.length != -1:
-            return self.length
         try:
             source_len = len(self.source_datapipe)
-            self.length = min(source_len, self.limit)
-            return self.length
+            return min(source_len, self.limit)
         except TypeError:
             warn(
                 "The length of this HeaderIterDataPipe is inferred to be equal to its limit."
