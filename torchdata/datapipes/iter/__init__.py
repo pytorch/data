@@ -72,6 +72,7 @@ from torchdata.datapipes.iter.transform.callable import (
     FlattenIterDataPipe as Flattener,
     SliceIterDataPipe as Slicer,
 )
+from torchdata.datapipes.iter.util.asyncnestedmap import AsyncNestedMapperIterDataPipe as AsyncNestedMapper
 from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
 from torchdata.datapipes.iter.util.cacheholder import (
     EndOnDiskCacheHolderIterDataPipe as EndOnDiskCacheHolder,
@@ -98,6 +99,7 @@ from torchdata.datapipes.iter.util.indexadder import (
     IndexAdderIterDataPipe as IndexAdder,
 )
 from torchdata.datapipes.iter.util.jsonparser import JsonParserIterDataPipe as JsonParser
+
 from torchdata.datapipes.iter.util.mux_longest import MultiplexerLongestIterDataPipe as MultiplexerLongest
 from torchdata.datapipes.iter.util.paragraphaggregator import ParagraphAggregatorIterDataPipe as ParagraphAggregator
 from torchdata.datapipes.iter.util.plain_text_reader import (
@@ -138,6 +140,7 @@ from torchdata.datapipes.map.util.converter import MapToIterConverterIterDataPip
 __all__ = [
     "AISFileLister",
     "AISFileLoader",
+    "AsyncNestedMapper",
     "BatchMapper",
     "Batcher",
     "BucketBatcher",
