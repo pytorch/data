@@ -370,10 +370,10 @@ class TestIterDataPipe(expecttest.TestCase):
                 str(wa[0].message), r"length of this HeaderIterDataPipe is inferred to be equal to its limit"
             )
 
-        # __len__ Test: returns limit if source doesn't have length, but it has been iterated through once
+        # __len__ Test: returns limit if source doesn't have length, even when it has been iterated through once
         for _ in header_dp:
             pass
-        self.assertEqual(20, len(header_dp))
+        self.assertEqual(30, len(header_dp))
 
     def test_enumerator_iterdatapipe(self) -> None:
         letters = "abcde"

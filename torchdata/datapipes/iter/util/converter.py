@@ -68,7 +68,6 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
             _check_unpickable_fn(key_value_fn)
         self.key_value_fn = key_value_fn  # type: ignore[assignment]
         self._map = None
-        self._length = -1
 
     def _load_map(self):
         self._map = {}
@@ -94,25 +93,19 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
             raise IndexError(f"Index {index} is valid for IterToMapConverter.")
 
     def __len__(self):
-        if self._length > -1:
-            return self._length
         if self._map is not None:
-            self._length = len(self._map)  # type: ignore[arg-type]
-            return self._length
+            return len(self._map)  # type: ignore[arg-type]
         try:
-            self._length = len(self.datapipe)
-            return self._length
+            return len(self.datapipe)
         except (TypeError, NotImplementedError):
-            self._length = -1
-        if self._map is None:
-            warnings.warn(
-                "Data from prior DataPipe are loaded to get length of"
-                "IterToMapConverter before execution of the pipeline."
-                "Please consider removing len()."
-            )
-            self._load_map()
-            self._length = len(self._map)  # type: ignore[arg-type]
-        return self._length
+            pass
+        warnings.warn(
+            "Data from prior DataPipe are loaded to get length of"
+            "IterToMapConverter before execution of the pipeline."
+            "Please consider removing len()."
+        )
+        self._load_map()
+        return len(self._map)  # type: ignore[arg-type]
 
     def __getstate__(self):
         if DILL_AVAILABLE:
@@ -123,11 +116,10 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
             self.datapipe,
             dill_key_value_fn,
             self._map,
-            self._length,
         )
 
     def __setstate__(self, state):
-        (self.datapipe, dill_key_value_fn, self._map, self._length) = state
+        (self.datapipe, dill_key_value_fn, self._map) = state
         if DILL_AVAILABLE:
             self.key_value_fn = dill.loads(dill_key_value_fn)  # type: ignore[assignment]
         else:

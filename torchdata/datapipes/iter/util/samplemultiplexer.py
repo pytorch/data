@@ -57,7 +57,6 @@ class SampleMultiplexerDataPipe(IterDataPipe[T_co]):
             self.random = random.Random()
         else:
             self.random = random.Random(seed)
-        self.length: Optional[int] = None
 
     def __iter__(self) -> Iterator[T_co]:
         pipes_and_weights = [(iter(k), v) for k, v in self.pipes_and_weights]
@@ -82,12 +81,7 @@ class SampleMultiplexerDataPipe(IterDataPipe[T_co]):
             yield item
 
     def __len__(self) -> int:
-        if self.length is not None:
-            if self.length == -1:
-                raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
-            return self.length
         if all(isinstance(dp, Sized) for dp, _ in self.pipes_and_weights):
-            self.length = sum(len(dp) for dp, _ in self.pipes_and_weights)
+            return sum(len(dp) for dp, _ in self.pipes_and_weights)
         else:
-            self.length = -1
-        return len(self)
+            raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
