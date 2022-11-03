@@ -40,7 +40,7 @@ jobs:
           else
             PT_CHANNEL="https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html"
           fi
-          echo "::set-output name=value::$PT_CHANNEL"
+          echo "value=$PT_CHANNEL" >> $GITHUB_OUTPUT
         id: pytorch_channel
       - name: Setup Python environment
         uses: actions/setup-python@v4
