@@ -105,6 +105,13 @@ class TestIterDataPipe(expecttest.TestCase):
         list(cache_dp)
         self.assertEqual(10, len(cache_dp))
 
+    def test_group_batch(self) -> None:
+        dp = IterableWrapper(range(20))
+        dp = dp.group_batch(batch_size=2, number_of_groups=5, group_key_fn=lambda x: x % 5)
+        actual = list(dp)
+        expected = [[0, 5], [1, 6], [2, 7], [3, 8], [4, 9], [10, 15], [11, 16], [12, 17], [13, 18], [14, 19]]
+        self.assertEqual(expected, actual)
+
     def test_iter_key_zipper_iterdatapipe(self) -> None:
 
         source_dp = IterableWrapper(range(10))
