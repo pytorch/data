@@ -36,6 +36,14 @@ class ResetEpochResponse(Response):
     pass
 
 
+class FullStopRequest(Request):
+    pass
+
+
+class FullStopResponse(Response):
+    pass
+
+
 class TerminateRequest(Request):
     pass
 

@@ -158,6 +158,12 @@ class _IterateQueueDataPipes(IterDataPipe):
         for dp in self.datapipes:
             dp.protocol.request_reset_epoch(*args)
 
+    def request_full_stop(self):
+        for dp in self.datapipes:
+            dp.protocol.discard_existing_request()
+        for dp in self.datapipes:
+            dp.protocol.request_full_stop()
+
 
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     r"""
@@ -340,6 +346,22 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         if self._pg is not None:
             dist.destroy_process_group(self._pg)
             self._pg = None
+
+    def _full_stop(self):
+        """
+        Fully stop DataPipes' activities such as prefetching, in order to collect state.
+        """
+        if self.prefetch_mainloop > 0:
+            # Stop prefetching first
+            self.end_datapipe.full_stop()  # type: ignore[union-attr]
+            end_datapipe: DataPipe = self.end_datapipe.source_datapipe
+        else:
+            end_datapipe = self.end_datapipe
+        end_datapipe.request_full_stop()
+
+    def _resume(self):
+        # TODO: I think this will be necessary to restart activities such as prefetching
+        pass
 
 
 class MultiProcessingReadingService(ReadingServiceInterface):

@@ -9,6 +9,7 @@ import types
 
 from torch.utils.data import IterDataPipe
 from torchdata.dataloader2 import communication
+from torchdata.dataloader2.graph import traverse_dps
 
 DEFAULT_NON_BLOCKING_SLEEP = 0.001
 
@@ -136,6 +137,13 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
         elif isinstance(request, communication.messages.ResetIteratorRequest):
             source_datapipe.reset_iterator()
             protocol.response_reset_iterator()
+
+        elif isinstance(request, communication.messages.FullStopRequest):
+            graph = traverse_dps(source_datapipe)
+            for dp, _ in graph.values():
+                if hasattr(dp, "full_stop") and callable(dp.full_stop):
+                    dp.full_stop()
+            protocol.response_full_stop()
 
         elif isinstance(request, communication.messages.TerminateRequest):
             forever = False

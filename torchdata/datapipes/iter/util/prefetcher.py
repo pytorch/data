@@ -104,7 +104,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
 
     def __getstate__(self):
         """
-        Getting state in threading enviroment requires next operations:
+        Getting state in threading environment requires next operations:
             1) Stopping of the producer thread.
             2) Saving buffer.
             3) Adding lazy restart of producer thread when __next__ is called again
@@ -123,3 +123,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
         if self.thread is not None:
             self.prefetch_data.run_prefetcher = False
             self.thread.join()
+
+    def full_stop(self):
+        if self.thread is not None:
+            self.prefetch_data.run_prefetcher = False
