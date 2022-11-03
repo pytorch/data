@@ -72,7 +72,6 @@ from torchdata.datapipes.iter.transform.callable import (
     FlattenIterDataPipe as Flattener,
     SliceIterDataPipe as Slicer,
 )
-from torchdata.datapipes.iter.util.bucketbatch import BucketBatchIterDataPipe as BucketBatch
 from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
 from torchdata.datapipes.iter.util.cacheholder import (
     EndOnDiskCacheHolderIterDataPipe as EndOnDiskCacheHolder,
@@ -92,6 +91,7 @@ from torchdata.datapipes.iter.util.decompressor import (
     DecompressorIterDataPipe as Decompressor,
     ExtractorIterDataPipe as Extractor,
 )
+from torchdata.datapipes.iter.util.groupbatch import GroupBatcherIterDataPipe as GroupBatcher
 from torchdata.datapipes.iter.util.hashchecker import HashCheckerIterDataPipe as HashChecker
 from torchdata.datapipes.iter.util.header import HeaderIterDataPipe as Header, LengthSetterIterDataPipe as LengthSetter
 from torchdata.datapipes.iter.util.indexadder import (
@@ -141,7 +141,6 @@ __all__ = [
     "AISFileLoader",
     "BatchMapper",
     "Batcher",
-    "BucketBatch",
     "BucketBatcher",
     "Bz2FileLoader",
     "CSVDictParser",
@@ -167,6 +166,7 @@ __all__ = [
     "Forker",
     "FullSync",
     "GDriveReader",
+    "GroupBatcher",
     "Grouper",
     "HashChecker",
     "Header",
