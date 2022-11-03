@@ -19,7 +19,12 @@ from torchdata.datapipes.utils import to_graph
 
 T_co = TypeVar("T_co", covariant=True)
 
-import graphviz
+try:
+    import graphviz
+
+    HAS_GRAPHVIZ = True
+except ImportError:
+    HAS_GRAPHVIZ = False
 
 
 class Adaptor(IterDataPipe[T_co]):
@@ -208,6 +213,7 @@ class TestGraph(expecttest.TestCase):
 
 
 class TestGraphVisualization(expecttest.TestCase):
+    @unittest.skipIf(not HAS_GRAPHVIZ, "Package `graphviz` is required to test graph visualization functionalities.")
     def test_to_graph(self):
         dp1 = IterableWrapper(range(10))
         dp2 = dp1.map(lambda x: x + 1)
