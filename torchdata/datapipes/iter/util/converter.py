@@ -116,11 +116,10 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
             self.datapipe,
             dill_key_value_fn,
             self._map,
-            self._length,
         )
 
     def __setstate__(self, state):
-        (self.datapipe, dill_key_value_fn, self._map, self._length) = state
+        (self.datapipe, dill_key_value_fn, self._map) = state
         if DILL_AVAILABLE:
             self.key_value_fn = dill.loads(dill_key_value_fn)  # type: ignore[assignment]
         else:
