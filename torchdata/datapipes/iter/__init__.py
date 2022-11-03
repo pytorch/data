@@ -72,6 +72,7 @@ from torchdata.datapipes.iter.transform.callable import (
     FlattenIterDataPipe as Flattener,
     SliceIterDataPipe as Slicer,
 )
+from torchdata.datapipes.iter.util.bucketbatch import BucketBatchIterDataPipe as BucketBatch
 from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
 from torchdata.datapipes.iter.util.cacheholder import (
     EndOnDiskCacheHolderIterDataPipe as EndOnDiskCacheHolder,
@@ -140,6 +141,7 @@ __all__ = [
     "AISFileLoader",
     "BatchMapper",
     "Batcher",
+    "BucketBatch",
     "BucketBatcher",
     "Bz2FileLoader",
     "CSVDictParser",
