@@ -272,6 +272,17 @@ class TestIterDataPipe(expecttest.TestCase):
         actual = list(prefetched_dp)
         self.assertEqual(expected, actual)
 
+    def test_async_nested_map(self) -> None:
+        source_dp = IterableWrapper(range(10))
+
+        async def a_mult(x):
+            return x * 2
+
+        dp = source_dp.batch(5).async_nested_map(a_mult)
+        actual = list(dp)
+        expected = [[0, 2, 4, 6, 8], [10, 12, 14, 16, 18]]
+        self.assertEqual(expected, actual)
+
     def test_repeater_iterdatapipe(self) -> None:
         import itertools
 
