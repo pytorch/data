@@ -682,52 +682,59 @@ class TestIterDataPipe(expecttest.TestCase):
         with self.assertRaises(ValueError, msg="``max_token_count`` must be equal to or greater than ``max_len``."):
             source_dp.max_token_bucketize(max_token_count=2, max_len=3)
 
+        def _validate_batch_size(res, exp_batch_len, len_fn=lambda d: len(d)):
+            self.assertEqual(len(res), len(exp_batch_len))
+
+            for batch, exp_token_lens in zip(res, exp_batch_len):
+                self.assertEqual(len(batch), len(exp_token_lens))
+                for token, exp_token_len in zip(batch, exp_token_lens):
+                    self.assertEqual(len_fn(token), exp_token_len)
+
         # Functional Test: Filter out min_len
         batch_dp = source_dp.max_token_bucketize(max_token_count=5, min_len=2, buffer_size=10)
-        exp_batch = [["11", "22"], ["111"], ["222"], ["1111"], ["2222"], ["11111"], ["22222"]]
-        self.assertEqual(list(batch_dp), exp_batch)
+        exp_batch_len = [(2, 2), (3,), (3,), (4,), (4,), (5,), (5,)]
+        _validate_batch_size(list(batch_dp), exp_batch_len)
 
         # Functional Test: Filter out max_len
         batch_dp = source_dp.max_token_bucketize(max_token_count=5, max_len=4, buffer_size=10)
-        exp_batch = [["1", "2", "11"], ["22", "111"], ["222"], ["1111"], ["2222"]]
-        self.assertEqual(list(batch_dp), exp_batch)
+        exp_batch_len = [(1, 1, 2), (2, 3), (3,), (4,), (4,)]
+        _validate_batch_size(list(batch_dp), exp_batch_len)
 
         def _custom_len_fn(token):
             return len(token) + 1
 
         # Functional Test: Custom length function
         batch_dp = source_dp.max_token_bucketize(max_token_count=7, len_fn=_custom_len_fn, buffer_size=10)
-        exp_batch = [["1", "2", "11"], ["22", "111"], ["222"], ["1111"], ["2222"], ["11111"], ["22222"]]
-        self.assertEqual(list(batch_dp), exp_batch)
+        exp_batch_len = [(1, 1, 2), (2, 3), (3,), (4,), (4,), (5,), (5,)]
+        _validate_batch_size(list(batch_dp), exp_batch_len)
 
         # Functional Test: Small buffer
         batch_dp = source_dp.max_token_bucketize(max_token_count=10, buffer_size=4)
-        exp_batch = [["1", "11", "2", "22", "111"], ["222", "1111"], ["2222", "11111"], ["22222"]]
-        self.assertEqual(list(batch_dp), exp_batch)
+        exp_batch_len = [(1, 2, 1, 2, 3), (3, 4), (4, 5), (5,)]
+        _validate_batch_size(list(batch_dp), exp_batch_len)
 
         # Reset Test:
         batch_dp = MaxTokenBucketizer(source_dp, max_token_count=5, buffer_size=10)
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(batch_dp, n_elements_before_reset)
-        exp_before_reset = [["1", "2", "11"], ["22", "111"]]
-        exp_after_reset = [["1", "2", "11"], ["22", "111"], ["222"], ["1111"], ["2222"], ["11111"], ["22222"]]
-        self.assertEqual(res_before_reset, exp_before_reset)
-        self.assertEqual(res_after_reset, exp_after_reset)
+        exp_batch_len_before_reset = [(1, 1, 2), (2, 3)]
+        exp_batch_len_after_reset = [(1, 1, 2), (2, 3), (3,), (4,), (4,), (5,), (5,)]
+        _validate_batch_size(res_before_reset, exp_batch_len_before_reset)
+        _validate_batch_size(res_after_reset, exp_batch_len_after_reset)
 
         # Functional test: Padded tokens exceeding max_token_count
         source_data = ["111", "1111", "11111"]  # 3, 4, 5
         source_dp = IterableWrapper(source_data)
         batch_dp = source_dp.max_token_bucketize(max_token_count=7)
-        exp_batch = [["111", "1111"], ["11111"]]
-
-        self.assertEqual(list(batch_dp), exp_batch)
+        exp_batch_len = [(3, 4), (5,)]
+        _validate_batch_size(list(batch_dp), exp_batch_len)
 
         # Functional test: Padded tokens not exceeding max_token_count
         source_data = ["111", "111", "111", "1111"]  # 3, 3, 3, 4
         source_dp = IterableWrapper(source_data)
         batch_dp = source_dp.max_token_bucketize(max_token_count=7, include_padding=True)
-        exp_batch = [["111", "111"], ["111"], ["1111"]]
-        self.assertEqual(list(batch_dp), exp_batch)
+        exp_batch_len = [(3, 3), (3,), (4,)]
+        _validate_batch_size(list(batch_dp), exp_batch_len)
 
         # Functional test: sample length exceeding max_token_count
         source_data = ["111"]
@@ -735,6 +742,16 @@ class TestIterDataPipe(expecttest.TestCase):
         batch_dp = source_dp.max_token_bucketize(max_token_count=2)
         exp_batch = []
         self.assertEqual(list(batch_dp), exp_batch)
+
+        # Functional test: incomparable data for heapq
+        def _custom_len_fn(data):
+            return data["len"]
+
+        source_data = [{"len": 1}, {"len": 2}, {"len": 1}, {"len": 3}, {"len": 1}]
+        source_dp = IterableWrapper(source_data)
+        batch_dp = source_dp.max_token_bucketize(max_token_count=3, len_fn=_custom_len_fn)
+        exp_batch_len = [(1, 1, 1), (2,), (3,)]
+        _validate_batch_size(list(batch_dp), exp_batch_len, len_fn=_custom_len_fn)
 
         # __len__ Test: returns the number of batches
         with self.assertRaises(TypeError):
