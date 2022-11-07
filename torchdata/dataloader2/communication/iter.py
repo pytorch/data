@@ -165,7 +165,9 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
 
 class QueueWrapper(NonBlocking):
     """
-    Creates iter.DataPipe which reads data from the DataLoader.Queue
+    Creates an IterDataPipe which reads data from the DataLoader.Queue.
+
+    The input is a ProtocolClient that contains request queue and response queue.
     """
 
     def __init__(self, protocol, response_wait_time=0.00001):

@@ -201,7 +201,6 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
         if merge_fn is not None:
             _check_unpickable_fn(merge_fn)
         self.merge_fn: Optional[Callable] = merge_fn
-        self.length: int = -1
 
     def __iter__(self) -> Iterator:
         for item in self.source_iterdatapipe:
@@ -213,6 +212,4 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
             yield self.merge_fn(item, map_item) if self.merge_fn else (item, map_item)
 
     def __len__(self) -> int:
-        if self.length == -1:
-            self.length = len(self.source_iterdatapipe)
-        return self.length
+        return len(self.source_iterdatapipe)
