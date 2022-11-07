@@ -112,13 +112,20 @@ def _generate_random_seed(rng: Optional[torch.Generator] = None, dtype: torch.dt
 
 
 class _IterateQueueDataPipes(IterDataPipe):
+    r"""
+    Takes in ``QueueWrapper``s and iterates through them in a round-robin manner to get batches one-by-one.
+
+    Typically, each worker has one ``QueueWrapper``.
+    """
+
     def __init__(self, datapipes):
         # TODO(VitalyFedyunin): Consider combining _IterateQueueDataPipes and QueueWrapper
-        # into one class, which supports any number of queues.
-        self.datapipes = datapipes
-        for dp in self.datapipes:
+        #                       into one class, which supports any number of queues.
+        for dp in datapipes:
             if not isinstance(dp, communication.iter.QueueWrapper):
                 raise Exception("Source datapipes should be an instance of iter.QueueWrapper")
+        self.datapipes = datapipes
+        self.res_buffers = [[] for _ in range(len(datapipes))]
 
     def __iter__(self):
         total_pipes = len(self.datapipes)
@@ -131,6 +138,9 @@ class _IterateQueueDataPipes(IterDataPipe):
         while cnt_disabled_pipes < total_pipes:
             for idx in range(total_pipes):
                 if not disabled_pipe[idx]:
+                    # Check if buffer of the DataPipe is empty before requesting next
+                    while len(self.res_buffers[idx]):
+                        yield self.res_buffers[idx].pop()
                     response = self.datapipes[idx].protocol.get_response_next(block=True)
                     if isinstance(response, communication.messages.StopIterationResponse):
                         disabled_pipe[idx] = True
@@ -159,10 +169,16 @@ class _IterateQueueDataPipes(IterDataPipe):
             dp.protocol.request_reset_epoch(*args)
 
     def request_full_stop(self):
-        for dp in self.datapipes:
-            dp.protocol.discard_existing_request()
+        # Store results of pending requests
+        for idx, dp in enumerate(self.datapipes):
+            res = dp.protocol.get_response_next(block=True)
+            self.res_buffers[idx].append(res)
         for dp in self.datapipes:
             dp.protocol.request_full_stop()
+
+    def request_resume(self):
+        for dp in self.datapipes:
+            dp.protocol.request_resume()
 
 
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
@@ -347,7 +363,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             dist.destroy_process_group(self._pg)
             self._pg = None
 
-    def _full_stop(self):
+    def full_stop(self):
         """
         Fully stop DataPipes' activities such as prefetching, in order to collect state.
         """
@@ -359,9 +375,13 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             end_datapipe = self.end_datapipe
         end_datapipe.request_full_stop()
 
-    def _resume(self):
-        # TODO: I think this will be necessary to restart activities such as prefetching
-        pass
+    def resume(self):
+        if self.prefetch_mainloop > 0:
+            self.end_datapipe.resume()  # type: ignore[union-attr]
+            end_datapipe: DataPipe = self.end_datapipe.source_datapipe
+        else:
+            end_datapipe = self.end_datapipe
+        end_datapipe.request_resume()
 
 
 class MultiProcessingReadingService(ReadingServiceInterface):

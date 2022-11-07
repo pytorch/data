@@ -44,6 +44,14 @@ class FullStopResponse(Response):
     pass
 
 
+class ResumeRequest(Request):
+    pass
+
+
+class ResumeResponse(Response):
+    pass
+
+
 class TerminateRequest(Request):
     pass
 

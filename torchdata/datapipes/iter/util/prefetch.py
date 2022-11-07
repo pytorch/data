@@ -223,3 +223,11 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
         self._error = None
         self._sync_counter = torch.tensor([0], dtype=torch.int32)
         self._done_callback = False
+
+    def full_stop(self):
+        if self._executor is not None:
+            self._executor.shutdown()
+            self._executor = None
+
+    def resume(self):
+        self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)

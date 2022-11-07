@@ -11,3 +11,4 @@ rarfile
 # See: https://github.com/protocolbuffers/protobuf/issues/10571
 protobuf >= 3.9.2, < 3.20
 datasets
+graphviz

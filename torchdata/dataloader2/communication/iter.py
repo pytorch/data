@@ -145,12 +145,23 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
                     dp.full_stop()
             protocol.response_full_stop()
 
+        elif isinstance(request, communication.messages.ResumeRequest):
+            graph = traverse_dps(source_datapipe)
+            for dp, _ in graph.values():
+                if hasattr(dp, "resume") and callable(dp.resume):
+                    dp.resume()
+            protocol.response_resume()
+
         elif isinstance(request, communication.messages.TerminateRequest):
             forever = False
             protocol.response_terminate()
 
         elif isinstance(request, communication.messages.GetNextRequest):
             while forever:
+                if protocol._full_stop:
+                    raise RuntimeError(
+                        "Cannot `GetNext` after `FullStop` has been called. " "`Resume` must be called first."
+                    )
                 try:
                     value = source_datapipe.nonblocking_next()
                 except NotAvailable:
@@ -173,7 +184,9 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
 
 class QueueWrapper(NonBlocking):
     """
-    Creates iter.DataPipe which reads data from the DataLoader.Queue
+    Creates an IterDataPipe which reads data from the DataLoader.Queue.
+
+    The input is a ProtocolClient that contains request queue and response queue.
     """
 
     def __init__(self, protocol, response_wait_time=0.00001):

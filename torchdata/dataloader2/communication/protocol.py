@@ -57,6 +57,13 @@ class ProtocolClient(Protocol):
         self.request_queue.put(request)
         self.request_sent(request)
 
+    def request_resume(self):
+        if not self.can_take_request():
+            raise Exception("Can not full stop while we are still waiting response for previous request")
+        request = communication.messages.ResumeRequest()
+        self.request_queue.put(request)
+        self.request_sent(request)
+
 
 class ProtocolServer(Protocol):
     """
@@ -64,18 +71,20 @@ class ProtocolServer(Protocol):
     """
 
     _req_received = None
+    _full_stop = False  # When `True`, prevents `GetNext` in `DataPipeBehindQueues`.
 
     def __init__(self, request_queue, response_queue):
         self.request_queue = request_queue
         self.response_queue = response_queue
         self._req_received = None
+        self._full_stop = False
 
     def have_pending_request(self):
         return self._req_received is not None
 
     def get_new_request(self, block=False):
         if self.have_pending_request():
-            raise Exception("Trying to get next request, while having one unserved")
+            raise Exception("Trying to get next request, while having one un-served")
         try:
             response = self.request_queue.get(block=block)
         except EmptyException:
@@ -103,7 +112,15 @@ class ProtocolServer(Protocol):
     def response_full_stop(self):
         if not self.have_pending_request():
             raise Exception("Attempting to reply with pending request")
+        self._full_stop = True
         self.response_queue.put(communication.messages.FullStopResponse())
+        self._req_received = None
+
+    def response_resume(self):
+        if not self.have_pending_request():
+            raise Exception("Attempting to reply with pending request")
+        self._full_stop = False
+        self.response_queue.put(communication.messages.ResumeResponse())
         self._req_received = None
 
 

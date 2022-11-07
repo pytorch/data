@@ -6,7 +6,7 @@
 
 
 import unittest
-from typing import Iterator, List, Tuple, TypeVar
+from typing import Dict, Iterator, List, Tuple, TypeVar
 
 import expecttest
 
@@ -15,8 +15,16 @@ from torch.utils.data import IterDataPipe
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService, ReadingServiceInterface
 from torchdata.dataloader2.graph import find_dps, remove_dp, replace_dp, traverse_dps
 from torchdata.datapipes.iter import IterableWrapper, Mapper
+from torchdata.datapipes.utils import to_graph
 
 T_co = TypeVar("T_co", covariant=True)
+
+try:
+    import graphviz
+
+    HAS_GRAPHVIZ = True
+except ImportError:
+    HAS_GRAPHVIZ = False
 
 
 class Adaptor(IterDataPipe[T_co]):
@@ -202,6 +210,34 @@ class TestGraph(expecttest.TestCase):
         d1 = list(dl)
         d2 = list(dl)
         self.assertEqual(d1, d2)
+
+
+class TestGraphVisualization(expecttest.TestCase):
+    @unittest.skipIf(not HAS_GRAPHVIZ, "Package `graphviz` is required to test graph visualization functionalities.")
+    def test_to_graph(self):
+        dp1 = IterableWrapper(range(10))
+        dp2 = dp1.map(lambda x: x + 1)
+        dp3 = dp2.filter(lambda x: x > 5)
+        cdp1, cdp2 = dp3.fork(num_instances=2)
+        dp4 = cdp1.zip(cdp2)
+        cdp3, cdp4 = dp4.demux(num_instances=2, classifier_fn=lambda x: x % 2)
+        dp5 = cdp3.concat(cdp4)
+
+        # Test to ensure that we can create these graphs with runtime errors
+        kwargs_list: List[Dict] = [
+            {"dp": dp1},
+            {"dp": dp2},
+            {"dp": dp3},
+            {"dp": cdp1, "debug": True},
+            {"dp": dp4},
+            {"dp": dp4, "debug": True},
+            {"dp": cdp3, "debug": True},
+            {"dp": dp5},
+            {"dp": dp5, "debug": True},
+        ]
+        for kwargs in kwargs_list:
+            g = to_graph(**kwargs)
+            self.assertTrue(isinstance(g, graphviz.Digraph))
 
 
 if __name__ == "__main__":
