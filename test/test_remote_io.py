@@ -13,7 +13,7 @@ import expecttest
 
 import torchdata
 
-from _utils._common_utils_for_test import check_hash_fn, create_temp_dir, IS_WINDOWS
+from _utils._common_utils_for_test import check_hash_fn, create_temp_dir, IS_M1, IS_WINDOWS
 from torch.utils.data import DataLoader
 
 from torchdata.datapipes.iter import (
@@ -222,6 +222,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             _ = S3FileLoader(IterableWrapper(file_urls))
 
     @skipIfNoAWS
+    @unittest.skipIf(IS_M1, "PyTorch M1 CI Machine doesn't allow accessing")
     def test_s3_io_iterdatapipe(self):
         # S3FileLister: different inputs
         input_list = [

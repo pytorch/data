@@ -68,7 +68,7 @@ class ProtocolServer(Protocol):
 
     def get_new_request(self, block=False):
         if self.have_pending_request():
-            raise Exception("Trying to get next request, while having one unserved")
+            raise Exception("Trying to get next request, while having one un-served")
         try:
             response = self.request_queue.get(block=block)
         except EmptyException:

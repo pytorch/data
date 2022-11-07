@@ -112,6 +112,12 @@ def _generate_random_seed(rng: Optional[torch.Generator] = None, dtype: torch.dt
 
 
 class _IterateQueueDataPipes(IterDataPipe):
+    r"""
+    Takes in ``QueueWrapper``s and iterates through them in a round-robin manner to get batches one-by-one.
+
+    Typically, each worker has one ``QueueWrapper``.
+    """
+
     def __init__(self, datapipes):
         # TODO(VitalyFedyunin): Consider combining _IterateQueueDataPipes and QueueWrapper
         # into one class, which supports any number of queues.

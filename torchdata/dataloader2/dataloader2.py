@@ -52,6 +52,14 @@ class ConcurrencySpec:
 
 
 class DataLoader2Iterator(Iterator[T_co]):
+    r"""
+    An iterator wrapper returned by ``DataLoader2``'s ``__iter__` method. It delegates method/attribute calls
+    to the DataPipe iterator object.
+
+    The purpose of this wrapper object is to track the validity of an iterator to enforce the single iterator per
+    ``DataLoader2`` constraint, and to finalize iteration/shutdown when necessary.
+    """
+
     def __init__(self, dataloader: "DataLoader2", iterator_id: int):
         self.dataloader = dataloader
         self.iterator_id = iterator_id
@@ -96,20 +104,22 @@ class DataLoader2(Generic[T_co]):
     ``DataLoader2`` is used to optimize and execute the given ``DataPipe`` graph
     based on ``ReadingService`` and ``Adapter`` functions, with support for
 
-    - Dynamic sharding for multi-process and distributed data loading
+    - Dynamic sharding for multiprocess and distributed data loading
     - Multiple backend ``ReadingServices``
     - ``DataPipe`` graph in-place modification like shuffle control, memory pinning, etc.
     - Snapshot the state of data-preprocessing pipeline (WIP)
 
     Args:
-        datapipe (``IterDataPipe`` or ``MapDataPipe``): ``DataPipe`` from which to load the data. A deepcopy of this will be made during
-            initialization, allowing the input to be re-used in a different ``DataLoader2`` without sharing states.
-            ``None`` can only be used together with ``load_state_dict`` right after DataLoader creation.
-        datapipe_adapter_fn (``Iterable[Adapter]`` or ``Adapter``, optional): ``Adapter`` function(s) that will be applied
-            to the DataPipe (default: ``None``).
+        datapipe (``IterDataPipe`` or ``MapDataPipe``): ``DataPipe`` from which to load the data. A deepcopy of this
+            datapipe will be made during initialization, allowing the input to be re-used in a different ``DataLoader2``
+            without sharing states. Input ``None`` can only be used if ``load_state_dict`` is called
+            right after the creation of the DataLoader.
+        datapipe_adapter_fn (``Iterable[Adapter]`` or ``Adapter``, optional): ``Adapter`` function(s) that
+            will be applied to the DataPipe (default: ``None``).
         reading_service (ReadingServiceInterface, optional): defines how ``DataLoader2`` should execute operations over
-            the ``DataPipe``, e.g. multiprocessing/distributed (default: ``None``). A deepcopy of this will be made during
-            initialization, allowing the input to be re-used in a different ``DataLoader2`` without sharing states.
+            the ``DataPipe``, e.g. multiprocessing/distributed (default: ``None``). A deepcopy of this will be
+            created during initialization, allowing the ReadingService to be re-used in a different
+            ``DataLoader2`` without sharing states.
     """
 
     def __init__(
