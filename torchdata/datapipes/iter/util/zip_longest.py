@@ -42,7 +42,6 @@ class ZipperLongestIterDataPipe(IterDataPipe):
             raise TypeError("All inputs are required to be `IterDataPipe` " "for `ZipperLongestIterDataPipe`.")
         super().__init__()
         self.datapipes = datapipes  # type: ignore[assignment]
-        self.length = None
         self.fill_value = fill_value
 
     def __iter__(self) -> Iterator[Tuple]:
@@ -63,12 +62,7 @@ class ZipperLongestIterDataPipe(IterDataPipe):
             yield tuple(values)
 
     def __len__(self) -> int:
-        if self.length is not None:
-            if self.length == -1:
-                raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
-            return self.length
         if all(isinstance(dp, Sized) for dp in self.datapipes):
-            self.length = max(len(dp) for dp in self.datapipes)
+            return max(len(dp) for dp in self.datapipes)
         else:
-            self.length = -1
-        return len(self)
+            raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
