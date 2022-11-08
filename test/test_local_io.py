@@ -674,7 +674,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
 
     # TODO(120): this test currently only covers reading from local
     # filesystem. It needs to be modified once test data can be stored on
-    # gdrive/s3/onedrive
+    # gdrive/onedrive
     @skipIfNoIoPath
     def test_io_path_file_lister_iterdatapipe(self):
         datapipe = IoPathFileLister(root=self.temp_sub_dir.name)
