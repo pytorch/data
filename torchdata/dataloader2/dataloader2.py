@@ -266,7 +266,7 @@ class DataLoader2(Generic[T_co]):
         data_loader.reading_service_state = reading_service_state
         return data_loader
 
-    def load_state_dict(self, state: Dict[str, Any]) -> None:
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         """
         For the existing ``DataLoader2``, load serialized state to restore ``DataPipe`` graph
         and reset the internal state of ``ReadingService``.
@@ -279,8 +279,8 @@ class DataLoader2(Generic[T_co]):
                 "Please create a new dataloader in order to use load state dict."
             )
 
-        serialized_datapipe = state[SERIALIZED_DATAPIPE_KEY_NAME]
-        reading_service_state = state[READING_SERVICE_STATE_KEY_NAME]
+        serialized_datapipe = state_dict[SERIALIZED_DATAPIPE_KEY_NAME]
+        reading_service_state = state_dict[READING_SERVICE_STATE_KEY_NAME]
 
         # deserialize datapipe
         deserialized_datapipe = deserialize_datapipe(serialized_datapipe)

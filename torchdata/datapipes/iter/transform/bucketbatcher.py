@@ -7,14 +7,17 @@
 import heapq
 import random
 
+from dataclasses import dataclass, field
 from functools import partial
-from typing import Callable, Iterator, List, Optional, TypeVar
+from typing import Callable, Generic, Iterator, List, Optional, TypeVar
 
 import torch
 
 from torchdata.datapipes import DataChunk, functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
+
+T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
 
 
@@ -181,13 +184,18 @@ def _default_len_fn(token):
     return len(token)
 
 
-def _token_len_fn(token, len_fn):
-    return len_fn(token), token
+@dataclass(order=True, frozen=True)
+class PrioritizedItem(Generic[T_co]):
+    length: int
+    data: T_co = field(compare=False)
+
+
+def _token_len_fn(token: T, len_fn: Callable) -> PrioritizedItem[T]:
+    return PrioritizedItem(length=len_fn(token), data=token)
 
 
 def _token_filter_fn(data, *, min_len, max_len):
-    length, token = data
-    return length >= min_len and length <= max_len
+    return data.length >= min_len and data.length <= max_len
 
 
 @functional_datapipe("max_token_bucketize")
@@ -234,7 +242,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         >>> list(batch_dp)
         [['1', '1', '1'], ['11', '11'], ['11'], ['111'], ['111'], ['1111']]
     """
-    datapipe: IterDataPipe[T_co]
+    datapipe: IterDataPipe[PrioritizedItem[T_co]]
     max_token_count: int
     len_fn: Callable
     min_len: int
@@ -258,18 +266,17 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
             raise ValueError("``min_len`` should be larger than 0 and equal to or smaller than ``max_len``.")
         if max_len > max_token_count:
             raise ValueError("``max_token_count`` must be equal to or greater than ``max_len``.")
-        datapipe = datapipe.map(partial(_token_len_fn, len_fn=len_fn))
-        datapipe = datapipe.filter(partial(_token_filter_fn, min_len=min_len, max_len=max_len))
         if buffer_size <= 0:
             raise ValueError("'buffer_size' is required to be a positive integer.")
-        self.datapipe = datapipe
+        self.datapipe = datapipe.map(partial(_token_len_fn, len_fn=len_fn))
+        self.datapipe = self.datapipe.filter(partial(_token_filter_fn, min_len=min_len, max_len=max_len))
         self.max_token_count = max_token_count
         self.buffer_size = buffer_size
         self.include_padding = include_padding
 
     def __iter__(self) -> Iterator[DataChunk[T_co]]:
-        buffer: List = []
-        batch: List = []
+        buffer: List[PrioritizedItem[T_co]] = []
+        batch: List[T_co] = []
         batch_size: int = 0
         max_length: int = 0
         for d in self.datapipe:
@@ -287,9 +294,11 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         if batch:
             yield DataChunk(batch)
 
-    def _pop_buffer(self, buffer: List, batch: List, batch_size: int, max_length: int):
+    def _pop_buffer(self, buffer: List[PrioritizedItem[T_co]], batch: List[T_co], batch_size: int, max_length: int):
         data_chunk_to_yield = None
-        length, token = heapq.heappop(buffer)
+        d: PrioritizedItem[T_co] = heapq.heappop(buffer)
+        length = d.length
+        token = d.data
 
         if self.include_padding:
             max_length = max(length, max_length)
