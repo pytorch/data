@@ -225,7 +225,7 @@ jobs:
     steps:
       - name: Download Artifacts from Github
         continue-on-error: true
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: torchdata-artifact
       - name: Determine if Wheel Uploading is needed
@@ -378,7 +378,7 @@ jobs:
           python -m pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Conda Package to Github
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: torchdata-artifact
           path: conda-bld/*/torchdata-*.tar.bz2
