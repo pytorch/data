@@ -50,18 +50,19 @@ class ProtocolClient(Protocol):
             response = self.response_queue.get(block=True)
             self.request_served(response)
 
-    def request_full_stop(self):
+    def request_pause(self):
         if not self.can_take_request():
-            raise Exception("Can not full stop while we are still waiting response for previous request")
-        request = communication.messages.FullStopRequest()
+            raise Exception("Can not pause while we are still waiting response for previous request")
+        request = communication.messages.PauseRequest()
         self.request_queue.put(request)
         self.request_sent(request)
 
     def request_resume(self):
-        if not self.can_take_request():
-            raise Exception("Can not full stop while we are still waiting response for previous request")
+        # if not self.can_take_request():
+        #     raise Exception("Can not resume while we are still waiting response for previous request")
         request = communication.messages.ResumeRequest()
         self.request_queue.put(request)
+        # TODO: Right now the issue is that self.response_queue is not being emptied. Such that the next line errors.
         self.request_sent(request)
 
 
@@ -71,13 +72,13 @@ class ProtocolServer(Protocol):
     """
 
     _req_received = None
-    _full_stop = False  # When `True`, prevents `GetNext` in `DataPipeBehindQueues`.
+    _pause = False  # When `True`, prevents `GetNext` in `DataPipeBehindQueues`.
 
     def __init__(self, request_queue, response_queue):
         self.request_queue = request_queue
         self.response_queue = response_queue
         self._req_received = None
-        self._full_stop = False
+        self._pause = False
 
     def have_pending_request(self):
         return self._req_received is not None
@@ -97,7 +98,7 @@ class ProtocolServer(Protocol):
         if not self.have_pending_request():
             raise Exception("Attempting to reply with pending request")
         if not isinstance(self._req_received, communication.messages.TerminateRequest):
-            raise Exception("Replaying with terminate status to other type of message")
+            raise Exception("Replaying with `terminate` status to other type of message")
         self.response_queue.put(communication.messages.TerminateResponse())
         self._req_received = None
 
@@ -105,21 +106,25 @@ class ProtocolServer(Protocol):
         if not self.have_pending_request():
             raise Exception("Attempting to reply with pending request")
         if not isinstance(self._req_received, communication.messages.ResetEpochRequest):
-            raise Exception("Replaying with reset epoch status to other type of message")
+            raise Exception("Replaying with `reset_epoch` status to other type of message")
         self.response_queue.put(communication.messages.ResetEpochResponse())
         self._req_received = None
 
-    def response_full_stop(self):
+    def response_pause(self):
         if not self.have_pending_request():
             raise Exception("Attempting to reply with pending request")
-        self._full_stop = True
-        self.response_queue.put(communication.messages.FullStopResponse())
+        if not isinstance(self._req_received, communication.messages.PauseRequest):
+            raise Exception("Replaying with `pause` status to other type of message")
+        self._pause = True
+        self.response_queue.put(communication.messages.PauseResponse())
         self._req_received = None
 
     def response_resume(self):
         if not self.have_pending_request():
             raise Exception("Attempting to reply with pending request")
-        self._full_stop = False
+        if not isinstance(self._req_received, communication.messages.ResumeRequest):
+            raise Exception("Replaying with `resume` status to other type of message")
+        self._pause = False
         self.response_queue.put(communication.messages.ResumeResponse())
         self._req_received = None
 
@@ -254,6 +259,26 @@ class IterDataPipeQueueProtocolClient(ProtocolClient):
 
         if not isinstance(response, communication.messages.ResetIteratorResponse):
             raise Exception("Invalid response received")
+
+    def get_response_pause(self, block=False):
+        try:
+            response = self.response_queue.get(block=block)
+        except EmptyException:
+            raise EmptyQueue("queue is empty")
+        self.request_served(response)
+
+        if not isinstance(response, communication.messages.PauseResponse):
+            raise Exception("Invalid response received when expecting `PauseResponse`")
+
+    def get_response_resume(self, block=False):
+        try:
+            response = self.response_queue.get(block=block)
+        except EmptyException:
+            raise EmptyQueue("queue is empty")
+        self.request_served(response)
+
+        if not isinstance(response, communication.messages.ResumeResponse):
+            raise Exception("Invalid response received when expecting `ResumeResponse`")
 
     def get_response_next(self, block=False, timeout=None):
         if not self.waiting_for_response():

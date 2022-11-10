@@ -47,6 +47,8 @@ class Expected:
 
 
 class _PrefetchExecutor:
+    # TODO: Improvement - merge with the `_PrefetchData` class of prefetcher.py
+    #       May not be possible right now due to circular import
     def __init__(
         self,
         datapipe_iterator: Iterator,
@@ -224,10 +226,11 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
         self._sync_counter = torch.tensor([0], dtype=torch.int32)
         self._done_callback = False
 
-    def full_stop(self):
+    def pause(self):
         if self._executor is not None:
             self._executor.shutdown()
             self._executor = None
 
     def resume(self):
-        self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)
+        self._executor = _FullSyncPrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)
+

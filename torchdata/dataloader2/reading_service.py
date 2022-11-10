@@ -140,7 +140,8 @@ class _IterateQueueDataPipes(IterDataPipe):
                 if not disabled_pipe[idx]:
                     # Check if buffer of the DataPipe is empty before requesting next
                     while len(self.res_buffers[idx]):
-                        yield self.res_buffers[idx].pop()
+                        response = self.res_buffers[idx].pop()
+                        yield response.value
                     response = self.datapipes[idx].protocol.get_response_next(block=True)
                     if isinstance(response, communication.messages.StopIterationResponse):
                         disabled_pipe[idx] = True
@@ -168,17 +169,20 @@ class _IterateQueueDataPipes(IterDataPipe):
         for dp in self.datapipes:
             dp.protocol.request_reset_epoch(*args)
 
-    def request_full_stop(self):
+    def request_pause(self):
         # Store results of pending requests
+        print("")
         for idx, dp in enumerate(self.datapipes):
             res = dp.protocol.get_response_next(block=True)
             self.res_buffers[idx].append(res)
         for dp in self.datapipes:
-            dp.protocol.request_full_stop()
+            dp.pause()
+            # dp.protocol.request_pause()
 
     def request_resume(self):
         for dp in self.datapipes:
-            dp.protocol.request_resume()
+            dp.resume()
+            # dp.protocol.request_resume()
 
 
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
@@ -363,19 +367,23 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             dist.destroy_process_group(self._pg)
             self._pg = None
 
-    def full_stop(self):
+    def _pause(self):
         """
-        Fully stop DataPipes' activities such as prefetching, in order to collect state.
+        Pauses DataPipes' activities such as prefetching, in order to collect state.
         """
         if self.prefetch_mainloop > 0:
             # Stop prefetching first
-            self.end_datapipe.full_stop()  # type: ignore[union-attr]
+            self.end_datapipe.pause()  # type: ignore[union-attr]
             end_datapipe: DataPipe = self.end_datapipe.source_datapipe
         else:
             end_datapipe = self.end_datapipe
-        end_datapipe.request_full_stop()
+        end_datapipe.request_pause()
 
-    def resume(self):
+    def _resume(self):
+        """
+        Resumes DataPipes' activities. This is required to be called after `_pause` before
+        the DataLoader can keep yielding elements.
+        """
         if self.prefetch_mainloop > 0:
             self.end_datapipe.resume()  # type: ignore[union-attr]
             end_datapipe: DataPipe = self.end_datapipe.source_datapipe

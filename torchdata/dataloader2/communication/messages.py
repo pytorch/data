@@ -36,11 +36,11 @@ class ResetEpochResponse(Response):
     pass
 
 
-class FullStopRequest(Request):
+class PauseRequest(Request):
     pass
 
 
-class FullStopResponse(Response):
+class PauseResponse(Response):
     pass
 
 

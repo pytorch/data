@@ -32,12 +32,12 @@ class PrefetcherIterDataPipe(IterDataPipe):
     """
     Prefetches elements from the source DataPipe and puts them into a buffer (functional name: ``prefetch``).
     Prefetching performs the operations (e.g. I/O, computations) of the DataPipes up to this one ahead of time
-    and stores the result in the buffer, ready to be consumed by the subsequent DataPipe. It has no effect aside
+    and stores the result in the buffer, ready to be consume by the subsequent DataPipe. It has no effect aside
     from getting the sample ready ahead of time.
 
     This is used by ``PrototypeMultiProcessingReadingService`` when the arguments
     ``prefetch_worker`` (for prefetching at each worker process) or
-    ``prefetch_mainloop`` (for prefetching at the main loop) are greater than 0.
+    ``prefetch_mainloop`` (for prefetching at the moain loop) are greater than 0.
 
     Beyond the built-in use cases, this can be useful to put after I/O DataPipes that have
     expensive I/O operations (e.g. takes a long time to request a file from a remote server).
@@ -104,7 +104,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
 
     def __getstate__(self):
         """
-        Getting state in threading environment requires next operations:
+        Getting state in threading enviroment requires next operations:
             1) Stopping of the producer thread.
             2) Saving buffer.
             3) Adding lazy restart of producer thread when __next__ is called again
@@ -123,9 +123,8 @@ class PrefetcherIterDataPipe(IterDataPipe):
         if self.thread is not None:
             self.prefetch_data.run_prefetcher = False
             self.thread.join()
-            self.thread = None
 
-    def full_stop(self):
+    def pause(self):
         if self.thread is not None:
             # Note: the content of the buffer still exists in `prefetch_data.prefetch_buffer`
             self.prefetch_data.run_prefetcher = False

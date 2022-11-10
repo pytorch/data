@@ -211,7 +211,7 @@ jobs:
           pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Wheels to Github
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: torchdata-artifact
           path: dist/torchdata*.whl
@@ -393,7 +393,7 @@ jobs:
     steps:
       - name: Download Artifacts from Github
         continue-on-error: true
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: torchdata-artifact
       - name: Determine if Conda Uploading is needed
@@ -529,7 +529,7 @@ jobs:
           echo "value=$TARGET_FOLDER" >> $GITHUB_OUTPUT
         id: target_folder
       - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4.2.5
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages # The branch the action should deploy to.
