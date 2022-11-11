@@ -25,7 +25,7 @@ from torch.utils.data import DataLoader
 
 from torchdata.dataloader2 import DataLoader2, DistributedReadingService, PrototypeMultiProcessingReadingService
 from torchdata.datapipes.iter import IterableWrapper
-from torchdata.datapipes.iter.util.prefetch import PrefetchTimeoutError
+from torchdata.datapipes.iter.util.distributed import PrefetchTimeoutError
 
 TEST_MASTER_ADDR = "127.0.0.1"
 DEFAULT_WORLD_SIZE = 2

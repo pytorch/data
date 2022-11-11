@@ -91,6 +91,7 @@ from torchdata.datapipes.iter.util.decompressor import (
     DecompressorIterDataPipe as Decompressor,
     ExtractorIterDataPipe as Extractor,
 )
+from torchdata.datapipes.iter.util.distributed import FullSyncIterDataPipe as FullSync
 from torchdata.datapipes.iter.util.hashchecker import HashCheckerIterDataPipe as HashChecker
 from torchdata.datapipes.iter.util.header import HeaderIterDataPipe as Header, LengthSetterIterDataPipe as LengthSetter
 from torchdata.datapipes.iter.util.indexadder import (
@@ -105,7 +106,6 @@ from torchdata.datapipes.iter.util.plain_text_reader import (
     CSVParserIterDataPipe as CSVParser,
     LineReaderIterDataPipe as LineReader,
 )
-from torchdata.datapipes.iter.util.prefetch import FullSyncIterDataPipe as FullSync
 from torchdata.datapipes.iter.util.prefetcher import PrefetcherIterDataPipe as Prefetcher
 from torchdata.datapipes.iter.util.randomsplitter import RandomSplitterIterDataPipe as RandomSplitter
 from torchdata.datapipes.iter.util.rararchiveloader import RarArchiveLoaderIterDataPipe as RarArchiveLoader
