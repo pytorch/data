@@ -13,7 +13,7 @@ import expecttest
 from _utils._common_utils_for_test import IS_WINDOWS
 from torch.utils.data import IterDataPipe
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService, ReadingServiceInterface
-from torchdata.dataloader2.graph import find_dps, remove_dp, replace_dp, traverse_dps
+from torchdata.dataloader2.graph import find_dps, list_dps, remove_dp, replace_dp, traverse_dps
 from torchdata.datapipes.iter import IterableWrapper, Mapper
 from torchdata.datapipes.utils import to_graph
 
@@ -96,6 +96,44 @@ class TestGraph(expecttest.TestCase):
         expected_dps = {m1, m2}
         for dp in dps:
             self.assertTrue(dp in expected_dps)
+
+    def test_list_dps(self) -> None:
+        def _validate_fn(dps, exp_dps):
+            self.assertEqual(len(dps), len(exp_dps))
+            exp_set = {*exp_dps}
+            for dp in dps:
+                self.assertTrue(dp in exp_set)
+
+        graph, exp_all_dps = self._get_datapipes()
+        (
+            src_dp,
+            m1,
+            ub,
+            dm,
+            c1,
+            c2,
+            m2,
+            dp,
+        ) = exp_all_dps
+
+        # List all DataPipes
+        dps = list_dps(graph)
+        _validate_fn(dps, exp_all_dps)
+
+        # List all DataPipes excluding a single DataPipe
+        dps = list_dps(graph, exclude_dps=m1)
+        _, _, *exp_dps = exp_all_dps
+        _validate_fn(dps, exp_dps)
+
+        dps = list_dps(graph, exclude_dps=m2)
+        *exp_dps_1, _, c2, _, dp = exp_all_dps
+        exp_dps = list(exp_dps_1) + [c2, dp]
+        _validate_fn(dps, exp_dps)
+
+        # List all DataPipes excluding multiple DataPipes
+        dps = list_dps(graph, exclude_dps=[m1, m2])
+        exp_dps = [ub, dm, c2, dp]
+        _validate_fn(dps, exp_dps)
 
     def _validate_graph(self, graph, nested_dp):
         self.assertEqual(len(graph), len(nested_dp))
