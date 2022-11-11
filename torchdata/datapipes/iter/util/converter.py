@@ -90,7 +90,7 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
                 self._load_map()
             return self._map[index]  # type: ignore[index]
         except KeyError:
-            raise IndexError(f"Index {index} is valid for IterToMapConverter.")
+            raise IndexError(f"Index {index} is invalid for IterToMapConverter.")
 
     def __len__(self):
         if self._map is not None:

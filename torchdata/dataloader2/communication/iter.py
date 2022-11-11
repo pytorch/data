@@ -110,6 +110,12 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
     """
     Indefinitely iterates over ``req_queue`` and passing values from source_datapipe to ``res_queue``.
 
+    Request Types:
+        `ResetEpoch` - Call the `reset_epoch_fn` on the protocol's DataPipe
+        `ResetIterator` - Reset the iterator by calling `QueueWrapper`'s `reset_iterator` method
+        `Terminate` - exits the infinite while loop
+        `GetNext` - returns the value from the DataPipe, and handles exceptions such as `StopIteration` as appropriate
+
     Args:
         source_datapipe: DataPipe
         protocol: ``IterDataPipeQueueProtocolServer`` that contains ``req_queue`` and ``res_queue``
@@ -165,8 +171,7 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
 
 class QueueWrapper(NonBlocking):
     """
-    Creates an IterDataPipe which reads data from the DataLoader.Queue.
-
+    Creates an IterDataPipe which sends requests and reads the response from the DataLoader.Queue.
     The input is a ProtocolClient that contains request queue and response queue.
     """
 
