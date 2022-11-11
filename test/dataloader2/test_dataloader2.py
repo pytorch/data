@@ -5,11 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import os
 import pickle
 import unittest
 from unittest import TestCase
-
-from torch.testing._internal.common_utils import TEST_WITH_TSAN
 
 from torchdata.dataloader2 import (
     communication,
@@ -35,7 +34,9 @@ try:
     HAS_DILL = True
 except ImportError:
     HAS_DILL = False
+
 skipIfNoDill = unittest.skipIf(not HAS_DILL, "no dill")
+TEST_WITH_TSAN = os.getenv("PYTORCH_TEST_WITH_TSAN", "0") == "1"
 
 
 class _ReadingServiceWrapper:
