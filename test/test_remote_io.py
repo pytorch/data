@@ -213,6 +213,21 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         res = list(fsspec_loader_dp)
         self.assertEqual(len(res), 18, f"{input} failed")
 
+    @skipIfNoFSSpecS3
+    def test_fsspec_azure_blob(self):
+        url = "public/curated/covid-19/ecdc_cases/latest/ecdc_cases.csv"
+        account_name = "pandemicdatalake"
+        azure_prefixes = ["abfs", "az"]
+        fsspec_loader_dp = {}
+
+        for prefix in azure_prefixes:
+            fsspec_lister_dp = FSSpecFileLister(f"{prefix}://{url}", account_name=account_name)
+            fsspec_loader_dp[prefix] = FSSpecFileOpener(fsspec_lister_dp, account_name=account_name).parse_csv()
+
+        res_abfs = list(fsspec_loader_dp["abfs"])[0]
+        res_az = list(fsspec_loader_dp["az"])[0]
+        self.assertEqual(res_abfs, res_az, f"{input} failed")
+
     @skipIfAWS
     def test_disabled_s3_io_iterdatapipe(self):
         file_urls = ["s3://ai2-public-datasets"]

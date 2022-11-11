@@ -12,3 +12,4 @@ rarfile
 protobuf >= 3.9.2, < 3.20
 datasets
 graphviz
+adlfs
