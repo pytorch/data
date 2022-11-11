@@ -57,8 +57,9 @@ And, graph utility functions are provided in ``torchdata.dataloader.graph`` to h
 
     traverse_dps
     find_dps
-    replace_dp
+    list_dps
     remove_dp
+    replace_dp
 
 Adapter
 --------
