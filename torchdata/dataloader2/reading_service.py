@@ -112,6 +112,12 @@ def _generate_random_seed(rng: Optional[torch.Generator] = None, dtype: torch.dt
 
 
 class _IterateQueueDataPipes(IterDataPipe):
+    r"""
+    Takes in ``QueueWrapper``s and iterates through them in a round-robin manner to get batches one-by-one.
+
+    Typically, each worker has one ``QueueWrapper``.
+    """
+
     def __init__(self, datapipes):
         # TODO(VitalyFedyunin): Consider combining _IterateQueueDataPipes and QueueWrapper
         # into one class, which supports any number of queues.
@@ -169,7 +175,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             ``0`` will be replaced by ``InProcessReadingService`` in the future.
         multiprocessing_context (str, optional): Multiprocessing starting method.
             If method is None then the default context is returned.
-            Otherwise method should be 'fork', 'spawn'.
+            Otherwise, method should be 'fork', 'spawn'.
     """
     num_workers: int
     processes: List
@@ -208,7 +214,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
     @staticmethod
     def _process_reset_fn(world_size, rank, num_workers, worker_id, datapipe, shared_seed):
-        # This function will receive worker local copy of datapipe and args value from initialize_iteration
+        # This function will receive worker local copy of datapipe and args value from ``initialize_iteration``
         worker_seed_generator = torch.Generator()
         worker_seed_generator.manual_seed(shared_seed)
         torch.utils.data.graph_settings.apply_random_seed(
@@ -259,6 +265,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
                 self._process_reset_fn, self._world_size, self._rank, self.num_workers, worker_id
             )
             ctx = mp.get_context(self.multiprocessing_context)
+            # Process contains a ProtocolServer
             (process, req_queue, res_queue) = communication.eventloop.SpawnProcessForDataPipeline(
                 ctx,
                 datapipe,

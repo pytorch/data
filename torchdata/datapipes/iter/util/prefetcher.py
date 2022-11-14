@@ -22,7 +22,6 @@ CONSUMER_SLEEP_INTERVAL = 0.0001  # Interval between checking items availablitit
 class _PrefetchData:
     def __init__(self, source_datapipe, buffer_size: int):
         self.run_prefetcher = True
-        # TODO: Potential optimization is changing buffer from list to dequeue
         self.prefetch_buffer: Deque = deque()
         self.buffer_size: int = buffer_size
         self.source_datapipe = source_datapipe

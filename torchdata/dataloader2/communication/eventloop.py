@@ -32,6 +32,10 @@ __all__ = [
 
 
 def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_on_process_init=None, call_on_epoch_reset=None):
+    r"""
+    Initialize with the given init function, set the appropriate pipe and protocol server type, and
+    create a loop with the protocol server.
+    """
     if call_on_process_init is not None:
         call_on_process_init(source_datapipe)
     if isinstance(source_datapipe, IterDataPipe):
@@ -54,6 +58,10 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_on_process_
 
 
 def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe, call_on_process_init=None, call_on_epoch_reset=None):
+    r"""
+    Given a DataPipe, starts a new process with ``DataPipeToQueuesLoop`` as target,
+    and returns ``(process, req_queue, res_queue)``.
+    """
     req_queue = multiprocessing_ctx.Queue()
     res_queue = multiprocessing_ctx.Queue()
     process = multiprocessing_ctx.Process(
@@ -64,8 +72,8 @@ def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe, call_on_process_i
 
 def SpawnThreadForDataPipeline(datapipe):
     r"""
-    Given a DataPipe, creates a copy of the DataPipe, starts a new Thread with DataPipeToQueuesLoop as target,
-    and return the process, req_queue, res_queue, thread_local_datapipe.
+    Given a DataPipe, creates a copy of the DataPipe, starts a new Thread with ``DataPipeToQueuesLoop`` as target,
+    and returns ``(process, req_queue, res_queue, new_copied_datapipe)``.
     """
     req_queue = communication.queue.ThreadingQueue()
     res_queue = communication.queue.ThreadingQueue()
