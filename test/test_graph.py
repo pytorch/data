@@ -125,14 +125,15 @@ class TestGraph(expecttest.TestCase):
         _, _, *exp_dps = exp_all_dps
         _validate_fn(dps, exp_dps)
 
+        # Exclude a DataPipe on one branch
         dps = list_dps(graph, exclude_dps=m2)
-        *exp_dps_1, _, c2, _, dp = exp_all_dps
-        exp_dps = list(exp_dps_1) + [c2, dp]
+        *_, c2, _, dp = exp_all_dps
+        exp_dps = [c2, dp]
         _validate_fn(dps, exp_dps)
 
         # List all DataPipes excluding multiple DataPipes
         dps = list_dps(graph, exclude_dps=[m1, m2])
-        exp_dps = [ub, dm, c2, dp]
+        exp_dps = [c2, dp]
         _validate_fn(dps, exp_dps)
 
     def _validate_graph(self, graph, nested_dp):

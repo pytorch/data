@@ -16,6 +16,7 @@ import torch
 
 from torch.testing._internal.common_utils import instantiate_parametrized_tests, IS_WINDOWS, parametrize
 from torchdata.dataloader2 import DataLoader2, DistributedReadingService, PrototypeMultiProcessingReadingService
+from torchdata.dataloader2.graph.settings import _set_worker_seed_for_dp_graph
 from torchdata.datapipes.iter import IterableWrapper
 
 
@@ -77,6 +78,37 @@ class DeterminismTest(TestCase):
         self.assertNotEqual(results[0][0], res)
         # Different subprocess-local random state
         self.assertNotEqual(results[0][1], ran_res)
+
+    def test_graph_random_settings(self):
+        def _get_dp_seeds_after_setting(worker_id, seed=123):
+            data_source = IterableWrapper(list(range(100)))
+            dp0 = data_source.shuffle()
+            dp1, dp2, dp3 = dp0.fork(3)
+            dp1 = dp1.sharding_filter()
+            dp2 = dp2.shuffle()
+            dp3 = dp3.shuffle()
+            dp3_ = dp3.sharding_filter()
+            dp4 = dp1.zip(dp2, dp3_).shuffle()
+
+            rng = torch.Generator()
+            rng.manual_seed(seed)
+            _set_worker_seed_for_dp_graph(dp4, rng, worker_id)
+
+            # same seeds, different seeds
+            return (dp0._seed, dp3._seed), (dp2._seed, dp4._seed)
+
+        ss_0_123, ds_0_123 = _get_dp_seeds_after_setting(worker_id=0, seed=123)
+        ss_1_123, ds_1_123 = _get_dp_seeds_after_setting(worker_id=1, seed=123)
+        self.assertEqual(ss_0_123, ss_1_123)
+        self.assertNotEqual(ds_0_123, ds_1_123)
+
+        ss_0_123_, ds_0_123_ = _get_dp_seeds_after_setting(worker_id=0, seed=123)
+        self.assertEqual(ss_0_123, ss_0_123_)
+        self.assertEqual(ds_0_123, ds_0_123_)
+
+        ss_0_321, ds_0_321 = _get_dp_seeds_after_setting(worker_id=0, seed=321)
+        self.assertNotEqual(ss_0_123, ss_0_321)
+        self.assertNotEqual(ds_0_123, ds_0_321)
 
 
 instantiate_parametrized_tests(DeterminismTest)

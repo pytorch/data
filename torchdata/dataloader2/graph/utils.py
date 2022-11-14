@@ -41,9 +41,15 @@ def list_dps(graph: DataPipeGraph, exclude_dps: Optional[Union[DataPipe, List[Da
 
     if exclude_dps is not None:
         if isinstance(exclude_dps, (IterDataPipe, MapDataPipe)):
-            cache.add(id(exclude_dps))
-        else:
-            for dp in exclude_dps:  # type: ignore[union-attr]
+            exclude_dps = [
+                exclude_dps,
+            ]
+        for exclude_dp in exclude_dps:  # type: ignore[union-attr]
+            assert isinstance(exclude_dp, (IterDataPipe, MapDataPipe))
+            # Skip DataPipe that has already been excluded
+            if id(exclude_dp) in cache:
+                continue
+            for dp in list_dps(traverse_dps(exclude_dp)):  # type: ignore[arg-type]
                 cache.add(id(dp))
 
     def helper(g) -> None:  # pyre-ignore
