@@ -10,9 +10,10 @@ import multiprocessing as mp
 import random
 
 from abc import ABC, abstractmethod
+from collections import deque
 
 from datetime import timedelta
-from typing import Callable, List, Optional
+from typing import Callable, Deque, List, Optional
 
 import torch
 import torch.distributed as dist
@@ -125,7 +126,7 @@ class _IterateQueueDataPipes(IterDataPipe):
             if not isinstance(dp, communication.iter.QueueWrapper):
                 raise Exception("Source datapipes should be an instance of iter.QueueWrapper")
         self.datapipes = datapipes
-        self.res_buffers = [[] for _ in range(len(datapipes))]
+        self.res_buffers: List[Deque] = [deque() for _ in range(len(datapipes))]
 
     def __iter__(self):
         total_pipes = len(self.datapipes)
@@ -138,11 +139,11 @@ class _IterateQueueDataPipes(IterDataPipe):
         while cnt_disabled_pipes < total_pipes:
             for idx in range(total_pipes):
                 if not disabled_pipe[idx]:
-                    # Check if buffer of the DataPipe is empty before requesting next
-                    while len(self.res_buffers[idx]):
-                        response = self.res_buffers[idx].pop()
-                        yield response.value
-                    response = self.datapipes[idx].protocol.get_response_next(block=True)
+                    # Check if buffer of the DataPipe is empty, if not, yield one before requesting next
+                    if len(self.res_buffers[idx]):
+                        response = self.res_buffers[idx].popleft()
+                    else:
+                        response = self.datapipes[idx].protocol.get_response_next(block=True)
                     if isinstance(response, communication.messages.StopIterationResponse):
                         disabled_pipe[idx] = True
                         cnt_disabled_pipes += 1
@@ -151,7 +152,8 @@ class _IterateQueueDataPipes(IterDataPipe):
                         raise communication.iter.InvalidStateResetRequired
                     if isinstance(response, communication.messages.TerminateResponse):
                         raise communication.iter.TerminateRequired
-                    self.datapipes[idx].protocol.request_next()
+                    if len(self.res_buffers[idx]) == 0:  # Only request if buffer is empty
+                        self.datapipes[idx].protocol.request_next()
                     yield response.value
 
     def reset(self):
@@ -171,18 +173,19 @@ class _IterateQueueDataPipes(IterDataPipe):
 
     def request_pause(self):
         # Store results of pending requests
-        print("")
         for idx, dp in enumerate(self.datapipes):
-            res = dp.protocol.get_response_next(block=True)
-            self.res_buffers[idx].append(res)
+            if dp.protocol.waiting_for_response():
+                res = dp.protocol.get_response_next(block=True)
+                self.res_buffers[idx].append(res)
         for dp in self.datapipes:
             dp.pause()
-            # dp.protocol.request_pause()
 
     def request_resume(self):
         for dp in self.datapipes:
+            if dp.protocol.waiting_for_response():
+                # TODO: Might need to see what request has been sent and wait here, see notes in test
+                pass
             dp.resume()
-            # dp.protocol.request_resume()
 
 
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
@@ -374,9 +377,9 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         if self.prefetch_mainloop > 0:
             # Stop prefetching first
             self.end_datapipe.pause()  # type: ignore[union-attr]
-            end_datapipe: DataPipe = self.end_datapipe.source_datapipe
+            end_datapipe: DataPipe = self.end_datapipe.source_datapipe  # type: ignore[union-attr]
         else:
-            end_datapipe = self.end_datapipe
+            end_datapipe = self.end_datapipe  # type: ignore[assignment]
         end_datapipe.request_pause()
 
     def _resume(self):
@@ -386,9 +389,9 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         """
         if self.prefetch_mainloop > 0:
             self.end_datapipe.resume()  # type: ignore[union-attr]
-            end_datapipe: DataPipe = self.end_datapipe.source_datapipe
+            end_datapipe: DataPipe = self.end_datapipe.source_datapipe  # type: ignore[union-attr]
         else:
-            end_datapipe = self.end_datapipe
+            end_datapipe = self.end_datapipe  # type: ignore[assignment]
         end_datapipe.request_resume()
 
 

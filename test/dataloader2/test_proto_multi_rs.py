@@ -24,12 +24,15 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
 
         # TODO: Check compatibility with prefetch main_loop
 
-        dp1 = IterableWrapper(range(4))
+        dp1 = IterableWrapper(range(6))
         dp2 = dp1.shuffle()
         dp3 = dp2.sharding_filter()
         test_dps = [dp3]
         for dp in test_dps:
-            rs = PrototypeMultiProcessingReadingService(num_workers=2, prefetch_worker=0, prefetch_mainloop=0)
+            rs = PrototypeMultiProcessingReadingService(num_workers=2, prefetch_worker=0, prefetch_mainloop=1)
+            # TODO: This non-deterministically breaks when prefetch_mainloop > 0, figure out why
+            #       I might need to check if there are requests when `request_resume` is called...
+            #       Perhaps whitelist the allowable and request and wait?
             dl = DataLoader2(dp, reading_service=rs)
             res = []
             for i, x in enumerate(dl):
@@ -38,7 +41,6 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
                     # dl.reading_service.reset()
                     print("Pausing...")
                     dl.reading_service._pause()
-                    # time.sleep(2)
                     print("Resuming...")
                     dl.reading_service._resume()
                     print("Done with resume", flush=True)

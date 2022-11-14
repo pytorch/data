@@ -232,5 +232,4 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
             self._executor = None
 
     def resume(self):
-        self._executor = _FullSyncPrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)
-
+        self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)
