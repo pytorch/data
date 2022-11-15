@@ -202,9 +202,6 @@ class S3FS {
             create_stream_fn);
     downloadHandle->WaitUntilFinished();
 
-    Aws::OFStream storeFile(
-        object_name_.c_str(), Aws::OFStream::out | Aws::OFStream::trunc);
-
     if (downloadHandle->GetStatus() !=
         Aws::Transfer::TransferStatus::COMPLETED) {
       const Aws::Client::AWSError<Aws::S3::S3Errors> error =
