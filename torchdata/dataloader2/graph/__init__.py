@@ -6,6 +6,12 @@
 
 
 from torch.utils.data.graph import DataPipe, DataPipeGraph, traverse_dps
+from torchdata.dataloader2.graph.serialization import (
+    clone,
+    deserialize_datapipe,
+    serialize_datapipe,
+    wrap_datapipe_for_serialization,
+)
 
 from torchdata.dataloader2.graph.utils import find_dps, list_dps, remove_dp, replace_dp
 
@@ -13,11 +19,15 @@ from torchdata.dataloader2.graph.utils import find_dps, list_dps, remove_dp, rep
 __all__ = [
     "DataPipe",
     "DataPipeGraph",
+    "clone",
+    "deserialize_datapipe",
     "find_dps",
     "list_dps",
     "remove_dp",
     "replace_dp",
+    "serialize_datapipe",
     "traverse_dps",
+    "wrap_datapipe_for_serialization",
 ]
 
 
