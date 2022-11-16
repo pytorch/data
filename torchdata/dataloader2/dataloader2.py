@@ -9,16 +9,15 @@ from dataclasses import dataclass
 from typing import Any, Dict, Generic, Iterable, Iterator, Optional, TypeVar, Union
 
 from torchdata.dataloader2.adapter import Adapter
-from torchdata.dataloader2.graph import (
+from torchdata.dataloader2.error import PauseIteration
+from torchdata.dataloader2.graph._serialization import (
     clone,
     DataPipe,
     deserialize_datapipe,
     serialize_datapipe,
     wrap_datapipe_for_serialization,
 )
-
-from .error import PauseIteration
-from .reading_service import CheckpointableReadingServiceInterface, ReadingServiceInterface
+from torchdata.dataloader2.reading_service import CheckpointableReadingServiceInterface, ReadingServiceInterface
 
 T_co = TypeVar("T_co", covariant=True)
 SERIALIZED_DATAPIPE_KEY_NAME = "serialized_datapipe"

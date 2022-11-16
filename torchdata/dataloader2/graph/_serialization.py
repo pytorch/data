@@ -18,6 +18,14 @@ from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.map import MapDataPipe
 
 
+__all__ = [
+    "clone",
+    "deserialize_datapipe",
+    "serialize_datapipe",
+    "wrap_datapipe_for_serialization",
+]
+
+
 def serialize_datapipe(datapipe: DataPipe) -> bytes:
     try:
         return pickle.dumps(datapipe)
