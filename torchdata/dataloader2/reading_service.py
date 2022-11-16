@@ -8,6 +8,7 @@
 import functools
 import multiprocessing as mp
 import random
+import warnings
 
 from abc import ABC, abstractmethod
 from collections import deque
@@ -177,15 +178,19 @@ class _IterateQueueDataPipes(IterDataPipe):
             if dp.protocol.waiting_for_response():
                 res = dp.protocol.get_response_next(block=True)
                 self.res_buffers[idx].append(res)
-        for dp in self.datapipes:
+        for i, dp in enumerate(self.datapipes):
+            print(f"Calling pause on worker {i}")
             dp.pause()
+            print(f"`pause` is done for worker {i}")
 
     def request_resume(self):
-        for dp in self.datapipes:
+        for i, dp in enumerate(self.datapipes):
             if dp.protocol.waiting_for_response():
                 # TODO: Might need to see what request has been sent and wait here, see notes in test
-                pass
+                print(f"Worker {i} is waiting fore response in request_resume")
+            print(f"Calling resume on worker {i}")
             dp.resume()
+            print(f"`request_resume` is done on worker {i}")
 
 
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
@@ -374,13 +379,16 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         """
         Pauses DataPipes' activities such as prefetching, in order to collect state.
         """
-        if self.prefetch_mainloop > 0:
+        if self.prefetch_mainloop > 0 and self.num_workers > 0:
             # Stop prefetching first
             self.end_datapipe.pause()  # type: ignore[union-attr]
             end_datapipe: DataPipe = self.end_datapipe.source_datapipe  # type: ignore[union-attr]
         else:
             end_datapipe = self.end_datapipe  # type: ignore[assignment]
-        end_datapipe.request_pause()
+        if self.num_workers > 0:
+            end_datapipe.request_pause()
+        else:
+            warnings.warn("If you would like to use `pause`, please use more than 0 worker.")
 
     def _resume(self):
         """
@@ -388,11 +396,18 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         the DataLoader can keep yielding elements.
         """
         if self.prefetch_mainloop > 0:
-            self.end_datapipe.resume()  # type: ignore[union-attr]
             end_datapipe: DataPipe = self.end_datapipe.source_datapipe  # type: ignore[union-attr]
         else:
             end_datapipe = self.end_datapipe  # type: ignore[assignment]
-        end_datapipe.request_resume()
+        if self.num_workers > 0:
+            end_datapipe.request_resume()
+        else:
+            warnings.warn("If you would like to use `resume`, please use more than 0 worker.")
+        print("`rs._resume`: done calling `request_resume` (on workers)", flush=True)
+        if self.prefetch_mainloop > 0 and self.num_workers > 0:
+            print("`rs._resume`: calling `resume` on prefetch_mainloop", flush=True)
+            print(f"Type: {type(self.end_datapipe)}")
+            self.end_datapipe.resume()  # type: ignore[union-attr]
 
 
 class MultiProcessingReadingService(ReadingServiceInterface):

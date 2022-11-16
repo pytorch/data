@@ -23,29 +23,46 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
         #       Use DL2 with Prototype
 
         # TODO: Check compatibility with prefetch main_loop
+        n_elements = 6  # 6 doesn't work when buffer is large
 
-        dp1 = IterableWrapper(range(6))
+        dp1 = IterableWrapper(range(n_elements))
         dp2 = dp1.shuffle()
         dp3 = dp2.sharding_filter()
-        test_dps = [dp3]
+        double_pause_dp = dp3.prefetch().prefetch()
+        test_dps = [dp3]  # , double_pause_dp]
+
         for dp in test_dps:
-            rs = PrototypeMultiProcessingReadingService(num_workers=2, prefetch_worker=0, prefetch_mainloop=1)
-            # TODO: This non-deterministically breaks when prefetch_mainloop > 0, figure out why
-            #       I might need to check if there are requests when `request_resume` is called...
-            #       Perhaps whitelist the allowable and request and wait?
-            dl = DataLoader2(dp, reading_service=rs)
-            res = []
-            for i, x in enumerate(dl):
-                res.append(x)
-                if i in {2}:  # {0, 5, 10}:
-                    # dl.reading_service.reset()
-                    print("Pausing...")
-                    dl.reading_service._pause()
-                    print("Resuming...")
-                    dl.reading_service._resume()
-                    print("Done with resume", flush=True)
-                    print(res)
-            print(res)
+
+            rs0 = PrototypeMultiProcessingReadingService(num_workers=0, prefetch_worker=0, prefetch_mainloop=1)
+            # TODO: Catch warning here about using more than 0 worker
+
+            rs1 = PrototypeMultiProcessingReadingService(num_workers=1, prefetch_worker=0, prefetch_mainloop=0)  # Pass
+            rs2 = PrototypeMultiProcessingReadingService(num_workers=1, prefetch_worker=0, prefetch_mainloop=2)  # Hangs
+            rs3 = PrototypeMultiProcessingReadingService(num_workers=2, prefetch_worker=0, prefetch_mainloop=0)  # Pass
+            rs4 = PrototypeMultiProcessingReadingService(
+                num_workers=2, prefetch_worker=2, prefetch_mainloop=0
+            )  # prefetch_worker hangs
+            rs5 = PrototypeMultiProcessingReadingService(num_workers=2, prefetch_worker=0, prefetch_mainloop=2)
+            rs6 = PrototypeMultiProcessingReadingService(
+                num_workers=2, prefetch_worker=2, prefetch_mainloop=2
+            )  # this fails
+
+            # TODO: There is a bug when prefetcher has fetched everything from source before pause/resume,
+            #       But nonetheless resume set `run_prefetcher` back to True, making it hang
+
+            # test_rss = [rs1, rs2, rs3, rs4, rs5, rs6]
+            test_rss = [rs2]
+            for rs in test_rss:
+                dl = DataLoader2(dp, reading_service=rs)
+                res = []
+                for i, x in enumerate(dl):
+                    res.append(x)
+                    if i in {2}:  # {2, n_elements - 3}:
+                        dl.reading_service._pause()
+                        dl.reading_service._resume()
+                print(res)
+
+                self.assertEqual(list(range(n_elements)), sorted(res))
 
         # TODO: Add a test case when not calling `_resume` will trigger error when `next` is called
 

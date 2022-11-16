@@ -57,27 +57,32 @@ class PrefetcherIterDataPipe(IterDataPipe):
             raise ValueError("'buffer_size' is required to be a positive integer.")
         self.buffer_size = buffer_size
         self.thread: Optional[threading.Thread] = None
+        self.stop_iteration = threading.Event()
+        self.stop_iteration.clear()
 
     @staticmethod
-    def thread_worker(prefetch_data):
+    def thread_worker(prefetch_data, stop_iteration: threading.Event):
         itr = iter(prefetch_data.source_datapipe)
-        stop_iteration = False
+        # stop_iteration = False
+        # while not stop_iteration.is_set():
         while prefetch_data.run_prefetcher:
-            if len(prefetch_data.prefetch_buffer) < prefetch_data.buffer_size and not stop_iteration:
+            if len(prefetch_data.prefetch_buffer) < prefetch_data.buffer_size and not stop_iteration.is_set():
                 try:
-                    item = next(itr)
+                    item = next(itr)  # It hangs here
                     prefetch_data.prefetch_buffer.append(item)
                 except StopIteration:
-                    stop_iteration = True
+                    stop_iteration.set()  # stop_iteration = True
                 except communication.iter.InvalidStateResetRequired:
-                    stop_iteration = True
+                    stop_iteration.set()  # stop_iteration = True
                 except communication.iter.TerminateRequired:
                     prefetch_data.run_prefetcher = False
-            elif stop_iteration and len(prefetch_data.prefetch_buffer) == 0:
+                    stop_iteration.set()  # stop_iteration = True
+            elif stop_iteration.is_set() and len(prefetch_data.prefetch_buffer) == 0:
                 prefetch_data.run_prefetcher = False
             else:  # Buffer is full, waiting for main thread to consume items
                 # TODO: Calculate sleep interval based on previous consumption speed
                 time.sleep(PRODUCER_SLEEP_INTERVAL)
+        # time.sleep(PRODUCER_SLEEP_INTERVAL)
 
     def __iter__(self):
         if self.buffer_size < 1:
@@ -87,7 +92,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
                 prefetch_data = _PrefetchData(self.source_datapipe, self.buffer_size)
                 self.prefetch_data = prefetch_data
                 self.thread = threading.Thread(
-                    target=PrefetcherIterDataPipe.thread_worker, args=(prefetch_data,), daemon=True
+                    target=PrefetcherIterDataPipe.thread_worker, args=(prefetch_data, self.stop_iteration), daemon=True
                 )
                 self.thread.start()
                 while prefetch_data.run_prefetcher:
@@ -95,7 +100,10 @@ class PrefetcherIterDataPipe(IterDataPipe):
                         yield prefetch_data.prefetch_buffer.popleft()
                     else:
                         # TODO: Calculate sleep interval based on previous availability speed
-                        time.sleep(CONSUMER_SLEEP_INTERVAL)
+                        if not self.stop_iteration.is_set():
+                            time.sleep(CONSUMER_SLEEP_INTERVAL)
+                        else:
+                            prefetch_data.run_prefetcher = False
             finally:
                 prefetch_data.run_prefetcher = False
                 if self.thread is not None:
@@ -126,14 +134,8 @@ class PrefetcherIterDataPipe(IterDataPipe):
 
     def pause(self):
         if self.thread is not None:
-            # Note: the content of the buffer still exists in `prefetch_data.prefetch_buffer`
             self.prefetch_data.run_prefetcher = False
-            self.thread.join()
-            self.thread = None
 
     def resume(self):
-        self.thread = threading.Thread(
-            target=PrefetcherIterDataPipe.thread_worker, args=(self.prefetch_data,), daemon=True
-        )
-        self.prefetch_data.run_prefetcher = True
-        self.thread.start()
+        if not self.stop_iteration.is_set() and self.thread is not None:
+            self.prefetch_data.run_prefetcher = True
