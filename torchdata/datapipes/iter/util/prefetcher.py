@@ -101,6 +101,8 @@ class PrefetcherIterDataPipe(IterDataPipe):
                 if self.thread is not None:
                     self.thread.join()
                     self.thread = None
+                for sample in prefetch_data.prefetch_buffer:
+                    yield sample
 
     def __getstate__(self):
         """
