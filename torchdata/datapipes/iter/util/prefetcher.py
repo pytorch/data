@@ -25,6 +25,9 @@ class _PrefetchData:
         self.prefetch_buffer: Deque = deque()
         self.buffer_size: int = buffer_size
         self.source_datapipe = source_datapipe
+        self.stop_iteration = False
+        self._lock = threading.RLock()
+        self.cv = threading.Condition(lock=self._lock)
 
 
 @functional_datapipe("prefetch")
@@ -57,32 +60,30 @@ class PrefetcherIterDataPipe(IterDataPipe):
             raise ValueError("'buffer_size' is required to be a positive integer.")
         self.buffer_size = buffer_size
         self.thread: Optional[threading.Thread] = None
-        self.stop_iteration = threading.Event()
-        self.stop_iteration.clear()
 
     @staticmethod
-    def thread_worker(prefetch_data, stop_iteration: threading.Event):
+    def thread_worker(prefetch_data: _PrefetchData):
         itr = iter(prefetch_data.source_datapipe)
-        # stop_iteration = False
-        # while not stop_iteration.is_set():
-        while prefetch_data.run_prefetcher:
-            if len(prefetch_data.prefetch_buffer) < prefetch_data.buffer_size and not stop_iteration.is_set():
-                try:
-                    item = next(itr)  # It hangs here
-                    prefetch_data.prefetch_buffer.append(item)
-                except StopIteration:
-                    stop_iteration.set()  # stop_iteration = True
-                except communication.iter.InvalidStateResetRequired:
-                    stop_iteration.set()  # stop_iteration = True
-                except communication.iter.TerminateRequired:
+        while not prefetch_data.stop_iteration:
+            while prefetch_data.run_prefetcher:
+                if len(prefetch_data.prefetch_buffer) < prefetch_data.buffer_size and not prefetch_data.stop_iteration:
+                    try:
+                        item = next(itr)
+                        prefetch_data.prefetch_buffer.append(item)
+                        print(f"prefetch success, got {item}", flush=True)
+                    except StopIteration:
+                        prefetch_data.stop_iteration = True
+                    except communication.iter.InvalidStateResetRequired:
+                        prefetch_data.stop_iteration = True
+                    except communication.iter.TerminateRequired:
+                        prefetch_data.run_prefetcher = False
+                        prefetch_data.stop_iteration = True
+                elif prefetch_data.stop_iteration and len(prefetch_data.prefetch_buffer) == 0:
                     prefetch_data.run_prefetcher = False
-                    stop_iteration.set()  # stop_iteration = True
-            elif stop_iteration.is_set() and len(prefetch_data.prefetch_buffer) == 0:
-                prefetch_data.run_prefetcher = False
-            else:  # Buffer is full, waiting for main thread to consume items
-                # TODO: Calculate sleep interval based on previous consumption speed
-                time.sleep(PRODUCER_SLEEP_INTERVAL)
-        # time.sleep(PRODUCER_SLEEP_INTERVAL)
+                else:  # Buffer is full, waiting for main thread to consume items
+                    # TODO: Calculate sleep interval based on previous consumption speed
+                    time.sleep(PRODUCER_SLEEP_INTERVAL)
+            time.sleep(PRODUCER_SLEEP_INTERVAL)
 
     def __iter__(self):
         if self.buffer_size < 1:
@@ -92,15 +93,16 @@ class PrefetcherIterDataPipe(IterDataPipe):
                 prefetch_data = _PrefetchData(self.source_datapipe, self.buffer_size)
                 self.prefetch_data = prefetch_data
                 self.thread = threading.Thread(
-                    target=PrefetcherIterDataPipe.thread_worker, args=(prefetch_data, self.stop_iteration), daemon=True
+                    target=PrefetcherIterDataPipe.thread_worker, args=(prefetch_data,), daemon=True
                 )
                 self.thread.start()
                 while prefetch_data.run_prefetcher:
                     if len(prefetch_data.prefetch_buffer) > 0:
+                        print(f"About to yield from buffer: {prefetch_data.prefetch_buffer[0]}")
                         yield prefetch_data.prefetch_buffer.popleft()
                     else:
                         # TODO: Calculate sleep interval based on previous availability speed
-                        if not self.stop_iteration.is_set():
+                        if not prefetch_data.stop_iteration:
                             time.sleep(CONSUMER_SLEEP_INTERVAL)
                         else:
                             prefetch_data.run_prefetcher = False
@@ -133,9 +135,11 @@ class PrefetcherIterDataPipe(IterDataPipe):
             self.thread.join()
 
     def pause(self):
+        print(f"Buffer state before pause: {self.prefetch_data.prefetch_buffer}", flush=True)
         if self.thread is not None:
             self.prefetch_data.run_prefetcher = False
 
     def resume(self):
-        if not self.stop_iteration.is_set() and self.thread is not None:
+        if not self.prefetch_data.stop_iteration and self.thread is not None:
             self.prefetch_data.run_prefetcher = True
+        print(f"Buffer state after resume: {self.prefetch_data.prefetch_buffer}", flush=True)

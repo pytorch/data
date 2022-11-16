@@ -131,7 +131,6 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
         try:
             # TODO: Non-blocking call is extremely slow here for python.mp, need to figure out a good workaround
             request = protocol.get_new_request(block=blocking_request_get)
-            print(f"DataPipeBehindQueues got new request: {request}")
         except communication.protocol.EmptyQueue:
             yield True
             continue
@@ -146,25 +145,25 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
             protocol.response_reset_iterator()
 
         elif isinstance(request, communication.messages.PauseRequest):
-            print("Processing PauseRequest")
+            print("\nProcessing PauseRequest")
             graph = traverse_dps(source_datapipe)
             for dp, _ in graph.values():
                 if hasattr(dp, "pause") and callable(dp.pause):
                     dp.pause()
             print("About to return response_pause", flush=True)
             protocol.response_pause()
-            print("PauseResponse returned", flush=True)
+            print("PauseResponse returned\n", flush=True)
             yield True  # Return control
 
         elif isinstance(request, communication.messages.ResumeRequest):
-            print("Processing ResumeRequest")
+            print("\nProcessing ResumeRequest")
             graph = traverse_dps(source_datapipe)
             for dp, _ in graph.values():
                 if hasattr(dp, "resume") and callable(dp.resume):
                     dp.resume()
             print("About to return response_resume", flush=True)
             protocol.response_resume()
-            print("ResumeResponse returned", flush=True)
+            print("ResumeResponse returned\n", flush=True)
             yield True  # Return control
 
         elif isinstance(request, communication.messages.TerminateRequest):
