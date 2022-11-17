@@ -100,12 +100,11 @@ class TestGraph(expecttest.TestCase):
     def test_list_dps(self) -> None:
         def _validate_fn(dps, exp_dps):
             self.assertEqual(len(dps), len(exp_dps))
-            exp_set = {*exp_dps}
-            for dp in dps:
-                self.assertTrue(dp in exp_set)
+            # Validate BFS Order
+            for dp, exp_dp in zip(dps, exp_dps):
+                self.assertEqual(dp, exp_dp)
 
-        graph, exp_all_dps = self._get_datapipes()
-        (
+        graph, (
             src_dp,
             m1,
             ub,
@@ -114,7 +113,8 @@ class TestGraph(expecttest.TestCase):
             c2,
             m2,
             dp,
-        ) = exp_all_dps
+        ) = self._get_datapipes()
+        exp_all_dps = [dp, m2, c2, c1, dm, ub, m1, src_dp]
 
         # List all DataPipes
         dps = list_dps(graph)
@@ -122,18 +122,17 @@ class TestGraph(expecttest.TestCase):
 
         # List all DataPipes excluding a single DataPipe
         dps = list_dps(graph, exclude_dps=m1)
-        _, _, *exp_dps = exp_all_dps
+        *exp_dps, _, _ = exp_all_dps
         _validate_fn(dps, exp_dps)
 
         # Exclude a DataPipe on one branch
         dps = list_dps(graph, exclude_dps=m2)
-        *_, c2, _, dp = exp_all_dps
-        exp_dps = [c2, dp]
+        exp_dps = [dp, c2]
         _validate_fn(dps, exp_dps)
 
         # List all DataPipes excluding multiple DataPipes
         dps = list_dps(graph, exclude_dps=[m1, m2])
-        exp_dps = [c2, dp]
+        exp_dps = [dp, c2]
         _validate_fn(dps, exp_dps)
 
     def _validate_graph(self, graph, nested_dp):
