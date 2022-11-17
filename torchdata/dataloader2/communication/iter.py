@@ -172,10 +172,13 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
 
         elif isinstance(request, communication.messages.GetNextRequest):
             while forever:
+                print("Checking if pause is True")
                 if protocol._pause:
-                    raise RuntimeError(
-                        "Cannot `GetNext` after `Pause` has been called. " "`Resume` must be called first."
-                    )
+                    protocol.response_stop_iteration()
+                    warnings.warn("Cannot `GetNext` after `Pause` has been called. "
+                                  "`Resume` must be called first before additional elements can be yielded.")
+                    yield True
+                    break
                 try:
                     value = source_datapipe.nonblocking_next()
                 except NotAvailable:

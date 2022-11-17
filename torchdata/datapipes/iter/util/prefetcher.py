@@ -96,7 +96,11 @@ class PrefetcherIterDataPipe(IterDataPipe):
                     target=PrefetcherIterDataPipe.thread_worker, args=(prefetch_data,), daemon=True
                 )
                 self.thread.start()
+
                 while prefetch_data.run_prefetcher:
+                # TODO: What should the expected behavior be for Prefetcher during `pause`?
+                # while prefetch_data.run_prefetcher or not prefetch_data.stop_iteration:
+                #     if len(prefetch_data.prefetch_buffer) > 0 and prefetch_data.run_prefetcher:
                     if len(prefetch_data.prefetch_buffer) > 0:
                         print(f"About to yield from buffer: {prefetch_data.prefetch_buffer[0]}")
                         yield prefetch_data.prefetch_buffer.popleft()
