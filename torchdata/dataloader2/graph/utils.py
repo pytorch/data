@@ -6,7 +6,7 @@
 
 
 from collections import deque
-from typing import List, Optional, Set, Type, Union
+from typing import Deque, List, Optional, Set, Type, Union
 
 from torchdata.dataloader2.graph import DataPipe, DataPipeGraph, traverse_dps
 from torchdata.datapipes.iter import IterDataPipe
@@ -56,7 +56,7 @@ def list_dps(graph: DataPipeGraph, exclude_dps: Optional[Union[DataPipe, List[Da
             for dp in list_dps(traverse_dps(exclude_dp)):  # type: ignore[arg-type]
                 cache.add(id(dp))
 
-    q = deque()
+    q: Deque = deque()
     # Initialization
     for dp_id, (dp, subgraph) in graph.items():
         if dp_id not in cache:
