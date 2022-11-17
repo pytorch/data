@@ -35,13 +35,21 @@ except ModuleNotFoundError:
 class ReadingServiceInterface(ABC):
     r"""
     Interface for ``ReadingService``. Please extend custom ``ReadingService`` based on this interface class.
+
+    ReadingService must be picklable prior to ``initialize`` being called. This is because a copy of it will be
+    created by ``DataLoader2`` to avoid the situation where the same ReadingService object is used by
+    multiple ``DataLoader2``, and its internal state will be modifiable by each of them.
+
+    As a result of this constraint, certain initialization steps may need to take place within the
+    ``initialize`` method rather than ``__init__`` of the ReadingService class.
     """
 
     @abstractmethod
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         r"""
         ``ReadingService`` takes a ``DataPipe`` graph, adapts it into a new ``DataPipe`` graph based on the custom need.
-        Called once in creating ``DataLoader2`` iterator at first time.
+        Called once in creating ``DataLoader2`` iterator at first time. Prior to calling this method,
+        the ``ReadingService`` object must be picklable.
 
         Args:
             datapipe: Original ``DataPipe`` graph.
