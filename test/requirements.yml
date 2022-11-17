@@ -6,3 +6,4 @@ dependencies:
       - s3fs
       - numpy
       - datasets
+      - adlfs
