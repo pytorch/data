@@ -81,6 +81,8 @@ from torchdata.datapipes.iter.util.cacheholder import (
 from torchdata.datapipes.iter.util.combining import (
     IterKeyZipperIterDataPipe as IterKeyZipper,
     MapKeyZipperIterDataPipe as MapKeyZipper,
+    RoundRobinDemultiplexerIterDataPipe as RoundRobinDemultiplexer,
+    UnZipperIterDataPipe as UnZipper,
 )
 from torchdata.datapipes.iter.util.cycler import CyclerIterDataPipe as Cycler, RepeaterIterDataPipe as Repeater
 from torchdata.datapipes.iter.util.dataframemaker import (
@@ -122,7 +124,6 @@ from torchdata.datapipes.iter.util.tfrecordloader import (
     TFRecordExampleSpec,
     TFRecordLoaderIterDataPipe as TFRecordLoader,
 )
-from torchdata.datapipes.iter.util.unzipper import UnZipperIterDataPipe as UnZipper
 from torchdata.datapipes.iter.util.webdataset import WebDatasetIterDataPipe as WebDataset
 from torchdata.datapipes.iter.util.xzfileloader import (
     XzFileLoaderIterDataPipe as XzFileLoader,
@@ -196,6 +197,7 @@ __all__ = [
     "RandomSplitter",
     "RarArchiveLoader",
     "Repeater",
+    "RoundRobinDemultiplexer",
     "RoutedDecoder",
     "Rows2Columnar",
     "S3FileLister",
