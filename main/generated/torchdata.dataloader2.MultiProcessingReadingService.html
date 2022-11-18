@@ -220,7 +220,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+594b30e ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+d55f9ee ) &#x25BC</a>
     </div>
     
 
@@ -362,7 +362,8 @@ Called in <code class="docutils literal notranslate"><span class="pre">DataLoade
 <dt class="sig sig-object py" id="torchdata.dataloader2.MultiProcessingReadingService.initialize">
 <span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.datapipes.datapipe.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torch.utils.data.datapipes.datapipe.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.dataloader2.MultiProcessingReadingService.initialize" title="Permalink to this definition">¶</a></dt>
 <dd><p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> takes a <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph, adapts it into a new <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph based on the custom need.
-Called once in creating <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> iterator at first time.</p>
+Called once in creating <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> iterator at first time. Prior to calling this method,
+the <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> object must be picklable.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>datapipe</strong> – Original <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.</p>
