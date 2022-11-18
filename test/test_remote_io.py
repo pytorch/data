@@ -227,6 +227,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         res = list(fsspec_loader_dp)
         self.assertEqual(len(res), 18, f"{input} failed")
 
+    @unittest.skipIf(True, "Needs authentications. See: https://github.com/pytorch/data/issues/904")
     @skipIfNoFSSpecAZ
     def test_fsspec_azure_blob(self):
         url = "public/curated/covid-19/ecdc_cases/latest/ecdc_cases.csv"

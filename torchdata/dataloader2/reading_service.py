@@ -369,7 +369,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
     pin_memory: bool
     timeout: float
     worker_init_fn: Optional[Callable[[int], None]]
-    prefetch_factor: int
+    prefetch_factor: Optional[int]
     persistent_workers: bool
 
     def __init__(
@@ -379,7 +379,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         timeout: float = 0,
         worker_init_fn: Optional[Callable[[int], None]] = None,
         multiprocessing_context=None,
-        prefetch_factor: int = 2,
+        prefetch_factor: Optional[int] = None,
         persistent_workers: bool = False,
     ) -> None:
         self.num_workers = num_workers
@@ -389,6 +389,9 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         self.multiprocessing_context = multiprocessing_context
         self.prefetch_factor = prefetch_factor
         self.persistent_workers = persistent_workers
+        if self.num_workers == 0:
+            self.prefetch_factor = None
+            self.persistent_workers = False
         self.dl_: Optional[DataLoader] = None
 
     # Wrap the DataLoader with IterableWrapper to respect type annotation
