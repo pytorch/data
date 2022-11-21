@@ -219,7 +219,7 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
 
 
 def _drop_index(idx_data):
-    idx, data = idx_data
+    _, data = idx_data
     return data
 
 
@@ -238,14 +238,16 @@ class RoundRobinDemultiplexerIterDataPipe(IterDataPipe):
 
     Examples:
         >>> from torchdata.datapipes.iter import IterableWrapper
-        >>> def odd_or_even(n):
-        ...     return n % 2
         >>> source_dp = IterableWrapper(range(5))
         >>> dp1, dp2 = source_dp.round_robin_demux(2)
         >>> list(dp1)
         [0, 2, 4]
+        >>> len(dp1)
+        3
         >>> list(dp2)
         [1, 3]
+        >>> len(dp2)
+        2
     """
 
     def __new__(cls, datapipe: IterDataPipe, num_instances: int, buffer_size: int = 1000):
@@ -267,7 +269,7 @@ class _RoundRobinDemultiplexerIterDataPipe(_DemultiplexerIterDataPipe):
         super().__init__(datapipe, num_instances, self._round_robin_fn, drop_none=False, buffer_size=buffer_size)
 
     def _round_robin_fn(self, idx_data) -> int:
-        idx, data = idx_data
+        idx, _ = idx_data
         return idx % self.num_instances
 
     def get_length_by_instance(self, instance_id: int) -> int:
