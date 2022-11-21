@@ -846,6 +846,22 @@ class TestIterDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "length relies on the output of its function."):
             len(flatmapped_dp)
 
+    def test_round_robin_demux_iterdatapipe(self):
+        source_dp = IterableWrapper(list(range(23)))
+        with self.assertRaisesRegex(ValueError, "Expected `num_instaces`"):
+            _ = source_dp.round_robin_demux(0)
+
+        # Funtional Test
+        dp1, dp2, dp3 = source_dp.round_robin_demux(3)
+        self.assertEqual(list(range(0, 23, 3)), list(dp1))
+        self.assertEqual(list(range(1, 23, 3)), list(dp2))
+        self.assertEqual(list(range(2, 23, 3)), list(dp3))
+
+        # __len__ Test
+        self.assertEqual(len(dp1), 8)
+        self.assertEqual(len(dp2), 8)
+        self.assertEqual(len(dp3), 7)
+
     def test_unzipper_iterdatapipe(self):
         source_dp = IterableWrapper([(i, i + 10, i + 20) for i in range(10)])
 
