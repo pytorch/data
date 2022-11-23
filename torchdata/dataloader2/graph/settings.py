@@ -7,11 +7,10 @@
 
 import inspect
 
-from typing import Optional
-
 import torch
 
 from torchdata.dataloader2.graph import DataPipe, find_dps, list_dps, traverse_dps
+from torchdata.dataloader2.utils import generate_random_int
 from torchdata.datapipes.iter import ShardingFilter
 
 
@@ -21,12 +20,8 @@ def _is_random_datapipe(datapipe: DataPipe) -> bool:
     return False
 
 
-def _generate_random_seed(rng: Optional[torch.Generator] = None, dtype: torch.dtype = torch.int64) -> int:
-    return int(torch.empty((), dtype=dtype).random_(generator=rng).item())
-
-
 def _seed_datapipe(datapipe: DataPipe, seed_generator: torch.Generator) -> DataPipe:
-    seed = _generate_random_seed(seed_generator)
+    seed = generate_random_int(seed_generator)
     datapipe.set_seed(seed)
     return datapipe
 
@@ -41,7 +36,7 @@ def _set_worker_seed_for_dp_graph(datapipe: DataPipe, seed_generator: torch.Gene
     graph = traverse_dps(datapipe)
     sharding_filter_dps = find_dps(graph, ShardingFilter)
 
-    base_seed = _generate_random_seed(seed_generator)
+    base_seed = generate_random_int(seed_generator)
     worker_seed = base_seed + worker_id
 
     # Set the same seed before sharding_filter
