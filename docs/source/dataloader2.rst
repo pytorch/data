@@ -18,6 +18,11 @@ Note:
 - :class:`torchdata.datapipes.map.SequenceWrapper`: ``torch.utils.data.Dataset``
 - :class:`torchdata.datapipes.iter.IterableWrapper`: ``torch.utils.data.IterableDataset``
 
+Both custom ``worker_init_fn`` and ``worker_reset_fn`` require the following three arguments:
+- :class:`torchdata.dataloader2.utils.DistInfo`
+- :class:`torchdata.dataloader2.utils.WorkerInfo`
+- ``DataPipe``
+
 ReadingService
 ---------------
 

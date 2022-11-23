@@ -181,10 +181,17 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         multiprocessing_context (str, optional): Multiprocessing starting method.
             If method is None then the default context is returned.
             Otherwise, method should be 'fork', 'spawn'.
-        prefetch_worker: (int, 10 by default):
-        prefetch_mainloop: (int, 10 by default):
-        worker_init_fn: (Callable, optional):
-        worker_reset_fn: (Callable, optional):
+        prefetch_worker: (int, 10 by default): Number of data will be prefetched at
+            the end of each worker process.
+        prefetch_mainloop: (int, 10 by default): Number of data will be prefetched
+            at the end of the whole pipeline in the main process.
+        worker_init_fn: (Callable, optional): Function to be called when each worker
+            process launches with ``DistInfo``, ``WorkerInfo`` and ``DataPipe``
+            as the expected arguments.
+        worker_reset_fn: (Callable, optional): Function to be called at the beginning
+            of each epoch in each worker process with ``DistInfo``, ``WorkerInfo``
+            and ``DataPipe`` as the expected arguments.
+
     """
     num_workers: int
     multiprocessing_context: Optional[str]

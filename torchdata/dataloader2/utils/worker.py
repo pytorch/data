@@ -28,6 +28,10 @@ except ModuleNotFoundError:
 class DistInfo:
     r"""
     Message class for keeping track of distributed information.
+
+    Args:
+        world_size (int): Total number of distributed nodes
+        rank (int): Distributed rank for the current distributed node
     """
     world_size: int = 1
     rank: int = 0
@@ -37,6 +41,10 @@ class DistInfo:
 class WorkerInfo:
     r"""
     Message class for keeping track of worker information.
+
+    Args:
+        num_workers (int): Total number of worker processes
+        worker_id (int): Worker ID for the current worker process
     """
     num_workers: int
     worker_id: int
@@ -56,6 +64,9 @@ def process_init_fn(
     worker_info: WorkerInfo,
     custom_init_fn: Optional[Callable[[DataPipe, DistInfo, WorkerInfo], DataPipe]] = None,
 ) -> DataPipe:
+    r"""
+    Based on the distributed and worker information, shard the ``DataPipe`` graph dynamically.
+    """
     global_worker_id = worker_info.worker_id * dist_info.world_size + dist_info.rank
     total_num_workers = worker_info.num_workers * dist_info.world_size
     torch.utils.data.graph_settings.apply_sharding(datapipe, total_num_workers, global_worker_id)
@@ -74,6 +85,11 @@ def process_reset_fn(
     extra_info: _ExtraInfo,
     custom_reset_fn: Optional[Callable[[DataPipe, DistInfo, WorkerInfo], DataPipe]] = None,
 ) -> DataPipe:
+    r"""
+    Based on the distributed shared random seed and worker id, this function is used to
+    reset the random state of the ``DataPipe`` graph and the global random states for ``torch``,
+    ``random`` and ``numpy``.
+    """
     # This function will receive worker local copy of datapipe and reset function from ``initialize_iteration``
     worker_seed_generator = torch.Generator()
     worker_seed_generator.manual_seed(extra_info.shared_seed)
