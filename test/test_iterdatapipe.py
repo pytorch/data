@@ -344,6 +344,11 @@ class TestIterDataPipe(expecttest.TestCase):
         header_dp = source_dp.header(100)
         self.assertEqual(list(range(5)), list(header_dp))
 
+        # Functional Test: ensure the source is not modified if limit is set to None
+        source_dp = IterableWrapper(range(5))
+        header_dp = source_dp.header(None)
+        self.assertEqual(list(range(5)), list(header_dp))
+
         # Reset Test:
         source_dp = IterableWrapper(range(20))
         header_dp = Header(source_dp, 5)
@@ -360,6 +365,10 @@ class TestIterDataPipe(expecttest.TestCase):
         header_dp = source_dp.header(30)
         self.assertEqual(20, len(header_dp))
 
+        # __len__ Test: returns the length of source when limit is set to None
+        header_dp = source_dp.header(None)
+        self.assertEqual(20, len(header_dp))
+
         # __len__ Test: returns limit if source doesn't have length
         source_dp_NoLen = IDP_NoLen(list(range(20)))
         header_dp = source_dp_NoLen.header(30)
@@ -370,7 +379,13 @@ class TestIterDataPipe(expecttest.TestCase):
                 str(wa[0].message), r"length of this HeaderIterDataPipe is inferred to be equal to its limit"
             )
 
+        # __len__ Test: raises TypeError if source doesn't have length and limit is set to None
+        header_dp = source_dp_NoLen.header(None)
+        with self.assertRaises(TypeError):
+            len(header_dp)
+
         # __len__ Test: returns limit if source doesn't have length, even when it has been iterated through once
+        header_dp = source_dp_NoLen.header(30)
         for _ in header_dp:
             pass
         self.assertEqual(30, len(header_dp))

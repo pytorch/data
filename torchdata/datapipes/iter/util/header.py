@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Iterator, TypeVar
+from typing import Iterator, TypeVar, Union
 from warnings import warn
 
 from torchdata.datapipes import functional_datapipe
@@ -33,25 +33,29 @@ class HeaderIterDataPipe(IterDataPipe[T_co]):
         [0, 1, 2]
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[T_co], limit: int = 10) -> None:
+    def __init__(self, source_datapipe: IterDataPipe[T_co], limit: Union[int, None] = 10) -> None:
         self.source_datapipe: IterDataPipe[T_co] = source_datapipe
-        self.limit: int = limit
+        self.limit: Union[int, None] = limit
 
     def __iter__(self) -> Iterator[T_co]:
         i: int = 0
         for value in self.source_datapipe:
             i += 1
-            if i <= self.limit:
+            if self.limit is None or i <= self.limit:
                 yield value
             else:
                 break
-        self.length = min(i, self.limit)  # We know length with certainty when we reach here
+        # We know length with certainty when we reach here
+        self.length = i if self.limit is None else min(i, self.limit)
 
     def __len__(self) -> int:
         try:
             source_len = len(self.source_datapipe)
-            return min(source_len, self.limit)
+            return source_len if self.limit is None else min(source_len, self.limit)
         except TypeError:
+            if self.limit is None:
+                raise
+
             warn(
                 "The length of this HeaderIterDataPipe is inferred to be equal to its limit."
                 "The actual value may be smaller if the actual length of source_datapipe is smaller than the limit."
