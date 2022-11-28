@@ -31,9 +31,13 @@ __all__ = [
 ]
 
 
-def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_locally_fn=None, call_on_reset_epoch=None):
-    if call_locally_fn is not None:
-        call_locally_fn(source_datapipe)
+def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_on_process_init=None, call_on_epoch_reset=None):
+    r"""
+    Initialize with the given init function, set the appropriate pipe and protocol server type, and
+    create a loop with the protocol server.
+    """
+    if call_on_process_init is not None:
+        call_on_process_init(source_datapipe)
     if isinstance(source_datapipe, IterDataPipe):
         pipe_type = communication.iter
         protocol_type = communication.protocol.IterDataPipeQueueProtocolServer
@@ -48,24 +52,28 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_locally_fn=
         source_datapipe,
         protocol_type(req_queue, res_queue),
         blocking_request_get=True,
-        reset_epoch_fn=call_on_reset_epoch,
+        reset_epoch_fn=call_on_epoch_reset,
     ):
         pass
 
 
-def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe, call_locally_fn=None, call_on_reset_epoch=None):
+def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe, call_on_process_init=None, call_on_epoch_reset=None):
+    r"""
+    Given a DataPipe, starts a new process with ``DataPipeToQueuesLoop`` as target,
+    and returns ``(process, req_queue, res_queue)``.
+    """
     req_queue = multiprocessing_ctx.Queue()
     res_queue = multiprocessing_ctx.Queue()
     process = multiprocessing_ctx.Process(
-        target=DataPipeToQueuesLoop, args=(datapipe, req_queue, res_queue, call_locally_fn, call_on_reset_epoch)
+        target=DataPipeToQueuesLoop, args=(datapipe, req_queue, res_queue, call_on_process_init, call_on_epoch_reset)
     )
     return process, req_queue, res_queue
 
 
 def SpawnThreadForDataPipeline(datapipe):
     r"""
-    Given a DataPipe, creates a copy of the DataPipe, starts a new Thread with DataPipeToQueuesLoop as target,
-    and return the process, req_queue, res_queue, thread_local_datapipe.
+    Given a DataPipe, creates a copy of the DataPipe, starts a new Thread with ``DataPipeToQueuesLoop`` as target,
+    and returns ``(process, req_queue, res_queue, new_copied_datapipe)``.
     """
     req_queue = communication.queue.ThreadingQueue()
     res_queue = communication.queue.ThreadingQueue()

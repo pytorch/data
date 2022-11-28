@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Optional, Set, Sized
+from typing import Set, Sized
 
 from torch.utils.data.datapipes._decorator import functional_datapipe
 from torch.utils.data.datapipes.datapipe import IterDataPipe
@@ -29,7 +29,6 @@ class MultiplexerLongestIterDataPipe(IterDataPipe):
 
     def __init__(self, *datapipes):
         self.datapipes = datapipes
-        self.length: Optional[int] = None
 
     def __iter__(self):
         iterators = [iter(x) for x in self.datapipes]
@@ -44,12 +43,7 @@ class MultiplexerLongestIterDataPipe(IterDataPipe):
                         finished.add(i)
 
     def __len__(self):
-        if self.length is not None:
-            if self.length == -1:
-                raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
-            return self.length
         if all(isinstance(dp, Sized) for dp in self.datapipes):
-            self.length = sum(len(dp) for dp in self.datapipes)
+            return sum(len(dp) for dp in self.datapipes)
         else:
-            self.length = -1
-        return len(self)
+            raise TypeError(f"{type(self).__name__} instance doesn't have valid length")

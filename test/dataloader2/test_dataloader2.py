@@ -5,11 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import os
 import pickle
 import unittest
 from unittest import TestCase
 
 from torchdata.dataloader2 import (
+    communication,
     DataLoader2,
     MultiProcessingReadingService,
     PrototypeMultiProcessingReadingService,
@@ -19,6 +21,22 @@ from torchdata.dataloader2.dataloader2 import READING_SERVICE_STATE_KEY_NAME, SE
 
 from torchdata.dataloader2.graph import DataPipe
 from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
+from torchdata.datapipes.map import SequenceWrapper
+
+try:
+    import dill
+
+    # XXX: By default, dill writes the Pickler dispatch table to inject its
+    # own logic there. This globally affects the behavior of the standard library
+    # pickler for any user who transitively depends on this module!
+    # Undo this extension to avoid altering the behavior of the pickler globally.
+    dill.extend(use_dill=False)
+    HAS_DILL = True
+except ImportError:
+    HAS_DILL = False
+
+skipIfNoDill = unittest.skipIf(not HAS_DILL, "no dill")
+TEST_WITH_TSAN = os.getenv("PYTORCH_TEST_WITH_TSAN", "0") == "1"
 
 
 class _ReadingServiceWrapper:
@@ -101,19 +119,13 @@ class DataLoader2Test(TestCase):
         self.assertIsNone(state[READING_SERVICE_STATE_KEY_NAME])
         data_loader.shutdown()
 
-        test_data_pipe_2 = IterableWrapper(range(5))
-        restored_data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe_2, reading_service=reading_service)
+        restored_data_loader: DataLoader2 = DataLoader2(datapipe=None, reading_service=reading_service)
         restored_data_loader.load_state_dict(state)
 
         restored_data_loader_datapipe = restored_data_loader.datapipe
         deserialized_datapipe = pickle.loads(state[SERIALIZED_DATAPIPE_KEY_NAME])
         for batch_1, batch_2 in zip(restored_data_loader_datapipe, deserialized_datapipe):
             self.assertEqual(batch_1, batch_2)
-
-        self.assertNotEqual(
-            len(restored_data_loader.datapipe),
-            len(test_data_pipe_2),
-        )
 
         self.assertEqual(
             restored_data_loader.reading_service_state,
@@ -267,6 +279,73 @@ class DataLoader2IntegrationTest(TestCase):
             self.assertEqual(list(it), list(range(10)))
             # Lazy loading in multiprocessing
             self.assertTrue(map_dp._map is None)
+
+
+@unittest.skipIf(
+    TEST_WITH_TSAN,
+    "Fails with TSAN with the following error: starting new threads after multi-threaded "
+    "fork is not supported. Dying (set die_after_fork=0 to override)",
+)
+class TestDataLoader2EventLoop(TestCase):
+
+    # TODO: This needs fixing, see issue 624
+    # @skipIfNoDill
+    # def test_basic_threading(self):
+    #     def clean_me(process, req_queue, res_queue):
+    #         req_queue.put(communication.messages.TerminateRequest())
+    #         _ = res_queue.get()
+    #         process.join()
+    #
+    #     it = list(range(100))
+    #     numbers_dp = IterableWrapper(it)
+    #     (process, req_queue, res_queue, _thread_local_datapipe) = communication.eventloop.SpawnThreadForDataPipeline(numbers_dp)
+    #
+    #     process.start()
+    #     local_datapipe = communication.iter.QueueWrapper(
+    #         communication.protocol.IterDataPipeQueueProtocolClient(req_queue, res_queue))
+    #
+    #     actual = list(local_datapipe)
+    #     clean_me(process, req_queue, res_queue)
+    #
+    #     self.assertEqual(list(range(100)), actual)
+
+    @skipIfNoDill
+    def test_basic_mapdatapipe_threading(self):
+        def clean_me(process, req_queue, res_queue):
+            req_queue.put(communication.messages.TerminateRequest())
+            _ = res_queue.get()
+            process.join()
+
+        input_len = 100
+        it = list(range(input_len))
+        numbers_dp = SequenceWrapper(it)
+        (process, req_queue, res_queue, _thread_local_datapipe) = communication.eventloop.SpawnThreadForDataPipeline(
+            numbers_dp
+        )
+
+        process.start()
+
+        # Functional Test: Ensure that you can retrieve every element from the Queue and DataPipe
+        local_datapipe = communication.map.QueueWrapperForMap(
+            communication.protocol.MapDataPipeQueueProtocolClient(req_queue, res_queue)
+        )
+        actual = list(local_datapipe)
+        self.assertEqual([(x, x) for x in range(100)], actual)
+
+        # Functional Test: raise Error when input
+        local_datapipe = communication.map.QueueWrapperForMap(
+            communication.protocol.MapDataPipeQueueProtocolClient(req_queue, res_queue)
+        )
+        with self.assertRaisesRegex(IndexError, "out of bound"):
+            local_datapipe[1000]
+
+        # __len__ Test: Ensure that the correct length is returned
+        local_datapipe = communication.map.QueueWrapperForMap(
+            communication.protocol.MapDataPipeQueueProtocolClient(req_queue, res_queue)
+        )
+        self.assertEqual(input_len, len(local_datapipe))
+
+        clean_me(process, req_queue, res_queue)
 
 
 if __name__ == "__main__":

@@ -79,6 +79,10 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
             else:
                 protocol_list = fs.protocol
 
+            # fspec.core.url_to_fs will return "abfs" for both, "az://" and "abfs://" urls
+            if "abfs" in protocol_list:
+                protocol_list.append("az")
+
             is_local = fs.protocol == "file" or not any(root.startswith(protocol) for protocol in protocol_list)
             if fs.isfile(path):
                 yield root
@@ -146,10 +150,6 @@ class FSSpecFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
-
-
-# Register for functional API for backward compatibility
-IterDataPipe.register_datapipe_as_function("open_file_by_fsspec", FSSpecFileOpenerIterDataPipe)
 
 
 @functional_datapipe("save_by_fsspec")
