@@ -50,7 +50,7 @@ jobs:
             fi
           fi
           echo "Release Type: $RELEASE_TYPE"
-          echo "::set-output name=type::$RELEASE_TYPE"
+          echo "type=$RELEASE_TYPE" >> $GITHUB_OUTPUT
         id: get_release_type
 
   wheel_build_test:
@@ -101,7 +101,7 @@ jobs:
           fi
           bash "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh" -b -u -p "${MINICONDA_INSTALL_PATH_MACOS}"
           rm -rf "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh"
-          echo "${MINICONDA_INSTALL_PATH_MACOS}/bin" >> $GITHUB_PATH
+          echo "${MINICONDA_INSTALL_PATH_MACOS}/bin" >> "$GITHUB_PATH"
       - name: Setup Python ${{ matrix.python-version }} on MacOS
         if: ${{ startsWith( matrix.os, 'macos' ) }}
         shell: bash -l {0}
@@ -211,7 +211,7 @@ jobs:
           pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Wheels to Github
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: torchdata-artifact
           path: dist/torchdata*.whl
@@ -225,7 +225,7 @@ jobs:
     steps:
       - name: Download Artifacts from Github
         continue-on-error: true
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: torchdata-artifact
       - name: Determine if Wheel Uploading is needed
@@ -235,7 +235,7 @@ jobs:
             upload=true
             break
           done
-          echo "::set-output name=value::$upload"
+          echo "value=$upload" >> $GITHUB_OUTPUT
         id: trigger_upload
       - name: Display All TorchData Wheels
         if: steps.trigger_upload.outputs.value == 'true'
@@ -272,6 +272,7 @@ jobs:
   conda_build_test:
     needs: get_release_type
     runs-on: ${{ matrix.os }}
+    container: ${{ startsWith( matrix.os, 'ubuntu' ) && 'pytorch/manylinux-cpu' || null }}
     strategy:
       fail-fast: false
       matrix:
@@ -295,42 +296,6 @@ jobs:
         with:
           ref: ${{ inputs.branch }}
           submodules: recursive
-      - name: Add temp runner environment variables
-        shell: bash -l {0}
-        run: |
-          echo "MINICONDA_INSTALL_PATH_MACOS=${RUNNER_TEMP}/miniconda" >> "${GITHUB_ENV}"
-          echo "CONDA_ENV_PATH=${RUNNER_TEMP}/conda_build_env" >> "${GITHUB_ENV}"
-      - name: Create Conda Env
-        if: ${{ ! startsWith( matrix.os, 'macos' ) }}
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-          activate-environment: ${{ env.CONDA_ENV_PATH }}
-      - name: Install Conda on MacOS
-        if: ${{ startsWith( matrix.os, 'macos' ) }}
-        shell: bash -l {0}
-        run: |
-          mkdir -p "${MINICONDA_INSTALL_PATH_MACOS}"
-          if ${{ startsWith( matrix.os, 'macos-m1' ) }}; then
-            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh"
-          else
-            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh"
-          fi
-          bash "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh" -b -u -p "${MINICONDA_INSTALL_PATH_MACOS}"
-          rm -rf "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh"
-          echo "${MINICONDA_INSTALL_PATH_MACOS}/bin" >> $GITHUB_PATH
-      - name: Create Conda Env on MacOS
-        if: ${{ startsWith( matrix.os, 'macos' ) }}
-        shell: bash -l {0}
-        run: |
-          conda init bash
-          conda create -y -p "${CONDA_ENV_PATH}" python=${{ matrix.python-version }}
-      - name: Setup additional system libraries
-        if: startsWith( matrix.os, 'ubuntu' )
-        run: |
-          sudo add-apt-repository multiverse
-          sudo apt update
-          sudo apt install libssl-dev libcurl4-openssl-dev zlib1g-dev
       - name: Determine if build AWSSDK
         shell: bash -l {0}
         run: |
@@ -339,8 +304,41 @@ jobs:
           else
             BUILD_S3=1
           fi
-          echo "::set-output name=value::$BUILD_S3"
+          echo "value=$BUILD_S3" >> $GITHUB_OUTPUT
         id: build_s3
+      - name: Add temp runner environment variables
+        shell: bash -l {0}
+        run: |
+          echo "MINICONDA_INSTALL_PATH=${RUNNER_TEMP}/miniconda" >> "${GITHUB_ENV}"
+          echo "CONDA_ENV_PATH=${RUNNER_TEMP}/conda_build_env" >> "${GITHUB_ENV}"
+      - name: Create Conda Env on Windows
+        if: ${{ startsWith( matrix.os, 'windows' ) }}
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: ${{ env.CONDA_ENV_PATH }}
+      - name: Install Conda on MacOS and Linux
+        if: ${{ ! startsWith( matrix.os, 'windows' ) }}
+        shell: bash -l {0}
+        run: |
+          mkdir -p "${MINICONDA_INSTALL_PATH}"
+          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o "${MINICONDA_INSTALL_PATH}/miniconda.sh"
+          elif ${{ startsWith( matrix.os, 'macos-m1' ) }}; then
+            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o "${MINICONDA_INSTALL_PATH}/miniconda.sh"
+          else
+            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o "${MINICONDA_INSTALL_PATH}/miniconda.sh"
+          fi
+          bash "${MINICONDA_INSTALL_PATH}/miniconda.sh" -b -u -p "${MINICONDA_INSTALL_PATH}"
+          rm -rf "${MINICONDA_INSTALL_PATH}/miniconda.sh"
+          echo "${MINICONDA_INSTALL_PATH}/bin" >> "$GITHUB_PATH"
+          ${MINICONDA_INSTALL_PATH}/bin/conda init bash
+      - name: Create Conda Env on MacOS and Linux
+        if: ${{ ! startsWith( matrix.os, 'windows' ) }}
+        shell: bash -l {0}
+        run: |
+          source "${MINICONDA_INSTALL_PATH}/etc/profile.d/conda.sh"
+          conda create -y -p "${CONDA_ENV_PATH}" python=${{ matrix.python-version }}
       - name: Build TorchData for Conda
         shell: bash -l {0}
         env:
@@ -349,6 +347,9 @@ jobs:
           BUILD_S3: ${{ steps.build_s3.outputs.value }}
         run: |
           set -ex
+          if ${{ ! startsWith( matrix.os, 'windows' ) }}; then
+            source "${MINICONDA_INSTALL_PATH}/etc/profile.d/conda.sh"
+          fi
           conda activate "${CONDA_ENV_PATH}"
           conda install -yq conda-build -c conda-forge
           packaging/build_conda.sh
@@ -356,6 +357,9 @@ jobs:
       - name: Install TorchData Conda Package
         shell: bash -l {0}
         run: |
+          if ${{ ! startsWith( matrix.os, 'windows' ) }}; then
+            source "${MINICONDA_INSTALL_PATH}/etc/profile.d/conda.sh"
+          fi
           conda activate "${CONDA_ENV_PATH}"
           if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
             CONDA_CHANNEL=pytorch
@@ -366,12 +370,15 @@ jobs:
       - name: Run DataPipes Tests with pytest
         shell: bash -l {0}
         run: |
+          if ${{ ! startsWith( matrix.os, 'windows' ) }}; then
+            source "${MINICONDA_INSTALL_PATH}/etc/profile.d/conda.sh"
+          fi
           conda activate "${CONDA_ENV_PATH}"
-          pip3 install -r test/requirements.txt
-          pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
+          conda env update --file test/requirements.yml
+          python -m pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Conda Package to Github
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: torchdata-artifact
           path: conda-bld/*/torchdata-*.tar.bz2
@@ -386,7 +393,7 @@ jobs:
     steps:
       - name: Download Artifacts from Github
         continue-on-error: true
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: torchdata-artifact
       - name: Determine if Conda Uploading is needed
@@ -396,7 +403,7 @@ jobs:
             upload=true
             break
           done
-          echo "::set-output name=value::$upload"
+          echo "value=$upload" >> $GITHUB_OUTPUT
         id: trigger_upload
       - name: Display All TorchData Conda Package
         if: steps.trigger_upload.outputs.value == 'true'
@@ -519,10 +526,10 @@ jobs:
             fi
             TARGET_FOLDER=${TARGET_FOLDER:1}
           fi
-          echo "::set-output name=value::$TARGET_FOLDER"
+          echo "value=$TARGET_FOLDER" >> $GITHUB_OUTPUT
         id: target_folder
       - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4.2.5
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages # The branch the action should deploy to.

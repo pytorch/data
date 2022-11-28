@@ -48,7 +48,17 @@ release = "main"
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.napoleon", "sphinx.ext.autodoc", "sphinx.ext.autosummary", "sphinx.ext.intersphinx"]
+extensions = [
+    "sphinx.ext.napoleon",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.doctest",
+]
+
+# Do not execute standard reST doctest blocks so that documentation can
+# be successively migrated to sphinx's doctest directive.
+doctest_test_doctest_blocks = ""
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -118,6 +128,8 @@ signature_replacements = {
     "torchdata.datapipes.iter.util.header.T_co": "T_co",
     "<class 'torch.utils.data.datapipes.datapipe.DataChunk'>": "List",
     "typing.": "",
+    "Union[IterDataPipe, MapDataPipe]": "DataPipe",
+    "Dict[int, Tuple[DataPipe, DataPipeGraph]": "DataPipeGraph",
 }
 
 

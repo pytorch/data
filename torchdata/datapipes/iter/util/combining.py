@@ -5,15 +5,18 @@
 # LICENSE file in the root directory of this source tree.
 
 import warnings
+
 from collections import OrderedDict
-from typing import Callable, Iterator, Optional, TypeVar
+from typing import Callable, Iterator, List, Optional, Sequence, TypeVar
 
 from torch.utils.data import functional_datapipe, IterDataPipe, MapDataPipe
+from torch.utils.data.datapipes.iter.combining import _ChildDataPipe, _DemultiplexerIterDataPipe, _ForkerIterDataPipe
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
 
 from torchdata.datapipes.utils.janitor import janitor
 
 T_co = TypeVar("T_co", covariant=True)
+T = TypeVar("T")
 
 
 @functional_datapipe("zip_with_iter")
@@ -117,7 +120,7 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
 
             # TODO(633): This should be Exception or warn when debug mode is enabled
             if len(self.buffer) > 0:
-                for k, v in self.buffer.items():
+                for _, v in self.buffer.items():
                     janitor(v)
 
     def __len__(self) -> int:
@@ -201,7 +204,6 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
         if merge_fn is not None:
             _check_unpickable_fn(merge_fn)
         self.merge_fn: Optional[Callable] = merge_fn
-        self.length: int = -1
 
     def __iter__(self) -> Iterator:
         for item in self.source_iterdatapipe:
@@ -213,6 +215,142 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
             yield self.merge_fn(item, map_item) if self.merge_fn else (item, map_item)
 
     def __len__(self) -> int:
-        if self.length == -1:
-            self.length = len(self.source_iterdatapipe)
-        return self.length
+        return len(self.source_iterdatapipe)
+
+
+def _drop_index(idx_data):
+    _, data = idx_data
+    return data
+
+
+@functional_datapipe("round_robin_demux")
+class RoundRobinDemultiplexerIterDataPipe(IterDataPipe):
+    r"""
+    Splits the input DataPipe into multiple child DataPipes in the round-robin order (functional name: ``round_robin_demux``).
+    A list of the child DataPipes is returned from this operation.
+
+    Args:
+        datapipe: Iterable DataPipe being filtered
+        num_instances: number of instances of the DataPipe to create
+        buffer_size: this defines the maximum number of inputs that the buffer can hold across all child
+            DataPipes while waiting for their values to be yielded.
+            Defaults to ``1000``. Use ``-1`` for the unlimited buffer.
+
+    Examples:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> source_dp = IterableWrapper(range(5))
+        >>> dp1, dp2 = source_dp.round_robin_demux(2)
+        >>> list(dp1)
+        [0, 2, 4]
+        >>> len(dp1)
+        3
+        >>> list(dp2)
+        [1, 3]
+        >>> len(dp2)
+        2
+    """
+
+    def __new__(cls, datapipe: IterDataPipe, num_instances: int, buffer_size: int = 1000):
+        if num_instances < 1:
+            raise ValueError(f"Expected `num_instaces` larger than 0, but {num_instances} is found")
+        if num_instances == 1:
+            warnings.warn(
+                "The operation of `round_robin_demux` with `num_instances=1` is an no-op and returns the provided `datapipe` directly"
+            )
+            return datapipe
+
+        datapipe = datapipe.enumerate()
+        container = _RoundRobinDemultiplexerIterDataPipe(datapipe, num_instances, buffer_size=buffer_size)
+        return [_ChildDataPipe(container, i).map(_drop_index) for i in range(num_instances)]
+
+
+class _RoundRobinDemultiplexerIterDataPipe(_DemultiplexerIterDataPipe):
+    def __init__(self, datapipe: IterDataPipe[T_co], num_instances: int, buffer_size: int):
+        super().__init__(datapipe, num_instances, self._round_robin_fn, drop_none=False, buffer_size=buffer_size)
+
+    def _round_robin_fn(self, idx_data) -> int:
+        idx, _ = idx_data
+        return idx % self.num_instances
+
+    def get_length_by_instance(self, instance_id: int) -> int:
+        n = len(self.main_datapipe)
+        avg_length = n // self.num_instances
+        return avg_length + 1 if n - avg_length * self.num_instances > instance_id else avg_length
+
+
+@functional_datapipe("unzip")
+class UnZipperIterDataPipe(IterDataPipe[T]):
+    r"""
+    Takes in a DataPipe of Sequences, unpacks each Sequence, and return the elements in separate DataPipes
+    based on their position in the Sequence (functional name: ``unzip``). The number of instances produced equals to
+    the sequence length minus the number of columns to skip.
+
+    Note:
+        Each sequence within the DataPipe should have the same length, specified by
+        the input argument `sequence_length`.
+
+    Args:
+        source_datapipe: Iterable DataPipe with sequences of data
+        sequence_length: Length of the sequence within the source_datapipe. All elements should have the same length.
+        buffer_size: this restricts how far ahead the leading child DataPipe can read relative
+            to the slowest child DataPipe. Use -1 for the unlimited buffer.
+        columns_to_skip: optional indices of columns that the DataPipe should skip (each index should be
+            an integer from 0 to sequence_length - 1)
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> source_dp = IterableWrapper([(i, i + 10, i + 20) for i in range(3)])
+        >>> dp1, dp2, dp3 = source_dp.unzip(sequence_length=3)
+        >>> list(dp1)
+        [0, 1, 2]
+        >>> list(dp2)
+        [10, 11, 12]
+        >>> list(dp3)
+        [20, 21, 22]
+    """
+
+    def __new__(
+        cls,
+        source_datapipe: IterDataPipe[Sequence[T]],
+        sequence_length: int,
+        buffer_size: int = 1000,
+        columns_to_skip: Optional[Sequence[int]] = None,
+    ):
+        if columns_to_skip is None:
+            instance_ids = list(range(sequence_length))
+        else:
+            skips = set(columns_to_skip)
+            instance_ids = [i for i in range(sequence_length) if i not in skips]
+
+        if len(instance_ids) == 0:
+            raise RuntimeError(
+                "All instances are being filtered out in UnZipperIterDataPipe. Please check"
+                "the input `sequence_length` and `columns_to_skip`."
+            )
+
+        # The implementation basically uses Forker but only yields a specific element within the sequence
+        container = _UnZipperIterDataPipe(source_datapipe, instance_ids, buffer_size)  # type: ignore[arg-type]
+        return [_ChildDataPipe(container, i) for i in range(len(instance_ids))]
+
+
+class _UnZipperIterDataPipe(_ForkerIterDataPipe):
+    def __init__(self, datapipe: IterDataPipe, instance_ids: List[int], buffer_size: int = 1000):
+        super().__init__(datapipe, len(instance_ids), buffer_size)  # type: ignore[arg-type]
+        self.instance_ids = instance_ids
+
+    def get_next_element_by_instance(self, instance_id: int):
+        r"""
+        Note:
+            Each element returned from the source datapipe is required to be a sequnce that can
+            be subscribed with a column index
+        """
+        for return_val in super().get_next_element_by_instance(instance_id):
+            yield return_val[self.instance_ids[instance_id]]
+
+    def __getstate__(self):
+        state = super().__getstate__()
+        return (*state, self.instance_ids)
+
+    def __setstate__(self, state):
+        super().__setstate__(state[:-1])
+        self.instance_ids = state[-1]

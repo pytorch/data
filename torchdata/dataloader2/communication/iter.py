@@ -106,10 +106,21 @@ def EnsureNonBlockingDataPipe(validated_datapipe):
     return validated_datapipe
 
 
-def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_request_get=False, reset_epoch_fn=None):
+def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, reset_epoch_fn=None):
     """
-    Indefinitely iterates over req_queue and passing values from source_datapipe to res_queue
-    If raise_stop is true, raises exception when StopIteration received from the source_datapipe
+    Indefinitely iterates over ``req_queue`` and passing values from source_datapipe to ``res_queue``.
+
+    Request Types:
+        `ResetEpoch` - Call the `reset_epoch_fn` on the protocol's DataPipe
+        `ResetIterator` - Reset the iterator by calling `QueueWrapper`'s `reset_iterator` method
+        `Terminate` - exits the infinite while loop
+        `GetNext` - returns the value from the DataPipe, and handles exceptions such as `StopIteration` as appropriate
+
+    Args:
+        source_datapipe: DataPipe
+        protocol: ``IterDataPipeQueueProtocolServer`` that contains ``req_queue`` and ``res_queue``
+        blocking_request_get: determines if ``protocol.get_new_request`` will block
+        reset_epoch_fn: function to call when receiving the message ``ResetEpochRequest``
     """
     if not isinstance(protocol, communication.protocol.IterDataPipeQueueProtocolServer):
         raise Exception("Expecting IterDataPipeQueueProtocolServer, got", protocol)
@@ -117,7 +128,7 @@ def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_re
     forever = True
     while forever:
         try:
-            # Non-blocking call is Extremely slow here for python.mp, need to figure out a good workaround
+            # TODO: Non-blocking call is extremely slow here for python.mp, need to figure out a good workaround
             request = protocol.get_new_request(block=blocking_request_get)
         except communication.protocol.EmptyQueue:
             yield True
@@ -145,17 +156,11 @@ def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_re
                     continue
                 except StopIteration:
                     protocol.response_stop_iteration()
-                    if full_stop:
-                        forever = False
-                    else:
-                        yield True
+                    yield True
                     break
                 except InvalidStateResetRequired:
                     protocol.response_invalid_state()
-                    if full_stop:
-                        forever = False
-                    else:
-                        yield True
+                    yield True
                     break
                 protocol.response_next(value)
                 yield True  # Returns control
@@ -166,7 +171,8 @@ def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_re
 
 class QueueWrapper(NonBlocking):
     """
-    Creates iter.DataPipe which reads data from the DataLoader.Queue
+    Creates an IterDataPipe which sends requests and reads the response from the DataLoader.Queue.
+    The input is a ProtocolClient that contains request queue and response queue.
     """
 
     def __init__(self, protocol, response_wait_time=0.00001):

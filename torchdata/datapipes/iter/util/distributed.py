@@ -47,6 +47,8 @@ class Expected:
 
 
 class _PrefetchExecutor:
+    # TODO: Improvement - merge with the `_PrefetchData` class of prefetcher.py
+    #       May not be possible right now due to circular import
     def __init__(
         self,
         datapipe_iterator: Iterator,
