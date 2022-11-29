@@ -181,9 +181,9 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         multiprocessing_context (str, optional): Multiprocessing starting method.
             If method is None then the default context is returned.
             Otherwise, method should be 'fork', 'spawn'.
-        prefetch_worker: (int, 10 by default): Number of data will be prefetched at
+        worker_prefetch_cnt: (int, 10 by default): Number of data will be prefetched at
             the end of each worker process.
-        prefetch_mainloop: (int, 10 by default): Number of data will be prefetched
+        main_prefetch_cnt: (int, 10 by default): Number of data will be prefetched
             at the end of the whole pipeline in the main process.
         worker_init_fn: (Callable, optional): Function to be called when each worker
             process launches with ``DistInfo``, ``WorkerInfo`` and ``DataPipe``
@@ -195,8 +195,8 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     """
     num_workers: int
     multiprocessing_context: Optional[str]
-    prefetch_worker: int
-    prefetch_mainloop: int
+    worker_prefetch_cnt: int
+    main_prefetch_cnt: int
     worker_init_fn: Optional[Callable[[DataPipe, DistInfo, WorkerInfo], DataPipe]]
     worker_reset_fn: Optional[Callable[[DataPipe, DistInfo, WorkerInfo], DataPipe]]
     processes: List
@@ -210,8 +210,8 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         self,
         num_workers: int = 0,
         multiprocessing_context: Optional[str] = None,
-        prefetch_worker: int = 10,
-        prefetch_mainloop: int = 10,
+        worker_prefetch_cnt: int = 10,
+        main_prefetch_cnt: int = 10,
         worker_init_fn: Optional[Callable[[DataPipe, DistInfo, WorkerInfo], DataPipe]] = None,
         worker_reset_fn: Optional[Callable[[DataPipe, DistInfo, WorkerInfo], DataPipe]] = None,
     ) -> None:
@@ -222,8 +222,8 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
                 multiprocessing_context in _all_start_methods
             ), f"Please choose one available multiprocessing context from {_all_start_methods}"
         self.multiprocessing_context = multiprocessing_context
-        self.prefetch_worker = prefetch_worker
-        self.prefetch_mainloop = prefetch_mainloop
+        self.worker_prefetch_cnt = worker_prefetch_cnt
+        self.main_prefetch_cnt = main_prefetch_cnt
         self.worker_init_fn = worker_init_fn
         self.worker_reset_fn = worker_reset_fn
         self.processes = []
@@ -251,8 +251,8 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             self.end_datapipe = datapipe
             return datapipe
 
-        if self.prefetch_worker > 0:
-            datapipe = datapipe.prefetch(self.prefetch_worker)
+        if self.worker_prefetch_cnt > 0:
+            datapipe = datapipe.prefetch(self.worker_prefetch_cnt)
 
         for worker_id in range(self.num_workers):
             worker_info = WorkerInfo(self.num_workers, worker_id)
@@ -275,8 +275,8 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             self.datapipes.append(local_datapipe)
 
         self.end_datapipe = _IterateQueueDataPipes(self.datapipes)  # type: ignore[assignment]
-        if self.prefetch_mainloop > 0:
-            self.end_datapipe = self.end_datapipe.prefetch(self.prefetch_mainloop)  # type: ignore[union-attr]
+        if self.main_prefetch_cnt > 0:
+            self.end_datapipe = self.end_datapipe.prefetch(self.main_prefetch_cnt)  # type: ignore[union-attr]
         return self.end_datapipe  # type: ignore[return-value]
 
     def initialize_iteration(self) -> None:
@@ -293,7 +293,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
         assert self.end_datapipe is not None
         if self._mp:
-            if self.prefetch_mainloop > 0:
+            if self.main_prefetch_cnt > 0:
                 # Stop prefetching first
                 self.end_datapipe.reset()  # type: ignore[union-attr]
                 end_datapipe: DataPipe = self.end_datapipe.source_datapipe
