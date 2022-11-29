@@ -115,25 +115,16 @@ from torchdata.datapipes.iter.util.rows2columnar import Rows2ColumnarIterDataPip
 from torchdata.datapipes.iter.util.samplemultiplexer import SampleMultiplexerDataPipe as SampleMultiplexer
 from torchdata.datapipes.iter.util.saver import SaverIterDataPipe as Saver
 from torchdata.datapipes.iter.util.shardexpander import ShardExpanderIterDataPipe as ShardExpander
-from torchdata.datapipes.iter.util.tararchiveloader import (
-    TarArchiveLoaderIterDataPipe as TarArchiveLoader,
-    TarArchiveReaderIterDataPipe as TarArchiveReader,
-)
+from torchdata.datapipes.iter.util.tararchiveloader import TarArchiveLoaderIterDataPipe as TarArchiveLoader
 from torchdata.datapipes.iter.util.tfrecordloader import (
     TFRecordExample,
     TFRecordExampleSpec,
     TFRecordLoaderIterDataPipe as TFRecordLoader,
 )
 from torchdata.datapipes.iter.util.webdataset import WebDatasetIterDataPipe as WebDataset
-from torchdata.datapipes.iter.util.xzfileloader import (
-    XzFileLoaderIterDataPipe as XzFileLoader,
-    XzFileReaderIterDataPipe as XzFileReader,
-)
+from torchdata.datapipes.iter.util.xzfileloader import XzFileLoaderIterDataPipe as XzFileLoader
 from torchdata.datapipes.iter.util.zip_longest import ZipperLongestIterDataPipe as ZipperLongest
-from torchdata.datapipes.iter.util.ziparchiveloader import (
-    ZipArchiveLoaderIterDataPipe as ZipArchiveLoader,
-    ZipArchiveReaderIterDataPipe as ZipArchiveReader,
-)
+from torchdata.datapipes.iter.util.ziparchiveloader import ZipArchiveLoaderIterDataPipe as ZipArchiveLoader
 from torchdata.datapipes.map.util.converter import MapToIterConverterIterDataPipe as MapToIterConverter
 
 __all__ = [
@@ -212,14 +203,11 @@ __all__ = [
     "StreamReader",
     "TFRecordLoader",
     "TarArchiveLoader",
-    "TarArchiveReader",
     "UnBatcher",
     "UnZipper",
     "WebDataset",
     "XzFileLoader",
-    "XzFileReader",
     "ZipArchiveLoader",
-    "ZipArchiveReader",
     "Zipper",
     "ZipperLongest",
 ]
