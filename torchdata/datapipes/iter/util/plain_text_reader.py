@@ -41,8 +41,10 @@ class PlainTextReaderHelper:
         with contextlib.suppress(StopIteration):
             for _ in range(self._skip_lines):
                 next(file)
-        yield from file
-        file.close()
+        try:
+            yield from file
+        finally:
+            file.close()
 
     def strip_newline(self, stream: Union[Iterator[bytes], Iterator[str]]) -> Union[Iterator[bytes], Iterator[str]]:
         if not self._strip_newline:
@@ -58,10 +60,9 @@ class PlainTextReaderHelper:
     def decode(self, stream: Union[Iterator[bytes], Iterator[str]]) -> Union[Iterator[bytes], Iterator[str]]:
         if not self._decode:
             yield from stream
-            return
-
-        for line in stream:
-            yield line.decode(self._encoding, self._errors) if isinstance(line, bytes) else line
+        else:
+            for line in stream:
+                yield line.decode(self._encoding, self._errors) if isinstance(line, bytes) else line
 
     def return_path(self, stream: Iterator[D], *, path: str) -> Iterator[Union[D, Tuple[str, D]]]:
         if not self._return_path:
