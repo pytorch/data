@@ -106,7 +106,7 @@ def EnsureNonBlockingDataPipe(validated_datapipe):
     return validated_datapipe
 
 
-def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, reset_epoch_fn=None):
+def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False):
     """
     Indefinitely iterates over ``req_queue`` and passing values from source_datapipe to ``res_queue``.
 
@@ -120,7 +120,6 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
         source_datapipe: DataPipe
         protocol: ``IterDataPipeQueueProtocolServer`` that contains ``req_queue`` and ``res_queue``
         blocking_request_get: determines if ``protocol.get_new_request`` will block
-        reset_epoch_fn: function to call when receiving the message ``ResetEpochRequest``
     """
     if not isinstance(protocol, communication.protocol.IterDataPipeQueueProtocolServer):
         raise Exception("Expecting IterDataPipeQueueProtocolServer, got", protocol)
@@ -135,8 +134,7 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
             continue
 
         if isinstance(request, communication.messages.ResetEpochRequest):
-            if reset_epoch_fn is not None:
-                reset_epoch_fn(source_datapipe, *request.args)
+            source_datapipe = request.reset_fn(source_datapipe)
             protocol.response_reset_epoch()
 
         elif isinstance(request, communication.messages.ResetIteratorRequest):
