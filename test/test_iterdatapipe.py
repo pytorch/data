@@ -381,7 +381,7 @@ class TestIterDataPipe(expecttest.TestCase):
 
         # __len__ Test: raises TypeError if source doesn't have length and limit is set to None
         header_dp = source_dp_NoLen.header(None)
-        with self.assertRaises(TypeError):
+        with self.assertRaisesRegex(TypeError, "The length of this HeaderIterDataPipe cannot be determined."):
             len(header_dp)
 
         # __len__ Test: returns limit if source doesn't have length, even when it has been iterated through once
