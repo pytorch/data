@@ -70,15 +70,11 @@ class PrefetcherIterDataPipe(IterDataPipe):
                     try:
                         item = next(itr)
                         prefetch_data.prefetch_buffer.append(item)
-                        print(f"prefetch success, got {item}", flush=True)
                     except StopIteration:
-                        print("--------setting prefetch_data.stop_iteration due to StopIteration")
                         prefetch_data.stop_iteration = True
                     except communication.iter.InvalidStateResetRequired:
-                        print("--------setting prefetch_data.stop_iteration due to InvalidStateResetRequired")
                         prefetch_data.stop_iteration = True
                     except communication.iter.TerminateRequired:
-                        print("--------setting prefetch_data.stop_iteration due to TerminateRequired")
                         prefetch_data.run_prefetcher = False
                         prefetch_data.stop_iteration = True
                 elif prefetch_data.stop_iteration and len(prefetch_data.prefetch_buffer) == 0:
@@ -146,12 +142,8 @@ class PrefetcherIterDataPipe(IterDataPipe):
             self.prefetch_data.run_prefetcher = False
 
     def resume(self):
-        print("In prefetcher.resume")
-        print(f"{self.prefetch_data.stop_iteration = }")
-        print(f"{self.thread is not None = }")
         if self.thread is not None and (
             not self.prefetch_data.stop_iteration or len(self.prefetch_data.prefetch_buffer) > 0
         ):
             self.prefetch_data.run_prefetcher = True
-            print(f"In resume, after setting {self.prefetch_data.run_prefetcher = }")
         print(f"Buffer state after resume: {self.prefetch_data.prefetch_buffer}", flush=True)
