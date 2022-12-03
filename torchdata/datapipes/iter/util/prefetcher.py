@@ -39,8 +39,8 @@ class PrefetcherIterDataPipe(IterDataPipe):
     from getting the sample ready ahead of time.
 
     This is used by ``PrototypeMultiProcessingReadingService`` when the arguments
-    ``prefetch_worker`` (for prefetching at each worker process) or
-    ``prefetch_mainloop`` (for prefetching at the moain loop) are greater than 0.
+    ``worker_prefetch_cnt`` (for prefetching at each worker process) or
+    ``main_prefetch_cnt`` (for prefetching at the main loop) are greater than 0.
 
     Beyond the built-in use cases, this can be useful to put after I/O DataPipes that have
     expensive I/O operations (e.g. takes a long time to request a file from a remote server).
@@ -72,10 +72,13 @@ class PrefetcherIterDataPipe(IterDataPipe):
                         prefetch_data.prefetch_buffer.append(item)
                         print(f"prefetch success, got {item}", flush=True)
                     except StopIteration:
+                        print("--------setting prefetch_data.stop_iteration due to StopIteration")
                         prefetch_data.stop_iteration = True
                     except communication.iter.InvalidStateResetRequired:
+                        print("--------setting prefetch_data.stop_iteration due to InvalidStateResetRequired")
                         prefetch_data.stop_iteration = True
                     except communication.iter.TerminateRequired:
+                        print("--------setting prefetch_data.stop_iteration due to TerminateRequired")
                         prefetch_data.run_prefetcher = False
                         prefetch_data.stop_iteration = True
                 elif prefetch_data.stop_iteration and len(prefetch_data.prefetch_buffer) == 0:
@@ -98,12 +101,10 @@ class PrefetcherIterDataPipe(IterDataPipe):
                 self.thread.start()
 
                 while prefetch_data.run_prefetcher:
-                # TODO: What should the expected behavior be for Prefetcher during `pause`?
-                # while prefetch_data.run_prefetcher or not prefetch_data.stop_iteration:
-                #     if len(prefetch_data.prefetch_buffer) > 0 and prefetch_data.run_prefetcher:
                     if len(prefetch_data.prefetch_buffer) > 0:
                         print(f"About to yield from buffer: {prefetch_data.prefetch_buffer[0]}")
                         yield prefetch_data.prefetch_buffer.popleft()
+                        print(f"Running the part after yield and {prefetch_data.run_prefetcher = }")
                     else:
                         # TODO: Calculate sleep interval based on previous availability speed
                         if not prefetch_data.stop_iteration:
@@ -111,9 +112,10 @@ class PrefetcherIterDataPipe(IterDataPipe):
                         else:
                             prefetch_data.run_prefetcher = False
             finally:
+                print("********* EXITING from prefetcher*******")
                 prefetch_data.run_prefetcher = False
                 if self.thread is not None:
-                    self.thread.join()
+                    self.thread.join(5)  # TODO: Is this timeout necessary?
                     self.thread = None
 
     def __getstate__(self):
@@ -144,6 +146,12 @@ class PrefetcherIterDataPipe(IterDataPipe):
             self.prefetch_data.run_prefetcher = False
 
     def resume(self):
-        if not self.prefetch_data.stop_iteration and self.thread is not None:
+        print("In prefetcher.resume")
+        print(f"{self.prefetch_data.stop_iteration = }")
+        print(f"{self.thread is not None = }")
+        if self.thread is not None and (
+            not self.prefetch_data.stop_iteration or len(self.prefetch_data.prefetch_buffer) > 0
+        ):
             self.prefetch_data.run_prefetcher = True
+            print(f"In resume, after setting {self.prefetch_data.run_prefetcher = }")
         print(f"Buffer state after resume: {self.prefetch_data.prefetch_buffer}", flush=True)

@@ -9,8 +9,6 @@ import warnings
 from io import BufferedIOBase
 from typing import Iterable, Iterator, Tuple
 
-from torch.utils.data.datapipes.utils.common import _deprecation_warning
-
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
@@ -68,21 +66,3 @@ class XzFileLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         if self.length == -1:
             raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
         return self.length
-
-
-@functional_datapipe("read_from_xz")
-class XzFileReaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
-    r"""
-    Please use ``XzFileLoader`` or ``.load_from_xz`` instead.
-    """
-
-    def __new__(cls, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1):
-        _deprecation_warning(
-            cls.__name__,
-            deprecation_version="0.4",
-            removal_version="0.6",
-            old_functional_name="read_from_xz",
-            new_class_name="XzFileLoader",
-            new_functional_name="load_from_xz",
-        )
-        return XzFileLoaderIterDataPipe(datapipe, length)

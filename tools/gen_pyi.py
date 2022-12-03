@@ -77,6 +77,7 @@ def gen_pyi() -> None:
         "read_from_zip": "IterDataPipe",
         "extract": "IterDataPipe",
         "to_map_datapipe": "MapDataPipe",
+        "round_robin_demux": "List[IterDataPipe]",
     }
     iter_method_name_exclusion: Set[str] = {"def extract", "read_from_tar", "read_from_xz", "read_from_zip"}
 

@@ -6,10 +6,11 @@
 
 import time
 import types
+import warnings
 
 from torch.utils.data import IterDataPipe
 from torchdata.dataloader2 import communication
-from torchdata.dataloader2.graph import traverse_dps
+from torchdata.dataloader2.graph import list_dps, traverse_dps
 
 DEFAULT_NON_BLOCKING_SLEEP = 0.001
 
@@ -107,7 +108,7 @@ def EnsureNonBlockingDataPipe(validated_datapipe):
     return validated_datapipe
 
 
-def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, reset_epoch_fn=None):
+def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False):
     """
     Indefinitely iterates over ``req_queue`` and passing values from source_datapipe to ``res_queue``.
 
@@ -121,7 +122,6 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
         source_datapipe: DataPipe
         protocol: ``IterDataPipeQueueProtocolServer`` that contains ``req_queue`` and ``res_queue``
         blocking_request_get: determines if ``protocol.get_new_request`` will block
-        reset_epoch_fn: function to call when receiving the message ``ResetEpochRequest``
     """
     if not isinstance(protocol, communication.protocol.IterDataPipeQueueProtocolServer):
         raise Exception("Expecting IterDataPipeQueueProtocolServer, got", protocol)
@@ -136,8 +136,7 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
             continue
 
         if isinstance(request, communication.messages.ResetEpochRequest):
-            if reset_epoch_fn is not None:
-                reset_epoch_fn(source_datapipe, *request.args)
+            source_datapipe = request.reset_fn(source_datapipe)
             protocol.response_reset_epoch()
 
         elif isinstance(request, communication.messages.ResetIteratorRequest):
@@ -145,25 +144,23 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
             protocol.response_reset_iterator()
 
         elif isinstance(request, communication.messages.PauseRequest):
-            print("\nProcessing PauseRequest")
-            graph = traverse_dps(source_datapipe)
-            for dp, _ in graph.values():
+            dp_list = list_dps(traverse_dps(source_datapipe))
+            for dp in dp_list:
                 if hasattr(dp, "pause") and callable(dp.pause):
                     dp.pause()
-            print("About to return response_pause", flush=True)
+
             protocol.response_pause()
-            print("PauseResponse returned\n", flush=True)
             yield True  # Return control
 
         elif isinstance(request, communication.messages.ResumeRequest):
-            print("\nProcessing ResumeRequest")
-            graph = traverse_dps(source_datapipe)
-            for dp, _ in graph.values():
+            dp_list = list_dps(traverse_dps(source_datapipe))
+            # for dp, _ in graph.values():
+            #     if hasattr(dp, "resume") and callable(dp.resume):
+            #         dp.resume()
+            for dp in reversed(dp_list):
                 if hasattr(dp, "resume") and callable(dp.resume):
                     dp.resume()
-            print("About to return response_resume", flush=True)
             protocol.response_resume()
-            print("ResumeResponse returned\n", flush=True)
             yield True  # Return control
 
         elif isinstance(request, communication.messages.TerminateRequest):
@@ -172,11 +169,14 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
 
         elif isinstance(request, communication.messages.GetNextRequest):
             while forever:
-                print("Checking if pause is True")
+                print(f"Checking if pause is True, it is {protocol._pause}")
                 if protocol._pause:
+                    print("-------Protocol says pause -----")
                     protocol.response_stop_iteration()
-                    warnings.warn("Cannot `GetNext` after `Pause` has been called. "
-                                  "`Resume` must be called first before additional elements can be yielded.")
+                    warnings.warn(
+                        "Cannot `GetNext` after `Pause` has been called. "
+                        "`Resume` must be called first before additional elements can be yielded."
+                    )
                     yield True
                     break
                 try:
