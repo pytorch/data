@@ -31,13 +31,11 @@ __all__ = [
 ]
 
 
-def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_on_process_init=None, call_on_epoch_reset=None):
+def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_on_process_init=None):
     r"""
     Initialize with the given init function, set the appropriate pipe and protocol server type, and
     create a loop with the protocol server.
     """
-    if call_on_process_init is not None:
-        call_on_process_init(source_datapipe)
     if isinstance(source_datapipe, IterDataPipe):
         pipe_type = communication.iter
         protocol_type = communication.protocol.IterDataPipeQueueProtocolServer
@@ -46,18 +44,19 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_on_process_
         protocol_type = communication.protocol.MapDataPipeQueueProtocolServer  # type: ignore[assignment]
     else:
         raise Exception("Only supports IterDataPipe or MapDataPipe, got", source_datapipe)
+    if call_on_process_init is not None:
+        call_on_process_init(source_datapipe)
 
     torch.set_num_threads(1)
     for _ in pipe_type.DataPipeBehindQueues(
         source_datapipe,
         protocol_type(req_queue, res_queue),
         blocking_request_get=True,
-        reset_epoch_fn=call_on_epoch_reset,
     ):
         pass
 
 
-def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe, call_on_process_init=None, call_on_epoch_reset=None):
+def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe, call_on_process_init=None):
     r"""
     Given a DataPipe, starts a new process with ``DataPipeToQueuesLoop`` as target,
     and returns ``(process, req_queue, res_queue)``.
@@ -65,7 +64,7 @@ def SpawnProcessForDataPipeline(multiprocessing_ctx, datapipe, call_on_process_i
     req_queue = multiprocessing_ctx.Queue()
     res_queue = multiprocessing_ctx.Queue()
     process = multiprocessing_ctx.Process(
-        target=DataPipeToQueuesLoop, args=(datapipe, req_queue, res_queue, call_on_process_init, call_on_epoch_reset)
+        target=DataPipeToQueuesLoop, args=(datapipe, req_queue, res_queue, call_on_process_init)
     )
     return process, req_queue, res_queue
 

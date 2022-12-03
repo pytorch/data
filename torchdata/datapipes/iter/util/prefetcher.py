@@ -36,8 +36,8 @@ class PrefetcherIterDataPipe(IterDataPipe):
     from getting the sample ready ahead of time.
 
     This is used by ``PrototypeMultiProcessingReadingService`` when the arguments
-    ``prefetch_worker`` (for prefetching at each worker process) or
-    ``prefetch_mainloop`` (for prefetching at the moain loop) are greater than 0.
+    ``worker_prefetch_cnt`` (for prefetching at each worker process) or
+    ``main_prefetch_cnt`` (for prefetching at the main loop) are greater than 0.
 
     Beyond the built-in use cases, this can be useful to put after I/O DataPipes that have
     expensive I/O operations (e.g. takes a long time to request a file from a remote server).

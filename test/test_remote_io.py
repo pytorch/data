@@ -30,12 +30,26 @@ from torchdata.datapipes.iter import (
 
 try:
     import fsspec
+
+    HAS_FSSPEC = True
+except ImportError:
+    HAS_FSSPEC = False
+
+try:
     import s3fs
 
     HAS_FSSPEC_S3 = True
 except ImportError:
     HAS_FSSPEC_S3 = False
-skipIfNoFSSpecS3 = unittest.skipIf(not HAS_FSSPEC_S3, "no FSSpec with S3fs")
+skipIfNoFSSpecS3 = unittest.skipIf(not (HAS_FSSPEC and HAS_FSSPEC_S3), "no FSSpec with S3fs")
+
+try:
+    import adlfs
+
+    HAS_FSSPEC_AZ = True
+except ImportError:
+    HAS_FSSPEC_AZ = False
+skipIfNoFSSpecAZ = unittest.skipIf(not (HAS_FSSPEC and HAS_FSSPEC_AZ), "no FSSpec with adlfs")
 
 try:
     from torchdata._torchdata import S3Handler
@@ -213,7 +227,8 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         res = list(fsspec_loader_dp)
         self.assertEqual(len(res), 18, f"{input} failed")
 
-    @skipIfNoFSSpecS3
+    @unittest.skipIf(True, "Needs authentications. See: https://github.com/pytorch/data/issues/904")
+    @skipIfNoFSSpecAZ
     def test_fsspec_azure_blob(self):
         url = "public/curated/covid-19/ecdc_cases/latest/ecdc_cases.csv"
         account_name = "pandemicdatalake"
