@@ -15,8 +15,8 @@ from torchdata.dataloader2 import communication
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
-PRODUCER_SLEEP_INTERVAL = 0.0001  # Interval between buffer fullfilment checks
-CONSUMER_SLEEP_INTERVAL = 0.0001  # Interval between checking items availablitity in buffer
+PRODUCER_SLEEP_INTERVAL = 0.0001  # Interval between buffer fulfillment checks
+CONSUMER_SLEEP_INTERVAL = 0.0001  # Interval between checking items availability in buffer
 
 
 class _PrefetchData:
@@ -35,7 +35,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
     """
     Prefetches elements from the source DataPipe and puts them into a buffer (functional name: ``prefetch``).
     Prefetching performs the operations (e.g. I/O, computations) of the DataPipes up to this one ahead of time
-    and stores the result in the buffer, ready to be consume by the subsequent DataPipe. It has no effect aside
+    and stores the result in the buffer, ready to be consumed by the subsequent DataPipe. It has no effect aside
     from getting the sample ready ahead of time.
 
     This is used by ``PrototypeMultiProcessingReadingService`` when the arguments
@@ -111,7 +111,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
 
     def __getstate__(self):
         """
-        Getting state in threading enviroment requires next operations:
+        Getting state in threading environment requires next operations:
             1) Stopping of the producer thread.
             2) Saving buffer.
             3) Adding lazy restart of producer thread when __next__ is called again
