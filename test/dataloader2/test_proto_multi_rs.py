@@ -44,7 +44,6 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
     def test_reading_service_pause_resume(self) -> None:
 
         for dp in self.test_dps:
-
             rs1 = PrototypeMultiProcessingReadingService(num_workers=1, worker_prefetch_cnt=0, main_prefetch_cnt=0)
             rs2 = PrototypeMultiProcessingReadingService(num_workers=1, worker_prefetch_cnt=0, main_prefetch_cnt=2)
             rs3 = PrototypeMultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=0)
@@ -70,14 +69,10 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
 
         # Functional Test: Confirms that `dl` will stop yielding elements after `_pause` is called
         rs7 = PrototypeMultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=1)
-        # TODO: If DL doesn't handle pause, this hangs, because the main_loop prefetcher doesn't follow messages
-        #       and will never reach the _pause condition
         rs8 = PrototypeMultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=1, main_prefetch_cnt=0)
-        # TODO: If DL doesn't handle pause, this yields 1 extra per worker, because we are popping from buffer
         rs9 = PrototypeMultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=0)
 
         test_rss2 = [rs7, rs8, rs9]
-        test_rss2 = [rs7]
         for rs in test_rss2:
             dl: DataLoader2 = DataLoader2(self.double_pause_dp, reading_service=rs)
             res = []
@@ -87,7 +82,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
                     dl.pause()
             self.assertEqual(3, len(res))
 
-    # TODO: Next PR
+    # TODO: Implemented in an upcoming PR
     # def test_reading_service_snapshot(self) -> None:
     #     pass
     #

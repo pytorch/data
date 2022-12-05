@@ -85,31 +85,29 @@ class PrefetcherIterDataPipe(IterDataPipe):
             time.sleep(PRODUCER_SLEEP_INTERVAL)
 
     def __iter__(self):
-        if self.buffer_size < 1:
-            yield from self.source_datapipe
-        else:
-            try:
-                prefetch_data = _PrefetchData(self.source_datapipe, self.buffer_size)
-                self.prefetch_data = prefetch_data
-                self.thread = threading.Thread(
-                    target=PrefetcherIterDataPipe.thread_worker, args=(prefetch_data,), daemon=True
-                )
-                self.thread.start()
+        try:
+            prefetch_data = _PrefetchData(self.source_datapipe, self.buffer_size)
+            self.prefetch_data = prefetch_data
+            self.thread = threading.Thread(
+                target=PrefetcherIterDataPipe.thread_worker, args=(prefetch_data,), daemon=True
+            )
+            self.thread.start()
 
-                while prefetch_data.run_prefetcher:
-                    if len(prefetch_data.prefetch_buffer) > 0:
-                        yield prefetch_data.prefetch_buffer.popleft()
+            while prefetch_data.run_prefetcher:
+                if len(prefetch_data.prefetch_buffer) > 0:
+                    yield prefetch_data.prefetch_buffer.popleft()
+                else:
+                    # TODO: Calculate sleep interval based on previous availability speed
+                    if not prefetch_data.stop_iteration:
+                        time.sleep(CONSUMER_SLEEP_INTERVAL)
                     else:
-                        # TODO: Calculate sleep interval based on previous availability speed
-                        if not prefetch_data.stop_iteration:
-                            time.sleep(CONSUMER_SLEEP_INTERVAL)
-                        else:
-                            prefetch_data.run_prefetcher = False
-            finally:
-                prefetch_data.run_prefetcher = False
-                if self.thread is not None:
-                    self.thread.join(3)  # TODO: Is it fine for us to have a timeout here?
-                    self.thread = None
+                        prefetch_data.run_prefetcher = False
+        finally:
+            prefetch_data.run_prefetcher = False
+            prefetch_data.stop_iteration = True
+            if self.thread is not None:
+                self.thread.join()
+                self.thread = None
 
     def __getstate__(self):
         """
