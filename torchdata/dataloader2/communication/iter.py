@@ -169,9 +169,7 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False):
 
         elif isinstance(request, communication.messages.GetNextRequest):
             while forever:
-                print(f"Checking if pause is True, it is {protocol._pause}")
                 if protocol._pause:
-                    print("-------Protocol says pause -----")
                     protocol.response_stop_iteration()
                     warnings.warn(
                         "Cannot `GetNext` after `Pause` has been called. "

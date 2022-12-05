@@ -6,7 +6,6 @@
 
 
 import multiprocessing as mp
-import warnings
 
 from abc import ABC, abstractmethod
 from collections import deque
@@ -379,7 +378,10 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         if self.num_workers > 0:
             end_datapipe.request_pause()
         else:
-            warnings.warn("If you would like to use `pause`, please use more than 0 worker.")
+            raise RuntimeError(
+                "If you would like to use `pause` with `PrototypeMultiProcessingReadingService`, "
+                "please use more than 0 worker."
+            )
 
     def _resume(self):
         """
@@ -393,7 +395,10 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         if self.num_workers > 0:
             end_datapipe.request_resume()
         else:
-            warnings.warn("If you would like to use `resume`, please use more than 0 worker.")
+            raise RuntimeError(
+                "If you would like to use `resume` with `PrototypeMultiProcessingReadingService`, "
+                "please use more than 0 worker."
+            )
         if self.main_prefetch_cnt > 0 and self.num_workers > 0:
             self.end_datapipe.resume()  # type: ignore[union-attr]
 

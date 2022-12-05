@@ -98,9 +98,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
 
                 while prefetch_data.run_prefetcher:
                     if len(prefetch_data.prefetch_buffer) > 0:
-                        print(f"About to yield from buffer: {prefetch_data.prefetch_buffer[0]}")
                         yield prefetch_data.prefetch_buffer.popleft()
-                        print(f"Running the part after yield and {prefetch_data.run_prefetcher = }")
                     else:
                         # TODO: Calculate sleep interval based on previous availability speed
                         if not prefetch_data.stop_iteration:
@@ -108,7 +106,6 @@ class PrefetcherIterDataPipe(IterDataPipe):
                         else:
                             prefetch_data.run_prefetcher = False
             finally:
-                print("********* EXITING from prefetcher*******")
                 prefetch_data.run_prefetcher = False
                 if self.thread is not None:
                     self.thread.join(5)  # TODO: Is this timeout necessary?
@@ -137,7 +134,6 @@ class PrefetcherIterDataPipe(IterDataPipe):
             self.thread.join()
 
     def pause(self):
-        print(f"Buffer state before pause: {self.prefetch_data.prefetch_buffer}", flush=True)
         if self.thread is not None:
             self.prefetch_data.run_prefetcher = False
 
@@ -146,4 +142,3 @@ class PrefetcherIterDataPipe(IterDataPipe):
             not self.prefetch_data.stop_iteration or len(self.prefetch_data.prefetch_buffer) > 0
         ):
             self.prefetch_data.run_prefetcher = True
-        print(f"Buffer state after resume: {self.prefetch_data.prefetch_buffer}", flush=True)
