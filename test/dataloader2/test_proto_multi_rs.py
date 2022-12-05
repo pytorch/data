@@ -38,6 +38,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
                     dl0.pause()
                 with self.assertRaisesRegex(RuntimeError, r"resume"):
                     dl0.resume()
+        dl0.shutdown()
 
     def test_reading_service_pause_resume(self) -> None:
 
@@ -52,7 +53,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
 
             # Functional Test: Testing various configuration of DataPipe/ReadingService to ensure the pipeline properly
             #                  pauses and resumes
-            for rs in test_rss:
+            for n, rs in enumerate(test_rss):
                 dl: DataLoader2 = DataLoader2(dp, reading_service=rs)
                 res = []
                 for i, x in enumerate(dl):
@@ -61,7 +62,13 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
                         dl.pause()
                         dl.resume()
 
-                self.assertEqual(list(range(self.n_elements)), sorted(res))
+                self.assertEqual(
+                    list(range(self.n_elements)),
+                    sorted(res),
+                    msg=f"The test is failing for rs{n + 1}, with {rs.num_workers = }, "
+                    f"{rs.worker_prefetch_cnt = }, {rs.main_prefetch_cnt = }",
+                )
+                dl.shutdown()
 
     def test_reading_service_pause_stop_yield(self) -> None:
 
@@ -71,14 +78,20 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
         rs9 = PrototypeMultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=0)
 
         test_rss2 = [rs7, rs8, rs9]
-        for rs in test_rss2:
+        for n, rs in enumerate(test_rss2):
             dl: DataLoader2 = DataLoader2(self.double_pause_dp, reading_service=rs)
             res = []
             for i, x in enumerate(dl):
                 res.append(x)
                 if i in {2}:
                     dl.pause()
-            self.assertEqual(3, len(res))
+            self.assertEqual(
+                3,
+                len(res),
+                msg=f"The test is failing for rs{n + 7}, with {rs.num_workers = }, "
+                f"{rs.worker_prefetch_cnt = }, {rs.main_prefetch_cnt = }",
+            )
+            dl.shutdown()
 
     # TODO: Implemented in an upcoming PR
     # def test_reading_service_snapshot(self) -> None:
