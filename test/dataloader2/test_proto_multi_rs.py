@@ -66,8 +66,10 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
                 self.assertEqual(
                     list(range(self.n_elements)),
                     sorted(res),
-                    msg=f"The test is failing for rs{n + 1}, with {rs.num_workers = }, "
-                    f"{rs.worker_prefetch_cnt = }, {rs.main_prefetch_cnt = }",
+                    msg=(
+                        f"The test is failing for rs{n + 1}, with {rs.num_workers = }, ",
+                        f"{rs.worker_prefetch_cnt = }, {rs.main_prefetch_cnt = }",
+                    ),
                 )
                 dl.shutdown()
 
@@ -89,8 +91,10 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
             self.assertEqual(
                 3,
                 len(res),
-                msg=f"The test is failing for rs{n + 7}, with {rs.num_workers = }, "
-                f"{rs.worker_prefetch_cnt = }, {rs.main_prefetch_cnt = }",
+                msg=(
+                    f"The test is failing for rs{n + 7}, with {rs.num_workers = }, ",
+                    f"{rs.worker_prefetch_cnt = }, {rs.main_prefetch_cnt = }",
+                ),
             )
             dl.shutdown()
 
