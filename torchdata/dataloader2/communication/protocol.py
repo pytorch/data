@@ -52,17 +52,16 @@ class ProtocolClient(Protocol):
 
     def request_pause(self):
         if not self.can_take_request():
-            raise Exception("Can not pause while we are still waiting response for previous request")
+            raise Exception("Can not `pause` while we are still waiting response for previous request")
         request = communication.messages.PauseRequest()
         self.request_queue.put(request)
         self.request_sent(request)
 
     def request_resume(self):
-        # if not self.can_take_request():
-        #     raise Exception("Can not resume while we are still waiting response for previous request")
+        if not self.can_take_request():
+            raise Exception("Can not `resume` while we are still waiting response for previous request")
         request = communication.messages.ResumeRequest()
         self.request_queue.put(request)
-        # TODO: Right now the issue is that self.response_queue is not being emptied. Such that the next line errors.
         self.request_sent(request)
 
 

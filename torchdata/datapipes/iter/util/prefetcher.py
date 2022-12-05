@@ -108,7 +108,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
             finally:
                 prefetch_data.run_prefetcher = False
                 if self.thread is not None:
-                    self.thread.join(5)  # TODO: Is this timeout necessary?
+                    self.thread.join(3)  # TODO: Is it fine for us to have a timeout here?
                     self.thread = None
 
     def __getstate__(self):

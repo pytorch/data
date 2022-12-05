@@ -154,9 +154,6 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False):
 
         elif isinstance(request, communication.messages.ResumeRequest):
             dp_list = list_dps(traverse_dps(source_datapipe))
-            # for dp, _ in graph.values():
-            #     if hasattr(dp, "resume") and callable(dp.resume):
-            #         dp.resume()
             for dp in reversed(dp_list):
                 if hasattr(dp, "resume") and callable(dp.resume):
                     dp.resume()
