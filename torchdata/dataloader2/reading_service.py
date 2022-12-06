@@ -377,10 +377,10 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         self.timeout = timeout
         self.worker_init_fn = worker_init_fn
         self.multiprocessing_context = multiprocessing_context
-        self.prefetch_factor = prefetch_factor
+        self.prefetch_factor: int = 2 if prefetch_factor is None or prefetch_factor == 0 else self.prefetch_factor
         self.persistent_workers = persistent_workers
         if self.num_workers == 0:
-            self.prefetch_factor = None
+            self.prefetch_factor = 2
             self.persistent_workers = False
         self.dl_: Optional[DataLoader] = None
 
