@@ -1088,19 +1088,19 @@ class TestIterDataPipe(expecttest.TestCase):
         noinf_dp, inf_dp = _get_dp(10)
         dp = inf_dp.zip(noinf_dp)
         res = list(dp)
-        self.assertEqual(res, list((i, i) for i in range(10)))
+        self.assertEqual(res, [(i, i) for i in range(10)])
 
         # mux
         noinf_dp, inf_dp = _get_dp(10)
         dp = inf_dp.mux(noinf_dp)
         res = list(dp)
-        self.assertEqual(res, list(i for i in range(10) for _ in range(2)))
+        self.assertEqual(res, [i for i in range(10) for _ in range(2)])
 
         # zip_with_iter
         noinf_dp, inf_dp = _get_dp(10)
         dp = noinf_dp.zip_with_iter(inf_dp, key_fn=lambda x: x)
         res = list(dp)
-        self.assertEqual(res, list((i, i) for i in range(10)))
+        self.assertEqual(res, [(i, i) for i in range(10)])
 
     def test_zip_longest_iterdatapipe(self):
 
