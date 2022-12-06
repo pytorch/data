@@ -1073,6 +1073,35 @@ class TestIterDataPipe(expecttest.TestCase):
             testexpand("{999..123}")
         self.assertEqual(testexpand("{0..1}{0..1}"), "00 01 10 11".split())
 
+    def test_combining_infinite_iterdatapipe(self):
+        r"""
+        Test combining DataPipe can properly exit at the end of iteration
+        with an infinite DataPipe as the input.
+        """
+
+        def _get_dp(length=10):
+            source_dp = IterableWrapper(list(range(length)))
+            inf_dp = IterableWrapper(list(range(length))).cycle()
+            return source_dp, inf_dp
+
+        # zip
+        noinf_dp, inf_dp = _get_dp(10)
+        dp = inf_dp.zip(noinf_dp)
+        res = list(dp)
+        self.assertEqual(res, [(i, i) for i in range(10)])
+
+        # mux
+        noinf_dp, inf_dp = _get_dp(10)
+        dp = inf_dp.mux(noinf_dp)
+        res = list(dp)
+        self.assertEqual(res, [i for i in range(10) for _ in range(2)])
+
+        # zip_with_iter
+        noinf_dp, inf_dp = _get_dp(10)
+        dp = noinf_dp.zip_with_iter(inf_dp, key_fn=lambda x: x)
+        res = list(dp)
+        self.assertEqual(res, [(i, i) for i in range(10)])
+
     def test_zip_longest_iterdatapipe(self):
 
         # Functional Test: raises TypeError when an input is not of type `IterDataPipe`
