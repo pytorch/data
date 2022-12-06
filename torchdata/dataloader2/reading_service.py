@@ -17,6 +17,7 @@ import torch
 import torch.distributed as dist
 
 from torch.utils.data import DataLoader
+from torch.utils.data.datapipes.utils.snapshot import _simple_graph_snapshot_restoration
 
 from torchdata._constants import default_dl2_worker_join_timeout_in_s, default_timeout_in_s
 from torchdata.dataloader2 import communication
@@ -252,6 +253,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         self._mp = num_workers > 0
         self._pg = None
         self._dist_info = DistInfo(1, 0)
+        self._initial_seed = None
 
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         r"""
@@ -306,6 +308,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         shared_seed_int: int = shared_seed.item()  # type: ignore[assignment]
         _seed_generator = torch.Generator()
         _seed_generator.manual_seed(shared_seed_int)
+        self._initial_seed = shared_seed_int
         torch.utils.data.graph_settings.apply_random_seed(
             self.end_datapipe,  # type: ignore[arg-type]
             _seed_generator,
@@ -401,6 +404,15 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             )
         if self.main_prefetch_cnt > 0 and self.num_workers > 0:
             self.end_datapipe.resume()  # type: ignore[union-attr]
+
+    def _get_naive_datapipe_snapshot(self):
+        return self.end_datapipe._number_of_samples_yielded, self._initial_seed
+
+    def _restore_naive_datapipe_snapshot(self, n_samples_yielded, initial_seed):
+        initial_seed_generator = torch.Generator()
+        initial_seed_generator.manual_seed(initial_seed)
+        _simple_graph_snapshot_restoration(self.end_datapipe, n_samples_yielded, initial_seed_generator)
+        # TODO: I might want to skip `initialize_iteration` after this????
 
 
 class MultiProcessingReadingService(ReadingServiceInterface):
