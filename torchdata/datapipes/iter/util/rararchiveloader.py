@@ -90,26 +90,27 @@ class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
             _PATCHED = True
 
         for data in self.datapipe:
-            validate_pathname_binary_tuple(data)
-            path, stream = data
-            if isinstance(stream, rarfile.RarExtFile) or (
-                isinstance(stream, StreamWrapper) and isinstance(stream.file_obj, rarfile.RarExtFile)
-            ):
-                raise ValueError(
-                    f"Nested RAR archive is not supported by {type(self).__name__}. Please extract outer archive first."
-                )
+            try:
+                validate_pathname_binary_tuple(data)
+                path, stream = data
+                if isinstance(stream, rarfile.RarExtFile) or (
+                    isinstance(stream, StreamWrapper) and isinstance(stream.file_obj, rarfile.RarExtFile)
+                ):
+                    raise ValueError(
+                        f"Nested RAR archive is not supported by {type(self).__name__}. Please extract outer archive first."
+                    )
 
-            rar = rarfile.RarFile(stream)
-            for info in rar.infolist():
-                if info.is_dir():
-                    continue
+                rar = rarfile.RarFile(stream)
+                for info in rar.infolist():
+                    if info.is_dir():
+                        continue
 
-                inner_path = os.path.join(path, info.filename)
-                file_obj = rar.open(info)
-
-                yield inner_path, StreamWrapper(file_obj, stream, name=path)  # type: ignore[misc]
-            if isinstance(stream, StreamWrapper):
-                stream.autoclose()
+                    inner_path = os.path.join(path, info.filename)
+                    file_obj = rar.open(info)
+                    yield inner_path, StreamWrapper(file_obj, stream, name=path)  # type: ignore[misc]
+            finally:
+                if isinstance(stream, StreamWrapper):
+                    stream.autoclose()
 
     def __len__(self) -> int:
         if self.length == -1:
