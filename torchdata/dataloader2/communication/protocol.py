@@ -68,7 +68,7 @@ class ProtocolServer(Protocol):
 
     def get_new_request(self, block=False):
         if self.have_pending_request():
-            raise Exception("Trying to get next request, while having one unserved")
+            raise Exception("Trying to get next request, while having one un-served")
         try:
             response = self.request_queue.get(block=block)
         except EmptyException:
@@ -122,10 +122,10 @@ class MapDataPipeQueueProtocolClient(ProtocolClient):
         self.request_queue.put(request)
         self.request_sent(request)
 
-    def request_reset_epoch(self, *args):
+    def request_reset_epoch(self, reset_fn):
         if not self.can_take_request():
             raise Exception("Can not reset while we are still waiting response for previous request")
-        request = communication.messages.ResetEpochRequest(args)
+        request = communication.messages.ResetEpochRequest(reset_fn)
         self.request_queue.put(request)
         self.request_sent(request)
 
@@ -201,10 +201,10 @@ class IterDataPipeQueueProtocolClient(ProtocolClient):
         self.request_queue.put(request)
         self.request_sent(request)
 
-    def request_reset_epoch(self, *args):
+    def request_reset_epoch(self, reset_fn):
         if not self.can_take_request():
             raise Exception("Can not reset while we are still waiting response for previous request")
-        request = communication.messages.ResetEpochRequest(args)
+        request = communication.messages.ResetEpochRequest(reset_fn)
         self.request_queue.put(request)
         self.request_sent(request)
 

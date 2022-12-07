@@ -83,10 +83,14 @@ def EnsureNonBlockingMapDataPipe(validated_datapipe):
     return validated_datapipe
 
 
-def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_request_get=False, reset_epoch_fn=None):
+def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False):
     """
-    Indefinitely iterates over req_queue and passing values from source_datapipe to res_queue
-    If raise_stop is true, raises exception when StopIteration received from the source_datapipe
+    Indefinitely iterates over req_queue and passing values from source_datapipe to res_queue.
+
+    Args:
+        source_datapipe: DataPipe
+        protocol: ``MapDataPipeQueueProtocolServer`` that contains ``req_queue`` and ``res_queue``
+        blocking_request_get: determines if ``protocol.get_new_request`` will block
     """
     if not isinstance(protocol, communication.protocol.MapDataPipeQueueProtocolServer):
         raise Exception("Expecting MapDataPipeQueueProtocolServer, got", protocol)
@@ -94,15 +98,14 @@ def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_re
     forever = True
     while forever:
         try:
-            # Non-blocking call is Extremely slow here for python.mp, need to figure out a good workaround
+            # TODO: non-blocking call is extremely slow here for python.mp, need to figure out a good workaround
             request = protocol.get_new_request(block=blocking_request_get)
         except communication.protocol.EmptyQueue:
             yield True
             continue
 
         if isinstance(request, communication.messages.ResetEpochRequest):
-            if reset_epoch_fn is not None:
-                reset_epoch_fn(source_datapipe, *request.args)
+            source_datapipe = request.reset_fn(source_datapipe)
             protocol.response_reset_epoch()
 
         elif isinstance(request, communication.messages.TerminateRequest):
@@ -123,10 +126,7 @@ def DataPipeBehindQueues(source_datapipe, protocol, full_stop=False, blocking_re
                 except IndexError:
                     # Alternatively, we can just allow the underlying DataPipe to throw an exception?
                     protocol.response_index_out_of_bound()
-                    if full_stop:
-                        forever = False
-                    else:
-                        yield True
+                    yield True
                     break
                 protocol.response_item(request.key, value)
                 yield True  # Returns control

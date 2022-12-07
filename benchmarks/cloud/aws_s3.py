@@ -65,7 +65,7 @@ def check_and_output_speed(prefix: str, create_dp_fn: Callable, n_prefetch: int,
 
     rs_type = "DataLoader2 w/ tar archives"
     new_rs = PrototypeMultiProcessingReadingService(
-        num_workers=n_workers, prefetch_worker=n_prefetch, prefetch_mainloop=n_prefetch
+        num_workers=n_workers, worker_prefetch_cnt=n_prefetch, main_prefetch_cnt=n_prefetch
     )
     dl: DataLoader2 = DataLoader2(dp, reading_service=new_rs)
 

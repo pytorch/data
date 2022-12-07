@@ -10,6 +10,10 @@ import pickle
 import unittest
 from unittest import TestCase
 
+import torch
+
+from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
+
 from torchdata.dataloader2 import (
     communication,
     DataLoader2,
@@ -140,7 +144,7 @@ class DataLoader2Test(TestCase):
             None,
             TestReadingService(),
             MultiProcessingReadingService(num_workers=4),
-            PrototypeMultiProcessingReadingService(num_workers=4, prefetch_worker=0),
+            PrototypeMultiProcessingReadingService(num_workers=4, worker_prefetch_cnt=0),
         ]
         for reading_service in reading_services:
             data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
@@ -346,6 +350,44 @@ class TestDataLoader2EventLoop(TestCase):
         self.assertEqual(input_len, len(local_datapipe))
 
         clean_me(process, req_queue, res_queue)
+
+
+class PrototypeMultiProcessingReadingServiceTest(TestCase):
+    @staticmethod
+    def _worker_init_fn(datapipe, worker_info):
+        datapipe = datapipe.sharding_filter()
+        torch.utils.data.graph_settings.apply_sharding(
+            datapipe, worker_info.num_workers, worker_info.worker_id, SHARDING_PRIORITIES.MULTIPROCESSING
+        )
+        return datapipe
+
+    @staticmethod
+    def _worker_reset_fn(datapipe, worker_info):
+        worker_seed_generator = torch.Generator()
+        worker_seed_generator.manual_seed(123)
+        torch.utils.data.graph_settings.apply_random_seed(
+            datapipe,
+            worker_seed_generator,
+        )
+        return datapipe
+
+    def test_worker_fns(self):
+        dp: IterDataPipe = IterableWrapper(range(100)).batch(2).shuffle()
+        torch.manual_seed(123)
+        exp = list(dp)
+
+        rs = PrototypeMultiProcessingReadingService(
+            num_workers=1, worker_init_fn=self._worker_init_fn, worker_reset_fn=self._worker_reset_fn
+        )
+        dl = DataLoader2(dp, reading_service=rs)
+
+        # Test worker_init_fn to shard the DataPipe graph
+        res1 = list(dl)
+        self.assertEqual(exp, res1)
+
+        # Test worker_reset_fn to set the same random seed across epoches
+        res2 = list(dl)
+        self.assertEqual(exp, res2)
 
 
 if __name__ == "__main__":

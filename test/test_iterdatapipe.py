@@ -344,6 +344,11 @@ class TestIterDataPipe(expecttest.TestCase):
         header_dp = source_dp.header(100)
         self.assertEqual(list(range(5)), list(header_dp))
 
+        # Functional Test: ensure the source is not modified if limit is set to None
+        source_dp = IterableWrapper(range(5))
+        header_dp = source_dp.header(None)
+        self.assertEqual(list(range(5)), list(header_dp))
+
         # Reset Test:
         source_dp = IterableWrapper(range(20))
         header_dp = Header(source_dp, 5)
@@ -360,6 +365,10 @@ class TestIterDataPipe(expecttest.TestCase):
         header_dp = source_dp.header(30)
         self.assertEqual(20, len(header_dp))
 
+        # __len__ Test: returns the length of source when limit is set to None
+        header_dp = source_dp.header(None)
+        self.assertEqual(20, len(header_dp))
+
         # __len__ Test: returns limit if source doesn't have length
         source_dp_NoLen = IDP_NoLen(list(range(20)))
         header_dp = source_dp_NoLen.header(30)
@@ -370,7 +379,13 @@ class TestIterDataPipe(expecttest.TestCase):
                 str(wa[0].message), r"length of this HeaderIterDataPipe is inferred to be equal to its limit"
             )
 
+        # __len__ Test: raises TypeError if source doesn't have length and limit is set to None
+        header_dp = source_dp_NoLen.header(None)
+        with self.assertRaisesRegex(TypeError, "The length of this HeaderIterDataPipe cannot be determined."):
+            len(header_dp)
+
         # __len__ Test: returns limit if source doesn't have length, even when it has been iterated through once
+        header_dp = source_dp_NoLen.header(30)
         for _ in header_dp:
             pass
         self.assertEqual(30, len(header_dp))
@@ -846,6 +861,22 @@ class TestIterDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "length relies on the output of its function."):
             len(flatmapped_dp)
 
+    def test_round_robin_demux_iterdatapipe(self):
+        source_dp = IterableWrapper(list(range(23)))
+        with self.assertRaisesRegex(ValueError, "Expected `num_instaces`"):
+            _ = source_dp.round_robin_demux(0)
+
+        # Funtional Test
+        dp1, dp2, dp3 = source_dp.round_robin_demux(3)
+        self.assertEqual(list(range(0, 23, 3)), list(dp1))
+        self.assertEqual(list(range(1, 23, 3)), list(dp2))
+        self.assertEqual(list(range(2, 23, 3)), list(dp3))
+
+        # __len__ Test
+        self.assertEqual(len(dp1), 8)
+        self.assertEqual(len(dp2), 8)
+        self.assertEqual(len(dp3), 7)
+
     def test_unzipper_iterdatapipe(self):
         source_dp = IterableWrapper([(i, i + 10, i + 20) for i in range(10)])
 
@@ -1056,6 +1087,35 @@ class TestIterDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(ValueError, r"bad range"):
             testexpand("{999..123}")
         self.assertEqual(testexpand("{0..1}{0..1}"), "00 01 10 11".split())
+
+    def test_combining_infinite_iterdatapipe(self):
+        r"""
+        Test combining DataPipe can properly exit at the end of iteration
+        with an infinite DataPipe as the input.
+        """
+
+        def _get_dp(length=10):
+            source_dp = IterableWrapper(list(range(length)))
+            inf_dp = IterableWrapper(list(range(length))).cycle()
+            return source_dp, inf_dp
+
+        # zip
+        noinf_dp, inf_dp = _get_dp(10)
+        dp = inf_dp.zip(noinf_dp)
+        res = list(dp)
+        self.assertEqual(res, [(i, i) for i in range(10)])
+
+        # mux
+        noinf_dp, inf_dp = _get_dp(10)
+        dp = inf_dp.mux(noinf_dp)
+        res = list(dp)
+        self.assertEqual(res, [i for i in range(10) for _ in range(2)])
+
+        # zip_with_iter
+        noinf_dp, inf_dp = _get_dp(10)
+        dp = noinf_dp.zip_with_iter(inf_dp, key_fn=lambda x: x)
+        res = list(dp)
+        self.assertEqual(res, [(i, i) for i in range(10)])
 
     def test_zip_longest_iterdatapipe(self):
 

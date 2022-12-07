@@ -100,6 +100,7 @@ These tend to involve multiple DataPipes, combining them or splitting one to man
     MapKeyZipper
     Multiplexer
     MultiplexerLongest
+    RoundRobinDemultiplexer
     SampleMultiplexer
     UnZipper
     Zipper
