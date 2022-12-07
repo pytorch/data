@@ -6,11 +6,10 @@
 
 
 from torchdata.dataloader2.utils.random import generate_random_int, generate_random_scalar_tensor
-from torchdata.dataloader2.utils.worker import DistInfo, process_init_fn, process_reset_fn, WorkerInfo
+from torchdata.dataloader2.utils.worker import process_init_fn, process_reset_fn, WorkerInfo
 
 
 __all__ = [
-    "DistInfo",
     "WorkerInfo",
     "generate_random_int",
     "generate_random_scalar_tensor",
