@@ -67,6 +67,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip3 install -r requirements.txt
+          pip3 install networkx
           pip3 install --pre torch -f "${{ steps.pytorch_channel.outputs.value }}"
           pip3 install cmake ninja
           echo "/home/runner/.local/bin" >> $GITHUB_PATH

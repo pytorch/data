@@ -115,13 +115,12 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
                 else:
                     yield res
         finally:
-            for remaining in ref_it:
-                janitor(remaining)
-
+            del ref_it
             # TODO(633): This should be Exception or warn when debug mode is enabled
-            if len(self.buffer) > 0:
+            if self.buffer:
                 for _, v in self.buffer.items():
                     janitor(v)
+                self.buffer.clear()
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
@@ -156,7 +155,10 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
         self.buffer = OrderedDict()
 
     def __del__(self):
-        self.buffer.clear()
+        if self.buffer:
+            for _, v in self.buffer.items():
+                janitor(v)
+            self.buffer.clear()
 
 
 @functional_datapipe("zip_with_map")

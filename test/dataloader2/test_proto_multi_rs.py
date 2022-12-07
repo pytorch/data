@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import multiprocessing as mp
 import unittest
 from unittest import TestCase
 
@@ -66,11 +67,9 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
                 self.assertEqual(
                     list(range(self.n_elements)),
                     sorted(res),
-                    msg=(
-                        f"The test is failing for rs{n + 1}, with num_workers = {rs.num_workers}, ",
-                        f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, ",
-                        f"main_prefetch_cnt = {rs.main_prefetch_cnt}",
-                    ),
+                    msg=f"The test is failing for rs{n + 1}, with num_workers = {rs.num_workers}, "
+                    f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, "
+                    f"main_prefetch_cnt = {rs.main_prefetch_cnt}",
                 )
                 dl.shutdown()
 
@@ -92,10 +91,8 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
             self.assertEqual(
                 3,
                 len(res),
-                msg=(
-                    f"The test is failing for rs{n + 7}, with num_workers = {rs.num_workers}, ",
-                    f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, main_prefetch_cnt = {rs.main_prefetch_cnt}",
-                ),
+                msg=f"The test is failing for rs{n + 7}, with num_workers = {rs.num_workers}, "
+                f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, main_prefetch_cnt = {rs.main_prefetch_cnt}",
             )
             dl.shutdown()
 
@@ -108,4 +105,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    mp_methods = ["fork", "forkserver", "spawn"]
+    for method in mp_methods:
+        mp.set_start_method(method, force=True)
+        unittest.main()

@@ -12,6 +12,8 @@ from unittest import TestCase
 
 import torch
 
+from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
+
 from torchdata.dataloader2 import (
     communication,
     DataLoader2,
@@ -352,13 +354,15 @@ class TestDataLoader2EventLoop(TestCase):
 
 class PrototypeMultiProcessingReadingServiceTest(TestCase):
     @staticmethod
-    def _worker_init_fn(datapipe, dist_info, worker_info):
+    def _worker_init_fn(datapipe, worker_info):
         datapipe = datapipe.sharding_filter()
-        torch.utils.data.graph_settings.apply_sharding(datapipe, worker_info.num_workers, worker_info.worker_id)
+        torch.utils.data.graph_settings.apply_sharding(
+            datapipe, worker_info.num_workers, worker_info.worker_id, SHARDING_PRIORITIES.MULTIPROCESSING
+        )
         return datapipe
 
     @staticmethod
-    def _worker_reset_fn(datapipe, dist_info, worker_info):
+    def _worker_reset_fn(datapipe, worker_info):
         worker_seed_generator = torch.Generator()
         worker_seed_generator.manual_seed(123)
         torch.utils.data.graph_settings.apply_random_seed(
