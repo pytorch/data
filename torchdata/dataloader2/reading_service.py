@@ -17,19 +17,14 @@ import torch
 import torch.distributed as dist
 
 from torch.utils.data import DataLoader
+from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
 from torch.utils.data.datapipes.utils.snapshot import _simple_graph_snapshot_restoration
 
 from torchdata._constants import default_dl2_worker_join_timeout_in_s, default_timeout_in_s
 from torchdata.dataloader2 import communication
 from torchdata.dataloader2.graph import DataPipe
-from torchdata.dataloader2.utils import (
-    DistInfo,
-    generate_random_scalar_tensor,
-    process_init_fn,
-    process_reset_fn,
-    WorkerInfo,
-)
-from torchdata.dataloader2.utils.worker import _ExtraInfo
+from torchdata.dataloader2.utils import generate_random_scalar_tensor, process_init_fn, process_reset_fn, WorkerInfo
+from torchdata.dataloader2.utils.worker import _DistInfo
 from torchdata.datapipes.iter import FullSync, IterableWrapper, IterDataPipe
 
 
@@ -207,10 +202,10 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         main_prefetch_cnt: (int, 10 by default): Number of data will be prefetched
             at the end of the whole pipeline in the main process.
         worker_init_fn: (Callable, optional): Function to be called when each worker
-            process launches with ``DistInfo``, ``WorkerInfo`` and ``DataPipe``
+            process launches with ``WorkerInfo`` and ``DataPipe``
             as the expected arguments.
         worker_reset_fn: (Callable, optional): Function to be called at the beginning
-            of each epoch in each worker process with ``DistInfo``, ``WorkerInfo``
+            of each epoch in each worker process with ``WorkerInfo``
             and ``DataPipe`` as the expected arguments.
 
     """
@@ -218,14 +213,15 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     multiprocessing_context: Optional[str]
     worker_prefetch_cnt: int
     main_prefetch_cnt: int
-    worker_init_fn: Optional[Callable[[DataPipe, DistInfo, WorkerInfo], DataPipe]]
-    worker_reset_fn: Optional[Callable[[DataPipe, DistInfo, WorkerInfo], DataPipe]]
+    worker_init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]]
+    worker_reset_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]]
     processes: List
     datapipes: List
     end_datapipe: Optional[DataPipe]
     _mp: bool
     _pg: Optional[dist.ProcessGroup]
-    _dist_info: DistInfo
+    _world_size: int
+    _rank: int
 
     def __init__(
         self,
@@ -233,8 +229,8 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         multiprocessing_context: Optional[str] = None,
         worker_prefetch_cnt: int = 10,
         main_prefetch_cnt: int = 10,
-        worker_init_fn: Optional[Callable[[DataPipe, DistInfo, WorkerInfo], DataPipe]] = None,
-        worker_reset_fn: Optional[Callable[[DataPipe, DistInfo, WorkerInfo], DataPipe]] = None,
+        worker_init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]] = None,
+        worker_reset_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]] = None,
     ) -> None:
         self.num_workers = num_workers
         if multiprocessing_context is not None:
@@ -252,7 +248,8 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         self.end_datapipe = None
         self._mp = num_workers > 0
         self._pg = None
-        self._dist_info = DistInfo(1, 0)
+        self._world_size = 1
+        self._rank = 0
         self._initial_seed = None
 
     def initialize(self, datapipe: DataPipe) -> DataPipe:
@@ -262,14 +259,16 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         creates subprocesses.
         """
         if dist.is_available() and dist.is_initialized():
-            _world_size = dist.get_world_size()
-            _rank = dist.get_rank()
-            self._dist_info = DistInfo(_world_size, _rank)
+            self._world_size = dist.get_world_size()
+            self._rank = dist.get_rank()
             self._pg = dist.new_group(backend="gloo")
+            torch.utils.data.graph_settings.apply_sharding(
+                datapipe, self._world_size, self._rank, SHARDING_PRIORITIES.DISTRIBUTED
+            )
         if not self._mp:
             # TODO(616): Warn and recommend usage of InProcessReadingService
             worker_info = WorkerInfo(1, 0)
-            process_init_fn(datapipe, self._dist_info, worker_info, self.worker_init_fn)
+            process_init_fn(datapipe, worker_info, self.worker_init_fn)
             self.end_datapipe = datapipe
             return datapipe
 
@@ -278,9 +277,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
         for worker_id in range(self.num_workers):
             worker_info = WorkerInfo(self.num_workers, worker_id)
-            call_on_process_init = partial(
-                process_init_fn, dist_info=self._dist_info, worker_info=worker_info, custom_init_fn=self.worker_init_fn
-            )
+            call_on_process_init = partial(process_init_fn, worker_info=worker_info, custom_init_fn=self.worker_init_fn)
             ctx = mp.get_context(self.multiprocessing_context)
             # Process contains a ProtocolServer
             (process, req_queue, res_queue) = communication.eventloop.SpawnProcessForDataPipeline(
@@ -323,10 +320,8 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             else:
                 end_datapipe = self.end_datapipe
             # Send the shared seed to subprocesses
-            extra_info = _ExtraInfo(shared_seed_int)
-            call_on_epoch_reset = partial(
-                process_reset_fn, dist_info=self._dist_info, extra_info=extra_info, custom_reset_fn=self.worker_reset_fn
-            )
+            dist_info = _DistInfo(shared_seed_int, self._world_size, self._rank)
+            call_on_epoch_reset = partial(process_reset_fn, dist_info=dist_info, custom_reset_fn=self.worker_reset_fn)
             end_datapipe.reset_epoch(call_on_epoch_reset)
             end_datapipe.reset()
         # In-process (num_workers == 0)
@@ -507,9 +502,7 @@ class DistributedReadingService(ReadingServiceInterface):
         self._rank = dist.get_rank()
         self._pg = dist.new_group(backend="gloo", timeout=timedelta(seconds=self._timeout))
         torch.utils.data.graph_settings.apply_sharding(
-            datapipe,
-            self._world_size,
-            self._rank,
+            datapipe, self._world_size, self._rank, SHARDING_PRIORITIES.DISTRIBUTED
         )
         # Only append FullSyncIterDataPipe if it's not presented at the end of the pipeline
         if not isinstance(datapipe, FullSync):

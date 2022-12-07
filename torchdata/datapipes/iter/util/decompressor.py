@@ -95,11 +95,13 @@ class DecompressorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for path, file in self.source_datapipe:
-            file_type = self._detect_compression_type(path)
-            decompressor = self._DECOMPRESSORS[file_type]
-            yield path, StreamWrapper(decompressor(file), file, name=path)
-            if isinstance(file, StreamWrapper):
-                file.autoclose()
+            try:
+                file_type = self._detect_compression_type(path)
+                decompressor = self._DECOMPRESSORS[file_type]
+                yield path, StreamWrapper(decompressor(file), file, name=path)
+            finally:
+                if isinstance(file, StreamWrapper):
+                    file.autoclose()
 
 
 @functional_datapipe("extract")
