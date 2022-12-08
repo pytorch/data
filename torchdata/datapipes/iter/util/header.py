@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Iterator, TypeVar, Optional
+from typing import Iterator, Optional, TypeVar
 from warnings import warn
 
 from torchdata.datapipes import functional_datapipe
