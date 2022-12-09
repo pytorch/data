@@ -225,6 +225,16 @@ class IterDataPipeQueueProtocolClient(ProtocolClient):
         if not isinstance(response, communication.messages.ResetIteratorResponse):
             raise Exception("Invalid response received")
 
+    def get_response_reset_epoch(self, block=False):
+        try:
+            response = self.response_queue.get(block=block)
+        except EmptyException:
+            raise EmptyQueue("queue is empty")
+        self.request_served(response)
+
+        if not isinstance(response, communication.messages.ResetEpochResponse):
+            raise Exception("Invalid response received")
+
     def get_response_next(self, block=False, timeout=None):
         if not self.waiting_for_response():
             raise Exception("Can not expect any response without submitted request")

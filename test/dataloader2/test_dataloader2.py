@@ -302,7 +302,7 @@ class TestDataLoader2EventLoop(TestCase):
     #
     #     it = list(range(100))
     #     numbers_dp = IterableWrapper(it)
-    #     (process, req_queue, res_queue, _thread_local_datapipe) = communication.eventloop.SpawnThreadForDataPipeline(numbers_dp)
+    #     (process, req_queue, res_queue, _thread_local_datapipe) = communication.eventloop.CreateThreadForDataPipeline(numbers_dp)
     #
     #     process.start()
     #     local_datapipe = communication.iter.QueueWrapper(
@@ -323,7 +323,7 @@ class TestDataLoader2EventLoop(TestCase):
         input_len = 100
         it = list(range(input_len))
         numbers_dp = SequenceWrapper(it)
-        (process, req_queue, res_queue, _thread_local_datapipe) = communication.eventloop.SpawnThreadForDataPipeline(
+        (process, req_queue, res_queue, _thread_local_datapipe) = communication.eventloop.CreateThreadForDataPipeline(
             numbers_dp
         )
 
