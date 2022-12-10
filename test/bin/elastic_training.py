@@ -10,6 +10,7 @@ import argparse
 import torch
 import torch.distributed as dist
 
+from torch.distributed.elastic.multiprocessing.errors import record
 from torch.utils.data import DataLoader
 from torchdata.dataloader2 import DataLoader2, DistributedReadingService
 from torchdata.datapipes.iter import IterableWrapper
@@ -33,6 +34,7 @@ def _get_dataloader(data_length: int, dl2: bool, shuffle: bool, rs=None):
     return dl
 
 
+@record
 def main(backend, dl2):
     dist.init_process_group(backend)
     rank = dist.get_rank()
