@@ -76,6 +76,10 @@ def main(backend, dl2):
     assert len(results[0]) == len(results[2])
     assert results[0] != results[2]
 
+    # Properly shutdown the process group
+    if isinstance(dl, DataLoader2):
+        dl.shutdown()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Elastic Training")
