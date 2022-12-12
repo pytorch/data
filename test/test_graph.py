@@ -4,8 +4,9 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-
+import types
 import unittest
+
 from typing import Dict, Iterator, List, Tuple, TypeVar
 
 import expecttest
@@ -13,7 +14,14 @@ import expecttest
 from _utils._common_utils_for_test import IS_WINDOWS
 from torch.utils.data import IterDataPipe
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService, ReadingServiceInterface
-from torchdata.dataloader2.graph import find_dps, list_dps, remove_dp, replace_dp, traverse_dps
+from torchdata.dataloader2.graph import (
+    find_dps,
+    find_lca_non_shardable_dp,
+    list_dps,
+    remove_dp,
+    replace_dp,
+    traverse_dps,
+)
 from torchdata.datapipes.iter import IterableWrapper, Mapper
 from torchdata.datapipes.utils import to_graph
 
@@ -248,6 +256,94 @@ class TestGraph(expecttest.TestCase):
         d1 = list(dl)
         d2 = list(dl)
         self.assertEqual(d1, d2)
+
+
+def make_dp_non_shardable(datapipe):
+    def _is_shardable(self):
+        return False
+
+    datapipe.is_shardable = types.MethodType(_is_shardable, datapipe)
+    return datapipe
+
+
+class TestNonShardableDataPipe(expecttest.TestCase):
+    def _make_dp(self):
+        r"""
+        Create a DataPipe that contains the most of cases including:
+            - single-branch pipeline
+            - multi-branch pipeline
+            - pipeline that has circurlar references
+
+        single_br_dp ---------------------------------
+                                ch1                    \
+                              /     \                   \
+        multi_br_dp --------->       -> fork_zip_dp -> end_dp ->
+                              \     /                   /
+               <-------         ch2                    /
+             /          \                             /
+        cir_br_dp -> cir_map_dp ----------------------
+        """
+        # Single-branch
+        single_br_dp = IterableWrapper(list(range(10)))
+
+        # Multi-branch
+        multi_br_dp = IterableWrapper(list(range(10)))
+        ch1, ch2 = multi_br_dp.fork(2)
+        fork_zip_dp = ch1.zip(ch2)
+
+        # Circular-branch
+        cir_br_dp = IterableWrapper(list(range(10)))
+        cir_map_dp = cir_br_dp.map(_x_mult_2)
+        # Force to circular reference
+        cir_br_dp.cir_dep = cir_map_dp
+
+        end_dp = single_br_dp.zip(fork_zip_dp, cir_map_dp)
+        graph = traverse_dps(end_dp)
+        return single_br_dp, multi_br_dp, ch1, ch2, fork_zip_dp, cir_br_dp, cir_map_dp, end_dp, graph
+
+    def test_single_non_shardable_dp(self):
+        single_br_dp, *_, graph = self._make_dp()
+        single_br_dp = make_dp_non_shardable(single_br_dp)
+        self.assertEqual(find_lca_non_shardable_dp(graph), single_br_dp)
+
+        # The same non-shardable DataPipe on both branches
+        _, multi_br_dp, *_, graph = self._make_dp()
+        multi_br_dp = make_dp_non_shardable(multi_br_dp)
+        self.assertEqual(find_lca_non_shardable_dp(graph), multi_br_dp)
+
+        _, _, ch1, *_, graph = self._make_dp()
+        ch1 = make_dp_non_shardable(ch1)
+        self.assertEqual(find_lca_non_shardable_dp(graph), ch1)
+
+        # Circular reference
+        *_, cir_br_dp, _, _, graph = self._make_dp()
+        cir_br_dp = make_dp_non_shardable(cir_br_dp)
+        self.assertEqual(find_lca_non_shardable_dp(graph), cir_br_dp)
+
+        *_, cir_map_dp, _, graph = self._make_dp()
+        cir_map_dp = make_dp_non_shardable(cir_map_dp)
+        self.assertEqual(find_lca_non_shardable_dp(graph), cir_map_dp)
+
+    def test_multi_non_shardable_dps(self):
+        single_br_dp, multi_br_dp, *_, end_dp, graph = self._make_dp()
+        single_br_dp = make_dp_non_shardable(single_br_dp)
+        multi_br_dp = make_dp_non_shardable(multi_br_dp)
+        self.assertEqual(find_lca_non_shardable_dp(graph), end_dp)
+
+        single_br_dp, _, ch1, *_, end_dp, graph = self._make_dp()
+        single_br_dp = make_dp_non_shardable(single_br_dp)
+        ch1 = make_dp_non_shardable(ch1)
+        self.assertEqual(find_lca_non_shardable_dp(graph), end_dp)
+
+        _, multi_br_dp, ch1, _, fork_zip_dp, *_, graph = self._make_dp()
+        multi_br_dp = make_dp_non_shardable(multi_br_dp)
+        ch1 = make_dp_non_shardable(ch1)
+        self.assertEqual(find_lca_non_shardable_dp(graph), fork_zip_dp)
+
+        single_br_dp, *_, cir_br_dp, _, end_dp, graph = self._make_dp()
+        single_br_dp = make_dp_non_shardable(single_br_dp)
+        cir_br_dp = make_dp_non_shardable(cir_br_dp)
+        self.assertEqual(find_lca_non_shardable_dp(graph), end_dp)
 
 
 class TestGraphVisualization(expecttest.TestCase):

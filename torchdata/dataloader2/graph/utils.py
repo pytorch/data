@@ -58,16 +58,20 @@ def find_lca_non_shardable_dp(graph: DataPipeGraph) -> Optional[DataPipe]:
             cache[root_dp_id] = root_dp
             return root_dp
         cache[root_dp_id] = None
-        non_shardable_cnt = 0
+        non_shardable_dps = []
         for dp_id, (dp, src_graph) in root_graph.items():
             res = helper(dp_id, dp, src_graph)
             if res is not None:
-                non_shardable_cnt += 1
-                cache[root_dp_id] = res
+                non_shardable_dps.append(res)
         # `root_dp` becomes the lowest common ancestor of this branch,
-        # if there are more than 1 non-shardable DataPipe prior to it,
-        if non_shardable_cnt > 1:
-            cache[root_dp_id] = root_dp
+        # if there are more than one unique non-shardable DataPipe prior to it.
+        if len(non_shardable_dps) > 0:
+            # One unique non-shardable DataPipe
+            if len(non_shardable_dps) == 1 or all(dp == non_shardable_dps[0] for dp in non_shardable_dps):
+                cache[root_dp_id] = non_shardable_dps[0]
+            # Multiple non-shardable DataPipe
+            else:
+                cache[root_dp_id] = root_dp
         return cache[root_dp_id]
 
     return helper(root_dp_id, root_dp, root_graph)
