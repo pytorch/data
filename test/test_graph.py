@@ -22,6 +22,7 @@ from torchdata.dataloader2.graph import (
     replace_dp,
     traverse_dps,
 )
+from torchdata.dataloader2.utils.non_shardable import _DummyIterDataPipe, find_shardable_branches
 from torchdata.datapipes.iter import IterableWrapper, Mapper
 from torchdata.datapipes.utils import to_graph
 
@@ -266,6 +267,10 @@ def make_dp_non_shardable(datapipe):
     return datapipe
 
 
+def replace_by_dummy(graph, datapipe):
+    return replace_dp(graph, datapipe, _DummyIterDataPipe())
+
+
 class TestNonShardableDataPipe(expecttest.TestCase):
     def _make_dp(self):
         r"""
@@ -344,6 +349,41 @@ class TestNonShardableDataPipe(expecttest.TestCase):
         single_br_dp = make_dp_non_shardable(single_br_dp)
         cir_br_dp = make_dp_non_shardable(cir_br_dp)
         self.assertEqual(find_lca_non_shardable_dp(graph), end_dp)
+
+    def test_shardable_branches(self):
+        r"""
+        There should be a single DataPipe as the lowest common ancestor of all
+        non-shardable DataPipes that is replaced by ``DummyIterDataPipe``.
+        """
+        single_br_dp, *_, fork_zip_dp, _, cir_map_dp, _, graph = self._make_dp()
+        graph = replace_by_dummy(graph, single_br_dp)
+        dps = find_shardable_branches(graph)
+        self.assertTrue(all(dp in (fork_zip_dp, cir_map_dp) for dp in dps))
+
+        single_br_dp, multi_br_dp, *_, cir_map_dp, _, graph = self._make_dp()
+        graph = replace_by_dummy(graph, multi_br_dp)
+        dps = find_shardable_branches(graph)
+        self.assertTrue(all(dp in (single_br_dp, cir_map_dp) for dp in dps))
+
+        single_br_dp, _, ch1, ch2, *_, cir_map_dp, _, graph = self._make_dp()
+        graph = replace_by_dummy(graph, ch1)
+        dps = find_shardable_branches(graph)
+        self.assertTrue(all(dp in (single_br_dp, ch2, cir_map_dp) for dp in dps))
+
+        single_br_dp, *_, fork_zip_dp, _, cir_map_dp, _, graph = self._make_dp()
+        graph = replace_by_dummy(graph, cir_map_dp)
+        dps = find_shardable_branches(graph)
+        self.assertTrue(all(dp in (single_br_dp, fork_zip_dp) for dp in dps))
+
+        *_, end_dp, graph = self._make_dp()
+        graph = replace_by_dummy(graph, end_dp)
+        dps = find_shardable_branches(graph)
+        self.assertEqual(len(dps), 0)
+
+        single_br_dp, *_, fork_zip_dp, _, cir_map_dp, _, graph = self._make_dp()
+        graph = replace_by_dummy(graph, fork_zip_dp)
+        dps = find_shardable_branches(graph)
+        self.assertTrue(all(dp in (single_br_dp, cir_map_dp) for dp in dps))
 
 
 class TestGraphVisualization(expecttest.TestCase):

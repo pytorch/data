@@ -33,7 +33,7 @@ def find_shardable_branches(graph: DataPipeGraph) -> List[DataPipe]:
     cache: Dict[int, bool] = {}
 
     root_dp_id = list(graph.keys())[0]
-    root_dp, root_graph = graph[roo_dp_id]
+    root_dp, root_graph = graph[root_dp_id]
 
     def helper(root_dp_id, root_dp, root_graph) -> bool:  # pyre-ignore
         if root_dp_id in cache:
@@ -45,12 +45,12 @@ def find_shardable_branches(graph: DataPipeGraph) -> List[DataPipe]:
         for dp_id, (dp, src_graph) in root_graph.items():
             if not helper(dp_id, dp, src_graph):
                 cache[root_dp_id] = False
-                break
+                #  Do not break to go through all children
         if not cache[root_dp_id]:
             # All children should have been cached already
-            for dp_id in root_graph.keys():
+            for dp_id, (dp, _) in root_graph.items():
                 if cache[dp_id]:
-                    dps.append(dp_id)
+                    dps.append(dp)
         return cache[root_dp_id]
 
     if helper(root_dp_id, root_dp, root_graph):
