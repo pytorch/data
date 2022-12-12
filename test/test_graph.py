@@ -316,14 +316,14 @@ class TestNonShardableDataPipe(expecttest.TestCase):
         multi_br_dp = make_dp_non_shardable(multi_br_dp)
         self.assertEqual(find_lca_non_shardable_dp(graph), multi_br_dp)
 
-        _, _, ch1, *_, graph = self._make_dp()
+        _, _, ch1, _, fork_zip_dp, *_, graph = self._make_dp()
         ch1 = make_dp_non_shardable(ch1)
-        self.assertEqual(find_lca_non_shardable_dp(graph), ch1)
+        self.assertEqual(find_lca_non_shardable_dp(graph), fork_zip_dp)
 
         # Circular reference
-        *_, cir_br_dp, _, _, graph = self._make_dp()
+        *_, cir_br_dp, cir_map_dp, _, graph = self._make_dp()
         cir_br_dp = make_dp_non_shardable(cir_br_dp)
-        self.assertEqual(find_lca_non_shardable_dp(graph), cir_br_dp)
+        self.assertEqual(find_lca_non_shardable_dp(graph), cir_map_dp)
 
         *_, cir_map_dp, _, graph = self._make_dp()
         cir_map_dp = make_dp_non_shardable(cir_map_dp)
