@@ -25,6 +25,7 @@ jobs:
           - repository: pytorch/data
             pre-script: ""
             post-script: ""
+            conda-package-directory: packaging/torchdata
             smoke-test-script: ""
             package-name: data
     name: ${{ matrix.repository }}
