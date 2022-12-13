@@ -417,6 +417,19 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
             end_dp = map_dp.map(_x_mult_2).shuffle()
             return single_br_dp, map_dp, end_dp
 
+        def _assert_deterministic_dl_res(dl, exp):
+            torch.manual_seed(123)
+            res = list(dl)
+            self.assertEqual(sorted(res), exp)
+            # Second epoch
+            torch.manual_seed(123)
+            self.assertEqual(list(dl), res)
+            # Different seed
+            torch.manual_seed(321)
+            self.assertNotEqual(list(dl), res)
+            # Properly shutdown
+            dl.shutdown()
+
         # By-default, all shardable
         single_br_dp, _, end_dp = _make_dp()
         graph = traverse_dps(end_dp)
@@ -424,17 +437,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         replace_dp(graph, single_br_dp, sf_dp)
         dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
         # Determinism and dynamic sharding
-        torch.manual_seed(123)
-        res = list(dl)
-        self.assertEqual(sorted(res), [i * 4 for i in range(10)])
-        # Second epoch
-        torch.manual_seed(123)
-        self.assertEqual(list(dl), res)
-        # Different seed
-        torch.manual_seed(321)
-        self.assertNotEqual(list(dl), res)
-        # Properly shutdown
-        dl.shutdown()
+        _assert_deterministic_dl_res(dl, [i * 4 for i in range(10)])
 
         # Non-shardable before sharding_filter
         # shuffle in non-sharding process
@@ -446,17 +449,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         replace_dp(graph, map_dp, sf_dp)
         dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
         # Determinism for non-shardable pipeline
-        torch.manual_seed(123)
-        res = list(dl)
-        self.assertEqual(sorted(res), [i * 4 for i in range(10)])
-        # Second epoch
-        torch.manual_seed(123)
-        self.assertEqual(list(dl), res)
-        # Different seed
-        torch.manual_seed(321)
-        self.assertNotEqual(list(dl), res)
-        # Properly shutdown
-        dl.shutdown()
+        _assert_deterministic_dl_res(dl, [i * 4 for i in range(10)])
 
         # Non-shardable after sharding_filter
         # shuffle in non-sharding process
@@ -468,17 +461,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         replace_dp(graph, map_dp, non_shardable_dp)
         dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
         # Determinism for non-shardable pipeline
-        torch.manual_seed(123)
-        res = list(dl)
-        self.assertEqual(sorted(res), [i * 4 for i in range(10)])
-        # Second epoch
-        torch.manual_seed(123)
-        self.assertEqual(list(dl), res)
-        # Different seed
-        torch.manual_seed(321)
-        self.assertNotEqual(list(dl), res)
-        # Properly shutdown
-        dl.shutdown()
+        _assert_deterministic_dl_res(dl, [i * 4 for i in range(10)])
 
     def test_multi_branch_non_shardable(self):
         r"""
@@ -493,6 +476,21 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
             end_dp = map_dp.zip(branch2_dp)
             return branch1_dp, map_dp, branch2_dp, end_dp
 
+        def _assert_deterministic_dl_res(dl, exp1, exp2):
+            torch.manual_seed(123)
+            res = list(dl)
+            res1, res2 = list(zip(*res))
+            self.assertEqual(sorted(res1), exp1)
+            self.assertEqual(sorted(res2), exp2)
+            # Second epoch
+            torch.manual_seed(123)
+            self.assertEqual(list(dl), res)
+            # Different seed
+            torch.manual_seed(321)
+            self.assertNotEqual(list(dl), res)
+            # Properly shutdown
+            dl.shutdown()
+
         # By-default, all shardable
         branch1_dp, _, branch2_dp, end_dp = _make_dp()
         graph = traverse_dps(end_dp)
@@ -502,19 +500,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         replace_dp(graph, branch2_dp, sf2_dp)
         dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
         # Determinism and dynamic sharding
-        torch.manual_seed(123)
-        res = list(dl)
-        res1, res2 = list(zip(*res))
-        self.assertEqual(sorted(res1), [i * 2 for i in range(10)])
-        self.assertEqual(sorted(res2), list(range(10)))
-        # Second epoch
-        torch.manual_seed(123)
-        self.assertEqual(list(dl), res)
-        # Different seed
-        torch.manual_seed(321)
-        self.assertNotEqual(list(dl), res)
-        # Properly shutdown
-        dl.shutdown()
+        _assert_deterministic_dl_res(dl, [i * 2 for i in range(10)], list(range(10)))
 
         # Non-shardable on one branch
         # shuffle in non-sharding process
@@ -527,19 +513,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         replace_dp(graph, branch2_dp, sf_dp)
         dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
         # Determinism for non-shardable pipeline
-        torch.manual_seed(123)
-        res = list(dl)
-        res1, res2 = list(zip(*res))
-        self.assertEqual(sorted(res1), [i * 2 for i in range(10)])
-        self.assertEqual(sorted(res2), list(range(10)))
-        # Second epoch
-        torch.manual_seed(123)
-        self.assertEqual(list(dl), res)
-        # Different seed
-        torch.manual_seed(321)
-        self.assertNotEqual(list(dl), res)
-        # Properly shutdown
-        dl.shutdown()
+        _assert_deterministic_dl_res(dl, [i * 2 for i in range(10)], list(range(10)))
 
         # Non-shardable on both branches
         # shuffle in non-sharding process
