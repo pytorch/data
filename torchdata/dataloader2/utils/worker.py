@@ -7,6 +7,7 @@
 import random
 
 from dataclasses import dataclass
+from functools import partial
 from typing import Callable, Optional
 
 import torch
@@ -14,9 +15,9 @@ import torch
 from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
 
 from torchdata.dataloader2 import communication
-from torchdata.dataloader2.graph import DataPipe, find_dps, traverse_dps
+from torchdata.dataloader2.graph import DataPipe, find_dps, replace_dp, traverse_dps
 from torchdata.dataloader2.utils import generate_random_int
-from torchdata.dataloader2.utils.non_shardable import _DummyIterDataPipe
+from torchdata.dataloader2.utils.non_shardable import _DummyIterDataPipe, find_shardable_branches
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.map import MapDataPipe
 
@@ -79,7 +80,6 @@ def process_init_fn(
     #    to the branch of DataPipes that doesn't contain `_DummyIterDataPipe`.
     else:
         assert len(non_shardable_dp) == 1
-
         shardable_branches = find_shardable_branches(graph)
         for dp in shardable_branches:
             torch.utils.data.graph_settings.apply_sharding(
@@ -94,7 +94,7 @@ def process_init_fn(
         )
         non_sharding_process_dp = communication.iter._IterateQueueDataPipes([queue_wrapper])
         graph = replace_dp(graph, non_shardable_dp[0], non_sharding_process_dp)
-        datapipe = graph.values()[0][0]
+        datapipe = list(graph.values())[0][0]
 
     if custom_init_fn is not None:
         datapipe = custom_init_fn(datapipe, worker_info)

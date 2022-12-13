@@ -210,7 +210,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             if non_shardable_dp is not None:
                 dummy_dp = _DummyIterDataPipe()
                 graph = replace_dp(graph, non_shardable_dp, dummy_dp)
-                datapipe = graph.values()[0][0]
+                datapipe = list(graph.values())[0][0]
                 # TODO(ejguan): Determine buffer_size at runtime or use unlimited buffer
                 round_robin_dps = non_shardable_dp.round_robin_demux(num_instances=self.num_workers)
                 # TODO(ejguan): Benchmark if we need to prefetch in non-sharding process
