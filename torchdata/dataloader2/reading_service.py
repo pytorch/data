@@ -209,7 +209,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             non_shardable_dp = find_lca_non_shardable_dp(graph)
             if non_shardable_dp is not None:
                 dummy_dp = _DummyIterDataPipe()
-                graph = replace_dp(graph, non_shardable_dp, dummy_dp)
+                graph = replace_dp(graph, non_shardable_dp, dummy_dp)  # type: ignore[arg-type]
                 datapipe = list(graph.values())[0][0]
                 # TODO(ejguan): Determine buffer_size at runtime or use unlimited buffer
                 round_robin_dps = non_shardable_dp.round_robin_demux(num_instances=self.num_workers)
@@ -297,7 +297,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             _ = res_queue.get()
             process.join(default_dl2_worker_join_timeout_in_s)
 
-        # Clean up worker processes first
+        # Clean up worker processes
         for process, req_queue, res_queue in self.worker_processes:
             try:
                 clean_me(process, req_queue, res_queue)
@@ -308,6 +308,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             except TimeoutError:
                 pass
 
+        # Clean up non-sharding process
         if self.non_sharding_process:
             try:
                 # Send TerminateRequest to all loops to make sure `zip_longest` exits
@@ -315,7 +316,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
                     req_queue.put(communication.messages.TerminateRequest())
                 for res_queue in self.non_sharding_process[2]:
                     _ = res_queue.get()
-                self.non_sharding_process.join(default_dl2_worker_join_timeout_in_s)
+                self.non_sharding_process[0].join(default_dl2_worker_join_timeout_in_s)
             except AttributeError:
                 # Due to non-deterministic order of destruction, by the time `finalize` is called,
                 # some objects may already be `None`.

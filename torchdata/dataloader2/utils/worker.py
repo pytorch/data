@@ -67,7 +67,7 @@ def process_init_fn(
     """
     # Find if there is non-sharding process
     graph = traverse_dps(datapipe)
-    non_shardable_dp = find_dps(graph, _DummyIterDataPipe)
+    non_shardable_dp = find_dps(graph, _DummyIterDataPipe)  # type: ignore
 
     # There are two cases for DataPipe graph in terms of mp sharding:
     # 1) All DataPipes are shardable, apply mp sharding to the whole graph
@@ -116,10 +116,10 @@ def process_reset_fn(
     """
     # Reset non-sharding process first
     graph = traverse_dps(datapipe)
-    non_sharding_process_dp = find_dps(graph, communication.iter._IterateQueueDataPipes)
-    if len(non_sharding_process_dp) > 0:
-        assert len(non_sharding_process_dp) == 1
-        non_sharding_process_dp = non_sharding_process_dp[0]
+    non_sharding_process_dps = find_dps(graph, communication.iter._IterateQueueDataPipes)
+    if len(non_sharding_process_dps) > 0:
+        assert len(non_sharding_process_dps) == 1
+        non_sharding_process_dp = non_sharding_process_dps[0]
         # Only send the reset epoch message once
         if worker_info.worker_id == 0:
             non_sharding_reset_fn = partial(process_reset_fn, dist_info=dist_info, custom_reset_fn=custom_reset_fn)
