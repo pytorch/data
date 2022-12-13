@@ -7,7 +7,6 @@
 
 import os
 import pickle
-import types
 import unittest
 from unittest import TestCase
 

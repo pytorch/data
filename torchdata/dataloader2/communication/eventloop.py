@@ -53,8 +53,6 @@ def MultipleDataPipesToQueuesLoop(source_datapipes, req_queues, res_queues, call
     loops = []
 
     for source_datapipe, req_queue, res_queue in zip(source_datapipes, req_queues, res_queues):
-        # TODO(ejguan): non-blocking request/response introduces non-determinism
-        # because the order of operations is not going to be consistent in this process
         loops.append(
             _create_datapipe_queue_loop(source_datapipe, req_queue, res_queue, blocking_request_get=False)
         )  # Non-blocking request
