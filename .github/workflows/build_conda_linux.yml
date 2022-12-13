@@ -31,7 +31,7 @@ jobs:
     name: ${{ matrix.repository }}
     uses: pytorch/test-infra/.github/workflows/build_conda_linux.yml@main
     with:
-      conda-package-directory: ${{ matrix.conda-package-directory }}
+      conda-package-directory: packaging/torchdata
       repository: ${{ matrix.repository }}
       ref: ""
       test-infra-repository: pytorch/test-infra
