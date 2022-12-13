@@ -525,19 +525,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         replace_dp(graph, branch2_dp, non_shardable_dp2)
         dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
         # Determinism for non-shardable pipeline
-        torch.manual_seed(123)
-        res = list(dl)
-        res1, res2 = list(zip(*res))
-        self.assertEqual(sorted(res1), [i * 2 for i in range(10)])
-        self.assertEqual(sorted(res2), list(range(10)))
-        # Second epoch
-        torch.manual_seed(123)
-        self.assertEqual(list(dl), res)
-        # Different seed
-        torch.manual_seed(321)
-        self.assertNotEqual(list(dl), res)
-        # Properly shutdown
-        dl.shutdown()
+        _assert_deterministic_dl_res(dl, [i * 2 for i in range(10)], list(range(10)))
 
 
 if __name__ == "__main__":
