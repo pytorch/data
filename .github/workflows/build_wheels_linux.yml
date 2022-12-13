@@ -26,7 +26,7 @@ jobs:
             pre-script: ""
             post-script: ""
             smoke-test-script: ""
-            package-name: data
+            package-name: torchdata
     name: ${{ matrix.repository }}
     uses: pytorch/test-infra/.github/workflows/build_wheels_linux.yml@main
     with:
