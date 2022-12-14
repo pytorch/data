@@ -245,10 +245,6 @@ class DistributedTest(TestCase):
         world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
         launch_distributed_training(backend, world_size, fn=partial(DistributedTest._test_distributed_training, True))
 
-    @unittest.skipIf(
-        IS_WINDOWS,
-        "Torch Elastic is not working properly on Windows. See: https://github.com/pytorch/pytorch/issues/85427",
-    )
     @backend_parametrize
     def test_elastic_training_dl2(self, backend) -> None:
         world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
@@ -271,10 +267,6 @@ class DistributedTest(TestCase):
         world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
         launch_distributed_training(backend, world_size, fn=partial(DistributedTest._test_distributed_training, False))
 
-    @unittest.skipIf(
-        IS_WINDOWS,
-        "Torch Elastic is not working properly on Windows. See: https://github.com/pytorch/pytorch/issues/85427",
-    )
     @unittest.skipIf(sys.version_info < (3, 8), "Torch Elastic requires Python >= 3.8")
     @backend_parametrize
     def test_elastic_training_dl1(self, backend) -> None:
