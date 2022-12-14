@@ -26,8 +26,6 @@ class _PrefetchData:
         self.buffer_size: int = buffer_size
         self.source_datapipe = source_datapipe
         self.stop_iteration = False
-        self._lock = threading.RLock()
-        self.cv = threading.Condition(lock=self._lock)
 
 
 @functional_datapipe("prefetch")
