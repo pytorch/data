@@ -275,10 +275,11 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         if self.worker_prefetch_cnt > 0:
             datapipe = datapipe.prefetch(self.worker_prefetch_cnt)
 
+        ctx = mp.get_context(self.multiprocessing_context)
+
         for worker_id in range(self.num_workers):
             worker_info = WorkerInfo(self.num_workers, worker_id)
             call_on_process_init = partial(process_init_fn, worker_info=worker_info, custom_init_fn=self.worker_init_fn)
-            ctx = mp.get_context(self.multiprocessing_context)
             # Process contains a ProtocolServer
             (process, req_queue, res_queue) = communication.eventloop.SpawnProcessForDataPipeline(
                 ctx,
@@ -323,7 +324,6 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             dist_info = _DistInfo(shared_seed_int, self._world_size, self._rank)
             call_on_epoch_reset = partial(process_reset_fn, dist_info=dist_info, custom_reset_fn=self.worker_reset_fn)
             end_datapipe.reset_epoch(call_on_epoch_reset)
-            end_datapipe.reset()
         # In-process (num_workers == 0)
         else:
             # Technically speaking, we should call `_process_reset_fn` to reset global RNGs
