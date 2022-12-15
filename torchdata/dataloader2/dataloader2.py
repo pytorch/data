@@ -50,12 +50,18 @@ class DataLoader2Iterator(Iterator[T_co]):
     def __init__(self, dataloader: "DataLoader2", iterator_id: int):
         self.dataloader = dataloader
         self.iterator_id = iterator_id
+        self.limit_counter = None
+        self.limit_threshold = None
 
     def __next__(self) -> T_co:
         if self.iterator_id == self.dataloader.valid_iterator_id:
             self.dataloader._reset_iter = True
             try:
                 if self.dataloader._paused:
+                    raise StopIteration
+                elif self.limit_threshold is not None and self.limit_counter >= self.limit_threshold:
+                    # TODO: Need to think through and test this section
+                    self.dataloader.pause()
                     raise StopIteration
                 else:
                     return next(self.dataloader._datapipe_iter)  # type: ignore[arg-type]
@@ -69,6 +75,8 @@ class DataLoader2Iterator(Iterator[T_co]):
                 if self.dataloader:
                     self.dataloader.shutdown()
                 raise
+            finally:
+                self.limit_counter = self.limit_counter + 1 if self.limit_counter is not None else None
         else:
             if self.dataloader.reading_service is not None:
                 self.dataloader.reading_service.finalize_iteration()
@@ -80,10 +88,31 @@ class DataLoader2Iterator(Iterator[T_co]):
                 "to comment on this issue: https://github.com/pytorch/data/issues/45."
             )
 
+    def pause(self):
+        self.dataloader.pause()
+
+    def resume(self):
+        self.dataloader.resume()
+
+    def limit(self, n_batches):
+        """
+        Pauses the DataLoader2 from yielding batches from ``n_batches`` has been yielded.
+        ``resume()`` must be called before it can start yielding again.
+        While paused, DataLoader2's threads are halted and its state remains unchanged,
+        allowing snapshotting and similar operations.
+
+        Args:
+            n_batches: Number of batches after which the DataLoader2 will pause
+        """
+        self.limit_counter = 0
+        self.limit_threshold = n_batches
+
     def __getattr__(self, name):
         """
         To delegate operations to ``dataloader._datapipe_iter``.
         """
+        if name in ("pause", "resume", "limit"):
+            return getattr(self.dataloader, name)
         if self.dataloader._datapipe_iter is None:
             raise AttributeError
         return getattr(self.dataloader._datapipe_iter, name)

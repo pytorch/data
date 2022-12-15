@@ -223,6 +223,22 @@ class DataLoader2ConsistencyTest(TestCase):
     def _get_proto_reading_service_zero_workers():
         return PrototypeMultiProcessingReadingService(num_workers=0)
 
+    # def _collect_data(self, datapipe, reading_service_gen):
+    #     dl: DataLoader2 = DataLoader2(datapipe, reading_service=reading_service_gen())
+    #     result = []
+    #     # Testing how RS handles partial reading and reiterations
+    #     for row, _ in zip(dl, range(10)):
+    #         result.append(row)
+    #     print("Attempts to shutdown")
+    #     dl.shutdown()
+    #     dl: DataLoader2 = DataLoader2(datapipe, reading_service=reading_service_gen())
+    #     print(f"half way through: {result = }", flush=True)
+    #     for row in dl:
+    #         result.append(row)
+    #     print(f"full way through: {result = }", flush=True)
+    #     return result
+
+    # Original
     def _collect_data(self, datapipe, reading_service_gen):
         dl: DataLoader2 = DataLoader2(datapipe, reading_service=reading_service_gen())
         result = []
@@ -242,10 +258,10 @@ class DataLoader2ConsistencyTest(TestCase):
         expected = self._collect_data(dp, reading_service_gen=self._get_no_reading_service)
 
         reading_service_generators = (
-            self._get_mp_reading_service,
+            # self._get_mp_reading_service,
             self._get_proto_reading_service,
-            self._get_mp_reading_service_zero_workers,
-            self._get_proto_reading_service_zero_workers,
+            # self._get_mp_reading_service_zero_workers,
+            # self._get_proto_reading_service_zero_workers,
         )
         for reading_service_gen in reading_service_generators:
             actual = self._collect_data(dp, reading_service_gen=reading_service_gen)
