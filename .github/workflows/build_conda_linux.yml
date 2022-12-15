@@ -29,13 +29,13 @@ jobs:
             smoke-test-script: ""
             package-name: torchdata
     name: ${{ matrix.repository }}
-    uses: pytorch/test-infra/.github/workflows/build_conda_linux.yml@Nova-TorchData-Fix-Smoke-Tests
+    uses: pytorch/test-infra/.github/workflows/build_conda_linux.yml@main
     with:
       conda-package-directory: ${{ matrix.conda-package-directory }}
       repository: ${{ matrix.repository }}
       ref: ""
       test-infra-repository: pytorch/test-infra
-      test-infra-ref: Nova-TorchData-Fix-Smoke-Tests
+      test-infra-ref: ""
       build-matrix: ${{ needs.generate-matrix.outputs.matrix }}
       pre-script: ${{ matrix.pre-script }}
       post-script: ${{ matrix.post-script }}
