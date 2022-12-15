@@ -28,12 +28,12 @@ jobs:
             smoke-test-script: test/smoke_test/smoke_test.py
             package-name: torchdata
     name: ${{ matrix.repository }}
-    uses: osalpekar/test-infra/.github/workflows/build_wheels_linux.yml@env_var_config
+    uses: pytorch/test-infra/.github/workflows/build_wheels_linux.yml@Env-Var-Config
     with:
       repository: ${{ matrix.repository }}
       ref: ""
-      test-infra-repository: osalpekar/test-infra
-      test-infra-ref: env_var_config
+      test-infra-repository: pytorch/test-infra
+      test-infra-ref: Env-Var-Config
       build-matrix: ${{ needs.generate-matrix.outputs.matrix }}
       pre-script: ${{ matrix.pre-script }}
       post-script: ${{ matrix.post-script }}
