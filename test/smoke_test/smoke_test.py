@@ -27,4 +27,4 @@ if __name__ == "__main__":
     # if options.s3:
     #     s3_test()
 
-    main()
+    # main()
