@@ -35,9 +35,6 @@ __all__ = [
 ]
 
 
-TIME_SLEEP_BETWEEN_CHECKING_DIFFERENT_QUEUES = 0.00000001
-
-
 def MultipleDataPipesToQueuesLoop(source_datapipes, req_queues, res_queues, call_on_process_init=None):
     r"""
     Set the appropriate pipes and protocol server type, and create a loop over multiple datapipes
@@ -60,10 +57,10 @@ def MultipleDataPipesToQueuesLoop(source_datapipes, req_queues, res_queues, call
     # Using `zip_longest` to guarantee the process is terminated only when
     # all loops have received `TerminateRequest`
     for _ in zip_longest(*loops):
-        # TODO(ejguan): Check python MP implementation why this sleep impacts queues statuses
-        # This magical sleep allows mp queue messages to travel faster
-        time.sleep(TIME_SLEEP_BETWEEN_CHECKING_DIFFERENT_QUEUES)
-        pass
+        # time.sleep to make Python switch context to get/send message in mp.Queue
+        # TODO(ejguan): Microbenchmarked a synthetic non-shardable case that sleep perform similar to pass.
+        #               A more comprehensive benchmarking in read-world scneario is needed.
+        time.sleep(0)
 
 
 def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_on_process_init=None):
