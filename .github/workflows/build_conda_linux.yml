@@ -26,7 +26,7 @@ jobs:
             pre-script: ""
             post-script: ""
             conda-package-directory: packaging/torchdata
-            smoke-test-script: ""
+            smoke-test-script: test/smoke_test/smoke_test.py
             package-name: torchdata
     name: ${{ matrix.repository }}
     uses: pytorch/test-infra/.github/workflows/build_conda_linux.yml@main
