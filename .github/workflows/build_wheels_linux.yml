@@ -31,9 +31,9 @@ jobs:
     uses: osalpekar/test-infra/.github/workflows/build_wheels_linux.yml@env_var_config
     with:
       repository: ${{ matrix.repository }}
-      ref: env_var_config
-      test-infra-repository: pytorch/test-infra
-      test-infra-ref: main
+      ref: ""
+      test-infra-repository: osalpekar/test-infra
+      test-infra-ref: env_var_config
       build-matrix: ${{ needs.generate-matrix.outputs.matrix }}
       pre-script: ${{ matrix.pre-script }}
       post-script: ${{ matrix.post-script }}
