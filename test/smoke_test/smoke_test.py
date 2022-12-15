@@ -24,7 +24,5 @@ if __name__ == "__main__":
     parser.add_argument("--no-s3", dest="s3", action="store_false")
 
     options = parser.parse_args()
-    # if options.s3:
-    #     s3_test()
-
-    # main()
+    if options.s3:
+        s3_test()
