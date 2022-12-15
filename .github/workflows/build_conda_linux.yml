@@ -29,18 +29,19 @@ jobs:
             smoke-test-script: test/smoke_test/smoke_test.py
             package-name: torchdata
     name: ${{ matrix.repository }}
-    uses: pytorch/test-infra/.github/workflows/build_conda_linux.yml@main
+    uses: pytorch/test-infra/.github/workflows/build_conda_linux.yml@Env-Var-Config
     with:
       conda-package-directory: ${{ matrix.conda-package-directory }}
       repository: ${{ matrix.repository }}
       ref: ""
       test-infra-repository: pytorch/test-infra
-      test-infra-ref: ""
+      test-infra-ref: Env-Var-Config
       build-matrix: ${{ needs.generate-matrix.outputs.matrix }}
       pre-script: ${{ matrix.pre-script }}
       post-script: ${{ matrix.post-script }}
       smoke-test-script: ${{ matrix.smoke-test-script }}
       package-name: ${{ matrix.package-name }}
+      env-var-script: packaging/env-var-script.txt
       # Using "development" as trigger event so these binaries are not uploaded
       # to official channels yet
       trigger-event: development
