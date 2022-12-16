@@ -18,10 +18,6 @@ Note:
 - :class:`torchdata.datapipes.map.SequenceWrapper`: ``torch.utils.data.Dataset``
 - :class:`torchdata.datapipes.iter.IterableWrapper`: ``torch.utils.data.IterableDataset``
 
-Both custom ``worker_init_fn`` and ``worker_reset_fn`` require the following two arguments:
-- :class:`torchdata.dataloader2.utils.WorkerInfo`
-- ``DataPipe``
-
 ReadingService
 ---------------
 
@@ -37,6 +33,19 @@ ReadingService
     PrototypeMultiProcessingReadingService
 
 Each ``ReadingServices`` would take the ``DataPipe`` graph and modify it to achieve a few features like dynamic sharding, sharing random seeds and snapshoting for multi-/distributed processes.
+
+Dynamic Sharding
+^^^^^^^^^^^^^^^^
+
+Dynamic sharding will take place at the place of ``sharding_filter`` within the pipeline. It's carried out by ``PrototypeMultiProcessingReadingService`` and ``DistributedReadingService`` based on the corresponding multiprocessing and distributed workers.
+
+There is a special case that non-shardable ``DataPipe`` (``datapipe.is_shardable() == False``) is presented in the graph. In that case, a certain part of ``DataPipe`` cannot be sent to multiprocessing workers. Based on the existing use cases, there are two typical non-shardable ``DataPipes``:
+- Non-shardable data source like loading data from a remote resource that only accept a single client. When multiprocessing takes place, the lowest common ancestor of non-shardable data source will be sent to a non-sharding process and transfer data from the non-shardable process to worker processes in the round-robin manner.
+- Non-shardable ``DataPipe`` that needs to be placed in the main process like ``fullsync``. And, this type of ``DataPipe`` is normally appended at the end of the pipeline and reading data from multiprocessing workers.
+- Please let us know if you have new examples about non-shardable ``DataPipe``.
+
+Graph Mode
+^^^^^^^^^^
 
 This also allows easier transition of data-preprocessing pipeline from research to production. After the ``DataPipe`` graph is created and validated with the ``ReadingServices``, a different ``ReadingService`` that configures and connects to the production service/infra such as ``AIStore`` can be provided to :class:`DataLoader2` as a drop-in replacement. The ``ReadingService`` could potentially search the graph, and find ``DataPipe`` operations that can be delegated to the production service/infra, then modify the graph correspondingly to achieve higher-performant execution.
 

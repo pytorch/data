@@ -113,8 +113,12 @@ def _collate_no_op(batch):
 
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     r"""
-    ``PrototypeMultiProcessingReadingService`` that spawns multiple subprocesses to iterate the ``DataPipe`` graph.
-    This ``ReadingService`` is still under prototype stage and will replace ``MultiProcessingReadingService`` eventually.
+    Spawns multiple worker processes to load data from the ``DataPipe`` graph.
+    If any non-shardble ``DataPipe`` (``datapipe.is_shardable() == False``) is presented in the graph,
+    a separate non-sharding process will be created to load data from the lowest common ancestor
+    of all non-shardable ``DataPipes`` and distributed data to each worker process in a round-robin manner
+    Then, the subsequent ``DataPipe`` graph in each worker process will process the data from the non-sharding
+    process and eventually return the result to the main process.
 
     Args:
         num_workers (int, optional): How many subprocesses to use for data loading.
@@ -132,6 +136,13 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         worker_reset_fn: (Callable, optional): Function to be called at the beginning
             of each epoch in each worker process with ``WorkerInfo``
             and ``DataPipe`` as the expected arguments.
+
+    Note:
+        - This ``ReadingService`` is still in prototype mode and will replace
+          :class:`MultiProcessingReadingService`.
+        - It currently does both distributed and multiprocessing sharding over the pipeline.
+          The distributed-related code is going to be removed when ``SequentialReadingService``
+          is provided to combine the :class:`DistributedReadingService` and this ``ReadingService``.
 
     """
     num_workers: int
