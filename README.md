@@ -42,13 +42,13 @@ Over many years of feedback and organic community usage of the PyTorch `DataLoad
 
 The following is the corresponding `torchdata` versions and supported Python versions.
 
-| `torch`            | `torchdata`        | `python`          |
-| ------------------ | ------------------ | ----------------- |
-| `main` / `nightly` | `main` / `nightly` | `>=3.7`, `<=3.10` |
-| `1.13.0`           | `0.5.0`            | `>=3.7`, `<=3.10` |
-| `1.12.1`           | `0.4.1`            | `>=3.7`, `<=3.10` |
-| `1.12.0`           | `0.4.0`            | `>=3.7`, `<=3.10` |
-| `1.11.0`           | `0.3.0`            | `>=3.7`, `<=3.10` |
+| `torch`              | `torchdata`        | `python`          |
+| -------------------- | ------------------ | ----------------- |
+| `master` / `nightly` | `main` / `nightly` | `>=3.7`, `<=3.10` |
+| `1.13.1`             | `0.5.1`            | `>=3.7`, `<=3.10` |
+| `1.12.1`             | `0.4.1`            | `>=3.7`, `<=3.10` |
+| `1.12.0`             | `0.4.0`            | `>=3.7`, `<=3.10` |
+| `1.11.0`             | `0.3.0`            | `>=3.7`, `<=3.10` |
 
 ### Colab
 
