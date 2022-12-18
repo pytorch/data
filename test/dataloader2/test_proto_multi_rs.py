@@ -122,31 +122,32 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
                 )
                 dl.shutdown()
 
-    def test_reading_service_pause_stop_yield(self) -> None:
+    def test_reading_service_limit(self) -> None:
 
-        # Functional Test: Confirms that `dl` will stop yielding elements after `_pause` is called
-        rs7 = PrototypeMultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=1)
-        rs8 = PrototypeMultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=1, main_prefetch_cnt=0)
-        rs9 = PrototypeMultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=0)
+        rs1 = PrototypeMultiProcessingReadingService(
+            num_workers=1,
+            worker_prefetch_cnt=0,
+            main_prefetch_cnt=0,
+        )
+        test_rss = [rs1]
 
-        test_rss2 = [rs7, rs8, rs9]
-        for n, rs in enumerate(test_rss2):
-            dl: DataLoader2 = DataLoader2(self.double_pause_dp, reading_service=rs)
-            res = []
-            for i, x in enumerate(dl):
-                res.append(x)
-                if i in {2}:
-                    dl.pause()
-            self.assertEqual(
-                3,
-                len(res),
-                msg=f"The test is failing for rs{n + 7}, with num_workers = {rs.num_workers}, "
-                f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, main_prefetch_cnt = {rs.main_prefetch_cnt}",
-            )
-            dl.shutdown()
+        for dp in self.test_dps:
+            for n, rs in enumerate(test_rss):
+                dl: DataLoader2 = DataLoader2(self.double_pause_dp, reading_service=rs)
+                res = []
+                # n_limit = 5
 
-    # def test_reading_service_snapshot(self) -> None:
-    #     pass
+                it = iter(dl)
+                # it.limit(n_limit)
+                for x in it:
+                    res.append(x)
+                # # Verify that the number of elements yielded equals to the specified limit
+                # self.assertEqual(len(res), n_limit)
+                # it.resume()
+                # for x in it:
+                #    res.append(x)
+                # Verify that the rest of the elements can be yielded after `resume` is called
+                # self.assertEqual(list(range(self.n_elements)), sorted(res))
 
     def test_dataloader2_snapshot(self) -> None:
 
