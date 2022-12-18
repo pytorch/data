@@ -86,6 +86,7 @@ class DataLoader2Iterator(Iterator[T_co]):
 
     def pause(self):
         self.dataloader.pause()
+        self.limit_counter = 0
 
     def resume(self):
         self.dataloader.resume()
@@ -100,14 +101,21 @@ class DataLoader2Iterator(Iterator[T_co]):
         Args:
             n_batches: Number of batches after which the DataLoader2 will pause
         """
+        # TODO: Should `limit_threshold` reset to 0 after 1 pause/resume?
         self.limit_counter = 0
         self.limit_threshold = n_batches
+
+    def clear_limit(self):
+        """
+        Set the ``limit_threshold`` to ``None`` such that the iterator will not automatically call ``pause``
+        """
+        self.limit_threshold = None
 
     def __getattr__(self, name):
         """
         To delegate operations to ``dataloader._datapipe_iter``.
         """
-        if name in ("pause", "resume", "limit"):
+        if name in ("pause", "resume"):
             return getattr(self.dataloader, name)
         if self.dataloader._datapipe_iter is None:
             raise AttributeError
@@ -302,3 +310,9 @@ class DataLoader2(Generic[T_co]):
             self._paused = False
         else:
             warnings.warn("ReadingService doesn't support resume.")
+
+    # TODO: Will we need limit at the DataLoader2 level or keeping it exclusively at iterator is fine?
+    #       If it exists at the DL2 level, we can have iterator do the work by reading from the threshold
+    #       variable within DL2.
+    # def limit(self, n_batches):
+    #     pass
