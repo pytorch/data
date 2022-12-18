@@ -122,6 +122,33 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
                 )
                 dl.shutdown()
 
+    def test_reading_service_limit(self) -> None:
+
+        rs1 = PrototypeMultiProcessingReadingService(
+            num_workers=1,
+            worker_prefetch_cnt=0,
+            main_prefetch_cnt=0,
+        )
+        test_rss = [rs1]
+
+        for dp in self.test_dps:
+            for n, rs in enumerate(test_rss):
+                dl: DataLoader2 = DataLoader2(self.double_pause_dp, reading_service=rs)
+                res = []
+                # n_limit = 5
+
+                it = iter(dl)
+                # it.limit(n_limit)
+                for x in it:
+                    res.append(x)
+                # # Verify that the number of elements yielded equals to the specified limit
+                # self.assertEqual(len(res), n_limit)
+                # it.resume()
+                # for x in it:
+                #    res.append(x)
+                # Verify that the rest of the elements can be yielded after `resume` is called
+                # self.assertEqual(list(range(self.n_elements)), sorted(res))
+
     # TODO: Implemented in an upcoming PR
     # def test_reading_service_snapshot(self) -> None:
     #     pass
