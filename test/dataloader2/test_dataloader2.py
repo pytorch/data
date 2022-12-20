@@ -24,7 +24,7 @@ from torchdata.dataloader2 import (
 from torchdata.dataloader2.dataloader2 import READING_SERVICE_STATE_KEY_NAME, SERIALIZED_DATAPIPE_KEY_NAME
 
 from torchdata.dataloader2.graph import DataPipe, replace_dp, traverse_dps
-from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
+from torchdata.datapipes.iter import IterableWrapper, IterDataPipe, ShardingRoundRobinDispatcher
 from torchdata.datapipes.map import SequenceWrapper
 
 try:
@@ -352,17 +352,6 @@ class TestDataLoader2EventLoop(TestCase):
         clean_me(process, req_queue, res_queue)
 
 
-class NonShardableDataPipe(IterDataPipe):
-    def __init__(self, datapipe):
-        self.datapipe = datapipe
-
-    def __iter__(self):
-        yield from self.datapipe
-
-    def is_shardable(self):
-        return False
-
-
 def _x_mult_2(d):
     return d * 2
 
@@ -404,10 +393,10 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         res2 = list(dl)
         self.assertEqual(exp, res2)
 
-    def test_single_branch_non_shardable(self):
+    def test_single_branch_non_replicable(self):
         r"""
-        For single branch pipeline with a non-shardable DataPipe, all ``sharding_filters``
-        in the pipeline become non-shardable.
+        For single branch pipeline with a non-replicable DataPipe, all ``sharding_filters``
+        in the pipeline become non-replicable.
         """
 
         def _make_dp():
@@ -429,7 +418,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
             # Properly shutdown
             dl.shutdown()
 
-        # By-default, all shardable
+        # By-default, all replicable
         single_br_dp, _, end_dp = _make_dp()
         graph = traverse_dps(end_dp)
         sf_dp = single_br_dp.sharding_filter()
@@ -438,34 +427,34 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         # Determinism and dynamic sharding
         _assert_deterministic_dl_res(dl, [i * 4 for i in range(10)])
 
-        # Non-shardable before sharding_filter
-        # shuffle in non-sharding process
+        # Non-replicable before sharding_filter
+        # shuffle in dispatch process
         single_br_dp, map_dp, end_dp = _make_dp()
         graph = traverse_dps(end_dp)
-        non_shardable_dp = NonShardableDataPipe(single_br_dp)
-        replace_dp(graph, single_br_dp, non_shardable_dp)
+        round_robin_dispatcher = ShardingRoundRobinDispatcher(single_br_dp, SHARDING_PRIORITIES.MULTIPROCESSING)
+        replace_dp(graph, single_br_dp, round_robin_dispatcher)
         sf_dp = map_dp.sharding_filter()
         replace_dp(graph, map_dp, sf_dp)
         dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
-        # Determinism for non-shardable pipeline
+        # Determinism for non-replicable pipeline
         _assert_deterministic_dl_res(dl, [i * 4 for i in range(10)])
 
-        # Non-shardable after sharding_filter
-        # shuffle in non-sharding process
+        # Non-replicable after sharding_filter
+        # shuffle in dispatch process
         single_br_dp, map_dp, end_dp = _make_dp()
         graph = traverse_dps(end_dp)
         sf_dp = single_br_dp.sharding_filter()
         replace_dp(graph, single_br_dp, sf_dp)
-        non_shardable_dp = NonShardableDataPipe(map_dp)
-        replace_dp(graph, map_dp, non_shardable_dp)
+        round_robin_dispatcher = ShardingRoundRobinDispatcher(map_dp, SHARDING_PRIORITIES.MULTIPROCESSING)
+        replace_dp(graph, map_dp, round_robin_dispatcher)
         dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
-        # Determinism for non-shardable pipeline
+        # Determinism for non-replicable pipeline
         _assert_deterministic_dl_res(dl, [i * 4 for i in range(10)])
 
-    def test_multi_branch_non_shardable(self):
+    def test_multi_branch_non_replicable(self):
         r"""
-        For multi-branch pipeline with a non-shardable DataPipe on one branch,
-        all ``sharding_filter`` on the other branches should remain shardable.
+        For multi-branch pipeline with a non-replicable DataPipe on one branch,
+        all ``sharding_filter`` on the other branches should remain replicable.
         """
 
         def _make_dp():
@@ -490,7 +479,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
             # Properly shutdown
             dl.shutdown()
 
-        # By-default, all shardable
+        # By-default, all replicable
         branch1_dp, _, branch2_dp, end_dp = _make_dp()
         graph = traverse_dps(end_dp)
         sf1_dp = branch1_dp.sharding_filter()
@@ -501,29 +490,29 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         # Determinism and dynamic sharding
         _assert_deterministic_dl_res(dl, [i * 2 for i in range(10)], list(range(10)))
 
-        # Non-shardable on one branch
-        # shuffle in non-sharding process
+        # Non-replicable on one branch
+        # shuffle in dispatch process
         branch1_dp, _, branch2_dp, end_dp = _make_dp()
         graph = traverse_dps(end_dp)
-        non_shardable_dp = NonShardableDataPipe(branch1_dp)
-        replace_dp(graph, branch1_dp, non_shardable_dp)
+        non_replicable_dp = ShardingRoundRobinDispatcher(branch1_dp, SHARDING_PRIORITIES.MULTIPROCESSING)
+        replace_dp(graph, branch1_dp, non_replicable_dp)
         # The other branch should has a sharding_filter to make data even
         sf_dp = branch2_dp.sharding_filter()
         replace_dp(graph, branch2_dp, sf_dp)
         dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
-        # Determinism for non-shardable pipeline
+        # Determinism for non-replicable pipeline
         _assert_deterministic_dl_res(dl, [i * 2 for i in range(10)], list(range(10)))
 
-        # Non-shardable on both branches
-        # shuffle in non-sharding process
+        # Non-replicable on both branches
+        # shuffle in dispatch process
         branch1_dp, _, branch2_dp, end_dp = _make_dp()
         graph = traverse_dps(end_dp)
-        non_shardable_dp1 = NonShardableDataPipe(branch1_dp)
-        replace_dp(graph, branch1_dp, non_shardable_dp1)
-        non_shardable_dp2 = NonShardableDataPipe(branch2_dp)
-        replace_dp(graph, branch2_dp, non_shardable_dp2)
+        non_replicable_dp1 = ShardingRoundRobinDispatcher(branch1_dp, SHARDING_PRIORITIES.MULTIPROCESSING)
+        replace_dp(graph, branch1_dp, non_replicable_dp1)
+        non_replicable_dp2 = ShardingRoundRobinDispatcher(branch2_dp, SHARDING_PRIORITIES.MULTIPROCESSING)
+        replace_dp(graph, branch2_dp, non_replicable_dp2)
         dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
-        # Determinism for non-shardable pipeline
+        # Determinism for non-replicable pipeline
         _assert_deterministic_dl_res(dl, [i * 2 for i in range(10)], list(range(10)))
 
 

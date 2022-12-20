@@ -21,9 +21,9 @@ from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
 
 from torchdata._constants import default_dl2_worker_join_timeout_in_s, default_timeout_in_s
 from torchdata.dataloader2 import communication
-from torchdata.dataloader2.graph import DataPipe, find_lca_non_shardable_dp, replace_dp, traverse_dps
+from torchdata.dataloader2.graph import DataPipe, replace_dp, traverse_dps
 from torchdata.dataloader2.utils import generate_random_scalar_tensor, process_init_fn, process_reset_fn, WorkerInfo
-from torchdata.dataloader2.utils.non_shardable import _DummyIterDataPipe
+from torchdata.dataloader2.utils.dispatch import _DummyIterDataPipe, find_lca_non_replicable_dp
 from torchdata.dataloader2.utils.worker import _DistInfo
 from torchdata.datapipes.iter import FullSync, IterableWrapper
 
@@ -114,10 +114,10 @@ def _collate_no_op(batch):
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     r"""
     Spawns multiple worker processes to load data from the ``DataPipe`` graph.
-    If any non-shardble ``DataPipe`` (``datapipe.is_shardable() == False``) is presented in the graph,
-    a separate non-sharding process will be created to load data from the lowest common ancestor
-    of all non-shardable ``DataPipes`` and distributed data to each worker process in a round-robin manner
-    Then, the subsequent ``DataPipe`` graph in each worker process will process the data from the non-sharding
+    If any non-replicable ``DataPipe`` (``sharding_round_robin_dispatch``) is presented in the graph,
+    a separate dispatching process will be created to load data from the lowest common ancestor
+    of all non-replicable ``DataPipes`` and distributes data to each worker process in the round-robin manner
+    Then, the subsequent ``DataPipe`` graph in each worker process will process the data from the dispatching
     process and eventually return the result to the main process.
 
     Args:
@@ -151,8 +151,8 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     main_prefetch_cnt: int
     worker_init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]]
     worker_reset_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]]
-    worker_processes: List[Tuple[py_mp.process.BaseProcess, Queue, Queue]]
-    non_sharding_process: Optional[Tuple[py_mp.process.BaseProcess, List[Queue], List[Queue]]]
+    _worker_processes: List[Tuple[py_mp.process.BaseProcess, Queue, Queue]]
+    _dispatch_process: Optional[Tuple[py_mp.process.BaseProcess, List[Queue], List[Queue]]]
     datapipes: List
     end_datapipe: Optional[DataPipe]
     _mp: bool
@@ -180,8 +180,8 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         self.main_prefetch_cnt = main_prefetch_cnt
         self.worker_init_fn = worker_init_fn
         self.worker_reset_fn = worker_reset_fn
-        self.worker_processes = []
-        self.non_sharding_process = None
+        self._worker_processes = []
+        self._dispatch_process = None
         self.datapipes = []
         self.end_datapipe = None
         self._mp = num_workers > 0
@@ -214,17 +214,17 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
         ctx = mp.get_context(self.multiprocessing_context)
 
-        # Launch worker process for the lowest common ancestor of non-shardable DataPipes
+        # Launch dispatching process for the lowest common ancestor of non-replicable DataPipes
         if self.num_workers > 1:
             graph = traverse_dps(datapipe)
-            non_shardable_dp = find_lca_non_shardable_dp(graph)
-            if non_shardable_dp is not None:
+            non_replicable_dp = find_lca_non_replicable_dp(graph)
+            if non_replicable_dp is not None:
                 dummy_dp = _DummyIterDataPipe()
-                graph = replace_dp(graph, non_shardable_dp, dummy_dp)  # type: ignore[arg-type]
+                graph = replace_dp(graph, non_replicable_dp, dummy_dp)  # type: ignore[arg-type]
                 datapipe = list(graph.values())[0][0]
                 # TODO(ejguan): Determine buffer_size at runtime or use unlimited buffer
-                round_robin_dps = non_shardable_dp.round_robin_demux(num_instances=self.num_workers)
-                # TODO(ejguan): Benchmark if we need to prefetch in non-sharding process
+                round_robin_dps = non_replicable_dp.round_robin_demux(num_instances=self.num_workers)
+                # TODO(ejguan): Benchmark if we need to prefetch in dispatching process
                 process, req_queues, res_queues = communication.eventloop.CreateProcessForMultipleDataPipelines(
                     ctx,
                     round_robin_dps,
@@ -232,17 +232,16 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
                 assert len(req_queues) == self.num_workers and len(res_queues) == self.num_workers
                 process.daemon = True
                 process.start()
-                self.non_sharding_process = (process, req_queues, res_queues)
+                self._dispatch_process = (process, req_queues, res_queues)
 
         for worker_id in range(self.num_workers):
             worker_info = WorkerInfo(self.num_workers, worker_id)
-            # Non-sharding process exists
-            if self.non_sharding_process is not None:
+            # Dispatching process for non-replicable DataPipes exists
+            if self._dispatch_process is not None:
                 # Use the placehold to pass request/response queue to each worker process
-                dummy_dp.req_queue = self.non_sharding_process[1][worker_id]
-                dummy_dp.res_queue = self.non_sharding_process[2][worker_id]
+                dummy_dp.req_queue = self._dispatch_process[1][worker_id]
+                dummy_dp.res_queue = self._dispatch_process[2][worker_id]
             call_on_process_init = partial(process_init_fn, worker_info=worker_info, custom_init_fn=self.worker_init_fn)
-            # Process contains a ProtocolServer
             (process, req_queue, res_queue) = communication.eventloop.CreateProcessForDataPipeline(
                 ctx,
                 datapipe,
@@ -250,7 +249,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             )
             process.daemon = True
             process.start()
-            self.worker_processes.append((process, req_queue, res_queue))  # These queues are independent
+            self._worker_processes.append((process, req_queue, res_queue))  # These queues are independent
             local_datapipe = communication.iter.QueueWrapper(
                 communication.protocol.IterDataPipeQueueProtocolClient(req_queue, res_queue)
             )
@@ -309,7 +308,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             process.join(default_dl2_worker_join_timeout_in_s)
 
         # Clean up worker processes
-        for process, req_queue, res_queue in self.worker_processes:
+        for process, req_queue, res_queue in self._worker_processes:
             try:
                 clean_me(process, req_queue, res_queue)
             except AttributeError:
@@ -319,15 +318,15 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             except TimeoutError:
                 pass
 
-        # Clean up non-sharding process
-        if self.non_sharding_process:
+        # Clean up dispatching process
+        if self._dispatch_process:
             try:
                 # Send TerminateRequest to all loops to make sure `zip_longest` exits
-                for req_queue in self.non_sharding_process[1]:
+                for req_queue in self._dispatch_process[1]:
                     req_queue.put(communication.messages.TerminateRequest())
-                for res_queue in self.non_sharding_process[2]:
+                for res_queue in self._dispatch_process[2]:
                     _ = res_queue.get()
-                self.non_sharding_process[0].join(default_dl2_worker_join_timeout_in_s)
+                self._dispatch_process[0].join(default_dl2_worker_join_timeout_in_s)
             except AttributeError:
                 # Due to non-deterministic order of destruction, by the time `finalize` is called,
                 # some objects may already be `None`.
@@ -335,8 +334,8 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             except TimeoutError:
                 pass
 
-        self.worker_processes = []
-        self.non_sharding_process = None
+        self._worker_processes = []
+        self._dispatch_process = None
 
         if self._pg is not None:
             dist.destroy_process_group(self._pg)

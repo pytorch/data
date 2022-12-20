@@ -17,7 +17,7 @@ from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
 from torchdata.dataloader2 import communication
 from torchdata.dataloader2.graph import DataPipe, find_dps, replace_dp, traverse_dps
 from torchdata.dataloader2.utils import generate_random_int
-from torchdata.dataloader2.utils.non_shardable import _DummyIterDataPipe, find_shardable_branches
+from torchdata.dataloader2.utils.dispatch import _DummyIterDataPipe, find_replicable_branches
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.map import MapDataPipe
 
@@ -65,35 +65,35 @@ def process_init_fn(
     r"""
     Based on the worker information, shard the ``DataPipe`` graph dynamically.
     """
-    # Find if there is non-sharding process
+    # Find if there is non-replicable DataPipe
     graph = traverse_dps(datapipe)
-    non_shardable_dp = find_dps(graph, _DummyIterDataPipe)  # type: ignore
+    non_replicable_dp = find_dps(graph, _DummyIterDataPipe)  # type: ignore
 
     # There are two cases for DataPipe graph in terms of mp sharding:
-    # 1) All DataPipes are shardable, apply mp sharding to the whole graph
-    if len(non_shardable_dp) == 0:
+    # 1) All DataPipes are replicable, apply mp sharding to the whole graph
+    if len(non_replicable_dp) == 0:
         torch.utils.data.graph_settings.apply_sharding(
             datapipe, worker_info.num_workers, worker_info.worker_id, SHARDING_PRIORITIES.MULTIPROCESSING
         )
-    # 2) There is non-shardable DataPipe. Since we have replaced the lowest common
+    # 2) There is non-replicable DataPipe. Since we have replaced the lowest common
     #    ancestor by a `_DummyIterDataPipe`, we would only apply mp sharding
-    #    to the branch of DataPipes that doesn't contain `_DummyIterDataPipe`.
+    #    to replicable branches that don't have `_DummyIterDataPipe`.
     else:
-        assert len(non_shardable_dp) == 1
-        shardable_branches = find_shardable_branches(graph)
-        for dp in shardable_branches:
+        assert len(non_replicable_dp) == 1
+        replicable_branches = find_replicable_branches(graph)
+        for dp in replicable_branches:
             torch.utils.data.graph_settings.apply_sharding(
                 dp, worker_info.num_workers, worker_info.worker_id, SHARDING_PRIORITIES.MULTIPROCESSING
             )
 
-        req_queue = non_shardable_dp[0].req_queue
-        res_queue = non_shardable_dp[0].res_queue
+        req_queue = non_replicable_dp[0].req_queue
+        res_queue = non_replicable_dp[0].res_queue
 
         queue_wrapper = communication.iter.QueueWrapper(
             communication.protocol.IterDataPipeQueueProtocolClient(req_queue, res_queue)
         )
-        non_sharding_process_dp = communication.iter._IterateQueueDataPipes([queue_wrapper])
-        graph = replace_dp(graph, non_shardable_dp[0], non_sharding_process_dp)
+        dispatch_process_dp = communication.iter._IterateQueueDataPipes([queue_wrapper])
+        graph = replace_dp(graph, non_replicable_dp[0], dispatch_process_dp)
         datapipe = list(graph.values())[0][0]
 
     if custom_init_fn is not None:
@@ -118,14 +118,14 @@ def _set_global_random_state(seed_generator: torch.Generator) -> None:
         numpy.random.seed(np_seed)
 
 
-def non_sharding_process_reset_fn(
+def dispatch_process_reset_fn(
     datapipe: DataPipe,
     worker_info: WorkerInfo,
     dist_info: _DistInfo,
 ) -> DataPipe:
     r"""
     Based on the distributed shared random seed, this function is used to set the random state
-    of the ``DataPipe`` graph and the global random states for the non-sharding process.
+    of the non-repliable ``DataPipe`` graph and the global random states for the dispatch process.
     This function would guarantee that all distributed non-sharding process share the
     same random states to ensure the same shuffle order.
     """
@@ -155,15 +155,15 @@ def process_reset_fn(
     """
     # Reset non-sharding process first
     graph = traverse_dps(datapipe)
-    non_sharding_process_dps = find_dps(graph, communication.iter._IterateQueueDataPipes)
-    if len(non_sharding_process_dps) > 0:
-        assert len(non_sharding_process_dps) == 1
-        non_sharding_process_dp = non_sharding_process_dps[0]
+    dispatch_process_dps = find_dps(graph, communication.iter._IterateQueueDataPipes)
+    if len(dispatch_process_dps) > 0:
+        assert len(dispatch_process_dps) == 1
+        dispatch_process_dp = dispatch_process_dps[0]
         # Only send the reset epoch message once
         if worker_info.worker_id == 0:
-            non_sharding_reset_fn = partial(non_sharding_process_reset_fn, dist_info=dist_info)
+            dispatch_reset_fn = partial(dispatch_process_reset_fn, dist_info=dist_info)
             # Use WorkerInfo(1, 0)
-            non_sharding_process_dp.reset_epoch(non_sharding_reset_fn)
+            dispatch_process_dp.reset_epoch(dispatch_reset_fn)
 
     # This function will receive worker local copy of datapipe and reset function from ``initialize_iteration``
     worker_seed_generator = torch.Generator()

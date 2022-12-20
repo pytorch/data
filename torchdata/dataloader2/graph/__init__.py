@@ -7,14 +7,13 @@
 
 from torch.utils.data.graph import DataPipe, DataPipeGraph, traverse_dps
 
-from torchdata.dataloader2.graph.utils import find_dps, find_lca_non_shardable_dp, list_dps, remove_dp, replace_dp
+from torchdata.dataloader2.graph.utils import find_dps, list_dps, remove_dp, replace_dp
 
 
 __all__ = [
     "DataPipe",
     "DataPipeGraph",
     "find_dps",
-    "find_lca_non_shardable_dp",
     "list_dps",
     "remove_dp",
     "replace_dp",
