@@ -363,6 +363,8 @@ class TestNonReplicableDataPipe(expecttest.TestCase):
         self.assertEqual(len(dps), 2)
         self.assertTrue(all(dp in (single_br_dp, cir_map_dp) for dp in dps))
 
+        # In theory, this case should never happen because LCA (fork_zip_dp) should be
+        # replaced by _DummpyIterDataPipe if any of child is non-replicable
         single_br_dp, _, ch1, ch2, *_, cir_map_dp, _, graph = self._make_dp()
         graph = replace_by_dummy(graph, ch1)
         dps = find_replicable_branches(graph)
