@@ -354,16 +354,19 @@ class TestNonReplicableDataPipe(expecttest.TestCase):
         single_br_dp, *_, fork_zip_dp, _, cir_map_dp, _, graph = self._make_dp()
         graph = replace_by_dummy(graph, single_br_dp)
         dps = find_replicable_branches(graph)
+        self.assertEqual(len(dps), 2)
         self.assertTrue(all(dp in (fork_zip_dp, cir_map_dp) for dp in dps))
 
         single_br_dp, multi_br_dp, *_, cir_map_dp, _, graph = self._make_dp()
         graph = replace_by_dummy(graph, multi_br_dp)
         dps = find_replicable_branches(graph)
+        self.assertEqual(len(dps), 2)
         self.assertTrue(all(dp in (single_br_dp, cir_map_dp) for dp in dps))
 
         single_br_dp, _, ch1, ch2, *_, cir_map_dp, _, graph = self._make_dp()
         graph = replace_by_dummy(graph, ch1)
         dps = find_replicable_branches(graph)
+        self.assertEqual(len(dps), 3)
         self.assertTrue(all(dp in (single_br_dp, ch2, cir_map_dp) for dp in dps))
 
         single_br_dp, *_, fork_zip_dp, _, cir_map_dp, _, graph = self._make_dp()
@@ -379,6 +382,7 @@ class TestNonReplicableDataPipe(expecttest.TestCase):
         single_br_dp, *_, fork_zip_dp, _, cir_map_dp, _, graph = self._make_dp()
         graph = replace_by_dummy(graph, fork_zip_dp)
         dps = find_replicable_branches(graph)
+        self.assertEqual(len(dps), 2)
         self.assertTrue(all(dp in (single_br_dp, cir_map_dp) for dp in dps))
 
 
