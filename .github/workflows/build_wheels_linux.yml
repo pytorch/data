@@ -28,12 +28,12 @@ jobs:
             smoke-test-script: test/smoke_test/smoke_test.py
             package-name: torchdata
     name: ${{ matrix.repository }}
-    uses: pytorch/test-infra/.github/workflows/build_wheels_linux.yml@Nova-Test-TorchData-Binaries
+    uses: pytorch/test-infra/.github/workflows/build_wheels_linux.yml@main
     with:
       repository: ${{ matrix.repository }}
       ref: ""
       test-infra-repository: pytorch/test-infra
-      test-infra-ref: Nova-Test-TorchData-Binaries
+      test-infra-ref: main
       build-matrix: ${{ needs.generate-matrix.outputs.matrix }}
       pre-script: ${{ matrix.pre-script }}
       post-script: ${{ matrix.post-script }}
@@ -41,8 +41,7 @@ jobs:
       package-name: ${{ matrix.package-name }}
       env-var-script: packaging/env-var-script.txt
       # Using "development" as trigger event so these binaries are not uploaded to official channels yet
-#      trigger-event: development
-      trigger-event: ${{ github.event_name }}
+      trigger-event: development
     secrets:
       AWS_PYTORCH_UPLOADER_ACCESS_KEY_ID: ${{ secrets.AWS_PYTORCH_UPLOADER_ACCESS_KEY_ID }}
       AWS_PYTORCH_UPLOADER_SECRET_ACCESS_KEY: ${{ secrets.AWS_PYTORCH_UPLOADER_SECRET_ACCESS_KEY }}
