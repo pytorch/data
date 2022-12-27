@@ -58,8 +58,8 @@ def MultipleDataPipesToQueuesLoop(source_datapipes, req_queues, res_queues, call
     # all loops have received `TerminateRequest`
     for _ in zip_longest(*loops):
         # time.sleep to make Python switch context to get/send message in mp.Queue
-        # TODO(ejguan): Microbenchmarked a synthetic non-shardable case that sleep perform similar to pass.
-        #               A more comprehensive benchmarking in read-world scneario is needed.
+        # TODO(ejguan): Microbenchmarked a synthetic non-replicable case that sleep perform similar to pass.
+        #               A more comprehensive benchmarking in real-world scneario is needed.
         time.sleep(0)
 
 

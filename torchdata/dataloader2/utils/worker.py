@@ -126,8 +126,8 @@ def dispatch_process_reset_fn(
     r"""
     Based on the distributed shared random seed, this function is used to set the random state
     of the non-repliable ``DataPipe`` graph and the global random states for the dispatch process.
-    This function would guarantee that all distributed non-sharding process share the
-    same random states to ensure the same shuffle order.
+    This function would guarantee that all distributed dispatching processes share the
+    same random state to ensure the same shuffle order.
     """
     worker_seed_generator = torch.Generator()
     worker_seed_generator.manual_seed(dist_info.shared_seed)
@@ -155,15 +155,15 @@ def process_reset_fn(
     """
     # Reset non-sharding process first
     graph = traverse_dps(datapipe)
-    dispatch_process_dps = find_dps(graph, communication.iter._IterateQueueDataPipes)
-    if len(dispatch_process_dps) > 0:
-        assert len(dispatch_process_dps) == 1
-        dispatch_process_dp = dispatch_process_dps[0]
+    dispatch_process_consumer_dps = find_dps(graph, communication.iter._IterateQueueDataPipes)
+    if len(dispatch_process_consumer_dps) > 0:
+        assert len(dispatch_process_consumer_dps) == 1
+        dispatch_process_consumer_dp = dispatch_process_consumer_dps[0]
         # Only send the reset epoch message once
         if worker_info.worker_id == 0:
             dispatch_reset_fn = partial(dispatch_process_reset_fn, dist_info=dist_info)
             # Use WorkerInfo(1, 0)
-            dispatch_process_dp.reset_epoch(dispatch_reset_fn)
+            dispatch_process_consumer_dp.reset_epoch(dispatch_reset_fn)
 
     # This function will receive worker local copy of datapipe and reset function from ``initialize_iteration``
     worker_seed_generator = torch.Generator()
