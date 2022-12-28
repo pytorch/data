@@ -10,8 +10,6 @@ import time
 from collections import deque
 from typing import Deque, Optional
 
-from torchdata.dataloader2 import communication
-
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 
@@ -60,6 +58,9 @@ class PrefetcherIterDataPipe(IterDataPipe):
 
     @staticmethod
     def thread_worker(prefetch_data):
+        # Lazily import to prevent circular import
+        from torchdata.dataloader2 import communication
+
         itr = iter(prefetch_data.source_datapipe)
         stop_iteration = False
         while prefetch_data.run_prefetcher:
