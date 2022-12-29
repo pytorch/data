@@ -23,8 +23,8 @@ from torchdata.dataloader2 import (
 )
 from torchdata.dataloader2.dataloader2 import READING_SERVICE_STATE_KEY_NAME, SERIALIZED_DATAPIPE_KEY_NAME
 
-from torchdata.dataloader2.graph import DataPipe
-from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
+from torchdata.dataloader2.graph import DataPipe, replace_dp, traverse_dps
+from torchdata.datapipes.iter import IterableWrapper, IterDataPipe, ShardingRoundRobinDispatcher
 from torchdata.datapipes.map import SequenceWrapper
 
 try:
@@ -302,7 +302,7 @@ class TestDataLoader2EventLoop(TestCase):
     #
     #     it = list(range(100))
     #     numbers_dp = IterableWrapper(it)
-    #     (process, req_queue, res_queue, _thread_local_datapipe) = communication.eventloop.SpawnThreadForDataPipeline(numbers_dp)
+    #     (process, req_queue, res_queue, _thread_local_datapipe) = communication.eventloop.CreateThreadForDataPipeline(numbers_dp)
     #
     #     process.start()
     #     local_datapipe = communication.iter.QueueWrapper(
@@ -323,7 +323,7 @@ class TestDataLoader2EventLoop(TestCase):
         input_len = 100
         it = list(range(input_len))
         numbers_dp = SequenceWrapper(it)
-        (process, req_queue, res_queue, _thread_local_datapipe) = communication.eventloop.SpawnThreadForDataPipeline(
+        (process, req_queue, res_queue, _thread_local_datapipe) = communication.eventloop.CreateThreadForDataPipeline(
             numbers_dp
         )
 
@@ -350,6 +350,10 @@ class TestDataLoader2EventLoop(TestCase):
         self.assertEqual(input_len, len(local_datapipe))
 
         clean_me(process, req_queue, res_queue)
+
+
+def _x_mult_2(d):
+    return d * 2
 
 
 class PrototypeMultiProcessingReadingServiceTest(TestCase):
@@ -388,6 +392,128 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         # Test worker_reset_fn to set the same random seed across epoches
         res2 = list(dl)
         self.assertEqual(exp, res2)
+
+    def test_single_branch_non_replicable(self):
+        r"""
+        For single branch pipeline with a non-replicable DataPipe, all ``sharding_filters``
+        in the pipeline become non-replicable.
+        """
+
+        def _make_dp():
+            single_br_dp = IterableWrapper(list(range(10))).shuffle()
+            map_dp = single_br_dp.map(_x_mult_2)
+            end_dp = map_dp.map(_x_mult_2).shuffle()
+            return single_br_dp, map_dp, end_dp
+
+        def _assert_deterministic_dl_res(dl, exp):
+            torch.manual_seed(123)
+            res = list(dl)
+            self.assertEqual(sorted(res), exp)
+            # Second epoch
+            torch.manual_seed(123)
+            self.assertEqual(list(dl), res)
+            # Different seed
+            torch.manual_seed(321)
+            self.assertNotEqual(list(dl), res)
+            # Properly shutdown
+            dl.shutdown()
+
+        # By-default, all replicable
+        single_br_dp, _, end_dp = _make_dp()
+        graph = traverse_dps(end_dp)
+        sf_dp = single_br_dp.sharding_filter()
+        replace_dp(graph, single_br_dp, sf_dp)
+        dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
+        # Determinism and dynamic sharding
+        _assert_deterministic_dl_res(dl, [i * 4 for i in range(10)])
+
+        # Non-replicable before sharding_filter
+        # shuffle in dispatch process
+        single_br_dp, map_dp, end_dp = _make_dp()
+        graph = traverse_dps(end_dp)
+        round_robin_dispatcher = ShardingRoundRobinDispatcher(single_br_dp, SHARDING_PRIORITIES.MULTIPROCESSING)
+        replace_dp(graph, single_br_dp, round_robin_dispatcher)
+        sf_dp = map_dp.sharding_filter()
+        replace_dp(graph, map_dp, sf_dp)
+        dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
+        # Determinism for non-replicable pipeline
+        _assert_deterministic_dl_res(dl, [i * 4 for i in range(10)])
+
+        # Non-replicable after sharding_filter
+        # shuffle in dispatch process
+        single_br_dp, map_dp, end_dp = _make_dp()
+        graph = traverse_dps(end_dp)
+        sf_dp = single_br_dp.sharding_filter()
+        replace_dp(graph, single_br_dp, sf_dp)
+        round_robin_dispatcher = ShardingRoundRobinDispatcher(map_dp, SHARDING_PRIORITIES.MULTIPROCESSING)
+        replace_dp(graph, map_dp, round_robin_dispatcher)
+        dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
+        # Determinism for non-replicable pipeline
+        _assert_deterministic_dl_res(dl, [i * 4 for i in range(10)])
+
+    def test_multi_branch_non_replicable(self):
+        r"""
+        For multi-branch pipeline with a non-replicable DataPipe on one branch,
+        all ``sharding_filter`` on the other branches should remain replicable.
+        """
+
+        def _make_dp():
+            branch1_dp = IterableWrapper(list(range(10))).shuffle()
+            branch2_dp = IterableWrapper(list(range(10))).shuffle()
+            map_dp = branch1_dp.map(_x_mult_2)
+            end_dp = map_dp.zip(branch2_dp)
+            return branch1_dp, map_dp, branch2_dp, end_dp
+
+        def _assert_deterministic_dl_res(dl, exp1, exp2):
+            torch.manual_seed(123)
+            res = list(dl)
+            res1, res2 = list(zip(*res))
+            self.assertEqual(sorted(res1), exp1)
+            self.assertEqual(sorted(res2), exp2)
+            # Second epoch
+            torch.manual_seed(123)
+            self.assertEqual(list(dl), res)
+            # Different seed
+            torch.manual_seed(321)
+            self.assertNotEqual(list(dl), res)
+            # Properly shutdown
+            dl.shutdown()
+
+        # By-default, all replicable
+        branch1_dp, _, branch2_dp, end_dp = _make_dp()
+        graph = traverse_dps(end_dp)
+        sf1_dp = branch1_dp.sharding_filter()
+        sf2_dp = branch2_dp.sharding_filter()
+        replace_dp(graph, branch1_dp, sf1_dp)
+        replace_dp(graph, branch2_dp, sf2_dp)
+        dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
+        # Determinism and dynamic sharding
+        _assert_deterministic_dl_res(dl, [i * 2 for i in range(10)], list(range(10)))
+
+        # Non-replicable on one branch
+        # shuffle in dispatch process
+        branch1_dp, _, branch2_dp, end_dp = _make_dp()
+        graph = traverse_dps(end_dp)
+        non_replicable_dp = ShardingRoundRobinDispatcher(branch1_dp, SHARDING_PRIORITIES.MULTIPROCESSING)
+        replace_dp(graph, branch1_dp, non_replicable_dp)
+        # The other branch should has a sharding_filter to make data even
+        sf_dp = branch2_dp.sharding_filter()
+        replace_dp(graph, branch2_dp, sf_dp)
+        dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
+        # Determinism for non-replicable pipeline
+        _assert_deterministic_dl_res(dl, [i * 2 for i in range(10)], list(range(10)))
+
+        # Non-replicable on both branches
+        # shuffle in dispatch process
+        branch1_dp, _, branch2_dp, end_dp = _make_dp()
+        graph = traverse_dps(end_dp)
+        non_replicable_dp1 = ShardingRoundRobinDispatcher(branch1_dp, SHARDING_PRIORITIES.MULTIPROCESSING)
+        replace_dp(graph, branch1_dp, non_replicable_dp1)
+        non_replicable_dp2 = ShardingRoundRobinDispatcher(branch2_dp, SHARDING_PRIORITIES.MULTIPROCESSING)
+        replace_dp(graph, branch2_dp, non_replicable_dp2)
+        dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
+        # Determinism for non-replicable pipeline
+        _assert_deterministic_dl_res(dl, [i * 2 for i in range(10)], list(range(10)))
 
 
 if __name__ == "__main__":
