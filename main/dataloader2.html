@@ -30,6 +30,7 @@
   <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
   <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -220,7 +221,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+a1612ee ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+e15e145 ) &#x25BC</a>
     </div>
     
 
@@ -416,9 +417,6 @@ and reset the internal state of <code class="docutils literal notranslate"><span
 <li><p><a class="reference internal" href="generated/torchdata.datapipes.map.SequenceWrapper.html#torchdata.datapipes.map.SequenceWrapper" title="torchdata.datapipes.map.SequenceWrapper"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.map.SequenceWrapper</span></code></a>: <code class="docutils literal notranslate"><span class="pre">torch.utils.data.Dataset</span></code></p></li>
 <li><p><a class="reference internal" href="generated/torchdata.datapipes.iter.IterableWrapper.html#torchdata.datapipes.iter.IterableWrapper" title="torchdata.datapipes.iter.IterableWrapper"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.IterableWrapper</span></code></a>: <code class="docutils literal notranslate"><span class="pre">torch.utils.data.IterableDataset</span></code></p></li>
 </ul>
-<p>Both custom <code class="docutils literal notranslate"><span class="pre">worker_init_fn</span></code> and <code class="docutils literal notranslate"><span class="pre">worker_reset_fn</span></code> require the following two arguments:
-- <code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.dataloader2.utils.WorkerInfo</span></code>
-- <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code></p>
 </section>
 <section id="readingservice">
 <h2>ReadingService<a class="headerlink" href="#readingservice" title="Permalink to this heading">¶</a></h2>
@@ -432,11 +430,109 @@ and reset the internal state of <code class="docutils literal notranslate"><span
 <td><p><code class="docutils literal notranslate"><span class="pre">MultiProcessingReadingService</span></code> that utilizes <code class="docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code> to launch subprocesses for <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.dataloader2.PrototypeMultiProcessingReadingService.html#torchdata.dataloader2.PrototypeMultiProcessingReadingService" title="torchdata.dataloader2.PrototypeMultiProcessingReadingService"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PrototypeMultiProcessingReadingService</span></code></a></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">PrototypeMultiProcessingReadingService</span></code> that spawns multiple subprocesses to iterate the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.</p></td>
+<td><p>Spawns multiple worker processes to load data from the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.</p></td>
 </tr>
 </tbody>
 </table>
 <p>Each <code class="docutils literal notranslate"><span class="pre">ReadingServices</span></code> would take the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph and modify it to achieve a few features like dynamic sharding, sharing random seeds and snapshoting for multi-/distributed processes.</p>
+<section id="dynamic-sharding">
+<h3>Dynamic Sharding<a class="headerlink" href="#dynamic-sharding" title="Permalink to this heading">¶</a></h3>
+<p>Dynamic sharding is achieved by <code class="docutils literal notranslate"><span class="pre">PrototypeMultiProcessingReadingService</span></code> and <code class="docutils literal notranslate"><span class="pre">DistributedReadingService</span></code> to shard the pipeline based on the information of corresponding multiprocessing and distributed workers. And, TorchData offers two types of <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> letting users to define the sharding place within the pipeline.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">sharding_filter</span></code>: When the pipeline is replicable, each distributed/multiprocessing worker loads data from one replica of the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph, and skip the data not blonged to the corresponding worker at the place of <code class="docutils literal notranslate"><span class="pre">sharding_filter</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sharding_round_robin_dispatch</span></code>: When there is any non-replicable <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> (<code class="docutils literal notranslate"><span class="pre">sharding_round_robin_dispatch</span></code>) in the pipeline, a dispatching process will be created to load data from the non-replicable <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> and distributed data to the subsequent worker processes.</p></li>
+</ul>
+<p>The following is an example of having two types of sharding strategies in the pipeline.</p>
+digraph Example {
+    subgraph cluster_replicable {
+        label=&quot;Replicable&quot;
+        a -&gt; b -&gt; c -&gt; d -&gt; l;
+        color=blue;
+    }
+
+    subgraph cluster_non_replicable {
+        style=filled;
+        color=lightgrey;
+        node [style=filled,color=white];
+        label=&quot;Non-Replicable&quot;
+        e -&gt; f -&gt; g -&gt; k;
+        h -&gt; i -&gt; j -&gt; k;
+    }
+
+    k -&gt; l -&gt; fullsync -&gt; end;
+
+    a [label=&quot;DP1&quot;];
+    b [label=&quot;shuffle&quot;];
+    c [label=&quot;sharding_filter&quot;, color=blue];
+    d [label=&quot;DP4&quot;];
+    e [label=&quot;DP2&quot;];
+    f [label=&quot;shuffle&quot;];
+    g [label=&quot;sharding_round_robin_dispatch&quot;, style=&quot;filled,rounded&quot;, color=red, fillcolor=white];
+    h [label=&quot;DP3&quot;];
+    i [label=&quot;shuffle&quot;];
+    j [label=&quot;sharding_round_robin_dispatch&quot;, style=&quot;filled,rounded&quot;, color=red, fillcolor=white];
+    k [label=&quot;DP5 (Lowest common ancestor)&quot;];
+    l [label=&quot;DP6&quot;];
+    fullsync;
+    end [shape=box];
+}<p>When multiprocessing takes place, the graph becomes:</p>
+digraph Example {
+    subgraph cluster_worker_0 {
+        label=&quot;Worker 0&quot;
+        a0 -&gt; b0 -&gt; c0 -&gt; d0 -&gt; l0;
+        m0 -&gt; l0;
+        color=blue;
+    }
+
+    subgraph cluster_worker_1 {
+        label=&quot;Worker 1&quot;
+        a1 -&gt; b1 -&gt; c1 -&gt; d1 -&gt; l1;
+        m1 -&gt; l1;
+        color=blue;
+    }
+
+    subgraph cluster_non_replicable {
+        style=filled;
+        color=lightgrey;
+        node [style=filled,color=white];
+        label=&quot;Non-Replicable&quot;
+        e -&gt; f -&gt; g -&gt; k;
+        h -&gt; i -&gt; j -&gt; k;
+        k -&gt; round_robin_demux;
+    }
+
+    round_robin_demux -&gt; m0;
+    round_robin_demux -&gt; m1;
+    l0 -&gt; n;
+    l1 -&gt; n;
+    n -&gt; fullsync -&gt; end;
+
+    a0 [label=&quot;DP1&quot;];
+    b0 [label=&quot;shuffle&quot;];
+    c0 [label=&quot;sharding_filter&quot;, color=blue];
+    d0 [label=&quot;DP4&quot;];
+    a1 [label=&quot;DP1&quot;];
+    b1 [label=&quot;shuffle&quot;];
+    c1 [label=&quot;sharding_filter&quot;, color=blue];
+    d1 [label=&quot;DP4&quot;];
+    e [label=&quot;DP2&quot;];
+    f [label=&quot;shuffle&quot;];
+    g [label=&quot;sharding_round_robin_dispatch&quot;, style=&quot;filled,rounded&quot;, color=red, fillcolor=white];
+    h [label=&quot;DP3&quot;];
+    i [label=&quot;shuffle&quot;];
+    j [label=&quot;sharding_round_robin_dispatch&quot;, style=&quot;filled,rounded&quot;, color=red, fillcolor=white];
+    k [label=&quot;DP5 (Lowest common ancestor)&quot;];
+    fullsync;
+    l0 [label=&quot;DP6&quot;];
+    l1 [label=&quot;DP6&quot;];
+    m0 [label=&quot;Client&quot;]
+    m1 [label=&quot;Client&quot;]
+    n [label=&quot;Client&quot;]
+    end [shape=box];
+}<p><code class="docutils literal notranslate"><span class="pre">Client</span></code> in the graph is a <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> that send request and receive response from multiprocessing queues.</p>
+</section>
+<section id="graph-mode">
+<h3>Graph Mode<a class="headerlink" href="#graph-mode" title="Permalink to this heading">¶</a></h3>
 <p>This also allows easier transition of data-preprocessing pipeline from research to production. After the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph is created and validated with the <code class="docutils literal notranslate"><span class="pre">ReadingServices</span></code>, a different <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> that configures and connects to the production service/infra such as <code class="docutils literal notranslate"><span class="pre">AIStore</span></code> can be provided to <a class="reference internal" href="#torchdata.dataloader2.DataLoader2" title="torchdata.dataloader2.DataLoader2"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader2</span></code></a> as a drop-in replacement. The <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> could potentially search the graph, and find <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> operations that can be delegated to the production service/infra, then modify the graph correspondingly to achieve higher-performant execution.</p>
 <p>The followings are interfaces for custom <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code>.</p>
 <dl class="py class">
@@ -540,6 +636,7 @@ of the adapted <code class="docutils literal notranslate"><span class="pre">Data
 </tr>
 </tbody>
 </table>
+</section>
 </section>
 <section id="adapter">
 <h2>Adapter<a class="headerlink" href="#adapter" title="Permalink to this heading">¶</a></h2>
@@ -646,6 +743,8 @@ needs, <code class="docutils literal notranslate"><span class="pre">DataLoader2<
 </ul>
 </li>
 <li><a class="reference internal" href="#readingservice">ReadingService</a><ul>
+<li><a class="reference internal" href="#dynamic-sharding">Dynamic Sharding</a></li>
+<li><a class="reference internal" href="#graph-mode">Graph Mode</a><ul>
 <li><a class="reference internal" href="#torchdata.dataloader2.ReadingServiceInterface"><code class="docutils literal notranslate"><span class="pre">ReadingServiceInterface</span></code></a><ul>
 <li><a class="reference internal" href="#torchdata.dataloader2.ReadingServiceInterface.finalize"><code class="docutils literal notranslate"><span class="pre">ReadingServiceInterface.finalize()</span></code></a></li>
 <li><a class="reference internal" href="#torchdata.dataloader2.ReadingServiceInterface.finalize_iteration"><code class="docutils literal notranslate"><span class="pre">ReadingServiceInterface.finalize_iteration()</span></code></a></li>
@@ -656,6 +755,8 @@ needs, <code class="docutils literal notranslate"><span class="pre">DataLoader2<
 <li><a class="reference internal" href="#torchdata.dataloader2.CheckpointableReadingServiceInterface"><code class="docutils literal notranslate"><span class="pre">CheckpointableReadingServiceInterface</span></code></a><ul>
 <li><a class="reference internal" href="#torchdata.dataloader2.CheckpointableReadingServiceInterface.checkpoint"><code class="docutils literal notranslate"><span class="pre">CheckpointableReadingServiceInterface.checkpoint()</span></code></a></li>
 <li><a class="reference internal" href="#torchdata.dataloader2.CheckpointableReadingServiceInterface.restore"><code class="docutils literal notranslate"><span class="pre">CheckpointableReadingServiceInterface.restore()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -685,9 +786,6 @@ needs, <code class="docutils literal notranslate"><span class="pre">DataLoader2<
      
        <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
          <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-         <script src="_static/jquery.js"></script>
-         <script src="_static/underscore.js"></script>
-         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="_static/doctools.js"></script>
          <script src="_static/sphinx_highlight.js"></script>
      

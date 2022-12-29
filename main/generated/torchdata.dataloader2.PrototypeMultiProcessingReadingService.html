@@ -30,6 +30,7 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/graphviz.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -220,7 +221,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+a1612ee ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+e15e145 ) &#x25BC</a>
     </div>
     
 
@@ -344,8 +345,12 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.dataloader2.PrototypeMultiProcessingReadingService">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.dataloader2.</span></span><span class="sig-name descname"><span class="pre">PrototypeMultiProcessingReadingService</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_workers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multiprocessing_context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">worker_prefetch_cnt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">main_prefetch_cnt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">worker_init_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">WorkerInfo</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">worker_reset_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">WorkerInfo</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.dataloader2.PrototypeMultiProcessingReadingService" title="Permalink to this definition">¶</a></dt>
-<dd><p><code class="docutils literal notranslate"><span class="pre">PrototypeMultiProcessingReadingService</span></code> that spawns multiple subprocesses to iterate the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.
-This <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> is still under prototype stage and will replace <code class="docutils literal notranslate"><span class="pre">MultiProcessingReadingService</span></code> eventually.</p>
+<dd><p>Spawns multiple worker processes to load data from the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.
+If any non-replicable <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> (<code class="docutils literal notranslate"><span class="pre">sharding_round_robin_dispatch</span></code>) is presented in the graph,
+a separate dispatching process will be created to load data from the lowest common ancestor
+of all non-replicable <code class="docutils literal notranslate"><span class="pre">DataPipes</span></code> and distributes data to each worker process in the round-robin manner
+Then, the subsequent <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph in each worker process will process the data from the dispatching
+process and eventually return the result to the main process.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -367,6 +372,16 @@ and <code class="docutils literal notranslate"><span class="pre">DataPipe</span>
 </ul>
 </dd>
 </dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul class="simple">
+<li><p>This <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> is still in prototype mode and will replace
+<a class="reference internal" href="torchdata.dataloader2.MultiProcessingReadingService.html#torchdata.dataloader2.MultiProcessingReadingService" title="torchdata.dataloader2.MultiProcessingReadingService"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiProcessingReadingService</span></code></a>.</p></li>
+<li><p>It currently does both distributed and multiprocessing sharding over the pipeline.
+The distributed-related code is going to be removed when <code class="docutils literal notranslate"><span class="pre">SequentialReadingService</span></code>
+is provided to combine the <a class="reference internal" href="torchdata.dataloader2.DistributedReadingService.html#torchdata.dataloader2.DistributedReadingService" title="torchdata.dataloader2.DistributedReadingService"><code class="xref py py-class docutils literal notranslate"><span class="pre">DistributedReadingService</span></code></a> and this <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code>.</p></li>
+</ul>
+</div>
 <dl class="py method">
 <dt class="sig sig-object py" id="torchdata.dataloader2.PrototypeMultiProcessingReadingService.finalize">
 <span class="sig-name descname"><span class="pre">finalize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#torchdata.dataloader2.PrototypeMultiProcessingReadingService.finalize" title="Permalink to this definition">¶</a></dt>
@@ -460,9 +475,6 @@ of every time getting <code class="docutils literal notranslate"><span class="pr
      
        <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
          <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-         <script src="../_static/jquery.js"></script>
-         <script src="../_static/underscore.js"></script>
-         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
          <script src="../_static/sphinx_highlight.js"></script>
      
