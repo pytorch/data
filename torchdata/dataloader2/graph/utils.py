@@ -19,9 +19,13 @@ def find_dps(graph: DataPipeGraph, dp_type: Type[DataPipe]) -> List[DataPipe]:
     instances with the provided DataPipe type.
     """
     dps: List[DataPipe] = []
+    cache: Set[int] = set()
 
     def helper(g) -> None:  # pyre-ignore
-        for _, (dp, src_graph) in g.items():
+        for dp_id, (dp, src_graph) in g.items():
+            if dp_id in cache:
+                continue
+            cache.add(dp_id)
             if type(dp) is dp_type:  # Please not use `isinstance`, there is a bug.
                 dps.append(dp)
             helper(src_graph)
