@@ -7,8 +7,13 @@
 import time
 import types
 
+from functools import partial
+from typing import Callable
+
 from torch.utils.data import IterDataPipe
 from torchdata.dataloader2 import communication
+from torchdata.dataloader2.graph import DataPipe
+from torchdata.dataloader2.utils import WorkerInfo
 
 DEFAULT_NON_BLOCKING_SLEEP = 0.001
 
@@ -208,3 +213,62 @@ class QueueWrapper(NonBlocking):
         if isinstance(response, communication.messages.InvalidStateResponse):
             raise NotAvailable
         return response.value
+
+
+class _IterateQueueDataPipes(IterDataPipe):
+    r"""
+    Takes in ``QueueWrapper``s and iterates through them in a round-robin manner to get batches one-by-one.
+
+    Typically, each worker has one ``QueueWrapper``.
+    """
+
+    def __init__(self, datapipes):
+        # TODO(VitalyFedyunin): Consider combining _IterateQueueDataPipes and QueueWrapper
+        # into one class, which supports any number of queues.
+        self.datapipes = datapipes
+        for dp in self.datapipes:
+            if not isinstance(dp, QueueWrapper):
+                raise Exception("Source datapipes should be an instance of iter.QueueWrapper")
+
+    def __iter__(self):
+        total_pipes = len(self.datapipes)
+        disabled_pipe = [False] * len(self.datapipes)
+        cnt_disabled_pipes = 0
+
+        for idx in range(total_pipes):
+            self.datapipes[idx].protocol.request_next()
+
+        while cnt_disabled_pipes < total_pipes:
+            for idx in range(total_pipes):
+                if not disabled_pipe[idx]:
+                    response = self.datapipes[idx].protocol.get_response_next(block=True)
+                    if isinstance(response, communication.messages.StopIterationResponse):
+                        disabled_pipe[idx] = True
+                        cnt_disabled_pipes += 1
+                        continue
+                    if isinstance(response, communication.messages.InvalidStateResponse):
+                        raise communication.iter.InvalidStateResetRequired
+                    if isinstance(response, communication.messages.TerminateResponse):
+                        raise communication.iter.TerminateRequired
+                    self.datapipes[idx].protocol.request_next()
+                    yield response.value
+
+    def reset(self):
+        # NonBlocking DataPipes do not reset automatically, have to do it manually
+        for dp in self.datapipes:
+            dp.reset_iterator()
+
+    def reset_epoch(self, reset_fn: Callable[[WorkerInfo, DataPipe], DataPipe]):
+        for dp in self.datapipes:
+            dp.protocol.discard_existing_request()
+        num_workers = len(self.datapipes)
+        for worker_id, dp in enumerate(self.datapipes):
+            worker_info = WorkerInfo(num_workers, worker_id)
+            dp.protocol.request_reset_epoch(partial(reset_fn, worker_info=worker_info))
+            while True:
+                try:
+                    dp.protocol.get_response_reset_epoch()
+                    break
+                except communication.protocol.EmptyQueue:
+                    if NonBlocking.not_available_hook is not None:
+                        NonBlocking.not_available_hook()

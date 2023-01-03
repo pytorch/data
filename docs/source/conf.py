@@ -54,6 +54,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.doctest",
+    "sphinx.ext.graphviz",
 ]
 
 # Do not execute standard reST doctest blocks so that documentation can

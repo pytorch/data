@@ -4,26 +4,28 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-
-import multiprocessing as mp
+import multiprocessing as py_mp
 
 from abc import ABC, abstractmethod
 from datetime import timedelta
 from functools import partial
-from typing import Callable, List, Optional
+from multiprocessing.queues import Queue
+from typing import Callable, List, Optional, Tuple
 
 import torch
 import torch.distributed as dist
+import torch.multiprocessing as mp
 
 from torch.utils.data import DataLoader
 from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
 
 from torchdata._constants import default_dl2_worker_join_timeout_in_s, default_timeout_in_s
 from torchdata.dataloader2 import communication
-from torchdata.dataloader2.graph import DataPipe
+from torchdata.dataloader2.graph import DataPipe, replace_dp, traverse_dps
 from torchdata.dataloader2.utils import generate_random_scalar_tensor, process_init_fn, process_reset_fn, WorkerInfo
+from torchdata.dataloader2.utils.dispatch import _DummyIterDataPipe, find_lca_non_replicable_dp
 from torchdata.dataloader2.utils.worker import _DistInfo
-from torchdata.datapipes.iter import FullSync, IterableWrapper, IterDataPipe
+from torchdata.datapipes.iter import FullSync, IterableWrapper
 
 
 class ReadingServiceInterface(ABC):
@@ -109,66 +111,14 @@ def _collate_no_op(batch):
     return batch[0]
 
 
-class _IterateQueueDataPipes(IterDataPipe):
-    r"""
-    Takes in ``QueueWrapper``s and iterates through them in a round-robin manner to get batches one-by-one.
-
-    Typically, each worker has one ``QueueWrapper``.
-    """
-
-    def __init__(self, datapipes):
-        # TODO(VitalyFedyunin): Consider combining _IterateQueueDataPipes and QueueWrapper
-        # into one class, which supports any number of queues.
-        self.datapipes = datapipes
-        for dp in self.datapipes:
-            if not isinstance(dp, communication.iter.QueueWrapper):
-                raise Exception("Source datapipes should be an instance of iter.QueueWrapper")
-
-    def __iter__(self):
-        total_pipes = len(self.datapipes)
-        disabled_pipe = [False] * len(self.datapipes)
-        cnt_disabled_pipes = 0
-
-        for idx in range(total_pipes):
-            self.datapipes[idx].protocol.request_next()
-
-        while cnt_disabled_pipes < total_pipes:
-            for idx in range(total_pipes):
-                if not disabled_pipe[idx]:
-                    response = self.datapipes[idx].protocol.get_response_next(block=True)
-                    if isinstance(response, communication.messages.StopIterationResponse):
-                        disabled_pipe[idx] = True
-                        cnt_disabled_pipes += 1
-                        continue
-                    if isinstance(response, communication.messages.InvalidStateResponse):
-                        raise communication.iter.InvalidStateResetRequired
-                    if isinstance(response, communication.messages.TerminateResponse):
-                        raise communication.iter.TerminateRequired
-                    self.datapipes[idx].protocol.request_next()
-                    yield response.value
-
-    def reset(self):
-        # Collect all existing requests results to clear queues
-        for dp in self.datapipes:
-            if dp.protocol.waiting_for_response():
-                dp.protocol.get_response_next(block=True)
-        # NonBlocking DataPipes do not reset automatically, have to do it manually
-        for dp in self.datapipes:
-            dp.reset_iterator()
-
-    def reset_epoch(self, reset_fn: Callable[[WorkerInfo, DataPipe], DataPipe]):
-        for dp in self.datapipes:
-            dp.protocol.discard_existing_request()
-        num_workers = len(self.datapipes)
-        for worker_id, dp in enumerate(self.datapipes):
-            worker_info = WorkerInfo(num_workers, worker_id)
-            dp.protocol.request_reset_epoch(partial(reset_fn, worker_info=worker_info))
-
-
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     r"""
-    ``PrototypeMultiProcessingReadingService`` that spawns multiple subprocesses to iterate the ``DataPipe`` graph.
-    This ``ReadingService`` is still under prototype stage and will replace ``MultiProcessingReadingService`` eventually.
+    Spawns multiple worker processes to load data from the ``DataPipe`` graph.
+    If any non-replicable ``DataPipe`` (``sharding_round_robin_dispatch``) is presented in the graph,
+    a separate dispatching process will be created to load data from the lowest common ancestor
+    of all non-replicable ``DataPipes`` and distributes data to each worker process in the round-robin manner
+    Then, the subsequent ``DataPipe`` graph in each worker process will process the data from the dispatching
+    process and eventually return the result to the main process.
 
     Args:
         num_workers (int, optional): How many subprocesses to use for data loading.
@@ -187,6 +137,13 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             of each epoch in each worker process with ``WorkerInfo``
             and ``DataPipe`` as the expected arguments.
 
+    Note:
+        - This ``ReadingService`` is still in prototype mode and will replace
+          :class:`MultiProcessingReadingService`.
+        - It currently does both distributed and multiprocessing sharding over the pipeline.
+          The distributed-related code is going to be removed when ``SequentialReadingService``
+          is provided to combine the :class:`DistributedReadingService` and this ``ReadingService``.
+
     """
     num_workers: int
     multiprocessing_context: Optional[str]
@@ -194,7 +151,8 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     main_prefetch_cnt: int
     worker_init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]]
     worker_reset_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]]
-    processes: List
+    _worker_processes: List[Tuple[py_mp.process.BaseProcess, Queue, Queue]]
+    _dispatch_process: Optional[Tuple[py_mp.process.BaseProcess, List[Queue], List[Queue]]]
     datapipes: List
     end_datapipe: Optional[DataPipe]
     _mp: bool
@@ -222,7 +180,8 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         self.main_prefetch_cnt = main_prefetch_cnt
         self.worker_init_fn = worker_init_fn
         self.worker_reset_fn = worker_reset_fn
-        self.processes = []
+        self._worker_processes = []
+        self._dispatch_process = None
         self.datapipes = []
         self.end_datapipe = None
         self._mp = num_workers > 0
@@ -255,24 +214,48 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
         ctx = mp.get_context(self.multiprocessing_context)
 
+        # Launch dispatching process for the lowest common ancestor of non-replicable DataPipes
+        if self.num_workers > 1:
+            graph = traverse_dps(datapipe)
+            non_replicable_dp = find_lca_non_replicable_dp(graph)
+            if non_replicable_dp is not None:
+                dummy_dp = _DummyIterDataPipe()
+                graph = replace_dp(graph, non_replicable_dp, dummy_dp)  # type: ignore[arg-type]
+                datapipe = list(graph.values())[0][0]
+                # TODO(ejguan): Determine buffer_size at runtime or use unlimited buffer
+                round_robin_dps = non_replicable_dp.round_robin_demux(num_instances=self.num_workers)
+                # TODO(ejguan): Benchmark if we need to prefetch in dispatching process
+                process, req_queues, res_queues = communication.eventloop.CreateProcessForMultipleDataPipelines(
+                    ctx,
+                    round_robin_dps,
+                )
+                assert len(req_queues) == self.num_workers and len(res_queues) == self.num_workers
+                process.daemon = True
+                process.start()
+                self._dispatch_process = (process, req_queues, res_queues)
+
         for worker_id in range(self.num_workers):
             worker_info = WorkerInfo(self.num_workers, worker_id)
+            # Dispatching process for non-replicable DataPipes exists
+            if self._dispatch_process is not None:
+                # Use the placehold to pass request/response queue to each worker process
+                dummy_dp.req_queue = self._dispatch_process[1][worker_id]
+                dummy_dp.res_queue = self._dispatch_process[2][worker_id]
             call_on_process_init = partial(process_init_fn, worker_info=worker_info, custom_init_fn=self.worker_init_fn)
-            # Process contains a ProtocolServer
-            (process, req_queue, res_queue) = communication.eventloop.SpawnProcessForDataPipeline(
+            (process, req_queue, res_queue) = communication.eventloop.CreateProcessForDataPipeline(
                 ctx,
                 datapipe,
                 call_on_process_init,
             )
             process.daemon = True
             process.start()
-            self.processes.append((process, req_queue, res_queue))  # These queues are independent
+            self._worker_processes.append((process, req_queue, res_queue))  # These queues are independent
             local_datapipe = communication.iter.QueueWrapper(
                 communication.protocol.IterDataPipeQueueProtocolClient(req_queue, res_queue)
             )
             self.datapipes.append(local_datapipe)
 
-        self.end_datapipe = _IterateQueueDataPipes(self.datapipes)  # type: ignore[assignment]
+        self.end_datapipe = communication.iter._IterateQueueDataPipes(self.datapipes)  # type: ignore[assignment]
         if self.main_prefetch_cnt > 0:
             self.end_datapipe = self.end_datapipe.prefetch(self.main_prefetch_cnt)  # type: ignore[union-attr]
         return self.end_datapipe  # type: ignore[return-value]
@@ -324,7 +307,8 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             _ = res_queue.get()
             process.join(default_dl2_worker_join_timeout_in_s)
 
-        for process, req_queue, res_queue in self.processes:
+        # Clean up worker processes
+        for process, req_queue, res_queue in self._worker_processes:
             try:
                 clean_me(process, req_queue, res_queue)
             except AttributeError:
@@ -334,7 +318,24 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             except TimeoutError:
                 pass
 
-        self.processes = []
+        # Clean up dispatching process
+        if self._dispatch_process:
+            try:
+                # Send TerminateRequest to all loops to make sure `zip_longest` exits
+                for req_queue in self._dispatch_process[1]:
+                    req_queue.put(communication.messages.TerminateRequest())
+                for res_queue in self._dispatch_process[2]:
+                    _ = res_queue.get()
+                self._dispatch_process[0].join(default_dl2_worker_join_timeout_in_s)
+            except AttributeError:
+                # Due to non-deterministic order of destruction, by the time `finalize` is called,
+                # some objects may already be `None`.
+                pass
+            except TimeoutError:
+                pass
+
+        self._worker_processes = []
+        self._dispatch_process = None
 
         if self._pg is not None:
             dist.destroy_process_group(self._pg)
