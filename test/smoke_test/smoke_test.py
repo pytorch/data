@@ -26,5 +26,3 @@ if __name__ == "__main__":
     options = parser.parse_args()
     if options.s3:
         s3_test()
-
-    main()

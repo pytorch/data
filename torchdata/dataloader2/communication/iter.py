@@ -8,9 +8,14 @@ import time
 import types
 import warnings
 
+from collections import deque
+from functools import partial
+from typing import Callable, Deque, List
+
 from torch.utils.data import IterDataPipe
 from torchdata.dataloader2 import communication
-from torchdata.dataloader2.graph import list_dps, traverse_dps
+from torchdata.dataloader2.graph import DataPipe, list_dps, traverse_dps
+from torchdata.dataloader2.utils import WorkerInfo
 
 DEFAULT_NON_BLOCKING_SLEEP = 0.001
 
@@ -255,3 +260,79 @@ class QueueWrapper(NonBlocking):
         if isinstance(response, communication.messages.InvalidStateResponse):
             raise NotAvailable
         return response.value
+
+
+class _IterateQueueDataPipes(IterDataPipe):
+    r"""
+    Takes in ``QueueWrapper``s and iterates through them in a round-robin manner to get batches one-by-one.
+
+    Typically, each worker has one ``QueueWrapper``.
+    """
+
+    def __init__(self, datapipes):
+        # TODO(VitalyFedyunin): Consider combining _IterateQueueDataPipes and QueueWrapper
+        #                       into one class, which supports any number of queues.
+        for dp in datapipes:
+            if not isinstance(dp, communication.iter.QueueWrapper):
+                raise Exception("Source datapipes should be an instance of iter.QueueWrapper")
+        self.datapipes = datapipes
+        self.res_buffers: List[Deque] = [deque() for _ in range(len(datapipes))]
+
+    def __iter__(self):
+        total_pipes = len(self.datapipes)
+        disabled_pipe = [False] * len(self.datapipes)
+        cnt_disabled_pipes = 0
+
+        for idx in range(total_pipes):
+            self.datapipes[idx].protocol.request_next()
+
+        while cnt_disabled_pipes < total_pipes:
+            for idx in range(total_pipes):
+                if not disabled_pipe[idx]:
+                    # Check if buffer of the DataPipe is empty, if not, yield one before requesting next
+                    if len(self.res_buffers[idx]):
+                        response = self.res_buffers[idx].popleft()
+                    else:
+                        response = self.datapipes[idx].protocol.get_response_next(block=True)
+                    if isinstance(response, communication.messages.StopIterationResponse):
+                        disabled_pipe[idx] = True
+                        cnt_disabled_pipes += 1
+                        continue
+                    if isinstance(response, communication.messages.InvalidStateResponse):
+                        raise communication.iter.InvalidStateResetRequired
+                    if isinstance(response, communication.messages.TerminateResponse):
+                        raise communication.iter.TerminateRequired
+                    if len(self.res_buffers[idx]) == 0:  # Only request if buffer is empty
+                        self.datapipes[idx].protocol.request_next()
+                    yield response.value
+
+    def reset(self):
+        # TODO: The first first loop was removed by #919, confirm if they are still necessary
+        # Collect all existing requests results to clear queues
+        for dp in self.datapipes:
+            if dp.protocol.waiting_for_response():
+                dp.protocol.get_response_next(block=True)
+        # NonBlocking DataPipes do not reset automatically, have to do it manually
+        for dp in self.datapipes:
+            dp.reset_iterator()
+
+    def reset_epoch(self, reset_fn: Callable[[WorkerInfo, DataPipe], DataPipe]):
+        for dp in self.datapipes:
+            dp.protocol.discard_existing_request()
+        num_workers = len(self.datapipes)
+        for worker_id, dp in enumerate(self.datapipes):
+            worker_info = WorkerInfo(num_workers, worker_id)
+            dp.protocol.request_reset_epoch(partial(reset_fn, worker_info=worker_info))
+
+    def request_pause(self):
+        # Store results of pending requests
+        for idx, dp in enumerate(self.datapipes):
+            if dp.protocol.waiting_for_response():
+                res = dp.protocol.get_response_next(block=True)
+                self.res_buffers[idx].append(res)
+        for dp in self.datapipes:
+            dp.pause()
+
+    def request_resume(self):
+        for dp in self.datapipes:
+            dp.resume()
