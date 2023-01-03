@@ -115,6 +115,9 @@ from torchdata.datapipes.iter.util.rows2columnar import Rows2ColumnarIterDataPip
 from torchdata.datapipes.iter.util.samplemultiplexer import SampleMultiplexerDataPipe as SampleMultiplexer
 from torchdata.datapipes.iter.util.saver import SaverIterDataPipe as Saver
 from torchdata.datapipes.iter.util.shardexpander import ShardExpanderIterDataPipe as ShardExpander
+from torchdata.datapipes.iter.util.sharding import (
+    ShardingRoundRobinDispatcherIterDataPipe as ShardingRoundRobinDispatcher,
+)
 from torchdata.datapipes.iter.util.tararchiveloader import TarArchiveLoaderIterDataPipe as TarArchiveLoader
 from torchdata.datapipes.iter.util.tfrecordloader import (
     TFRecordExample,
@@ -198,6 +201,7 @@ __all__ = [
     "Saver",
     "ShardExpander",
     "ShardingFilter",
+    "ShardingRoundRobinDispatcher",
     "Shuffler",
     "Slicer",
     "StreamReader",
