@@ -28,6 +28,7 @@ __all__ = ["Expected", "FullSyncIterDataPipe", "PrefetchTimeoutError"]
 class PrefetchTimeoutError(RuntimeError):
     def __init__(self, timeout: int) -> None:
         super().__init__(f"Fail to fetch data within {timeout} seconds")
+        self.timeout = timeout
 
 
 class _EndOfPrefetch:
