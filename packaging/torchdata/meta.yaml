@@ -36,6 +36,7 @@ build:
 test:
   imports:
     - torchdata
+    - torchdata.dataloader2
     - torchdata.datapipes
   source_files:
     - test
