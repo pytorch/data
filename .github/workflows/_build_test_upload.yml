@@ -487,6 +487,7 @@ jobs:
       - name: Build the docset
         run: |
           cd ./docs
+          sudo apt-get install -y graphviz
           pip3 install -r requirements.txt
           make html
           cd ..
