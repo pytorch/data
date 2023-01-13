@@ -217,14 +217,18 @@ class DataLoader2(Generic[T_co]):
         r"""
         Shuts down ``ReadingService`` and clean up iterator.
         """
-        if not self._reset_iter:
-            self._reset_iter = True
-            self._datapipe_iter = None
-        if not self._terminated:
-            if self.reading_service is not None:
-                self.reading_service.finalize_iteration()
-                self.reading_service.finalize()
-            self._terminated = True
+        try:
+            if not self._reset_iter:
+                self._reset_iter = True
+                self._datapipe_iter = None
+            if not self._terminated:
+                if self.reading_service is not None:
+                    self.reading_service.finalize_iteration()
+                    self.reading_service.finalize()
+                self._terminated = True
+        # Ignore AttributeError in case any attribute has been removed before `__del__`
+        except AttributeError:
+            pass
 
     def __enter__(self) -> "DataLoader2[T_co]":
         return self

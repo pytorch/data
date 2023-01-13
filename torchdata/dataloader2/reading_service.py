@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import multiprocessing as py_mp
+import queue
 
 from abc import ABC, abstractmethod
 from datetime import timedelta
@@ -235,15 +236,23 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
                 process.daemon = True
                 process.start()
                 self._dispatch_process = (process, req_queues, res_queues)
+                for req_queue in req_queues:
+                    req_queue.cancel_join_thread()
+                for res_queue in res_queues:
+                    res_queue.cancel_join_thread()
 
         for worker_id in range(self.num_workers):
             worker_info = WorkerInfo(self.num_workers, worker_id)
             # Dispatching process for non-replicable DataPipes exists
-            if self._dispatch_process is not None:
-                # Use the placehold to pass request/response queue to each worker process
-                dummy_dp.req_queue = self._dispatch_process[1][worker_id]
-                dummy_dp.res_queue = self._dispatch_process[2][worker_id]
-            call_on_process_init = partial(process_init_fn, worker_info=worker_info, custom_init_fn=self.worker_init_fn)
+            dispatching_req_queue = self._dispatch_process[1][worker_id] if self._dispatch_process is not None else None
+            dispatching_res_queue = self._dispatch_process[2][worker_id] if self._dispatch_process is not None else None
+            call_on_process_init = partial(
+                process_init_fn,
+                worker_info=worker_info,
+                custom_init_fn=self.worker_init_fn,
+                dispatching_req_queue=dispatching_req_queue,
+                dispatching_res_queue=dispatching_res_queue,
+            )
             (process, req_queue, res_queue) = communication.eventloop.CreateProcessForDataPipeline(
                 ctx,
                 datapipe,
@@ -260,6 +269,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         self.end_datapipe = communication.iter._IterateQueueDataPipes(self.datapipes)  # type: ignore[assignment]
         if self.main_prefetch_cnt > 0:
             self.end_datapipe = self.end_datapipe.prefetch(self.main_prefetch_cnt)  # type: ignore[union-attr]
+
         return self.end_datapipe  # type: ignore[return-value]
 
     def initialize_iteration(self) -> None:
@@ -307,7 +317,10 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             # TODO(619): Can send terminations simultaneously
             # TODO(620): Make termination a function of QueueWrapperDataPipe (similar to reset)
             req_queue.put(communication.messages.TerminateRequest())
-            _ = res_queue.get()
+            try:
+                _ = res_queue.get(timeout=default_dl2_worker_join_timeout_in_s)
+            except queue.Empty:
+                pass
             process.join(default_dl2_worker_join_timeout_in_s)
 
         # Clean up worker processes
@@ -328,7 +341,10 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
                 for req_queue in self._dispatch_process[1]:
                     req_queue.put(communication.messages.TerminateRequest())
                 for res_queue in self._dispatch_process[2]:
-                    _ = res_queue.get()
+                    try:
+                        _ = res_queue.get(timeout=default_dl2_worker_join_timeout_in_s)
+                    except queue.Empty:
+                        pass
                 self._dispatch_process[0].join(default_dl2_worker_join_timeout_in_s)
             except AttributeError:
                 # Due to non-deterministic order of destruction, by the time `finalize` is called,

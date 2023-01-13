@@ -196,7 +196,7 @@ jobs:
             conda activate wheel_build_env
           fi
           pip3 install dist/torchdata*.whl
-      - name: Run DataPipes Tests with pytest
+      - name: Run Smoke Tests
         shell: bash -l {0}
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
@@ -207,8 +207,7 @@ jobs:
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
             conda activate wheel_build_env
           fi
-          pip3 install -r test/requirements.txt
-          pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
+          python test/smoke_test/smoke_test.py
       - name: Upload Wheels to Github
         if: always()
         uses: actions/upload-artifact@v3
@@ -354,28 +353,6 @@ jobs:
           conda install -yq conda-build -c conda-forge
           packaging/build_conda.sh
           conda index ./conda-bld
-      - name: Install TorchData Conda Package
-        shell: bash -l {0}
-        run: |
-          if ${{ ! startsWith( matrix.os, 'windows' ) }}; then
-            source "${MINICONDA_INSTALL_PATH}/etc/profile.d/conda.sh"
-          fi
-          conda activate "${CONDA_ENV_PATH}"
-          if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
-            CONDA_CHANNEL=pytorch
-          else
-            CONDA_CHANNEL=pytorch-${{ needs.get_release_type.outputs.type }}
-          fi
-          conda install pytorch torchdata cpuonly -c $(pwd)/conda-bld/ -c "$CONDA_CHANNEL"
-      - name: Run DataPipes Tests with pytest
-        shell: bash -l {0}
-        run: |
-          if ${{ ! startsWith( matrix.os, 'windows' ) }}; then
-            source "${MINICONDA_INSTALL_PATH}/etc/profile.d/conda.sh"
-          fi
-          conda activate "${CONDA_ENV_PATH}"
-          conda env update --file test/requirements.yml
-          python -m pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Conda Package to Github
         if: always()
         uses: actions/upload-artifact@v3
@@ -510,6 +487,7 @@ jobs:
       - name: Build the docset
         run: |
           cd ./docs
+          sudo apt-get install -y graphviz
           pip3 install -r requirements.txt
           make html
           cd ..
