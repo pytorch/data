@@ -433,3 +433,109 @@ directory ``curated/covid-19/ecdc_cases/latest``, belonging to account ``pandemi
 
 If necessary, you can also access data in Azure Data Lake Storage Gen1 by using URIs staring with 
 ``adl://`` and ``abfs://``, as described in `README of adlfs repo <https://github.com/fsspec/adlfs/blob/main/README.md>`_
+
+Accessing Azure ML Datastores with ``fsspec`` DataPipes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+An Azure ML datastore is a *reference* to an existing storage account on Azure. The key benefits of creating and using an Azure ML datastore are:
+
+- A common and easy-to-use API to interact with different storage types in Azure (Blob/Files/<datastore>).
+- Easier to discover useful datastores when working as a team.
+- Authentication is automatically handled - both *credential-based* access (service principal/SAS/key) and *identity-based* access (Azure Active Directory/managed identity) are supported. When using credential-based authentication, you do not need to expose secrets in your code.
+
+This requires the installation of the library ``azureml-fsspec``
+(`documentation <https://learn.microsoft.com/python/api/azureml-fsspec/?view=azure-ml-py>`_).
+
+You can access data in an Azure ML datastore by providing URIs staring with ``azureml://``. 
+For example,
+`FSSpecFileLister <generated/torchdata.datapipes.iter.FSSpecFileLister.html>`_ (``.list_files_by_fsspec(...)``) 
+can be used to list files in a directory in a container:
+
+.. code:: python
+
+    from torchdata.datapipes.iter import IterableWrapper
+
+    # set the subscription_id, resource_group, and AzureML workspace_name
+    subscription_id = "<subscription_id>"
+    resource_group = "<resource_group>"
+    workspace_name = "<workspace_name>"
+
+    # set the datastore name and path on the datastore
+    datastore_name = "<datastore_name>"
+    path_on_datastore = "<path_on_datastore>"
+
+    uri = f"azureml://subscriptions/{subscription_id}/resourcegroups/{resource_group}/workspaces/{workspace_name}/datastores/{datastore_name}/paths/{path_on_datastore}"
+
+    dp = IterableWrapper([uri]).list_files_by_fsspec()
+    print(list(dp))
+    # ['azureml:///<sub_id>/resourcegroups/<rg_name>/workspaces/<ws_name>/datastores/<datastore>/paths/<folder>/file1.txt', 
+    # 'azureml:///<sub_id>/resourcegroups/<rg_name>/workspaces/<ws_name>/datastores/<datastore>/paths/<folder>/file2.txt', ...]
+
+You can also open files using `FSSpecFileOpener <generated/torchdata.datapipes.iter.FSSpecFileOpener.html>`_
+(``.open_files_by_fsspec(...)``) and stream them
+(if supported by the file format).
+
+Here is an example of loading a tar file from the default Azure ML datastore ``workspaceblobstore`` where the path is ``/cifar-10-python.tar.gz`` (top-level folder).
+
+.. code:: python
+
+    from torchdata.datapipes.iter import IterableWrapper
+
+    # set the subscription_id, resource_group, and AzureML workspace_name
+    subscription_id = "<subscription_id>"
+    resource_group = "<resource_group>"
+    workspace_name = "<workspace_name>"
+
+    # set the datastore name and path on the datastore
+    datastore_name = "workspaceblobstore"
+    path_on_datastore = "cifar-10-python.tar.gz"
+
+    uri = f"azureml://subscriptions/{subscription_id}/resourcegroups/{resource_group}/workspaces/{workspace_name}/datastores/{datastore_name}/paths/{path_on_datastore}"
+
+    dp = IterableWrapper([uri]) \
+            .open_files_by_fsspec(mode="rb") \
+            .load_from_tar()
+
+    for path, filestream in dp:
+        print(path)
+    # ['azureml:/subscriptions/<sub_id>/resourcegroups/<rg_name>/workspaces/<ws_name>/datastores/<datastore>/paths/cifar-10-python.tar.gz/cifar-10-batches-py/data_batch_4',
+    #   'azureml:/subscriptions/<sub_id>/resourcegroups/<rg_name>/workspaces/<ws_name>/datastores/<datastore>/paths/cifar-10-python.tar.gz/cifar-10-batches-py/readme.html',
+    #   'azureml:/subscriptions/<sub_id>/resourcegroups/<rg_name>/workspaces/<ws_name>/datastores/<datastore>/paths/cifar-10-python.tar.gz/cifar-10-batches-py/test_batch',
+    #   'azureml:/subscriptions/<sub_id>/resourcegroups/<rg_name>/workspaces/<ws_name>/datastores/<datastore>/paths/cifar-10-python.tar.gz/cifar-10-batches-py/data_batch_3',
+    #   'azureml:/subscriptions/<sub_id>/resourcegroups/<rg_name>/workspaces/<ws_name>/datastores/<datastore>/paths/cifar-10-python.tar.gz/cifar-10-batches-py/batches.meta',
+    #   'azureml:/subscriptions/<sub_id>/resourcegroups/<rg_name>/workspaces/<ws_name>/datastores/<datastore>/paths/cifar-10-python.tar.gz/cifar-10-batches-py/data_batch_2',
+    #   'azureml:/subscriptions/<sub_id>/resourcegroups/<rg_name>/workspaces/<ws_name>/datastores/<datastore>/paths/cifar-10-python.tar.gz/cifar-10-batches-py/data_batch_5',
+    #   'azureml:/subscriptions/<sub_id>/resourcegroups/<rg_name>/workspaces/<ws_name>/datastores/<datastore>/paths/cifar-10-python.tar.gz/cifar-10-batches-py/data_batch_1]
+
+Here is an example of loading a CSV file - the famous Titanic dataset (`download <https://raw.githubusercontent.com/Azure/azureml-examples/main/cli/assets/data/sample-data/titanic.csv>`_) - from the Azure ML datastore ``workspaceblobstore`` where the path is ``/titanic.csv`` (top-level folder).
+
+.. code:: python
+
+    from torchdata.datapipes.iter import IterableWrapper
+
+    # set the subscription_id, resource_group, and AzureML workspace_name
+    subscription_id = "<subscription_id>"
+    resource_group = "<resource_group>"
+    workspace_name = "<workspace_name>"
+
+    # set the datastore name and path on the datastore
+    datastore_name = "workspaceblobstore"
+    path_on_datastore = "titanic.csv"
+
+    uri = f"azureml://subscriptions/{subscription_id}/resourcegroups/{resource_group}/workspaces/{workspace_name}/datastores/{datastore_name}/paths/{path_on_datastore}"
+
+    def row_processer(row):
+        # return the label and data (the class and age of the passenger)
+        # if missing age, set to 50
+        if row[5] == "":
+            row[5] = 50.0
+        return {"label": np.array(row[1], np.int32), "data": np.array([row[2],row[5]], dtype=np.float32)}
+
+    dp = IterableWrapper([uri]) \
+            .open_files_by_fsspec() \
+            .parse_csv(delimiter=",", skip_lines=1) \
+            .map(row_processer)
+
+    print(list(dp)[:3])
+    # [{'label': array(0, dtype=int32), 'data': array([ 3., 22.], dtype=float32)},
+    #  {'label': array(1, dtype=int32), 'data': array([ 1., 38.], dtype=float32)},
+    #  {'label': array(1, dtype=int32), 'data': array([ 3., 26.], dtype=float32)}]
