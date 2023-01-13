@@ -8,6 +8,7 @@ import random
 
 from dataclasses import dataclass
 from functools import partial
+from multiprocessing.queues import Queue
 from typing import Callable, Optional
 
 import torch
@@ -61,6 +62,8 @@ def process_init_fn(
     datapipe: DataPipe,
     worker_info: WorkerInfo,
     custom_init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]] = None,
+    dispatching_req_queue: Optional[Queue] = None,
+    dispatching_res_queue: Optional[Queue] = None,
 ) -> DataPipe:
     r"""
     Based on the worker information, shard the ``DataPipe`` graph dynamically.
@@ -75,22 +78,21 @@ def process_init_fn(
         torch.utils.data.graph_settings.apply_sharding(
             datapipe, worker_info.num_workers, worker_info.worker_id, SHARDING_PRIORITIES.MULTIPROCESSING
         )
+        assert dispatching_req_queue is None and dispatching_res_queue is None
     # 2) There is non-replicable DataPipe. Since we have replaced the lowest common
     #    ancestor by a `_DummyIterDataPipe`, we would only apply mp sharding
     #    to replicable branches that don't have `_DummyIterDataPipe`.
     else:
         assert len(non_replicable_dp) == 1
+        assert not (dispatching_req_queue is None and dispatching_res_queue is None)
         replicable_branches = find_replicable_branches(graph)
         for dp in replicable_branches:
             torch.utils.data.graph_settings.apply_sharding(
                 dp, worker_info.num_workers, worker_info.worker_id, SHARDING_PRIORITIES.MULTIPROCESSING
             )
 
-        req_queue = non_replicable_dp[0].req_queue
-        res_queue = non_replicable_dp[0].res_queue
-
         queue_wrapper = communication.iter.QueueWrapper(
-            communication.protocol.IterDataPipeQueueProtocolClient(req_queue, res_queue)
+            communication.protocol.IterDataPipeQueueProtocolClient(dispatching_req_queue, dispatching_res_queue)
         )
         dispatch_process_dp = communication.iter._IterateQueueDataPipes([queue_wrapper])
         graph = replace_dp(graph, non_replicable_dp[0], dispatch_process_dp)

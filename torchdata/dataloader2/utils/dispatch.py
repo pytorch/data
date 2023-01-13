@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from multiprocessing.queues import Queue
+#  from multiprocessing.queues import Queue
 from typing import Dict, List, Optional, Set
 
 from torchdata.dataloader2.graph import DataPipe, DataPipeGraph, list_dps, traverse_dps
@@ -20,8 +20,10 @@ class _DummyIterDataPipe(IterDataPipe):
     This DataPipe is a placeholder to be replaced by the ``QueueWrapper``
     that connects the worker process for non-replicable DataPipe.
     """
-    req_queue: Queue
-    res_queue: Queue
+    # TODO: Revert `_DummyIterDataPipe` as the placeholder when `_SerializationWrapper`
+    #       can handle mp.Queue. See: https://github.com/pytorch/data/issues/934
+    #  req_queue: Queue
+    #  res_queue: Queue
 
 
 def find_lca_non_replicable_dp(graph: DataPipeGraph) -> Optional[DataPipe]:
