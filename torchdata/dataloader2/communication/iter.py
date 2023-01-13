@@ -307,11 +307,6 @@ class _IterateQueueDataPipes(IterDataPipe):
                     yield response.value
 
     def reset(self):
-        # TODO: The first first loop was removed by #919, confirm if they are still necessary
-        # Collect all existing requests results to clear queues
-        for dp in self.datapipes:
-            if dp.protocol.waiting_for_response():
-                dp.protocol.get_response_next(block=True)
         # NonBlocking DataPipes do not reset automatically, have to do it manually
         for dp in self.datapipes:
             dp.reset_iterator()

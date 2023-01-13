@@ -4,13 +4,14 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-
+import multiprocessing as mp
 import os
 import pickle
 import unittest
 from unittest import TestCase
 
 import torch
+from torch.testing._internal.common_utils import instantiate_parametrized_tests, parametrize
 
 from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
 
@@ -41,6 +42,8 @@ except ImportError:
 
 skipIfNoDill = unittest.skipIf(not HAS_DILL, "no dill")
 TEST_WITH_TSAN = os.getenv("PYTORCH_TEST_WITH_TSAN", "0") == "1"
+
+mp_ctx_parametrize = parametrize("ctx", mp.get_all_start_methods())
 
 
 class _ReadingServiceWrapper:
@@ -391,13 +394,17 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         )
         return datapipe
 
-    def test_worker_fns(self):
+    @mp_ctx_parametrize
+    def test_worker_fns(self, ctx):
         dp: IterDataPipe = IterableWrapper(range(100)).batch(2).shuffle()
         torch.manual_seed(123)
         exp = list(dp)
 
         rs = PrototypeMultiProcessingReadingService(
-            num_workers=1, worker_init_fn=self._worker_init_fn, worker_reset_fn=self._worker_reset_fn
+            num_workers=1,
+            multiprocessing_context=ctx,
+            worker_init_fn=self._worker_init_fn,
+            worker_reset_fn=self._worker_reset_fn,
         )
         dl = DataLoader2(dp, reading_service=rs)
 
@@ -409,7 +416,8 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         res2 = list(dl)
         self.assertEqual(exp, res2)
 
-    def test_single_branch_non_replicable(self):
+    @mp_ctx_parametrize
+    def test_single_branch_non_replicable(self, ctx):
         r"""
         For single branch pipeline with a non-replicable DataPipe, all ``sharding_filters``
         in the pipeline become non-replicable.
@@ -439,7 +447,9 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         graph = traverse_dps(end_dp)
         sf_dp = single_br_dp.sharding_filter()
         replace_dp(graph, single_br_dp, sf_dp)
-        dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
+        dl = DataLoader2(
+            end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
+        )
         # Determinism and dynamic sharding
         _assert_deterministic_dl_res(dl, [i * 4 for i in range(10)])
 
@@ -451,7 +461,9 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         replace_dp(graph, single_br_dp, round_robin_dispatcher)
         sf_dp = map_dp.sharding_filter()
         replace_dp(graph, map_dp, sf_dp)
-        dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
+        dl = DataLoader2(
+            end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
+        )
         # Determinism for non-replicable pipeline
         _assert_deterministic_dl_res(dl, [i * 4 for i in range(10)])
 
@@ -463,11 +475,14 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         replace_dp(graph, single_br_dp, sf_dp)
         round_robin_dispatcher = ShardingRoundRobinDispatcher(map_dp, SHARDING_PRIORITIES.MULTIPROCESSING)
         replace_dp(graph, map_dp, round_robin_dispatcher)
-        dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
+        dl = DataLoader2(
+            end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
+        )
         # Determinism for non-replicable pipeline
         _assert_deterministic_dl_res(dl, [i * 4 for i in range(10)])
 
-    def test_multi_branch_non_replicable(self):
+    @mp_ctx_parametrize
+    def test_multi_branch_non_replicable(self, ctx) -> None:
         r"""
         For multi-branch pipeline with a non-replicable DataPipe on one branch,
         all ``sharding_filter`` on the other branches should remain replicable.
@@ -502,7 +517,9 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         sf2_dp = branch2_dp.sharding_filter()
         replace_dp(graph, branch1_dp, sf1_dp)
         replace_dp(graph, branch2_dp, sf2_dp)
-        dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
+        dl = DataLoader2(
+            end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
+        )
         # Determinism and dynamic sharding
         _assert_deterministic_dl_res(dl, [i * 2 for i in range(10)], list(range(10)))
 
@@ -515,7 +532,9 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         # The other branch should has a sharding_filter to make data even
         sf_dp = branch2_dp.sharding_filter()
         replace_dp(graph, branch2_dp, sf_dp)
-        dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
+        dl = DataLoader2(
+            end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
+        )
         # Determinism for non-replicable pipeline
         _assert_deterministic_dl_res(dl, [i * 2 for i in range(10)], list(range(10)))
 
@@ -527,9 +546,14 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         replace_dp(graph, branch1_dp, non_replicable_dp1)
         non_replicable_dp2 = ShardingRoundRobinDispatcher(branch2_dp, SHARDING_PRIORITIES.MULTIPROCESSING)
         replace_dp(graph, branch2_dp, non_replicable_dp2)
-        dl = DataLoader2(end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2))
+        dl = DataLoader2(
+            end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
+        )
         # Determinism for non-replicable pipeline
         _assert_deterministic_dl_res(dl, [i * 2 for i in range(10)], list(range(10)))
+
+
+instantiate_parametrized_tests(PrototypeMultiProcessingReadingServiceTest)
 
 
 if __name__ == "__main__":
