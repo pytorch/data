@@ -24,7 +24,8 @@ from torchdata.dataloader2 import (
 )
 from torchdata.dataloader2.dataloader2 import READING_SERVICE_STATE_KEY_NAME, SERIALIZED_DATAPIPE_KEY_NAME
 
-from torchdata.dataloader2.graph import DataPipe, replace_dp, traverse_dps
+from torchdata.dataloader2.graph import DataPipe, list_dps, replace_dp, set_datapipes_seed, traverse_dps
+from torchdata.dataloader2.random import SeedGenerator
 from torchdata.datapipes.iter import IterableWrapper, IterDataPipe, ShardingRoundRobinDispatcher
 from torchdata.datapipes.map import SequenceWrapper
 
@@ -369,36 +370,29 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         return datapipe
 
     @staticmethod
-    def _worker_reset_fn(datapipe, worker_info):
-        worker_seed_generator = torch.Generator()
-        worker_seed_generator.manual_seed(123)
-        torch.utils.data.graph_settings.apply_random_seed(
-            datapipe,
-            worker_seed_generator,
-        )
+    def _worker_reset_fn(datapipe, worker_info, worker_seed_generator: SeedGenerator):
+        graph = traverse_dps(datapipe)
+        dps = list_dps(graph)
+        worker_seed_generator.seed(123)
+        set_datapipes_seed(dps, seed_generator=worker_seed_generator, distributed_shared=True)
         return datapipe
 
     @mp_ctx_parametrize
     def test_worker_fns(self, ctx):
         dp: IterDataPipe = IterableWrapper(range(100)).batch(2).shuffle()
-        torch.manual_seed(123)
-        exp = list(dp)
 
         rs = PrototypeMultiProcessingReadingService(
-            num_workers=1,
+            num_workers=2,
             multiprocessing_context=ctx,
             worker_init_fn=self._worker_init_fn,
             worker_reset_fn=self._worker_reset_fn,
         )
         dl = DataLoader2(dp, reading_service=rs)
 
-        # Test worker_init_fn to shard the DataPipe graph
-        res1 = list(dl)
-        self.assertEqual(exp, res1)
-
         # Test worker_reset_fn to set the same random seed across epoches
+        res1 = list(dl)
         res2 = list(dl)
-        self.assertEqual(exp, res2)
+        self.assertEqual(res1, res2)
 
     @mp_ctx_parametrize
     def test_single_branch_non_replicable(self, ctx):
@@ -535,6 +529,68 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         )
         # Determinism for non-replicable pipeline
         _assert_deterministic_dl_res(dl, [i * 2 for i in range(10)], list(range(10)))
+
+    @mp_ctx_parametrize
+    def test_multi_worker_determinism(self, ctx):
+        dp: IterDataPipe = IterableWrapper(range(100))
+        dp = dp.shuffle().sharding_filter()
+        dp = dp.batch(2)
+
+        rs = PrototypeMultiProcessingReadingService(
+            num_workers=2,
+            multiprocessing_context=ctx,
+        )
+        dl = DataLoader2(dp, reading_service=rs)
+
+        torch.manual_seed(123)
+        res = list(dl) + list(dl)
+
+        torch.manual_seed(123)
+        self.assertEqual(res, list(dl) + list(dl))
+
+        torch.manual_seed(321)
+        self.assertNotEqual(res, list(dl) + list(dl))
+
+        # Using seed API for DataLoader2
+        dl.seed(123)
+        res = list(dl) + list(dl)
+
+        dl.seed(123)
+        self.assertEqual(res, list(dl) + list(dl))
+
+        dl.seed(321)
+        self.assertNotEqual(res, list(dl) + list(dl))
+
+    @mp_ctx_parametrize
+    def test_dispatching_worker_determinism(self, ctx):
+        dp: IterDataPipe = IterableWrapper(range(100))
+        dp = dp.shuffle().sharding_round_robin_dispatch(SHARDING_PRIORITIES.MULTIPROCESSING)
+        dp = dp.batch(2)
+
+        rs = PrototypeMultiProcessingReadingService(
+            num_workers=2,
+            multiprocessing_context=ctx,
+        )
+        dl = DataLoader2(dp, reading_service=rs)
+
+        torch.manual_seed(123)
+        res = list(dl) + list(dl)
+
+        torch.manual_seed(123)
+        self.assertEqual(res, list(dl) + list(dl))
+
+        torch.manual_seed(321)
+        self.assertNotEqual(res, list(dl) + list(dl))
+
+        # Using seed API for DataLoader2
+        dl.seed(123)
+        res = list(dl) + list(dl)
+
+        dl.seed(123)
+        self.assertEqual(res, list(dl) + list(dl))
+
+        dl.seed(321)
+        self.assertNotEqual(res, list(dl) + list(dl))
 
 
 instantiate_parametrized_tests(PrototypeMultiProcessingReadingServiceTest)
