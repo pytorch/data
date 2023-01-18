@@ -318,6 +318,13 @@ class _IterateQueueDataPipes(IterDataPipe):
         for worker_id, dp in enumerate(self.datapipes):
             worker_info = WorkerInfo(num_workers, worker_id)
             dp.protocol.request_reset_epoch(partial(reset_fn, worker_info=worker_info))
+            while True:
+                try:
+                    dp.protocol.get_response_reset_epoch()
+                    break
+                except communication.protocol.EmptyQueue:
+                    if NonBlocking.not_available_hook is not None:
+                        NonBlocking.not_available_hook()
 
     def request_pause(self):
         # Store results of pending requests
