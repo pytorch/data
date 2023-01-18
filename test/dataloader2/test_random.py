@@ -15,8 +15,9 @@ import numpy as np
 import torch
 
 from torch.testing._internal.common_utils import instantiate_parametrized_tests, IS_WINDOWS, parametrize
-from torchdata.dataloader2 import DataLoader2, DistributedReadingService, PrototypeMultiProcessingReadingService
-from torchdata.dataloader2.graph.settings import _set_worker_seed_for_dp_graph
+from torchdata.dataloader2 import DataLoader2, PrototypeMultiProcessingReadingService
+from torchdata.dataloader2.graph.settings import set_graph_random_seed
+from torchdata.dataloader2.random import SeedGenerator
 from torchdata.datapipes.iter import IterableWrapper
 
 
@@ -90,9 +91,8 @@ class DeterminismTest(TestCase):
             dp3_ = dp3.sharding_filter()
             dp4 = dp1.zip(dp2, dp3_).shuffle()
 
-            rng = torch.Generator()
-            rng.manual_seed(seed)
-            _set_worker_seed_for_dp_graph(dp4, rng, worker_id)
+            sg = SeedGenerator(seed).spawn(worker_id)
+            set_graph_random_seed(dp4, sg)
 
             # same seeds, different seeds
             return (dp0._seed, dp3._seed), (dp2._seed, dp4._seed)

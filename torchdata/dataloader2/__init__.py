@@ -5,16 +5,16 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from .dataloader2 import DataLoader2, DataLoader2Iterator
-from .error import PauseIteration
-from .reading_service import (
+from torchdata.dataloader2.dataloader2 import DataLoader2, DataLoader2Iterator
+from torchdata.dataloader2.error import PauseIteration
+from torchdata.dataloader2.reading_service import (
     CheckpointableReadingServiceInterface,
     DistributedReadingService,
     MultiProcessingReadingService,
     PrototypeMultiProcessingReadingService,
     ReadingServiceInterface,
 )
-from .shuffle_spec import ShuffleSpec
+from torchdata.dataloader2.shuffle_spec import ShuffleSpec
 
 __all__ = [
     "CheckpointableReadingServiceInterface",

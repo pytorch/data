@@ -7,7 +7,6 @@
 import random
 
 from dataclasses import dataclass
-from functools import partial
 from multiprocessing.queues import Queue
 from typing import Callable, Optional
 
@@ -16,8 +15,16 @@ import torch
 from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
 
 from torchdata.dataloader2 import communication
-from torchdata.dataloader2.graph import DataPipe, find_dps, replace_dp, traverse_dps
-from torchdata.dataloader2.utils import generate_random_int
+from torchdata.dataloader2.graph import (
+    DataPipe,
+    find_dps,
+    list_dps,
+    replace_dp,
+    set_datapipes_seed,
+    set_graph_random_seed,
+    traverse_dps,
+)
+from torchdata.dataloader2.random import SeedGenerator
 from torchdata.dataloader2.utils.dispatch import _DummyIterDataPipe, find_replicable_branches
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.map import MapDataPipe
@@ -41,21 +48,6 @@ class WorkerInfo:
     """
     num_workers: int
     worker_id: int
-
-
-@dataclass(frozen=True)
-class _DistInfo:
-    r"""
-    Message class for distribtued information.
-
-    Args:
-        shared_seed: Distributed shared random seed
-        world_size (int): Total number of distributed nodes
-        rank (int): Distributed rank for the current distributed node
-    """
-    shared_seed: int
-    world_size: int = 1
-    rank: int = 0
 
 
 def process_init_fn(
@@ -105,25 +97,24 @@ def process_init_fn(
     return datapipe
 
 
-def _set_global_random_state(seed_generator: torch.Generator) -> None:
-    py_seed = generate_random_int(seed_generator)
+def _set_global_random_state(seed_generator: SeedGenerator, distributed_shared: bool = False) -> None:
+    py_seed = seed_generator.generate_shared_seed() if distributed_shared else seed_generator.generate_seed()
     random.seed(py_seed)
 
-    torch_seed = generate_random_int(seed_generator)
+    torch_seed = seed_generator.generate_shared_seed() if distributed_shared else seed_generator.generate_seed()
     torch.manual_seed(torch_seed)
 
     if HAS_NUMPY:
-        # Numpy only accepts uint32 as the seed
-        np_seed = generate_random_int(seed_generator, torch.int32)
-        if np_seed < 0:
-            np_seed = 2 ** 32 + np_seed
+        # Convert uint64 to uint32 for Numpy
+        np_seed = seed_generator.generate_shared_seed() if distributed_shared else seed_generator.generate_seed()
+        np_seed = np_seed >> 32
         numpy.random.seed(np_seed)
 
 
 def dispatch_process_reset_fn(
     datapipe: DataPipe,
     worker_info: WorkerInfo,
-    dist_info: _DistInfo,
+    seed_generator: SeedGenerator,
 ) -> DataPipe:
     r"""
     Based on the distributed shared random seed, this function is used to set the random state
@@ -131,15 +122,12 @@ def dispatch_process_reset_fn(
     This function would guarantee that all distributed dispatching processes share the
     same random state to ensure the same shuffle order.
     """
-    worker_seed_generator = torch.Generator()
-    worker_seed_generator.manual_seed(dist_info.shared_seed)
-    torch.utils.data.graph_settings.apply_random_seed(
-        datapipe,
-        worker_seed_generator,
-    )
-
     # Set global random states
-    _set_global_random_state(worker_seed_generator)
+    _set_global_random_state(seed_generator, distributed_shared=True)
+
+    graph = traverse_dps(datapipe)
+    dps = list_dps(graph)
+    set_datapipes_seed(dps, seed_generator=seed_generator, distributed_shared=True)
 
     return datapipe
 
@@ -147,8 +135,8 @@ def dispatch_process_reset_fn(
 def process_reset_fn(
     datapipe: DataPipe,
     worker_info: WorkerInfo,
-    dist_info: _DistInfo,
-    custom_reset_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]] = None,
+    seed_generator: SeedGenerator,
+    custom_reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
 ) -> DataPipe:
     r"""
     Based on the distributed shared random seed and worker id, this function is used to
@@ -163,27 +151,16 @@ def process_reset_fn(
         dispatch_process_consumer_dp = dispatch_process_consumer_dps[0]
         # Only send the reset epoch message once
         if worker_info.worker_id == 0:
-            dispatch_reset_fn = partial(dispatch_process_reset_fn, dist_info=dist_info)
             # Use WorkerInfo(1, 0)
-            dispatch_process_consumer_dp.reset_epoch(dispatch_reset_fn)
-
-    # This function will receive worker local copy of datapipe and reset function from ``initialize_iteration``
-    worker_seed_generator = torch.Generator()
-    worker_seed_generator.manual_seed(dist_info.shared_seed)
-    # TODO(ejguan): https://github.com/pytorch/data/issues/885
-    torch.utils.data.graph_settings.apply_random_seed(
-        datapipe,
-        worker_seed_generator,
-    )
-    # Set different seeds across distributed workers
-    global_worker_id = worker_info.worker_id * dist_info.world_size + dist_info.rank
-    worker_seed_generator.manual_seed(dist_info.shared_seed + global_worker_id)
+            dispatch_process_consumer_dp.reset_epoch(dispatch_process_reset_fn, seed_generator)
 
     # Set global random states
-    _set_global_random_state(worker_seed_generator)
+    _set_global_random_state(seed_generator)
+
+    set_graph_random_seed(datapipe, seed_generator)
 
     if custom_reset_fn is not None:
-        datapipe = custom_reset_fn(datapipe, worker_info)
+        datapipe = custom_reset_fn(datapipe, worker_info, seed_generator)
         assert isinstance(datapipe, (IterDataPipe, MapDataPipe))
 
     return datapipe

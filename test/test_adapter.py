@@ -6,9 +6,9 @@
 
 from unittest import TestCase
 
-from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService, ReadingServiceInterface
+from torchdata.dataloader2 import DataLoader2
 from torchdata.dataloader2.adapter import Shuffle
-from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
+from torchdata.datapipes.iter import IterableWrapper
 
 
 class AdapterTest(TestCase):
