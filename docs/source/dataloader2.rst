@@ -41,7 +41,7 @@ Dynamic sharding is achieved by ``PrototypeMultiProcessingReadingService`` and `
 
 - ``sharding_filter``: When the pipeline is replicable, each distributed/multiprocessing worker loads data from one replica of the ``DataPipe`` graph, and skip the data not blonged to the corresponding worker at the place of ``sharding_filter``.
 
-- ``sharding_round_robin_dispatch``: When there is any non-replicable ``DataPipe`` (``sharding_round_robin_dispatch``) in the pipeline, a dispatching process will be created to load data from the non-replicable ``DataPipe`` and distributed data to the subsequent worker processes.
+- ``sharding_round_robin_dispatch``: When there is any ``sharding_round_robin_dispatch`` ``DataPipe`` in the pipeline, that branch will be treated as a non-replicable branch. Then, a single dispatching process will be created to load data from the non-repliable branch and distributed data to the subsequent worker processes.
 
 The following is an example of having two types of sharding strategies in the pipeline.
 

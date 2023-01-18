@@ -25,7 +25,7 @@ from torchdata.dataloader2 import communication
 from torchdata.dataloader2.graph import DataPipe, replace_dp, set_graph_random_seed, traverse_dps
 from torchdata.dataloader2.random import dist_share_seed, SeedGenerator
 from torchdata.dataloader2.utils import process_init_fn, process_reset_fn, WorkerInfo
-from torchdata.dataloader2.utils.dispatch import _DummyIterDataPipe, find_lca_non_replicable_dp
+from torchdata.dataloader2.utils.dispatch import _DummyIterDataPipe, find_lca_round_robin_sharding_dp
 from torchdata.datapipes.iter import FullSync, IterableWrapper
 
 
@@ -226,7 +226,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         # Launch dispatching process for the lowest common ancestor of non-replicable DataPipes
         if self.num_workers > 1:
             graph = traverse_dps(datapipe)
-            non_replicable_dp = find_lca_non_replicable_dp(graph)
+            non_replicable_dp = find_lca_round_robin_sharding_dp(graph)
             if non_replicable_dp is not None:
                 dummy_dp = _DummyIterDataPipe()
                 graph = replace_dp(graph, non_replicable_dp, dummy_dp)  # type: ignore[arg-type]
