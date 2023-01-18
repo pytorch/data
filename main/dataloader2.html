@@ -221,7 +221,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+139d558 ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+38e0d03 ) &#x25BC</a>
     </div>
     
 
@@ -391,6 +391,17 @@ from the serialized state.</p>
 <span class="sig-name descname"><span class="pre">load_state_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#torchdata.dataloader2.DataLoader2.load_state_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>For the existing <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code>, load serialized state to restore <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph
 and reset the internal state of <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.dataloader2.DataLoader2.seed">
+<span class="sig-name descname"><span class="pre">seed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#torchdata.dataloader2.DataLoader2.seed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set random seed for DataLoader2 to control determinism.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>seed</strong> – Random uint64 seed</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -578,9 +589,19 @@ the <code class="docutils literal notranslate"><span class="pre">ReadingService<
 
 <dl class="py method">
 <dt class="sig sig-object py" id="torchdata.dataloader2.ReadingServiceInterface.initialize_iteration">
-<span class="sig-name descname"><span class="pre">initialize_iteration</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#torchdata.dataloader2.ReadingServiceInterface.initialize_iteration" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">initialize_iteration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed_generator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SeedGenerator</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#torchdata.dataloader2.ReadingServiceInterface.initialize_iteration" title="Permalink to this definition">¶</a></dt>
 <dd><p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> spins up service for an epoch. Called at the beginning
 of every time getting <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> iterator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>seed_generator</strong> – SeedGenerator object created and managed by DataLoader2. As the single
+source of randomness, it will governs the determinism for all of random operations
+with the graph of DataPipes.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<p>MultiProcessingReadingService starts setting worker seeds per process and prefetching
+items from the graph.</p>
 </dd></dl>
 
 </dd></dl>
@@ -738,6 +759,7 @@ needs, <code class="docutils literal notranslate"><span class="pre">DataLoader2<
 <li><a class="reference internal" href="#torchdata.dataloader2.DataLoader2.__iter__"><code class="docutils literal notranslate"><span class="pre">DataLoader2.__iter__()</span></code></a></li>
 <li><a class="reference internal" href="#torchdata.dataloader2.DataLoader2.from_state"><code class="docutils literal notranslate"><span class="pre">DataLoader2.from_state()</span></code></a></li>
 <li><a class="reference internal" href="#torchdata.dataloader2.DataLoader2.load_state_dict"><code class="docutils literal notranslate"><span class="pre">DataLoader2.load_state_dict()</span></code></a></li>
+<li><a class="reference internal" href="#torchdata.dataloader2.DataLoader2.seed"><code class="docutils literal notranslate"><span class="pre">DataLoader2.seed()</span></code></a></li>
 <li><a class="reference internal" href="#torchdata.dataloader2.DataLoader2.shutdown"><code class="docutils literal notranslate"><span class="pre">DataLoader2.shutdown()</span></code></a></li>
 <li><a class="reference internal" href="#torchdata.dataloader2.DataLoader2.state_dict"><code class="docutils literal notranslate"><span class="pre">DataLoader2.state_dict()</span></code></a></li>
 </ul>
