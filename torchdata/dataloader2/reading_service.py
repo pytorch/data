@@ -22,10 +22,10 @@ from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
 
 from torchdata._constants import default_dl2_worker_join_timeout_in_s, default_timeout_in_s
 from torchdata.dataloader2 import communication
-from torchdata.dataloader2.graph import DataPipe, replace_dp, traverse_dps
-from torchdata.dataloader2.utils import generate_random_scalar_tensor, process_init_fn, process_reset_fn, WorkerInfo
+from torchdata.dataloader2.graph import DataPipe, replace_dp, set_graph_random_seed, traverse_dps
+from torchdata.dataloader2.random import dist_share_seed, SeedGenerator
+from torchdata.dataloader2.utils import process_init_fn, process_reset_fn, WorkerInfo
 from torchdata.dataloader2.utils.dispatch import _DummyIterDataPipe, find_lca_non_replicable_dp
-from torchdata.dataloader2.utils.worker import _DistInfo
 from torchdata.datapipes.iter import FullSync, IterableWrapper
 
 
@@ -63,10 +63,19 @@ class ReadingServiceInterface(ABC):
         """
         pass
 
-    def initialize_iteration(self) -> None:
+    def initialize_iteration(self, seed_generator: SeedGenerator) -> None:
         r"""
         ``ReadingService`` spins up service for an epoch. Called at the beginning
         of every time getting ``DataLoader2`` iterator.
+
+        Args:
+            seed_generator: SeedGenerator object created and managed by DataLoader2. As the single
+                source of randomness, it will governs the determinism for all of random operations
+                with the graph of DataPipes.
+
+        Example:
+            MultiProcessingReadingService starts setting worker seeds per process and prefetching
+            items from the graph.
         """
         pass
 
@@ -132,11 +141,10 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         main_prefetch_cnt: (int, 10 by default): Number of data will be prefetched
             at the end of the whole pipeline in the main process.
         worker_init_fn: (Callable, optional): Function to be called when each worker
-            process launches with ``WorkerInfo`` and ``DataPipe``
-            as the expected arguments.
+            process launches with ``DataPipe`` and ``WorkerInfo`` as the expected arguments.
         worker_reset_fn: (Callable, optional): Function to be called at the beginning
-            of each epoch in each worker process with ``WorkerInfo``
-            and ``DataPipe`` as the expected arguments.
+            of each epoch in each worker process with ``DataPipe``, ``WorkerInfo``
+            and ``SeedGenerator`` as the expected arguments.
 
     Note:
         - This ``ReadingService`` is still in prototype mode and will replace
@@ -151,7 +159,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     worker_prefetch_cnt: int
     main_prefetch_cnt: int
     worker_init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]]
-    worker_reset_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]]
+    worker_reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]]
     _worker_processes: List[Tuple[py_mp.process.BaseProcess, Queue, Queue]]
     _dispatch_process: Optional[Tuple[py_mp.process.BaseProcess, List[Queue], List[Queue]]]
     datapipes: List
@@ -168,7 +176,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         worker_prefetch_cnt: int = 10,
         main_prefetch_cnt: int = 10,
         worker_init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]] = None,
-        worker_reset_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]] = None,
+        worker_reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
     ) -> None:
         self.num_workers = num_workers
         if multiprocessing_context is not None:
@@ -270,19 +278,17 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
         return self.end_datapipe  # type: ignore[return-value]
 
-    def initialize_iteration(self) -> None:
-        shared_seed = generate_random_scalar_tensor()
+    def initialize_iteration(self, seed_generator: SeedGenerator) -> None:
+        # Distributed shared seed
         if self._pg is not None:
-            dist.broadcast(shared_seed, src=0, group=self._pg)
-        shared_seed_int: int = shared_seed.item()  # type: ignore[assignment]
-        _seed_generator = torch.Generator()
-        _seed_generator.manual_seed(shared_seed_int)
-        torch.utils.data.graph_settings.apply_random_seed(
-            self.end_datapipe,  # type: ignore[arg-type]
-            _seed_generator,
-        )
+            shared_seed_int = dist_share_seed(seed_generator.generate_shared_seed(), self._pg)
+            seed_generator.seed(shared_seed_int)
+            seed_generator = seed_generator.spawn(self._rank, inplace=True)
 
         assert self.end_datapipe is not None
+
+        set_graph_random_seed(self.end_datapipe, seed_generator)
+
         if self._mp:
             if self.main_prefetch_cnt > 0:
                 # Stop prefetching first
@@ -291,9 +297,8 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             else:
                 end_datapipe = self.end_datapipe
             # Send the shared seed to subprocesses
-            dist_info = _DistInfo(shared_seed_int, self._world_size, self._rank)
-            call_on_epoch_reset = partial(process_reset_fn, dist_info=dist_info, custom_reset_fn=self.worker_reset_fn)
-            end_datapipe.reset_epoch(call_on_epoch_reset)
+            call_on_epoch_reset = partial(process_reset_fn, custom_reset_fn=self.worker_reset_fn)
+            end_datapipe.reset_epoch(call_on_epoch_reset, seed_generator)
         # In-process (num_workers == 0)
         else:
             # Technically speaking, we should call `_process_reset_fn` to reset global RNGs
@@ -458,26 +463,17 @@ class DistributedReadingService(ReadingServiceInterface):
         self._datapipe = datapipe
         return datapipe
 
-    def initialize_iteration(self) -> None:
+    def initialize_iteration(self, seed_generator: SeedGenerator) -> None:
         r"""
         Shares the same seed from rank 0 to other ranks across the distributed processes
         and apply the random seed to the ``DataPipe`` graph.
         """
-        # TODO: Seed Generator should be moved to DataLoader2 after the API
-        #       change of initialize_iteration is landed.
-        seed = self._share_seed()
-        _seed_generator = torch.Generator()
-        _seed_generator.manual_seed(seed)
         assert self._datapipe is not None
-        self._datapipe = torch.utils.data.graph_settings.apply_random_seed(
-            self._datapipe,
-            _seed_generator,
-        )
 
-    def _share_seed(self):
-        shared_seed = generate_random_scalar_tensor()
-        dist.broadcast(shared_seed, src=0, group=self._pg)
-        return shared_seed.item()
+        shared_seed = dist_share_seed(seed_generator.generate_shared_seed(), self._pg)
+        seed_generator.seed(shared_seed)
+        seed_generator = seed_generator.spawn(self._rank, inplace=True)
+        set_graph_random_seed(self._datapipe, seed_generator)
 
     def __del__(self):
         self.finalize()
