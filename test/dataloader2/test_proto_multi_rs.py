@@ -43,7 +43,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
                     with self.assertRaisesRegex(RuntimeError, r"pause"):
                         dl0._pause()
                     with self.assertRaisesRegex(RuntimeError, r"resume"):
-                        dl0.resume()
+                        dl0._resume()
             dl0.shutdown()
 
     def test_reading_service_pause_resume(self) -> None:
@@ -79,7 +79,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
                         res.append(x)
                         if i in {2, self.n_elements - 2}:
                             dl._pause()
-                            dl.resume()
+                            dl._resume()
 
                     self.assertEqual(
                         list(range(self.n_elements)),

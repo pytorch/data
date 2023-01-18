@@ -19,6 +19,8 @@ from torchdata.dataloader2.graph._serialization import (
     serialize_datapipe,
     wrap_datapipe_for_serialization,
 )
+from torchdata.dataloader2.random import SeedGenerator
+from torchdata.dataloader2.random.seed_generator import _UINT64_UPPER_BOUND
 from torchdata.dataloader2.reading_service import (
     CheckpointableReadingServiceInterface,
     PrototypeMultiProcessingReadingService,
@@ -107,7 +109,7 @@ class DataLoader2Iterator(Iterator[T_co]):
         r"""
         Restarts the threads within ``DataLoader2`` and allows it to yield additional batches.
         """
-        self.dataloader.resume()
+        self.dataloader._resume()
 
     def limit(self, n_batches) -> None:
         """
@@ -190,6 +192,9 @@ class DataLoader2(Generic[T_co]):
             for adapter_fn in self.datapipe_adapter_fns:
                 self.datapipe = adapter_fn(self.datapipe)
         self._datapipe_before_reading_service_adapt: DataPipe = clone(self.datapipe)
+        self._seed_generator: SeedGenerator = SeedGenerator()
+        self._seed: Optional[int] = None
+        self._reset_seed: bool = True
 
     def __iter__(self) -> DataLoader2Iterator[T_co]:
         r"""
@@ -205,6 +210,13 @@ class DataLoader2(Generic[T_co]):
             raise RuntimeError("Cannot iterate over the DataLoader as it has already been shut down")
 
         if self._reset_iter:
+            if self._seed:
+                if self._reset_seed:
+                    self._seed_generator.seed(self._seed)
+                    self._reset_seed = False
+            else:
+                self._seed_generator.seed()
+
             if not self._adapted and self.reading_service is not None:
                 if self.reading_service_state is None:
                     # Only called once when `self._adapted = False`
@@ -216,13 +228,25 @@ class DataLoader2(Generic[T_co]):
                 self._adapted = True
 
             if self.reading_service is not None:
-                self.reading_service.initialize_iteration()
+                self.reading_service.initialize_iteration(self._seed_generator)
 
             self._datapipe_iter = iter(self.datapipe)
             self._reset_iter = False
 
         self.valid_iterator_id = 0 if self.valid_iterator_id is None else self.valid_iterator_id + 1
         return DataLoader2Iterator(self, self.valid_iterator_id)
+
+    def seed(self, seed: int) -> None:
+        r"""
+        Set random seed for DataLoader2 to control determinism.
+
+        Args:
+            seed: Random uint64 seed
+        """
+        if seed >= _UINT64_UPPER_BOUND:
+            raise ValueError(f"Expected an uint64 seed, but got {seed}.")
+        self._seed = seed
+        self._reset_seed = True
 
     def __del__(self) -> None:
         self.shutdown()
@@ -327,7 +351,7 @@ class DataLoader2(Generic[T_co]):
         else:
             warnings.warn("ReadingService doesn't support pause.")
 
-    def resume(self):
+    def _resume(self):
         if hasattr(self.reading_service, "_resume"):
             self.reading_service._resume()
         else:
@@ -342,9 +366,9 @@ class DataLoader2(Generic[T_co]):
             raise RuntimeError(
                 "Only `PrototypeMultiProcessingReadingService` " "currently supports naive DataPipe snapshotting."
             )
-        self.pause()
+        self._pause()
         n_samples_yielded, _initial_seed = self.reading_service._get_naive_datapipe_snapshot()
-        self.resume()
+        self._resume()
         return n_samples_yielded, _initial_seed
 
     def _restore_naive_datapipe_snapshot(self, n_samples_yielded, initial_seed) -> None:
