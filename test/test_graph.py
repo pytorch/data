@@ -17,6 +17,7 @@ from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
 
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService, ReadingServiceInterface
 from torchdata.dataloader2.graph import find_dps, list_dps, remove_dp, replace_dp, traverse_dps
+from torchdata.dataloader2.random import SeedGenerator
 from torchdata.dataloader2.utils.dispatch import (
     _DummyIterDataPipe,
     find_lca_non_replicable_dp,
@@ -63,7 +64,8 @@ class TempReadingService(ReadingServiceInterface):
 
         return list(graph.values())[0][0]
 
-    def initialize_iteration(self) -> None:
+    def initialize_iteration(self, seed_generator: SeedGenerator) -> None:
+        seed_generator.seed(123)
         for dp in self.adaptors:
             dp.started = True
 
@@ -247,6 +249,8 @@ class TestGraph(expecttest.TestCase):
 
         for new_dp in rs.adaptors:
             self.assertFalse(new_dp.started)
+
+        self.assertEqual(res, list(dl))
 
     @unittest.skipIf(IS_WINDOWS, "Fork is required for lambda")
     def test_multiprocessing_reading_service(self) -> None:

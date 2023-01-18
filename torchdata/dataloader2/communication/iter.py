@@ -15,7 +15,9 @@ from typing import Callable, Deque, List
 from torch.utils.data import IterDataPipe
 from torchdata.dataloader2 import communication
 from torchdata.dataloader2.graph import DataPipe, list_dps, traverse_dps
+from torchdata.dataloader2.random import SeedGenerator
 from torchdata.dataloader2.utils import WorkerInfo
+
 
 DEFAULT_NON_BLOCKING_SLEEP = 0.001
 
@@ -311,13 +313,18 @@ class _IterateQueueDataPipes(IterDataPipe):
         for dp in self.datapipes:
             dp.reset_iterator()
 
-    def reset_epoch(self, reset_fn: Callable[[WorkerInfo, DataPipe], DataPipe]):
+    def reset_epoch(
+        self, reset_fn: Callable[[WorkerInfo, SeedGenerator, DataPipe], DataPipe], seed_generator: SeedGenerator
+    ):
         for dp in self.datapipes:
             dp.protocol.discard_existing_request()
         num_workers = len(self.datapipes)
         for worker_id, dp in enumerate(self.datapipes):
             worker_info = WorkerInfo(num_workers, worker_id)
-            dp.protocol.request_reset_epoch(partial(reset_fn, worker_info=worker_info))
+            worker_seed_generator = seed_generator.spawn(worker_id)
+            dp.protocol.request_reset_epoch(
+                partial(reset_fn, worker_info=worker_info, seed_generator=worker_seed_generator)
+            )
             while True:
                 try:
                     dp.protocol.get_response_reset_epoch()
