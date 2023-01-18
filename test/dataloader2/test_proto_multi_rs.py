@@ -134,6 +134,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
             for n, rs in enumerate(test_rss):
                 dl: DataLoader2 = DataLoader2(dp, reading_service=rs)
                 res = []
+                cumulative_res = []
                 n_limit = 3
 
                 it: DataLoader2Iterator = iter(dl)
@@ -148,6 +149,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
                     f"num_workers = {rs.num_workers}, "
                     f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, main_prefetch_cnt = {rs.main_prefetch_cnt}",
                 )
+                cumulative_res.extend(res)
 
                 # Functional Test: Calling `next` after `limit` will trigger `StopIteration`
                 with self.assertRaisesRegex(StopIteration, "pause"):
@@ -165,6 +167,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
                     f"num_workers = {rs.num_workers}, "
                     f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, main_prefetch_cnt = {rs.main_prefetch_cnt}",
                 )
+                cumulative_res.extend(res)
 
                 # Functional Test: Clear the `limit` and yield the rest of the elements
                 it.clear_limit()
@@ -179,6 +182,31 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
                     f"num_workers = {rs.num_workers}, "
                     f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, main_prefetch_cnt = {rs.main_prefetch_cnt}",
                 )
+
+                cumulative_res.extend(res)
+                self.assertEqual(list(range(self.n_elements)), sorted(cumulative_res))
+
+        # Functional Test: Setting `limit` to a different value during after each mini-epoch
+        dl2: DataLoader2 = DataLoader2(self.double_pause_dp, reading_service=rs4)
+        res = []
+        it2: DataLoader2Iterator = iter(dl2)
+        it2.limit(3)
+        for x in it2:
+            res.append(x)
+
+        # Limit can be set before `resume`
+        it2.limit(4)
+        it2.resume()
+        for x in it2:
+            res.append(x)
+        self.assertEqual(7, len(res))
+
+        # Limit can also be set after `resume`, but before the next `for` loop
+        it2.resume()
+        it2.limit(2)
+        for x in it2:
+            res.append(x)
+        self.assertEqual(9, len(res))
 
     # TODO: Implemented in an upcoming PR
     # def test_reading_service_snapshot(self) -> None:

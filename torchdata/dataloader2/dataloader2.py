@@ -109,10 +109,12 @@ class DataLoader2Iterator(Iterator[T_co]):
 
     def limit(self, n_batches) -> None:
         """
-        Pauses the DataLoader2 from yielding additional batches after ``n_batches`` has been yielded.
-        ``resume()`` must be called before it can start yielding again.
-        While paused, DataLoader2's threads are halted and its state remains unchanged,
-        allowing DataLoader2 to safely perform snapshotting and similar operations.
+        Pauses ``DataLoader2`` from yielding additional batches after ``n_batches`` has been yielded. The count
+        begins after this method is invoked (i.e. previously yielded batches do not count towards the threshold).
+
+        While paused, ``DataLoader2``'s threads are halted and its state remains unchanged,
+        allowing ``DataLoader2`` to safely perform snapshotting and similar operations.
+        After ``DataLoader2`` is paused, ``resume()`` must be called before it can start yielding again.
 
         Note:
             ``limit_threshold`` persists after ``pause`` and ``resume``. Use ``.clear_limit()`` to remove it.
@@ -340,15 +342,18 @@ class DataLoader2(Generic[T_co]):
         self._datapipe_before_reading_service_adapt = clone(self.datapipe)
 
     def _pause(self):
-        self._is_paused = True
         if hasattr(self.reading_service, "_pause"):
+            self._is_paused = True
             self.reading_service._pause()
         else:
             warnings.warn("ReadingService doesn't support pause.")
 
     def _resume(self):
         if hasattr(self.reading_service, "_resume"):
-            self.reading_service._resume()
+            if not self._is_paused:
+                warnings.warn("Resume is called when `DataLoader2` is not paused. No operation is performed.")
+            else:
+                self.reading_service._resume()
+                self._is_paused = False
         else:
             warnings.warn("ReadingService doesn't support resume.")
-        self._is_paused = False
