@@ -6,7 +6,7 @@
 
 
 from collections import deque
-from typing import Deque, List, Optional, Set, Type, Union
+from typing import Deque, Dict, List, Optional, Set, Type, Union
 
 from torchdata.dataloader2.graph import DataPipe, DataPipeGraph, traverse_dps
 from torchdata.datapipes.iter import IterDataPipe

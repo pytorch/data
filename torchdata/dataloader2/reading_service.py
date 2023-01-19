@@ -298,7 +298,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         # Attach non-replicable DataPipes
         if replicable_dp is not datapipe:
             graph = replace_dp(graph, replicable_dp, end_datapipe)
-            end_datapipe = datapipe
+            end_datapipe = datapipe  # type: ignore[assignment]
 
         self._end_datapipe = end_datapipe
         assert self._end_datapipe is not None
@@ -322,6 +322,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
                 self._main_prefetch_datapipe.reset()  # type: ignore[union-attr]
             # Send the shared seed to subprocesses
             call_on_epoch_reset = partial(process_reset_fn, custom_reset_fn=self.worker_reset_fn)
+            assert self._worker_consumer_datapipe is not None
             self._worker_consumer_datapipe.reset_epoch(call_on_epoch_reset, seed_generator)
         # In-process (num_workers == 0)
         else:
