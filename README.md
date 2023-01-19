@@ -22,9 +22,9 @@ the basic structure of `DataPipes`, please see [What are DataPipes?](#what-are-d
 [examples](https://pytorch.org/data/main/examples.html).
 
 On top of `DataPipes`, this library provides a new `DataLoader2` that allows the execution of these data pipelines in
-various settings and backends. You can learn more about the new version of `DataLoader2` in our
-[full DataLoader2 documentation](https://pytorch.org/data/main/dataloader2.html#dataloader2). Additional features are
-work in progres, such as checkpointing and advanced control of randomness and determinism.
+various settings and execution backends (`ReadingService`). You can learn more about the new version of `DataLoader2` in
+our [full DataLoader2 documentation](https://pytorch.org/data/main/dataloader2.html#dataloader2). Additional features
+are work in progres, such as checkpointing and advanced control of randomness and determinism.
 
 Note that because many features of the original DataLoader have been modularized into DataPipes, their source codes live
 as [standard DataPipes in pytorch/pytorch](https://github.com/pytorch/pytorch/tree/master/torch/utils/data/datapipes)
@@ -95,17 +95,8 @@ Using conda:
 conda install -c pytorch torchdata
 ```
 
-Run a quick sanity check in python:
-
-```py
-from torchdata.datapipes.iter import HttpReader
-URL = "https://raw.githubusercontent.com/mhjabreel/CharCnn_Keras/master/data/ag_news_csv/train.csv"
-ag_news_train = HttpReader([URL]).parse_csv().map(lambda t: (int(t[0]), " ".join(t[1:])))
-agn_batches = ag_news_train.batch(2).map(lambda batch: {'labels': [sample[0] for sample in batch],\
-                                      'text': [sample[1].split() for sample in batch]})
-batch = next(iter(agn_batches))
-assert batch['text'][0][0:8] == ['Wall', 'St.', 'Bears', 'Claw', 'Back', 'Into', 'the', 'Black']
-```
+You can then proceed to run [our examples](https://github.com/pytorch/data/tree/main/examples), such as
+[the IMDb one](https://github.com/pytorch/data/blob/main/examples/text/imdb.py).
 
 ### From source
 
