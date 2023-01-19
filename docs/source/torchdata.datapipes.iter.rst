@@ -142,6 +142,7 @@ saving files, and listing the files in directories).
     FileOpener
     GDriveReader
     HttpReader
+    HuggingFaceHubReader
     IoPathFileLister
     IoPathFileOpener
     IoPathSaver
