@@ -273,12 +273,8 @@ def replace_by_dummy(graph, datapipe):
     return replace_dp(graph, datapipe, _DummyIterDataPipe())
 
 
-def _is_replicable(self):
-    return False
-
-
 def make_non_replicable_dp(datapipe):
-    datapipe.is_replicable = types.MethodType(_is_replicable, datapipe)
+    datapipe.is_replicable = types.MethodType(lambda self: False, datapipe)
     return datapipe
 
 
