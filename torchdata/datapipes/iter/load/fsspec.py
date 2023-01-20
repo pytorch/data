@@ -87,7 +87,7 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
             if fs.isfile(path):
                 yield root
             else:
-                for file_name in fs.ls(path):
+                for file_name in fs.ls(path, detail=False):  # Ensure it returns List[str], not List[Dict]
                     if not match_masks(file_name, self.masks):
                         continue
 
