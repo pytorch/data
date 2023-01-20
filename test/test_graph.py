@@ -410,6 +410,14 @@ class TestNonReplicableDataPipe(expecttest.TestCase):
         self.assertEqual(len(dps), 1)
         self.assertEqual(dps[0], end_dp)
 
+        # Test the production use case where the last DataPipe is fullsync
+        *_, end_dp, _ = self._make_dp()
+        dp = end_dp.fullsync()
+        graph = traverse_dps(dp)
+        dps = _find_replicable_branches(graph)
+        self.assertEqual(len(dps), 1)
+        self.assertEqual(dps[0], end_dp)
+
         single_br_dp, *_, fork_zip_dp, _, cir_map_dp, _, graph = self._make_dp()
         make_non_replicable_dp(single_br_dp)
         dps = _find_replicable_branches(graph)
