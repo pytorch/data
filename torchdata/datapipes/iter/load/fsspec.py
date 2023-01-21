@@ -200,7 +200,6 @@ class FSSpecSaverIterDataPipe(IterDataPipe[str]):
             filepath = meta if self.filepath_fn is None else self.filepath_fn(meta)
             fs, path = fsspec.core.url_to_fs(filepath, **self.kwargs_for_connection)
             with fs.open(path, self.mode, **self.kwargs_for_open) as f:
-                print(f)
                 f.write(data)
             yield filepath
 
