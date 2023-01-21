@@ -26,7 +26,7 @@ welcomed in that Github issue.
 
 Here is the list of available Map-style DataPipes:
 
-MapDataPipes
+List of MapDataPipes
 -------------------------
 
 .. autosummary::
