@@ -1,6 +1,6 @@
 # DataLoader2 (Prototype)
 
-Please check [online doc](https://pytorch.org/data/main/dataloader2.html#dataloader2)
+Please check out our [full DataLoader2 documentation](https://pytorch.org/data/main/dataloader2.html#dataloader2).
 
 ## DataLoader2 Prototype Usage and Feedback
 
