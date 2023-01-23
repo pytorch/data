@@ -84,7 +84,7 @@ These DataPipes help to perform combinatorial operations.
     Sampler
     Shuffler
 
-Combining/Spliting DataPipes
+Combining/Splitting DataPipes
 -----------------------------
 These tend to involve multiple DataPipes, combining them or splitting one to many.
 

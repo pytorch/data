@@ -73,14 +73,15 @@ class HuggingFaceHubReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
                 "to install the package"
             )
 
-        self.datset = dataset
+        self.dataset = dataset
         self.config_kwargs = config_kwargs
-        warnings.warn(
-            "default behavior of HuggingFaceHubReader will change in version 0.7", DeprecationWarning, stacklevel=2
-        )
+        if "split" not in self.config_kwargs:
+            warnings.warn("Default value of `split` will be changed to None in version 0.7", FutureWarning)
+        if "revision" not in self.config_kwargs:
+            warnings.warn("Default value of `revision` will be changed to None in version 0.7", FutureWarning)
 
     def __iter__(self) -> Iterator[Any]:
-        return _get_response_from_huggingface_hub(dataset=self.datset, **self.config_kwargs)
+        return _get_response_from_huggingface_hub(dataset=self.dataset, **self.config_kwargs)
 
     def __len__(self) -> int:
         raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
