@@ -58,7 +58,7 @@ jobs:
           pip3 install mypy==0.960 numpy types-requests
       - name: Build TorchData
         run: |
-          python setup.py develop
+          pip3 install .
       - name: Run mypy
         env:
           MYPY_FORCE_COLOR: 1

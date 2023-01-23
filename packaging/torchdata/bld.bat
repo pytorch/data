@@ -11,5 +11,5 @@ git config --system core.longpaths true
 git submodule update --init --recursive
 if errorlevel 1 exit /b 1
 
-python setup.py install --single-version-externally-managed --record=record.txt
+pip install .
 if errorlevel 1 exit /b 1

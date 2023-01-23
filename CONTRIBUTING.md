@@ -51,7 +51,7 @@ conda install pytorch -c pytorch-nightly
 ```bash
 git clone https://github.com/pytorch/data.git
 cd data
-python setup.py develop
+pip install -e .
 pip install flake8 typing mypy pytest expecttest
 ```
 
