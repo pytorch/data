@@ -3,9 +3,8 @@
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
-
-
-from typing import Any, Iterator, Tuple
+import warnings
+from typing import Any, Iterator, Tuple, Union
 
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
@@ -17,9 +16,15 @@ except ImportError:
 
 
 def _get_response_from_huggingface_hub(
-    path: str, streaming=True, split="train", revision="main", **config_kwargs
+    dataset: str,
+    split: Union[str, datasets.Split] = "train",
+    revision: Union[str, datasets.Version] = "main",
+    streaming: bool = True,
+    **config_kwargs,
 ) -> Iterator[Any]:
-    hf_dataset = datasets.load_dataset(path=path, streaming=streaming, split=split, revision=revision, **config_kwargs)
+    hf_dataset = datasets.load_dataset(
+        path=dataset, streaming=streaming, split=split, revision=revision, **config_kwargs
+    )
     return iter(hf_dataset)
 
 
@@ -27,10 +32,11 @@ class HuggingFaceHubReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
     Takes in dataset names and returns an Iterable HuggingFace dataset.
     Args format and meaning are the same as https://huggingface.co/docs/datasets/loading.
-    Contrary to their implementation, default behavior differs in the following:
-    split is set to "train".
-    revision is set to "main".
-    streaming is set to True.
+    Contrary to their implementation, default behavior differs in the following (this will be changed in version 0.7):
+        split is set to "train".
+        revision is set to "main".
+        streaming is set to True.
+
     Args:
         source_datapipe: a DataPipe that contains dataset names which will be accepted by the HuggingFace datasets library
     Example:
@@ -67,11 +73,14 @@ class HuggingFaceHubReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
                 "to install the package"
             )
 
-        self.path = dataset
+        self.datset = dataset
         self.config_kwargs = config_kwargs
+        warnings.warn(
+            "default behavior of HuggingFaceHubReader will change in version 0.7", DeprecationWarning, stacklevel=2
+        )
 
     def __iter__(self) -> Iterator[Any]:
-        return _get_response_from_huggingface_hub(path=self.path, **self.config_kwargs)
+        return _get_response_from_huggingface_hub(dataset=self.datset, **self.config_kwargs)
 
     def __len__(self) -> int:
         raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
