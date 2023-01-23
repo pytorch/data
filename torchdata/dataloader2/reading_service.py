@@ -260,7 +260,6 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
         if self.worker_prefetch_cnt > 0:
             worker_prefetch_dp = replicable_dp.prefetch(self.worker_prefetch_cnt)
-            graph = replace_dp(graph, replicable_dp, worker_prefetch_dp)
             replicable_dp = worker_prefetch_dp
 
         for worker_id in range(self.num_workers):
@@ -296,8 +295,8 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             self._main_prefetch_datapipe = end_datapipe
 
         # Attach non-replicable DataPipes
-        if replicable_dp is not datapipe:
-            graph = replace_dp(graph, replicable_dp, end_datapipe)
+        if replicable_dps[0] is not datapipe:
+            graph = replace_dp(graph, replicable_dps[0], end_datapipe)
             end_datapipe = datapipe  # type: ignore[assignment]
 
         self._end_datapipe = end_datapipe
