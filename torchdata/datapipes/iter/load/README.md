@@ -14,7 +14,7 @@ S3 IO datapipes are included when building with flag `BUILD_S3=1`. The following
 source with S3 datapipes.
 
 ```bash
-BUILD_S3=1 python setup.py install
+BUILD_S3=1 pip install .
 ```
 
 We also offer nightly and official (>=0.4.0) TorchData releases integrated with `AWSSDK` on the most of platforms.

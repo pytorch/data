@@ -101,7 +101,7 @@ You can then proceed to run [our examples](https://github.com/pytorch/data/tree/
 ### From source
 
 ```bash
-python setup.py install
+pip install .
 ```
 
 If you'd like to include the S3 IO datapipes and aws-sdk-cpp, you may also follow
