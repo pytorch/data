@@ -73,7 +73,7 @@ jobs:
           echo "/home/runner/.local/bin" >> $GITHUB_PATH
       - name: Build TorchData
         run: |
-          python setup.py install
+          pip3 install .
         env:
           BUILD_S3: 1
       - name: Install test requirements

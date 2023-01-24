@@ -388,4 +388,3 @@ class DataLoader2(Generic[T_co]):
         # TODO: I might want to skip `initialize_iteration` after this????
 
         # TODO: Integrate this with the existing API? Is anyone using these at the moment?
->>>>>>> 9fa7f8da ([PrototypeRS] Adding support for naive snapshotting)

@@ -481,7 +481,7 @@ jobs:
           fi
 
           pip3 install -r requirements.txt
-          python3 setup.py install
+          pip3 install .
       - name: Check env
         run: echo `which spinx-build`
       - name: Build the docset
