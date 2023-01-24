@@ -25,7 +25,7 @@ from torchdata.dataloader2.graph import (
     traverse_dps,
 )
 from torchdata.dataloader2.random import SeedGenerator
-from torchdata.dataloader2.utils.dispatch import _DummyIterDataPipe, find_replicable_branches
+from torchdata.dataloader2.utils.dispatch import _DummyIterDataPipe, find_non_dispatching_branches
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.map import MapDataPipe
 
@@ -77,8 +77,8 @@ def process_init_fn(
     else:
         assert len(non_replicable_dp) == 1
         assert not (dispatching_req_queue is None and dispatching_res_queue is None)
-        replicable_branches = find_replicable_branches(graph)
-        for dp in replicable_branches:
+        non_dispatching_branches = find_non_dispatching_branches(graph)
+        for dp in non_dispatching_branches:
             torch.utils.data.graph_settings.apply_sharding(
                 dp, worker_info.num_workers, worker_info.worker_id, SHARDING_PRIORITIES.MULTIPROCESSING
             )

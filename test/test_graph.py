@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import types
 import unittest
 
 from typing import Dict, Iterator, List, Tuple, TypeVar
@@ -17,11 +18,12 @@ from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
 
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService, ReadingServiceInterface
 from torchdata.dataloader2.graph import find_dps, list_dps, remove_dp, replace_dp, traverse_dps
+from torchdata.dataloader2.graph.utils import _find_replicable_branches
 from torchdata.dataloader2.random import SeedGenerator
 from torchdata.dataloader2.utils.dispatch import (
     _DummyIterDataPipe,
-    find_lca_non_replicable_dp,
-    find_replicable_branches,
+    find_lca_round_robin_sharding_dp,
+    find_non_dispatching_branches,
 )
 from torchdata.datapipes.iter import IterableWrapper, Mapper, ShardingRoundRobinDispatcher
 from torchdata.datapipes.utils import to_graph
@@ -262,13 +264,18 @@ class TestGraph(expecttest.TestCase):
         self.assertEqual(d1, d2)
 
 
-def make_dp_non_replicable(graph, datapipe):
-    non_rep_dp = ShardingRoundRobinDispatcher(datapipe, SHARDING_PRIORITIES.MULTIPROCESSING)
-    return replace_dp(graph, datapipe, non_rep_dp), non_rep_dp
+def insert_round_robin_sharding(graph, datapipe):
+    dispatch_dp = ShardingRoundRobinDispatcher(datapipe, SHARDING_PRIORITIES.MULTIPROCESSING)
+    return replace_dp(graph, datapipe, dispatch_dp), dispatch_dp
 
 
 def replace_by_dummy(graph, datapipe):
     return replace_dp(graph, datapipe, _DummyIterDataPipe())
+
+
+def make_non_replicable_dp(datapipe):
+    datapipe.is_replicable = types.MethodType(lambda self: False, datapipe)
+    return datapipe
 
 
 class TestNonReplicableDataPipe(expecttest.TestCase):
@@ -279,14 +286,14 @@ class TestNonReplicableDataPipe(expecttest.TestCase):
             - multi-branch pipeline
             - pipeline that has circurlar references
 
-        single_br_dp ---------------------------------
-                                ch1                    \
-                              /     \                   \
-        multi_br_dp --------->       -> fork_zip_dp -> end_dp ->
-                              \     /                   /
-               <-------         ch2                    /
-             /          \                             /
-        cir_br_dp -> cir_map_dp ----------------------
+        single_br_dp -------------------------------------
+                                     ch1                    \
+                                   /     \                   \
+        multi_br_dp -->forker_dp-->       -> fork_zip_dp -> end_dp ->
+                                   \     /                   /
+               <-------              ch2                    /
+             /          \                                  /
+        cir_br_dp -> cir_map_dp --------------------------
         """
         # Single-branch
         single_br_dp = IterableWrapper(list(range(10)))
@@ -294,6 +301,7 @@ class TestNonReplicableDataPipe(expecttest.TestCase):
         # Multi-branch
         multi_br_dp = IterableWrapper(list(range(10)))
         ch1, ch2 = multi_br_dp.fork(2)
+        forker_dp = ch1.main_datapipe
         fork_zip_dp = ch1.zip(ch2)
 
         # Circular-branch
@@ -304,92 +312,187 @@ class TestNonReplicableDataPipe(expecttest.TestCase):
 
         end_dp = single_br_dp.zip(fork_zip_dp, cir_map_dp)
         graph = traverse_dps(end_dp)
-        return single_br_dp, multi_br_dp, ch1, ch2, fork_zip_dp, cir_br_dp, cir_map_dp, end_dp, graph
+        return single_br_dp, multi_br_dp, forker_dp, ch1, ch2, fork_zip_dp, cir_br_dp, cir_map_dp, end_dp, graph
 
-    def test_single_non_replicable_dp(self):
+    def test_single_round_robin_sharding_dp(self):
         single_br_dp, *_, graph = self._make_dp()
-        graph, single_br_dp = make_dp_non_replicable(graph, single_br_dp)
-        self.assertEqual(find_lca_non_replicable_dp(graph), single_br_dp)
+        graph, single_br_dp = insert_round_robin_sharding(graph, single_br_dp)
+        self.assertEqual(find_lca_round_robin_sharding_dp(graph), single_br_dp)
 
         # The same non-shardable DataPipe on both branches
         _, multi_br_dp, *_, graph = self._make_dp()
-        graph, multi_br_dp = make_dp_non_replicable(graph, multi_br_dp)
-        self.assertEqual(find_lca_non_replicable_dp(graph), multi_br_dp)
+        graph, multi_br_dp = insert_round_robin_sharding(graph, multi_br_dp)
+        self.assertEqual(find_lca_round_robin_sharding_dp(graph), multi_br_dp)
 
-        _, _, ch1, _, fork_zip_dp, *_, graph = self._make_dp()
-        graph, ch1 = make_dp_non_replicable(graph, ch1)
-        self.assertEqual(find_lca_non_replicable_dp(graph), fork_zip_dp)
+        _, _, _, ch1, _, fork_zip_dp, *_, graph = self._make_dp()
+        graph, ch1 = insert_round_robin_sharding(graph, ch1)
+        self.assertEqual(find_lca_round_robin_sharding_dp(graph), fork_zip_dp)
 
         # Circular reference
         *_, cir_br_dp, cir_map_dp, _, graph = self._make_dp()
-        graph, cir_br_dp = make_dp_non_replicable(graph, cir_br_dp)
-        self.assertEqual(find_lca_non_replicable_dp(graph), cir_map_dp)
+        graph, cir_br_dp = insert_round_robin_sharding(graph, cir_br_dp)
+        self.assertEqual(find_lca_round_robin_sharding_dp(graph), cir_map_dp)
 
         *_, cir_map_dp, _, graph = self._make_dp()
-        graph, cir_map_dp = make_dp_non_replicable(graph, cir_map_dp)
-        self.assertEqual(find_lca_non_replicable_dp(graph), cir_map_dp)
+        graph, cir_map_dp = insert_round_robin_sharding(graph, cir_map_dp)
+        self.assertEqual(find_lca_round_robin_sharding_dp(graph), cir_map_dp)
 
-    def test_multi_non_replicable_dps(self):
+    def test_multi_round_robin_sharding_dps(self):
         single_br_dp, multi_br_dp, *_, end_dp, graph = self._make_dp()
-        graph, single_br_dp = make_dp_non_replicable(graph, single_br_dp)
-        graph, multi_br_dp = make_dp_non_replicable(graph, multi_br_dp)
-        self.assertEqual(find_lca_non_replicable_dp(graph), end_dp)
+        graph, single_br_dp = insert_round_robin_sharding(graph, single_br_dp)
+        graph, multi_br_dp = insert_round_robin_sharding(graph, multi_br_dp)
+        self.assertEqual(find_lca_round_robin_sharding_dp(graph), end_dp)
 
-        single_br_dp, _, ch1, *_, end_dp, graph = self._make_dp()
-        graph, single_br_dp = make_dp_non_replicable(graph, single_br_dp)
-        graph, ch1 = make_dp_non_replicable(graph, ch1)
-        self.assertEqual(find_lca_non_replicable_dp(graph), end_dp)
+        single_br_dp, _, _, ch1, *_, end_dp, graph = self._make_dp()
+        graph, single_br_dp = insert_round_robin_sharding(graph, single_br_dp)
+        graph, ch1 = insert_round_robin_sharding(graph, ch1)
+        self.assertEqual(find_lca_round_robin_sharding_dp(graph), end_dp)
 
-        _, multi_br_dp, ch1, _, fork_zip_dp, *_, graph = self._make_dp()
-        graph, multi_br_dp = make_dp_non_replicable(graph, multi_br_dp)
-        graph, ch1 = make_dp_non_replicable(graph, ch1)
-        self.assertEqual(find_lca_non_replicable_dp(graph), fork_zip_dp)
+        _, multi_br_dp, _, ch1, _, fork_zip_dp, *_, graph = self._make_dp()
+        graph, multi_br_dp = insert_round_robin_sharding(graph, multi_br_dp)
+        graph, ch1 = insert_round_robin_sharding(graph, ch1)
+        self.assertEqual(find_lca_round_robin_sharding_dp(graph), fork_zip_dp)
 
         single_br_dp, *_, cir_br_dp, _, end_dp, graph = self._make_dp()
-        graph, single_br_dp = make_dp_non_replicable(graph, single_br_dp)
-        graph, cir_br_dp = make_dp_non_replicable(graph, cir_br_dp)
-        self.assertEqual(find_lca_non_replicable_dp(graph), end_dp)
+        graph, single_br_dp = insert_round_robin_sharding(graph, single_br_dp)
+        graph, cir_br_dp = insert_round_robin_sharding(graph, cir_br_dp)
+        self.assertEqual(find_lca_round_robin_sharding_dp(graph), end_dp)
 
-    def test_replicable_branches(self):
+    def test_non_dispatching_branches(self):
         r"""
         There should be a single DataPipe as the lowest common ancestor of all
-        non-replicable DataPipes that is replaced by ``DummyIterDataPipe``.
+        non-dispatching DataPipes that is replaced by ``DummyIterDataPipe``.
         """
         single_br_dp, *_, fork_zip_dp, _, cir_map_dp, _, graph = self._make_dp()
         graph = replace_by_dummy(graph, single_br_dp)
-        dps = find_replicable_branches(graph)
+        dps = find_non_dispatching_branches(graph)
         self.assertEqual(len(dps), 2)
         self.assertTrue(all(dp in (fork_zip_dp, cir_map_dp) for dp in dps))
 
         single_br_dp, multi_br_dp, *_, cir_map_dp, _, graph = self._make_dp()
         graph = replace_by_dummy(graph, multi_br_dp)
-        dps = find_replicable_branches(graph)
+        dps = find_non_dispatching_branches(graph)
         self.assertEqual(len(dps), 2)
         self.assertTrue(all(dp in (single_br_dp, cir_map_dp) for dp in dps))
 
         # In theory, this case should never happen because LCA (fork_zip_dp) should be
         # replaced by _DummpyIterDataPipe if any of child is non-replicable
-        single_br_dp, _, ch1, ch2, *_, cir_map_dp, _, graph = self._make_dp()
+        single_br_dp, _, _, ch1, ch2, *_, cir_map_dp, _, graph = self._make_dp()
         graph = replace_by_dummy(graph, ch1)
-        dps = find_replicable_branches(graph)
+        dps = find_non_dispatching_branches(graph)
         self.assertEqual(len(dps), 3)
         self.assertTrue(all(dp in (single_br_dp, ch2, cir_map_dp) for dp in dps))
 
         single_br_dp, *_, fork_zip_dp, _, cir_map_dp, _, graph = self._make_dp()
         graph = replace_by_dummy(graph, cir_map_dp)
-        dps = find_replicable_branches(graph)
+        dps = find_non_dispatching_branches(graph)
         self.assertTrue(all(dp in (single_br_dp, fork_zip_dp) for dp in dps))
 
         *_, end_dp, graph = self._make_dp()
         graph = replace_by_dummy(graph, end_dp)
-        dps = find_replicable_branches(graph)
+        dps = find_non_dispatching_branches(graph)
         self.assertEqual(len(dps), 0)
 
         single_br_dp, *_, fork_zip_dp, _, cir_map_dp, _, graph = self._make_dp()
         graph = replace_by_dummy(graph, fork_zip_dp)
-        dps = find_replicable_branches(graph)
+        dps = find_non_dispatching_branches(graph)
         self.assertEqual(len(dps), 2)
         self.assertTrue(all(dp in (single_br_dp, cir_map_dp) for dp in dps))
+
+    def test_single_non_replicable_dp(self):
+        # All replicable
+        *_, end_dp, graph = self._make_dp()
+        dps = _find_replicable_branches(graph)
+        self.assertEqual(len(dps), 1)
+        self.assertEqual(dps[0], end_dp)
+
+        # Test the production use case where the last DataPipe is fullsync
+        *_, end_dp, _ = self._make_dp()
+        dp = end_dp.fullsync()
+        graph = traverse_dps(dp)
+        dps = _find_replicable_branches(graph)
+        self.assertEqual(len(dps), 1)
+        self.assertEqual(dps[0], end_dp)
+
+        single_br_dp, *_, fork_zip_dp, _, cir_map_dp, _, graph = self._make_dp()
+        make_non_replicable_dp(single_br_dp)
+        dps = _find_replicable_branches(graph)
+        self.assertEqual(len(dps), 2)
+        self.assertTrue(all(dp in (fork_zip_dp, cir_map_dp) for dp in dps))
+
+        single_br_dp, *_, ch1, ch2, fork_zip_dp, _, cir_map_dp, _, graph = self._make_dp()
+        make_non_replicable_dp(fork_zip_dp)
+        dps = _find_replicable_branches(graph)
+        self.assertEqual(len(dps), 4)
+        self.assertTrue(all(dp in (single_br_dp, ch1, ch2, cir_map_dp) for dp in dps))
+
+        single_br_dp, _, forker_dp, ch1, *_, cir_map_dp, _, graph = self._make_dp()
+        make_non_replicable_dp(ch1)
+        dps = _find_replicable_branches(graph)
+        self.assertEqual(len(dps), 3)
+        self.assertTrue(all(dp in (single_br_dp, forker_dp, cir_map_dp) for dp in dps))
+
+        single_br_dp, *_, fork_zip_dp, cir_br_dp, cir_map_dp, _, graph = self._make_dp()
+        make_non_replicable_dp(cir_map_dp)
+        dps = _find_replicable_branches(graph)
+        self.assertEqual(len(dps), 3)
+        self.assertTrue(all(dp in (single_br_dp, fork_zip_dp, cir_br_dp) for dp in dps))
+
+        single_br_dp, *_, fork_zip_dp, _, cir_map_dp, end_dp, graph = self._make_dp()
+        make_non_replicable_dp(end_dp)
+        dps = _find_replicable_branches(graph)
+        self.assertEqual(len(dps), 3)
+        self.assertTrue(all(dp in (single_br_dp, fork_zip_dp, cir_map_dp) for dp in dps))
+
+    def test_multi_non_replicable_dps(self):
+        single_br_dp, multi_br_dp, *_, cir_map_dp, _, graph = self._make_dp()
+        make_non_replicable_dp(single_br_dp)
+        make_non_replicable_dp(multi_br_dp)
+        dps = _find_replicable_branches(graph)
+        self.assertEqual(len(dps), 1)
+        self.assertEqual(dps[0], cir_map_dp)
+
+        single_br_dp, _, forker_dp, ch1, *_, cir_map_dp, _, graph = self._make_dp()
+        make_non_replicable_dp(single_br_dp)
+        make_non_replicable_dp(ch1)
+        dps = _find_replicable_branches(graph)
+        self.assertEqual(len(dps), 2)
+        self.assertTrue(all(dp in (forker_dp, cir_map_dp) for dp in dps))
+
+        single_br_dp, *_, ch1, ch2, fork_zip_dp, _, cir_map_dp, _, graph = self._make_dp()
+        make_non_replicable_dp(single_br_dp)
+        make_non_replicable_dp(fork_zip_dp)
+        dps = _find_replicable_branches(graph)
+        self.assertEqual(len(dps), 3)
+        self.assertTrue(all(dp in (ch1, ch2, cir_map_dp) for dp in dps))
+
+        single_br_dp, *_, fork_zip_dp, cir_br_dp, cir_map_dp, _, graph = self._make_dp()
+        make_non_replicable_dp(single_br_dp)
+        make_non_replicable_dp(cir_map_dp)
+        dps = _find_replicable_branches(graph)
+        self.assertEqual(len(dps), 2)
+        self.assertTrue(all(dp in (fork_zip_dp, cir_br_dp) for dp in dps))
+
+        single_br_dp, multi_br_dp, forker_dp, ch1, *_, cir_map_dp, _, graph = self._make_dp()
+        make_non_replicable_dp(forker_dp)
+        make_non_replicable_dp(ch1)
+        dps = _find_replicable_branches(graph)
+        self.assertEqual(len(dps), 3)
+        self.assertTrue(all(dp in (single_br_dp, multi_br_dp, cir_map_dp) for dp in dps))
+
+        single_br_dp, multi_br_dp, forker_dp, *_, cir_br_dp, cir_map_dp, _, graph = self._make_dp()
+        make_non_replicable_dp(forker_dp)
+        make_non_replicable_dp(cir_map_dp)
+        dps = _find_replicable_branches(graph)
+        self.assertEqual(len(dps), 3)
+        self.assertTrue(all(dp in (single_br_dp, multi_br_dp, cir_br_dp) for dp in dps))
+
+        single_br_dp, *_, ch1, ch2, fork_zip_dp, cir_br_dp, cir_map_dp, _, graph = self._make_dp()
+        make_non_replicable_dp(fork_zip_dp)
+        make_non_replicable_dp(cir_map_dp)
+        dps = _find_replicable_branches(graph)
+        self.assertEqual(len(dps), 4)
+        self.assertTrue(all(dp in (single_br_dp, ch1, ch2, cir_br_dp) for dp in dps))
 
 
 class TestGraphVisualization(expecttest.TestCase):
