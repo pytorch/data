@@ -41,7 +41,7 @@ jobs:
       - name: Install torchdata
         run: |
           pip install -r requirements.txt
-          python setup.py install
+          pip install .
 
       - name: Install test requirements
         run: pip install pytest pytest-mock scipy iopath pycocotools h5py
