@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 import warnings
-from typing import Any, Iterator, Tuple, Union
+from typing import Any, Iterator, Tuple
 
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
@@ -17,8 +17,8 @@ except ImportError:
 
 def _get_response_from_huggingface_hub(
     dataset: str,
-    split: Union[str, datasets.Split] = "train",
-    revision: Union[str, datasets.Version] = "main",
+    split: str = "train",
+    revision: str = "main",
     streaming: bool = True,
     **config_kwargs,
 ) -> Iterator[Any]:
