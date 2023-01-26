@@ -6,6 +6,7 @@
 
 import re
 import urllib
+import warnings
 
 from typing import Any, Dict, Iterator, Optional, Tuple
 
@@ -62,6 +63,7 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Args:
         source_datapipe: a DataPipe that contains URLs
         timeout: timeout in seconds for HTTP request
+        skip_on_error: whether to skip over urls causing problems, an exception is (being?) raised otherewise
         **kwargs: a Dictionary to pass optional arguments that requests takes. For the full list check out https://docs.python-requests.org/en/master/api/
 
     Example:
@@ -80,18 +82,29 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     """
 
     def __init__(
-        self, source_datapipe: IterDataPipe[str], timeout: Optional[float] = None, **kwargs: Optional[Dict[str, Any]]
+        self,
+        source_datapipe: IterDataPipe[str],
+        timeout: Optional[float] = None,
+        skip_on_error: bool = False,
+        **kwargs: Optional[Dict[str, Any]],
     ) -> None:
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.timeout = timeout
+        self.skip_on_error = skip_on_error
         self.query_params = kwargs
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for url in self.source_datapipe:
-            if self.query_params:
-                yield _get_response_from_http(url, timeout=self.timeout, **self.query_params)
-            else:
-                yield _get_response_from_http(url, timeout=self.timeout)
+            try:
+                if self.query_params:
+                    yield _get_response_from_http(url, timeout=self.timeout, **self.query_params)
+                else:
+                    yield _get_response_from_http(url, timeout=self.timeout)
+            except Exception as e:
+                if self.skip_on_error:
+                    warnings.warn(f"{e}, skipping...")
+                else:
+                    raise
 
     def __len__(self) -> int:
         return len(self.source_datapipe)

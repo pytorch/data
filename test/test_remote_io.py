@@ -103,6 +103,15 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         with self.assertRaisesRegex(Exception, "[404]"):
             next(iter(http_error_dp.readlines()))
 
+        # Feature skip-error Test: test if the Http Reader skips urls causing problems
+        http_skip_error_dp = HttpReader(IterableWrapper([error_url, file_url]), timeout=timeout, skip_on_error=True)
+        reader_dp = http_skip_error_dp.readlines()
+        with self.assertWarnsRegex(Warning, "404.+skipping"):
+            it = iter(reader_dp)
+            path, line = next(it)
+            self.assertEqual(expected_file_name, os.path.basename(path))
+            self.assertTrue(b"BSD" in line)
+
     def test_on_disk_cache_holder_iterdatapipe(self):
         tar_file_url = "https://raw.githubusercontent.com/pytorch/data/main/test/_fakedata/csv.tar.gz"
         expected_file_name = os.path.join(self.temp_dir.name, "csv.tar.gz")
