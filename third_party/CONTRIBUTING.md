@@ -34,7 +34,7 @@ They are contrasted with Core dependencies that are must be installed along with
 ### Static Linking vs Dynamic Linking
 
 For the third-party libraries in C, if their runtime libraries are available on both PyPI and Conda across platfroms
-(Linux, MacOS, Windows and Python 3.7-3.10), it's recommended to use dynamic linking against the `torchdata`
+(Linux, MacOS, Windows and Python 3.8-3.10), it's recommended to use dynamic linking against the `torchdata`
 C-extension.
 
 For the third-party libraries that are not available on PyPI and Conda, please add it as a submodule under `third_party`
