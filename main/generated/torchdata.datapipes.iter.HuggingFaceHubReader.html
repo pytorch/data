@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>OnlineReader &mdash; TorchData main documentation</title>
+  <title>HuggingFaceHubReader &mdash; TorchData main documentation</title>
   
 
   
@@ -34,8 +34,8 @@
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="ParquetDataFrameLoader" href="torchdata.datapipes.iter.ParquetDataFrameLoader.html" />
-    <link rel="prev" title="IoPathSaver" href="torchdata.datapipes.iter.IoPathSaver.html" />
+    <link rel="next" title="IoPathFileLister" href="torchdata.datapipes.iter.IoPathFileLister.html" />
+    <link rel="prev" title="HttpReader" href="torchdata.datapipes.iter.HttpReader.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -308,13 +308,13 @@
         
           <li><a href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a> &gt;</li>
         
-      <li>OnlineReader</li>
+      <li>HuggingFaceHubReader</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/generated/torchdata.datapipes.iter.OnlineReader.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/generated/torchdata.datapipes.iter.HuggingFaceHubReader.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -340,32 +340,28 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="onlinereader">
-<h1>OnlineReader<a class="headerlink" href="#onlinereader" title="Permalink to this heading">¶</a></h1>
+  <section id="huggingfacehubreader">
+<h1>HuggingFaceHubReader<a class="headerlink" href="#huggingfacehubreader" title="Permalink to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="torchdata.datapipes.iter.OnlineReader">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">OnlineReader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.OnlineReader" title="Permalink to this definition">¶</a></dt>
-<dd><p>Takes file URLs (can be HTTP URLs pointing to files or URLs to GDrive files), and
-yields tuples of file URL and IO stream (functional name: <code class="docutils literal notranslate"><span class="pre">read_from_remote</span></code>).</p>
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.HuggingFaceHubReader">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">HuggingFaceHubReader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">config_kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.HuggingFaceHubReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes in dataset names and returns an Iterable HuggingFace dataset.
+Args format and meaning are the same as <a class="reference external" href="https://huggingface.co/docs/datasets/loading">https://huggingface.co/docs/datasets/loading</a>.
+Contrary to their implementation, default behavior differs in the following (this will be changed in version 0.7):</p>
+<blockquote>
+<div><p>split is set to “train”.
+revision is set to “main”.
+streaming is set to True.</p>
+</div></blockquote>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>source_datapipe</strong> – a DataPipe that contains URLs</p></li>
-<li><p><strong>timeout</strong> – timeout in seconds for HTTP request</p></li>
-</ul>
+<dd class="field-odd"><p><strong>source_datapipe</strong> – a DataPipe that contains dataset names which will be accepted by the HuggingFace datasets library</p>
 </dd>
 </dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span><span class="p">,</span> <span class="n">OnlineReader</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">file_url</span> <span class="o">=</span> <span class="s2">&quot;https://raw.githubusercontent.com/pytorch/data/main/LICENSE&quot;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">online_reader_dp</span> <span class="o">=</span> <span class="n">OnlineReader</span><span class="p">(</span><span class="n">IterableWrapper</span><span class="p">([</span><span class="n">file_url</span><span class="p">]))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">reader_dp</span> <span class="o">=</span> <span class="n">online_reader_dp</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">it</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">reader_dp</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span><span class="p">,</span> <span class="n">line</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">it</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span>
-<span class="go">https://raw.githubusercontent.com/pytorch/data/main/LICENSE</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">line</span>
-<span class="go">b&#39;BSD 3-Clause License&#39;</span>
+<p>Example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">huggingface_reader_dp</span> <span class="o">=</span> <span class="n">HuggingFaceHubReader</span><span class="p">(</span><span class="s2">&quot;lhoestq/demo1&quot;</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="s2">&quot;main&quot;</span><span class="p">)</span>
+<span class="n">elem</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">huggingface_reader_dp</span><span class="p">))</span>
+<span class="k">assert</span> <span class="n">elem</span><span class="p">[</span><span class="s2">&quot;package_name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;com.mantz_it.rfanalyzer&quot;</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -380,10 +376,10 @@ yields tuples of file URL and IO stream (functional name: <code class="docutils 
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="torchdata.datapipes.iter.ParquetDataFrameLoader.html" class="btn btn-neutral float-right" title="ParquetDataFrameLoader" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.datapipes.iter.IoPathFileLister.html" class="btn btn-neutral float-right" title="IoPathFileLister" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.iter.IoPathSaver.html" class="btn btn-neutral" title="IoPathSaver" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="torchdata.datapipes.iter.HttpReader.html" class="btn btn-neutral" title="HttpReader" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -415,8 +411,8 @@ yields tuples of file URL and IO stream (functional name: <code class="docutils 
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">OnlineReader</a><ul>
-<li><a class="reference internal" href="#torchdata.datapipes.iter.OnlineReader"><code class="docutils literal notranslate"><span class="pre">OnlineReader</span></code></a></li>
+<li><a class="reference internal" href="#">HuggingFaceHubReader</a><ul>
+<li><a class="reference internal" href="#torchdata.datapipes.iter.HuggingFaceHubReader"><code class="docutils literal notranslate"><span class="pre">HuggingFaceHubReader</span></code></a></li>
 </ul>
 </li>
 </ul>
