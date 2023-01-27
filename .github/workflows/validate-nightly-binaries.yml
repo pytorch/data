@@ -1,5 +1,5 @@
 # Scheduled validation of the nightly binaries
-name: cron
+name: Cron job to validate TorchData Nightly Binaries
 
 on:
   schedule:
