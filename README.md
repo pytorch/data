@@ -53,7 +53,7 @@ The following is the corresponding `torchdata` versions and supported Python ver
 
 | `torch`              | `torchdata`        | `python`          |
 | -------------------- | ------------------ | ----------------- |
-| `master` / `nightly` | `main` / `nightly` | `>=3.7`, `<=3.10` |
+| `master` / `nightly` | `main` / `nightly` | `>=3.8`, `<=3.10` |
 | `1.13.1`             | `0.5.1`            | `>=3.7`, `<=3.10` |
 | `1.12.1`             | `0.4.1`            | `>=3.7`, `<=3.10` |
 | `1.12.0`             | `0.4.0`            | `>=3.7`, `<=3.10` |
