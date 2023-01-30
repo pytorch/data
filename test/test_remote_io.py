@@ -8,16 +8,13 @@ import io
 import os
 import unittest
 import warnings
+from unittest.mock import patch
 
 import expecttest
 
-import torchdata
-
 from _utils._common_utils_for_test import check_hash_fn, create_temp_dir, IS_M1, IS_WINDOWS
 from torch.utils.data import DataLoader
-
 from torchdata.datapipes.iter import (
-    EndOnDiskCacheHolder,
     FileOpener,
     FSSpecFileLister,
     FSSpecFileOpener,
@@ -100,17 +97,29 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         # Error Test: test if the Http Reader raises an error when the url is invalid
         error_url = "https://github.com/pytorch/data/this/url/dont/exist"
         http_error_dp = HttpReader(IterableWrapper([error_url]), timeout=timeout)
-        with self.assertRaisesRegex(Exception, "[404]"):
+        with self.assertRaisesRegex(Exception, f"404.+{error_url}"):
             next(iter(http_error_dp.readlines()))
 
         # Feature skip-error Test: test if the Http Reader skips urls causing problems
         http_skip_error_dp = HttpReader(IterableWrapper([error_url, file_url]), timeout=timeout, skip_on_error=True)
         reader_dp = http_skip_error_dp.readlines()
-        with self.assertWarnsRegex(Warning, "404.+skipping"):
+        with self.assertWarnsRegex(Warning, f"404.+{error_url}.+skipping"):
             it = iter(reader_dp)
             path, line = next(it)
             self.assertEqual(expected_file_name, os.path.basename(path))
             self.assertTrue(b"BSD" in line)
+
+        # test if GET-request is done with correct arguments
+        with patch("requests.Session.get") as mock_get:
+            http_reader_dp = HttpReader(IterableWrapper([file_url]), timeout=timeout, **query_params)
+            _ = next(iter(http_reader_dp))
+            mock_get.assert_called_with(
+                file_url,
+                timeout=timeout,
+                stream=True,
+                auth=query_params["auth"],
+                allow_redirects=query_params["allow_redirects"],
+            )
 
     def test_on_disk_cache_holder_iterdatapipe(self):
         tar_file_url = "https://raw.githubusercontent.com/pytorch/data/main/test/_fakedata/csv.tar.gz"
