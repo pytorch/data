@@ -2,6 +2,9 @@ name: Build Linux Conda
 
 on:
   pull_request:
+    paths:
+      - .github/workflows/build_conda_linux.yml
+      - .github/workflows/build_wheels_linux.yml
   push:
     branches:
       - nightly
