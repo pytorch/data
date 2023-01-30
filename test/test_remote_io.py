@@ -24,6 +24,7 @@ from torchdata.datapipes.iter import (
     S3FileLister,
     S3FileLoader,
 )
+from torchdata.datapipes.iter.load.online import _get_proxies
 
 try:
     import fsspec
@@ -116,6 +117,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             mock_get.assert_called_with(
                 file_url,
                 timeout=timeout,
+                proxies=_get_proxies(),
                 stream=True,
                 auth=query_params["auth"],
                 allow_redirects=query_params["allow_redirects"],
