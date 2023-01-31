@@ -226,7 +226,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
     @skipIfNoFSSpecS3
     def test_fsspec_io_iterdatapipe(self):
         input_list = [
-            (["s3://ai2-public-datasets"], 40),  # bucket without '/'
+            (["s3://ai2-public-datasets"], 41),  # bucket without '/'
             (["s3://ai2-public-datasets/charades/"], 18),  # bucket with '/'
             (
                 [
@@ -276,8 +276,8 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
     def test_s3_io_iterdatapipe(self):
         # S3FileLister: different inputs
         input_list = [
-            [["s3://ai2-public-datasets"], 78],  # bucket without '/'
-            [["s3://ai2-public-datasets/"], 78],  # bucket with '/'
+            [["s3://ai2-public-datasets"], 81],  # bucket without '/'
+            [["s3://ai2-public-datasets/"], 81],  # bucket with '/'
             [["s3://ai2-public-datasets/charades"], 18],  # folder without '/'
             [["s3://ai2-public-datasets/charades/"], 18],  # folder without '/'
             [["s3://ai2-public-datasets/charad"], 18],  # prefix

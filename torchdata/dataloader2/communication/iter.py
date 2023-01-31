@@ -272,6 +272,7 @@ class _IterateQueueDataPipes(IterDataPipe):
             dp.protocol.request_reset_epoch(
                 partial(reset_fn, worker_info=worker_info, seed_generator=worker_seed_generator)
             )
+        for dp in self.datapipes:
             while True:
                 try:
                     dp.protocol.get_response_reset_epoch()

@@ -259,8 +259,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         replicable_dp = replicable_dps[0]
 
         if self.worker_prefetch_cnt > 0:
-            worker_prefetch_dp = replicable_dp.prefetch(self.worker_prefetch_cnt)
-            replicable_dp = worker_prefetch_dp
+            replicable_dp = replicable_dp.prefetch(self.worker_prefetch_cnt)
 
         for worker_id in range(self.num_workers):
             worker_info = WorkerInfo(self.num_workers, worker_id)
