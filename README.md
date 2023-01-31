@@ -63,7 +63,7 @@ The following is the corresponding `torchdata` versions and supported Python ver
 
 Follow the instructions
 [in this Colab notebook](https://colab.research.google.com/drive/1eSvp-eUDYPj0Sd0X_Mv9s9VkE8RNDg1u). The notebook also
-contains
+contains a simple usage example.
 
 ### Local pip or conda
 
