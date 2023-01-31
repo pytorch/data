@@ -10,7 +10,6 @@ import warnings
 from typing import Any, Dict, Iterator, Optional, Tuple
 
 import requests
-from requests.exceptions import RequestException
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -85,7 +84,7 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         for url in self.source_datapipe:
             try:
                 yield _get_response_from_http(url, timeout=self.timeout, **self.query_params)
-            except RequestException as e:
+            except Exception as e:
                 if self.skip_on_error:
                     warnings.warn(f"{e}, skipping...")
                 else:
@@ -106,7 +105,7 @@ def _get_response_from_google_drive(
     confirm_token = None
 
     with requests.Session() as session:
-        response = session.get(url, timeout=timeout, stream=True, **query_params)
+        response = session.get(url, timeout=timeout, stream=True, **query_params)  # type: ignore[arg-type]
         response.raise_for_status()
 
         for k, v in response.cookies.items():
@@ -123,7 +122,7 @@ def _get_response_from_google_drive(
         if confirm_token:
             url = url + "&confirm=" + confirm_token
 
-        response = session.get(url, timeout=timeout, stream=True, **query_params)
+        response = session.get(url, timeout=timeout, stream=True, **query_params)  # type: ignore[arg-type]
         response.raise_for_status()
 
         if "content-disposition" not in response.headers:

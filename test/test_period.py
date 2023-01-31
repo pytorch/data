@@ -45,14 +45,20 @@ class TestDataPipePeriod(expecttest.TestCase):
 
         # Error Test: test if the GDrive Reader raises an error when the url is invalid
         error_url = "https://drive.google.com/uc?export=download&id=filedoesnotexist"
-        http_error_dp = GDriveReader(IterableWrapper([error_url]))
-        with self.assertRaisesRegex(Exception, "[404]"):
+        http_error_dp = GDriveReader(IterableWrapper([error_url]), timeout=timeout)
+        with self.assertRaisesRegex(
+            Exception, r"404.+https://drive.google.com/uc\?export=download&id=filedoesnotexist"
+        ):
             next(iter(http_error_dp.readlines()))
 
         # Feature skip-error Test: test if the GDrive Reader skips urls causing problems
-        gdrive_skip_error_dp = GDriveReader(IterableWrapper([error_url, amazon_review_url]), skip_on_error=True)
+        gdrive_skip_error_dp = GDriveReader(
+            IterableWrapper([error_url, amazon_review_url]), timeout=timeout, skip_on_error=True
+        )
         reader_dp = gdrive_skip_error_dp.readlines()
-        with self.assertWarnsRegex(Warning, f"404.+{error_url}.+skipping"):
+        with self.assertWarnsRegex(
+            Warning, r"404.+https://drive.google.com/uc\?export=download&id=filedoesnotexist.+skipping"
+        ):
             it = iter(reader_dp)
             path, line = next(it)
             self.assertEqual(expected_file_name, os.path.basename(path))
@@ -110,22 +116,23 @@ class TestDataPipePeriod(expecttest.TestCase):
 
         # Error Test: test if the Online Reader raises an error when the url is invalid
         error_url_http = "https://github.com/pytorch/data/this/url/dont/exist"
-        online_skip_error_dp = OnlineReader(IterableWrapper([error_url_http]))
+        online_error_dp = OnlineReader(IterableWrapper([error_url_http]), timeout=timeout)
         with self.assertRaisesRegex(Exception, f"404.+{error_url_http}"):
-            next(iter(online_skip_error_dp.readlines()))
+            next(iter(online_error_dp.readlines()))
 
         error_url_gdrive = "https://drive.google.com/uc?export=download&id=filedoesnotexist"
-        online_skip_error_dp = OnlineReader(IterableWrapper([error_url_gdrive]))
-        with self.assertRaisesRegex(Exception, f"404.+{error_url_gdrive}"):
-            next(iter(online_skip_error_dp.readlines()))
+        online_error_dp = OnlineReader(IterableWrapper([error_url_gdrive]), timeout=timeout)
+        with self.assertRaisesRegex(
+            Exception, r"404.+https://drive.google.com/uc\?export=download&id=filedoesnotexist"
+        ):
+            next(iter(online_error_dp.readlines()))
 
         # Feature skip-error Test: test if the Online Reader skips urls causing problems
-        error_url_http = "https://github.com/pytorch/data/this/url/dont/exist"
         online_skip_error_dp = OnlineReader(
-            IterableWrapper([error_url_http, error_url_gdrive, license_file_url]), skip_on_error=True
+            IterableWrapper([error_url_http, error_url_gdrive, license_file_url]), timeout=timeout, skip_on_error=True
         )
         reader_dp = online_skip_error_dp.readlines()
-        with self.assertWarnsRegex(Warning, f"404.+{error_url_gdrive}.+skipping"):
+        with self.assertWarnsRegex(Warning, f"404.+{error_url_http}.+skipping"):
             it = iter(reader_dp)
             path, line = next(it)
             self.assertEqual(expected_license_file_name, os.path.basename(path))
