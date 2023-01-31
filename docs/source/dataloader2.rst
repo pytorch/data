@@ -1,5 +1,7 @@
+:tocdepth: -1
+
 DataLoader2
-================================
+============
 
 .. automodule:: torchdata.dataloader2
 
