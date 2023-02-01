@@ -62,7 +62,8 @@ The following is the corresponding `torchdata` versions and supported Python ver
 ### Colab
 
 Follow the instructions
-[in this Colab notebook](https://colab.research.google.com/drive/1x1ESG0_N02txFuQwyTfCnjhqzS-PzQjA)
+[in this Colab notebook](https://colab.research.google.com/drive/1eSvp-eUDYPj0Sd0X_Mv9s9VkE8RNDg1u). The notebook also
+contains a simple usage example.
 
 ### Local pip or conda
 
@@ -183,8 +184,12 @@ It covers three topics: [using DataPipes](https://pytorch.org/data/main/tutorial
 
 ## Usage Examples
 
-There are several data loading implementations of popular datasets across different research domains that use
-`DataPipes`. You can find a few [selected examples here](https://pytorch.org/data/main/examples.html).
+We provide a simple usage example in this
+[Colab notebook](https://colab.research.google.com/drive/1eSvp-eUDYPj0Sd0X_Mv9s9VkE8RNDg1u). It can also be downloaded
+and executed locally as a Jupyter notebook.
+
+In addition, there are several data loading implementations of popular datasets across different research domains that
+use `DataPipes`. You can find a few [selected examples here](https://pytorch.org/data/main/examples.html).
 
 ## Frequently Asked Questions (FAQ)
 
