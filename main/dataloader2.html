@@ -221,7 +221,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+d202d56 ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+1d98097 ) &#x25BC</a>
     </div>
     
 
@@ -251,10 +251,12 @@
 <li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.html">Map-style DataPipes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.utils.html">Utility Functions</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">DataLoader2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reading_service.html">ReadingService</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dp_tutorial.html">DataPipe Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dlv2_tutorial.html">DataLoader2 Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
@@ -345,7 +347,7 @@
 <h2>DataLoader2<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.dataloader2.DataLoader2">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.dataloader2.</span></span><span class="sig-name descname"><span class="pre">DataLoader2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datapipe_adapter_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#torchdata.dataloader2.adapter.Adapter" title="torchdata.dataloader2.adapter.Adapter"><span class="pre">Adapter</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#torchdata.dataloader2.adapter.Adapter" title="torchdata.dataloader2.adapter.Adapter"><span class="pre">Adapter</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reading_service</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#torchdata.dataloader2.ReadingServiceInterface" title="torchdata.dataloader2.reading_service.ReadingServiceInterface"><span class="pre">ReadingServiceInterface</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.dataloader2.DataLoader2" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.dataloader2.</span></span><span class="sig-name descname"><span class="pre">DataLoader2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datapipe_adapter_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#torchdata.dataloader2.adapter.Adapter" title="torchdata.dataloader2.adapter.Adapter"><span class="pre">Adapter</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#torchdata.dataloader2.adapter.Adapter" title="torchdata.dataloader2.adapter.Adapter"><span class="pre">Adapter</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reading_service</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="reading_service.html#torchdata.dataloader2.ReadingServiceInterface" title="torchdata.dataloader2.reading_service.ReadingServiceInterface"><span class="pre">ReadingServiceInterface</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.dataloader2.DataLoader2" title="Permalink to this definition">¶</a></dt>
 <dd><p><code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> is used to optimize and execute the given <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph
 based on <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> and <code class="docutils literal notranslate"><span class="pre">Adapter</span></code> functions, with support for</p>
 <ul class="simple">
@@ -363,7 +365,7 @@ without sharing states. Input <code class="docutils literal notranslate"><span c
 right after the creation of the DataLoader.</p></li>
 <li><p><strong>datapipe_adapter_fn</strong> (<code class="docutils literal notranslate"><span class="pre">Iterable[Adapter]</span></code> or <code class="docutils literal notranslate"><span class="pre">Adapter</span></code>, optional) – <code class="docutils literal notranslate"><span class="pre">Adapter</span></code> function(s) that
 will be applied to the DataPipe (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>).</p></li>
-<li><p><strong>reading_service</strong> (<a class="reference internal" href="#torchdata.dataloader2.ReadingServiceInterface" title="torchdata.dataloader2.ReadingServiceInterface"><em>ReadingServiceInterface</em></a><em>, </em><em>optional</em>) – defines how <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> should execute operations over
+<li><p><strong>reading_service</strong> (<a class="reference internal" href="reading_service.html#torchdata.dataloader2.ReadingServiceInterface" title="torchdata.dataloader2.ReadingServiceInterface"><em>ReadingServiceInterface</em></a><em>, </em><em>optional</em>) – defines how <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> should execute operations over
 the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code>, e.g. multiprocessing/distributed (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>). A deepcopy of this will be
 created during initialization, allowing the ReadingService to be re-used in a different
 <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> without sharing states.</p></li>
@@ -381,7 +383,7 @@ invoked at the beginning and end of the iteration correspondingly.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="torchdata.dataloader2.DataLoader2.from_state">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reading_service</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#torchdata.dataloader2.CheckpointableReadingServiceInterface" title="torchdata.dataloader2.reading_service.CheckpointableReadingServiceInterface"><span class="pre">CheckpointableReadingServiceInterface</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#torchdata.dataloader2.DataLoader2" title="torchdata.dataloader2.dataloader2.DataLoader2"><span class="pre">DataLoader2</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T_co</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.dataloader2.DataLoader2.from_state" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reading_service</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="reading_service.html#torchdata.dataloader2.CheckpointableReadingServiceInterface" title="torchdata.dataloader2.reading_service.CheckpointableReadingServiceInterface"><span class="pre">CheckpointableReadingServiceInterface</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#torchdata.dataloader2.DataLoader2" title="torchdata.dataloader2.dataloader2.DataLoader2"><span class="pre">DataLoader2</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T_co</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.dataloader2.DataLoader2.from_state" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create new <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> with <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph and <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> restored
 from the serialized state.</p>
 </dd></dl>
@@ -431,7 +433,7 @@ and reset the internal state of <code class="docutils literal notranslate"><span
 </section>
 <section id="readingservice">
 <h2>ReadingService<a class="headerlink" href="#readingservice" title="Permalink to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> specifies the execution backend for the data-processing graph. There are three types of <code class="docutils literal notranslate"><span class="pre">ReadingServices</span></code> in TorchData:</p>
+<p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> specifies the execution backend for the data-processing graph. There are three types of <code class="docutils literal notranslate"><span class="pre">ReadingServices</span></code> provided in TorchData:</p>
 <table class="autosummary longtable docutils # Necessary for the table generated by autosummary to look decent align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.dataloader2.DistributedReadingService.html#torchdata.dataloader2.DistributedReadingService" title="torchdata.dataloader2.DistributedReadingService"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DistributedReadingService</span></code></a></p></td>
@@ -445,227 +447,13 @@ and reset the internal state of <code class="docutils literal notranslate"><span
 </tr>
 </tbody>
 </table>
-<p>Each <code class="docutils literal notranslate"><span class="pre">ReadingServices</span></code> would take the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph and modify it to achieve a few features like dynamic sharding, sharing random seeds and snapshoting for multi-/distributed processes.</p>
-<section id="dynamic-sharding">
-<h3>Dynamic Sharding<a class="headerlink" href="#dynamic-sharding" title="Permalink to this heading">¶</a></h3>
-<p>Dynamic sharding is achieved by <code class="docutils literal notranslate"><span class="pre">PrototypeMultiProcessingReadingService</span></code> and <code class="docutils literal notranslate"><span class="pre">DistributedReadingService</span></code> to shard the pipeline based on the information of corresponding multiprocessing and distributed workers. And, TorchData offers two types of <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> letting users to define the sharding place within the pipeline.</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">sharding_filter</span></code>: When the pipeline is replicable, each distributed/multiprocessing worker loads data from one replica of the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph, and skip the data not blonged to the corresponding worker at the place of <code class="docutils literal notranslate"><span class="pre">sharding_filter</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">sharding_round_robin_dispatch</span></code>: When there is any <code class="docutils literal notranslate"><span class="pre">sharding_round_robin_dispatch</span></code> <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> in the pipeline, that branch will be treated as a non-replicable branch. Then, a single dispatching process will be created to load data from the non-repliable branch and distributed data to the subsequent worker processes.</p></li>
-</ul>
-<p>The following is an example of having two types of sharding strategies in the pipeline.</p>
-<div class="graphviz"><img src="_images/graphviz-9b00b7c2c30ffa59e20399b1bda2aa5c5ee2cd81.png" alt="digraph Example {
-    subgraph cluster_replicable {
-        label=&quot;Replicable&quot;
-        a -&gt; b -&gt; c -&gt; d -&gt; l;
-        color=blue;
-    }
-
-    subgraph cluster_non_replicable {
-        style=filled;
-        color=lightgrey;
-        node [style=filled,color=white];
-        label=&quot;Non-Replicable&quot;
-        e -&gt; f -&gt; g -&gt; k;
-        h -&gt; i -&gt; j -&gt; k;
-    }
-
-    k -&gt; l -&gt; fullsync -&gt; end;
-
-    a [label=&quot;DP1&quot;];
-    b [label=&quot;shuffle&quot;];
-    c [label=&quot;sharding_filter&quot;, color=blue];
-    d [label=&quot;DP4&quot;];
-    e [label=&quot;DP2&quot;];
-    f [label=&quot;shuffle&quot;];
-    g [label=&quot;sharding_round_robin_dispatch&quot;, style=&quot;filled,rounded&quot;, color=red, fillcolor=white];
-    h [label=&quot;DP3&quot;];
-    i [label=&quot;shuffle&quot;];
-    j [label=&quot;sharding_round_robin_dispatch&quot;, style=&quot;filled,rounded&quot;, color=red, fillcolor=white];
-    k [label=&quot;DP5 (Lowest common ancestor)&quot;];
-    l [label=&quot;DP6&quot;];
-    fullsync;
-    end [shape=box];
-}" class="graphviz" /></div>
-<p>When multiprocessing takes place, the graph becomes:</p>
-<div class="graphviz"><img src="_images/graphviz-f1e55e8fa83dae6a69366592f5b01cd8989b565b.png" alt="digraph Example {
-    subgraph cluster_worker_0 {
-        label=&quot;Worker 0&quot;
-        a0 -&gt; b0 -&gt; c0 -&gt; d0 -&gt; l0;
-        m0 -&gt; l0;
-        color=blue;
-    }
-
-    subgraph cluster_worker_1 {
-        label=&quot;Worker 1&quot;
-        a1 -&gt; b1 -&gt; c1 -&gt; d1 -&gt; l1;
-        m1 -&gt; l1;
-        color=blue;
-    }
-
-    subgraph cluster_non_replicable {
-        style=filled;
-        color=lightgrey;
-        node [style=filled,color=white];
-        label=&quot;Non-Replicable&quot;
-        e -&gt; f -&gt; g -&gt; k;
-        h -&gt; i -&gt; j -&gt; k;
-        k -&gt; round_robin_demux;
-    }
-
-    round_robin_demux -&gt; m0;
-    round_robin_demux -&gt; m1;
-    l0 -&gt; n;
-    l1 -&gt; n;
-    n -&gt; fullsync -&gt; end;
-
-    a0 [label=&quot;DP1&quot;];
-    b0 [label=&quot;shuffle&quot;];
-    c0 [label=&quot;sharding_filter&quot;, color=blue];
-    d0 [label=&quot;DP4&quot;];
-    a1 [label=&quot;DP1&quot;];
-    b1 [label=&quot;shuffle&quot;];
-    c1 [label=&quot;sharding_filter&quot;, color=blue];
-    d1 [label=&quot;DP4&quot;];
-    e [label=&quot;DP2&quot;];
-    f [label=&quot;shuffle&quot;];
-    g [label=&quot;sharding_round_robin_dispatch&quot;, style=&quot;filled,rounded&quot;, color=red, fillcolor=white];
-    h [label=&quot;DP3&quot;];
-    i [label=&quot;shuffle&quot;];
-    j [label=&quot;sharding_round_robin_dispatch&quot;, style=&quot;filled,rounded&quot;, color=red, fillcolor=white];
-    k [label=&quot;DP5 (Lowest common ancestor)&quot;];
-    fullsync;
-    l0 [label=&quot;DP6&quot;];
-    l1 [label=&quot;DP6&quot;];
-    m0 [label=&quot;Client&quot;]
-    m1 [label=&quot;Client&quot;]
-    n [label=&quot;Client&quot;]
-    end [shape=box];
-}" class="graphviz" /></div>
-<p><code class="docutils literal notranslate"><span class="pre">Client</span></code> in the graph is a <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> that send request and receive response from multiprocessing queues.</p>
-</section>
-<section id="graph-mode">
-<h3>Graph Mode<a class="headerlink" href="#graph-mode" title="Permalink to this heading">¶</a></h3>
-<p>This also allows easier transition of data-preprocessing pipeline from research to production. After the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph is created and validated with the <code class="docutils literal notranslate"><span class="pre">ReadingServices</span></code>, a different <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> that configures and connects to the production service/infra such as <code class="docutils literal notranslate"><span class="pre">AIStore</span></code> can be provided to <a class="reference internal" href="#torchdata.dataloader2.DataLoader2" title="torchdata.dataloader2.DataLoader2"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader2</span></code></a> as a drop-in replacement. The <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> could potentially search the graph, and find <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> operations that can be delegated to the production service/infra, then modify the graph correspondingly to achieve higher-performant execution.</p>
-<p>The followings are interfaces for custom <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code>.</p>
-<dl class="py class">
-<dt class="sig sig-object py" id="torchdata.dataloader2.ReadingServiceInterface">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.dataloader2.</span></span><span class="sig-name descname"><span class="pre">ReadingServiceInterface</span></span><a class="headerlink" href="#torchdata.dataloader2.ReadingServiceInterface" title="Permalink to this definition">¶</a></dt>
-<dd><p>Interface for <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code>. Please extend custom <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> based on this interface class.</p>
-<p>ReadingService must be picklable prior to <code class="docutils literal notranslate"><span class="pre">initialize</span></code> being called. This is because a copy of it will be
-created by <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> to avoid the situation where the same ReadingService object is used by
-multiple <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code>, and its internal state will be modifiable by each of them.</p>
-<p>As a result of this constraint, certain initialization steps may need to take place within the
-<code class="docutils literal notranslate"><span class="pre">initialize</span></code> method rather than <code class="docutils literal notranslate"><span class="pre">__init__</span></code> of the ReadingService class.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="torchdata.dataloader2.ReadingServiceInterface.finalize">
-<span class="sig-name descname"><span class="pre">finalize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#torchdata.dataloader2.ReadingServiceInterface.finalize" title="Permalink to this definition">¶</a></dt>
-<dd><p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> cleans up internal states and fully shuts down the service.
-Called in <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code>’s <code class="docutils literal notranslate"><span class="pre">shutdown</span></code> and <code class="docutils literal notranslate"><span class="pre">__del__</span></code>.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="torchdata.dataloader2.ReadingServiceInterface.finalize_iteration">
-<span class="sig-name descname"><span class="pre">finalize_iteration</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#torchdata.dataloader2.ReadingServiceInterface.finalize_iteration" title="Permalink to this definition">¶</a></dt>
-<dd><p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> ends service after an epoch is finished. Called when
-the iterator of <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> is depleted.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="torchdata.dataloader2.ReadingServiceInterface.initialize">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.datapipes.datapipe.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torch.utils.data.datapipes.datapipe.MapDataPipe"><span class="pre">MapDataPipe</span></a></span></span><a class="headerlink" href="#torchdata.dataloader2.ReadingServiceInterface.initialize" title="Permalink to this definition">¶</a></dt>
-<dd><p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> takes a <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph, adapts it into a new <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph based on the custom need.
-Called once in creating <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> iterator at first time. Prior to calling this method,
-the <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> object must be picklable.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>datapipe</strong> – Original <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>An adapted or a new <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="torchdata.dataloader2.ReadingServiceInterface.initialize_iteration">
-<span class="sig-name descname"><span class="pre">initialize_iteration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed_generator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SeedGenerator</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#torchdata.dataloader2.ReadingServiceInterface.initialize_iteration" title="Permalink to this definition">¶</a></dt>
-<dd><p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> spins up service for an epoch. Called at the beginning
-of every time getting <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> iterator.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>seed_generator</strong> – SeedGenerator object created and managed by DataLoader2. As the single
-source of randomness, it will governs the determinism for all of random operations
-with the graph of DataPipes.</p>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<p>MultiProcessingReadingService starts setting worker seeds per process and prefetching
-items from the graph.</p>
-</dd></dl>
-
-</dd></dl>
-
-<p>The checkpoint/snapshotting feature is a work in progress. Here is the preliminary interface (small changes are likely):</p>
-<dl class="py class">
-<dt class="sig sig-object py" id="torchdata.dataloader2.CheckpointableReadingServiceInterface">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.dataloader2.</span></span><span class="sig-name descname"><span class="pre">CheckpointableReadingServiceInterface</span></span><a class="headerlink" href="#torchdata.dataloader2.CheckpointableReadingServiceInterface" title="Permalink to this definition">¶</a></dt>
-<dd><p>Extend <code class="docutils literal notranslate"><span class="pre">ReadingServiceInterface</span></code> with two additional methods to save/restore the state of the data-processing graph.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="torchdata.dataloader2.CheckpointableReadingServiceInterface.checkpoint">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">checkpoint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bytes</span></span></span><a class="headerlink" href="#torchdata.dataloader2.CheckpointableReadingServiceInterface.checkpoint" title="Permalink to this definition">¶</a></dt>
-<dd><p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> serializes the internal states. Called in <code class="docutils literal notranslate"><span class="pre">DataLoader2.state_dict</span></code>.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="torchdata.dataloader2.CheckpointableReadingServiceInterface.restore">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">restore</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">serialized_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.datapipes.datapipe.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torch.utils.data.datapipes.datapipe.MapDataPipe"><span class="pre">MapDataPipe</span></a></span></span><a class="headerlink" href="#torchdata.dataloader2.CheckpointableReadingServiceInterface.restore" title="Permalink to this definition">¶</a></dt>
-<dd><p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> adapts <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph based on the serialized state.
-Called once in creating <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> iterator at first time.
-Counterpart of <code class="docutils literal notranslate"><span class="pre">initialize</span></code>, which adapt <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph from scratch.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>datapipe</strong> – original <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph before adapted by <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code></p></li>
-<li><p><strong>serialized_state</strong> – The serialized state of internal state used to restore the state
-of the adapted <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Adapted <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> generated from the serialized state.</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<p>And, graph utility functions are provided in <code class="docutils literal notranslate"><span class="pre">torchdata.dataloader.graph</span></code> to help users to define their own <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> and modify the graph:</p>
-<span class="target" id="module-torchdata.dataloader2.graph"></span><table class="autosummary longtable docutils # Necessary for the table generated by autosummary to look decent align-default">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.dataloader2.graph.traverse_dps.html#torchdata.dataloader2.graph.traverse_dps" title="torchdata.dataloader2.graph.traverse_dps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">traverse_dps</span></code></a></p></td>
-<td><p>Traverse the DataPipes and their attributes to extract the DataPipe graph.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/torchdata.dataloader2.graph.find_dps.html#torchdata.dataloader2.graph.find_dps" title="torchdata.dataloader2.graph.find_dps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_dps</span></code></a></p></td>
-<td><p>Given the graph of DataPipe generated by <code class="docutils literal notranslate"><span class="pre">traverse_dps</span></code> function, return DataPipe instances with the provided DataPipe type.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.dataloader2.graph.list_dps.html#torchdata.dataloader2.graph.list_dps" title="torchdata.dataloader2.graph.list_dps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_dps</span></code></a></p></td>
-<td><p>Given the graph of DataPipe generated by <code class="docutils literal notranslate"><span class="pre">traverse_dps</span></code> function, return a list of all DataPipe instances without duplication.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/torchdata.dataloader2.graph.remove_dp.html#torchdata.dataloader2.graph.remove_dp" title="torchdata.dataloader2.graph.remove_dp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_dp</span></code></a></p></td>
-<td><p>Given the graph of DataPipe generated by <code class="docutils literal notranslate"><span class="pre">traverse_dps</span></code> function and the DataPipe to be removed, return the new graph of DataPipe.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.dataloader2.graph.replace_dp.html#torchdata.dataloader2.graph.replace_dp" title="torchdata.dataloader2.graph.replace_dp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">replace_dp</span></code></a></p></td>
-<td><p>Given the graph of DataPipe generated by <code class="docutils literal notranslate"><span class="pre">traverse_dps</span></code> function and the DataPipe to be replaced and the new DataPipe, return the new graph of DataPipe.</p></td>
-</tr>
-</tbody>
-</table>
-</section>
+<p>Each <code class="docutils literal notranslate"><span class="pre">ReadingServices</span></code> would take the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph and rewrite it to achieve a few features like dynamic sharding, sharing random seeds and snapshoting for multi-/distributed processes. For more detail about those features, please refer to <a class="reference external" href="reading_service.html">the documentation</a>.</p>
 </section>
 <section id="adapter">
 <h2>Adapter<a class="headerlink" href="#adapter" title="Permalink to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">Adapter</span></code> is used to configure, modify and extend the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph in <code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader2</span></code>. It allows in-place
+<p><code class="docutils literal notranslate"><span class="pre">Adapter</span></code> is used to configure, modify and extend the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph in <a class="reference internal" href="#torchdata.dataloader2.DataLoader2" title="torchdata.dataloader2.DataLoader2"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader2</span></code></a>. It allows in-place
 modification or replace the pre-assembled <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph provided by PyTorch domains. For example, <code class="docutils literal notranslate"><span class="pre">Shuffle(False)</span></code> can be
-provided to <code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader2</span></code>, which would disable any <code class="docutils literal notranslate"><span class="pre">shuffle</span></code> operations in the <code class="docutils literal notranslate"><span class="pre">DataPipes</span></code> graph.</p>
+provided to <a class="reference internal" href="#torchdata.dataloader2.DataLoader2" title="torchdata.dataloader2.DataLoader2"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader2</span></code></a>, which would disable any <code class="docutils literal notranslate"><span class="pre">shuffle</span></code> operations in the <code class="docutils literal notranslate"><span class="pre">DataPipes</span></code> graph.</p>
 <span class="target" id="module-torchdata.dataloader2.adapter"></span><dl class="py class">
 <dt class="sig sig-object py" id="torchdata.dataloader2.adapter.Adapter">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.dataloader2.adapter.</span></span><span class="sig-name descname"><span class="pre">Adapter</span></span><a class="headerlink" href="#torchdata.dataloader2.adapter.Adapter" title="Permalink to this definition">¶</a></dt>
@@ -755,41 +543,12 @@ needs, <code class="docutils literal notranslate"><span class="pre">DataLoader2<
               <ul>
 <li><a class="reference internal" href="#">DataLoader2</a><ul>
 <li><a class="reference internal" href="#id1">DataLoader2</a><ul>
-<li><a class="reference internal" href="#torchdata.dataloader2.DataLoader2"><code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code></a><ul>
-<li><a class="reference internal" href="#torchdata.dataloader2.DataLoader2.__iter__"><code class="docutils literal notranslate"><span class="pre">DataLoader2.__iter__()</span></code></a></li>
-<li><a class="reference internal" href="#torchdata.dataloader2.DataLoader2.from_state"><code class="docutils literal notranslate"><span class="pre">DataLoader2.from_state()</span></code></a></li>
-<li><a class="reference internal" href="#torchdata.dataloader2.DataLoader2.load_state_dict"><code class="docutils literal notranslate"><span class="pre">DataLoader2.load_state_dict()</span></code></a></li>
-<li><a class="reference internal" href="#torchdata.dataloader2.DataLoader2.seed"><code class="docutils literal notranslate"><span class="pre">DataLoader2.seed()</span></code></a></li>
-<li><a class="reference internal" href="#torchdata.dataloader2.DataLoader2.shutdown"><code class="docutils literal notranslate"><span class="pre">DataLoader2.shutdown()</span></code></a></li>
-<li><a class="reference internal" href="#torchdata.dataloader2.DataLoader2.state_dict"><code class="docutils literal notranslate"><span class="pre">DataLoader2.state_dict()</span></code></a></li>
+<li><a class="reference internal" href="#torchdata.dataloader2.DataLoader2"><code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code></a></li>
 </ul>
 </li>
-</ul>
-</li>
-<li><a class="reference internal" href="#readingservice">ReadingService</a><ul>
-<li><a class="reference internal" href="#dynamic-sharding">Dynamic Sharding</a></li>
-<li><a class="reference internal" href="#graph-mode">Graph Mode</a><ul>
-<li><a class="reference internal" href="#torchdata.dataloader2.ReadingServiceInterface"><code class="docutils literal notranslate"><span class="pre">ReadingServiceInterface</span></code></a><ul>
-<li><a class="reference internal" href="#torchdata.dataloader2.ReadingServiceInterface.finalize"><code class="docutils literal notranslate"><span class="pre">ReadingServiceInterface.finalize()</span></code></a></li>
-<li><a class="reference internal" href="#torchdata.dataloader2.ReadingServiceInterface.finalize_iteration"><code class="docutils literal notranslate"><span class="pre">ReadingServiceInterface.finalize_iteration()</span></code></a></li>
-<li><a class="reference internal" href="#torchdata.dataloader2.ReadingServiceInterface.initialize"><code class="docutils literal notranslate"><span class="pre">ReadingServiceInterface.initialize()</span></code></a></li>
-<li><a class="reference internal" href="#torchdata.dataloader2.ReadingServiceInterface.initialize_iteration"><code class="docutils literal notranslate"><span class="pre">ReadingServiceInterface.initialize_iteration()</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#torchdata.dataloader2.CheckpointableReadingServiceInterface"><code class="docutils literal notranslate"><span class="pre">CheckpointableReadingServiceInterface</span></code></a><ul>
-<li><a class="reference internal" href="#torchdata.dataloader2.CheckpointableReadingServiceInterface.checkpoint"><code class="docutils literal notranslate"><span class="pre">CheckpointableReadingServiceInterface.checkpoint()</span></code></a></li>
-<li><a class="reference internal" href="#torchdata.dataloader2.CheckpointableReadingServiceInterface.restore"><code class="docutils literal notranslate"><span class="pre">CheckpointableReadingServiceInterface.restore()</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
+<li><a class="reference internal" href="#readingservice">ReadingService</a></li>
 <li><a class="reference internal" href="#adapter">Adapter</a><ul>
-<li><a class="reference internal" href="#torchdata.dataloader2.adapter.Adapter"><code class="docutils literal notranslate"><span class="pre">Adapter</span></code></a><ul>
-<li><a class="reference internal" href="#torchdata.dataloader2.adapter.Adapter.__call__"><code class="docutils literal notranslate"><span class="pre">Adapter.__call__()</span></code></a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#torchdata.dataloader2.adapter.Adapter"><code class="docutils literal notranslate"><span class="pre">Adapter</span></code></a></li>
 </ul>
 </li>
 </ul>

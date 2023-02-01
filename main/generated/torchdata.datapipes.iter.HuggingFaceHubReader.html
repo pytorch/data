@@ -221,7 +221,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+d202d56 ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+1d98097 ) &#x25BC</a>
     </div>
     
 
@@ -251,10 +251,12 @@
 <li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.map.html">Map-style DataPipes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.utils.html">Utility Functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../dataloader2.html">DataLoader2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reading_service.html">ReadingService</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dp_tutorial.html">DataPipe Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dlv2_tutorial.html">DataLoader2 Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
@@ -346,13 +348,13 @@
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.HuggingFaceHubReader">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">HuggingFaceHubReader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">config_kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.HuggingFaceHubReader" title="Permalink to this definition">¶</a></dt>
 <dd><p>Takes in dataset names and returns an Iterable HuggingFace dataset.
-Args format and meaning are the same as <a class="reference external" href="https://huggingface.co/docs/datasets/loading">https://huggingface.co/docs/datasets/loading</a>.
+Please refer to <a class="reference external" href="https://huggingface.co/docs/datasets/loading">https://huggingface.co/docs/datasets/loading</a> for the meaning and type of each argument.
 Contrary to their implementation, default behavior differs in the following (this will be changed in version 0.7):</p>
-<blockquote>
-<div><p>split is set to “train”.
-revision is set to “main”.
-streaming is set to True.</p>
-</div></blockquote>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">split</span></code> is set to <code class="docutils literal notranslate"><span class="pre">&quot;train&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">revision</span></code> is set to <code class="docutils literal notranslate"><span class="pre">&quot;main&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">streaming</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code></p></li>
+</ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>source_datapipe</strong> – a DataPipe that contains dataset names which will be accepted by the HuggingFace datasets library</p>
