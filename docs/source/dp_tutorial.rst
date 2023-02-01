@@ -66,10 +66,13 @@ You can find the full list of built-in `IterDataPipes here <torchdata.datapipes.
 Working with DataLoader
 ---------------------------------------------
 
-In this section, we will demonstrate how you can use DataPipe with ``DataLoader``.
+In this section, we will demonstrate how you can use ``DataPipe`` with ``DataLoader``.
 For the most part, you should be able to use it just by passing ``dataset=datapipe`` as an input arugment
 into the ``DataLoader``. For detailed documentation related to ``DataLoader``,
 please visit `this page <https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading>`_.
+
+
+Please refer to `this page <dlv2_tutorial.html>`_ about using ``DataPipe`` with ``DataLoader2``.
 
 
 For this example, we will first have a helper function that generates some CSV files with random label and data.

@@ -1,16 +1,16 @@
 DataLoader2 Tutorial
 =====================
 
-This is the tutorial for users to create ``DataPipe`` graph and load data via ``DataLoader2`` with different backend systems (``ReadingService``).
+This is the tutorial for users to create ``DataPipe`` graph and load data via ``DataLoader2`` with different backend systems (``ReadingService``). An usage example can found in `this colab notebook <https://colab.research.google.com/drive/1eSvp-eUDYPj0Sd0X_Mv9s9VkE8RNDg1u>`_.
 
 DataPipe
 ---------
 
-Please refer to `DataPipe Tutorial <dp_tutorial.html>_` for more details. Here are the most important caveats:
+Please refer to `DataPipe Tutorial <dp_tutorial.html>`_ for more details. Here are the most important caveats necessary:
 to make sure the data pipeline has different order per epoch and data shards are mutually exclusive and collectively exhaustive:
 
-- Place ``sharding_filter`` or ``sharding_round_robin_dispatch`` as early as possibel in the pipele to avoid repeating expensive operations in worker/distributed processes.
-- Add a ``shuffle`` DataPipe before sharding to achieve inter-shard shuffling. ``ReadingService`` will handle synchronization of those ``shuffle`` operations to the order of data are the same before sharding so that all shards are mutually exclusive and collectively exhaustive.
+- Place ``sharding_filter`` or ``sharding_round_robin_dispatch`` as early as possible in the pipeline to avoid repeating expensive operations in worker/distributed processes.
+- Add a ``shuffle`` DataPipe before sharding to achieve inter-shard shuffling. ``ReadingService`` will handle synchronization of those ``shuffle`` operations to ensure the order of data are the same before sharding so that all shards are mutually exclusive and collectively exhaustive.
 
 Here is an example of ``DataPipe`` graph:
 

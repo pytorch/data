@@ -33,12 +33,12 @@ def _get_response_from_huggingface_hub(
 class HuggingFaceHubReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
     Takes in dataset names and returns an Iterable HuggingFace dataset.
-    Please refere to https://huggingface.co/docs/datasets/loading for the meaning and type of each argument.
+    Please refer to https://huggingface.co/docs/datasets/loading for the meaning and type of each argument.
     Contrary to their implementation, default behavior differs in the following (this will be changed in version 0.7):
 
-    * split is set to "train".
-    * revision is set to "main".
-    * streaming is set to True.
+    * ``split`` is set to ``"train"``
+    * ``revision`` is set to ``"main"``
+    * ``streaming`` is set to ``True``
 
     Args:
         source_datapipe: a DataPipe that contains dataset names which will be accepted by the HuggingFace datasets library
