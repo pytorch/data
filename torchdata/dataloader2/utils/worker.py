@@ -7,6 +7,7 @@
 import random
 
 from dataclasses import dataclass
+from functools import partial
 from multiprocessing.queues import Queue
 from typing import Callable, Optional
 
@@ -25,7 +26,7 @@ from torchdata.dataloader2.graph import (
     traverse_dps,
 )
 from torchdata.dataloader2.random import SeedGenerator
-from torchdata.dataloader2.utils.dispatch import _DummyIterDataPipe, find_replicable_branches
+from torchdata.dataloader2.utils.dispatch import _DummyIterDataPipe, find_non_dispatching_branches
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.map import MapDataPipe
 
@@ -77,8 +78,8 @@ def process_init_fn(
     else:
         assert len(non_replicable_dp) == 1
         assert not (dispatching_req_queue is None and dispatching_res_queue is None)
-        replicable_branches = find_replicable_branches(graph)
-        for dp in replicable_branches:
+        non_dispatching_branches = find_non_dispatching_branches(graph)
+        for dp in non_dispatching_branches:
             torch.utils.data.graph_settings.apply_sharding(
                 dp, worker_info.num_workers, worker_info.worker_id, SHARDING_PRIORITIES.MULTIPROCESSING
             )
@@ -115,6 +116,7 @@ def dispatch_process_reset_fn(
     datapipe: DataPipe,
     worker_info: WorkerInfo,
     seed_generator: SeedGenerator,
+    custom_dispatch_process_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None,
 ) -> DataPipe:
     r"""
     Based on the distributed shared random seed, this function is used to set the random state
@@ -129,6 +131,10 @@ def dispatch_process_reset_fn(
     dps = list_dps(graph)
     set_datapipes_seed(dps, seed_generator=seed_generator, distributed_shared=True)
 
+    if custom_dispatch_process_reset_fn is not None:
+        datapipe = custom_dispatch_process_reset_fn(datapipe)
+        assert isinstance(datapipe, (IterDataPipe, MapDataPipe))
+
     return datapipe
 
 
@@ -137,6 +143,7 @@ def process_reset_fn(
     worker_info: WorkerInfo,
     seed_generator: SeedGenerator,
     custom_reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
+    custom_dispatch_process_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None,
 ) -> DataPipe:
     r"""
     Based on the distributed shared random seed and worker id, this function is used to
@@ -146,13 +153,17 @@ def process_reset_fn(
     # Reset non-sharding process first
     graph = traverse_dps(datapipe)
     dispatch_process_consumer_dps = find_dps(graph, communication.iter._IterateQueueDataPipes)
+
     if len(dispatch_process_consumer_dps) > 0:
         assert len(dispatch_process_consumer_dps) == 1
         dispatch_process_consumer_dp = dispatch_process_consumer_dps[0]
         # Only send the reset epoch message once
         if worker_info.worker_id == 0:
             # Use WorkerInfo(1, 0)
-            dispatch_process_consumer_dp.reset_epoch(dispatch_process_reset_fn, seed_generator)
+            dispatch_reset_fn = partial(
+                dispatch_process_reset_fn, custom_dispatch_process_reset_fn=custom_dispatch_process_reset_fn
+            )
+            dispatch_process_consumer_dp.reset_epoch(dispatch_reset_fn, seed_generator)
 
     # Set global random states
     _set_global_random_state(seed_generator)
