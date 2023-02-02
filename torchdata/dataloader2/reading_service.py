@@ -64,7 +64,7 @@ class ReadingServiceInterface(ABC):
         """
         pass
 
-    def initialize_iteration(self, seed_generator: SeedGenerator) -> None:
+    def initialize_iteration(self, seed_generator: SeedGenerator, iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None) -> Optional[Callable[[DataPipe], DataPipe]]:
         r"""
         ``ReadingService`` spins up service for an epoch. Called at the beginning
         of every time getting ``DataLoader2`` iterator.
@@ -228,27 +228,27 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         ctx = mp.get_context(self.multiprocessing_context)
 
         # Launch dispatching process for the lowest common ancestor of non-replicable DataPipes
-        if self.num_workers > 1:
-            dispatching_dp = find_lca_round_robin_sharding_dp(graph)
-            if dispatching_dp is not None:
-                dummy_dp = _DummyIterDataPipe()
-                graph = replace_dp(graph, dispatching_dp, dummy_dp)  # type: ignore[arg-type]
-                datapipe = list(graph.values())[0][0]
-                # TODO(ejguan): Determine buffer_size at runtime or use unlimited buffer
-                round_robin_dps = dispatching_dp.round_robin_demux(num_instances=self.num_workers)
-                # TODO(ejguan): Benchmark if we need to prefetch in dispatching process
-                process, req_queues, res_queues = communication.eventloop.CreateProcessForMultipleDataPipelines(
-                    ctx,
-                    round_robin_dps,
-                )
-                assert len(req_queues) == self.num_workers and len(res_queues) == self.num_workers
-                process.daemon = True
-                process.start()
-                self._dispatch_process = (process, req_queues, res_queues)
-                for req_queue in req_queues:
-                    req_queue.cancel_join_thread()
-                for res_queue in res_queues:
-                    res_queue.cancel_join_thread()
+        graph = traverse_dps(datapipe)
+        non_replicable_dp = find_lca_round_robin_sharding_dp(graph)
+        if non_replicable_dp is not None:
+            dummy_dp = _DummyIterDataPipe()
+            graph = replace_dp(graph, non_replicable_dp, dummy_dp)  # type: ignore[arg-type]
+            datapipe = list(graph.values())[0][0]
+            # TODO(ejguan): Determine buffer_size at runtime or use unlimited buffer
+            round_robin_dps = non_replicable_dp.round_robin_demux(num_instances=self.num_workers)
+            # TODO(ejguan): Benchmark if we need to prefetch in dispatching process
+            process, req_queues, res_queues = communication.eventloop.CreateProcessForMultipleDataPipelines(
+                ctx,
+                round_robin_dps,
+            )
+            assert len(req_queues) == self.num_workers and len(res_queues) == self.num_workers
+            process.daemon = True
+            process.start()
+            self._dispatch_process = (process, req_queues, res_queues)
+            for req_queue in req_queues:
+                req_queue.cancel_join_thread()
+            for res_queue in res_queues:
+                res_queue.cancel_join_thread()
 
         # Find replicable branches for worker processes
         # The rest of non-replicable DataPipes will remain in the main process
@@ -303,8 +303,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
         return self._end_datapipe  # type: ignore[return-value]
 
-    def initialize_iteration(self, seed_generator: SeedGenerator) -> None:
-        # Distributed shared seed
+    def initialize_iteration(self, seed_generator: SeedGenerator, iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None) -> Optional[Callable[[DataPipe], DataPipe]]:
         if self._pg is not None:
             shared_seed_int = dist_share_seed(seed_generator.generate_shared_seed(), self._pg)
             seed_generator.seed(shared_seed_int)
@@ -319,7 +318,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
                 # Stop prefetching first
                 self._main_prefetch_datapipe.reset()  # type: ignore[union-attr]
             # Send the shared seed to subprocesses
-            call_on_epoch_reset = partial(process_reset_fn, custom_reset_fn=self.worker_reset_fn)
+            call_on_epoch_reset = partial(process_reset_fn, custom_reset_fn=self.worker_reset_fn, custom_dispatch_process_reset_fn=iter_reset_fn)
             assert self._worker_consumer_datapipe is not None
             self._worker_consumer_datapipe.reset_epoch(call_on_epoch_reset, seed_generator)
         # In-process (num_workers == 0)
@@ -508,3 +507,42 @@ class DistributedReadingService(ReadingServiceInterface):
         if self._pg is not None:
             dist.destroy_process_group(self._pg)
             self._pg = None
+
+
+class SequentialReadingService(ReadingServiceInterface):
+    def __init__(self, *reading_services):
+        self.reading_services = reading_services
+
+    # Sequential Order
+    def initialize(self, datapipe: DataPipe) -> DataPipe:
+        for rs in self.reading_services:
+            datapipe = rs.initialize(datapipe)
+        return datapipe
+
+    # Reversed Order
+    def finalize(self) -> None:
+        for rs in reversed(self.reading_services):
+            rs.finalize()
+
+    # Sequential Order
+    def initialize_iteration(self, seed_generator: SeedGenerator, iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None) -> Optional[Callable[[DataPipe], DataPipe]]:
+        chained_iter_reset_fn = iter_reset_fn
+        for rs in self.reading_services:
+            chained_iter_reset_fn = rs.initialize_iteration(seed_generator=seed_generator, iter_reset_fn=chained_iter_reset_fn)
+
+    # Reversed Order
+    def finalize_iteration(self) -> None:
+        for rs in reversed(self.reading_services):
+            rs.finalize_iteration()
+
+    # Sequential Order
+    def checkpoint(self) -> bytes:
+        states = []
+        for rs in self.reading_services:
+            states.append(rs.checkpoint())
+
+    # Sequential Order, to align with initialize
+    def restore(self, datapipe, serialized_state) -> DataPipe:
+        for rs, state in zip(self.reading_service, serialized_state):
+            datapipe = rs.restore(datapipe, state)
+        return datapipe
