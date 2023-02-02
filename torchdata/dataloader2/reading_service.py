@@ -64,7 +64,9 @@ class ReadingServiceInterface(ABC):
         """
         pass
 
-    def initialize_iteration(self, seed_generator: SeedGenerator, iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None) -> Optional[Callable[[DataPipe], DataPipe]]:
+    def initialize_iteration(
+        self, seed_generator: SeedGenerator, iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
         r"""
         ``ReadingService`` spins up service for an epoch. Called at the beginning
         of every time getting ``DataLoader2`` iterator.
@@ -303,7 +305,9 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
         return self._end_datapipe  # type: ignore[return-value]
 
-    def initialize_iteration(self, seed_generator: SeedGenerator, iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None) -> Optional[Callable[[DataPipe], DataPipe]]:
+    def initialize_iteration(
+        self, seed_generator: SeedGenerator, iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> None:
         if self._pg is not None:
             shared_seed_int = dist_share_seed(seed_generator.generate_shared_seed(), self._pg)
             seed_generator.seed(shared_seed_int)
@@ -318,7 +322,9 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
                 # Stop prefetching first
                 self._main_prefetch_datapipe.reset()  # type: ignore[union-attr]
             # Send the shared seed to subprocesses
-            call_on_epoch_reset = partial(process_reset_fn, custom_reset_fn=self.worker_reset_fn, custom_dispatch_process_reset_fn=iter_reset_fn)
+            call_on_epoch_reset = partial(
+                process_reset_fn, custom_reset_fn=self.worker_reset_fn, custom_dispatch_process_reset_fn=iter_reset_fn
+            )
             assert self._worker_consumer_datapipe is not None
             self._worker_consumer_datapipe.reset_epoch(call_on_epoch_reset, seed_generator)
         # In-process (num_workers == 0)
@@ -485,7 +491,7 @@ class DistributedReadingService(ReadingServiceInterface):
         self._datapipe = datapipe
         return datapipe
 
-    def initialize_iteration(self, seed_generator: SeedGenerator) -> None:
+    def initialize_iteration(self, seed_generator: SeedGenerator, _=None) -> None:
         r"""
         Shares the same seed from rank 0 to other ranks across the distributed processes
         and apply the random seed to the ``DataPipe`` graph.
@@ -525,10 +531,14 @@ class SequentialReadingService(ReadingServiceInterface):
             rs.finalize()
 
     # Sequential Order
-    def initialize_iteration(self, seed_generator: SeedGenerator, iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None) -> Optional[Callable[[DataPipe], DataPipe]]:
+    def initialize_iteration(
+        self, seed_generator: SeedGenerator, iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> None:
         chained_iter_reset_fn = iter_reset_fn
         for rs in self.reading_services:
-            chained_iter_reset_fn = rs.initialize_iteration(seed_generator=seed_generator, iter_reset_fn=chained_iter_reset_fn)
+            chained_iter_reset_fn = rs.initialize_iteration(
+                seed_generator=seed_generator, iter_reset_fn=chained_iter_reset_fn
+            )
 
     # Reversed Order
     def finalize_iteration(self) -> None:
@@ -537,12 +547,14 @@ class SequentialReadingService(ReadingServiceInterface):
 
     # Sequential Order
     def checkpoint(self) -> bytes:
-        states = []
-        for rs in self.reading_services:
-            states.append(rs.checkpoint())
+        # states = []
+        # for rs in self.reading_services:
+        #     states.append(rs.checkpoint())
+        # return states
+        raise NotImplementedError
 
     # Sequential Order, to align with initialize
     def restore(self, datapipe, serialized_state) -> DataPipe:
-        for rs, state in zip(self.reading_service, serialized_state):
+        for rs, state in zip(self.reading_services, serialized_state):
             datapipe = rs.restore(datapipe, state)
         return datapipe

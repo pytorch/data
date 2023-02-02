@@ -142,7 +142,7 @@ def process_reset_fn(
     datapipe: DataPipe,
     worker_info: WorkerInfo,
     seed_generator: SeedGenerator,
-    custom_reset_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]] = None,
+    custom_reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
     custom_dispatch_process_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None,
 ) -> DataPipe:
     r"""
@@ -160,7 +160,9 @@ def process_reset_fn(
         # Only send the reset epoch message once
         if worker_info.worker_id == 0:
             # Use WorkerInfo(1, 0)
-            dispatch_reset_fn = partial(dispatch_process_reset_fn, custom_dispatch_process_reset_fn=custom_dispatch_process_reset_fn)
+            dispatch_reset_fn = partial(
+                dispatch_process_reset_fn, custom_dispatch_process_reset_fn=custom_dispatch_process_reset_fn
+            )
             dispatch_process_consumer_dp.reset_epoch(dispatch_reset_fn, seed_generator)
 
     # Set global random states
