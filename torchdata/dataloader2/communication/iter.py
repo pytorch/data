@@ -153,7 +153,10 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False):
         elif isinstance(request, communication.messages.PauseRequest):
             dp_list = list_dps(traverse_dps(source_datapipe))
             for dp in dp_list:
-                if hasattr(dp, "pause") and callable(dp.pause):
+                # TODO: Remove this condition after there is `pause` support for round-robin sharding
+                if isinstance(dp, (QueueWrapper, _IterateQueueDataPipes)):
+                    warnings.warn("There is no support for `pause` with round-robin sharding at the moment.")
+                elif hasattr(dp, "pause") and callable(dp.pause):
                     dp.pause()
 
             protocol.response_pause()
@@ -162,7 +165,10 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False):
         elif isinstance(request, communication.messages.ResumeRequest):
             dp_list = list_dps(traverse_dps(source_datapipe))
             for dp in reversed(dp_list):
-                if hasattr(dp, "resume") and callable(dp.resume):
+                # TODO: Remove this condition after there is `resume` support for round-robin sharding
+                if isinstance(dp, (QueueWrapper, _IterateQueueDataPipes)):
+                    raise RuntimeError("There is no support for `resume` with round-robin sharding at the moment.")
+                elif hasattr(dp, "resume") and callable(dp.resume):
                     dp.resume()
             protocol.response_resume()
             yield True  # Return control
@@ -325,6 +331,7 @@ class _IterateQueueDataPipes(IterDataPipe):
             dp.protocol.request_reset_epoch(
                 partial(reset_fn, worker_info=worker_info, seed_generator=worker_seed_generator)
             )
+        for dp in self.datapipes:
             while True:
                 try:
                     dp.protocol.get_response_reset_epoch()

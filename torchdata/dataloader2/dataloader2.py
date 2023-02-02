@@ -225,7 +225,9 @@ class DataLoader2(Generic[T_co]):
                 self._adapted = True
 
             if self.reading_service is not None:
-                self.reading_service.initialize_iteration(self._seed_generator)
+                iter_reset_fn = self.reading_service.initialize_iteration(self._seed_generator)
+                if iter_reset_fn:
+                    self.datapipe = iter_reset_fn(self.datapipe)
 
             self._datapipe_iter = iter(self.datapipe)
             self._reset_iter = False

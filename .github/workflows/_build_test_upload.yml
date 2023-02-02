@@ -66,14 +66,9 @@ jobs:
           - windows-latest
           - macos-m1-12
         python-version:
-          - 3.7
           - 3.8
           - 3.9
           - "3.10"
-        # Python 3.7 is not officially provided on Apple Silicon
-        exclude:
-          - os: macos-m1-12
-            python-version: 3.7
     steps:
       - name: Checkout Source Repository
         uses: actions/checkout@v3
@@ -281,14 +276,9 @@ jobs:
           - windows-latest
           - macos-m1-12
         python-version:
-          - 3.7
           - 3.8
           - 3.9
           - "3.10"
-        # Python 3.7 is not officially provided on Apple Silicon
-        exclude:
-          - os: macos-m1-12
-            python-version: 3.7
     steps:
       - name: Checkout Source Repository
         uses: actions/checkout@v3

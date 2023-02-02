@@ -376,6 +376,17 @@ def _x_mult_2(d):
     return d * 2
 
 
+class NonReplicableDataPipe(IterDataPipe):
+    def __init__(self, datapipe):
+        self.datapipe = datapipe
+
+    def __iter__(self):
+        yield from self.datapipe
+
+    def is_replicable(self):
+        return False
+
+
 class PrototypeMultiProcessingReadingServiceTest(TestCase):
     @staticmethod
     def _worker_init_fn(datapipe, worker_info):
@@ -606,6 +617,37 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         self.assertEqual(res, list(dl) + list(dl))
 
         dl.seed(321)
+        self.assertNotEqual(res, list(dl) + list(dl))
+
+    @mp_ctx_parametrize
+    def test_non_replicable_datapipe(self, ctx) -> None:
+        r"""
+        For the pipeline with non-replicable DataPipe, make sure
+        the DataPipe remains in the main process.
+        """
+        dp: IterDataPipe = IterableWrapper(range(100))
+        dp = dp.shuffle().sharding_filter()
+        dp = dp.batch(2)
+        non_rep_dp = NonReplicableDataPipe(dp)
+
+        rs = PrototypeMultiProcessingReadingService(
+            num_workers=2,
+            multiprocessing_context=ctx,
+        )
+        dl = DataLoader2(non_rep_dp, reading_service=rs)
+
+        torch.manual_seed(123)
+        it = iter(dl)
+        # Validate NonReplicableDataPipe still in the main process
+        non_rep_dp = dl.reading_service._end_datapipe._datapipe
+        self.assertEqual(type(non_rep_dp), NonReplicableDataPipe)
+
+        res = list(it) + list(dl)
+
+        torch.manual_seed(123)
+        self.assertEqual(res, list(dl) + list(dl))
+
+        torch.manual_seed(321)
         self.assertNotEqual(res, list(dl) + list(dl))
 
 
