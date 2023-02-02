@@ -75,6 +75,11 @@ class ReadingServiceInterface(ABC):
             seed_generator: SeedGenerator object created and managed by DataLoader2. As the single
                 source of randomness, it will governs the determinism for all of random operations
                 with the graph of DataPipes.
+            iter_reset_fn: Optional reset function from the prior ``ReadingServcie``
+                when ``SequentialReadingService`` chains multiple ``ReadingServices``
+
+        Returns:
+            A new ``iter_reset_fn`` to be used by subseqeuent ``ReadingService``
 
         Example:
             MultiProcessingReadingService starts setting worker seeds per process and prefetching
