@@ -175,9 +175,6 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     _main_prefetch_datapipe: Optional[DataPipe]
     _end_datapipe: Optional[DataPipe]
     _mp: bool
-    _pg: Optional[dist.ProcessGroup]
-    _world_size: int
-    _rank: int
 
     def __init__(
         self,
@@ -206,9 +203,6 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         self._main_prefetch_datapipe = None
         self._end_datapipe = None
         self._mp = num_workers > 0
-        self._pg = None
-        self._world_size = 1
-        self._rank = 0
 
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         r"""
@@ -216,13 +210,6 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         separates graph by multiple pieces and reconnects it using queues.
         creates subprocesses.
         """
-        if dist.is_available() and dist.is_initialized():
-            self._world_size = dist.get_world_size()
-            self._rank = dist.get_rank()
-            self._pg = dist.new_group(backend="gloo")
-            torch.utils.data.graph_settings.apply_sharding(
-                datapipe, self._world_size, self._rank, SHARDING_PRIORITIES.DISTRIBUTED
-            )
         if not self._mp:
             # TODO(616): Warn and recommend usage of InProcessReadingService
             worker_info = WorkerInfo(1, 0)
@@ -236,13 +223,13 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
         # Launch dispatching process for the lowest common ancestor of non-replicable DataPipes
         graph = traverse_dps(datapipe)
-        non_replicable_dp = find_lca_round_robin_sharding_dp(graph)
-        if non_replicable_dp is not None:
+        dispatching_dp = find_lca_round_robin_sharding_dp(graph)
+        if dispatching_dp is not None:
             dummy_dp = _DummyIterDataPipe()
-            graph = replace_dp(graph, non_replicable_dp, dummy_dp)  # type: ignore[arg-type]
+            graph = replace_dp(graph, dispatching_dp, dummy_dp)  # type: ignore[arg-type]
             datapipe = list(graph.values())[0][0]
             # TODO(ejguan): Determine buffer_size at runtime or use unlimited buffer
-            round_robin_dps = non_replicable_dp.round_robin_demux(num_instances=self.num_workers)
+            round_robin_dps = dispatching_dp.round_robin_demux(num_instances=self.num_workers)
             # TODO(ejguan): Benchmark if we need to prefetch in dispatching process
             process, req_queues, res_queues = communication.eventloop.CreateProcessForMultipleDataPipelines(
                 ctx,
@@ -313,11 +300,6 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
     def initialize_iteration(
         self, seed_generator: SeedGenerator, iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None
     ) -> Optional[Callable[[DataPipe], DataPipe]]:
-        if self._pg is not None:
-            shared_seed_int = dist_share_seed(seed_generator.generate_shared_seed(), self._pg)
-            seed_generator.seed(shared_seed_int)
-            seed_generator = seed_generator.spawn(self._rank, inplace=True)
-
         assert self._end_datapipe is not None
 
         set_graph_random_seed(self._end_datapipe, seed_generator)
@@ -391,10 +373,6 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
         self._worker_processes = []
         self._dispatch_process = None
-
-        if self._pg is not None:
-            dist.destroy_process_group(self._pg)
-            self._pg = None
 
 
 class MultiProcessingReadingService(ReadingServiceInterface):
@@ -548,7 +526,7 @@ class SequentialReadingService(CheckpointableReadingServiceInterface):
             chained_iter_reset_fn = rs.initialize_iteration(
                 seed_generator=seed_generator, iter_reset_fn=chained_iter_reset_fn
             )
-        return None
+        return chained_iter_reset_fn
 
     # Reversed Order
     def finalize_iteration(self) -> None:
