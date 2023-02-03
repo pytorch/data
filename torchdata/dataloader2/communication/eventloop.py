@@ -92,7 +92,7 @@ def _create_datapipe_queue_loop(source_datapipe, req_queue, res_queue, blocking_
     return pipe_type.DataPipeBehindQueues(
         source_datapipe,
         protocol_type(req_queue, res_queue),
-        blocking_request_get=True,
+        blocking_request_get=blocking_request_get,
     )
 
 
