@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Map-style DataPipes &mdash; TorchData main documentation</title>
+  <title>SequentialReadingService &mdash; TorchData main documentation</title>
   
 
   
@@ -26,16 +26,16 @@
 
   
 
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
-  <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
-    <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Batcher" href="generated/torchdata.datapipes.map.Batcher.html" />
-    <link rel="prev" title="StreamReader" href="generated/torchdata.datapipes.iter.StreamReader.html" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/graphviz.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Shuffle" href="torchdata.dataloader2.adapter.Shuffle.html" />
+    <link rel="prev" title="PrototypeMultiProcessingReadingService" href="torchdata.dataloader2.PrototypeMultiProcessingReadingService.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -51,16 +51,16 @@
   
 
   
-  <script src="_static/js/modernizr.min.js"></script>
+  <script src="../_static/js/modernizr.min.js"></script>
 
   <!-- Preload the theme fonts -->
 
-<link rel="preload" href="_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
 
 <!-- Preload the katex fonts -->
 
@@ -230,7 +230,7 @@
 
 
 <div role="search">
-  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search Docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
@@ -247,17 +247,17 @@
             
               <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Map-style DataPipes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.utils.html">Utility Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dataloader2.html">DataLoader2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reading_service.html">ReadingService</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.map.html">Map-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.utils.html">Utility Functions</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../dataloader2.html">DataLoader2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reading_service.html">ReadingService</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="dp_tutorial.html">DataPipe Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dlv2_tutorial.html">DataLoader2 Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dp_tutorial.html">DataPipe Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dlv2_tutorial.html">DataLoader2 Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
 <ul>
@@ -300,7 +300,7 @@
   <ul class="pytorch-breadcrumbs">
     
       <li>
-        <a href="index.html">
+        <a href="../index.html">
           
             Docs
           
@@ -308,13 +308,15 @@
       </li>
 
         
-      <li>Map-style DataPipes</li>
+          <li><a href="../dataloader2.html">DataLoader2</a> &gt;</li>
+        
+      <li>SequentialReadingService</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="_sources/torchdata.datapipes.map.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/generated/torchdata.dataloader2.SequentialReadingService.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -340,92 +342,93 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="map-style-datapipes">
-<h1>Map-style DataPipes<a class="headerlink" href="#map-style-datapipes" title="Permalink to this heading">¶</a></h1>
-<p>A Map-style DataPipe is one that implements the <code class="docutils literal notranslate"><span class="pre">__getitem__()</span></code> and <code class="docutils literal notranslate"><span class="pre">__len__()</span></code> protocols, and represents a map
-from (possibly non-integral) indices/keys to data samples. This is a close equivalent of <code class="docutils literal notranslate"><span class="pre">Dataset</span></code> from the PyTorch
-core library.</p>
-<p>For example, when accessed with <code class="docutils literal notranslate"><span class="pre">mapdatapipe[idx]</span></code>, could read the <code class="docutils literal notranslate"><span class="pre">idx</span></code>-th image and its
-corresponding label from a folder on the disk.</p>
+  <section id="sequentialreadingservice">
+<h1>SequentialReadingService<a class="headerlink" href="#sequentialreadingservice" title="Permalink to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="torchdata.datapipes.map.MapDataPipe">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.map.</span></span><span class="sig-name descname"><span class="pre">MapDataPipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.map.MapDataPipe" title="Permalink to this definition">¶</a></dt>
-<dd><p>Map-style DataPipe.</p>
-<p>All datasets that represent a map from keys to data samples should subclass this.
-Subclasses should overwrite <code class="xref py py-meth docutils literal notranslate"><span class="pre">__getitem__()</span></code>, supporting fetching a
-data sample for a given, unique key. Subclasses can also optionally overwrite
-<code class="xref py py-meth docutils literal notranslate"><span class="pre">__len__()</span></code>, which is expected to return the size of the dataset by many
-<code class="xref py py-class docutils literal notranslate"><span class="pre">Sampler</span></code> implementations and the default options
-of <code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader</span></code>.</p>
-<p>These DataPipes can be invoked in two ways, using the class constructor or applying their
-functional form onto an existing <cite>MapDataPipe</cite> (recommend, available to most but not all DataPipes).</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p><code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader</span></code> by default constructs an index
-sampler that yields integral indices. To make it work with a map-style
-DataPipe with non-integral indices/keys, a custom sampler must be provided.</p>
-</div>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># xdoctest: +SKIP</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.map</span> <span class="kn">import</span> <span class="n">SequenceWrapper</span><span class="p">,</span> <span class="n">Mapper</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">SequenceWrapper</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">map_dp_1</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Using functional form (recommended)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">map_dp_1</span><span class="p">)</span>
-<span class="go">[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">map_dp_2</span> <span class="o">=</span> <span class="n">Mapper</span><span class="p">(</span><span class="n">dp</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Using class constructor</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">map_dp_2</span><span class="p">)</span>
-<span class="go">[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">batch_dp</span> <span class="o">=</span> <span class="n">map_dp_1</span><span class="o">.</span><span class="n">batch</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">batch_dp</span><span class="p">)</span>
-<span class="go">[[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]]</span>
-</pre></div>
-</div>
+<dt class="sig sig-object py" id="torchdata.dataloader2.SequentialReadingService">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.dataloader2.</span></span><span class="sig-name descname"><span class="pre">SequentialReadingService</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">reading_services</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.dataloader2.SequentialReadingService" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="torchdata.dataloader2.SequentialReadingService.checkpoint">
+<span class="sig-name descname"><span class="pre">checkpoint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bytes</span></span></span><a class="headerlink" href="#torchdata.dataloader2.SequentialReadingService.checkpoint" title="Permalink to this definition">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> serializes the internal states. Called in <code class="docutils literal notranslate"><span class="pre">DataLoader2.state_dict</span></code>.</p>
 </dd></dl>
 
-<p>By design, there are fewer <code class="docutils literal notranslate"><span class="pre">MapDataPipe</span></code> than <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> to avoid duplicate implementations of the same
-functionalities as <code class="docutils literal notranslate"><span class="pre">MapDataPipe</span></code>. We encourage users to use the built-in <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> for various functionalities,
-and convert it to <code class="docutils literal notranslate"><span class="pre">MapDataPipe</span></code> as needed using <a class="reference internal" href="generated/torchdata.datapipes.map.IterToMapConverter.html#torchdata.datapipes.map.IterToMapConverter" title="torchdata.datapipes.map.IterToMapConverter"><code class="xref py py-class docutils literal notranslate"><span class="pre">IterToMapConverter</span></code></a> or <code class="docutils literal notranslate"><span class="pre">.to_map_datapipe()</span></code>.
-If you have any question about usage or best practices while using <code class="docutils literal notranslate"><span class="pre">MapDataPipe</span></code>, feel free to ask on the PyTorch
-forum under the <a class="reference external" href="https://discuss.pytorch.org/c/data/37">‘data’ category</a>.</p>
-<p>We are open to add additional <code class="docutils literal notranslate"><span class="pre">MapDataPipe</span></code> where the operations can be lazily executed and <code class="docutils literal notranslate"><span class="pre">__len__</span></code> can be
-known in advance. Feel free to make suggestions with description of your use case in
-<a class="reference external" href="https://github.com/pytorch/pytorch/issues/57031">this Github issue</a>. Feedback about our design choice is also
-welcomed in that Github issue.</p>
-<p>Here is the list of available Map-style DataPipes:</p>
-<section id="list-of-mapdatapipes">
-<h2>List of MapDataPipes<a class="headerlink" href="#list-of-mapdatapipes" title="Permalink to this heading">¶</a></h2>
-<table class="autosummary longtable docutils # Necessary for the table generated by autosummary to look decent align-default">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.datapipes.map.Batcher.html#torchdata.datapipes.map.Batcher" title="torchdata.datapipes.map.Batcher"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Batcher</span></code></a></p></td>
-<td><p>Create mini-batches of data (functional name: <code class="docutils literal notranslate"><span class="pre">batch</span></code>).</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/torchdata.datapipes.map.Concater.html#torchdata.datapipes.map.Concater" title="torchdata.datapipes.map.Concater"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Concater</span></code></a></p></td>
-<td><p>Concatenate multiple Map DataPipes (functional name: <code class="docutils literal notranslate"><span class="pre">concat</span></code>).</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.datapipes.map.InMemoryCacheHolder.html#torchdata.datapipes.map.InMemoryCacheHolder" title="torchdata.datapipes.map.InMemoryCacheHolder"><code class="xref py py-obj docutils literal notranslate"><span class="pre">InMemoryCacheHolder</span></code></a></p></td>
-<td><p>Stores elements from the source DataPipe in memory (functional name: <code class="docutils literal notranslate"><span class="pre">in_memory_cache</span></code>).</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/torchdata.datapipes.map.IterToMapConverter.html#torchdata.datapipes.map.IterToMapConverter" title="torchdata.datapipes.map.IterToMapConverter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IterToMapConverter</span></code></a></p></td>
-<td><p>Lazily load data from <code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> to construct a <code class="docutils literal notranslate"><span class="pre">MapDataPipe</span></code> with the key-value pair generated by <code class="docutils literal notranslate"><span class="pre">key_value_fn</span></code> (functional name: <code class="docutils literal notranslate"><span class="pre">to_map_datapipe</span></code>).</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.datapipes.map.Mapper.html#torchdata.datapipes.map.Mapper" title="torchdata.datapipes.map.Mapper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapper</span></code></a></p></td>
-<td><p>Apply the input function over each item from the source DataPipe (functional name: <code class="docutils literal notranslate"><span class="pre">map</span></code>).</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/torchdata.datapipes.map.SequenceWrapper.html#torchdata.datapipes.map.SequenceWrapper" title="torchdata.datapipes.map.SequenceWrapper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SequenceWrapper</span></code></a></p></td>
-<td><p>Wraps a sequence object into a MapDataPipe.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.datapipes.map.Shuffler.html#torchdata.datapipes.map.Shuffler" title="torchdata.datapipes.map.Shuffler"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Shuffler</span></code></a></p></td>
-<td><p>Shuffle the input MapDataPipe via its indices (functional name: <code class="docutils literal notranslate"><span class="pre">shuffle</span></code>).</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/torchdata.datapipes.map.UnZipper.html#torchdata.datapipes.map.UnZipper" title="torchdata.datapipes.map.UnZipper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">UnZipper</span></code></a></p></td>
-<td><p>Takes in a DataPipe of Sequences, unpacks each Sequence, and return the elements in separate DataPipes based on their position in the Sequence (functional name: <code class="docutils literal notranslate"><span class="pre">unzip</span></code>).</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.datapipes.map.Zipper.html#torchdata.datapipes.map.Zipper" title="torchdata.datapipes.map.Zipper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Zipper</span></code></a></p></td>
-<td><p>Aggregates elements into a tuple from each of the input DataPipes (functional name: <code class="docutils literal notranslate"><span class="pre">zip</span></code>).</p></td>
-</tr>
-</tbody>
-</table>
-</section>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.dataloader2.SequentialReadingService.finalize">
+<span class="sig-name descname"><span class="pre">finalize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#torchdata.dataloader2.SequentialReadingService.finalize" title="Permalink to this definition">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> cleans up internal states and fully shuts down the service.
+Called in <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code>’s <code class="docutils literal notranslate"><span class="pre">shutdown</span></code> and <code class="docutils literal notranslate"><span class="pre">__del__</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.dataloader2.SequentialReadingService.finalize_iteration">
+<span class="sig-name descname"><span class="pre">finalize_iteration</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#torchdata.dataloader2.SequentialReadingService.finalize_iteration" title="Permalink to this definition">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> ends service after an epoch is finished. Called when
+the iterator of <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> is depleted.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.dataloader2.SequentialReadingService.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.datapipes.datapipe.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torch.utils.data.datapipes.datapipe.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.dataloader2.SequentialReadingService.initialize" title="Permalink to this definition">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> takes a <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph, adapts it into a new <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph based on the custom need.
+Called once in creating <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> iterator at first time. Prior to calling this method,
+the <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> object must be picklable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>datapipe</strong> – Original <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>An adapted or a new <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.dataloader2.SequentialReadingService.initialize_iteration">
+<span class="sig-name descname"><span class="pre">initialize_iteration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed_generator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SeedGenerator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iter_reset_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.datapipes.datapipe.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torch.utils.data.datapipes.datapipe.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.datapipes.datapipe.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torch.utils.data.datapipes.datapipe.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.dataloader2.SequentialReadingService.initialize_iteration" title="Permalink to this definition">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> spins up service for an epoch. Called at the beginning
+of every time getting <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> iterator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seed_generator</strong> – SeedGenerator object created and managed by DataLoader2. As the single
+source of randomness, it will governs the determinism for all of random operations
+with the graph of DataPipes.</p></li>
+<li><p><strong>iter_reset_fn</strong> – Optional reset function from the prior <code class="docutils literal notranslate"><span class="pre">ReadingServcie</span></code>
+when <code class="docutils literal notranslate"><span class="pre">SequentialReadingService</span></code> chains multiple <code class="docutils literal notranslate"><span class="pre">ReadingServices</span></code></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A new <code class="docutils literal notranslate"><span class="pre">iter_reset_fn</span></code> to be used by subseqeuent <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code></p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<p>MultiProcessingReadingService starts setting worker seeds per process and prefetching
+items from the graph.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.dataloader2.SequentialReadingService.restore">
+<span class="sig-name descname"><span class="pre">restore</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">serialized_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.datapipes.datapipe.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torch.utils.data.datapipes.datapipe.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.dataloader2.SequentialReadingService.restore" title="Permalink to this definition">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> adapts <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph based on the serialized state.
+Called once in creating <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> iterator at first time.
+Counterpart of <code class="docutils literal notranslate"><span class="pre">initialize</span></code>, which adapt <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph from scratch.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>datapipe</strong> – original <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph before adapted by <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code></p></li>
+<li><p><strong>serialized_state</strong> – The serialized state of internal state used to restore the state
+of the adapted <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Adapted <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> generated from the serialized state.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 
 
@@ -436,10 +439,10 @@ welcomed in that Github issue.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="generated/torchdata.datapipes.map.Batcher.html" class="btn btn-neutral float-right" title="Batcher" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.dataloader2.adapter.Shuffle.html" class="btn btn-neutral float-right" title="Shuffle" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="generated/torchdata.datapipes.iter.StreamReader.html" class="btn btn-neutral" title="StreamReader" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="torchdata.dataloader2.PrototypeMultiProcessingReadingService.html" class="btn btn-neutral" title="PrototypeMultiProcessingReadingService" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -471,10 +474,7 @@ welcomed in that Github issue.</p>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">Map-style DataPipes</a><ul>
-<li><a class="reference internal" href="#list-of-mapdatapipes">List of MapDataPipes</a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#">SequentialReadingService</a></li>
 </ul>
 
             </div>
@@ -489,20 +489,20 @@ welcomed in that Github issue.</p>
   
 
      
-       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-         <script src="_static/jquery.js"></script>
-         <script src="_static/underscore.js"></script>
-         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-         <script src="_static/doctools.js"></script>
+       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+         <script src="../_static/jquery.js"></script>
+         <script src="../_static/underscore.js"></script>
+         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+         <script src="../_static/doctools.js"></script>
      
 
   
 
-  <script type="text/javascript" src="_static/js/vendor/popper.min.js"></script>
-  <script type="text/javascript" src="_static/js/vendor/bootstrap.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/bootstrap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
-  <script type="text/javascript" src="_static/js/theme.js"></script>
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
 
   <script type="text/javascript">
       jQuery(function () {
@@ -607,7 +607,7 @@ welcomed in that Github issue.</p>
   <div class="cookie-banner-wrapper">
   <div class="container">
     <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
-    <img class="close-button" src="_static/images/pytorch-x.svg">
+    <img class="close-button" src="../_static/images/pytorch-x.svg">
   </div>
 </div>
 
@@ -743,7 +743,7 @@ welcomed in that Github issue.</p>
 
   <!-- End Mobile Menu -->
 
-  <script type="text/javascript" src="_static/js/vendor/anchor.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/anchor.min.js"></script>
 
   <script type="text/javascript">
     $(document).ready(function() {
