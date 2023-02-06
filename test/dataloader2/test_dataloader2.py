@@ -12,7 +12,6 @@ import random
 import socket
 import unittest
 
-from functools import partial
 from unittest import TestCase
 
 import numpy as np
