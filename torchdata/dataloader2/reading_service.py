@@ -75,6 +75,11 @@ class ReadingServiceInterface(ABC):
             seed_generator: SeedGenerator object created and managed by DataLoader2. As the single
                 source of randomness, it will governs the determinism for all of random operations
                 with the graph of DataPipes.
+            iter_reset_fn: Optional reset function from the prior ``ReadingServcie``
+                when ``SequentialReadingService`` chains multiple ``ReadingServices``
+
+        Returns:
+            A new ``iter_reset_fn`` to be used by subseqeuent ``ReadingService``
 
         Example:
             MultiProcessingReadingService starts setting worker seeds per process and prefetching
@@ -307,7 +312,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
     def initialize_iteration(
         self, seed_generator: SeedGenerator, iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None
-    ) -> None:
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
         if self._pg is not None:
             shared_seed_int = dist_share_seed(seed_generator.generate_shared_seed(), self._pg)
             seed_generator.seed(shared_seed_int)
@@ -323,7 +328,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
                 self._main_prefetch_datapipe.reset()  # type: ignore[union-attr]
             # Send the shared seed to subprocesses
             call_on_epoch_reset = partial(
-                process_reset_fn, custom_reset_fn=self.worker_reset_fn, custom_dispatch_process_reset_fn=iter_reset_fn
+                process_reset_fn, iter_reset_fn=iter_reset_fn, custom_reset_fn=self.worker_reset_fn
             )
             assert self._worker_consumer_datapipe is not None
             self._worker_consumer_datapipe.reset_epoch(call_on_epoch_reset, seed_generator)
@@ -334,6 +339,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             # (random, torch and numpy), if users have already seeded them in the main process
             # TODO(ejguan): This should be fixed by adding a method to isolate global RNGs
             pass
+        return None
 
     def __del__(self):
         self.finalize()
@@ -491,7 +497,9 @@ class DistributedReadingService(ReadingServiceInterface):
         self._datapipe = datapipe
         return datapipe
 
-    def initialize_iteration(self, seed_generator: SeedGenerator, _=None) -> None:
+    def initialize_iteration(
+        self, seed_generator: SeedGenerator, iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
         r"""
         Shares the same seed from rank 0 to other ranks across the distributed processes
         and apply the random seed to the ``DataPipe`` graph.
@@ -502,6 +510,7 @@ class DistributedReadingService(ReadingServiceInterface):
         seed_generator.seed(shared_seed)
         seed_generator = seed_generator.spawn(self._rank, inplace=True)
         set_graph_random_seed(self._datapipe, seed_generator)
+        return None
 
     def __del__(self):
         self.finalize()
@@ -515,7 +524,7 @@ class DistributedReadingService(ReadingServiceInterface):
             self._pg = None
 
 
-class SequentialReadingService(ReadingServiceInterface):
+class SequentialReadingService(CheckpointableReadingServiceInterface):
     def __init__(self, *reading_services):
         self.reading_services = reading_services
 
@@ -533,12 +542,13 @@ class SequentialReadingService(ReadingServiceInterface):
     # Sequential Order
     def initialize_iteration(
         self, seed_generator: SeedGenerator, iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None
-    ) -> None:
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
         chained_iter_reset_fn = iter_reset_fn
         for rs in self.reading_services:
             chained_iter_reset_fn = rs.initialize_iteration(
                 seed_generator=seed_generator, iter_reset_fn=chained_iter_reset_fn
             )
+        return None
 
     # Reversed Order
     def finalize_iteration(self) -> None:
@@ -547,14 +557,15 @@ class SequentialReadingService(ReadingServiceInterface):
 
     # Sequential Order
     def checkpoint(self) -> bytes:
-        # states = []
-        # for rs in self.reading_services:
-        #     states.append(rs.checkpoint())
-        # return states
-        raise NotImplementedError
+        states = []
+        for rs in self.reading_services:
+            states.append(rs.checkpoint())
+        return b"\n".join(states)
 
     # Sequential Order, to align with initialize
-    def restore(self, datapipe, serialized_state) -> DataPipe:
-        for rs, state in zip(self.reading_services, serialized_state):
+    def restore(self, datapipe, serialized_state: bytes) -> DataPipe:
+        states = serialized_state.split(b"\n")
+        assert len(states) == len(self.reading_services)
+        for rs, state in zip(self.reading_services, states):
             datapipe = rs.restore(datapipe, state)
         return datapipe
