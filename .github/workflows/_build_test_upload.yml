@@ -153,13 +153,13 @@ jobs:
             # Use Python 3.8 for pure python build
             if ${{ matrix.python-version == 'pure' }}; then
               export PYTHON_VERSION=3.8
-              source packaging/manylinux/python_helper.sh
-            else
-              source packaging/manylinux/python_helper.sh
-              # Docker path is /__w by default
-              export WORKSPACE="/__w"
-              # See: https://github.com/actions/checkout/issues/760
-              git config --global --add safe.directory "$WORKSPACE/data/data"
+            fi
+            source packaging/manylinux/python_helper.sh
+            # Docker path is /__w by default
+            export WORKSPACE="/__w"
+            # See: https://github.com/actions/checkout/issues/760
+            git config --global --add safe.directory "$WORKSPACE/data/data"
+            if ${{ matrix.python-version != 'pure' }}; then
               # AWSSDK uses $CMAKE_PREFIX_PATH to find openssl
               export OPENSSL_ROOT_DIR="$WORKSPACE/ssl"
               export CURL_ROOT_DIR="$WORKSPACE/curl"
