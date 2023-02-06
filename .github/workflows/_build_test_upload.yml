@@ -69,18 +69,27 @@ jobs:
           - 3.8
           - 3.9
           - "3.10"
+          - pure
+        exclude:
+          - os: macos-latest
+            python-version: pure
+          - os: windows-latest
+            python-version: pure
+          - os: macos-m1-12
+            python-version: pure
     steps:
       - name: Checkout Source Repository
         uses: actions/checkout@v3
         with:
           ref: ${{ inputs.branch }}
           submodules: recursive
-      - name: Setup Python ${{ matrix.python-version }}
+      - name: Setup Python ${{ matrix.python-version }} for Windows
         if: ${{ startsWith( matrix.os, 'windows' ) }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
       - name: Add temp runner environment variables
+        if: ${{ startsWith( matrix.os, 'macos' ) }}
         shell: bash -l {0}
         run: |
           echo "MINICONDA_INSTALL_PATH_MACOS=${RUNNER_TEMP}/miniconda" >> "${GITHUB_ENV}"
@@ -117,12 +126,14 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-            source packaging/manylinux/python_helper.sh
-            yum -y install ninja-build zlib-static
-            # Docker path is /__w by default
-            export WORKSPACE="/__w"
-            # Install static OpenSSL/libcrypto library
-            ./packaging/manylinux/install_openssl_curl.sh
+            if ${{ matrix.python-version != 'pure' }}; then
+              source packaging/manylinux/python_helper.sh
+              yum -y install ninja-build zlib-static
+              # Docker path is /__w by default
+              export WORKSPACE="/__w"
+              # Install static OpenSSL/libcrypto library
+              ./packaging/manylinux/install_openssl_curl.sh
+            fi
           else
             if ${{ startsWith( matrix.os, 'macos' ) }}; then
               conda activate wheel_build_env
@@ -135,20 +146,26 @@ jobs:
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
-          BUILD_S3: 1
+          BUILD_S3: ${{ matrix.python-version != 'pure' }}
         run: |
           set -ex
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-            source packaging/manylinux/python_helper.sh
-            # Docker path is /__w by default
-            export WORKSPACE="/__w"
-            # See: https://github.com/actions/checkout/issues/760
-            git config --global --add safe.directory "$WORKSPACE/data/data"
-            # AWSSDK uses $CMAKE_PREFIX_PATH to find openssl
-            export OPENSSL_ROOT_DIR="$WORKSPACE/ssl"
-            export CURL_ROOT_DIR="$WORKSPACE/curl"
-            export CMAKE_PREFIX_PATH="$OPENSSL_ROOT_DIR:$CURL_ROOT_DIR:$CMAKE_PREFIX_PATH"
-            export STATIC_DEPS=TRUE
+            # Use Python 3.8 for pure python build
+            if ${{ matrix.python-version == 'pure' }}; then
+              export PYTHON_VERSION=3.8
+              source packaging/manylinux/python_helper.sh
+            else
+              source packaging/manylinux/python_helper.sh
+              # Docker path is /__w by default
+              export WORKSPACE="/__w"
+              # See: https://github.com/actions/checkout/issues/760
+              git config --global --add safe.directory "$WORKSPACE/data/data"
+              # AWSSDK uses $CMAKE_PREFIX_PATH to find openssl
+              export OPENSSL_ROOT_DIR="$WORKSPACE/ssl"
+              export CURL_ROOT_DIR="$WORKSPACE/curl"
+              export CMAKE_PREFIX_PATH="$OPENSSL_ROOT_DIR:$CURL_ROOT_DIR:$CMAKE_PREFIX_PATH"
+              export STATIC_DEPS=TRUE
+            fi
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
             conda activate wheel_build_env
@@ -160,6 +177,9 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            if ${{ matrix.python-version == 'pure' }}; then
+              export PYTHON_VERSION=3.8
+            fi
             source packaging/manylinux/python_helper.sh
             pip3 install auditwheel
           fi
@@ -170,12 +190,12 @@ jobs:
           for pkg in dist/torchdata*.whl; do
               echo "PkgInfo of $pkg:"
               pkginfo $pkg
-              if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+              if ${{ startsWith( matrix.os, 'ubuntu' ) && matrix.python-version != 'pure' }}; then
                 auditwheel show $pkg
                 auditwheel repair $pkg --plat manylinux2014_x86_64 -w wheelhouse
               fi
           done
-          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+          if ${{ startsWith( matrix.os, 'ubuntu' ) && matrix.python-version != 'pure' }}; then
             mv dist temp
             mv wheelhouse dist
           fi
@@ -185,6 +205,9 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            if ${{ matrix.python-version == 'pure' }}; then
+              export PYTHON_VERSION=3.8
+            fi
             source packaging/manylinux/python_helper.sh
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
@@ -197,6 +220,9 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            if ${{ matrix.python-version == 'pure' }}; then
+              export PYTHON_VERSION=3.8
+            fi
             source packaging/manylinux/python_helper.sh
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
