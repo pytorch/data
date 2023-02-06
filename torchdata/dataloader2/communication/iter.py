@@ -263,6 +263,8 @@ class _IterateQueueDataPipes(IterDataPipe):
     def reset_epoch(
         self, reset_fn: Callable[[WorkerInfo, SeedGenerator, DataPipe], DataPipe], seed_generator: SeedGenerator
     ):
+        for dp in self.datapipes:
+            dp.protocol.discard_existing_request()
         num_workers = len(self.datapipes)
         for worker_id, dp in enumerate(self.datapipes):
             worker_info = WorkerInfo(num_workers, worker_id)
