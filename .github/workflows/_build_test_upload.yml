@@ -228,7 +228,11 @@ jobs:
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
             conda activate wheel_build_env
           fi
-          python test/smoke_test/smoke_test.py
+          if ${{ matrix.python-version == 'pure' }}; then
+            python test/smoke_test/smoke_test.py --no-s3
+          else
+            python test/smoke_test/smoke_test.py
+          fi
       - name: Upload Wheels to Github
         if: always()
         uses: actions/upload-artifact@v3
