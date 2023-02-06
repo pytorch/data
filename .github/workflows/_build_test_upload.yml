@@ -69,6 +69,7 @@ jobs:
           - 3.8
           - 3.9
           - "3.10"
+          - "3.11"
           - pure
         exclude:
           - os: macos-latest
@@ -111,7 +112,12 @@ jobs:
         shell: bash -l {0}
         run: |
           conda init bash
-          conda create -y --name wheel_build_env python=${{ matrix.python-version }}
+          PYTHON_VERSION=${{ matrix.python-version }}
+          if [[ "${PYTHON_VERSION}" = "3.11" ]]; then
+            conda create -y --name wheel_build_end -c conda-forge python=${{ matrix.python-version }}
+          else
+            conda create -y --name wheel_build_env python=${{ matrix.python-version }}
+          fi
       - name: Setup msbuild on Windows
         if: startsWith( matrix.os, 'windows' )
         uses: microsoft/setup-msbuild@v1.1
