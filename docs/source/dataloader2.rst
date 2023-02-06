@@ -33,6 +33,7 @@ ReadingService
     DistributedReadingService
     MultiProcessingReadingService
     PrototypeMultiProcessingReadingService
+    SequentialReadingService
 
 Each ``ReadingServices`` would take the ``DataPipe`` graph and rewrite it to achieve a few features like dynamic sharding, sharing random seeds and snapshoting for multi-/distributed processes. For more detail about those features, please refer to `the documentation <reading_service.html>`_.
 
