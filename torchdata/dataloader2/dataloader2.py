@@ -172,7 +172,7 @@ class DataLoader2(Generic[T_co]):
         self.datapipe = clone(wrap_datapipe_for_serialization(datapipe)) if datapipe is not None else None
         self._adapted: bool = False
         self._datapipe_iter: Optional[Iterator[T_co]] = None
-        self._reset_iter: bool = True  # Sets to `False` when __iter__ starts, and `True` when `StopIteration``
+        self._reset_iter: bool = True  # Sets to `False` when `__iter__` runs, and `True` when `__next__` is called
         # TODO(630): Some ReadingServices might want to validate adapters, we can add this feature
         if datapipe_adapter_fn is None:
             self.datapipe_adapter_fns = None

@@ -13,7 +13,7 @@ from torchdata.dataloader2.reading_service import (
     MultiProcessingReadingService,
     PrototypeMultiProcessingReadingService,
     ReadingServiceInterface,
-    SequentialReadingService
+    SequentialReadingService,
 )
 from torchdata.dataloader2.shuffle_spec import ShuffleSpec
 

@@ -116,7 +116,8 @@ def dispatch_process_reset_fn(
     datapipe: DataPipe,
     worker_info: WorkerInfo,
     seed_generator: SeedGenerator,
-    custom_dispatch_process_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None,
+    iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None,
+    custom_reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
 ) -> DataPipe:
     r"""
     Based on the distributed shared random seed, this function is used to set the random state
@@ -131,8 +132,12 @@ def dispatch_process_reset_fn(
     dps = list_dps(graph)
     set_datapipes_seed(dps, seed_generator=seed_generator, distributed_shared=True)
 
-    if custom_dispatch_process_reset_fn is not None:
-        datapipe = custom_dispatch_process_reset_fn(datapipe)
+    if iter_reset_fn is not None:
+        datapipe = iter_reset_fn(datapipe)
+        assert isinstance(datapipe, (IterDataPipe, MapDataPipe))
+
+    if custom_reset_fn is not None:
+        datapipe = custom_reset_fn(datapipe, worker_info, seed_generator)
         assert isinstance(datapipe, (IterDataPipe, MapDataPipe))
 
     return datapipe
@@ -142,8 +147,8 @@ def process_reset_fn(
     datapipe: DataPipe,
     worker_info: WorkerInfo,
     seed_generator: SeedGenerator,
+    iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None,
     custom_reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
-    custom_dispatch_process_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None,
 ) -> DataPipe:
     r"""
     Based on the distributed shared random seed and worker id, this function is used to
@@ -161,7 +166,7 @@ def process_reset_fn(
         if worker_info.worker_id == 0:
             # Use WorkerInfo(1, 0)
             dispatch_reset_fn = partial(
-                dispatch_process_reset_fn, custom_dispatch_process_reset_fn=custom_dispatch_process_reset_fn
+                dispatch_process_reset_fn, iter_reset_fn=iter_reset_fn, custom_reset_fn=custom_reset_fn
             )
             dispatch_process_consumer_dp.reset_epoch(dispatch_reset_fn, seed_generator)
 
@@ -169,6 +174,10 @@ def process_reset_fn(
     _set_global_random_state(seed_generator)
 
     set_graph_random_seed(datapipe, seed_generator)
+
+    if iter_reset_fn is not None:
+        datapipe = iter_reset_fn(datapipe)
+        assert isinstance(datapipe, (IterDataPipe, MapDataPipe))
 
     if custom_reset_fn is not None:
         datapipe = custom_reset_fn(datapipe, worker_info, seed_generator)
