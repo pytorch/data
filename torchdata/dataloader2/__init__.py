@@ -13,6 +13,7 @@ from torchdata.dataloader2.reading_service import (
     MultiProcessingReadingService,
     PrototypeMultiProcessingReadingService,
     ReadingServiceInterface,
+    SequentialReadingService,
 )
 from torchdata.dataloader2.shuffle_spec import ShuffleSpec
 
@@ -25,6 +26,7 @@ __all__ = [
     "PauseIteration",
     "PrototypeMultiProcessingReadingService",
     "ReadingServiceInterface",
+    "SequentialReadingService",
     "ShuffleSpec",
 ]
 
