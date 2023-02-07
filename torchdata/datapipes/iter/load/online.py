@@ -235,18 +235,24 @@ class OnlineReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     def __iter__(self) -> Iterator[Tuple[str, StreamWrapper]]:
         for url in self.source_datapipe:
-            try:
-                parts = urllib.parse.urlparse(url)
+            parts = urllib.parse.urlparse(url)
 
-                if re.match(r"(drive|docs)[.]google[.]com", parts.netloc):
+            if re.match(r"(drive|docs)[.]google[.]com", parts.netloc):
+                try:
                     yield _get_response_from_google_drive(url, timeout=self.timeout, **self.query_params)
-                else:
+                except Exception as e:
+                    if self.skip_on_error:
+                        warnings.warn(f"{e}, skipping...")
+                    else:
+                        raise
+            else:
+                try:
                     yield _get_response_from_http(url, timeout=self.timeout, **self.query_params)
-            except Exception as e:
-                if self.skip_on_error:
-                    warnings.warn(f"{e}, skipping...")
-                else:
-                    raise
+                except Exception as e:
+                    if self.skip_on_error:
+                        warnings.warn(f"{e}, skipping...")
+                    else:
+                        raise
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
