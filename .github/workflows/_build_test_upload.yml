@@ -114,7 +114,7 @@ jobs:
           conda init bash
           PYTHON_VERSION=${{ matrix.python-version }}
           if [[ "${PYTHON_VERSION}" = "3.11" ]]; then
-            conda create -y --name wheel_build_end -c conda-forge python=${{ matrix.python-version }}
+            conda create -y --name wheel_build_env -c conda-forge python=${{ matrix.python-version }}
           else
             conda create -y --name wheel_build_env python=${{ matrix.python-version }}
           fi
