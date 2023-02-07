@@ -112,7 +112,6 @@ jobs:
         shell: bash -l {0}
         run: |
           conda init bash
-          PYTHON_VERSION=${{ matrix.python-version }}
           conda create -y --name wheel_build_env python=${{ matrix.python-version }}
       - name: Setup msbuild on Windows
         if: startsWith( matrix.os, 'windows' )
