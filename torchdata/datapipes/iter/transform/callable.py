@@ -266,8 +266,8 @@ class SliceIterDataPipe(IterDataPipe[T_co]):
         if isinstance(index, list):
             if stop or step:
                 warnings.warn(
-                    "A list of indices was passed as well as a stop or step for the slice,"
-                    "these arguments can't be used together so onlyu the indices list will be used."
+                    "A list of indices was passed as well as a stop or step for the slice, "
+                    "these arguments can't be used together so only the indices list will be used."
                 )
 
     def __iter__(self) -> Iterator[T_co]:
