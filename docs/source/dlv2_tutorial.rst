@@ -50,3 +50,21 @@ Distributed
         for d in dl:
             model(d)
     dl.shutdown()
+
+Multiprocessing + Distributed
+------------------------------
+
+``SequentialReadingService`` can be used to combine both ``ReadingServices`` together to achive multiprocessing and distributed training at the same time.
+
+.. code:: python
+
+    mp_rs = PrototypeMultiProcessingReadingService(num_workers=4)
+    dist_rs = DistributedReadingService()
+    rs = SequentialReadingService(dist_rs, mp_rs)
+
+    dl = DataLoader2(datapipe, reading_service=rs)
+    for epoch in range(10):
+        dl.seed(epoch)
+        for d in dl:
+            model(d)
+    dl.shutdown()
