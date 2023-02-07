@@ -13,7 +13,7 @@ from typing import Callable, Optional
 
 import torch
 
-from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
+from torch.utils.data.datapipes.iter.sharding import SHARDING_PRIORITIES
 
 from torchdata.dataloader2 import communication
 from torchdata.dataloader2.graph import (

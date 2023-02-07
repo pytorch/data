@@ -20,7 +20,7 @@ import torch
 import torch.distributed as dist
 from torch.testing._internal.common_utils import instantiate_parametrized_tests, parametrize
 
-from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
+from torch.utils.data.datapipes.iter.sharding import SHARDING_PRIORITIES
 
 from torchdata.dataloader2 import (
     communication,

@@ -18,7 +18,7 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 
 from torch.utils.data import DataLoader
-from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
+from torch.utils.data.datapipes.iter.sharding import SHARDING_PRIORITIES
 
 from torchdata._constants import default_dl2_worker_join_timeout_in_s, default_timeout_in_s
 from torchdata.dataloader2 import communication
