@@ -14,7 +14,7 @@ import expecttest
 from _utils._common_utils_for_test import IS_WINDOWS
 
 from torch.utils.data import IterDataPipe
-from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
+from torch.utils.data.datapipes.iter.sharding import SHARDING_PRIORITIES
 
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService, ReadingServiceInterface
 from torchdata.dataloader2.graph import find_dps, list_dps, remove_dp, replace_dp, traverse_dps
