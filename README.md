@@ -176,10 +176,11 @@ Please read the [full documentation here](https://pytorch.org/data/main/dataload
 
 ## Tutorial
 
-A tutorial of this library is [available here on the documentation site](https://pytorch.org/data/main/tutorial.html).
-It covers three topics: [using DataPipes](https://pytorch.org/data/main/tutorial.html#using-datapipes),
-[working with DataLoader](https://pytorch.org/data/main/tutorial.html#working-with-dataloader), and
-[implementing DataPipes](https://pytorch.org/data/main/tutorial.html#implementing-a-custom-datapipe).
+A tutorial of this library is
+[available here on the documentation site](https://pytorch.org/data/main/dp_tutorial.html). It covers three topics:
+[using DataPipes](https://pytorch.org/data/main/dp_tutorial.html#using-datapipes),
+[working with DataLoader](https://pytorch.org/data/main/dp_tutorial.html#working-with-dataloader), and
+[implementing DataPipes](https://pytorch.org/data/main/dp_tutorial.html#implementing-a-custom-datapipe).
 
 ## Usage Examples
 
@@ -194,8 +195,8 @@ What should I do if the existing set of DataPipes does not do what I need?
 </summary>
 
 You can
-[implement your own custom DataPipe](https://pytorch.org/data/main/tutorial.html#implementing-a-custom-datapipe). If you
-believe your use case is common enough such that the community can benefit from having your custom DataPipe added to
+[implement your own custom DataPipe](https://pytorch.org/data/main/dp_tutorial.html#implementing-a-custom-datapipe). If
+you believe your use case is common enough such that the community can benefit from having your custom DataPipe added to
 this library, feel free to open a GitHub issue. We will be happy to discuss!
 
 </details>
@@ -240,7 +241,7 @@ Multi-process data loading is still handled by the `DataLoader`, see the
 [DataLoader documentation for more details](https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading).
 As of PyTorch version >= 1.12.0 (TorchData version >= 0.4.0), data sharding is automatically done for DataPipes within
 the `DataLoader` as long as a `ShardingFilter` DataPipe exists in your pipeline. Please see the
-[tutorial](https://pytorch.org/data/main/tutorial.html#working-with-dataloader) for an example.
+[tutorial](https://pytorch.org/data/main/dp_tutorial.html#working-with-dataloader) for an example.
 
 </details>
 
