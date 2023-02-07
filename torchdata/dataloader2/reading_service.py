@@ -94,6 +94,12 @@ class ReadingServiceInterface(ABC):
         """
         pass
 
+    def __del__(self):
+        try:
+            self.finalize()
+        except AttributeError:
+            pass
+
 
 class CheckpointableReadingServiceInterface(ReadingServiceInterface):
     r"""
@@ -323,9 +329,6 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             pass
         return None
 
-    def __del__(self):
-        self.finalize()
-
     def finalize(self) -> None:
         r"""
         ``PrototypeMultiProcessingReadingService`` invalidate states & properly exits all subprocesses.
@@ -489,9 +492,6 @@ class DistributedReadingService(ReadingServiceInterface):
         seed_generator = seed_generator.spawn(self._rank, inplace=True)
         set_graph_random_seed(self._datapipe, seed_generator)
         return None
-
-    def __del__(self):
-        self.finalize()
 
     def finalize(self) -> None:
         r"""
