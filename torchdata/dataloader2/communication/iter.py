@@ -154,7 +154,7 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False):
             dp_list = list_dps(traverse_dps(source_datapipe))
             for dp in dp_list:
                 # TODO: Remove this condition after there is `pause` support for round-robin sharding
-                if isinstance(dp, (QueueWrapper, _IterateQueueDataPipes)):
+                if isinstance(dp, QueueWrapper):
                     warnings.warn("There is no support for `pause` with round-robin sharding at the moment.")
                 elif hasattr(dp, "pause") and callable(dp.pause):
                     dp.pause()
@@ -166,7 +166,7 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False):
             dp_list = list_dps(traverse_dps(source_datapipe))
             for dp in reversed(dp_list):
                 # TODO: Remove this condition after there is `resume` support for round-robin sharding
-                if isinstance(dp, (QueueWrapper, _IterateQueueDataPipes)):
+                if isinstance(dp, QueueWrapper):
                     raise RuntimeError("There is no support for `resume` with round-robin sharding at the moment.")
                 elif hasattr(dp, "resume") and callable(dp.resume):
                     dp.resume()
@@ -179,7 +179,7 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False):
 
         elif isinstance(request, communication.messages.GetNextRequest):
             while forever:
-                if protocol._pause:
+                if protocol.is_paused():
                     protocol.response_stop_iteration()
                     warnings.warn(
                         "Cannot `GetNext` after `Pause` has been called. "
