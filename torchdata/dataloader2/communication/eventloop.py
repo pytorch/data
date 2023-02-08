@@ -50,8 +50,6 @@ class _ResetCounter:
         assert self.cnt <= self.exp_cnt
 
     def is_reached(self) -> bool:
-        if self._reached:
-            return self._reached
         if self.cnt == self.exp_cnt:
             self._reached = True
         return self._reached
