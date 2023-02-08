@@ -5,11 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 import io
+import json
 import os
+import subprocess
 import unittest
 import warnings
-import subprocess
-import json
 from unittest.mock import patch
 
 import expecttest
@@ -231,7 +231,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         for p in s3_pths:
             pth_parts = p.split("s3://")[1].split("/", 1)
             if len(pth_parts) == 1:
-                bkt_name, prefix = pth_parts[0], ''
+                bkt_name, prefix = pth_parts[0], ""
             else:
                 bkt_name, prefix = pth_parts
 
@@ -239,13 +239,12 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
                 aws_cmd = f"aws --output json s3api list-objects  --bucket {bkt_name} --prefix {prefix} --no-sign-request --query Contents[*].Key"
             else:
                 aws_cmd = f"aws --output json s3api list-objects  --bucket {bkt_name} --no-sign-request --query Contents[*].Key"
-                
+
             res = subprocess.run(aws_cmd, shell=True, check=True, capture_output=True)
             objs = json.loads(res.stdout)
-            tot_objs |= set(objs)  
+            tot_objs |= set(objs)
 
         return len(tot_objs)
-
 
     @skipIfNoFSSpecS3
     def test_fsspec_io_iterdatapipe(self):
