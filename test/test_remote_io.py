@@ -235,13 +235,9 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             else:
                 bkt_name, prefix = pth_parts
 
+            aws_cmd = f"aws --output json s3api list-objects  --bucket {bkt_name} --no-sign-request"
             if prefix.strip():
-                aws_cmd = (
-                    f"aws --output json s3api list-objects  --bucket {bkt_name} --prefix {prefix} --no-sign-request"
-                )
-            else:
-                aws_cmd = f"aws --output json s3api list-objects  --bucket {bkt_name} --no-sign-request"
-
+                aws_cmd += f" --prefix {prefix}"
             if not recursive:
                 aws_cmd += " --delimiter /"
 
