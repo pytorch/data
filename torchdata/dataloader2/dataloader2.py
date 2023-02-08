@@ -16,7 +16,9 @@ from torchdata.dataloader2.graph._serialization import (
     clone,
     DataPipe,
     deserialize_datapipe,
+    deserialize_seed_generator,
     serialize_datapipe,
+    serialize_seed_generator,
     wrap_datapipe_for_serialization,
 )
 from torchdata.dataloader2.random import SeedGenerator
@@ -26,6 +28,7 @@ from torchdata.dataloader2.reading_service import CheckpointableReadingServiceIn
 T_co = TypeVar("T_co", covariant=True)
 SERIALIZED_DATAPIPE_KEY_NAME = "serialized_datapipe"
 READING_SERVICE_STATE_KEY_NAME = "reading_service_state"
+INITIAL_SEED_GEN_STATE_KEY_NAME = "initial_seed_gen_state"
 
 
 @dataclass
@@ -187,6 +190,9 @@ class DataLoader2(Generic[T_co]):
         self._seed_generator: SeedGenerator = SeedGenerator()
         self._seed: Optional[int] = None
         self._reset_seed: bool = True
+        # Seed generator as of beginning of each epoch
+        self._initial_seed_generator: SeedGenerator = clone(self._seed_generator)
+        self._skip_iteration_seeding: bool = False
 
     def __iter__(self) -> DataLoader2Iterator[T_co]:
         r"""
@@ -206,8 +212,13 @@ class DataLoader2(Generic[T_co]):
                 if self._reset_seed:
                     self._seed_generator.seed(self._seed)
                     self._reset_seed = False
+            elif self._skip_iteration_seeding:
+                self._skip_iteration_seeding = False
             else:
                 self._seed_generator.seed()
+
+            # Saving initial seed generator state
+            self._initial_seed_generator = clone(self._seed_generator)
 
             if not self._adapted and self.reading_service is not None:
                 if self.reading_service_state is None:
@@ -280,10 +291,12 @@ class DataLoader2(Generic[T_co]):
 
         # Serialize datapipe after applying adapters and before reading service adaption
         serialized_datapipe = serialize_datapipe(self._datapipe_before_reading_service_adapt)
+        serialized_initial_seed_generator = serialize_seed_generator(self._initial_seed_generator)
 
         return {
             SERIALIZED_DATAPIPE_KEY_NAME: serialized_datapipe,
             READING_SERVICE_STATE_KEY_NAME: reading_service_state,
+            INITIAL_SEED_GEN_STATE_KEY_NAME: serialized_initial_seed_generator,
         }
 
     @classmethod
@@ -291,6 +304,7 @@ class DataLoader2(Generic[T_co]):
         cls,
         state: Dict[str, Any],
         reading_service: CheckpointableReadingServiceInterface,
+        restore_initial_seed_generator: bool = False,
     ) -> "DataLoader2[T_co]":
         """
         Create new ``DataLoader2`` with ``DataPipe`` graph and ``ReadingService`` restored
@@ -305,9 +319,17 @@ class DataLoader2(Generic[T_co]):
             reading_service=reading_service,
         )
         data_loader.reading_service_state = reading_service_state
+
+        if restore_initial_seed_generator:
+            serialized_generator = state[INITIAL_SEED_GEN_STATE_KEY_NAME]
+            deserialized_seed_generator = deserialize_seed_generator(serialized_generator)
+            assert deserialized_seed_generator is not None
+            data_loader._seed_generator = deserialized_seed_generator
+            data_loader._skip_iteration_seeding = True
+
         return data_loader
 
-    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
+    def load_state_dict(self, state_dict: Dict[str, Any], restore_initial_seed_generator: bool = False) -> None:
         """
         For the existing ``DataLoader2``, load serialized state to restore ``DataPipe`` graph
         and reset the internal state of ``ReadingService``.
@@ -330,6 +352,13 @@ class DataLoader2(Generic[T_co]):
         # override existing datapipe and reading service state
         self.datapipe = deserialized_datapipe
         self.reading_service_state = reading_service_state
+
+        if restore_initial_seed_generator:
+            serialized_generator = state_dict[INITIAL_SEED_GEN_STATE_KEY_NAME]
+            deserialized_seed_generator = deserialize_seed_generator(serialized_generator)
+            assert deserialized_seed_generator is not None
+            self._seed_generator = deserialized_seed_generator
+            self._skip_iteration_seeding = True
 
         # re-initialize datapipe_adapter_fn and _datapipe_before_reading_service_adapt
         if self.datapipe_adapter_fns is not None:

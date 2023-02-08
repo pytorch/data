@@ -14,6 +14,7 @@ from torch.utils.data.datapipes.datapipe import (
 )
 
 from torchdata.dataloader2.graph import DataPipe
+from torchdata.dataloader2.random.seed_generator import SeedGenerator
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.map import MapDataPipe
 
@@ -22,8 +23,23 @@ __all__ = [
     "clone",
     "deserialize_datapipe",
     "serialize_datapipe",
+    "serialize_seed_generator",
     "wrap_datapipe_for_serialization",
 ]
+
+
+def serialize_seed_generator(seed_generator: SeedGenerator) -> bytes:
+    try:
+        return pickle.dumps(seed_generator)
+    except pickle.PickleError as e:
+        raise RuntimeError(f"Seed generator should be pickle-able by default for checkpoint: {e}")
+
+
+def deserialize_seed_generator(serialized_generator: bytes) -> SeedGenerator:
+    try:
+        return pickle.loads(serialized_generator)
+    except pickle.PickleError as e:
+        raise RuntimeError(f"Seed generator should be pickle-able by default for checkpoint: {e}")
 
 
 def serialize_datapipe(datapipe: DataPipe) -> bytes:
