@@ -117,19 +117,13 @@ class DataLoader2Iterator(Iterator[T_co]):
         After ``DataLoader2`` is paused, ``resume()`` must be called before it can start yielding again.
 
         Note:
-            ``limit_threshold`` persists after ``pause`` and ``resume``. Use ``.clear_limit()`` to remove it.
+            ``limit_threshold`` persists after ``pause`` and ``resume``. Use ``.limit(None)`` to remove it.
 
         Args:
             n_batches: Number of batches after which the DataLoader2 will pause
         """
         self.limit_counter = 0
         self.limit_threshold = n_batches
-
-    def clear_limit(self) -> None:
-        """
-        Set the ``limit_threshold`` to ``None`` such that the iterator will not automatically call ``pause``
-        """
-        self.limit_threshold = None
 
     def __getattr__(self, name):
         """
