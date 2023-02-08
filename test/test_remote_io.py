@@ -8,6 +8,7 @@ import io
 import os
 import unittest
 import warnings
+import subprocess
 from unittest.mock import patch
 
 import expecttest
@@ -274,6 +275,9 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
     @skipIfNoAWS
     @unittest.skipIf(IS_M1, "PyTorch M1 CI Machine doesn't allow accessing")
     def test_s3_io_iterdatapipe(self):
+        res = subprocess.run("aws --output json s3api list-objects  --bucket ai2-public-datasets --no-sign-request --query Contents[*].Key", \
+            shell=True, check=True, capture_output=True)
+        num_items =  len(res.stdout.decode("utf-8").split("\n")) - 1
         # S3FileLister: different inputs
         input_list = [
             [["s3://ai2-public-datasets"], 81],  # bucket without '/'
