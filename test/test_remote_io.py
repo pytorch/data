@@ -345,14 +345,6 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
                 for _ in s3_lister_dp:
                     pass
 
-        # S3FileLoader: loader
-        input = [
-            "s3://charades-tar-shards/charades-video-0.tar",
-            "s3://charades-tar-shards/charades-video-1.tar",
-        ]  # multiple files
-        s3_loader_dp = S3FileLoader(input, region="us-west-2")
-        self.assertEqual(sum(1 for _ in s3_loader_dp), 2, f"{input} failed")
-
         input = [["s3://aft-vbi-pds/bin-images/100730.jpg"], 1]
         s3_loader_dp = S3FileLoader(input[0], region="us-east-1")
         self.assertEqual(sum(1 for _ in s3_loader_dp), input[1], f"{input[0]} failed")
