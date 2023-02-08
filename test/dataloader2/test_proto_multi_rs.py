@@ -159,7 +159,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
         cumulative_res.extend(res)
 
         # Functional Test: Clear the `limit` and yield the rest of the elements
-        it.clear_limit()
+        it.limit(None)
         it.resume()
         res = []
         for x in it:
@@ -260,7 +260,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
     # cumulative_res.extend(res)
     #
     # # Functional Test: Clear the `limit` and yield the rest of the elements
-    # it.clear_limit()
+    # it.limit(None)
     # it.resume()
     # res = []
     # for x in it:
