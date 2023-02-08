@@ -225,7 +225,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             res = list(dl)
             self.assertEqual(sorted(expected), sorted(res))
 
-    def __get_s3_cnt(self, s3_pths: list):
+    def __get_s3_cnt(self, s3_pths: list, recursive=True):
         """Return the count of the total objects collected from a list s3 paths"""
         tot_objs = set()
         for p in s3_pths:
@@ -236,12 +236,21 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
                 bkt_name, prefix = pth_parts
 
             if prefix.strip():
-                aws_cmd = f"aws --output json s3api list-objects  --bucket {bkt_name} --prefix {prefix} --no-sign-request --query Contents[*].Key"
+                aws_cmd = (
+                    f"aws --output json s3api list-objects  --bucket {bkt_name} --prefix {prefix} --no-sign-request"
+                )
             else:
-                aws_cmd = f"aws --output json s3api list-objects  --bucket {bkt_name} --no-sign-request --query Contents[*].Key"
+                aws_cmd = f"aws --output json s3api list-objects  --bucket {bkt_name} --no-sign-request"
+
+            if not recursive:
+                aws_cmd += f" --delimiter /"
 
             res = subprocess.run(aws_cmd, shell=True, check=True, capture_output=True)
-            objs = json.loads(res.stdout)
+            json_res = json.loads(res.stdout)
+            if "Contents" in json_res:
+                objs = [v["Key"] for v in json_res["Contents"]]
+            else:
+                objs = [v["Prefix"] for v in json_res["CommonPrefixes"]]
             tot_objs |= set(objs)
 
         return len(tot_objs)
@@ -260,7 +269,9 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         ]
         for urls in input_list:
             fsspec_lister_dp = FSSpecFileLister(IterableWrapper(urls), anon=True)
-            self.assertEqual(sum(1 for _ in fsspec_lister_dp), self.__get_s3_cnt(urls), f"{urls} failed")
+            self.assertEqual(
+                sum(1 for _ in fsspec_lister_dp), self.__get_s3_cnt(urls, recursive=False), f"{urls} failed"
+            )
 
         url = "s3://ai2-public-datasets/charades/"
         fsspec_loader_dp = FSSpecFileOpener(FSSpecFileLister(IterableWrapper([url]), anon=True), anon=True)
