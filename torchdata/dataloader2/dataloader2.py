@@ -60,13 +60,13 @@ class DataLoader2Iterator(Iterator[T_co]):
             self.dataloader._reset_iter = True
             try:
                 if self.dataloader._is_paused:
-                    raise StopIteration("DataLoader2 has been paused. `resume` must be called before continuing.")
+                    raise PauseIteration("DataLoader2 has been paused. `resume` must be called before continuing.")
                 else:
                     next_val = next(self.dataloader._datapipe_iter)  # type: ignore[arg-type]
                     if self.limit_threshold is not None:
                         self.limit_counter = self.limit_counter + 1  # type: ignore[operator]
                     return next_val
-            except PauseIteration:
+            except PauseIteration:  # This can be used for raising `StopIteration` without `finalize_iteration`
                 raise StopIteration
             except StopIteration:
                 if self.dataloader.reading_service is not None:

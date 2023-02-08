@@ -5,17 +5,29 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import multiprocessing as mp
 import unittest
 from unittest import TestCase
 
-from torch.utils.data.datapipes.iter.grouping import SHARDING_PRIORITIES
+from test_dataloader2 import parametrize
+from torch.testing._internal.common_utils import instantiate_parametrized_tests
 from torchdata.dataloader2 import DataLoader2, DataLoader2Iterator, PrototypeMultiProcessingReadingService
-
 from torchdata.datapipes.iter import IterableWrapper
 
 
 def _add_one(x: int) -> int:
     return x + 1
+
+
+# Test DataPipes
+n_elements = 10
+dp1 = IterableWrapper(range(n_elements)).shuffle().sharding_filter()
+double_pause_dp = dp1.prefetch().prefetch()
+test_dps = [dp1, double_pause_dp]
+
+
+mp_ctx_parametrize = parametrize("ctx", mp.get_all_start_methods())
+dp_parametrize = parametrize("dp", test_dps)
 
 
 class TestPrototypeMultiProcessingReadingService(TestCase):
@@ -24,109 +36,103 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
     `pause`, `resume`, `snapshot`.
     """
 
-    # Test DataPipes
-    n_elements = 10
-    dp1 = IterableWrapper(range(n_elements)).shuffle().sharding_filter()
-    double_pause_dp = dp1.prefetch().prefetch()
-    test_dps = [dp1, double_pause_dp]
-    mp_start_methods = ["fork", "forkserver", "spawn"]
-
-    def test_reading_service_pause_resume_0_worker(self) -> None:
+    @mp_ctx_parametrize
+    def test_reading_service_pause_resume_0_worker(self, ctx) -> None:
 
         # Functional Test: Verifies that this ReadingService will raise error when `pause/resume` is used
         #                  with `num_workers = 0`
-        for mp_method in self.mp_start_methods:
-            rs0 = PrototypeMultiProcessingReadingService(
-                num_workers=0, worker_prefetch_cnt=0, main_prefetch_cnt=0, multiprocessing_context=mp_method
-            )
-            dl0: DataLoader2 = DataLoader2(self.dp1, reading_service=rs0)
-            res0 = []
-            for i, x in enumerate(dl0):
-                res0.append(x)
-                if i in {2}:
-                    with self.assertRaisesRegex(RuntimeError, r"pause"):
-                        dl0._pause()
-                    with self.assertRaisesRegex(RuntimeError, r"resume"):
-                        dl0._resume()
-            dl0.shutdown()
+        rs0 = PrototypeMultiProcessingReadingService(
+            num_workers=0, worker_prefetch_cnt=0, main_prefetch_cnt=0, multiprocessing_context=ctx
+        )
+        dl0: DataLoader2 = DataLoader2(dp1, reading_service=rs0)
+        res0 = []
+        for i, x in enumerate(dl0):
+            res0.append(x)
+            if i in {2}:
+                with self.assertRaisesRegex(RuntimeError, r"pause"):
+                    dl0._pause()
+                with self.assertRaisesRegex(RuntimeError, r"resume"):
+                    dl0._resume()
+        dl0.shutdown()
 
-    def test_reading_service_pause_resume(self) -> None:
+    @mp_ctx_parametrize
+    @dp_parametrize
+    def test_reading_service_pause_resume(self, ctx, dp) -> None:
 
-        for mp_method in self.mp_start_methods:
-            rs1 = PrototypeMultiProcessingReadingService(
-                num_workers=1, worker_prefetch_cnt=0, main_prefetch_cnt=0, multiprocessing_context=mp_method
-            )
-            rs2 = PrototypeMultiProcessingReadingService(
-                num_workers=1, worker_prefetch_cnt=0, main_prefetch_cnt=2, multiprocessing_context=mp_method
-            )
-            rs3 = PrototypeMultiProcessingReadingService(
-                num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=0, multiprocessing_context=mp_method
-            )
-            rs4 = PrototypeMultiProcessingReadingService(
-                num_workers=2, worker_prefetch_cnt=2, main_prefetch_cnt=0, multiprocessing_context=mp_method
-            )
-            rs5 = PrototypeMultiProcessingReadingService(
-                num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=2, multiprocessing_context=mp_method
-            )
-            rs6 = PrototypeMultiProcessingReadingService(
-                num_workers=2, worker_prefetch_cnt=2, main_prefetch_cnt=2, multiprocessing_context=mp_method
-            )
-            test_rss = [rs1, rs2, rs3, rs4, rs5, rs6]
+        rs1 = PrototypeMultiProcessingReadingService(
+            num_workers=1, worker_prefetch_cnt=0, main_prefetch_cnt=0, multiprocessing_context=ctx
+        )
+        rs2 = PrototypeMultiProcessingReadingService(
+            num_workers=1, worker_prefetch_cnt=0, main_prefetch_cnt=2, multiprocessing_context=ctx
+        )
+        rs3 = PrototypeMultiProcessingReadingService(
+            num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=0, multiprocessing_context=ctx
+        )
+        rs4 = PrototypeMultiProcessingReadingService(
+            num_workers=2, worker_prefetch_cnt=2, main_prefetch_cnt=0, multiprocessing_context=ctx
+        )
+        rs5 = PrototypeMultiProcessingReadingService(
+            num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=2, multiprocessing_context=ctx
+        )
+        rs6 = PrototypeMultiProcessingReadingService(
+            num_workers=2, worker_prefetch_cnt=2, main_prefetch_cnt=2, multiprocessing_context=ctx
+        )
+        test_rss = [rs1, rs2, rs3, rs4, rs5, rs6]
 
-            for dp in self.test_dps:
-                # Functional Test: Testing various configuration of DataPipe/ReadingService to ensure the pipeline
-                #                  properly pauses and resumes
-                for n, rs in enumerate(test_rss):
-                    dl: DataLoader2 = DataLoader2(dp, reading_service=rs)
-                    res = []
-                    for i, x in enumerate(dl):
-                        res.append(x)
-                        if i in {2, self.n_elements - 2}:
-                            dl._pause()
-                            dl._resume()
+        # Functional Test: Testing various configuration of DataPipe/ReadingService to ensure the pipeline
+        #                  properly pauses and resumes
+        for n, rs in enumerate(test_rss):
+            dl: DataLoader2 = DataLoader2(dp, reading_service=rs)
+            res = []
+            for i, x in enumerate(dl):
+                res.append(x)
+                if i in {2, n_elements - 2}:
+                    dl._pause()
+                    dl._resume()
 
-                    self.assertEqual(
-                        list(range(self.n_elements)),
-                        sorted(res),
-                        msg=f"The test is failing for rs{n + 1} with '{mp_method}', num_workers = {rs.num_workers}, "
-                        f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, "
-                        f"main_prefetch_cnt = {rs.main_prefetch_cnt}",
-                    )
-                    dl.shutdown()
+            self.assertEqual(
+                list(range(n_elements)),
+                sorted(res),
+                msg=f"The test is failing for rs{n + 1} with '{ctx}', num_workers = {rs.num_workers}, "
+                f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, "
+                f"main_prefetch_cnt = {rs.main_prefetch_cnt}",
+            )
+            dl.shutdown()
 
-    def test_reading_service_pause_stop_yield(self) -> None:
+    @mp_ctx_parametrize
+    @dp_parametrize
+    def test_reading_service_pause_stop_yield(self, ctx, dp) -> None:
 
         # Functional Test: Confirms that `dl` will stop yielding elements after `_pause` is called
+        rs7 = PrototypeMultiProcessingReadingService(
+            num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=1, multiprocessing_context=ctx
+        )
+        rs8 = PrototypeMultiProcessingReadingService(
+            num_workers=2, worker_prefetch_cnt=1, main_prefetch_cnt=0, multiprocessing_context=ctx
+        )
+        rs9 = PrototypeMultiProcessingReadingService(
+            num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=0, multiprocessing_context=ctx
+        )
 
-        for mp_method in self.mp_start_methods:
-            rs7 = PrototypeMultiProcessingReadingService(
-                num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=1, multiprocessing_context=mp_method
+        test_rss2 = [rs7, rs8, rs9]
+
+        for n, rs in enumerate(test_rss2):
+            dl: DataLoader2 = DataLoader2(double_pause_dp, reading_service=rs)
+            res = []
+            for i, x in enumerate(dl):
+                res.append(x)
+                if i in {2}:
+                    dl._pause()
+            self.assertEqual(
+                3,
+                len(res),
+                msg=f"The test is failing for rs{n + 7} with '{ctx}', num_workers = {rs.num_workers}, "
+                f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, main_prefetch_cnt = {rs.main_prefetch_cnt}",
             )
-            rs8 = PrototypeMultiProcessingReadingService(
-                num_workers=2, worker_prefetch_cnt=1, main_prefetch_cnt=0, multiprocessing_context=mp_method
-            )
-            rs9 = PrototypeMultiProcessingReadingService(
-                num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=0, multiprocessing_context=mp_method
-            )
+            dl.shutdown()
 
-            test_rss2 = [rs7, rs8, rs9]
-
-            for n, rs in enumerate(test_rss2):
-                dl: DataLoader2 = DataLoader2(self.double_pause_dp, reading_service=rs)
-                res = []
-                for i, x in enumerate(dl):
-                    res.append(x)
-                    if i in {2}:
-                        dl._pause()
-                self.assertEqual(
-                    3,
-                    len(res),
-                    msg=f"The test is failing for rs{n + 7} with '{mp_method}', num_workers = {rs.num_workers}, "
-                    f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, main_prefetch_cnt = {rs.main_prefetch_cnt}",
-                )
-                dl.shutdown()
-
-    def test_reading_service_limit(self) -> None:
+    @dp_parametrize
+    def test_reading_service_limit(self, dp) -> None:
 
         rs1 = PrototypeMultiProcessingReadingService(num_workers=1, worker_prefetch_cnt=0, main_prefetch_cnt=0)
         rs2 = PrototypeMultiProcessingReadingService(num_workers=1, worker_prefetch_cnt=0, main_prefetch_cnt=2)
@@ -134,64 +140,63 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
         rs4 = PrototypeMultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=2, main_prefetch_cnt=2)
         test_rss = [rs1, rs2, rs3, rs4]
 
-        for dp in self.test_dps:
-            for n, rs in enumerate(test_rss):
-                dl: DataLoader2 = DataLoader2(dp, reading_service=rs)
-                res = []
-                cumulative_res = []
-                n_limit = 3
+        for n, rs in enumerate(test_rss):
+            dl: DataLoader2 = DataLoader2(dp, reading_service=rs)
+            res = []
+            cumulative_res = []
+            n_limit = 3
 
-                it: DataLoader2Iterator = iter(dl)
-                it.limit(n_limit)
-                for x in it:
-                    res.append(x)
-                # Functional Test: Verify that the number of elements yielded equals to the specified limit
-                self.assertEqual(
-                    n_limit,
-                    len(res),  # 3
-                    msg=f"The test is failing for rs{n + 7} with default multiprocessing method, "
-                    f"num_workers = {rs.num_workers}, "
-                    f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, main_prefetch_cnt = {rs.main_prefetch_cnt}",
-                )
-                cumulative_res.extend(res)
+            it: DataLoader2Iterator = iter(dl)
+            it.limit(n_limit)
+            for x in it:
+                res.append(x)
+            # Functional Test: Verify that the number of elements yielded equals to the specified limit
+            self.assertEqual(
+                n_limit,
+                len(res),  # 3
+                msg=f"The test is failing for rs{n + 7} with default multiprocessing method, "
+                f"num_workers = {rs.num_workers}, "
+                f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, main_prefetch_cnt = {rs.main_prefetch_cnt}",
+            )
+            cumulative_res.extend(res)
 
-                # Functional Test: Calling `next` after `limit` will trigger `StopIteration`
-                with self.assertRaisesRegex(StopIteration, "pause"):
-                    next(it)
+            # Functional Test: Calling `next` after `limit` will trigger `StopIteration`
+            with self.assertRaises(StopIteration):
+                next(it)
 
-                # Functional Test: Verify that `limit` persists without the need to set it again
-                it.resume()
-                res = []
-                for x in it:
-                    res.append(x)
-                self.assertEqual(
-                    n_limit,
-                    len(res),  # 3
-                    msg=f"The test is failing for rs{n + 7} with default multiprocessing method, "
-                    f"num_workers = {rs.num_workers}, "
-                    f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, main_prefetch_cnt = {rs.main_prefetch_cnt}",
-                )
-                cumulative_res.extend(res)
+            # Functional Test: Verify that `limit` persists without the need to set it again
+            it.resume()
+            res = []
+            for x in it:
+                res.append(x)
+            self.assertEqual(
+                n_limit,
+                len(res),  # 3
+                msg=f"The test is failing for rs{n + 7} with default multiprocessing method, "
+                f"num_workers = {rs.num_workers}, "
+                f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, main_prefetch_cnt = {rs.main_prefetch_cnt}",
+            )
+            cumulative_res.extend(res)
 
-                # Functional Test: Clear the `limit` and yield the rest of the elements
-                it.clear_limit()
-                it.resume()
-                res = []
-                for x in it:
-                    res.append(x)
-                self.assertEqual(
-                    self.n_elements - 2 * n_limit,
-                    len(res),  # 4
-                    msg=f"The test is failing for rs{n + 7} with default multiprocessing method, "
-                    f"num_workers = {rs.num_workers}, "
-                    f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, main_prefetch_cnt = {rs.main_prefetch_cnt}",
-                )
+            # Functional Test: Clear the `limit` and yield the rest of the elements
+            it.clear_limit()
+            it.resume()
+            res = []
+            for x in it:
+                res.append(x)
+            self.assertEqual(
+                n_elements - 2 * n_limit,
+                len(res),  # 4
+                msg=f"The test is failing for rs{n + 7} with default multiprocessing method, "
+                f"num_workers = {rs.num_workers}, "
+                f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, main_prefetch_cnt = {rs.main_prefetch_cnt}",
+            )
 
-                cumulative_res.extend(res)
-                self.assertEqual(list(range(self.n_elements)), sorted(cumulative_res))
+            cumulative_res.extend(res)
+            self.assertEqual(list(range(n_elements)), sorted(cumulative_res))
 
         # Functional Test: Setting `limit` to a different value during after each mini-epoch
-        dl2: DataLoader2 = DataLoader2(self.double_pause_dp, reading_service=rs4)
+        dl2: DataLoader2 = DataLoader2(double_pause_dp, reading_service=rs4)
         res = []
         it2: DataLoader2Iterator = iter(dl2)
         it2.limit(3)
@@ -281,7 +286,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
     # for x in it:
     #     res.append(x)
     # # self.assertEqual(
-    # #     self.n_elements - 2 * n_limit,
+    # #     n_elements - 2 * n_limit,
     # #     len(res),  # 4
     # #     msg=f"The test is failing for rs{n + 1} with default multiprocessing method, "
     # #         f"num_workers = {rs.num_workers}, "
@@ -289,7 +294,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
     # # )
     #
     # cumulative_res.extend(res)
-    # self.assertEqual(list(range(self.n_elements)), sorted(cumulative_res))
+    # self.assertEqual(list(range(n_elements)), sorted(cumulative_res))
 
     def test_dataloader2_snapshot(self) -> None:
 
@@ -326,6 +331,9 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
             dl_restored.shutdown()
 
             # TODO: Need to figure out the reset situation within `_simple_graph_snapshot_restoration` and ProtoRS
+
+
+instantiate_parametrized_tests(TestPrototypeMultiProcessingReadingService)
 
 
 if __name__ == "__main__":

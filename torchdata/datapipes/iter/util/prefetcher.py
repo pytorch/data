@@ -87,9 +87,8 @@ class PrefetcherIterDataPipe(IterDataPipe):
         try:
             prefetch_data = _PrefetchData(self.source_datapipe, self.buffer_size)
             self.prefetch_data = prefetch_data
-            self.thread = threading.Thread(
-                target=PrefetcherIterDataPipe.thread_worker, args=(prefetch_data,), daemon=True
-            )
+            thread = threading.Thread(target=PrefetcherIterDataPipe.thread_worker, args=(prefetch_data,), daemon=True)
+            self.thread = thread
             self.thread.start()
 
             while prefetch_data.run_prefetcher:
@@ -104,9 +103,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
         finally:
             prefetch_data.run_prefetcher = False
             prefetch_data.stop_iteration = True
-            if self.thread is not None:
-                self.thread.join()
-                self.thread = None
+            thread.join()
 
     def __getstate__(self):
         """
