@@ -127,6 +127,9 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
         source_datapipe: DataPipe
         protocol: ``IterDataPipeQueueProtocolServer`` that contains ``req_queue`` and ``res_queue``
         blocking_request_get: determines if ``protocol.get_new_request`` will block
+        reset_iterator_counter: Optional counter to synchronize all loops that have received
+            `ResetIteratorRequest` within the dispatching process. It would guarantee that
+            all loops starts to reset iterator and get next element at the same time.
     """
     if not isinstance(protocol, communication.protocol.IterDataPipeQueueProtocolServer):
         raise Exception("Expecting IterDataPipeQueueProtocolServer, got", protocol)
