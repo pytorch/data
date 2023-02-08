@@ -243,7 +243,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
                 aws_cmd = f"aws --output json s3api list-objects  --bucket {bkt_name} --no-sign-request"
 
             if not recursive:
-                aws_cmd += f" --delimiter /"
+                aws_cmd += " --delimiter /"
 
             res = subprocess.run(aws_cmd, shell=True, check=True, capture_output=True)
             json_res = json.loads(res.stdout)
