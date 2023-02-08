@@ -231,9 +231,11 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
         self._done_callback = False
 
     def pause(self):
-        if self._executor is not None:
-            self._executor.shutdown()
-            self._executor = None
+        raise RuntimeError("`pause` is not supported for FullSync at the moment.")
+        # if self._executor is not None:
+        #     self._executor.shutdown()
+        #     self._executor = None
 
     def resume(self):
-        self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)
+        raise RuntimeError("`resume` is not supported for FullSync at the moment.")
+        # self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)

@@ -70,14 +70,19 @@ class ProtocolServer(Protocol):
     ProtocolServer takes charge of getting requests from req_queue and fetching data from source datapipe.
     """
 
+    # TODO(966): Update the exceptions raised in this class to be more specific
+
     _req_received = None
-    _pause = False  # When `True`, prevents `GetNext` in `DataPipeBehindQueues`.
+    _paused = False  # When `True`, prevents `GetNext` in `DataPipeBehindQueues`.
 
     def __init__(self, request_queue, response_queue):
         self.request_queue = request_queue
         self.response_queue = response_queue
         self._req_received = None
-        self._pause = False
+        self._paused = False
+
+    def is_paused(self):
+        return self._paused
 
     def have_pending_request(self):
         return self._req_received is not None
@@ -114,7 +119,7 @@ class ProtocolServer(Protocol):
             raise Exception("Attempting to reply with pending request")
         if not isinstance(self._req_received, communication.messages.PauseRequest):
             raise Exception("Replaying with `pause` status to other type of message")
-        self._pause = True
+        self._paused = True
         self.response_queue.put(communication.messages.PauseResponse())
         self._req_received = None
 
@@ -123,7 +128,7 @@ class ProtocolServer(Protocol):
             raise Exception("Attempting to reply with pending request")
         if not isinstance(self._req_received, communication.messages.ResumeRequest):
             raise Exception("Replaying with `resume` status to other type of message")
-        self._pause = False
+        self._paused = False
         self.response_queue.put(communication.messages.ResumeResponse())
         self._req_received = None
 

@@ -380,12 +380,9 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         """
         if self.main_prefetch_cnt > 0 and self.num_workers > 0:
             # Stop prefetching of main loop first
-            self._end_datapipe.pause()  # type: ignore[union-attr]
-            end_datapipe: DataPipe = self._end_datapipe.source_datapipe  # type: ignore[union-attr]
-        else:
-            end_datapipe = self._end_datapipe  # type: ignore[assignment]
+            self._main_prefetch_datapipe.pause()  # type: ignore[union-attr]
         if self.num_workers > 0:
-            end_datapipe.request_pause()
+            self._worker_consumer_datapipe.request_pause()  # type: ignore[union-attr]
         else:
             raise RuntimeError(
                 "If you would like to use `pause` with `PrototypeMultiProcessingReadingService`, "
@@ -397,19 +394,15 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         Resumes DataPipes' activities. This is required to be called after `_pause` before
         the DataLoader can keep yielding elements.
         """
-        if self.main_prefetch_cnt > 0:
-            end_datapipe: DataPipe = self._end_datapipe.source_datapipe  # type: ignore[union-attr]
-        else:
-            end_datapipe = self._end_datapipe  # type: ignore[assignment]
         if self.num_workers > 0:
-            end_datapipe.request_resume()
+            self._worker_consumer_datapipe.request_resume()  # type: ignore[union-attr]
         else:
             raise RuntimeError(
                 "If you would like to use `resume` with `PrototypeMultiProcessingReadingService`, "
                 "please use more than 0 worker."
             )
         if self.main_prefetch_cnt > 0 and self.num_workers > 0:
-            self._end_datapipe.resume()  # type: ignore[union-attr]
+            self._main_prefetch_datapipe.resume()  # type: ignore[union-attr]
 
 
 class MultiProcessingReadingService(ReadingServiceInterface):
