@@ -14,6 +14,7 @@ import torch
 
 from torch.utils.data import IterDataPipe, MapDataPipe
 from torchdata.dataloader2 import communication
+from torchdata.dataloader2.graph._serialization import attach_wrapper, extract_wrapper
 
 try:
     import dill
@@ -77,6 +78,8 @@ def MultipleDataPipesToQueuesLoop(source_datapipes, req_queues, res_queues, call
     reset_iterator_counter = _ResetCounter(num_loops)
 
     for source_datapipe, req_queue, res_queue in zip(source_datapipes, req_queues, res_queues):
+        # Extract Serialization Wrapper
+        source_datapipe = extract_wrapper(source_datapipe)
         loops.append(
             _create_datapipe_queue_loop(
                 source_datapipe,
@@ -101,6 +104,9 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_on_process_
     Initialize with the given init function, set the appropriate pipe and protocol server type, and
     create a loop with the protocol server.
     """
+    # Extract Serialization Wrapper
+    source_datapipe = extract_wrapper(source_datapipe)
+
     if call_on_process_init is not None:
         call_on_process_init(source_datapipe)
 
@@ -139,8 +145,10 @@ def CreateProcessForDataPipeline(multiprocessing_ctx, datapipe, call_on_process_
     """
     req_queue = multiprocessing_ctx.Queue()
     res_queue = multiprocessing_ctx.Queue()
+    # Attach Serialization Wrapper
+    wrapped_datapipe = attach_wrapper(datapipe)
     process = multiprocessing_ctx.Process(
-        target=DataPipeToQueuesLoop, args=(datapipe, req_queue, res_queue, call_on_process_init)
+        target=DataPipeToQueuesLoop, args=(wrapped_datapipe, req_queue, res_queue, call_on_process_init)
     )
     return process, req_queue, res_queue
 
@@ -152,13 +160,15 @@ def CreateThreadForDataPipeline(datapipe):
     """
     req_queue = communication.queue.ThreadingQueue()
     res_queue = communication.queue.ThreadingQueue()
+    # Attach Serialization Wrapper
+    wrapped_datapipe = attach_wrapper(datapipe)
 
     try:
-        new_datapipe = pickle.loads(pickle.dumps(datapipe))
+        new_datapipe = pickle.loads(pickle.dumps(wrapped_datapipe))
     except Exception as pe:
         if HAS_DILL:
             try:
-                new_datapipe = dill.loads(dill.dumps(datapipe))
+                new_datapipe = dill.loads(dill.dumps(wrapped_datapipe))
             except Exception as de:
                 raise Exception("Unable to dill DataPipe to make thread local copy", de)
 
@@ -176,11 +186,14 @@ def CreateProcessForMultipleDataPipelines(multiprocessing_ctx, datapipes):
     """
     req_queues = []
     res_queues = []
-    for _ in datapipes:
+    wrapped_datapipes = []
+    for datapipe in datapipes:
+        # Attach Serialization Wrapper
+        wrapped_datapipes.append(attach_wrapper(datapipe))
         req_queues.append(multiprocessing_ctx.Queue())
         res_queues.append(multiprocessing_ctx.Queue())
 
     process = multiprocessing_ctx.Process(
-        target=MultipleDataPipesToQueuesLoop, args=(datapipes, req_queues, res_queues)
+        target=MultipleDataPipesToQueuesLoop, args=(wrapped_datapipes, req_queues, res_queues)
     )
     return process, req_queues, res_queues
