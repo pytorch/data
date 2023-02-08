@@ -251,6 +251,7 @@ class DataLoader2(Generic[T_co]):
             raise ValueError(f"Expected an uint64 seed, but got {seed}.")
         self._seed = seed
         self._reset_seed = True
+        self._skip_iteration_seeding = False
 
     def __del__(self) -> None:
         self.shutdown()
