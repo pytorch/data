@@ -250,21 +250,18 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
     @skipIfNoFSSpecS3
     def test_fsspec_io_iterdatapipe(self):
         input_list = [
-            (["s3://ai2-public-datasets"], 41),  # bucket without '/'
-            (["s3://ai2-public-datasets/charades/"], 18),  # bucket with '/'
-            (
-                [
-                    "s3://ai2-public-datasets/charades/Charades_v1.zip",
-                    "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
-                    "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
-                    "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
-                ],
-                4,
-            ),  # multiple files
+            ["s3://ai2-public-datasets"],  # bucket without '/'
+            ["s3://ai2-public-datasets/charades/"],  # bucket with '/'
+            [
+                "s3://ai2-public-datasets/charades/Charades_v1.zip",
+                "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
+                "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
+                "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
+            ],  # multiple files
         ]
-        for urls, num in input_list:
+        for urls in input_list:
             fsspec_lister_dp = FSSpecFileLister(IterableWrapper(urls), anon=True)
-            self.assertEqual(sum(1 for _ in fsspec_lister_dp), num, f"{urls} failed")
+            self.assertEqual(sum(1 for _ in fsspec_lister_dp), self.__get_s3_cnt(urls), f"{urls} failed")
 
         url = "s3://ai2-public-datasets/charades/"
         fsspec_loader_dp = FSSpecFileOpener(FSSpecFileLister(IterableWrapper([url]), anon=True), anon=True)
