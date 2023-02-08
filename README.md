@@ -178,10 +178,14 @@ Please read the [full documentation here](https://pytorch.org/data/main/dataload
 ## Tutorial
 
 A tutorial of this library is
-[available here on the documentation site](https://pytorch.org/data/main/dp_tutorial.html). It covers three topics:
+[available here on the documentation site](https://pytorch.org/data/main/dp_tutorial.html). It covers four topics:
 [using DataPipes](https://pytorch.org/data/main/dp_tutorial.html#using-datapipes),
-[working with DataLoader](https://pytorch.org/data/main/dp_tutorial.html#working-with-dataloader), and
-[implementing DataPipes](https://pytorch.org/data/main/dp_tutorial.html#implementing-a-custom-datapipe).
+[working with DataLoader](https://pytorch.org/data/main/dp_tutorial.html#working-with-dataloader),
+[implementing DataPipes](https://pytorch.org/data/main/dp_tutorial.html#implementing-a-custom-datapipe), and
+[working with Cloud Storage Providers](https://pytorch.org/data/main/dp_tutorial.html#working-with-cloud-storage-providers).
+
+There is also a tutorial available on
+[how to work with the new DataLoader2](https://pytorch.org/data/main/dlv2_tutorial.html).
 
 ## Usage Examples
 
