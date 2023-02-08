@@ -221,7 +221,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+01fc762 ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+e14927f ) &#x25BC</a>
     </div>
     
 
@@ -385,6 +385,22 @@ to make sure the data pipeline has different order per epoch and data shards are
 </pre></div>
 </div>
 </section>
+<section id="multiprocessing-distributed">
+<h2>Multiprocessing + Distributed<a class="headerlink" href="#multiprocessing-distributed" title="Permalink to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">SequentialReadingService</span></code> can be used to combine both <code class="docutils literal notranslate"><span class="pre">ReadingServices</span></code> together to achive multiprocessing and distributed training at the same time.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mp_rs</span> <span class="o">=</span> <span class="n">PrototypeMultiProcessingReadingService</span><span class="p">(</span><span class="n">num_workers</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">dist_rs</span> <span class="o">=</span> <span class="n">DistributedReadingService</span><span class="p">()</span>
+<span class="n">rs</span> <span class="o">=</span> <span class="n">SequentialReadingService</span><span class="p">(</span><span class="n">dist_rs</span><span class="p">,</span> <span class="n">mp_rs</span><span class="p">)</span>
+
+<span class="n">dl</span> <span class="o">=</span> <span class="n">DataLoader2</span><span class="p">(</span><span class="n">datapipe</span><span class="p">,</span> <span class="n">reading_service</span><span class="o">=</span><span class="n">rs</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+    <span class="n">dl</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">epoch</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dl</span><span class="p">:</span>
+        <span class="n">model</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+<span class="n">dl</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
 </section>
 
 
@@ -434,6 +450,7 @@ to make sure the data pipeline has different order per epoch and data shards are
 <li><a class="reference internal" href="#datapipe">DataPipe</a></li>
 <li><a class="reference internal" href="#multiprocessing">Multiprocessing</a></li>
 <li><a class="reference internal" href="#distributed">Distributed</a></li>
+<li><a class="reference internal" href="#multiprocessing-distributed">Multiprocessing + Distributed</a></li>
 </ul>
 </li>
 </ul>
