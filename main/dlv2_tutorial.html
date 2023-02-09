@@ -221,7 +221,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+e14927f ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+a402344 ) &#x25BC</a>
     </div>
     
 
@@ -342,7 +342,7 @@
               
   <section id="dataloader2-tutorial">
 <h1>DataLoader2 Tutorial<a class="headerlink" href="#dataloader2-tutorial" title="Permalink to this heading">¶</a></h1>
-<p>This is the tutorial for users to create <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph and load data via <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> with different backend systems (<code class="docutils literal notranslate"><span class="pre">ReadingService</span></code>). An usage example can found in <a class="reference external" href="https://colab.research.google.com/drive/1eSvp-eUDYPj0Sd0X_Mv9s9VkE8RNDg1u">this colab notebook</a>.</p>
+<p>This is the tutorial for users to create a <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph and load data via <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> with different backend systems (<code class="docutils literal notranslate"><span class="pre">ReadingService</span></code>). An usage example can be found in <a class="reference external" href="https://colab.research.google.com/drive/1eSvp-eUDYPj0Sd0X_Mv9s9VkE8RNDg1u">this colab notebook</a>.</p>
 <section id="datapipe">
 <h2>DataPipe<a class="headerlink" href="#datapipe" title="Permalink to this heading">¶</a></h2>
 <p>Please refer to <a class="reference external" href="dp_tutorial.html">DataPipe Tutorial</a> for more details. Here are the most important caveats necessary:
@@ -351,7 +351,7 @@ to make sure the data pipeline has different order per epoch and data shards are
 <li><p>Place <code class="docutils literal notranslate"><span class="pre">sharding_filter</span></code> or <code class="docutils literal notranslate"><span class="pre">sharding_round_robin_dispatch</span></code> as early as possible in the pipeline to avoid repeating expensive operations in worker/distributed processes.</p></li>
 <li><p>Add a <code class="docutils literal notranslate"><span class="pre">shuffle</span></code> DataPipe before sharding to achieve inter-shard shuffling. <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> will handle synchronization of those <code class="docutils literal notranslate"><span class="pre">shuffle</span></code> operations to ensure the order of data are the same before sharding so that all shards are mutually exclusive and collectively exhaustive.</p></li>
 </ul>
-<p>Here is an example of <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph:</p>
+<p>Here is an example of a <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">datapipe</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([</span><span class="s2">&quot;./train1.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;./train2.csv&quot;</span><span class="p">])</span>
 <span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">open_files</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parse_csv</span><span class="p">()</span>
 <span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span><span class="o">.</span><span class="n">sharding_filter</span><span class="p">()</span>
@@ -361,7 +361,7 @@ to make sure the data pipeline has different order per epoch and data shards are
 </section>
 <section id="multiprocessing">
 <h2>Multiprocessing<a class="headerlink" href="#multiprocessing" title="Permalink to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">PrototypeMultiProcessingReadingService</span></code> handles multiprocessing sharding at the point of <code class="docutils literal notranslate"><span class="pre">sharding_filter</span></code> and synchronize the seeds across worker processes.</p>
+<p><code class="docutils literal notranslate"><span class="pre">PrototypeMultiProcessingReadingService</span></code> handles multiprocessing sharding at the point of <code class="docutils literal notranslate"><span class="pre">sharding_filter</span></code> and synchronizes the seeds across worker processes.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rs</span> <span class="o">=</span> <span class="n">PrototypeMultiProcessingReadingService</span><span class="p">(</span><span class="n">num_workers</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
 <span class="n">dl</span> <span class="o">=</span> <span class="n">DataLoader2</span><span class="p">(</span><span class="n">datapipe</span><span class="p">,</span> <span class="n">reading_service</span><span class="o">=</span><span class="n">rs</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
@@ -374,7 +374,7 @@ to make sure the data pipeline has different order per epoch and data shards are
 </section>
 <section id="distributed">
 <h2>Distributed<a class="headerlink" href="#distributed" title="Permalink to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">DistributedReadingService</span></code> handles distributed sharding at the point of <code class="docutils literal notranslate"><span class="pre">sharding_filter</span></code> and synchronize the seeds across distributed processes. And, in order to balance the data shards across distributed nodes, a <code class="docutils literal notranslate"><span class="pre">fullsync</span></code> <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> will be attached to the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph to align the number of batches across distributed ranks. This would prevent hanging issue caused by uneven shards in distributed training.</p>
+<p><code class="docutils literal notranslate"><span class="pre">DistributedReadingService</span></code> handles distributed sharding at the point of <code class="docutils literal notranslate"><span class="pre">sharding_filter</span></code> and synchronizes the seeds across distributed processes. And, in order to balance the data shards across distributed nodes, a <code class="docutils literal notranslate"><span class="pre">fullsync</span></code> <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> will be attached to the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph to align the number of batches across distributed ranks. This would prevent hanging issue caused by uneven shards in distributed training.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rs</span> <span class="o">=</span> <span class="n">DistributedReadingService</span><span class="p">()</span>
 <span class="n">dl</span> <span class="o">=</span> <span class="n">DataLoader2</span><span class="p">(</span><span class="n">datapipe</span><span class="p">,</span> <span class="n">reading_service</span><span class="o">=</span><span class="n">rs</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
@@ -387,7 +387,7 @@ to make sure the data pipeline has different order per epoch and data shards are
 </section>
 <section id="multiprocessing-distributed">
 <h2>Multiprocessing + Distributed<a class="headerlink" href="#multiprocessing-distributed" title="Permalink to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">SequentialReadingService</span></code> can be used to combine both <code class="docutils literal notranslate"><span class="pre">ReadingServices</span></code> together to achive multiprocessing and distributed training at the same time.</p>
+<p><code class="docutils literal notranslate"><span class="pre">SequentialReadingService</span></code> can be used to combine both <code class="docutils literal notranslate"><span class="pre">ReadingServices</span></code> together to achieve multiprocessing and distributed training at the same time.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mp_rs</span> <span class="o">=</span> <span class="n">PrototypeMultiProcessingReadingService</span><span class="p">(</span><span class="n">num_workers</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
 <span class="n">dist_rs</span> <span class="o">=</span> <span class="n">DistributedReadingService</span><span class="p">()</span>
 <span class="n">rs</span> <span class="o">=</span> <span class="n">SequentialReadingService</span><span class="p">(</span><span class="n">dist_rs</span><span class="p">,</span> <span class="n">mp_rs</span><span class="p">)</span>
