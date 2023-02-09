@@ -74,6 +74,8 @@ class PrefetcherIterDataPipe(IterDataPipe):
                     stop_iteration = True
                 except communication.iter.TerminateRequired:
                     prefetch_data.run_prefetcher = False
+                except Exception as e:
+                    prefetch_data.prefetch_buffer.append(e)
             elif stop_iteration and len(prefetch_data.prefetch_buffer) == 0:
                 prefetch_data.run_prefetcher = False
             else:  # Buffer is full, waiting for main thread to consume items
@@ -93,7 +95,11 @@ class PrefetcherIterDataPipe(IterDataPipe):
                 self.thread.start()
                 while prefetch_data.run_prefetcher:
                     if len(prefetch_data.prefetch_buffer) > 0:
-                        yield prefetch_data.prefetch_buffer.popleft()
+                        item = prefetch_data.prefetch_buffer.popleft()
+                        if isinstance(item, Exception):
+                            prefetch_data.run_prefetcher = False
+                            raise item
+                        yield item
                     else:
                         # TODO: Calculate sleep interval based on previous availability speed
                         time.sleep(CONSUMER_SLEEP_INTERVAL)

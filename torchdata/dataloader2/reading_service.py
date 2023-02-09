@@ -264,8 +264,11 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         for worker_id in range(self.num_workers):
             worker_info = WorkerInfo(self.num_workers, worker_id)
             # Dispatching process for non-replicable DataPipes exists
+            print("=====in initialize PMPRS disp req queue for ", worker_id)
             dispatching_req_queue = self._dispatch_process[1][worker_id] if self._dispatch_process is not None else None
+            print("=====in initialize PMPRS disp req queue for ", worker_id)
             dispatching_res_queue = self._dispatch_process[2][worker_id] if self._dispatch_process is not None else None
+            print("=====in initialize PMPRS disp req queue for ", worker_id)
             call_on_process_init = partial(
                 process_init_fn,
                 worker_info=worker_info,
@@ -280,6 +283,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             )
             process.daemon = True
             process.start()
+            print("=====in initialize PMPRS proc started ", process)
             self._worker_processes.append((process, req_queue, res_queue))  # These queues are independent
             local_datapipe = communication.iter.QueueWrapper(
                 communication.protocol.IterDataPipeQueueProtocolClient(req_queue, res_queue)

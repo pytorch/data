@@ -57,6 +57,17 @@ class TerminateRequired(Exception):
     pass
 
 
+class WorkerException(Exception):
+    def __init__(self, exception):
+        self.exception = exception
+
+    def __str__(self):
+        return self.exception
+
+    def __traceback__(self):
+        return self.exception.__traceback__
+
+
 class NonBlocking(IterDataPipe):
     not_available_hook = default_not_available_hook
 
@@ -112,7 +123,6 @@ def EnsureNonBlockingDataPipe(validated_datapipe):
         )
     return validated_datapipe
 
-
 def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False):
     """
     Indefinitely iterates over ``req_queue`` and passing values from source_datapipe to ``res_queue``.
@@ -167,6 +177,10 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False):
                     protocol.response_invalid_state()
                     yield True
                     break
+                except Exception as e:
+                    # print("==== setting resp")
+                    protocol.response_worker_exception(str(e))
+                    return
                 protocol.response_next(value)
                 yield True  # Returns control
                 break
@@ -216,7 +230,6 @@ class QueueWrapper(NonBlocking):
             raise NotAvailable
         return response.value
 
-
 class _IterateQueueDataPipes(IterDataPipe):
     r"""
     Takes in ``QueueWrapper``s and iterates through them in a round-robin manner to get batches one-by-one.
@@ -252,6 +265,9 @@ class _IterateQueueDataPipes(IterDataPipe):
                         raise communication.iter.InvalidStateResetRequired
                     if isinstance(response, communication.messages.TerminateResponse):
                         raise communication.iter.TerminateRequired
+                    if isinstance(response, communication.messages.WorkerExceptionResponse):
+                        # print("====raising", idx, total_pipes)
+                        raise communication.iter.WorkerException(f"Exception from worker {idx}: {response.exception}")
                     self.datapipes[idx].protocol.request_next()
                     yield response.value
 

@@ -92,3 +92,8 @@ class InvalidStateResponse(Response):
     """
 
     pass
+
+
+class WorkerExceptionResponse(Response):
+    def __init__(self, exception):
+        self.exception = exception
