@@ -113,7 +113,7 @@ def EnsureNonBlockingDataPipe(validated_datapipe):
     return validated_datapipe
 
 
-def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False):
+def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, reset_iterator_counter=None):
     """
     Indefinitely iterates over ``req_queue`` and passing values from source_datapipe to ``res_queue``.
 
@@ -127,6 +127,9 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False):
         source_datapipe: DataPipe
         protocol: ``IterDataPipeQueueProtocolServer`` that contains ``req_queue`` and ``res_queue``
         blocking_request_get: determines if ``protocol.get_new_request`` will block
+        reset_iterator_counter: Optional counter to synchronize all loops that have received
+            `ResetIteratorRequest` within the dispatching process. It would guarantee that
+            all loops starts to reset iterator and get next element at the same time.
     """
     if not isinstance(protocol, communication.protocol.IterDataPipeQueueProtocolServer):
         raise Exception("Expecting IterDataPipeQueueProtocolServer, got", protocol)
@@ -145,6 +148,15 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False):
             protocol.response_reset_epoch()
 
         elif isinstance(request, communication.messages.ResetIteratorRequest):
+            # Ensure only reset iterator once for the dispatching process
+            if reset_iterator_counter is not None:
+                reset_iterator_counter.increment()
+                while not reset_iterator_counter.is_reached():
+                    yield True
+                # Sync between loops within the dispatching process
+                source_datapipe.reset_iterator()
+                yield True
+                reset_iterator_counter.reset()
             source_datapipe.reset_iterator()
             protocol.response_reset_iterator()
 
