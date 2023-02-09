@@ -20,7 +20,7 @@ import numpy as np
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
-from torch.testing._internal.common_utils import instantiate_parametrized_tests, IS_WINDOWS, parametrize
+from torch.testing._internal.common_utils import instantiate_parametrized_tests, parametrize
 from torch.utils.data import DataLoader
 
 from torchdata.dataloader2 import DataLoader2, DistributedReadingService, PrototypeMultiProcessingReadingService

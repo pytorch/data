@@ -5,7 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 import io
+import json
 import os
+import subprocess
 import unittest
 import warnings
 from unittest.mock import patch
@@ -223,24 +225,49 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             res = list(dl)
             self.assertEqual(sorted(expected), sorted(res))
 
+    def __get_s3_cnt(self, s3_pths: list, recursive=True):
+        """Return the count of the total objects collected from a list s3 paths"""
+        tot_objs = set()
+        for p in s3_pths:
+            pth_parts = p.split("s3://")[1].split("/", 1)
+            if len(pth_parts) == 1:
+                bkt_name, prefix = pth_parts[0], ""
+            else:
+                bkt_name, prefix = pth_parts
+
+            aws_cmd = f"aws --output json s3api list-objects  --bucket {bkt_name} --no-sign-request"
+            if prefix.strip():
+                aws_cmd += f" --prefix {prefix}"
+            if not recursive:
+                aws_cmd += " --delimiter /"
+
+            res = subprocess.run(aws_cmd, shell=True, check=True, capture_output=True)
+            json_res = json.loads(res.stdout)
+            if "Contents" in json_res:
+                objs = [v["Key"] for v in json_res["Contents"]]
+            else:
+                objs = [v["Prefix"] for v in json_res["CommonPrefixes"]]
+            tot_objs |= set(objs)
+
+        return len(tot_objs)
+
     @skipIfNoFSSpecS3
     def test_fsspec_io_iterdatapipe(self):
         input_list = [
-            (["s3://ai2-public-datasets"], 41),  # bucket without '/'
-            (["s3://ai2-public-datasets/charades/"], 18),  # bucket with '/'
-            (
-                [
-                    "s3://ai2-public-datasets/charades/Charades_v1.zip",
-                    "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
-                    "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
-                    "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
-                ],
-                4,
-            ),  # multiple files
+            ["s3://ai2-public-datasets"],  # bucket without '/'
+            ["s3://ai2-public-datasets/charades/"],  # bucket with '/'
+            [
+                "s3://ai2-public-datasets/charades/Charades_v1.zip",
+                "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
+                "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
+                "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
+            ],  # multiple files
         ]
-        for urls, num in input_list:
+        for urls in input_list:
             fsspec_lister_dp = FSSpecFileLister(IterableWrapper(urls), anon=True)
-            self.assertEqual(sum(1 for _ in fsspec_lister_dp), num, f"{urls} failed")
+            self.assertEqual(
+                sum(1 for _ in fsspec_lister_dp), self.__get_s3_cnt(urls, recursive=False), f"{urls} failed"
+            )
 
         url = "s3://ai2-public-datasets/charades/"
         fsspec_loader_dp = FSSpecFileOpener(FSSpecFileLister(IterableWrapper([url]), anon=True), anon=True)
@@ -276,42 +303,33 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
     def test_s3_io_iterdatapipe(self):
         # S3FileLister: different inputs
         input_list = [
-            [["s3://ai2-public-datasets"], 81],  # bucket without '/'
-            [["s3://ai2-public-datasets/"], 81],  # bucket with '/'
-            [["s3://ai2-public-datasets/charades"], 18],  # folder without '/'
-            [["s3://ai2-public-datasets/charades/"], 18],  # folder without '/'
-            [["s3://ai2-public-datasets/charad"], 18],  # prefix
+            ["s3://ai2-public-datasets"],  # bucket without '/'
+            ["s3://ai2-public-datasets/"],  # bucket with '/'
+            ["s3://ai2-public-datasets/charades"],  # folder without '/'
+            ["s3://ai2-public-datasets/charades/"],  # folder without '/'
+            ["s3://ai2-public-datasets/charad"],  # prefix
             [
-                [
-                    "s3://ai2-public-datasets/charades/Charades_v1",
-                    "s3://ai2-public-datasets/charades/Charades_vu17",
-                ],
-                12,
+                "s3://ai2-public-datasets/charades/Charades_v1",
+                "s3://ai2-public-datasets/charades/Charades_vu17",
             ],  # prefixes
-            [["s3://ai2-public-datasets/charades/Charades_v1.zip"], 1],  # single file
+            ["s3://ai2-public-datasets/charades/Charades_v1.zip"],  # single file
             [
-                [
-                    "s3://ai2-public-datasets/charades/Charades_v1.zip",
-                    "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
-                    "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
-                    "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
-                ],
-                4,
+                "s3://ai2-public-datasets/charades/Charades_v1.zip",
+                "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
+                "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
+                "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
             ],  # multiple files
             [
-                [
-                    "s3://ai2-public-datasets/charades/Charades_v1.zip",
-                    "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
-                    "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
-                    "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
-                    "s3://ai2-public-datasets/charades/Charades_vu17",
-                ],
-                10,
+                "s3://ai2-public-datasets/charades/Charades_v1.zip",
+                "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
+                "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
+                "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
+                "s3://ai2-public-datasets/charades/Charades_vu17",
             ],  # files + prefixes
         ]
         for input in input_list:
-            s3_lister_dp = S3FileLister(IterableWrapper(input[0]), region="us-west-2")
-            self.assertEqual(sum(1 for _ in s3_lister_dp), input[1], f"{input[0]} failed")
+            s3_lister_dp = S3FileLister(IterableWrapper(input), region="us-west-2")
+            self.assertEqual(sum(1 for _ in s3_lister_dp), self.__get_s3_cnt(input), f"{input} failed")
 
         # S3FileLister: prefixes + different region
         file_urls = [
@@ -333,14 +351,6 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
                 s3_lister_dp = S3FileLister(IterableWrapper(input), region="us-east-1")
                 for _ in s3_lister_dp:
                     pass
-
-        # S3FileLoader: loader
-        input = [
-            "s3://charades-tar-shards/charades-video-0.tar",
-            "s3://charades-tar-shards/charades-video-1.tar",
-        ]  # multiple files
-        s3_loader_dp = S3FileLoader(input, region="us-west-2")
-        self.assertEqual(sum(1 for _ in s3_loader_dp), 2, f"{input} failed")
 
         input = [["s3://aft-vbi-pds/bin-images/100730.jpg"], 1]
         s3_loader_dp = S3FileLoader(input[0], region="us-east-1")

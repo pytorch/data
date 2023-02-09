@@ -8,7 +8,7 @@
 AWS_ENABLED=1
 if [[ ${MATRIX_PACKAGE_TYPE} = "conda" ]]; then
     conda install -y torchdata -c "${PYTORCH_CONDA_CHANNEL}"
-    if [[ ${TARGET_OS} = "windows" ]]; then
+    if [[ ${TARGET_OS:-} = "windows" ]]; then
         AWS_ENABLED=0
     fi
 else
