@@ -95,6 +95,14 @@ class ReadingServiceInterface(ABC):
         """
         pass
 
+    def __del__(self):
+        # Due to non-deterministic order of destruction, by the time `finalize` is called,
+        # some objects may already be `None`.
+        try:
+            self.finalize()
+        except AttributeError:
+            pass
+
 
 class CheckpointableReadingServiceInterface(ReadingServiceInterface):
     r"""
@@ -333,9 +341,6 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             pass
         return None
 
-    def __del__(self):
-        self.finalize()
-
     def finalize(self) -> None:
         r"""
         ``PrototypeMultiProcessingReadingService`` invalidate states & properly exits all subprocesses.
@@ -355,10 +360,6 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         for process, req_queue, res_queue in self._worker_processes:
             try:
                 clean_me(process, req_queue, res_queue)
-            except AttributeError:
-                # Due to non-deterministic order of destruction, by the time `finalize` is called,
-                # some objects may already be `None`.
-                pass
             except TimeoutError:
                 pass
 
@@ -374,10 +375,6 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
                     except queue.Empty:
                         pass
                 self._dispatch_process[0].join(default_dl2_worker_join_timeout_in_s)
-            except AttributeError:
-                # Due to non-deterministic order of destruction, by the time `finalize` is called,
-                # some objects may already be `None`.
-                pass
             except TimeoutError:
                 pass
 
@@ -538,9 +535,6 @@ class DistributedReadingService(ReadingServiceInterface):
         seed_generator = seed_generator.spawn(self._rank, inplace=True)
         set_graph_random_seed(self._datapipe, seed_generator)
         return None
-
-    def __del__(self):
-        self.finalize()
 
     def finalize(self) -> None:
         r"""
