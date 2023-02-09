@@ -46,7 +46,7 @@ TEST_WITH_TSAN = os.getenv("PYTORCH_TEST_WITH_TSAN", "0") == "1"
 
 mp_ctx_parametrize = parametrize("ctx", mp.get_all_start_methods())
 
-DATAPIPE_ITERATION = 7
+EXCEPTION_ITERATION_NUM = 7
 
 
 class _ReadingServiceWrapper:
@@ -65,14 +65,13 @@ class _ReadingServiceWrapper:
         return 1
 
 class MakeMistakeDataPipe(IterDataPipe):
-    def __init__(self, source_datapipe, iteration=DATAPIPE_ITERATION):
+    def __init__(self, source_datapipe, exc_iteration=EXCEPTION_ITERATION_NUM):
         self.source_datapipe = source_datapipe
-        # TODO generate random num within 100 to raise expection at
-        self.iteration = iteration
+        self.exc_iteration = exc_iteration
 
     def __iter__(self):
         for i, x in enumerate(self.source_datapipe):
-            if i == self.iteration:
+            if i == self.exc_iteration:
                 raise Exception("oops")
             yield x
 
@@ -101,18 +100,14 @@ class DataLoader2Test(TestCase):
         dp = IterableWrapper(range(100)).sharding_filter()
         dp = MakeMistakeDataPipe(dp)
         for worker_prefetch_cnt in [0,5,10]:
-            print("== worker_prefetch_cnt ", worker_prefetch_cnt)
             # TODO test with multiple workers
             rs = PrototypeMultiProcessingReadingService(num_workers=1, worker_prefetch_cnt=worker_prefetch_cnt)
             dl = DataLoader2(dp, reading_service=rs)
             it = iter(dl)
-            for i in range(DATAPIPE_ITERATION):
+            for i in range(EXCEPTION_ITERATION_NUM):
                 item = next(it)
-                print("item ", item)
             with self.assertRaises(communication.iter.WorkerException):
                 item = next(it)
-            # print("=== expect exception")
-            # next(it)
 
     def test_dataloader2_state_dict(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
