@@ -114,9 +114,9 @@ class DataLoader2Iterator(Iterator[T_co]):
         """
         self.dataloader._resume()
 
-    def limit(self, n_batches) -> None:
+    def limit(self, num_batches: Optional[int]) -> None:
         """
-        Pauses ``DataLoader2`` from yielding additional batches after ``n_batches`` has been yielded. The count
+        Pauses ``DataLoader2`` from yielding additional batches after ``num_batches`` has been yielded. The count
         begins after this method is invoked (i.e. previously yielded batches do not count towards the threshold).
 
         While paused, ``DataLoader2``'s threads are halted and its state remains unchanged,
@@ -127,10 +127,10 @@ class DataLoader2Iterator(Iterator[T_co]):
             ``limit_threshold`` persists after ``pause`` and ``resume``. Use ``.limit(None)`` to remove it.
 
         Args:
-            n_batches: Number of batches after which the DataLoader2 will pause
+            num_batches: Number of batches after which the DataLoader2 will pause, use ``None`` to remove the limit
         """
         self.limit_counter = 0
-        self.limit_threshold = n_batches
+        self.limit_threshold = num_batches
 
     def __getattr__(self, name):
         """
