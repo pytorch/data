@@ -18,7 +18,7 @@ import numpy as np
 
 import torch
 import torch.distributed as dist
-from torch.testing._internal.common_utils import instantiate_parametrized_tests, parametrize
+from torch.testing._internal.common_utils import instantiate_parametrized_tests, IS_WINDOWS, parametrize
 
 from torch.utils.data.datapipes.iter.sharding import SHARDING_PRIORITIES
 
@@ -765,6 +765,7 @@ def _dist_training_fn(rank, world_size, q, dp_fn, rs_fn, num_workers, ctx):
 
 
 @skipIfNoDistributed
+@unittest.skipIf(IS_WINDOWS, "Remove when https://github.com/pytorch/data/issues/857 is fixed")
 class SequentialReadingServiceTest(TestCase):
     @staticmethod
     def _make_dp(data_length):
