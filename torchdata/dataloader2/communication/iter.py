@@ -58,14 +58,11 @@ class TerminateRequired(Exception):
 
 
 class WorkerException(Exception):
-    def __init__(self, exception):
-        self.exception = exception
+    """
+    Returned by DataPipe when there is a failure/exception from a worker process
+    """
 
-    def __str__(self):
-        return self.exception
-
-    def __traceback__(self):
-        return self.exception.__traceback__
+    pass
 
 
 class NonBlocking(IterDataPipe):
@@ -191,7 +188,7 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
                     yield True
                     break
                 except Exception as e:
-                    protocol.response_worker_exception(str(e))
+                    protocol.response_worker_exception(e)
                     return
                 protocol.response_next(value)
                 yield True  # Returns control
@@ -278,7 +275,7 @@ class _IterateQueueDataPipes(IterDataPipe):
                     if isinstance(response, communication.messages.TerminateResponse):
                         raise communication.iter.TerminateRequired
                     if isinstance(response, communication.messages.WorkerExceptionResponse):
-                        raise communication.iter.WorkerException(f"Exception from worker {idx}: {response.exception}")
+                        raise communication.iter.WorkerException(f"Exception from worker {idx}") from response.exception
                     self.datapipes[idx].protocol.request_next()
                     yield response.value
 
