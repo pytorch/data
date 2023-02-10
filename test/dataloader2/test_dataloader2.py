@@ -122,9 +122,9 @@ class DataLoader2Test(TestCase):
                 dl = DataLoader2(dp, reading_service=rs)
                 it = iter(dl)
                 for i in range(EXCEPTION_ITERATION_NUM*num_workers):
-                    item = next(it)
+                    next(it)
                 with self.assertRaises(communication.iter.WorkerException):
-                    item = next(it)
+                    next(it)
 
     def test_dataloader2_state_dict(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
