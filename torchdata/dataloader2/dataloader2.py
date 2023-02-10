@@ -3,8 +3,7 @@
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
-
-
+import pickle
 import warnings
 
 from dataclasses import dataclass
@@ -16,9 +15,7 @@ from torchdata.dataloader2.graph._serialization import (
     clone,
     DataPipe,
     deserialize_datapipe,
-    deserialize_seed_generator,
     serialize_datapipe,
-    serialize_seed_generator,
     wrap_datapipe_for_serialization,
 )
 from torchdata.dataloader2.random import SeedGenerator
@@ -296,7 +293,7 @@ class DataLoader2(Generic[T_co]):
 
         # Serialize datapipe after applying adapters and before reading service adaption
         serialized_datapipe = serialize_datapipe(self._datapipe_before_reading_service_adapt)
-        serialized_initial_seed_generator = serialize_seed_generator(self._initial_seed_generator)
+        serialized_initial_seed_generator = pickle.dumps(self._initial_seed_generator)
 
         return {
             SERIALIZED_DATAPIPE_KEY_NAME: serialized_datapipe,
@@ -327,7 +324,7 @@ class DataLoader2(Generic[T_co]):
 
         if restore_initial_seed_generator:
             serialized_generator = state[INITIAL_SEED_GEN_STATE_KEY_NAME]
-            deserialized_seed_generator = deserialize_seed_generator(serialized_generator)
+            deserialized_seed_generator = pickle.loads(serialized_generator)
             assert deserialized_seed_generator is not None
             data_loader._seed_generator = deserialized_seed_generator
             data_loader._skip_iteration_seeding = True
@@ -360,7 +357,7 @@ class DataLoader2(Generic[T_co]):
 
         if restore_initial_seed_generator:
             serialized_generator = state_dict[INITIAL_SEED_GEN_STATE_KEY_NAME]
-            deserialized_seed_generator = deserialize_seed_generator(serialized_generator)
+            deserialized_seed_generator = pickle.loads(serialized_generator)
             assert deserialized_seed_generator is not None
             self._seed_generator = deserialized_seed_generator
             self._skip_iteration_seeding = True
