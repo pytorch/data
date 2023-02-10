@@ -54,7 +54,7 @@ def deserialize_datapipe(serialized_state: bytes) -> DataPipe:
     return extract_wrapper(datapipe)
 
 
-def attach_wrapper(datapipe: DataPipe):
+def attach_wrapper(datapipe: DataPipe) -> DataPipe:
     r"""
     Wraps the ``DataPipe`` with the corresponding serialization wrapper.
     """
@@ -67,7 +67,7 @@ def attach_wrapper(datapipe: DataPipe):
     return wrapped_dp
 
 
-def extract_wrapper(datapipe: DataPipe):
+def extract_wrapper(datapipe: DataPipe) -> DataPipe:
     r"""
     Extracts the ``DataPipe`` from the serialization wrapper.
     """
