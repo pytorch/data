@@ -76,6 +76,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
                     prefetch_data.run_prefetcher = False
                 except Exception as e:
                     prefetch_data.prefetch_buffer.append(e)
+                    break
             elif stop_iteration and len(prefetch_data.prefetch_buffer) == 0:
                 prefetch_data.run_prefetcher = False
             else:  # Buffer is full, waiting for main thread to consume items

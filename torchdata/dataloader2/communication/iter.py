@@ -178,7 +178,6 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False):
                     yield True
                     break
                 except Exception as e:
-                    # print("==== setting resp")
                     protocol.response_worker_exception(str(e))
                     return
                 protocol.response_next(value)
@@ -266,7 +265,6 @@ class _IterateQueueDataPipes(IterDataPipe):
                     if isinstance(response, communication.messages.TerminateResponse):
                         raise communication.iter.TerminateRequired
                     if isinstance(response, communication.messages.WorkerExceptionResponse):
-                        # print("====raising", idx, total_pipes)
                         raise communication.iter.WorkerException(f"Exception from worker {idx}: {response.exception}")
                     self.datapipes[idx].protocol.request_next()
                     yield response.value

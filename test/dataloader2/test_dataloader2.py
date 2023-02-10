@@ -96,18 +96,18 @@ class DataLoader2Test(TestCase):
         data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe)
         data_loader.shutdown()
 
-    def test_passing_errors(self):
+    def test_worker_exception_raised(self):
         dp = IterableWrapper(range(100)).sharding_filter()
         dp = MakeMistakeDataPipe(dp)
-        for worker_prefetch_cnt in [0,5,10]:
-            # TODO test with multiple workers
-            rs = PrototypeMultiProcessingReadingService(num_workers=1, worker_prefetch_cnt=worker_prefetch_cnt)
-            dl = DataLoader2(dp, reading_service=rs)
-            it = iter(dl)
-            for i in range(EXCEPTION_ITERATION_NUM):
-                item = next(it)
-            with self.assertRaises(communication.iter.WorkerException):
-                item = next(it)
+        for worker_prefetch_cnt in [0, 5, 10]:
+            for num_workers in [1, 4]:
+                rs = PrototypeMultiProcessingReadingService(num_workers=num_workers, worker_prefetch_cnt=worker_prefetch_cnt)
+                dl = DataLoader2(dp, reading_service=rs)
+                it = iter(dl)
+                for i in range(EXCEPTION_ITERATION_NUM*num_workers):
+                    item = next(it)
+                with self.assertRaises(communication.iter.WorkerException):
+                    item = next(it)
 
     def test_dataloader2_state_dict(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
