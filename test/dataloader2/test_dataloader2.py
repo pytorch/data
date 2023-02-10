@@ -283,13 +283,6 @@ class DataLoader2IntegrationTest(TestCase):
     def _get_mp_reading_service():
         return MultiProcessingReadingService(num_workers=2)
 
-    @staticmethod
-    def _access_datapipe(dl):
-        """
-        Returns a reference to the DataPipe, bypassing serialization wrapper and etc.
-        """
-        return dl.datapipe._datapipe
-
     def test_lazy_load(self):
         source_dp = IterableWrapper([(i, i) for i in range(10)])
         map_dp = source_dp.to_map_datapipe()
@@ -298,7 +291,7 @@ class DataLoader2IntegrationTest(TestCase):
         for reading_service_gen in reading_service_generators:
             dl: DataLoader2 = DataLoader2(datapipe=map_dp, reading_service=reading_service_gen())
             # Lazy loading
-            dp = self._access_datapipe(dl)
+            dp = dl.datapipe
             self.assertTrue(dp._map is None)
             it = iter(dl)
             self.assertEqual(list(it), list(range(10)))
@@ -640,7 +633,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         torch.manual_seed(123)
         it = iter(dl)
         # Validate NonReplicableDataPipe still in the main process
-        non_rep_dp = dl.reading_service._end_datapipe._datapipe
+        non_rep_dp = dl.reading_service._end_datapipe
         self.assertEqual(type(non_rep_dp), NonReplicableDataPipe)
 
         res = list(it) + list(dl)
