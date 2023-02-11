@@ -23,6 +23,7 @@ from torch.utils.data.datapipes.iter.sharding import SHARDING_PRIORITIES
 from torchdata._constants import default_dl2_worker_join_timeout_in_s, default_timeout_in_s
 from torchdata.dataloader2 import communication
 from torchdata.dataloader2.graph import DataPipe, replace_dp, set_graph_random_seed, traverse_dps
+from torchdata.dataloader2.graph._serialization import attach_wrapper
 from torchdata.dataloader2.graph.utils import _find_replicable_branches
 from torchdata.dataloader2.random import dist_share_seed, SeedGenerator
 from torchdata.dataloader2.utils import process_init_fn, process_reset_fn, WorkerInfo
@@ -237,6 +238,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             graph = replace_dp(graph, dispatching_dp, dummy_dp)  # type: ignore[arg-type]
             datapipe = list(graph.values())[0][0]
             # TODO(ejguan): Determine buffer_size at runtime or use unlimited buffer
+            dispatching_dp = attach_wrapper(dispatching_dp)
             round_robin_dps = dispatching_dp.round_robin_demux(num_instances=self.num_workers)
             # TODO(ejguan): Benchmark if we need to prefetch in dispatching process
             process, req_queues, res_queues = communication.eventloop.CreateProcessForMultipleDataPipelines(
@@ -262,6 +264,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
         if self.worker_prefetch_cnt > 0:
             replicable_dp = replicable_dp.prefetch(self.worker_prefetch_cnt)
+        replicable_dp = attach_wrapper(replicable_dp)
 
         for worker_id in range(self.num_workers):
             worker_info = WorkerInfo(self.num_workers, worker_id)
