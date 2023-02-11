@@ -239,6 +239,7 @@ class QueueWrapper(NonBlocking):
             raise NotAvailable
         return response.value
 
+
 class _IterateQueueDataPipes(IterDataPipe):
     r"""
     Takes in ``QueueWrapper``s and iterates through them in a round-robin manner to get batches one-by-one.
