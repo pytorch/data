@@ -77,7 +77,7 @@ class DataLoader2Iterator(Iterator[T_co]):
         """
         To delegate operations to ``dataloader._datapipe_iter``.
         """
-        if self.dataloader._datapipe_iter is None:
+        if "dataloader" not in self.__dict__ or self.dataloader._datapipe_iter is None:
             raise AttributeError
         return getattr(self.dataloader._datapipe_iter, name)
 
