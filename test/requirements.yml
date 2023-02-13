@@ -7,3 +7,4 @@ dependencies:
       - numpy
       - datasets
       - adlfs
+      - portalocker>=2.0.0
