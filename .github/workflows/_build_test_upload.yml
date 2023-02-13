@@ -377,7 +377,7 @@ jobs:
             source "${MINICONDA_INSTALL_PATH}/etc/profile.d/conda.sh"
           fi
           conda activate "${CONDA_ENV_PATH}"
-          if [[ "${PYTHON_VERSION}"" = "3.11" ]]; then
+          if [[ "${PYTHON_VERSION}" = "3.11" ]]; then
             conda install -yq conda-build -c malfet -c conda-forge
             export CONDA_CHANNEL_FLAGS="${CONDA_CHANNEL_FLAGS} -c malfet"
           else
