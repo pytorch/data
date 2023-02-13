@@ -6,6 +6,7 @@
 
 import multiprocessing as py_mp
 import queue
+import warnings
 
 from abc import ABC, abstractmethod
 from datetime import timedelta
@@ -534,7 +535,11 @@ class SequentialReadingService(CheckpointableReadingServiceInterface):
     def checkpoint(self) -> bytes:
         states = []
         for rs in self.reading_services:
-            states.append(rs.checkpoint())
+            if hasattr(rs, "checkpoint") and callable(rs.checkpoint):
+                states.append(rs.checkpoint())
+            else:
+                warnings.warn(f"{rs} doesn't support `checkpoint`, skipping...")
+                states.append(b"")
         return b"\n".join(states)
 
     # Sequential Order, to align with initialize
@@ -542,5 +547,8 @@ class SequentialReadingService(CheckpointableReadingServiceInterface):
         states = serialized_state.split(b"\n")
         assert len(states) == len(self.reading_services)
         for rs, state in zip(self.reading_services, states):
-            datapipe = rs.restore(datapipe, state)
+            if hasattr(rs, "restore") and callable(rs.restore):
+                datapipe = rs.restore(datapipe, state)
+            else:
+                warnings.warn(f"{rs} doesn't support `restore` from state, skipping...")
         return datapipe
