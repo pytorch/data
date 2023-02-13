@@ -1,6 +1,7 @@
 name: Test Release Pipelines
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - .github/workflows/pull_release.yml
