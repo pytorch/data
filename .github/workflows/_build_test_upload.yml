@@ -378,7 +378,7 @@ jobs:
           fi
           conda activate "${CONDA_ENV_PATH}"
           if [[ "${PYTHON_VERSION}" = "3.11" ]]; then
-            conda install -yq conda-build -c malfet -c conda-forge
+            conda install -yq conda-build -c malfet
             export CONDA_CHANNEL_FLAGS="${CONDA_CHANNEL_FLAGS} -c malfet"
           else
             conda install -yq conda-build -c conda-forge
