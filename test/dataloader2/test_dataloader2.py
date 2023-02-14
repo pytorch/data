@@ -252,6 +252,7 @@ class DataLoader2ConsistencyTest(TestCase):
             result.append(row)
         for row in dl:
             result.append(row)
+        dl.shutdown()
         return result
 
     @staticmethod
