@@ -5,6 +5,7 @@ s3fs
 iopath == 0.1.9
 numpy
 rarfile
+portalocker >= 2.0.0
 # Protobuf 4.0 is binary incompatible with what C++ TF uses.
 # See: https://github.com/tensorflow/tensorflow/blob/8dcaf6b98a6a49c85eb470140ba8506e71a3b5af/tensorflow/tools/pip_package/setup.py#L88-L94
 # Protobuf 3.20.2 is also broken on MacOS Python 3.10
