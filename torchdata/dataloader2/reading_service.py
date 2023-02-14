@@ -18,7 +18,6 @@ import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 
-from torch.utils.data import DataLoader
 from torch.utils.data.datapipes.iter.sharding import SHARDING_PRIORITIES
 
 from torchdata._constants import default_dl2_worker_join_timeout_in_s, default_timeout_in_s
@@ -29,7 +28,7 @@ from torchdata.dataloader2.graph.utils import _find_replicable_branches
 from torchdata.dataloader2.random import dist_share_seed, SeedGenerator
 from torchdata.dataloader2.utils import process_init_fn, process_reset_fn, WorkerInfo
 from torchdata.dataloader2.utils.dispatch import _DummyIterDataPipe, find_lca_round_robin_sharding_dp
-from torchdata.datapipes.iter import FullSync, IterableWrapper
+from torchdata.datapipes.iter import FullSync
 
 
 class ReadingServiceInterface(ABC):
@@ -140,6 +139,15 @@ def _collate_no_op(batch):
 
 
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
+    def __new__(cls, *args, **kwargs):
+        warnings.warn(
+            "`PrototypeMultiProcessingReadingService` is deprecated and will be removed in TorchData 0.8. "
+            "Please use `MultiProcessingReadingService`."
+        )
+        return MultiProcessingReadingService(*args, **kwargs)
+
+
+class MultiProcessingReadingService(ReadingServiceInterface):
     r"""
     Spawns multiple worker processes to load data from the ``DataPipe`` graph.
     If any non-replicable ``DataPipe`` (``sharding_round_robin_dispatch``) is presented in the graph,
@@ -163,14 +171,6 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         worker_reset_fn: (Callable, optional): Function to be called at the beginning
             of each epoch in each worker process with ``DataPipe``, ``WorkerInfo``
             and ``SeedGenerator`` as the expected arguments.
-
-    Note:
-        - This ``ReadingService`` is still in prototype mode and will replace
-          :class:`MultiProcessingReadingService`.
-        - It currently does both distributed and multiprocessing sharding over the pipeline.
-          The distributed-related code is going to be removed when ``SequentialReadingService``
-          is provided to combine the :class:`DistributedReadingService` and this ``ReadingService``.
-
     """
     num_workers: int
     multiprocessing_context: Optional[str]
@@ -216,7 +216,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         r"""
-        ``PrototypeMultiProcessingReadingService`` finds information about sharding,
+        ``MultiProcessingReadingService`` finds information about sharding,
         separates graph by multiple pieces and reconnects it using queues.
         creates subprocesses.
         """
@@ -260,7 +260,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         replicable_dps = _find_replicable_branches(graph)
         assert (
             len(replicable_dps) == 1
-        ), "PrototypeMultiProcessingReadingService only supports single replicable branch currently"
+        ), "MultiProcessingReadingService only supports single replicable branch currently"
         replicable_dp = replicable_dps[0]
 
         if self.worker_prefetch_cnt > 0:
@@ -337,7 +337,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
     def finalize(self) -> None:
         r"""
-        ``PrototypeMultiProcessingReadingService`` invalidate states & properly exits all subprocesses.
+        ``MultiProcessingReadingService`` invalidate states & properly exits all subprocesses.
         """
         # TODO(618): Check if anyone stuck with messages
         def clean_me(process, req_queue, res_queue):
@@ -404,67 +404,6 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             )
         if self.main_prefetch_cnt > 0 and self.num_workers > 0:
             self._main_prefetch_datapipe.resume()  # type: ignore[union-attr]
-
-
-class MultiProcessingReadingService(ReadingServiceInterface):
-    r"""
-    ``MultiProcessingReadingService`` that utilizes ``torch.utils.data.DataLoader`` to
-    launch subprocesses for ``DataPipe`` graph. Please refer to documents of ``DataLoader``
-    in https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader for all arguments.
-
-    Note:
-        This ``ReadingService`` be replaced by :class:`PrototypeMultiProcessingReadingService`.
-    """
-    num_workers: int
-    pin_memory: bool
-    timeout: float
-    worker_init_fn: Optional[Callable[[int], None]]
-    prefetch_factor: Optional[int]
-    persistent_workers: bool
-
-    def __init__(
-        self,
-        num_workers: int = 0,
-        pin_memory: bool = False,
-        timeout: float = 0,
-        worker_init_fn: Optional[Callable[[int], None]] = None,
-        multiprocessing_context=None,
-        prefetch_factor: Optional[int] = None,
-        persistent_workers: bool = False,
-    ) -> None:
-        self.num_workers = num_workers
-        self.pin_memory = pin_memory
-        self.timeout = timeout
-        self.worker_init_fn = worker_init_fn
-        self.multiprocessing_context = multiprocessing_context
-        self.prefetch_factor = prefetch_factor
-        self.persistent_workers = persistent_workers
-        if self.num_workers == 0:
-            self.prefetch_factor = None
-            self.persistent_workers = False
-        self.dl_: Optional[DataLoader] = None
-
-    # Wrap the DataLoader with IterableWrapper to respect type annotation
-    def initialize(self, datapipe: DataPipe) -> DataPipe:
-        self.dl_ = DataLoader(
-            datapipe,
-            num_workers=self.num_workers,
-            pin_memory=self.pin_memory,
-            timeout=self.timeout,
-            worker_init_fn=self.worker_init_fn,
-            multiprocessing_context=self.multiprocessing_context,
-            prefetch_factor=self.prefetch_factor,
-            persistent_workers=self.persistent_workers,
-            # TODO(621): `collate_fn` is necessary until we stop using DLv1 https://github.com/pytorch/data/issues/530
-            collate_fn=_collate_no_op,
-            batch_size=1,  # This reading service assume batching is done via DataPipe
-        )
-        return IterableWrapper(self.dl_)  # type: ignore[return-value]
-
-    def finalize(self) -> None:
-        if self.persistent_workers and self.dl_ is not None and self.dl_._iterator is not None:
-            self.dl_._iterator._shutdown_workers()  # type: ignore[attr-defined]
-            self.dl_._iterator = None
 
 
 class DistributedReadingService(ReadingServiceInterface):

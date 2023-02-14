@@ -16,7 +16,7 @@ from _utils._common_utils_for_test import IS_WINDOWS
 from torch.utils.data import IterDataPipe
 from torch.utils.data.datapipes.iter.sharding import SHARDING_PRIORITIES
 
-from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService, ReadingServiceInterface
+from torchdata.dataloader2 import DataLoader2, ReadingServiceInterface
 from torchdata.dataloader2.graph import find_dps, list_dps, remove_dp, replace_dp, traverse_dps
 from torchdata.dataloader2.graph.utils import _find_replicable_branches
 from torchdata.dataloader2.random import SeedGenerator
@@ -253,15 +253,6 @@ class TestGraph(expecttest.TestCase):
             self.assertFalse(new_dp.started)
 
         self.assertEqual(res, list(dl))
-
-    @unittest.skipIf(IS_WINDOWS, "Fork is required for lambda")
-    def test_multiprocessing_reading_service(self) -> None:
-        _, (*_, dp) = self._get_datapipes()  # pyre-ignore
-        rs = MultiProcessingReadingService(2, persistent_workers=True, multiprocessing_context="fork")
-        dl = DataLoader2(dp, reading_service=rs)
-        d1 = list(dl)
-        d2 = list(dl)
-        self.assertEqual(d1, d2)
 
 
 def insert_round_robin_sharding(graph, datapipe):
