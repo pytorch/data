@@ -6,6 +6,7 @@
 
 import multiprocessing as py_mp
 import queue
+import warnings
 
 from abc import ABC, abstractmethod
 from datetime import timedelta
@@ -74,7 +75,7 @@ class ReadingServiceInterface(ABC):
 
         Args:
             seed_generator: SeedGenerator object created and managed by DataLoader2. As the single
-                source of randomness, it will governs the determinism for all of random operations
+                source of randomness, it will govern the determinism for all of random operations
                 with the graph of DataPipes.
             iter_reset_fn: Optional reset function from the prior ``ReadingServcie``
                 when ``SequentialReadingService`` chains multiple ``ReadingServices``
@@ -374,11 +375,41 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         self._worker_processes = []
         self._dispatch_process = None
 
+    def _pause(self):
+        """
+        Pauses DataPipes' activities such as prefetching, in order to collect state.
+        """
+        if self.main_prefetch_cnt > 0 and self.num_workers > 0:
+            # Stop prefetching of main loop first
+            self._main_prefetch_datapipe.pause()  # type: ignore[union-attr]
+        if self.num_workers > 0:
+            self._worker_consumer_datapipe.request_pause()  # type: ignore[union-attr]
+        else:
+            raise RuntimeError(
+                "If you would like to use `pause` with `PrototypeMultiProcessingReadingService`, "
+                "please use more than 0 worker."
+            )
+
+    def _resume(self):
+        """
+        Resumes DataPipes' activities. This is required to be called after `_pause` before
+        the DataLoader can keep yielding elements.
+        """
+        if self.num_workers > 0:
+            self._worker_consumer_datapipe.request_resume()  # type: ignore[union-attr]
+        else:
+            raise RuntimeError(
+                "If you would like to use `resume` with `PrototypeMultiProcessingReadingService`, "
+                "please use more than 0 worker."
+            )
+        if self.main_prefetch_cnt > 0 and self.num_workers > 0:
+            self._main_prefetch_datapipe.resume()  # type: ignore[union-attr]
+
 
 class MultiProcessingReadingService(ReadingServiceInterface):
     r"""
     ``MultiProcessingReadingService`` that utilizes ``torch.utils.data.DataLoader`` to
-    launch subprocesses for ``DataPipe`` graph. Please refers to documents of ``DataLoader``
+    launch subprocesses for ``DataPipe`` graph. Please refer to documents of ``DataLoader``
     in https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader for all arguments.
 
     Note:
@@ -458,7 +489,7 @@ class DistributedReadingService(ReadingServiceInterface):
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         r"""
         Launches the ``gloo``-backend distributed process group. Carries out distributed sharding
-        on the graph of ``DataPipe`` and returnes the graph attached with a ``FullSyncIterDataPipe``
+        on the graph of ``DataPipe`` and returns the graph attached with a ``FullSyncIterDataPipe``
         at the end.
         """
         if not (dist.is_available() and dist.is_initialized()):
@@ -534,7 +565,11 @@ class SequentialReadingService(CheckpointableReadingServiceInterface):
     def checkpoint(self) -> bytes:
         states = []
         for rs in self.reading_services:
-            states.append(rs.checkpoint())
+            if hasattr(rs, "checkpoint") and callable(rs.checkpoint):
+                states.append(rs.checkpoint())
+            else:
+                warnings.warn(f"{rs} doesn't support `checkpoint`, skipping...")
+                states.append(b"")
         return b"\n".join(states)
 
     # Sequential Order, to align with initialize
@@ -542,5 +577,8 @@ class SequentialReadingService(CheckpointableReadingServiceInterface):
         states = serialized_state.split(b"\n")
         assert len(states) == len(self.reading_services)
         for rs, state in zip(self.reading_services, states):
-            datapipe = rs.restore(datapipe, state)
+            if hasattr(rs, "restore") and callable(rs.restore):
+                datapipe = rs.restore(datapipe, state)
+            else:
+                warnings.warn(f"{rs} doesn't support `restore` from state, skipping...")
         return datapipe
