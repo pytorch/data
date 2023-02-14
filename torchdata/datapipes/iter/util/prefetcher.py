@@ -4,11 +4,14 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import collections
 import threading
 import time
 
 from collections import deque
 from typing import Deque, Optional
+
+import torch
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -19,16 +22,16 @@ CONSUMER_SLEEP_INTERVAL = 0.0001  # Interval between checking items availability
 
 class _PrefetchData:
     def __init__(self, source_datapipe, buffer_size: int):
-        self.run_prefetcher = True
+        self.run_prefetcher: bool = True
         self.prefetch_buffer: Deque = deque()
         self.buffer_size: int = buffer_size
         self.source_datapipe = source_datapipe
-        self.stop_iteration = False
+        self.stop_iteration: bool = False
 
 
 @functional_datapipe("prefetch")
 class PrefetcherIterDataPipe(IterDataPipe):
-    """
+    r"""
     Prefetches elements from the source DataPipe and puts them into a buffer (functional name: ``prefetch``).
     Prefetching performs the operations (e.g. I/O, computations) of the DataPipes up to this one ahead of time
     and stores the result in the buffer, ready to be consumed by the subsequent DataPipe. It has no effect aside
@@ -59,54 +62,42 @@ class PrefetcherIterDataPipe(IterDataPipe):
 
     @staticmethod
     def thread_worker(prefetch_data: _PrefetchData):
-        # Lazily import to prevent circular import
-        from torchdata.dataloader2 import communication
-
         itr = iter(prefetch_data.source_datapipe)
         while not prefetch_data.stop_iteration:
+            # Run if not paused
             while prefetch_data.run_prefetcher:
-                if len(prefetch_data.prefetch_buffer) < prefetch_data.buffer_size and not prefetch_data.stop_iteration:
+                if len(prefetch_data.prefetch_buffer) < prefetch_data.buffer_size:
                     try:
                         item = next(itr)
                         prefetch_data.prefetch_buffer.append(item)
-                    except StopIteration:
-                        prefetch_data.stop_iteration = True
-                    except communication.iter.InvalidStateResetRequired:
-                        prefetch_data.stop_iteration = True
-                    except communication.iter.TerminateRequired:
+                    except Exception as e:
                         prefetch_data.run_prefetcher = False
                         prefetch_data.stop_iteration = True
-                    except Exception as e:
                         prefetch_data.prefetch_buffer.append(e)
-                        break
-                elif prefetch_data.stop_iteration and len(prefetch_data.prefetch_buffer) == 0:
-                    prefetch_data.run_prefetcher = False
                 else:  # Buffer is full, waiting for main thread to consume items
                     # TODO: Calculate sleep interval based on previous consumption speed
                     time.sleep(PRODUCER_SLEEP_INTERVAL)
-            time.sleep(PRODUCER_SLEEP_INTERVAL)
+            # Sleep longer when this prefetcher thread is paused
+            time.sleep(PRODUCER_SLEEP_INTERVAL * 10)
 
     def __iter__(self):
         try:
             prefetch_data = _PrefetchData(self.source_datapipe, self.buffer_size)
             self.prefetch_data = prefetch_data
             thread = threading.Thread(target=PrefetcherIterDataPipe.thread_worker, args=(prefetch_data,), daemon=True)
+            thread.start()
             self.thread = thread
-            self.thread.start()
 
-            while prefetch_data.run_prefetcher:
+            while not prefetch_data.stop_iteration or len(prefetch_data.prefetch_buffer) > 0:
                 if len(prefetch_data.prefetch_buffer) > 0:
-                    item = prefetch_data.prefetch_buffer.popleft()
-                    if isinstance(item, Exception):
-                        prefetch_data.run_prefetcher = False
-                        raise item
-                    yield item
+                    data = prefetch_data.prefetch_buffer.popleft()
+                    if isinstance(data, Exception):
+                        if isinstance(data, StopIteration):
+                            break
+                        raise data
+                    yield data
                 else:
-                    # TODO: Calculate sleep interval based on previous availability speed
-                    if not prefetch_data.stop_iteration:
-                        time.sleep(CONSUMER_SLEEP_INTERVAL)
-                    else:
-                        prefetch_data.run_prefetcher = False
+                    time.sleep(CONSUMER_SLEEP_INTERVAL)
         finally:
             prefetch_data.run_prefetcher = False
             prefetch_data.stop_iteration = True
@@ -138,10 +129,115 @@ class PrefetcherIterDataPipe(IterDataPipe):
 
     def pause(self):
         if self.thread is not None:
+            assert self.prefetch_data is not None
             self.prefetch_data.run_prefetcher = False
 
     def resume(self):
         if self.thread is not None and (
             not self.prefetch_data.stop_iteration or len(self.prefetch_data.prefetch_buffer) > 0
         ):
+            assert self.prefetch_data is not None
             self.prefetch_data.run_prefetcher = True
+
+
+def pin_memory_fn(data, device=None):
+    if hasattr(data, "pin_memory"):
+        return data.pin_memory(device)
+    elif isinstance(data, torch.Tensor):
+        return data.pin_memory(device)
+    elif isinstance(data, str):
+        return data
+    elif isinstance(data, collections.abc.Mapping):
+        pinned_data = {k: pin_memory(sample, device) for k, sample in data.items()}
+        try:
+            return type(data)(pinned_data)
+        except TypeError:
+            # The mapping type may not support `__init__(iterable)`.
+            return pinned_data
+    elif isinstance(data, tuple) and hasattr(data, "_fields"):  # namedtuple
+        return type(data)(*(pin_memory(sample, device) for sample in data))
+    elif isinstance(data, tuple):
+        return [pin_memory(sample, device) for sample in data]  # Backwards compatibility.
+    elif isinstance(data, collections.abc.Sequence):
+        pinned_data = [pin_memory(sample, device) for sample in data]
+        try:
+            return type(data)(pinned_data)
+        except TypeError:
+            # The sequence type may not support `__init__(iterable)` (e.g., `range`).
+            return pinned_data
+    else:
+        return data
+
+
+@functional_datapipe("pin_memory")
+class PinMemoryIterDataPipe(PrefetcherIterDataPipe):
+    r"""
+    Prefetches one element from the source DataPipe and moves it to pinned memory (functional name: ``pin_memory``).
+    When used with ``MultiProcessingReadingService``, this DataPipe would be kept in the main process to prevent
+    duplicated CUDA context creation.
+
+    Args:
+        source_datapipe: IterDataPipe from which samples are moved to pinned memory.
+        device: The device to pin samples.
+        pin_memory_fn: Optional callable function to move data to pinned memory.
+            A ``pin_memory_fn`` to handle general objects is provided by default.
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> dp = IterableWrapper(file_paths).open_files().readlines().map(tokenize_fn).pin_memory()
+    """
+
+    def __init__(self, source_datapipe, device=None, pin_memory_fn=pin_memory_fn):
+        super().__init__(source_datapipe, 1)
+        self.device = device
+        self.pin_memory_fn = pin_memory_fn
+
+    def is_replicable(self) -> bool:
+        return False
+
+    @staticmethod
+    def thread_worker(prefetch_data: _PrefetchData, pin_memory_fn, device):
+        itr = iter(prefetch_data.source_datapipe)
+        while not prefetch_data.stop_iteration:
+            # Run if not paused
+            while prefetch_data.run_prefetcher:
+                if len(prefetch_data.prefetch_buffer) < prefetch_data.buffer_size:
+                    try:
+                        item = pin_memory_fn(next(itr), device)
+                        prefetch_data.prefetch_buffer.append(item)
+                    except Exception as e:
+                        prefetch_data.run_prefetcher = False
+                        prefetch_data.stop_iteration = True
+                        prefetch_data.prefetch_buffer.append(e)
+                else:  # Buffer is full, waiting for main thread to consume items
+                    # TODO: Calculate sleep interval based on previous consumption speed
+                    time.sleep(PRODUCER_SLEEP_INTERVAL)
+            # Sleep longer when this prefetcher thread is paused
+            time.sleep(PRODUCER_SLEEP_INTERVAL * 10)
+
+    def __iter__(self):
+        try:
+            prefetch_data = _PrefetchData(self.source_datapipe, self.buffer_size)
+            self.prefetch_data = prefetch_data
+            thread = threading.Thread(
+                target=PinMemoryIterDataPipe.thread_worker,
+                args=(prefetch_data, self.pin_memory_fn, self.device),
+                daemon=True,
+            )
+            thread.start()
+            self.thread = thread
+
+            while not prefetch_data.stop_iteration or len(prefetch_data.prefetch_buffer) > 0:
+                if len(prefetch_data.prefetch_buffer) > 0:
+                    data = prefetch_data.prefetch_buffer.popleft()
+                    if isinstance(data, Exception):
+                        if isinstance(data, StopIteration):
+                            break
+                        raise data
+                    yield data
+                else:
+                    time.sleep(CONSUMER_SLEEP_INTERVAL)
+        finally:
+            prefetch_data.run_prefetcher = False
+            prefetch_data.stop_iteration = True
+            thread.join()
