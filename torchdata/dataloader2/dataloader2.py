@@ -118,6 +118,7 @@ class DataLoader2Iterator(Iterator[T_co]):
         """
         self.limit_counter = 0
         self.limit_threshold = num_batches
+        self.dataloader._limit(num_batches)
 
     def __getattr__(self, name):
         """
@@ -363,7 +364,7 @@ class DataLoader2(Generic[T_co]):
             self._is_paused = True
             self.reading_service._pause()
         else:
-            warnings.warn("ReadingService doesn't support pause.")
+            warnings.warn("ReadingService doesn't support `pause`.")
 
     def _resume(self):
         if hasattr(self.reading_service, "_resume"):
@@ -373,4 +374,10 @@ class DataLoader2(Generic[T_co]):
                 self.reading_service._resume()
                 self._is_paused = False
         else:
-            warnings.warn("ReadingService doesn't support resume.")
+            warnings.warn("ReadingService doesn't support `resume`.")
+
+    def _limit(self, num_batches: Optional[int]) -> None:
+        if hasattr(self.reading_service, "_limit"):
+            self.reading_service._limit(num_batches)
+        else:
+            warnings.warn("ReadingService doesn't support `limit`.")
