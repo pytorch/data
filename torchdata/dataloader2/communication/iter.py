@@ -62,8 +62,6 @@ class WorkerException(Exception):
     Returned by DataPipe when there is a failure/exception from a worker process
     """
 
-    pass
-
 
 class NonBlocking(IterDataPipe):
     not_available_hook = default_not_available_hook
