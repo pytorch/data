@@ -36,7 +36,7 @@ def _get_response_from_http(
 ) -> Tuple[str, StreamWrapper]:
     with requests.Session() as session:
         proxies = _get_proxies()
-        r = session.get(url, timeout=timeout, proxies=proxies, stream=True, **query_params)  # type: ignore[arg-type]
+        r = session.get(url, timeout=timeout, proxies=proxies, stream=True, **query_params)  # type: ignore[attr-defined]
     r.raise_for_status()
     return url, StreamWrapper(r.raw)
 
@@ -105,7 +105,7 @@ def _get_response_from_google_drive(
     confirm_token = None
 
     with requests.Session() as session:
-        response = session.get(url, timeout=timeout, stream=True, **query_params)  # type: ignore[arg-type]
+        response = session.get(url, timeout=timeout, stream=True, **query_params)  # type: ignore[attr-defined]
         response.raise_for_status()
 
         for k, v in response.cookies.items():
@@ -122,7 +122,7 @@ def _get_response_from_google_drive(
         if confirm_token:
             url = url + "&confirm=" + confirm_token
 
-        response = session.get(url, timeout=timeout, stream=True, **query_params)  # type: ignore[arg-type]
+        response = session.get(url, timeout=timeout, stream=True, **query_params)  # type: ignore[attr-defined]
         response.raise_for_status()
 
         if "content-disposition" not in response.headers:
