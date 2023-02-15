@@ -5,8 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import warnings
-
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Iterator, Optional
 
 from torch.utils.data import IterDataPipe, MapDataPipe
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, DILL_AVAILABLE
@@ -59,6 +58,8 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
     key_value_fn: Optional[Callable]
     _map: Optional[Dict]
     _length: int
+    _itr: Optional[Iterator]
+    _depleted: bool
 
     def __init__(self, datapipe: IterDataPipe, key_value_fn: Optional[Callable] = None):
         if not isinstance(datapipe, IterDataPipe):
