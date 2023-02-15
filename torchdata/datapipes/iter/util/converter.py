@@ -86,17 +86,18 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
             if self._map is None:
                 self._map = {}
                 self._itr = iter(self.datapipe)
-                raise KeyError
-            return self._map[index]
+            else:
+                return self._map[index]
         except KeyError:
-            while not self._depleted:
-                try:
-                    key, value = self._load_next_item()
-                    if key == index:
-                        return value
-                except StopIteration:
-                    self._depleted = True
-            raise IndexError(f"Index {index} is invalid for IterToMapConverter.")
+            pass
+        while not self._depleted:
+            try:
+                key, value = self._load_next_item()
+                if key == index:
+                    return value
+            except StopIteration:
+                self._depleted = True
+        raise IndexError(f"Index {index} is invalid for IterToMapConverter.")
 
     def _load_next_item(self):
         elem = next(self._itr)
