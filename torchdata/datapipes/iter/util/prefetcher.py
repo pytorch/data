@@ -34,7 +34,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
     and stores the result in the buffer, ready to be consumed by the subsequent DataPipe. It has no effect aside
     from getting the sample ready ahead of time.
 
-    This is used by ``PrototypeMultiProcessingReadingService`` when the arguments
+    This is used by ``MultiProcessingReadingService`` when the arguments
     ``worker_prefetch_cnt`` (for prefetching at each worker process) or
     ``main_prefetch_cnt`` (for prefetching at the main loop) are greater than 0.
 

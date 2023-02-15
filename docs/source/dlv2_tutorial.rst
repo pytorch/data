@@ -24,11 +24,11 @@ Here is an example of a ``DataPipe`` graph:
 Multiprocessing
 ----------------
 
-``PrototypeMultiProcessingReadingService`` handles multiprocessing sharding at the point of ``sharding_filter`` and synchronizes the seeds across worker processes.
+``MultiProcessingReadingService`` handles multiprocessing sharding at the point of ``sharding_filter`` and synchronizes the seeds across worker processes.
 
 .. code:: python
 
-    rs = PrototypeMultiProcessingReadingService(num_workers=4)
+    rs = MultiProcessingReadingService(num_workers=4)
     dl = DataLoader2(datapipe, reading_service=rs)
     for epoch in range(10):
         dl.seed(epoch)
@@ -58,7 +58,7 @@ Multiprocessing + Distributed
 
 .. code:: python
 
-    mp_rs = PrototypeMultiProcessingReadingService(num_workers=4)
+    mp_rs = MultiProcessingReadingService(num_workers=4)
     dist_rs = DistributedReadingService()
     rs = SequentialReadingService(dist_rs, mp_rs)
 

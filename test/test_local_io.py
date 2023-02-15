@@ -74,6 +74,14 @@ except (ModuleNotFoundError, FileNotFoundError):
     HAS_RAR_TOOLS = False
 skipIfNoRarTools = unittest.skipIf(not HAS_RAR_TOOLS, "no rar tools")
 
+try:
+    import portalocker
+
+    HAS_PORTALOCKER = True
+except ImportError:
+    HAS_PORTALOCKER = False
+skipIfNoPortalocker = unittest.skipIf(not HAS_PORTALOCKER, "No portalocker installed")
+
 
 def filepath_fn(temp_dir_name, name: str) -> str:
     return os.path.join(temp_dir_name, os.path.basename(name))
@@ -645,6 +653,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         time.sleep(10)
         return (x, "str")
 
+    @skipIfNoPortalocker
     def test_disk_cache_locks(self):
         with tempfile.TemporaryDirectory() as tmpdirname:
             file_name = os.path.join(tmpdirname, "test.bin")

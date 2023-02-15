@@ -14,6 +14,7 @@ import torch
 
 from torch.utils.data import IterDataPipe, MapDataPipe
 from torchdata.dataloader2 import communication
+from torchdata.dataloader2.graph._serialization import extract_wrapper
 
 try:
     import dill
@@ -77,6 +78,8 @@ def MultipleDataPipesToQueuesLoop(source_datapipes, req_queues, res_queues, call
     reset_iterator_counter = _ResetCounter(num_loops)
 
     for source_datapipe, req_queue, res_queue in zip(source_datapipes, req_queues, res_queues):
+        # Extract Serialization Wrapper
+        source_datapipe = extract_wrapper(source_datapipe)
         loops.append(
             _create_datapipe_queue_loop(
                 source_datapipe,
@@ -101,6 +104,9 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, call_on_process_
     Initialize with the given init function, set the appropriate pipe and protocol server type, and
     create a loop with the protocol server.
     """
+    # Extract Serialization Wrapper
+    source_datapipe = extract_wrapper(source_datapipe)
+
     if call_on_process_init is not None:
         call_on_process_init(source_datapipe)
 
