@@ -88,11 +88,14 @@ class PrefetcherIterDataPipe(IterDataPipe):
             thread.start()
             self.thread = thread
 
+            # Lazily import to prevent circular import
+            from torchdata.dataloader2 import communication
+
             while not prefetch_data.stop_iteration or len(prefetch_data.prefetch_buffer) > 0:
                 if len(prefetch_data.prefetch_buffer) > 0:
                     data = prefetch_data.prefetch_buffer.popleft()
                     if isinstance(data, Exception):
-                        if isinstance(data, StopIteration):
+                        if isinstance(data, (StopIteration, communication.iter.TerminateRequired)):
                             break
                         raise data
                     yield data
@@ -227,11 +230,14 @@ class PinMemoryIterDataPipe(PrefetcherIterDataPipe):
             thread.start()
             self.thread = thread
 
+            # Lazily import to prevent circular import
+            from torchdata.dataloader2 import communication
+
             while not prefetch_data.stop_iteration or len(prefetch_data.prefetch_buffer) > 0:
                 if len(prefetch_data.prefetch_buffer) > 0:
                     data = prefetch_data.prefetch_buffer.popleft()
                     if isinstance(data, Exception):
-                        if isinstance(data, StopIteration):
+                        if isinstance(data, (StopIteration, communication.iter.TerminateRequired)):
                             break
                         raise data
                     yield data
