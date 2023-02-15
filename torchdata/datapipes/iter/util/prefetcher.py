@@ -148,18 +148,18 @@ def pin_memory_fn(data, device=None):
     elif isinstance(data, str):
         return data
     elif isinstance(data, collections.abc.Mapping):
-        pinned_data = {k: pin_memory(sample, device) for k, sample in data.items()}
+        pinned_data = {k: pin_memory_fn(sample, device) for k, sample in data.items()}
         try:
             return type(data)(pinned_data)
         except TypeError:
             # The mapping type may not support `__init__(iterable)`.
             return pinned_data
     elif isinstance(data, tuple) and hasattr(data, "_fields"):  # namedtuple
-        return type(data)(*(pin_memory(sample, device) for sample in data))
+        return type(data)(*(pin_memory_fn(sample, device) for sample in data))
     elif isinstance(data, tuple):
-        return [pin_memory(sample, device) for sample in data]  # Backwards compatibility.
+        return [pin_memory_fn(sample, device) for sample in data]  # Backwards compatibility.
     elif isinstance(data, collections.abc.Sequence):
-        pinned_data = [pin_memory(sample, device) for sample in data]
+        pinned_data = [pin_memory_fn(sample, device) for sample in data]
         try:
             return type(data)(pinned_data)
         except TypeError:
@@ -188,7 +188,11 @@ class PinMemoryIterDataPipe(PrefetcherIterDataPipe):
     """
 
     def __init__(self, source_datapipe, device=None, pin_memory_fn=pin_memory_fn):
+        if not torch.cuda.is_available():
+            raise RuntimeError("``pin_memory`` can only be used when CUDA is available.")
         super().__init__(source_datapipe, 1)
+        if device is None:
+            device = torch.cuda.current_device()
         self.device = device
         self.pin_memory_fn = pin_memory_fn
 
@@ -241,3 +245,14 @@ class PinMemoryIterDataPipe(PrefetcherIterDataPipe):
             prefetch_data.run_prefetcher = False
             prefetch_data.stop_iteration = True
             thread.join()
+
+    def __getstate__(self):
+        state = super().__getstate__()
+        state["pin_memory_fn"] = self.pin_memory_fn
+        state["device"] = self.device
+        return state
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        self.pin_memory_fn = state["pin_memory_fn"]
+        self.device = state["device"]

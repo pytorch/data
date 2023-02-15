@@ -92,6 +92,10 @@ def _filter_by_module_availability(datapipes):
     return [dp for dp in datapipes if dp[0] not in filter_set]
 
 
+def _convert_to_tensor(data):
+    return torch.tensor(data)
+
+
 class TestIterDataPipeSerialization(expecttest.TestCase):
     def setUp(self):
         self.temp_dir = create_temp_dir()
@@ -272,6 +276,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (),
                 {},
             ),
+            (iterdp.Prefetcher, None, (), {}),
             (iterdp.ParquetDataFrameLoader, None, (), {"dtype": DTYPE}),
             (iterdp.RarArchiveLoader, None, (), {}),
             (
