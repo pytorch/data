@@ -310,6 +310,7 @@ jobs:
           - 3.8
           - 3.9
           - "3.10"
+          - 3.11
     steps:
       - name: Checkout Source Repository
         uses: actions/checkout@v3
@@ -358,7 +359,12 @@ jobs:
         shell: bash -l {0}
         run: |
           source "${MINICONDA_INSTALL_PATH}/etc/profile.d/conda.sh"
-          conda create -y -p "${CONDA_ENV_PATH}" python=${{ matrix.python-version }}
+
+          if [[ ${{ matrix.python-version }} = "3.11" ]]; then
+            conda create -y -p "${CONDA_ENV_PATH}" python=3.8
+          else
+            conda create -y -p "${CONDA_ENV_PATH}" python=${{ matrix.python-version }}
+          fi
       - name: Build TorchData for Conda
         shell: bash -l {0}
         env:
@@ -371,7 +377,12 @@ jobs:
             source "${MINICONDA_INSTALL_PATH}/etc/profile.d/conda.sh"
           fi
           conda activate "${CONDA_ENV_PATH}"
-          conda install -yq conda-build -c conda-forge
+          if [[ "${PYTHON_VERSION}" = "3.11" ]]; then
+            conda install -yq conda-build -c malfet -c conda-forge
+            export CONDA_CHANNEL_FLAGS="${CONDA_CHANNEL_FLAGS} -c malfet"
+          else
+            conda install -yq conda-build -c conda-forge
+          fi
           packaging/build_conda.sh
           conda index ./conda-bld
       - name: Upload Conda Package to Github
