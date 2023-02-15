@@ -18,14 +18,8 @@ from typing import Any, Callable, Deque, Dict, Iterator, List, Optional, Tuple, 
 
 try:
     import portalocker
-except ImportError as e:
-    if os.name == "nt" and str(e).startswith("DLL load failed while importing"):
-        print(
-            "Please take a look at FAQ in https://github.com/pytorch/data#frequently-asked-questions-faq"
-            "for the solution of this Error."
-        )
-    raise
-
+except ImportError:
+    protalocker = None
 
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, DILL_AVAILABLE
 
@@ -37,6 +31,26 @@ if DILL_AVAILABLE:
     import dill
 
     dill.extend(use_dill=False)
+
+
+def _assert_portalocker() -> None:
+    try:
+        import portalocker  # noqa: F401
+    except ImportError as e:
+        if os.name == "nt" and str(e).startswith("DLL load failed while importing"):
+            print(
+                "Please take a look at FAQ in https://github.com/pytorch/data#frequently-asked-questions-faq"
+                "for the solution of this Error."
+            )
+            raise
+        else:
+            raise ModuleNotFoundError(
+                "Package `portalocker` is required to be installed to use this datapipe."
+                "Please use `pip install 'portalocker>=2.0.0'` or"
+                "`conda install -c conda-forge 'portalocker>=2/0.0'`"
+                "to install the package"
+            )
+
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -190,6 +204,8 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         hash_type: str = "sha256",
         extra_check_fn: Optional[Callable[[str], bool]] = None,
     ):
+        _assert_portalocker()
+
         self.source_datapipe = source_datapipe
 
         if filepath_fn is not None:

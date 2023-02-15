@@ -14,7 +14,7 @@ from typing import Callable
 
 import pandas as pd
 import psutil
-from torchdata.dataloader2 import DataLoader2, PrototypeMultiProcessingReadingService
+from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
 from torchdata.datapipes.iter import IterableWrapper
 
 
@@ -64,7 +64,7 @@ def check_and_output_speed(prefix: str, create_dp_fn: Callable, n_prefetch: int,
     dp = create_dp_fn()
 
     rs_type = "DataLoader2 w/ tar archives"
-    new_rs = PrototypeMultiProcessingReadingService(
+    new_rs = MultiProcessingReadingService(
         num_workers=n_workers, worker_prefetch_cnt=n_prefetch, main_prefetch_cnt=n_prefetch
     )
     dl: DataLoader2 = DataLoader2(dp, reading_service=new_rs)

@@ -12,13 +12,7 @@ from typing import Any, Dict, Generic, Iterable, Iterator, Optional, TypeVar, Un
 
 from torchdata.dataloader2.adapter import Adapter
 from torchdata.dataloader2.error import PauseIteration
-from torchdata.dataloader2.graph._serialization import (
-    clone,
-    DataPipe,
-    deserialize_datapipe,
-    serialize_datapipe,
-    wrap_datapipe_for_serialization,
-)
+from torchdata.dataloader2.graph._serialization import clone, DataPipe, deserialize_datapipe, serialize_datapipe
 from torchdata.dataloader2.random import SeedGenerator
 from torchdata.dataloader2.random.seed_generator import _UINT64_UPPER_BOUND
 from torchdata.dataloader2.reading_service import CheckpointableReadingServiceInterface, ReadingServiceInterface
@@ -127,13 +121,13 @@ class DataLoader2Iterator(Iterator[T_co]):
         self.limit_counter = 0
         self.limit_threshold = num_batches
         if self.dataloader._datapipe_iter and hasattr(self.dataloader._datapipe_iter, "limit"):
-            self.dataloader._datapipe_iter.limit()  # type: ignore[attr-defined]
+            self.dataloader._datapipe_iter.limit(num_batches)  # type: ignore[attr-defined]
 
     def __getattr__(self, name):
         """
         To delegate operations to ``dataloader._datapipe_iter``.
         """
-        if self.dataloader._datapipe_iter is None:
+        if "dataloader" not in self.__dict__ or self.dataloader._datapipe_iter is None:
             raise AttributeError
         return getattr(self.dataloader._datapipe_iter, name)
 
@@ -167,7 +161,7 @@ class DataLoader2(Generic[T_co]):
         datapipe_adapter_fn: Optional[Union[Iterable[Adapter], Adapter]] = None,
         reading_service: Optional[ReadingServiceInterface] = None,
     ) -> None:
-        self.datapipe = clone(wrap_datapipe_for_serialization(datapipe)) if datapipe is not None else None
+        self.datapipe = clone(datapipe) if datapipe is not None else None
         self._adapted: bool = False
         self._datapipe_iter: Optional[Iterator[T_co]] = None
         self._reset_iter: bool = True  # Sets to `False` when `__iter__` runs, and `True` when `__next__` is called
