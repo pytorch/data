@@ -150,18 +150,14 @@ def pin_memory_fn(data, device=None):
     elif isinstance(data, collections.abc.Mapping):
         pinned_data = {k: pin_memory_fn(sample, device) for k, sample in data.items()}
         try:
-            return type(data)(pinned_data)
+            return type(data)(**pinned_data)
         except TypeError:
             # The mapping type may not support `__init__(iterable)`.
             return pinned_data
-    elif isinstance(data, tuple) and hasattr(data, "_fields"):  # namedtuple
-        return type(data)(*(pin_memory_fn(sample, device) for sample in data))
-    elif isinstance(data, tuple):
-        return [pin_memory_fn(sample, device) for sample in data]  # Backwards compatibility.
     elif isinstance(data, collections.abc.Sequence):
-        pinned_data = [pin_memory_fn(sample, device) for sample in data]
+        pinned_data = [pin_memory_fn(sample, device) for sample in data]  # type: ignore[assignment]
         try:
-            return type(data)(pinned_data)
+            type(data)(*pinned_data)
         except TypeError:
             # The sequence type may not support `__init__(iterable)` (e.g., `range`).
             return pinned_data
@@ -200,7 +196,7 @@ class PinMemoryIterDataPipe(PrefetcherIterDataPipe):
         return False
 
     @staticmethod
-    def thread_worker(prefetch_data: _PrefetchData, pin_memory_fn, device):
+    def thread_worker(prefetch_data: _PrefetchData, pin_memory_fn, device):  # type: ignore[override]
         itr = iter(prefetch_data.source_datapipe)
         while not prefetch_data.stop_iteration:
             # Run if not paused
