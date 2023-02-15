@@ -23,7 +23,7 @@ import torch.multiprocessing as mp
 from torch.testing._internal.common_utils import instantiate_parametrized_tests, parametrize
 from torch.utils.data import DataLoader
 
-from torchdata.dataloader2 import DataLoader2, DistributedReadingService, PrototypeMultiProcessingReadingService
+from torchdata.dataloader2 import DataLoader2, DistributedReadingService
 from torchdata.datapipes.iter import IterableWrapper
 from torchdata.datapipes.iter.util.distributed import PrefetchTimeoutError
 

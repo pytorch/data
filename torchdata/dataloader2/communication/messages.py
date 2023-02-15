@@ -36,6 +36,22 @@ class ResetEpochResponse(Response):
     pass
 
 
+class PauseRequest(Request):
+    pass
+
+
+class PauseResponse(Response):
+    pass
+
+
+class ResumeRequest(Request):
+    pass
+
+
+class ResumeResponse(Response):
+    pass
+
+
 class TerminateRequest(Request):
     pass
 

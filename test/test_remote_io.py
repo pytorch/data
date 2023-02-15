@@ -60,6 +60,14 @@ except ImportError:
 skipIfAWS = unittest.skipIf(HAS_AWS, "AWSSDK Enabled")
 skipIfNoAWS = unittest.skipIf(not HAS_AWS, "No AWSSDK Enabled")
 
+try:
+    import portalocker
+
+    HAS_PORTALOCKER = True
+except ImportError:
+    HAS_PORTALOCKER = False
+skipIfNoPortalocker = unittest.skipIf(not HAS_PORTALOCKER, "No portalocker installed")
+
 
 class TestDataPipeRemoteIO(expecttest.TestCase):
     def setUp(self):
@@ -125,6 +133,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
                 allow_redirects=query_params["allow_redirects"],
             )
 
+    @skipIfNoPortalocker
     def test_on_disk_cache_holder_iterdatapipe(self):
         tar_file_url = "https://raw.githubusercontent.com/pytorch/data/main/test/_fakedata/csv.tar.gz"
         expected_file_name = os.path.join(self.temp_dir.name, "csv.tar.gz")

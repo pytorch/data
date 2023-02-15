@@ -6,6 +6,7 @@
 
 import multiprocessing as py_mp
 import queue
+import warnings
 
 from abc import ABC, abstractmethod
 from datetime import timedelta
@@ -17,17 +18,17 @@ import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 
-from torch.utils.data import DataLoader
 from torch.utils.data.datapipes.iter.sharding import SHARDING_PRIORITIES
 
 from torchdata._constants import default_dl2_worker_join_timeout_in_s, default_timeout_in_s
 from torchdata.dataloader2 import communication
 from torchdata.dataloader2.graph import DataPipe, replace_dp, set_graph_random_seed, traverse_dps
+from torchdata.dataloader2.graph._serialization import attach_wrapper
 from torchdata.dataloader2.graph.utils import _find_replicable_branches
 from torchdata.dataloader2.random import dist_share_seed, SeedGenerator
 from torchdata.dataloader2.utils import process_init_fn, process_reset_fn, WorkerInfo
 from torchdata.dataloader2.utils.dispatch import _DummyIterDataPipe, find_lca_round_robin_sharding_dp
-from torchdata.datapipes.iter import FullSync, IterableWrapper
+from torchdata.datapipes.iter import FullSync
 
 
 class ReadingServiceInterface(ABC):
@@ -73,7 +74,7 @@ class ReadingServiceInterface(ABC):
 
         Args:
             seed_generator: SeedGenerator object created and managed by DataLoader2. As the single
-                source of randomness, it will governs the determinism for all of random operations
+                source of randomness, it will govern the determinism for all of random operations
                 with the graph of DataPipes.
             iter_reset_fn: Optional reset function from the prior ``ReadingServcie``
                 when ``SequentialReadingService`` chains multiple ``ReadingServices``
@@ -138,6 +139,15 @@ def _collate_no_op(batch):
 
 
 class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
+    def __new__(cls, *args, **kwargs):
+        warnings.warn(
+            "`PrototypeMultiProcessingReadingService` is deprecated and will be removed in TorchData 0.8. "
+            "Please use `MultiProcessingReadingService`."
+        )
+        return MultiProcessingReadingService(*args, **kwargs)
+
+
+class MultiProcessingReadingService(ReadingServiceInterface):
     r"""
     Spawns multiple worker processes to load data from the ``DataPipe`` graph.
     If any non-replicable ``DataPipe`` (``sharding_round_robin_dispatch``) is presented in the graph,
@@ -161,14 +171,6 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         worker_reset_fn: (Callable, optional): Function to be called at the beginning
             of each epoch in each worker process with ``DataPipe``, ``WorkerInfo``
             and ``SeedGenerator`` as the expected arguments.
-
-    Note:
-        - This ``ReadingService`` is still in prototype mode and will replace
-          :class:`MultiProcessingReadingService`.
-        - It currently does both distributed and multiprocessing sharding over the pipeline.
-          The distributed-related code is going to be removed when ``SequentialReadingService``
-          is provided to combine the :class:`DistributedReadingService` and this ``ReadingService``.
-
     """
     num_workers: int
     multiprocessing_context: Optional[str]
@@ -214,7 +216,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         r"""
-        ``PrototypeMultiProcessingReadingService`` finds information about sharding,
+        ``MultiProcessingReadingService`` finds information about sharding,
         separates graph by multiple pieces and reconnects it using queues.
         creates subprocesses.
         """
@@ -237,6 +239,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
             graph = replace_dp(graph, dispatching_dp, dummy_dp)  # type: ignore[arg-type]
             datapipe = list(graph.values())[0][0]
             # TODO(ejguan): Determine buffer_size at runtime or use unlimited buffer
+            dispatching_dp = attach_wrapper(dispatching_dp)
             round_robin_dps = dispatching_dp.round_robin_demux(num_instances=self.num_workers)
             # TODO(ejguan): Benchmark if we need to prefetch in dispatching process
             process, req_queues, res_queues = communication.eventloop.CreateProcessForMultipleDataPipelines(
@@ -257,11 +260,12 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         replicable_dps = _find_replicable_branches(graph)
         assert (
             len(replicable_dps) == 1
-        ), "PrototypeMultiProcessingReadingService only supports single replicable branch currently"
+        ), "MultiProcessingReadingService only supports single replicable branch currently"
         replicable_dp = replicable_dps[0]
 
         if self.worker_prefetch_cnt > 0:
             replicable_dp = replicable_dp.prefetch(self.worker_prefetch_cnt)
+        replicable_dp = attach_wrapper(replicable_dp)
 
         for worker_id in range(self.num_workers):
             worker_info = WorkerInfo(self.num_workers, worker_id)
@@ -333,7 +337,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
     def finalize(self) -> None:
         r"""
-        ``PrototypeMultiProcessingReadingService`` invalidate states & properly exits all subprocesses.
+        ``MultiProcessingReadingService`` invalidate states & properly exits all subprocesses.
         """
         # TODO(618): Check if anyone stuck with messages
         def clean_me(process, req_queue, res_queue):
@@ -371,66 +375,35 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         self._worker_processes = []
         self._dispatch_process = None
 
+    def _pause(self):
+        """
+        Pauses DataPipes' activities such as prefetching, in order to collect state.
+        """
+        if self.main_prefetch_cnt > 0 and self.num_workers > 0:
+            # Stop prefetching of main loop first
+            self._main_prefetch_datapipe.pause()  # type: ignore[union-attr]
+        if self.num_workers > 0:
+            self._worker_consumer_datapipe.request_pause()  # type: ignore[union-attr]
+        else:
+            raise RuntimeError(
+                "If you would like to use `pause` with `PrototypeMultiProcessingReadingService`, "
+                "please use more than 0 worker."
+            )
 
-class MultiProcessingReadingService(ReadingServiceInterface):
-    r"""
-    ``MultiProcessingReadingService`` that utilizes ``torch.utils.data.DataLoader`` to
-    launch subprocesses for ``DataPipe`` graph. Please refers to documents of ``DataLoader``
-    in https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader for all arguments.
-
-    Note:
-        This ``ReadingService`` be replaced by :class:`PrototypeMultiProcessingReadingService`.
-    """
-    num_workers: int
-    pin_memory: bool
-    timeout: float
-    worker_init_fn: Optional[Callable[[int], None]]
-    prefetch_factor: Optional[int]
-    persistent_workers: bool
-
-    def __init__(
-        self,
-        num_workers: int = 0,
-        pin_memory: bool = False,
-        timeout: float = 0,
-        worker_init_fn: Optional[Callable[[int], None]] = None,
-        multiprocessing_context=None,
-        prefetch_factor: Optional[int] = None,
-        persistent_workers: bool = False,
-    ) -> None:
-        self.num_workers = num_workers
-        self.pin_memory = pin_memory
-        self.timeout = timeout
-        self.worker_init_fn = worker_init_fn
-        self.multiprocessing_context = multiprocessing_context
-        self.prefetch_factor = prefetch_factor
-        self.persistent_workers = persistent_workers
-        if self.num_workers == 0:
-            self.prefetch_factor = None
-            self.persistent_workers = False
-        self.dl_: Optional[DataLoader] = None
-
-    # Wrap the DataLoader with IterableWrapper to respect type annotation
-    def initialize(self, datapipe: DataPipe) -> DataPipe:
-        self.dl_ = DataLoader(
-            datapipe,
-            num_workers=self.num_workers,
-            pin_memory=self.pin_memory,
-            timeout=self.timeout,
-            worker_init_fn=self.worker_init_fn,
-            multiprocessing_context=self.multiprocessing_context,
-            prefetch_factor=self.prefetch_factor,
-            persistent_workers=self.persistent_workers,
-            # TODO(621): `collate_fn` is necessary until we stop using DLv1 https://github.com/pytorch/data/issues/530
-            collate_fn=_collate_no_op,
-            batch_size=1,  # This reading service assume batching is done via DataPipe
-        )
-        return IterableWrapper(self.dl_)  # type: ignore[return-value]
-
-    def finalize(self) -> None:
-        if self.persistent_workers and self.dl_ is not None and self.dl_._iterator is not None:
-            self.dl_._iterator._shutdown_workers()  # type: ignore[attr-defined]
-            self.dl_._iterator = None
+    def _resume(self):
+        """
+        Resumes DataPipes' activities. This is required to be called after `_pause` before
+        the DataLoader can keep yielding elements.
+        """
+        if self.num_workers > 0:
+            self._worker_consumer_datapipe.request_resume()  # type: ignore[union-attr]
+        else:
+            raise RuntimeError(
+                "If you would like to use `resume` with `PrototypeMultiProcessingReadingService`, "
+                "please use more than 0 worker."
+            )
+        if self.main_prefetch_cnt > 0 and self.num_workers > 0:
+            self._main_prefetch_datapipe.resume()  # type: ignore[union-attr]
 
 
 class DistributedReadingService(ReadingServiceInterface):
@@ -455,7 +428,7 @@ class DistributedReadingService(ReadingServiceInterface):
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         r"""
         Launches the ``gloo``-backend distributed process group. Carries out distributed sharding
-        on the graph of ``DataPipe`` and returnes the graph attached with a ``FullSyncIterDataPipe``
+        on the graph of ``DataPipe`` and returns the graph attached with a ``FullSyncIterDataPipe``
         at the end.
         """
         if not (dist.is_available() and dist.is_initialized()):
@@ -531,7 +504,11 @@ class SequentialReadingService(CheckpointableReadingServiceInterface):
     def checkpoint(self) -> bytes:
         states = []
         for rs in self.reading_services:
-            states.append(rs.checkpoint())
+            if hasattr(rs, "checkpoint") and callable(rs.checkpoint):
+                states.append(rs.checkpoint())
+            else:
+                warnings.warn(f"{rs} doesn't support `checkpoint`, skipping...")
+                states.append(b"")
         return b"\n".join(states)
 
     # Sequential Order, to align with initialize
@@ -539,5 +516,8 @@ class SequentialReadingService(CheckpointableReadingServiceInterface):
         states = serialized_state.split(b"\n")
         assert len(states) == len(self.reading_services)
         for rs, state in zip(self.reading_services, states):
-            datapipe = rs.restore(datapipe, state)
+            if hasattr(rs, "restore") and callable(rs.restore):
+                datapipe = rs.restore(datapipe, state)
+            else:
+                warnings.warn(f"{rs} doesn't support `restore` from state, skipping...")
         return datapipe
