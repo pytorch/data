@@ -118,9 +118,7 @@ class DataLoader2Test(TestCase):
         dp = MakeMistakeDataPipe(dp)
         for worker_prefetch_cnt in [0, 5, 10]:
             for num_workers in [1, 4]:
-                rs = MultiProcessingReadingService(
-                    num_workers=num_workers, worker_prefetch_cnt=worker_prefetch_cnt
-                )
+                rs = MultiProcessingReadingService(num_workers=num_workers, worker_prefetch_cnt=worker_prefetch_cnt)
                 dl = DataLoader2(dp, reading_service=rs)
                 it = iter(dl)
                 for i in range(EXCEPTION_ITERATION_NUM * num_workers):
