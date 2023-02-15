@@ -68,32 +68,53 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
             _check_unpickable_fn(key_value_fn)
         self.key_value_fn = key_value_fn  # type: ignore[assignment]
         self._map = None
+        self._itr = None
+        self._depleted = False
 
     def _load_map(self):
-        self._map = {}
-        for d in self.datapipe:
-            inp = d if self.key_value_fn is None else self.key_value_fn(d)
+        if self._map is None:
+            self._map = {}
+            self._itr = iter(self.datapipe)
+        while not self._depleted:
             try:
-                length = len(inp)
-            except TypeError:
-                raise TypeError(f"Cannot convert dictionary update element {type(inp)} ({inp}) to a sequence")
-            if length != 2:
-                raise ValueError(f"dictionary update sequence element has length {length}, 2 is required")
-            key, value = inp
-            if key in self._map:
-                warnings.warn(f"Found duplicate key {key}. Please check your `key_value_fn`")
-            self._map[key] = value
+                self._load_next_item()
+            except StopIteration:
+                self._depleted = True
 
     def __getitem__(self, index):
         try:
             if self._map is None:
-                self._load_map()
-            return self._map[index]  # type: ignore[index]
+                self._map = {}
+                self._itr = iter(self.datapipe)
+                raise KeyError
+            return self._map[index]
         except KeyError:
+            while not self._depleted:
+                try:
+                    key, value = self._load_next_item()
+                    if key == index:
+                        return value
+                except StopIteration:
+                    self._depleted = True
             raise IndexError(f"Index {index} is invalid for IterToMapConverter.")
 
+    def _load_next_item(self):
+        elem = next(self._itr)
+        inp = elem if self.key_value_fn is None else self.key_value_fn(elem)
+        try:
+            length = len(inp)
+        except TypeError:
+            raise TypeError(f"Cannot convert dictionary update element {type(inp)} ({inp}) to a sequence")
+        if length != 2:
+            raise ValueError(f"dictionary update sequence element has length {length}, 2 is required")
+        key, value = inp
+        if key in self._map:
+            warnings.warn(f"Found duplicate key {key}. Please check your `key_value_fn`")
+        self._map[key] = value
+        return key, value
+
     def __len__(self):
-        if self._map is not None:
+        if self._depleted:
             return len(self._map)  # type: ignore[arg-type]
         try:
             return len(self.datapipe)
