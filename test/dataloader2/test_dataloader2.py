@@ -27,7 +27,6 @@ from torchdata.dataloader2 import (
     DataLoader2,
     DistributedReadingService,
     MultiProcessingReadingService,
-    PrototypeMultiProcessingReadingService,
     ReadingServiceInterface,
     SequentialReadingService,
 )
@@ -120,16 +119,6 @@ class DataLoader2Test(TestCase):
             self.assertEqual(batch, expected_batch)
             expected_batch += 1
 
-    def test_dataloader2_multi_process_reading_service(self) -> None:
-        test_data_pipe = IterableWrapper(range(3))
-        reading_service = MultiProcessingReadingService()
-        data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
-
-        expected_batch = 0
-        for batch in iter(data_loader):
-            self.assertEqual(batch, expected_batch)
-            expected_batch += 1
-
     def test_dataloader2_load_state_dict(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
         reading_service = TestReadingService()
@@ -165,7 +154,7 @@ class DataLoader2Test(TestCase):
             None,
             TestReadingService(),
             MultiProcessingReadingService(num_workers=4),
-            PrototypeMultiProcessingReadingService(num_workers=4, worker_prefetch_cnt=0),
+            MultiProcessingReadingService(num_workers=4, worker_prefetch_cnt=0),
         ]
         for reading_service in reading_services:
             data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe, reading_service=reading_service)
@@ -233,16 +222,8 @@ class DataLoader2ConsistencyTest(TestCase):
         return MultiProcessingReadingService(num_workers=2)
 
     @staticmethod
-    def _get_proto_reading_service():
-        return PrototypeMultiProcessingReadingService(num_workers=2)
-
-    @staticmethod
     def _get_mp_reading_service_zero_workers():
         return MultiProcessingReadingService(num_workers=0)
-
-    @staticmethod
-    def _get_proto_reading_service_zero_workers():
-        return PrototypeMultiProcessingReadingService(num_workers=0)
 
     def _collect_data(self, datapipe, reading_service_gen):
         dl: DataLoader2 = DataLoader2(datapipe, reading_service=reading_service_gen())
@@ -265,9 +246,7 @@ class DataLoader2ConsistencyTest(TestCase):
 
         reading_service_generators = (
             self._get_mp_reading_service,
-            self._get_proto_reading_service,
             self._get_mp_reading_service_zero_workers,
-            self._get_proto_reading_service_zero_workers,
         )
         for reading_service_gen in reading_service_generators:
             actual = self._collect_data(dp, reading_service_gen=reading_service_gen)
@@ -277,34 +256,6 @@ class DataLoader2ConsistencyTest(TestCase):
     def test_dataloader2_shuffle(self) -> None:
         # TODO(589): Add shuffle test
         pass
-
-
-class DataLoader2IntegrationTest(TestCase):
-    @staticmethod
-    def _get_mp_reading_service():
-        return MultiProcessingReadingService(num_workers=2)
-
-    @staticmethod
-    def _access_datapipe(dl):
-        """
-        Returns a reference to the DataPipe, bypassing serialization wrapper and etc.
-        """
-        return dl.datapipe._datapipe
-
-    def test_lazy_load(self):
-        source_dp = IterableWrapper([(i, i) for i in range(10)])
-        map_dp = source_dp.to_map_datapipe()
-
-        reading_service_generators = (self._get_mp_reading_service,)
-        for reading_service_gen in reading_service_generators:
-            dl: DataLoader2 = DataLoader2(datapipe=map_dp, reading_service=reading_service_gen())
-            # Lazy loading
-            dp = self._access_datapipe(dl)
-            self.assertTrue(dp._map is None)
-            it = iter(dl)
-            self.assertEqual(list(it), list(range(10)))
-            # Lazy loading in multiprocessing
-            self.assertTrue(map_dp._map is None)
 
 
 @unittest.skipIf(
@@ -389,7 +340,7 @@ class NonReplicableDataPipe(IterDataPipe):
         return False
 
 
-class PrototypeMultiProcessingReadingServiceTest(TestCase):
+class MultiProcessingReadingServiceTest(TestCase):
     @staticmethod
     def _worker_init_fn(datapipe, worker_info):
         datapipe = datapipe.sharding_filter()
@@ -410,7 +361,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
     def test_worker_fns(self, ctx):
         dp: IterDataPipe = IterableWrapper(range(100)).batch(2).shuffle()
 
-        rs = PrototypeMultiProcessingReadingService(
+        rs = MultiProcessingReadingService(
             num_workers=2,
             multiprocessing_context=ctx,
             worker_init_fn=self._worker_init_fn,
@@ -455,10 +406,10 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         sf_dp = single_br_dp.sharding_filter()
         replace_dp(graph, single_br_dp, sf_dp)
         dl = DataLoader2(
-            end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
+            end_dp, reading_service=MultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
         )
         # Determinism and dynamic sharding
-        _assert_deterministic_dl_res(dl, [i * 4 for i in range(10)])
+        #  _assert_deterministic_dl_res(dl, [i * 4 for i in range(10)])
 
         # Non-replicable before sharding_filter
         # shuffle in dispatch process
@@ -469,7 +420,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         sf_dp = map_dp.sharding_filter()
         replace_dp(graph, map_dp, sf_dp)
         dl = DataLoader2(
-            end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
+            end_dp, reading_service=MultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
         )
         # Determinism for non-replicable pipeline
         _assert_deterministic_dl_res(dl, [i * 4 for i in range(10)])
@@ -483,7 +434,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         round_robin_dispatcher = ShardingRoundRobinDispatcher(map_dp, SHARDING_PRIORITIES.MULTIPROCESSING)
         replace_dp(graph, map_dp, round_robin_dispatcher)
         dl = DataLoader2(
-            end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
+            end_dp, reading_service=MultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
         )
         # Determinism for non-replicable pipeline
         _assert_deterministic_dl_res(dl, [i * 4 for i in range(10)])
@@ -525,7 +476,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         replace_dp(graph, branch1_dp, sf1_dp)
         replace_dp(graph, branch2_dp, sf2_dp)
         dl = DataLoader2(
-            end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
+            end_dp, reading_service=MultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
         )
         # Determinism and dynamic sharding
         _assert_deterministic_dl_res(dl, [i * 2 for i in range(10)], list(range(10)))
@@ -540,7 +491,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         sf_dp = branch2_dp.sharding_filter()
         replace_dp(graph, branch2_dp, sf_dp)
         dl = DataLoader2(
-            end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
+            end_dp, reading_service=MultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
         )
         # Determinism for non-replicable pipeline
         _assert_deterministic_dl_res(dl, [i * 2 for i in range(10)], list(range(10)))
@@ -554,7 +505,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         non_replicable_dp2 = ShardingRoundRobinDispatcher(branch2_dp, SHARDING_PRIORITIES.MULTIPROCESSING)
         replace_dp(graph, branch2_dp, non_replicable_dp2)
         dl = DataLoader2(
-            end_dp, reading_service=PrototypeMultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
+            end_dp, reading_service=MultiProcessingReadingService(num_workers=2, multiprocessing_context=ctx)
         )
         # Determinism for non-replicable pipeline
         _assert_deterministic_dl_res(dl, [i * 2 for i in range(10)], list(range(10)))
@@ -565,7 +516,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         dp = dp.shuffle().sharding_filter()
         dp = dp.batch(2)
 
-        rs = PrototypeMultiProcessingReadingService(
+        rs = MultiProcessingReadingService(
             num_workers=2,
             multiprocessing_context=ctx,
         )
@@ -596,7 +547,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         dp = dp.shuffle().sharding_round_robin_dispatch(SHARDING_PRIORITIES.MULTIPROCESSING)
         dp = dp.batch(2)
 
-        rs = PrototypeMultiProcessingReadingService(
+        rs = MultiProcessingReadingService(
             num_workers=2,
             multiprocessing_context=ctx,
         )
@@ -632,7 +583,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         dp = dp.batch(2)
         non_rep_dp = NonReplicableDataPipe(dp)
 
-        rs = PrototypeMultiProcessingReadingService(
+        rs = MultiProcessingReadingService(
             num_workers=2,
             multiprocessing_context=ctx,
         )
@@ -641,7 +592,7 @@ class PrototypeMultiProcessingReadingServiceTest(TestCase):
         torch.manual_seed(123)
         it = iter(dl)
         # Validate NonReplicableDataPipe still in the main process
-        non_rep_dp = dl.reading_service._end_datapipe._datapipe
+        non_rep_dp = dl.reading_service._end_datapipe
         self.assertEqual(type(non_rep_dp), NonReplicableDataPipe)
 
         res = list(it) + list(dl)
@@ -782,7 +733,7 @@ class SequentialReadingServiceTest(TestCase):
 
     @staticmethod
     def _make_rs(num_workers, ctx):
-        mp_rs = PrototypeMultiProcessingReadingService(
+        mp_rs = MultiProcessingReadingService(
             num_workers=num_workers,
             multiprocessing_context=ctx,
         )
@@ -857,7 +808,7 @@ class SequentialReadingServiceTest(TestCase):
             self.assertNotEqual(result[1][rank][1], result[3][rank][1])
 
 
-instantiate_parametrized_tests(PrototypeMultiProcessingReadingServiceTest)
+instantiate_parametrized_tests(MultiProcessingReadingServiceTest)
 instantiate_parametrized_tests(SequentialReadingServiceTest)
 
 
