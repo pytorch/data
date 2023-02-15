@@ -754,9 +754,9 @@ def _random_fn(data):
     r"""
     Used to validate the randomness of subprocess-local RNGs are set deterministically.
     """
-    py_random_num = random.randint(0, 2**32)
-    np_random_num = np.random.randint(0, 2**32)
-    torch_random_num = torch.randint(0, 2**32, size=[]).item()
+    py_random_num = random.randint(0, 2 ** 32)
+    np_random_num = np.random.randint(0, 2 ** 32)
+    torch_random_num = torch.randint(0, 2 ** 32, size=[]).item()
     return (data, py_random_num, np_random_num, torch_random_num)
 
 
