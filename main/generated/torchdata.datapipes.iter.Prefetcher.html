@@ -221,7 +221,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+cfcdf6e ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.6.0a0+73d3aa9 ) &#x25BC</a>
     </div>
     
 
@@ -351,7 +351,7 @@
 Prefetching performs the operations (e.g. I/O, computations) of the DataPipes up to this one ahead of time
 and stores the result in the buffer, ready to be consumed by the subsequent DataPipe. It has no effect aside
 from getting the sample ready ahead of time.</p>
-<p>This is used by <code class="docutils literal notranslate"><span class="pre">PrototypeMultiProcessingReadingService</span></code> when the arguments
+<p>This is used by <code class="docutils literal notranslate"><span class="pre">MultiProcessingReadingService</span></code> when the arguments
 <code class="docutils literal notranslate"><span class="pre">worker_prefetch_cnt</span></code> (for prefetching at each worker process) or
 <code class="docutils literal notranslate"><span class="pre">main_prefetch_cnt</span></code> (for prefetching at the main loop) are greater than 0.</p>
 <p>Beyond the built-in use cases, this can be useful to put after I/O DataPipes that have
