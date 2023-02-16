@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from torchdata.datapipes.iter import Dropper, Filter, HuggingFaceHubReader, Mapper, Slicer
+from torchdata.datapipes.iter import HuggingFaceHubReader
 from torchdata.datapipes.iter.load.online import _get_response_from_http
 
 try:
@@ -42,13 +42,14 @@ NAME = "laion/laion2B-en-joined"
 # As the dataset is too large to store locally we use a streaming approach
 def laion2b_en(name=NAME):
     dp = HuggingFaceHubReader(name)
-    dp = Filter(dp, has_no_watermark)
-    dp = Filter(dp, is_sfw)
+    dp = dp.filter(has_no_watermark)
+    dp = dp.filter(is_sfw)
     dp = dp.shuffle().sharding_filter()
-    dp = Slicer(dp, index=["TEXT", "URL"])
-    dp = Mapper(dp, fn=load_image, input_col="URL", output_col="IMAGE")  # this needs multithreading
-    dp = Filter(dp, filter_fn=image_was_loaded, input_col="IMAGE")
-    dp = Dropper(dp, "URL")
+    dp = dp.slice(index=["TEXT", "URL"])
+    dp = dp.map(fn=load_image, input_col="URL", output_col="IMAGE")  # this needs multithreading
+    dp = dp.filter(filter_fn=image_was_loaded, input_col="IMAGE")
+    dp = dp.drop("URL")
+    dp = dp.batch(20)
     return dp
 
 
@@ -70,5 +71,8 @@ def print_label_and_copyright(label, image):
 
 
 if __name__ == "__main__":
-    for i, data in enumerate(laion2b_en()):
-        print_label_and_copyright(data["TEXT"], data["IMAGE"])
+    i = 0
+    for batch in laion2b_en():
+        for entry in batch:
+            print_label_and_copyright(entry["TEXT"], entry["IMAGE"])
+            i += 1
