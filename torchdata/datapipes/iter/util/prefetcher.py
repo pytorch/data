@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import collections
 import threading
 import time
 
@@ -15,6 +14,7 @@ import torch
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+from torchdata.utils import pin_memory_fn
 
 PRODUCER_SLEEP_INTERVAL = 0.0001  # Interval between buffer fulfillment checks
 CONSUMER_SLEEP_INTERVAL = 0.0001  # Interval between checking items availability in buffer
@@ -143,31 +143,6 @@ class PrefetcherIterDataPipe(IterDataPipe):
             self.prefetch_data.run_prefetcher = True
 
 
-def pin_memory_fn(data, device=None):
-    if hasattr(data, "pin_memory"):
-        return data.pin_memory(device)
-    elif isinstance(data, torch.Tensor):
-        return data.pin_memory(device)
-    elif isinstance(data, str):
-        return data
-    elif isinstance(data, collections.abc.Mapping):
-        pinned_data = {k: pin_memory_fn(sample, device) for k, sample in data.items()}
-        try:
-            return type(data)(**pinned_data)
-        except TypeError:
-            # The mapping type may not support `__init__(iterable)`.
-            return pinned_data
-    elif isinstance(data, collections.abc.Sequence):
-        pinned_data = [pin_memory_fn(sample, device) for sample in data]  # type: ignore[assignment]
-        try:
-            type(data)(*pinned_data)
-        except TypeError:
-            # The sequence type may not support `__init__(iterable)` (e.g., `range`).
-            return pinned_data
-    else:
-        return data
-
-
 @functional_datapipe("pin_memory")
 class PinMemoryIterDataPipe(PrefetcherIterDataPipe):
     r"""
@@ -189,7 +164,8 @@ class PinMemoryIterDataPipe(PrefetcherIterDataPipe):
     def __init__(self, source_datapipe, device=None, pin_memory_fn=pin_memory_fn):
         if not torch.cuda.is_available():
             raise RuntimeError("``pin_memory`` can only be used when CUDA is available.")
-        super().__init__(source_datapipe, 1)
+        # TODO: Add support for dynamic buffer based on the available size of pinned memory
+        super().__init__(source_datapipe, buffer_size=2)
         if device is None:
             device = torch.cuda.current_device()
         self.device = device
