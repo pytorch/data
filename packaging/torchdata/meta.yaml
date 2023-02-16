@@ -43,7 +43,8 @@ test:
     - cpuonly
     - pytest
     - expecttest
-    - fsspec
+    # fsspec doesn't support Python 3.11
+    # - fsspec
     # The following packages are not on the default conda channel
     # - iopath
     # - rarfile

@@ -121,7 +121,7 @@ class DataLoader2Iterator(Iterator[T_co]):
         self.limit_counter = 0
         self.limit_threshold = num_batches
         if self.dataloader._datapipe_iter and hasattr(self.dataloader._datapipe_iter, "limit"):
-            self.dataloader._datapipe_iter.limit()  # type: ignore[attr-defined]
+            self.dataloader._datapipe_iter.limit(num_batches)  # type: ignore[attr-defined]
 
     def __getattr__(self, name):
         """
