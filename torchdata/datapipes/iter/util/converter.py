@@ -73,9 +73,6 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
         self._depleted = False
 
     def _load_map(self):
-        if self._map is None:
-            self._map = {}
-            self._itr = iter(self.datapipe)
         while not self._depleted:
             try:
                 self._load_next_item()
@@ -84,10 +81,7 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
 
     def __getitem__(self, index):
         try:
-            if self._map is None:
-                self._map = {}
-                self._itr = iter(self.datapipe)
-            else:
+            if self._map is not None:
                 return self._map[index]
         except KeyError:
             pass
@@ -101,7 +95,10 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
         raise IndexError(f"Index {index} is invalid for IterToMapConverter.")
 
     def _load_next_item(self):
-        elem = next(self._itr)
+        if self._map is None:
+            self._map = {}
+            self._itr = iter(self.datapipe)
+        elem = next(self._itr)  # type: ignore[arg-type]
         inp = elem if self.key_value_fn is None else self.key_value_fn(elem)
         try:
             length = len(inp)
@@ -135,14 +132,10 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
             dill_key_value_fn = dill.dumps(self.key_value_fn)
         else:
             dill_key_value_fn = self.key_value_fn
-        return (
-            self.datapipe,
-            dill_key_value_fn,
-            self._map,
-        )
+        return (self.datapipe, dill_key_value_fn, self._map, self._itr, self._depleted)
 
     def __setstate__(self, state):
-        (self.datapipe, dill_key_value_fn, self._map) = state
+        (self.datapipe, dill_key_value_fn, self._map, self._itr, self._depleted) = state
         if DILL_AVAILABLE:
             self.key_value_fn = dill.loads(dill_key_value_fn)  # type: ignore[assignment]
         else:
