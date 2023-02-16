@@ -62,6 +62,8 @@ TEST_WITH_TSAN = os.getenv("PYTORCH_TEST_WITH_TSAN", "0") == "1"
 
 mp_ctx_parametrize = parametrize("ctx", mp.get_all_start_methods())
 
+EXCEPTION_ITERATION_NUM = 7
+
 
 class _ReadingServiceWrapper:
     def __init__(self, dp):
@@ -77,6 +79,18 @@ class _ReadingServiceWrapper:
     @staticmethod
     def return_one():
         return 1
+
+
+class MakeMistakeDataPipe(IterDataPipe):
+    def __init__(self, source_datapipe, exc_iteration=EXCEPTION_ITERATION_NUM):
+        self.source_datapipe = source_datapipe
+        self.exc_iteration = exc_iteration
+
+    def __iter__(self):
+        for i, x in enumerate(self.source_datapipe):
+            if i == self.exc_iteration:
+                raise Exception("oops")
+            yield x
 
 
 class TestReadingService(ReadingServiceInterface):
@@ -98,6 +112,19 @@ class DataLoader2Test(TestCase):
         test_data_pipe = IterableWrapper(range(3))
         data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe)
         data_loader.shutdown()
+
+    def test_worker_exception_raised(self):
+        dp = IterableWrapper(range(100)).sharding_filter()
+        dp = MakeMistakeDataPipe(dp)
+        for worker_prefetch_cnt in [0, 5, 10]:
+            for num_workers in [1, 4]:
+                rs = MultiProcessingReadingService(num_workers=num_workers, worker_prefetch_cnt=worker_prefetch_cnt)
+                dl = DataLoader2(dp, reading_service=rs)
+                it = iter(dl)
+                for i in range(EXCEPTION_ITERATION_NUM * num_workers):
+                    next(it)
+                with self.assertRaises(communication.iter.WorkerException):
+                    next(it)
 
     def test_dataloader2_state_dict(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
@@ -171,7 +198,6 @@ class DataLoader2Test(TestCase):
             self.assertEqual(list(range(10)), actual)
 
     def test_dataloader2_reset(self) -> None:
-
         test_data_pipe = IterableWrapper(range(10))
         reading_services = [None, TestReadingService(), MultiProcessingReadingService(num_workers=1)]
 
@@ -264,7 +290,6 @@ class DataLoader2ConsistencyTest(TestCase):
     "fork is not supported. Dying (set die_after_fork=0 to override)",
 )
 class TestDataLoader2EventLoop(TestCase):
-
     # TODO: This needs fixing, see issue 624
     # @skipIfNoDill
     # def test_basic_threading(self):
