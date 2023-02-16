@@ -59,6 +59,12 @@ class TerminateRequired(Exception):
     pass
 
 
+class WorkerException(Exception):
+    """
+    Returned by DataPipe when there is a failure/exception from a worker process
+    """
+
+
 class NonBlocking(IterDataPipe):
     not_available_hook = default_not_available_hook
 
@@ -212,6 +218,9 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
                     protocol.response_invalid_state()
                     yield True
                     break
+                except Exception as e:
+                    protocol.response_worker_exception(e)
+                    return
                 protocol.response_next(value)
                 yield True  # Returns control
                 break
@@ -322,6 +331,8 @@ class _IterateQueueDataPipes(IterDataPipe):
                         raise communication.iter.InvalidStateResetRequired
                     if isinstance(response, communication.messages.TerminateResponse):
                         raise communication.iter.TerminateRequired
+                    if isinstance(response, communication.messages.WorkerExceptionResponse):
+                        raise communication.iter.WorkerException(f"Exception from worker {idx}") from response.exception
                     if len(self.res_buffers[idx]) == 0:  # Only request if buffer is empty
                         self.datapipes[idx].protocol.request_next()
                     yield response.value
