@@ -12,7 +12,7 @@ if [[ ${MATRIX_PACKAGE_TYPE} = "conda" ]]; then
         PYTORCH_CONDA_CHANNEL="malfet -c ${PYTORCH_CONDA_CHANNEL}"
     fi
 
-    conda install -y torchdata "-c ${PYTORCH_CONDA_CHANNEL}"
+    conda install -y torchdata -c ${PYTORCH_CONDA_CHANNEL}
     if [[ ${TARGET_OS:-} = "windows" ]]; then
         AWS_ENABLED=0
     fi
