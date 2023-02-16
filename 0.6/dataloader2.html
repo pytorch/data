@@ -1,0 +1,838 @@
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>DataLoader2 &mdash; TorchData 0.6.0 (beta) documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="DistributedReadingService" href="generated/torchdata.dataloader2.DistributedReadingService.html" />
+    <link rel="prev" title="StreamWrapper" href="generated/torchdata.datapipes.utils.StreamWrapper.html" />
+  <!-- Google Analytics -->
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-117752657-2');
+    </script>
+  
+  <!-- End Google Analytics -->
+  
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+  <!-- Preload the theme fonts -->
+
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+
+<!-- Preload the katex fonts -->
+
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size1-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size4-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size2-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size3-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Caligraphic-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css" integrity="sha384-vSIIfh2YWi9wW0r9iZe7RJPrKwp6bG+s9QZMoITbCckVJqGCCRhc+ccxNcdpHuYu" crossorigin="anonymous">
+</head>
+
+<div class="container-fluid header-holder tutorials-header" id="header-holder">
+  <div class="container">
+    <div class="header-container">
+      <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://pytorch.org/get-started">Get Started</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/blog/">Blog</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/tutorials">Tutorials</a>
+          </li>
+
+          <li class="active docs-active">
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="resource-option with-down-orange-arrow">
+                Docs
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/docs/stable/index.html">
+                  <span class="dropdown-title">PyTorch</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/audio/stable/index.html">
+                  <span class="dropdown-title">torchaudio</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/text/stable/index.html">
+                  <span class="dropdown-title">torchtext</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/vision/stable/index.html">
+                  <span class="dropdown-title">torchvision</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torcharrow">
+                  <span class="dropdown-title">torcharrow</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/data">
+                  <span class="dropdown-title">TorchData</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchrec">
+                  <span class="dropdown-title">TorchRec</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/serve/">
+                  <span class="dropdown-title">TorchServe</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchx/">
+                  <span class="dropdown-title">TorchX</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/xla">
+                  <span class="dropdown-title">PyTorch on XLA Devices</span>
+                  <p></p>
+                </a>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="resource-option with-down-arrow">
+                Resources
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/features">
+                  <span class="dropdown-title">About</span>
+                  <p>Learn about PyTorch’s features and capabilities</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/foundation">
+                  <span class="dropdown-title">PyTorch Foundation</span>
+                  <p>Learn about the PyTorch foundation</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/#community-module">
+                  <span class="dropdown-title">Community</span>
+                  <p>Join the PyTorch developer community to contribute, learn, and get your questions answered.</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/community-stories">
+                  <span class="dropdown-title">Community Stories</span>
+                  <p>Learn how our community solves real, everyday machine learning problems with PyTorch.</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources">
+                  <span class="dropdown-title">Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/events">
+                  <span class="dropdown-title">Events</span>
+                  <p>Find events, webinars, and podcasts</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://discuss.pytorch.org/" target="_blank">
+                  <span class="dropdown-title">Forums</span>
+                  <p>A place to discuss PyTorch code, issues, install, research</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/hub">
+                  <span class="dropdown-title">Models (Beta)</span>
+                  <p>Discover, publish, and reuse pre-trained models</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+            <a href="https://github.com/pytorch/pytorch">GitHub</a>
+          </li>
+        </ul>
+      </div>
+
+      <a class="main-menu-open-button" href="#" data-behavior="open-mobile-menu"></a>
+    </div>
+  </div>
+</div>
+
+<body class="pytorch-body">
+
+   
+
+    
+
+    <div class="table-of-contents-link-wrapper">
+      <span>Table of Contents</span>
+      <a href="#" class="toggle-table-of-contents" data-behavior="toggle-table-of-contents"></a>
+    </div>
+
+    <nav data-toggle="wy-nav-shift" class="pytorch-left-menu" id="pytorch-left-menu">
+      <div class="pytorch-side-scroll">
+        <div class="pytorch-menu pytorch-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          <div class="pytorch-left-menu-search">
+            
+    <div class="version">
+      <a href='https://pytorch.org/data/versions.html'>0.6.0 &#x25BC</a>
+    </div>
+    
+
+
+  
+
+
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search Docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          </div>
+
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.html">Map-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.utils.html">Utility Functions</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">DataLoader2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reading_service.html">ReadingService</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="dp_tutorial.html">DataPipe Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dlv2_tutorial.html">DataLoader2 Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/docs">PyTorch</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/audio">torchaudio</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/text">torchtext</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/vision">torchvision</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/elastic/">TorchElastic</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/serve">TorchServe</a></li>
+<li class="toctree-l1"><a class="reference external" href="http://pytorch.org/xla/">PyTorch on XLA Devices</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <div class="pytorch-container">
+      <div class="pytorch-page-level-bar" id="pytorch-page-level-bar">
+        <div class="pytorch-breadcrumbs-wrapper">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="pytorch-breadcrumbs">
+    
+      <li>
+        <a href="index.html">
+          
+            Docs
+          
+        </a> &gt;
+      </li>
+
+        
+      <li>DataLoader2</li>
+    
+    
+      <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="_sources/dataloader2.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+</div>
+        </div>
+
+        <div class="pytorch-shortcuts-wrapper" id="pytorch-shortcuts-wrapper">
+          Shortcuts
+        </div>
+      </div>
+
+      <section data-toggle="wy-nav-shift" id="pytorch-content-wrap" class="pytorch-content-wrap">
+        <div class="pytorch-content-left">
+
+        
+          
+          <div class="rst-content">
+          
+            <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
+             <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
+              
+  <section id="module-torchdata.dataloader2">
+<span id="dataloader2"></span><h1>DataLoader2<a class="headerlink" href="#module-torchdata.dataloader2" title="Permalink to this heading">¶</a></h1>
+<p>A new, light-weight <a class="reference internal" href="#torchdata.dataloader2.DataLoader2" title="torchdata.dataloader2.DataLoader2"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader2</span></code></a> is introduced to decouple the overloaded data-manipulation functionalities from <code class="docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code> to <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> operations. Besides, certain features can only be achieved with <a class="reference internal" href="#torchdata.dataloader2.DataLoader2" title="torchdata.dataloader2.DataLoader2"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader2</span></code></a> like snapshotting and switching backend services to perform high-performant operations.</p>
+<section id="id1">
+<h2>DataLoader2<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.dataloader2.DataLoader2">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.dataloader2.</span></span><span class="sig-name descname"><span class="pre">DataLoader2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datapipe_adapter_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#torchdata.dataloader2.adapter.Adapter" title="torchdata.dataloader2.adapter.Adapter"><span class="pre">Adapter</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#torchdata.dataloader2.adapter.Adapter" title="torchdata.dataloader2.adapter.Adapter"><span class="pre">Adapter</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reading_service</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="reading_service.html#torchdata.dataloader2.ReadingServiceInterface" title="torchdata.dataloader2.reading_service.ReadingServiceInterface"><span class="pre">ReadingServiceInterface</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.dataloader2.DataLoader2" title="Permalink to this definition">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> is used to optimize and execute the given <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph
+based on <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> and <code class="docutils literal notranslate"><span class="pre">Adapter</span></code> functions, with support for</p>
+<ul class="simple">
+<li><p>Dynamic sharding for multiprocess and distributed data loading</p></li>
+<li><p>Multiple backend <code class="docutils literal notranslate"><span class="pre">ReadingServices</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph in-place modification like shuffle control, memory pinning, etc.</p></li>
+<li><p>Snapshot the state of data-preprocessing pipeline (WIP)</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>datapipe</strong> (<code class="docutils literal notranslate"><span class="pre">IterDataPipe</span></code> or <code class="docutils literal notranslate"><span class="pre">MapDataPipe</span></code>) – <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> from which to load the data. A deepcopy of this
+datapipe will be made during initialization, allowing the input to be re-used in a different <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code>
+without sharing states. Input <code class="docutils literal notranslate"><span class="pre">None</span></code> can only be used if <code class="docutils literal notranslate"><span class="pre">load_state_dict</span></code> is called
+right after the creation of the DataLoader.</p></li>
+<li><p><strong>datapipe_adapter_fn</strong> (<code class="docutils literal notranslate"><span class="pre">Iterable[Adapter]</span></code> or <code class="docutils literal notranslate"><span class="pre">Adapter</span></code>, optional) – <code class="docutils literal notranslate"><span class="pre">Adapter</span></code> function(s) that
+will be applied to the DataPipe (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>).</p></li>
+<li><p><strong>reading_service</strong> (<a class="reference internal" href="reading_service.html#torchdata.dataloader2.ReadingServiceInterface" title="torchdata.dataloader2.ReadingServiceInterface"><em>ReadingServiceInterface</em></a><em>, </em><em>optional</em>) – defines how <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> should execute operations over
+the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code>, e.g. multiprocessing/distributed (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>). A deepcopy of this will be
+created during initialization, allowing the ReadingService to be re-used in a different
+<code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> without sharing states.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.dataloader2.DataLoader2.__iter__">
+<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataLoader2Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">T_co</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.dataloader2.DataLoader2.__iter__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a singleton iterator from the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph adapted by <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code>.
+<code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> will be restored if the serialized state is provided to construct
+<code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code>. And, <code class="docutils literal notranslate"><span class="pre">initialize_iteration</span></code> and <code class="docutils literal notranslate"><span class="pre">finalize_iterator</span></code> will be
+invoked at the beginning and end of the iteration correspondingly.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.dataloader2.DataLoader2.from_state">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reading_service</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="reading_service.html#torchdata.dataloader2.CheckpointableReadingServiceInterface" title="torchdata.dataloader2.reading_service.CheckpointableReadingServiceInterface"><span class="pre">CheckpointableReadingServiceInterface</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#torchdata.dataloader2.DataLoader2" title="torchdata.dataloader2.dataloader2.DataLoader2"><span class="pre">DataLoader2</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T_co</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.dataloader2.DataLoader2.from_state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create new <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> with <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph and <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> restored
+from the serialized state.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.dataloader2.DataLoader2.load_state_dict">
+<span class="sig-name descname"><span class="pre">load_state_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#torchdata.dataloader2.DataLoader2.load_state_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>For the existing <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code>, load serialized state to restore <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph
+and reset the internal state of <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.dataloader2.DataLoader2.seed">
+<span class="sig-name descname"><span class="pre">seed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#torchdata.dataloader2.DataLoader2.seed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set random seed for DataLoader2 to control determinism.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>seed</strong> – Random uint64 seed</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.dataloader2.DataLoader2.shutdown">
+<span class="sig-name descname"><span class="pre">shutdown</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#torchdata.dataloader2.DataLoader2.shutdown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shuts down <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> and clean up iterator.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.dataloader2.DataLoader2.state_dict">
+<span class="sig-name descname"><span class="pre">state_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.dataloader2.DataLoader2.state_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a dictionary to represent the state of data-processing pipeline with keys:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">serialized_datapipe</span></code>:Serialized <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> before <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> adaption.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">reading_service_state</span></code>: The state of <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> and adapted <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code>.</p></li>
+</ul>
+</dd></dl>
+
+</dd></dl>
+
+<p>Note:
+<a class="reference internal" href="#torchdata.dataloader2.DataLoader2" title="torchdata.dataloader2.DataLoader2"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader2</span></code></a> doesn’t support <code class="docutils literal notranslate"><span class="pre">torch.utils.data.Dataset</span></code> or <code class="docutils literal notranslate"><span class="pre">torch.utils.data.IterableDataset</span></code>. Please wrap each of them with the corresponding <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> below:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="generated/torchdata.datapipes.map.SequenceWrapper.html#torchdata.datapipes.map.SequenceWrapper" title="torchdata.datapipes.map.SequenceWrapper"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.map.SequenceWrapper</span></code></a>: <code class="docutils literal notranslate"><span class="pre">torch.utils.data.Dataset</span></code></p></li>
+<li><p><a class="reference internal" href="generated/torchdata.datapipes.iter.IterableWrapper.html#torchdata.datapipes.iter.IterableWrapper" title="torchdata.datapipes.iter.IterableWrapper"><code class="xref py py-class docutils literal notranslate"><span class="pre">torchdata.datapipes.iter.IterableWrapper</span></code></a>: <code class="docutils literal notranslate"><span class="pre">torch.utils.data.IterableDataset</span></code></p></li>
+</ul>
+</section>
+<section id="readingservice">
+<h2>ReadingService<a class="headerlink" href="#readingservice" title="Permalink to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> specifies the execution backend for the data-processing graph. There are three types of <code class="docutils literal notranslate"><span class="pre">ReadingServices</span></code> provided in TorchData:</p>
+<table class="autosummary longtable docutils # Necessary for the table generated by autosummary to look decent align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.dataloader2.DistributedReadingService.html#torchdata.dataloader2.DistributedReadingService" title="torchdata.dataloader2.DistributedReadingService"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DistributedReadingService</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DistributedReadingSerivce</span></code> handles distributed sharding on the graph of <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> and guarantee the randomness by sharing the same seed across the distributed processes.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/torchdata.dataloader2.MultiProcessingReadingService.html#torchdata.dataloader2.MultiProcessingReadingService" title="torchdata.dataloader2.MultiProcessingReadingService"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MultiProcessingReadingService</span></code></a></p></td>
+<td><p>Spawns multiple worker processes to load data from the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.dataloader2.SequentialReadingService.html#torchdata.dataloader2.SequentialReadingService" title="torchdata.dataloader2.SequentialReadingService"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SequentialReadingService</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p>Each <code class="docutils literal notranslate"><span class="pre">ReadingServices</span></code> would take the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph and rewrite it to achieve a few features like dynamic sharding, sharing random seeds and snapshoting for multi-/distributed processes. For more detail about those features, please refer to <a class="reference external" href="reading_service.html">the documentation</a>.</p>
+</section>
+<section id="adapter">
+<h2>Adapter<a class="headerlink" href="#adapter" title="Permalink to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">Adapter</span></code> is used to configure, modify and extend the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph in <a class="reference internal" href="#torchdata.dataloader2.DataLoader2" title="torchdata.dataloader2.DataLoader2"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader2</span></code></a>. It allows in-place
+modification or replace the pre-assembled <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph provided by PyTorch domains. For example, <code class="docutils literal notranslate"><span class="pre">Shuffle(False)</span></code> can be
+provided to <a class="reference internal" href="#torchdata.dataloader2.DataLoader2" title="torchdata.dataloader2.DataLoader2"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader2</span></code></a>, which would disable any <code class="docutils literal notranslate"><span class="pre">shuffle</span></code> operations in the <code class="docutils literal notranslate"><span class="pre">DataPipes</span></code> graph.</p>
+<span class="target" id="module-torchdata.dataloader2.adapter"></span><dl class="py class">
+<dt class="sig sig-object py" id="torchdata.dataloader2.adapter.Adapter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.dataloader2.adapter.</span></span><span class="sig-name descname"><span class="pre">Adapter</span></span><a class="headerlink" href="#torchdata.dataloader2.adapter.Adapter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adapter Base Class that follows python Callable protocol.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.dataloader2.adapter.Adapter.__call__">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">__call__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.datapipes.datapipe.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torch.utils.data.datapipes.datapipe.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.dataloader2.adapter.Adapter.__call__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Callable function that either runs in-place modification of
+the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph, or returns a new <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>datapipe</strong> – <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> that needs to be adapted.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Adapted <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> or new <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<p>Here are the list of <a class="reference internal" href="#torchdata.dataloader2.adapter.Adapter" title="torchdata.dataloader2.adapter.Adapter"><code class="xref py py-class docutils literal notranslate"><span class="pre">Adapter</span></code></a> provided by TorchData in <code class="docutils literal notranslate"><span class="pre">torchdata.dataloader2.adapter</span></code>:</p>
+<table class="autosummary longtable docutils # Necessary for the table generated by autosummary to look decent align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.dataloader2.adapter.Shuffle.html#torchdata.dataloader2.adapter.Shuffle" title="torchdata.dataloader2.adapter.Shuffle"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Shuffle</span></code></a></p></td>
+<td><p>Shuffle DataPipes adapter allows control over all existing Shuffler (<code class="docutils literal notranslate"><span class="pre">shuffle</span></code>) DataPipes in the graph.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/torchdata.dataloader2.adapter.CacheTimeout.html#torchdata.dataloader2.adapter.CacheTimeout" title="torchdata.dataloader2.adapter.CacheTimeout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CacheTimeout</span></code></a></p></td>
+<td><p>CacheTimeout DataPipes adapter allows control over timeouts of all existing EndOnDiskCacheHolder (<code class="docutils literal notranslate"><span class="pre">end_caching</span></code>) in the graph.</p></td>
+</tr>
+</tbody>
+</table>
+<p>And, we will provide more <code class="docutils literal notranslate"><span class="pre">Adapters</span></code> to cover data-processing options:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">PinMemory</span></code>: Attach a <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> at the end of the data-processing graph that coverts output data to <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code> in pinned memory.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FullSync</span></code>: Attach a <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> to make sure the data-processing graph synchronized between distributed processes to prevent hanging.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ShardingPolicy</span></code>: Modify sharding policy if <code class="docutils literal notranslate"><span class="pre">sharding_filter</span></code> is presented in the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PrefetchPolicy</span></code>, <code class="docutils literal notranslate"><span class="pre">InvalidateCache</span></code>, etc.</p></li>
+</ul>
+<p>If you have feature requests about the <code class="docutils literal notranslate"><span class="pre">Adapters</span></code> you’d like to be provided, please open a GitHub issue. For specific
+needs, <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> also accepts any custom <code class="docutils literal notranslate"><span class="pre">Adapter</span></code> as long as it inherits from the <code class="docutils literal notranslate"><span class="pre">Adapter</span></code> class.</p>
+</section>
+</section>
+
+
+             </article>
+             
+            </div>
+            <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="generated/torchdata.dataloader2.DistributedReadingService.html" class="btn btn-neutral float-right" title="DistributedReadingService" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
+      
+      
+        <a href="generated/torchdata.datapipes.utils.StreamWrapper.html" class="btn btn-neutral" title="StreamWrapper" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
+  
+
+  
+
+    <hr>
+
+  
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2021 - Present, Torch Contributors.
+
+    </p>
+  </div>
+    
+      <div>
+        Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+      </div>
+     
+
+</footer>
+
+          </div>
+        </div>
+
+        <div class="pytorch-content-right" id="pytorch-content-right">
+          <div class="pytorch-right-menu" id="pytorch-right-menu">
+            <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
+              <ul>
+<li><a class="reference internal" href="#">DataLoader2</a><ul>
+<li><a class="reference internal" href="#id1">DataLoader2</a></li>
+<li><a class="reference internal" href="#readingservice">ReadingService</a></li>
+<li><a class="reference internal" href="#adapter">Adapter</a></li>
+</ul>
+</li>
+</ul>
+
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  
+
+
+  
+
+     
+       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+         <script src="_static/jquery.js"></script>
+         <script src="_static/underscore.js"></script>
+         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+         <script src="_static/doctools.js"></script>
+     
+
+  
+
+  <script type="text/javascript" src="_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="_static/js/vendor/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+  <!-- Begin Footer -->
+
+  <div class="container-fluid docs-tutorials-resources" id="docs-tutorials-resources">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <h2>Docs</h2>
+          <p>Access comprehensive developer documentation for PyTorch</p>
+          <a class="with-right-arrow" href="https://pytorch.org/docs/stable/index.html">View Docs</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Tutorials</h2>
+          <p>Get in-depth tutorials for beginners and advanced developers</p>
+          <a class="with-right-arrow" href="https://pytorch.org/tutorials">View Tutorials</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Resources</h2>
+          <p>Find development resources and get your questions answered</p>
+          <a class="with-right-arrow" href="https://pytorch.org/resources">View Resources</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-logo-wrapper">
+        <a href="https://pytorch.org/" class="footer-logo"></a>
+      </div>
+
+      <div class="footer-links-wrapper">
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/">PyTorch</a></li>
+            <li><a href="https://pytorch.org/get-started">Get Started</a></li>
+            <li><a href="https://pytorch.org/features">Features</a></li>
+            <li><a href="https://pytorch.org/ecosystem">Ecosystem</a></li>
+            <li><a href="https://pytorch.org/blog/">Blog</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md">Contributing</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/resources">Resources</a></li>
+            <li><a href="https://pytorch.org/tutorials">Tutorials</a></li>
+            <li><a href="https://pytorch.org/docs/stable/index.html">Docs</a></li>
+            <li><a href="https://discuss.pytorch.org" target="_blank">Discuss</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/issues" target="_blank">Github Issues</a></li>
+            <li><a href="https://pytorch.org/assets/brand-guidelines/PyTorch-Brand-Guidelines.pdf" target="_blank">Brand Guidelines</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">Stay up to date</li>
+            <li><a href="https://www.facebook.com/pytorch" target="_blank">Facebook</a></li>
+            <li><a href="https://twitter.com/pytorch" target="_blank">Twitter</a></li>
+            <li><a href="https://www.youtube.com/pytorch" target="_blank">YouTube</a></li>
+            <li><a href="https://www.linkedin.com/company/pytorch" target="_blank">LinkedIn</a></li>
+          </ul>  
+          </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">PyTorch Podcasts</li>
+            <li><a href="https://open.spotify.com/show/6UzHKeiy368jKfQMKKvJY5" target="_blank">Spotify</a></li>
+            <li><a href="https://podcasts.apple.com/us/podcast/pytorch-developer-podcast/id1566080008" target="_blank">Apple</a></li>
+            <li><a href="https://www.google.com/podcasts?feed=aHR0cHM6Ly9mZWVkcy5zaW1wbGVjYXN0LmNvbS9PQjVGa0lsOA%3D%3D" target="_blank">Google</a></li>
+            <li><a href="https://music.amazon.com/podcasts/7a4e6f0e-26c2-49e9-a478-41bd244197d0/PyTorch-Developer-Podcast?" target="_blank">Amazon</a></li>
+          </ul>
+         </div>
+        </div>
+        
+        <div class="privacy-policy">
+          <ul>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/terms/" target="_blank">Terms</a></li>
+            <li class="privacy-policy-links">|</li>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/privacy-policy/" target="_blank">Privacy</a></li>
+          </ul>
+        </div>
+        <div class="copyright">
+        <p>© Copyright The Linux Foundation. The PyTorch Foundation is a project of The Linux Foundation.
+          For web site terms of use, trademark policy and other policies applicable to The PyTorch Foundation please see
+          <a href="www.linuxfoundation.org/policies/">www.linuxfoundation.org/policies/</a>. The PyTorch Foundation supports the PyTorch open source
+          project, which has been established as PyTorch Project a Series of LF Projects, LLC. For policies applicable to the PyTorch Project a Series of LF Projects, LLC,
+          please see <a href="www.lfprojects.org/policies/">www.lfprojects.org/policies/</a>.</p>
+      </div>
+     </div>
+
+  </footer>
+
+  <div class="cookie-banner-wrapper">
+  <div class="container">
+    <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
+    <img class="close-button" src="_static/images/pytorch-x.svg">
+  </div>
+</div>
+
+  <!-- End Footer -->
+
+  <!-- Begin Mobile Menu -->
+
+  <div class="mobile-main-menu">
+    <div class="container-fluid">
+      <div class="container">
+        <div class="mobile-main-menu-header-container">
+          <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+          <a class="main-menu-close-button" href="#" data-behavior="close-mobile-menu"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-main-menu-links-container">
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://pytorch.org/get-started">Get Started</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+            
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/blog/">Blog</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/tutorials">Tutorials</a>
+          </li>
+
+          <li class="resources-mobile-menu-title" class="active">
+            Docs
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/docs/stable/index.html">PyTorch</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/audio/stable/index.html">torchaudio</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/text/stable/index.html">torchtext</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/vision/stable/index.html">torchvision</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/torcharrow">torcharrow</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/data">TorchData</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/torchrec">TorchRec</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/serve/">TorchServe</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/torchx/">TorchX</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/xla">PyTorch on XLA Devices</a>
+            </li>
+          </ul>
+
+          <li class="resources-mobile-menu-title">
+            Resources
+          </li>
+            
+           <ul class="resources-mobile-menu-items">
+
+            <li>
+              <a href="https://pytorch.org/features">About</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/foundation">PyTorch Foundation</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/#community-module">Community</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/community-stories">Community Stories</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/resources">Developer Resources</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/events">Events</a>
+            </li>
+
+            <li>
+              <a href="https://discuss.pytorch.org/">Forums</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/hub">Models (Beta)</a>
+            </li>
+          </ul>
+
+          <li>
+            <a href="https://github.com/pytorch/pytorch">Github</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Mobile Menu -->
+
+  <script type="text/javascript" src="_static/js/vendor/anchor.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      mobileMenu.bind();
+      mobileTOC.bind();
+      pytorchAnchors.bind();
+      sideMenus.bind();
+      scrollToAnchor.bind();
+      highlightNavigation.bind();
+      mainMenuDropdown.bind();
+      filterTags.bind();
+
+      // Add class to links that have code blocks, since we cannot create links in code blocks
+      $("article.pytorch-article a span.pre").each(function(e) {
+        $(this).closest("a").addClass("has-code");
+      });
+    })
+  </script>
+</body>
+</html>
