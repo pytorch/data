@@ -6,13 +6,14 @@
 
 import collections
 
-import torch
-
 
 def pin_memory_fn(data, device=None):
-    if hasattr(data, "pin_memory"):
-        return data.pin_memory(device)
-    elif isinstance(data, torch.Tensor):
+    r"""
+    Utility function to move data to pinned memory. If special treatment is needed to move
+    the input data to pinned memory, please attach a ``pin_memory`` method to the expected
+    data class.
+    """
+    if hasattr(data, "pin_memory"):  # Including torch.Tensor
         return data.pin_memory(device)
     elif isinstance(data, (str, bytes)):
         return data
