@@ -17,7 +17,7 @@ if [[ ${MATRIX_PACKAGE_TYPE} = "conda" ]]; then
         AWS_ENABLED=0
     fi
 else
-    pip install "${PYTORCH_PIP_PREFIX}" torchdata --extra-index-url "${PYTORCH_PIP_DOWNLOAD_URL}"
+    pip install ${PYTORCH_PIP_PREFIX:-} torchdata --extra-index-url "${PYTORCH_PIP_DOWNLOAD_URL}"
 fi
 
 case "${AWS_ENABLED}" in
