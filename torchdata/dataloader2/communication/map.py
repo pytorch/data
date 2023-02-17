@@ -83,13 +83,14 @@ def EnsureNonBlockingMapDataPipe(validated_datapipe):
     return validated_datapipe
 
 
-def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, reset_iterator_counter=None):
+def DataPipeBehindQueues(source_datapipe, protocol, name, blocking_request_get=False, reset_iterator_counter=None):
     """
     Indefinitely iterates over req_queue and passing values from source_datapipe to res_queue.
 
     Args:
         source_datapipe: DataPipe
         protocol: ``MapDataPipeQueueProtocolServer`` that contains ``req_queue`` and ``res_queue``
+        name: Process name
         blocking_request_get: determines if ``protocol.get_new_request`` will block
     """
     if not isinstance(protocol, communication.protocol.MapDataPipeQueueProtocolServer):
@@ -123,11 +124,10 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
                 except NotAvailable:
                     yield True
                     continue
-                except IndexError:
-                    # Alternatively, we can just allow the underlying DataPipe to throw an exception?
-                    protocol.response_index_out_of_bound()
-                    yield True
-                    break
+                except Exception:
+                    exc = ExceptionWrapper(where=f"in {name}")
+                    protocol.response_worker_exception(exc)
+                    return
                 protocol.response_item(request.key, value)
                 yield True  # Returns control
                 break

@@ -257,9 +257,9 @@ class RoundRobinDemultiplexerIterDataPipe(IterDataPipe):
             raise ValueError(f"Expected `num_instaces` larger than 0, but {num_instances} is found")
         if num_instances == 1:
             warnings.warn(
-                "The operation of `round_robin_demux` with `num_instances=1` is an no-op and returns the provided `datapipe` directly"
+                "The operation of `round_robin_demux` with `num_instances=1` is an no-op and returns the provided `datapipe` in a list directly"
             )
-            return datapipe
+            return [datapipe]
 
         datapipe = datapipe.enumerate()
         container = _RoundRobinDemultiplexerIterDataPipe(datapipe, num_instances, buffer_size=buffer_size)
