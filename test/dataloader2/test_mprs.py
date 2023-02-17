@@ -10,7 +10,7 @@ import unittest
 from unittest import TestCase
 
 from torch.testing._internal.common_utils import instantiate_parametrized_tests, parametrize
-from torchdata.dataloader2 import DataLoader2, DataLoader2Iterator, PrototypeMultiProcessingReadingService
+from torchdata.dataloader2 import DataLoader2, DataLoader2Iterator, MultiProcessingReadingService
 from torchdata.datapipes.iter import IterableWrapper
 
 
@@ -29,9 +29,9 @@ mp_ctx_parametrize = parametrize("ctx", mp.get_all_start_methods())
 dp_parametrize = parametrize("dp", test_dps)
 
 
-class TestPrototypeMultiProcessingReadingService(TestCase):
+class TestMultiProcessingReadingService(TestCase):
     r"""
-    This tests specific functionalities of PrototypeMultiProcessingReadingService, notably
+    This tests specific functionalities of MultiProcessingReadingService, notably
     `pause`, `resume`, `snapshot`.
     """
 
@@ -40,7 +40,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
 
         # Functional Test: Verifies that this ReadingService will raise error when `pause/resume` is used
         #                  with `num_workers = 0`
-        rs0 = PrototypeMultiProcessingReadingService(
+        rs0 = MultiProcessingReadingService(
             num_workers=0, worker_prefetch_cnt=0, main_prefetch_cnt=0, multiprocessing_context=ctx
         )
         dl0: DataLoader2 = DataLoader2(dp1, reading_service=rs0)
@@ -64,7 +64,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
 
         # Functional Test: Testing various configuration of DataPipe/ReadingService to ensure the pipeline
         #                  properly pauses and resumes
-        rs = PrototypeMultiProcessingReadingService(
+        rs = MultiProcessingReadingService(
             num_workers=n_workers,
             worker_prefetch_cnt=worker_prefetch_cnt,
             main_prefetch_cnt=main_prefetch_cnt,
@@ -93,7 +93,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
     def test_reading_service_pause_stop_yield(self, ctx, dp, n_workers, worker_prefetch_cnt, main_prefetch_cnt) -> None:
 
         # Functional Test: Confirms that `dl` will stop yielding elements after `_pause` is called
-        rs = PrototypeMultiProcessingReadingService(
+        rs = MultiProcessingReadingService(
             num_workers=n_workers,
             worker_prefetch_cnt=worker_prefetch_cnt,
             main_prefetch_cnt=main_prefetch_cnt,
@@ -117,7 +117,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
     @parametrize("n_workers,worker_prefetch_cnt,main_prefetch_cnt", [(1, 0, 0), (1, 0, 2), (2, 0, 0), (2, 2, 2)])
     def test_reading_service_limit(self, dp, n_workers, worker_prefetch_cnt, main_prefetch_cnt) -> None:
 
-        rs = PrototypeMultiProcessingReadingService(
+        rs = MultiProcessingReadingService(
             num_workers=n_workers, worker_prefetch_cnt=worker_prefetch_cnt, main_prefetch_cnt=main_prefetch_cnt
         )
 
@@ -209,10 +209,10 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
     #       those DPs belong to a dispatching process and only do pause if worker_id == 0
     #       There might still be a race condition, need to look into the messages
 
-    # rs1 = PrototypeMultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=0)
-    # rs2 = PrototypeMultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=2)
-    # rs3 = PrototypeMultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=2, main_prefetch_cnt=0)
-    # rs4 = PrototypeMultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=2, main_prefetch_cnt=2)
+    # rs1 = MultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=0)
+    # rs2 = MultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=0, main_prefetch_cnt=2)
+    # rs3 = MultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=2, main_prefetch_cnt=0)
+    # rs4 = MultiProcessingReadingService(num_workers=2, worker_prefetch_cnt=2, main_prefetch_cnt=2)
     # rss = [rs1, rs2, rs3, rs4]
 
     # for n, rs in enumerate(rss):
@@ -284,7 +284,7 @@ class TestPrototypeMultiProcessingReadingService(TestCase):
     #     pass
 
 
-instantiate_parametrized_tests(TestPrototypeMultiProcessingReadingService)
+instantiate_parametrized_tests(TestMultiProcessingReadingService)
 
 
 if __name__ == "__main__":
