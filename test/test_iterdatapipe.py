@@ -14,7 +14,7 @@ from collections import defaultdict
 from typing import Dict
 
 import expecttest
-import torch.utils.data.datapipes.iter
+import torch
 
 import torchdata
 
@@ -42,6 +42,8 @@ from torchdata.datapipes.iter import (
 )
 from torchdata.datapipes.map import MapDataPipe, SequenceWrapper
 
+skipIfNoCUDA = unittest.skipIf(not torch.cuda.is_available(), "CUDA is not available")
+
 
 def test_torchdata_pytorch_consistency() -> None:
     def extract_datapipe_names(module):
@@ -66,6 +68,14 @@ def test_torchdata_pytorch_consistency() -> None:
             "but not under `torchdata.datapipes.iter`:\n"
         )
         raise AssertionError(msg + "\n".join(sorted(missing_datapipes)))
+
+
+def _convert_to_tensor(data):
+    if isinstance(data, dict):
+        return {k: _convert_to_tensor(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [_convert_to_tensor(v) for v in data]
+    return torch.tensor(data)
 
 
 class TestIterDataPipe(expecttest.TestCase):
@@ -1474,6 +1484,38 @@ class TestIterDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "iterator has been invalidated"):
             next(it_train)
         next(it_valid)  # No error, can keep going
+
+    @skipIfNoCUDA
+    def test_pin_memory(self):
+        # Tensor
+        dp = IterableWrapper([(i, i + 1) for i in range(10)]).map(_convert_to_tensor).pin_memory()
+        self.assertTrue(all(d.is_pinned() for d in dp))
+
+        # List of Tensors
+        dp = IterableWrapper([[(i - 1, i), (i, i + 1)] for i in range(10)]).map(_convert_to_tensor).pin_memory()
+        self.assertTrue(all(d0.is_pinned() and d1.is_pinned() for d0, d1 in dp))
+
+        # Dict of Tensors
+        dp = IterableWrapper([{str(i): (i, i + 1)} for i in range(10)]).map(_convert_to_tensor).pin_memory()
+        self.assertTrue(all(v.is_pinned() for d in dp for v in d.values()))
+
+        # Dict of List of Tensors
+        dp = (
+            IterableWrapper([{str(i): [(i - 1, i), (i, i + 1)]} for i in range(10)])
+            .map(_convert_to_tensor)
+            .pin_memory()
+        )
+        self.assertTrue(all(v.is_pinned() for d in dp for batch in d.values() for v in batch))
+
+        # List of Dict of Tensors
+        dp = IterableWrapper([{str(i): (i, i + 1)} for i in range(10)]).map(_convert_to_tensor).batch(2).pin_memory()
+        self.assertTrue(all(v.is_pinned() for batch in dp for d in batch for v in d.values()))
+
+        # List of List of Tensors
+        dp = (
+            IterableWrapper([[(i - 1, i), (i, i + 1)] for i in range(10)]).map(_convert_to_tensor).batch(2).pin_memory()
+        )
+        self.assertTrue(all(d0.is_pinned() and d1.is_pinned() for batch in dp for d0, d1 in batch))
 
 
 if __name__ == "__main__":
