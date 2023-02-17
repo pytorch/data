@@ -108,7 +108,10 @@ from torchdata.datapipes.iter.util.plain_text_reader import (
     CSVParserIterDataPipe as CSVParser,
     LineReaderIterDataPipe as LineReader,
 )
-from torchdata.datapipes.iter.util.prefetcher import PrefetcherIterDataPipe as Prefetcher
+from torchdata.datapipes.iter.util.prefetcher import (
+    PinMemoryIterDataPipe as PinMemory,
+    PrefetcherIterDataPipe as Prefetcher,
+)
 from torchdata.datapipes.iter.util.randomsplitter import RandomSplitterIterDataPipe as RandomSplitter
 from torchdata.datapipes.iter.util.rararchiveloader import RarArchiveLoaderIterDataPipe as RarArchiveLoader
 from torchdata.datapipes.iter.util.rows2columnar import Rows2ColumnarIterDataPipe as Rows2Columnar
@@ -187,6 +190,7 @@ __all__ = [
     "OnlineReader",
     "ParagraphAggregator",
     "ParquetDataFrameLoader",
+    "PinMemory",
     "Prefetcher",
     "RandomSplitter",
     "RarArchiveLoader",
