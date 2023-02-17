@@ -14,7 +14,7 @@ import torch
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
-from torchdata.utils import pin_memory_fn
+from torchdata.datapipes.utils import pin_memory_fn
 
 PRODUCER_SLEEP_INTERVAL = 0.0001  # Interval between buffer fulfillment checks
 CONSUMER_SLEEP_INTERVAL = 0.0001  # Interval between checking items availability in buffer
