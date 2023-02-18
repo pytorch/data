@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>TorchData &mdash; TorchData main documentation</title>
+  <title>pin_memory_fn &mdash; TorchData main documentation</title>
   
 
   
@@ -26,15 +26,16 @@
 
   
 
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
-  <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
-    <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Iterable-style DataPipes" href="torchdata.datapipes.iter.html" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/graphviz.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="StreamWrapper" href="torchdata.datapipes.utils.StreamWrapper.html" />
+    <link rel="prev" title="to_graph" href="torchdata.datapipes.utils.to_graph.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -50,16 +51,16 @@
   
 
   
-  <script src="_static/js/modernizr.min.js"></script>
+  <script src="../_static/js/modernizr.min.js"></script>
 
   <!-- Preload the theme fonts -->
 
-<link rel="preload" href="_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
 
 <!-- Preload the katex fonts -->
 
@@ -229,7 +230,7 @@
 
 
 <div role="search">
-  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search Docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
@@ -245,18 +246,18 @@
             
             
               <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.html">Map-style DataPipes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.utils.html">Utility Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dataloader2.html">DataLoader2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reading_service.html">ReadingService</a></li>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.map.html">Map-style DataPipes</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../torchdata.datapipes.utils.html">Utility Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataloader2.html">DataLoader2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reading_service.html">ReadingService</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="dp_tutorial.html">DataPipe Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dlv2_tutorial.html">DataLoader2 Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dp_tutorial.html">DataPipe Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dlv2_tutorial.html">DataLoader2 Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
 <ul>
@@ -299,7 +300,7 @@
   <ul class="pytorch-breadcrumbs">
     
       <li>
-        <a href="#">
+        <a href="../index.html">
           
             Docs
           
@@ -307,13 +308,15 @@
       </li>
 
         
-      <li>TorchData</li>
+          <li><a href="../torchdata.datapipes.utils.html">Utility Functions</a> &gt;</li>
+        
+      <li>pin_memory_fn</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="_sources/index.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/generated/torchdata.datapipes.utils.pin_memory_fn.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -339,117 +342,16 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="torchdata">
-<h1>TorchData<a class="headerlink" href="#torchdata" title="Permalink to this heading">¶</a></h1>
-<p>This library is part of the <a class="reference external" href="http://pytorch.org/">PyTorch</a> project. PyTorch is an open source
-machine learning framework.</p>
-<p><code class="xref py py-mod docutils literal notranslate"><span class="pre">torchdata</span></code> is a Beta library of common modular data loading primitives for
-easily constructing flexible and performant data pipelines. And, there are
-a few features still in prototype stage.</p>
-<p>Features described in this documentation are classified by release status:</p>
-<blockquote>
-<div><p><em>Stable:</em>  These features will be maintained long-term and there should generally
-be no major performance limitations or gaps in documentation.
-We also expect to maintain backwards compatibility (although
-breaking changes can happen and notice will be given one release ahead
-of time).</p>
-<p><em>Beta:</em>  Features are tagged as Beta because the API may change based on
-user feedback, because the performance needs to improve, or because
-coverage across operators is not yet complete. For Beta features, we are
-committing to seeing the feature through to the Stable classification.
-We are not, however, committing to backwards compatibility.</p>
-<p><em>Prototype:</em>  These features are typically not available as part of
-binary distributions like PyPI or Conda, except sometimes behind run-time
-flags, and are at an early stage for feedback and testing.</p>
-</div></blockquote>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.html">Iterable-style DataPipes</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.html#archive-datapipes">Archive DataPipes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.html#augmenting-datapipes">Augmenting DataPipes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.html#combinatorial-datapipes">Combinatorial DataPipes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.html#combining-splitting-datapipes">Combining/Splitting DataPipes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.html#grouping-datapipes">Grouping DataPipes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.html#io-datapipes">IO DataPipes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.html#mapping-datapipes">Mapping DataPipes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.html#other-datapipes">Other DataPipes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.html#selecting-datapipes">Selecting DataPipes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.iter.html#text-datapipes">Text DataPipes</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.html">Map-style DataPipes</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.map.html#list-of-mapdatapipes">List of MapDataPipes</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.utils.html">Utility Functions</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.utils.html#datapipe-graph-visualization">DataPipe Graph Visualization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.utils.html#commond-utility-functions">Commond Utility Functions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.utils.html#file-object-and-stream-utility">File Object and Stream Utility</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.utils.html#dataloader">DataLoader</a></li>
-<li class="toctree-l2"><a class="reference internal" href="torchdata.datapipes.utils.html#sampler">Sampler</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="dataloader2.html">DataLoader2</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="dataloader2.html#id1">DataLoader2</a></li>
-<li class="toctree-l2"><a class="reference internal" href="dataloader2.html#readingservice">ReadingService</a></li>
-<li class="toctree-l2"><a class="reference internal" href="dataloader2.html#adapter">Adapter</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="reading_service.html">ReadingService</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="reading_service.html#features">Features</a></li>
-<li class="toctree-l2"><a class="reference internal" href="reading_service.html#module-torchdata.dataloader2">Extend ReadingService</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="dp_tutorial.html">DataPipe Tutorial</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="dp_tutorial.html#using-datapipes">Using DataPipes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="dp_tutorial.html#working-with-dataloader">Working with DataLoader</a></li>
-<li class="toctree-l2"><a class="reference internal" href="dp_tutorial.html#implementing-a-custom-datapipe">Implementing a Custom DataPipe</a></li>
-<li class="toctree-l2"><a class="reference internal" href="dp_tutorial.html#working-with-cloud-storage-providers">Working with Cloud Storage Providers</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="dlv2_tutorial.html">DataLoader2 Tutorial</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="dlv2_tutorial.html#datapipe">DataPipe</a></li>
-<li class="toctree-l2"><a class="reference internal" href="dlv2_tutorial.html#multiprocessing">Multiprocessing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="dlv2_tutorial.html#distributed">Distributed</a></li>
-<li class="toctree-l2"><a class="reference internal" href="dlv2_tutorial.html#multiprocessing-distributed">Multiprocessing + Distributed</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="examples.html#audio">Audio</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples.html#text">Text</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples.html#vision">Vision</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples.html#recommender-system">Recommender System</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples.html#graphs-meshes-and-point-clouds">Graphs, Meshes and Point Clouds</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples.html#timeseries">Timeseries</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples.html#using-aistore">Using AIStore</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/docs">PyTorch</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/audio">torchaudio</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/text">torchtext</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/vision">torchvision</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/elastic/">TorchElastic</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/serve">TorchServe</a></li>
-<li class="toctree-l1"><a class="reference external" href="http://pytorch.org/xla/">PyTorch on XLA Devices</a></li>
-</ul>
-</div>
-<section id="indices">
-<h2>Indices<a class="headerlink" href="#indices" title="Permalink to this heading">¶</a></h2>
-<ul class="simple">
-<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
-</ul>
-</section>
+  <section id="pin-memory-fn">
+<h1>pin_memory_fn<a class="headerlink" href="#pin-memory-fn" title="Permalink to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="torchdata.datapipes.utils.pin_memory_fn">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.utils.</span></span><span class="sig-name descname"><span class="pre">pin_memory_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.utils.pin_memory_fn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility function to move data to pinned memory. If special treatment is needed to move
+the input data to pinned memory, please attach a <code class="docutils literal notranslate"><span class="pre">pin_memory</span></code> method to the expected
+data class.</p>
+</dd></dl>
+
 </section>
 
 
@@ -460,8 +362,10 @@ flags, and are at an early stage for feedback and testing.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="torchdata.datapipes.iter.html" class="btn btn-neutral float-right" title="Iterable-style DataPipes" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.datapipes.utils.StreamWrapper.html" class="btn btn-neutral float-right" title="StreamWrapper" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
+      
+        <a href="torchdata.datapipes.utils.to_graph.html" class="btn btn-neutral" title="to_graph" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -493,10 +397,7 @@ flags, and are at an early stage for feedback and testing.</p>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">TorchData</a><ul>
-<li><a class="reference internal" href="#indices">Indices</a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#">pin_memory_fn</a></li>
 </ul>
 
             </div>
@@ -511,20 +412,20 @@ flags, and are at an early stage for feedback and testing.</p>
   
 
      
-       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-         <script src="_static/jquery.js"></script>
-         <script src="_static/underscore.js"></script>
-         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-         <script src="_static/doctools.js"></script>
+       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+         <script src="../_static/jquery.js"></script>
+         <script src="../_static/underscore.js"></script>
+         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+         <script src="../_static/doctools.js"></script>
      
 
   
 
-  <script type="text/javascript" src="_static/js/vendor/popper.min.js"></script>
-  <script type="text/javascript" src="_static/js/vendor/bootstrap.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/bootstrap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
-  <script type="text/javascript" src="_static/js/theme.js"></script>
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
 
   <script type="text/javascript">
       jQuery(function () {
@@ -629,7 +530,7 @@ flags, and are at an early stage for feedback and testing.</p>
   <div class="cookie-banner-wrapper">
   <div class="container">
     <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
-    <img class="close-button" src="_static/images/pytorch-x.svg">
+    <img class="close-button" src="../_static/images/pytorch-x.svg">
   </div>
 </div>
 
@@ -765,7 +666,7 @@ flags, and are at an early stage for feedback and testing.</p>
 
   <!-- End Mobile Menu -->
 
-  <script type="text/javascript" src="_static/js/vendor/anchor.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/anchor.min.js"></script>
 
   <script type="text/javascript">
     $(document).ready(function() {
