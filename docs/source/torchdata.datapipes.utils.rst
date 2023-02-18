@@ -15,6 +15,17 @@ DataPipe Graph Visualization
 
     to_graph
 
+Commond Utility Functions
+--------------------------------------
+.. currentmodule:: torchdata.datapipes.utils
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated/
+    :template: function.rst
+
+    pin_memory_fn
+
 
 File Object and Stream Utility
 -------------------------------------
