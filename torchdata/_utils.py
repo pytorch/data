@@ -8,6 +8,13 @@ import sys
 import traceback
 
 
+class KeyErrorMessage(str):
+    r"""str subclass that returns itself in repr"""
+
+    def __repr__(self):
+        return self
+
+
 class ExceptionWrapper:
     r"""
     Wraps an exception with traceback to communicate across threads/processes

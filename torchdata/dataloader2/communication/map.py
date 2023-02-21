@@ -8,6 +8,7 @@ import time
 import types
 
 from torch.utils.data import MapDataPipe
+from torchdata._utils import ExceptionWrapper
 from torchdata.dataloader2 import communication
 
 DEFAULT_NON_BLOCKING_SLEEP = 0.001
