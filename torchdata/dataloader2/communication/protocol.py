@@ -152,6 +152,12 @@ class MapDataPipeQueueProtocolServer(ProtocolServer):
         self.response_queue.put(communication.messages.LenResponse(size))
         self._req_received = None
 
+    def response_index_out_of_bound(self):
+        if not self.have_pending_request():
+            raise Exception("Attempting to reply with pending request")
+        self.response_queue.put(communication.messages.StopIterationResponse())
+        self._req_received = None
+
 
 class MapDataPipeQueueProtocolClient(ProtocolClient):
     def request_len(self):

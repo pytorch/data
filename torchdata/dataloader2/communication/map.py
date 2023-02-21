@@ -125,10 +125,15 @@ def DataPipeBehindQueues(source_datapipe, protocol, name, blocking_request_get=F
                 except NotAvailable:
                     yield True
                     continue
+                except IndexError:
+                    # Alternatively, we can just allow the underlying DataPipe to throw an exception?
+                    protocol.response_index_out_of_bound()
+                    yield True
+                    break
                 except Exception:
                     exc = ExceptionWrapper(where=f"in {name}")
                     protocol.response_worker_exception(exc)
-                    return
+                    break
                 protocol.response_item(request.key, value)
                 yield True  # Returns control
                 break
@@ -161,6 +166,9 @@ class QueueWrapperForMap(NonBlockingMap):
         if isinstance(response, communication.messages.StopIterationResponse):
             self._stop_iteration = True
             raise IndexError(f"Index {index} is out of bound.")
+        if isinstance(response, communication.messages.WorkerExceptionResponse):
+            self._stop_iteration = True
+            response.exc.reraise()
         return response.key, response.value
 
     def nonblocking_len(self):
