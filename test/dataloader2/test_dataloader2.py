@@ -298,7 +298,7 @@ class TestDataLoader2EventLoop(TestCase):
         numbers_dp = SequenceWrapper(it)
         (process, req_queue, res_queue, _thread_local_datapipe) = communication.eventloop.CreateThreadForDataPipeline(
             numbers_dp,
-            name="worker thread",
+            thread_name="worker thread",
         )
 
         process.start()

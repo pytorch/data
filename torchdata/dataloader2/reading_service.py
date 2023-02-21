@@ -244,7 +244,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             round_robin_dps = dispatching_dp.round_robin_demux(num_instances=self.num_workers)
             # TODO(ejguan): Benchmark if we need to prefetch in dispatching process
             process, req_queues, res_queues = communication.eventloop.CreateProcessForMultipleDataPipelines(
-                ctx, round_robin_dps, name="dispatching process"
+                ctx, round_robin_dps, process_name="dispatching process"
             )
             assert len(req_queues) == self.num_workers and len(res_queues) == self.num_workers
             process.daemon = True
@@ -282,7 +282,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             (process, req_queue, res_queue) = communication.eventloop.CreateProcessForDataPipeline(
                 ctx,
                 replicable_dp,
-                name=f"worker process {worker_id}",
+                process_name=f"worker process {worker_id}",
                 call_on_process_init=call_on_process_init,
             )
             process.daemon = True

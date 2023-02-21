@@ -61,7 +61,7 @@ class _ResetCounter:
             self.cnt = 0
 
 
-def MultipleDataPipesToQueuesLoop(source_datapipes, req_queues, res_queues, name, call_on_process_init=None):
+def MultipleDataPipesToQueuesLoop(source_datapipes, req_queues, res_queues, process_name, call_on_process_init=None):
     r"""
     Set the appropriate pipes and protocol server type, and create a loop over multiple datapipes
     with the protocol server in a non-blocking manner.
@@ -85,7 +85,7 @@ def MultipleDataPipesToQueuesLoop(source_datapipes, req_queues, res_queues, name
                 source_datapipe,
                 req_queue,
                 res_queue,
-                name,
+                process_name,
                 blocking_request_get=False,
                 reset_iterator_counter=reset_iterator_counter,
             )
@@ -100,7 +100,7 @@ def MultipleDataPipesToQueuesLoop(source_datapipes, req_queues, res_queues, name
         time.sleep(0)
 
 
-def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, name, call_on_process_init=None):
+def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, process_name, call_on_process_init=None):
     r"""
     Initialize with the given init function, set the appropriate pipe and protocol server type, and
     create a loop with the protocol server.
@@ -113,7 +113,7 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, name, call_on_pr
 
     torch.set_num_threads(1)
 
-    loop = _create_datapipe_queue_loop(source_datapipe, req_queue, res_queue, name, blocking_request_get=True)
+    loop = _create_datapipe_queue_loop(source_datapipe, req_queue, res_queue, process_name, blocking_request_get=True)
 
     for _ in loop:
         pass
@@ -123,7 +123,7 @@ def _create_datapipe_queue_loop(
     source_datapipe,
     req_queue,
     res_queue,
-    name,
+    process_name,
     blocking_request_get=True,
     reset_iterator_counter=None,
 ):
@@ -139,13 +139,13 @@ def _create_datapipe_queue_loop(
     return pipe_type.DataPipeBehindQueues(
         source_datapipe,
         protocol_type(req_queue, res_queue),
-        name=name,
+        process_name=process_name,
         blocking_request_get=blocking_request_get,
         reset_iterator_counter=reset_iterator_counter,
     )
 
 
-def CreateProcessForDataPipeline(multiprocessing_ctx, datapipe, name, call_on_process_init=None):
+def CreateProcessForDataPipeline(multiprocessing_ctx, datapipe, process_name, call_on_process_init=None):
     r"""
     Given a DataPipe, creates a new process with ``DataPipeToQueuesLoop`` as target,
     and returns ``(process, req_queue, res_queue)``.
@@ -153,12 +153,12 @@ def CreateProcessForDataPipeline(multiprocessing_ctx, datapipe, name, call_on_pr
     req_queue = multiprocessing_ctx.Queue()
     res_queue = multiprocessing_ctx.Queue()
     process = multiprocessing_ctx.Process(
-        target=DataPipeToQueuesLoop, args=(datapipe, req_queue, res_queue, name, call_on_process_init)
+        target=DataPipeToQueuesLoop, args=(datapipe, req_queue, res_queue, process_name, call_on_process_init)
     )
     return process, req_queue, res_queue
 
 
-def CreateThreadForDataPipeline(datapipe, name):
+def CreateThreadForDataPipeline(datapipe, thread_name):
     r"""
     Given a DataPipe, creates a copy of the DataPipe, starts a new Thread with ``DataPipeToQueuesLoop`` as target,
     and returns ``(process, req_queue, res_queue, new_copied_datapipe)``.
@@ -179,12 +179,12 @@ def CreateThreadForDataPipeline(datapipe, name):
             raise Exception("Unable to pickle DataPipe to make thread local copy (consider installing `dill`)", pe)
 
     process = threading.Thread(
-        target=DataPipeToQueuesLoop, args=(new_datapipe, req_queue, res_queue, name), daemon=True
+        target=DataPipeToQueuesLoop, args=(new_datapipe, req_queue, res_queue, thread_name), daemon=True
     )
     return process, req_queue, res_queue, new_datapipe
 
 
-def CreateProcessForMultipleDataPipelines(multiprocessing_ctx, datapipes, name):
+def CreateProcessForMultipleDataPipelines(multiprocessing_ctx, datapipes, process_name):
     r"""
     Given a DataPipe, creates a new process with ``MultipleDataPipesToQueuesLoop`` as target,
     and returns ``(process, [req_queue_0, ...], [res_queue_0, ...])``.
@@ -196,6 +196,6 @@ def CreateProcessForMultipleDataPipelines(multiprocessing_ctx, datapipes, name):
         res_queues.append(multiprocessing_ctx.Queue())
 
     process = multiprocessing_ctx.Process(
-        target=MultipleDataPipesToQueuesLoop, args=(datapipes, req_queues, res_queues, name)
+        target=MultipleDataPipesToQueuesLoop, args=(datapipes, req_queues, res_queues, process_name)
     )
     return process, req_queues, res_queues

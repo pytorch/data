@@ -84,14 +84,16 @@ def EnsureNonBlockingMapDataPipe(validated_datapipe):
     return validated_datapipe
 
 
-def DataPipeBehindQueues(source_datapipe, protocol, name, blocking_request_get=False, reset_iterator_counter=None):
+def DataPipeBehindQueues(
+    source_datapipe, protocol, process_name, blocking_request_get=False, reset_iterator_counter=None
+):
     """
     Indefinitely iterates over req_queue and passing values from source_datapipe to res_queue.
 
     Args:
         source_datapipe: DataPipe
         protocol: ``MapDataPipeQueueProtocolServer`` that contains ``req_queue`` and ``res_queue``
-        name: Process name
+        process_name: Process name
         blocking_request_get: determines if ``protocol.get_new_request`` will block
     """
     if not isinstance(protocol, communication.protocol.MapDataPipeQueueProtocolServer):
@@ -131,7 +133,7 @@ def DataPipeBehindQueues(source_datapipe, protocol, name, blocking_request_get=F
                     yield True
                     break
                 except Exception:
-                    exc = ExceptionWrapper(where=f"in {name}")
+                    exc = ExceptionWrapper(where=f"in {process_name}")
                     protocol.response_worker_exception(exc)
                     break
                 protocol.response_item(request.key, value)
