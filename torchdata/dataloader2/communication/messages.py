@@ -103,6 +103,17 @@ class StopIterationResponse(Response):
     pass
 
 
+class GetStateRequest(Request):
+    pass
+
+
+class GetStateResponse(Request):
+    __slots__ = "value"
+
+    def __init__(self, value):
+        self.value = value
+
+
 class InvalidStateResponse(Response):
     """
     Returned by DataPipe when it is expecting to get reset request,

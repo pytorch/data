@@ -64,6 +64,13 @@ class ProtocolClient(Protocol):
         self.request_queue.put(request)
         self.request_sent(request)
 
+    def request_state(self):
+        if not self.can_take_request():
+            raise Exception("Can not request state while we are still waiting response for previous request")
+        request = communication.messages.GetStateRequest()
+        self.request_queue.put(request)
+        self.request_sent(request)
+
 
 class ProtocolServer(Protocol):
     """
@@ -130,6 +137,12 @@ class ProtocolServer(Protocol):
             raise Exception("Replaying with `resume` status to other type of message")
         self._paused = False
         self.response_queue.put(communication.messages.ResumeResponse())
+        self._req_received = None
+
+    def response_state(self, value):
+        if not self.have_pending_request():
+            raise Exception("Attempting to reply with pending request")
+        self.response_queue.put(communication.messages.GetStateResponse(value))
         self._req_received = None
 
     def response_worker_exception(self, exception):
@@ -203,6 +216,17 @@ class MapDataPipeQueueProtocolClient(ProtocolClient):
         self.request_served(response)
         # if not isinstance(response, communication.messages.GetItemResponse):
         #     raise Exception('Invalid response received')
+        return response
+
+    def get_response_state(self, block=False, timeout=None):
+        if not self.waiting_for_response():
+            raise Exception("Can not expect any response without submitted request")
+        try:
+            response = self.response_queue.get(block=block, timeout=timeout)
+        except EmptyException:
+            raise EmptyQueue("queue is empty")
+        self.request_served(response)
+
         return response
 
 
@@ -310,4 +334,15 @@ class IterDataPipeQueueProtocolClient(ProtocolClient):
         self.request_served(response)
 
         # TODO(629): Add possible response types validation here
+        return response
+
+    def get_response_state(self, block=False, timeout=None):
+        if not self.waiting_for_response():
+            raise Exception("Can not expect any response without submitted request")
+        try:
+            response = self.response_queue.get(block=block, timeout=timeout)
+        except EmptyException:
+            raise EmptyQueue("queue is empty")
+        self.request_served(response)
+
         return response
