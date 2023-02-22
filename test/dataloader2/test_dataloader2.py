@@ -81,18 +81,6 @@ class _ReadingServiceWrapper:
         return 1
 
 
-class MakeMistakeDataPipe(IterDataPipe):
-    def __init__(self, source_datapipe, exc_iteration=EXCEPTION_ITERATION_NUM):
-        self.source_datapipe = source_datapipe
-        self.exc_iteration = exc_iteration
-
-    def __iter__(self):
-        for i, x in enumerate(self.source_datapipe):
-            if i == self.exc_iteration:
-                raise Exception("oops")
-            yield x
-
-
 class TestReadingService(ReadingServiceInterface):
     def initialize(self, dp: DataPipe) -> DataPipe:
         return _ReadingServiceWrapper(dp)  # type: ignore[return-value]
@@ -112,19 +100,6 @@ class DataLoader2Test(TestCase):
         test_data_pipe = IterableWrapper(range(3))
         data_loader: DataLoader2 = DataLoader2(datapipe=test_data_pipe)
         data_loader.shutdown()
-
-    def test_worker_exception_raised(self):
-        dp = IterableWrapper(range(100)).sharding_filter()
-        dp = MakeMistakeDataPipe(dp)
-        for worker_prefetch_cnt in [0, 5, 10]:
-            for num_workers in [1, 4]:
-                rs = MultiProcessingReadingService(num_workers=num_workers, worker_prefetch_cnt=worker_prefetch_cnt)
-                dl = DataLoader2(dp, reading_service=rs)
-                it = iter(dl)
-                for i in range(EXCEPTION_ITERATION_NUM * num_workers):
-                    next(it)
-                with self.assertRaises(communication.iter.WorkerException):
-                    next(it)
 
     def test_dataloader2_state_dict(self) -> None:
         test_data_pipe = IterableWrapper(range(3))
@@ -322,7 +297,8 @@ class TestDataLoader2EventLoop(TestCase):
         it = list(range(input_len))
         numbers_dp = SequenceWrapper(it)
         (process, req_queue, res_queue, _thread_local_datapipe) = communication.eventloop.CreateThreadForDataPipeline(
-            numbers_dp
+            numbers_dp,
+            thread_name="worker thread",
         )
 
         process.start()
@@ -363,6 +339,22 @@ class NonReplicableDataPipe(IterDataPipe):
 
     def is_replicable(self):
         return False
+
+
+class _CustomException(Exception):
+    pass
+
+
+class MakeMistakeDataPipe(IterDataPipe):
+    def __init__(self, source_datapipe, exc_iteration=EXCEPTION_ITERATION_NUM):
+        self.source_datapipe = source_datapipe
+        self.exc_iteration = exc_iteration
+
+    def __iter__(self):
+        for i, x in enumerate(self.source_datapipe):
+            if i == self.exc_iteration:
+                raise _CustomException("oops")
+            yield x
 
 
 class MultiProcessingReadingServiceTest(TestCase):
@@ -627,6 +619,42 @@ class MultiProcessingReadingServiceTest(TestCase):
 
         torch.manual_seed(321)
         self.assertNotEqual(res, list(dl) + list(dl))
+
+    @parametrize("num_workers", [1, 3])
+    @parametrize("worker_prefetch_cnt", [0, 5, 10])
+    def test_worker_exception_raised(self, num_workers, worker_prefetch_cnt):
+        dp = IterableWrapper(range(100)).sharding_filter()
+        dp = MakeMistakeDataPipe(dp)
+        rs = MultiProcessingReadingService(num_workers=num_workers, worker_prefetch_cnt=worker_prefetch_cnt)
+        dl = DataLoader2(dp, reading_service=rs)
+        it = iter(dl)
+        for _ in range(EXCEPTION_ITERATION_NUM * num_workers):
+            next(it)
+        with self.assertRaises(_CustomException) as cm:
+            next(it)
+        exc_msg = str(cm.exception)
+        self.assertTrue("Caught _CustomException in worker process 0" in exc_msg)
+        self.assertTrue("Original Traceback" in exc_msg)
+        self.assertTrue("_CustomException: oops" in exc_msg)
+
+    @parametrize("num_workers", [1, 3])
+    @parametrize("worker_prefetch_cnt", [0, 5, 10])
+    def test_dispatching_exception_raised(self, num_workers, worker_prefetch_cnt):
+        dp = IterableWrapper(range(100))
+        dp = MakeMistakeDataPipe(dp)
+        dp = dp.sharding_round_robin_dispatch(SHARDING_PRIORITIES.MULTIPROCESSING)
+        dp = dp.map(_x_mult_2)
+        rs = MultiProcessingReadingService(num_workers=num_workers, worker_prefetch_cnt=worker_prefetch_cnt)
+        dl = DataLoader2(dp, reading_service=rs)
+        it = iter(dl)
+        for _ in range(EXCEPTION_ITERATION_NUM):
+            next(it)
+        with self.assertRaises(_CustomException) as cm:
+            next(it)
+        exc_msg = str(cm.exception)
+        self.assertTrue("Caught _CustomException in dispatching process" in exc_msg)
+        self.assertTrue("Original Traceback" in exc_msg)
+        self.assertTrue("_CustomException: oops" in exc_msg)
 
 
 TEST_MASTER_ADDR = "127.0.0.1"
