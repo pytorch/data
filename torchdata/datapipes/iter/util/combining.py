@@ -175,7 +175,7 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
         map_datapipe: MapDataPipe that takes a key from ``key_fn``, and returns an item
         key_fn: Function that maps each item from ``source_iterdatapipe`` to a key that exists in ``map_datapipe``
         keep_key: Option to yield the matching key along with the items in a tuple,
-            resulting in `(key, merge_fn(item1, item2))`.
+            resulting in ``(key, merge_fn(item1, item2))``.
         merge_fn: Function that combines the item from ``source_iterdatapipe`` and the matching item
             from ``map_datapipe``, by default a tuple is created
 
