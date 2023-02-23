@@ -174,6 +174,8 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
             from ``map_datapipe``
         map_datapipe: MapDataPipe that takes a key from ``key_fn``, and returns an item
         key_fn: Function that maps each item from ``source_iterdatapipe`` to a key that exists in ``map_datapipe``
+        keep_key: Option to yield the matching key along with the items in a tuple,
+            resulting in `(key, merge_fn(item1, item2))`.
         merge_fn: Function that combines the item from ``source_iterdatapipe`` and the matching item
             from ``map_datapipe``, by default a tuple is created
 
@@ -196,6 +198,7 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
         map_datapipe: MapDataPipe,
         key_fn: Callable,
         merge_fn: Optional[Callable] = None,
+        keep_key: bool = False,
     ):
         if not isinstance(map_datapipe, MapDataPipe):
             raise TypeError(f"map_datapipe must be a MapDataPipe, but its type is {type(map_datapipe)} instead.")
@@ -206,6 +209,7 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
         if merge_fn is not None:
             _check_unpickable_fn(merge_fn)
         self.merge_fn: Optional[Callable] = merge_fn
+        self.keep_key = keep_key
 
     def __iter__(self) -> Iterator:
         for item in self.source_iterdatapipe:
@@ -214,7 +218,11 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
                 map_item = self.map_datapipe[key]
             except (KeyError, IndexError):
                 raise KeyError(f"key_fn maps {item} to {key}, which is not a valid key in the given MapDataPipe.")
-            yield self.merge_fn(item, map_item) if self.merge_fn else (item, map_item)
+            res = self.merge_fn(item, map_item) if self.merge_fn else (item, map_item)
+            if self.keep_key:
+                yield key, res
+            else:
+                yield res
 
     def __len__(self) -> int:
         return len(self.source_iterdatapipe)
