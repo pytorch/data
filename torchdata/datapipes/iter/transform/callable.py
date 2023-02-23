@@ -139,9 +139,9 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
         [1, 2, 3, 4, 5, 6]
     """
     datapipe: IterDataPipe
-    fn: Callable
+    fn: Optional[Callable]
 
-    def __init__(self, datapipe: IterDataPipe, fn: Callable = None, input_col=None) -> None:
+    def __init__(self, datapipe: IterDataPipe, fn: Optional[Callable] = None, input_col=None) -> None:
         self.datapipe = datapipe
 
         if fn is None:
@@ -153,12 +153,12 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
 
     def _apply_fn(self, data):
         if self.input_col is None:
-            return self.fn(data)
+            return self.fn(data)  # type: ignore[misc]
         elif isinstance(self.input_col, (list, tuple)):
             args = tuple(data[col] for col in self.input_col)
-            return self.fn(*args)
+            return self.fn(*args)  # type: ignore[misc]
         else:
-            return self.fn(data[self.input_col])
+            return self.fn(data[self.input_col])  # type: ignore[misc]
 
     def __iter__(self) -> Iterator[T_co]:
         for d in self.datapipe:
