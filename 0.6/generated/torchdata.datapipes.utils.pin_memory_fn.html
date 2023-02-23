@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Utility Functions &mdash; TorchData 0.6.0 (beta) documentation</title>
+  <title>pin_memory_fn &mdash; TorchData 0.6.0 (beta) documentation</title>
   
 
   
@@ -26,16 +26,16 @@
 
   
 
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
-  <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
-    <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="to_graph" href="generated/torchdata.datapipes.utils.to_graph.html" />
-    <link rel="prev" title="Zipper" href="generated/torchdata.datapipes.map.Zipper.html" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/graphviz.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="StreamWrapper" href="torchdata.datapipes.utils.StreamWrapper.html" />
+    <link rel="prev" title="to_graph" href="torchdata.datapipes.utils.to_graph.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -51,16 +51,16 @@
   
 
   
-  <script src="_static/js/modernizr.min.js"></script>
+  <script src="../_static/js/modernizr.min.js"></script>
 
   <!-- Preload the theme fonts -->
 
-<link rel="preload" href="_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
 
 <!-- Preload the katex fonts -->
 
@@ -230,7 +230,7 @@
 
 
 <div role="search">
-  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search Docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
@@ -247,17 +247,17 @@
             
               <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.html">Map-style DataPipes</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Utility Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dataloader2.html">DataLoader2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reading_service.html">ReadingService</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.map.html">Map-style DataPipes</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../torchdata.datapipes.utils.html">Utility Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataloader2.html">DataLoader2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reading_service.html">ReadingService</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="dp_tutorial.html">DataPipe Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dlv2_tutorial.html">DataLoader2 Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dp_tutorial.html">DataPipe Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dlv2_tutorial.html">DataLoader2 Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
 <ul>
@@ -300,7 +300,7 @@
   <ul class="pytorch-breadcrumbs">
     
       <li>
-        <a href="index.html">
+        <a href="../index.html">
           
             Docs
           
@@ -308,13 +308,15 @@
       </li>
 
         
-      <li>Utility Functions</li>
+          <li><a href="../torchdata.datapipes.utils.html">Utility Functions</a> &gt;</li>
+        
+      <li>pin_memory_fn</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="_sources/torchdata.datapipes.utils.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/generated/torchdata.datapipes.utils.pin_memory_fn.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -340,52 +342,16 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="utility-functions">
-<h1>Utility Functions<a class="headerlink" href="#utility-functions" title="Permalink to this heading">¶</a></h1>
-<section id="datapipe-graph-visualization">
-<h2>DataPipe Graph Visualization<a class="headerlink" href="#datapipe-graph-visualization" title="Permalink to this heading">¶</a></h2>
-<table class="autosummary longtable docutils # Necessary for the table generated by autosummary to look decent align-default">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.datapipes.utils.to_graph.html#torchdata.datapipes.utils.to_graph" title="torchdata.datapipes.utils.to_graph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_graph</span></code></a></p></td>
-<td><p>Visualizes a DataPipe by returning a <a class="reference external" href="https://graphviz.readthedocs.io/en/stable/api.html#graphviz.Digraph" title="(in graphviz)"><code class="xref py py-class docutils literal notranslate"><span class="pre">graphviz.Digraph</span></code></a>, which is a graph of the data pipeline.</p></td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="commond-utility-functions">
-<h2>Commond Utility Functions<a class="headerlink" href="#commond-utility-functions" title="Permalink to this heading">¶</a></h2>
-<table class="autosummary longtable docutils # Necessary for the table generated by autosummary to look decent align-default">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.datapipes.utils.pin_memory_fn.html#torchdata.datapipes.utils.pin_memory_fn" title="torchdata.datapipes.utils.pin_memory_fn"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pin_memory_fn</span></code></a></p></td>
-<td><p>Utility function to move data to pinned memory.</p></td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="file-object-and-stream-utility">
-<h2>File Object and Stream Utility<a class="headerlink" href="#file-object-and-stream-utility" title="Permalink to this heading">¶</a></h2>
-<table class="autosummary longtable docutils # Necessary for the table generated by autosummary to look decent align-default">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.datapipes.utils.StreamWrapper.html#torchdata.datapipes.utils.StreamWrapper" title="torchdata.datapipes.utils.StreamWrapper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StreamWrapper</span></code></a></p></td>
-<td><p>StreamWrapper is introduced to wrap file handler generated by DataPipe operation like <cite>FileOpener</cite>.</p></td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="dataloader">
-<h2>DataLoader<a class="headerlink" href="#dataloader" title="Permalink to this heading">¶</a></h2>
-<p>For documentation related to DataLoader, please refer to the
-<code class="docutils literal notranslate"><span class="pre">torch.utils.data</span></code> <a class="reference external" href="https://pytorch.org/docs/stable/data.html">documentation</a>. Or, more specifically, the
-<a class="reference external" href="https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader">DataLoader API section</a>.</p>
-<p>DataLoader v2 is currently in development. You should see an update here by mid-2022.</p>
-</section>
-<section id="sampler">
-<h2>Sampler<a class="headerlink" href="#sampler" title="Permalink to this heading">¶</a></h2>
-<p>For documentation related to Sampler, please refer to the
-<code class="docutils literal notranslate"><span class="pre">torch.utils.data</span></code>
-<a class="reference external" href="https://pytorch.org/docs/stable/data.html#data-loading-order-and-sampler">documentation on Data Loading order</a>.
-The Sampler API section is <a class="reference external" href="https://pytorch.org/docs/stable/data.html#torch.utils.data.Sampler">here</a>.</p>
-</section>
+  <section id="pin-memory-fn">
+<h1>pin_memory_fn<a class="headerlink" href="#pin-memory-fn" title="Permalink to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="torchdata.datapipes.utils.pin_memory_fn">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.utils.</span></span><span class="sig-name descname"><span class="pre">pin_memory_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.utils.pin_memory_fn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility function to move data to pinned memory. If special treatment is needed to move
+the input data to pinned memory, please attach a <code class="docutils literal notranslate"><span class="pre">pin_memory</span></code> method to the expected
+data class.</p>
+</dd></dl>
+
 </section>
 
 
@@ -396,10 +362,10 @@ The Sampler API section is <a class="reference external" href="https://pytorch.o
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="generated/torchdata.datapipes.utils.to_graph.html" class="btn btn-neutral float-right" title="to_graph" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.datapipes.utils.StreamWrapper.html" class="btn btn-neutral float-right" title="StreamWrapper" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="generated/torchdata.datapipes.map.Zipper.html" class="btn btn-neutral" title="Zipper" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="torchdata.datapipes.utils.to_graph.html" class="btn btn-neutral" title="to_graph" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -431,14 +397,7 @@ The Sampler API section is <a class="reference external" href="https://pytorch.o
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">Utility Functions</a><ul>
-<li><a class="reference internal" href="#datapipe-graph-visualization">DataPipe Graph Visualization</a></li>
-<li><a class="reference internal" href="#commond-utility-functions">Commond Utility Functions</a></li>
-<li><a class="reference internal" href="#file-object-and-stream-utility">File Object and Stream Utility</a></li>
-<li><a class="reference internal" href="#dataloader">DataLoader</a></li>
-<li><a class="reference internal" href="#sampler">Sampler</a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#">pin_memory_fn</a></li>
 </ul>
 
             </div>
@@ -453,20 +412,20 @@ The Sampler API section is <a class="reference external" href="https://pytorch.o
   
 
      
-       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-         <script src="_static/jquery.js"></script>
-         <script src="_static/underscore.js"></script>
-         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-         <script src="_static/doctools.js"></script>
+       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+         <script src="../_static/jquery.js"></script>
+         <script src="../_static/underscore.js"></script>
+         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+         <script src="../_static/doctools.js"></script>
      
 
   
 
-  <script type="text/javascript" src="_static/js/vendor/popper.min.js"></script>
-  <script type="text/javascript" src="_static/js/vendor/bootstrap.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/bootstrap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
-  <script type="text/javascript" src="_static/js/theme.js"></script>
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
 
   <script type="text/javascript">
       jQuery(function () {
@@ -571,7 +530,7 @@ The Sampler API section is <a class="reference external" href="https://pytorch.o
   <div class="cookie-banner-wrapper">
   <div class="container">
     <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
-    <img class="close-button" src="_static/images/pytorch-x.svg">
+    <img class="close-button" src="../_static/images/pytorch-x.svg">
   </div>
 </div>
 
@@ -707,7 +666,7 @@ The Sampler API section is <a class="reference external" href="https://pytorch.o
 
   <!-- End Mobile Menu -->
 
-  <script type="text/javascript" src="_static/js/vendor/anchor.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/anchor.min.js"></script>
 
   <script type="text/javascript">
     $(document).ready(function() {
