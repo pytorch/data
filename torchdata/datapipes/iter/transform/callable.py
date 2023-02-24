@@ -538,6 +538,16 @@ class BatchAsyncMapperIterDataPipe(IterDataPipe):
         >>> dp = dp.async_map_batches(mul_ten, 16, input_col=1, output_col=-1)
         >>> list(dp)
         [(0, 0, 0), (1, 1, 10), (2, 2, 20), (3, 3, 30), ...]
+        # Async fetching html from remote
+        >>> from aiohttp import ClientSession
+        >>> async def fetch_html(url: str, **kwargs):
+        ...     async with ClientSession() as session:
+        ...         resp = await session.request(method="GET", url=url, **kwargs)
+        ...         resp.raise_for_status()
+        ...         html = await resp.text()
+        ...     return html
+        >>> dp = IterableWrapper(urls)
+        >>> dp = dp.async_map_batches(fetch_html, 16)
     """
 
     def __new__(
