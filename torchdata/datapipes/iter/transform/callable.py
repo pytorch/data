@@ -435,7 +435,7 @@ class _BatchAsyncMapperIterDataPipe(IterDataPipe):
         self.source_datapipe = source_datapipe
         if not inspect.iscoroutinefunction(async_fn):
             raise ValueError(f"Expected a corotine function with an async def syntax, but got a {type(async_fn)}")
-        self.async_fn = async_fn
+        self.async_fn = async_fn  # type: ignore[assignment]
         if input_col is None and output_col is not None:
             raise ValueError("`output_col` must be None when `input_col` is None.")
         self.input_col = input_col
