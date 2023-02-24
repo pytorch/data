@@ -8,6 +8,7 @@ import time
 import types
 
 from torch.utils.data import MapDataPipe
+from torchdata._utils import ExceptionWrapper
 from torchdata.dataloader2 import communication
 
 DEFAULT_NON_BLOCKING_SLEEP = 0.001
@@ -83,13 +84,16 @@ def EnsureNonBlockingMapDataPipe(validated_datapipe):
     return validated_datapipe
 
 
-def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, reset_iterator_counter=None):
+def DataPipeBehindQueues(
+    source_datapipe, protocol, process_name, blocking_request_get=False, reset_iterator_counter=None
+):
     """
     Indefinitely iterates over req_queue and passing values from source_datapipe to res_queue.
 
     Args:
         source_datapipe: DataPipe
         protocol: ``MapDataPipeQueueProtocolServer`` that contains ``req_queue`` and ``res_queue``
+        process_name: Process name
         blocking_request_get: determines if ``protocol.get_new_request`` will block
     """
     if not isinstance(protocol, communication.protocol.MapDataPipeQueueProtocolServer):
@@ -128,6 +132,10 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
                     protocol.response_index_out_of_bound()
                     yield True
                     break
+                except Exception:
+                    exc = ExceptionWrapper(where=f"in {process_name}")
+                    protocol.response_worker_exception(exc)
+                    break
                 protocol.response_item(request.key, value)
                 yield True  # Returns control
                 break
@@ -160,6 +168,9 @@ class QueueWrapperForMap(NonBlockingMap):
         if isinstance(response, communication.messages.StopIterationResponse):
             self._stop_iteration = True
             raise IndexError(f"Index {index} is out of bound.")
+        if isinstance(response, communication.messages.WorkerExceptionResponse):
+            self._stop_iteration = True
+            response.exc.reraise()
         return response.key, response.value
 
     def nonblocking_len(self):
