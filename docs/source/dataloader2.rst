@@ -5,7 +5,7 @@ DataLoader2
 
 .. automodule:: torchdata.dataloader2
 
-A new, light-weight :class:`DataLoader2` is introduced to decouple the overloaded data-manipulation functionalities from ``torch.utils.data.DataLoader`` to ``DataPipe`` operations. Besides, certain features can only be achieved with :class:`DataLoader2` like snapshotting and switching backend services to perform high-performant operations.
+A new, light-weight :class:`DataLoader2` is introduced to decouple the overloaded data-manipulation functionalities from ``torch.utils.data.DataLoader`` to ``DataPipe`` operations. Besides, certain features can only be achieved with :class:`DataLoader2` like snapshottting and switching backend services to perform high-performant operations.
 
 DataLoader2
 ------------

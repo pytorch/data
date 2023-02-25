@@ -67,7 +67,7 @@ Working with DataLoader
 ---------------------------------------------
 
 In this section, we will demonstrate how you can use ``DataPipe`` with ``DataLoader``.
-For the most part, you should be able to use it just by passing ``dataset=datapipe`` as an input arugment
+For the most part, you should be able to use it just by passing ``dataset=datapipe`` as an input argument
 into the ``DataLoader``. For detailed documentation related to ``DataLoader``,
 please visit `this page <https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading>`_.
 
@@ -102,7 +102,7 @@ pass defined functions to DataPipes rather than lambda functions because the for
     def filter_for_data(filename):
         return "sample_data" in filename and filename.endswith(".csv")
 
-    def row_processer(row):
+    def row_processor(row):
         return {"label": np.array(row[0], np.int32), "data": np.array(row[1:], dtype=np.float64)}
 
     def build_datapipes(root_dir="."):
@@ -112,7 +112,7 @@ pass defined functions to DataPipes rather than lambda functions because the for
         datapipe = datapipe.parse_csv(delimiter=",", skip_lines=1)
         # Shuffle will happen as long as you do NOT set `shuffle=False` later in the DataLoader
         datapipe = datapipe.shuffle()
-        datapipe = datapipe.map(row_processer)
+        datapipe = datapipe.map(row_processor)
         return datapipe
 
 Lastly, we will put everything together in ``'__main__'`` and pass the DataPipe into the DataLoader. Note that
@@ -180,7 +180,7 @@ Note:
 - Place ``ShardingFilter`` (``datapipe.sharding_filter``) as early as possible in the pipeline, especially before expensive
   operations such as decoding, in order to avoid repeating these expensive operations across worker/distributed processes.
 - For the data source that needs to be sharded, it is crucial to add ``Shuffler`` before ``ShardingFilter``
-  to ensure data are globally shuffled before splitted into shards. Otherwise, each worker process would
+  to ensure data are globally shuffled before being split into shards. Otherwise, each worker process would
   always process the same shard of data for all epochs. And, it means each batch would only consist of data
   from the same shard, which leads to low accuracy during training. However, it doesn't apply to the data
   source that has already been sharded for each multi-/distributed process, since ``ShardingFilter`` is no
