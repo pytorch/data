@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>HttpReader &mdash; TorchData main documentation</title>
+  <title>PinMemory &mdash; TorchData main documentation</title>
   
 
   
@@ -34,8 +34,8 @@
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="HuggingFaceHubReader" href="torchdata.datapipes.iter.HuggingFaceHubReader.html" />
-    <link rel="prev" title="GDriveReader" href="torchdata.datapipes.iter.GDriveReader.html" />
+    <link rel="next" title="Prefetcher" href="torchdata.datapipes.iter.Prefetcher.html" />
+    <link rel="prev" title="OnDiskCacheHolder" href="torchdata.datapipes.iter.OnDiskCacheHolder.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -310,13 +310,13 @@
         
           <li><a href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a> &gt;</li>
         
-      <li>HttpReader</li>
+      <li>PinMemory</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/generated/torchdata.datapipes.iter.HttpReader.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/generated/torchdata.datapipes.iter.PinMemory.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -342,36 +342,27 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="httpreader">
-<h1>HttpReader<a class="headerlink" href="#httpreader" title="Permalink to this heading">¶</a></h1>
+  <section id="pinmemory">
+<h1>PinMemory<a class="headerlink" href="#pinmemory" title="Permalink to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="torchdata.datapipes.iter.HttpReader">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">HttpReader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_on_error</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.HttpReader" title="Permalink to this definition">¶</a></dt>
-<dd><p>Takes file URLs (HTTP URLs pointing to files), and yields tuples of file URL and
-IO stream (functional name: <code class="docutils literal notranslate"><span class="pre">read_from_http</span></code>).</p>
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.PinMemory">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">PinMemory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pin_memory_fn=&lt;function</span> <span class="pre">pin_memory_fn&gt;</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.PinMemory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prefetches one element from the source DataPipe and moves it to pinned memory (functional name: <code class="docutils literal notranslate"><span class="pre">pin_memory</span></code>).
+When used with <code class="docutils literal notranslate"><span class="pre">MultiProcessingReadingService</span></code>, this DataPipe would be kept in the main process to prevent
+duplicated CUDA context creation.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>source_datapipe</strong> – a DataPipe that contains URLs</p></li>
-<li><p><strong>timeout</strong> – timeout in seconds for HTTP request</p></li>
-<li><p><strong>skip_on_error</strong> – whether to skip over urls causing problems, otherwise an exception is raised</p></li>
-<li><p><strong>**kwargs</strong> – a Dictionary to pass optional arguments that requests takes. For the full list check out <a class="reference external" href="https://docs.python-requests.org/en/master/api/">https://docs.python-requests.org/en/master/api/</a></p></li>
+<li><p><strong>source_datapipe</strong> – IterDataPipe from which samples are moved to pinned memory.</p></li>
+<li><p><strong>device</strong> – The device to pin samples.</p></li>
+<li><p><strong>pin_memory_fn</strong> – Optional callable function to move data to pinned memory.
+A <code class="docutils literal notranslate"><span class="pre">pin_memory_fn</span></code> to handle general objects is provided by default.</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span><span class="p">,</span> <span class="n">HttpReader</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">file_url</span> <span class="o">=</span> <span class="s2">&quot;https://raw.githubusercontent.com/pytorch/data/main/LICENSE&quot;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">query_params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;auth&quot;</span> <span class="p">:</span> <span class="p">(</span><span class="s2">&quot;fake_username&quot;</span><span class="p">,</span> <span class="s2">&quot;fake_password&quot;</span><span class="p">),</span> <span class="s2">&quot;allow_redirects&quot;</span> <span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">timeout</span> <span class="o">=</span> <span class="mi">120</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">http_reader_dp</span> <span class="o">=</span> <span class="n">HttpReader</span><span class="p">(</span><span class="n">IterableWrapper</span><span class="p">([</span><span class="n">file_url</span><span class="p">]),</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span> <span class="n">query_params</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">reader_dp</span> <span class="o">=</span> <span class="n">http_reader_dp</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">it</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">reader_dp</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span><span class="p">,</span> <span class="n">line</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">it</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span>
-<span class="go">https://raw.githubusercontent.com/pytorch/data/main/LICENSE</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">line</span>
-<span class="go">b&#39;BSD 3-Clause License&#39;</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="n">file_paths</span><span class="p">)</span><span class="o">.</span><span class="n">open_files</span><span class="p">()</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">tokenize_fn</span><span class="p">)</span><span class="o">.</span><span class="n">pin_memory</span><span class="p">()</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -386,10 +377,10 @@ IO stream (functional name: <code class="docutils literal notranslate"><span cla
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="torchdata.datapipes.iter.HuggingFaceHubReader.html" class="btn btn-neutral float-right" title="HuggingFaceHubReader" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.datapipes.iter.Prefetcher.html" class="btn btn-neutral float-right" title="Prefetcher" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.iter.GDriveReader.html" class="btn btn-neutral" title="GDriveReader" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="torchdata.datapipes.iter.OnDiskCacheHolder.html" class="btn btn-neutral" title="OnDiskCacheHolder" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -421,7 +412,7 @@ IO stream (functional name: <code class="docutils literal notranslate"><span cla
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">HttpReader</a></li>
+<li><a class="reference internal" href="#">PinMemory</a></li>
 </ul>
 
             </div>
