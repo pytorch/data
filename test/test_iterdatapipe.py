@@ -261,6 +261,11 @@ class TestIterDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(KeyError, "is not a valid key in the given MapDataPipe"):
             next(it)
 
+        # Functional test: ensure that keep_key option works
+        result_dp = source_dp.zip_with_map(map_dp, odd_even, keep_key=True)
+        expected_res_keep_key = [(key, (i, odd_even_string(i))) for i, key in zip(range(10), [0, 1] * 5)]
+        self.assertEqual(expected_res_keep_key, list(result_dp))
+
         # Reset Test:
         n_elements_before_reset = 4
         result_dp = source_dp.zip_with_map(map_dp, odd_even)
