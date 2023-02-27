@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import asyncio
 import io
 import itertools
 import pickle
@@ -76,6 +77,16 @@ def _convert_to_tensor(data):
     elif isinstance(data, list):
         return [_convert_to_tensor(v) for v in data]
     return torch.tensor(data)
+
+
+async def _async_mul_ten(x):
+    await asyncio.sleep(1)
+    return x * 10
+
+
+async def _async_x_mul_y(x, y):
+    await asyncio.sleep(1)
+    return x * y
 
 
 class TestIterDataPipe(expecttest.TestCase):
@@ -1516,6 +1527,79 @@ class TestIterDataPipe(expecttest.TestCase):
             IterableWrapper([[(i - 1, i), (i, i + 1)] for i in range(10)]).map(_convert_to_tensor).batch(2).pin_memory()
         )
         self.assertTrue(all(d0.is_pinned() and d1.is_pinned() for batch in dp for d0, d1 in batch))
+
+    def test_async_map_batches(self):
+        batch_size = 16
+
+        def _helper(input_data, exp_res, async_fn, input_col=None, output_col=None, max_concurrency=32):
+            dp = IterableWrapper(input_data)
+            dp = dp.async_map_batches(async_fn, batch_size, input_col, output_col, max_concurrency)
+            self.assertEqual(
+                exp_res,
+                list(dp),
+                msg=f"Async map test with {async_fn=}, {input_col=}, {output_col=}, {max_concurrency=}",
+            )
+
+        _helper(range(50), [i * 10 for i in range(50)], _async_mul_ten)
+
+        # Smaller max_concurrency
+        _helper(range(50), [i * 10 for i in range(50)], _async_mul_ten, max_concurrency=6)
+
+        # Tuple with input_col
+        _helper([(i, i) for i in range(50)], [(i * 10, i) for i in range(50)], _async_mul_ten, input_col=0)
+        _helper([(i, i) for i in range(50)], [(i, i * 10) for i in range(50)], _async_mul_ten, input_col=1)
+        # Tuple with input_col and output_col
+        _helper(
+            [(i, i) for i in range(50)], [(i, i * 10) for i in range(50)], _async_mul_ten, input_col=0, output_col=1
+        )
+        _helper(
+            [(i, i) for i in range(50)], [(i, i, i * 10) for i in range(50)], _async_mul_ten, input_col=0, output_col=-1
+        )
+
+        # Dict with input_col
+        _helper(
+            [{"a": i, "b": i} for i in range(50)],
+            [{"a": i, "b": i * 10} for i in range(50)],
+            _async_mul_ten,
+            input_col="b",
+        )
+        # Dict with input_col and output_col
+        _helper(
+            [{"a": i, "b": i} for i in range(50)],
+            [{"a": i * 10, "b": i} for i in range(50)],
+            _async_mul_ten,
+            input_col="b",
+            output_col="a",
+        )
+        _helper(
+            [{"a": i, "b": i} for i in range(50)],
+            [{"a": i, "b": i, "c": i * 10} for i in range(50)],
+            _async_mul_ten,
+            input_col="b",
+            output_col="c",
+        )
+
+        # Multiple input_col
+        _helper(
+            [(i - 1, i, i + 1) for i in range(50)],
+            [((i - 1) * (i + 1), i) for i in range(50)],
+            _async_x_mul_y,
+            input_col=(0, 2),
+        )
+        _helper(
+            [(i - 1, i, i + 1) for i in range(50)],
+            [(i, (i - 1) * (i + 1)) for i in range(50)],
+            _async_x_mul_y,
+            input_col=(2, 0),
+        )
+        # Multiple input_col with output_col
+        _helper(
+            [(i - 1, i, i + 1) for i in range(50)],
+            [(i - 1, (i - 1) * (i + 1), i + 1) for i in range(50)],
+            _async_x_mul_y,
+            input_col=(0, 2),
+            output_col=1,
+        )
 
 
 if __name__ == "__main__":

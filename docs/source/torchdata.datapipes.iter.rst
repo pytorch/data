@@ -162,6 +162,7 @@ These DataPipes apply the a given function to each element in the DataPipe.
     :toctree: generated/
     :template: class_template.rst
 
+    BatchAsyncMapper
     BatchMapper
     FlatMapper
     Mapper

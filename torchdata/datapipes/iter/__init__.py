@@ -66,6 +66,7 @@ from torchdata.datapipes.iter.transform.bucketbatcher import (
     MaxTokenBucketizerIterDataPipe as MaxTokenBucketizer,
 )
 from torchdata.datapipes.iter.transform.callable import (
+    BatchAsyncMapperIterDataPipe as BatchAsyncMapper,
     BatchMapperIterDataPipe as BatchMapper,
     DropperIterDataPipe as Dropper,
     FlatMapperIterDataPipe as FlatMapper,
@@ -136,6 +137,7 @@ from torchdata.datapipes.map.util.converter import MapToIterConverterIterDataPip
 __all__ = [
     "AISFileLister",
     "AISFileLoader",
+    "BatchAsyncMapper",
     "BatchMapper",
     "Batcher",
     "BucketBatcher",
