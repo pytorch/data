@@ -19,7 +19,7 @@ Here is an example of a ``DataPipe`` graph:
     datapipe = IterableWrapper(["./train1.csv", "./train2.csv"])
     datapipe = datapipe.open_files(encoding="utf-8").parse_csv()
     datapipe = datapipe.shuffle().sharding_filter()
-    datapipe = datapiep.map(fn).batch(8)
+    datapipe = datapipe.map(fn).batch(8)
 
 Multiprocessing
 ----------------
