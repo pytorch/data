@@ -105,7 +105,7 @@ When adding a new DataPipe, there are few things that need to be done to ensure 
 4. Import - import the DataPipe in the correct `__init__.py` file.
 5. Interface - if the DataPipe has a functional form, make sure that is generated properly by `gen_pyi.py` into the
    relevant interface file.
-   - You can re-generate the pyi files by re-running `python setup.py develop`, then you can examine the new outputs.
+   - You can re-generate the pyi files by re-running `pip install -e .`, then you can examine the new outputs.
 
 ## Contributor License Agreement ("CLA")
 
