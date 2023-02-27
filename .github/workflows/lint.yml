@@ -15,7 +15,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.7"
+          python-version: "3.8"
       - name: Check out source repository
         uses: actions/checkout@v3
       - name: Install lint utilities
@@ -58,7 +58,7 @@ jobs:
           pip3 install mypy==0.960 numpy types-requests
       - name: Build TorchData
         run: |
-          python setup.py develop
+          pip3 install .
       - name: Run mypy
         env:
           MYPY_FORCE_COLOR: 1

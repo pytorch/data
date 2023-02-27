@@ -53,6 +53,7 @@ These DataPipes help opening and decompressing archive files of different format
     Decompressor
     RarArchiveLoader
     TarArchiveLoader
+    TFRecordLoader
     WebDataset
     XzFileLoader
     ZipArchiveLoader
@@ -84,7 +85,7 @@ These DataPipes help to perform combinatorial operations.
     Sampler
     Shuffler
 
-Combining/Spliting DataPipes
+Combining/Splitting DataPipes
 -----------------------------
 These tend to involve multiple DataPipes, combining them or splitting one to many.
 
@@ -142,6 +143,7 @@ saving files, and listing the files in directories).
     FileOpener
     GDriveReader
     HttpReader
+    HuggingFaceHubReader
     IoPathFileLister
     IoPathFileOpener
     IoPathSaver
@@ -161,6 +163,7 @@ These DataPipes apply the a given function to each element in the DataPipe.
     :toctree: generated/
     :template: class_template.rst
 
+    BatchAsyncMapper
     BatchMapper
     FlatMapper
     Mapper
@@ -176,15 +179,19 @@ A miscellaneous set of DataPipes with different functionalities.
 
     DataFrameMaker
     EndOnDiskCacheHolder
+    FullSync
     HashChecker
     InMemoryCacheHolder
     IterableWrapper
     LengthSetter
     MapToIterConverter
     OnDiskCacheHolder
+    PinMemory
     Prefetcher
     RandomSplitter
+    ShardExpander
     ShardingFilter
+    ShardingRoundRobinDispatcher
 
 Selecting DataPipes
 -------------------------

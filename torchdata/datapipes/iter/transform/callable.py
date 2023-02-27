@@ -4,11 +4,15 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import asyncio
+import inspect
 import warnings
+
 from typing import Callable, Hashable, Iterator, List, Optional, Set, Sized, TypeVar, Union
 
-from torch.utils.data import functional_datapipe, IterDataPipe
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, validate_input_col
+from torchdata.datapipes import functional_datapipe
+from torchdata.datapipes.iter import IterDataPipe
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -26,7 +30,7 @@ def _no_op_fn(*args):
 class BatchMapperIterDataPipe(IterDataPipe[T_co]):
     r"""
     Combines elements from the source DataPipe to batches and applies a function
-    over each batch, then flattens the outpus to a single, unnested IterDataPipe
+    over each batch, then flattens the outputs to a single, unnested IterDataPipe
     (functional name: ``map_batches``).
 
     Args:
@@ -34,6 +38,7 @@ class BatchMapperIterDataPipe(IterDataPipe[T_co]):
         fn: The function to be applied to each batch of data
         batch_size: The size of batch to be aggregated from ``datapipe``
         input_col: Index or indices of data which ``fn`` is applied, such as:
+
             - ``None`` as default to apply ``fn`` to the data directly.
             - Integer(s) is used for list/tuple.
             - Key(s) is used for dict.
@@ -114,6 +119,7 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
         datapipe: Source IterDataPipe
         fn: the function to be applied to each element in the DataPipe, the output must be a Sequence
         input_col: Index or indices of data which ``fn`` is applied, such as:
+
             - ``None`` as default to apply ``fn`` to the data directly.
             - Integer(s) is/are used for list/tuple.
             - Key(s) is/are used for dict.
@@ -133,9 +139,9 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
         [1, 2, 3, 4, 5, 6]
     """
     datapipe: IterDataPipe
-    fn: Callable
+    fn: Optional[Callable]
 
-    def __init__(self, datapipe: IterDataPipe, fn: Callable = None, input_col=None) -> None:
+    def __init__(self, datapipe: IterDataPipe, fn: Optional[Callable] = None, input_col=None) -> None:
         self.datapipe = datapipe
 
         if fn is None:
@@ -147,12 +153,12 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
 
     def _apply_fn(self, data):
         if self.input_col is None:
-            return self.fn(data)
+            return self.fn(data)  # type: ignore[misc]
         elif isinstance(self.input_col, (list, tuple)):
             args = tuple(data[col] for col in self.input_col)
-            return self.fn(*args)
+            return self.fn(*args)  # type: ignore[misc]
         else:
-            return self.fn(data[self.input_col])
+            return self.fn(data[self.input_col])  # type: ignore[misc]
 
     def __iter__(self) -> Iterator[T_co]:
         for d in self.datapipe:
@@ -170,6 +176,9 @@ class DropperIterDataPipe(IterDataPipe[T_co]):
     Args:
         datapipe: IterDataPipe with columns to be dropped
         indices: a single column index to be dropped or a list of indices
+
+            - Integer(s) is/are used for list/tuple.
+            - Key(s) is/are used for dict.
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper, ZipperMapDataPipe
@@ -237,8 +246,13 @@ class SliceIterDataPipe(IterDataPipe[T_co]):
     Args:
         datapipe: IterDataPipe with iterable elements
         index: a single start index for the slice or a list of indices to be returned instead of a start/stop slice
-        stop: the slice stop. ignored if index is a list
-        step: step to be taken from start to stop. ignored if index is a list
+
+            - Integer(s) is/are used for list/tuple.
+            - Key(s) is/are used for dict.
+
+
+        stop: the slice stop. ignored if index is a list or if element is a dict
+        step: step to be taken from start to stop. ignored if index is a list or if element is a dict
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
@@ -266,8 +280,8 @@ class SliceIterDataPipe(IterDataPipe[T_co]):
         if isinstance(index, list):
             if stop or step:
                 warnings.warn(
-                    "A list of indices was passed as well as a stop or step for the slice,"
-                    "these arguments can't be used together so onlyu the indices list will be used."
+                    "A list of indices was passed as well as a stop or step for the slice, "
+                    "these arguments can't be used together so only the indices list will be used."
                 )
 
     def __iter__(self) -> Iterator[T_co]:
@@ -285,6 +299,8 @@ class SliceIterDataPipe(IterDataPipe[T_co]):
             elif isinstance(old_item, dict):
                 if isinstance(self.index, list):
                     new_item = {k: v for (k, v) in old_item.items() if k in self.index}  # type: ignore[assignment]
+                elif self.index in old_item.keys():
+                    new_item = {self.index: old_item.get(self.index)}  # type: ignore[assignment]
                 else:
                     new_item = old_item  # type: ignore[assignment]
                     warnings.warn(
@@ -328,6 +344,9 @@ class FlattenIterDataPipe(IterDataPipe[T_co]):
     Args:
         datapipe: IterDataPipe with iterable elements
         indices: a single index/key for the item to flatten from an iterator item or a list of indices/keys to be flattened
+
+            - Integer(s) is/are used for list/tuple.
+            - Key(s) is/are used for dict.
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
@@ -414,3 +433,155 @@ class FlattenIterDataPipe(IterDataPipe[T_co]):
         if isinstance(self.datapipe, Sized):
             return len(self.datapipe)
         raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
+
+
+class _BatchAsyncMapperIterDataPipe(IterDataPipe):
+    datapipe: IterDataPipe
+    async_fn: Callable
+
+    def __init__(
+        self,
+        source_datapipe: IterDataPipe,
+        async_fn: Callable,
+        input_col=None,
+        output_col=None,
+        max_concurrency: int = 32,
+    ):
+        self.source_datapipe = source_datapipe
+        if not inspect.iscoroutinefunction(async_fn):
+            raise ValueError(f"Expected a corotine function with an async def syntax, but got a {type(async_fn)}")
+        self.async_fn = async_fn  # type: ignore[assignment]
+        if input_col is None and output_col is not None:
+            raise ValueError("`output_col` must be None when `input_col` is None.")
+        self.input_col = input_col
+        if isinstance(output_col, (list, tuple)):
+            if len(output_col) > 1:
+                raise ValueError("`output_col` must be a single-element list or tuple")
+            output_col = output_col[0]
+        self.output_col = output_col
+        self.max_concurrency = max_concurrency
+
+    def __iter__(self):
+        policy = asyncio.get_event_loop_policy()
+        loop = policy.new_event_loop()
+        try:
+            for batch in self.source_datapipe:
+                policy.set_event_loop(loop)
+                new_batch = loop.run_until_complete(self.processbatch(batch))
+                yield new_batch
+        finally:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
+
+    async def processbatch(self, batch):
+        sem = asyncio.Semaphore(self.max_concurrency)
+
+        async def controlled_async_fn(async_fn, *data):
+            async with sem:
+                return await async_fn(*data)
+
+        coroutines = []
+        if self.input_col is None:
+            for data in batch:
+                coroutines.append(controlled_async_fn(self.async_fn, data))
+            results = await asyncio.gather(*coroutines)
+            return results
+
+        for data in batch:
+            if isinstance(self.input_col, (list, tuple)):
+                args = tuple(data[col] for col in self.input_col)
+                coroutines.append(controlled_async_fn(self.async_fn, *args))
+            else:
+                coroutines.append(controlled_async_fn(self.async_fn, data[self.input_col]))
+        results = await asyncio.gather(*coroutines)
+
+        new_batch = []
+        for data, res in zip(batch, results):
+            t_flag = isinstance(data, tuple)
+            if t_flag:
+                data = list(data)
+
+            if self.output_col is None:
+                if isinstance(self.input_col, (list, tuple)):
+                    data[self.input_col[0]] = res
+                    for idx in sorted(self.input_col[1:], reverse=True):
+                        del data[idx]
+                else:
+                    data[self.input_col] = res
+            elif self.output_col == -1:
+                data.append(res)
+            else:
+                data[self.output_col] = res
+
+            if t_flag:
+                data = tuple(data)
+
+            new_batch.append(data)
+        return new_batch
+
+
+@functional_datapipe("async_map_batches")
+class BatchAsyncMapperIterDataPipe(IterDataPipe):
+    r"""
+    Combines elements from the source DataPipe to batches and applies a coroutine function
+    over each element within the batch concurrently, then flattens the outpus to a
+    single, unnested IterDataPipe (functional name: ``async_map_batches``).
+
+    Args:
+        source_datapipe: Source IterDataPipe
+        async_fn: The coroutine function to be applied to each batch of data
+        batch_size: The size of batch to be aggregated from ``source_datapipe``
+        input_col: Index or indices of data which ``fn`` is applied, such as:
+            - ``None`` as default to apply ``fn`` to the data directly.
+            - Integer(s) is used for list/tuple.
+            - Key(s) is used for dict.
+        output_col: Index of data where result of ``fn`` is placed. ``output_col`` can be specified
+            only when ``input_col`` is not ``None``
+            - ``None`` as default to replace the index that ``input_col`` specified; For ``input_col`` with
+              multiple indices, the left-most one is used, and other indices will be removed.
+            - Integer is used for list/tuple. ``-1`` represents to append result at the end.
+            - Key is used for dict. New key is acceptable.
+        max_concurrency: Maximum concurrency to call async functions. (Default value: 32)
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> async def mul_ten(x):
+        ...     await asyncio.sleep(1)
+        ...     return x * 10
+        >>> dp = IterableWrapper(range(50))
+        >>> dp = dp.async_map_batches(mul_ten, 16)
+        >>> list(dp)
+        [0, 10, 20, 30, ...]
+        >>> dp = IterableWrapper([(i, i) for i in range(50)])
+        >>> dp = dp.async_map_batches(mul_ten, 16, input_col=1)
+        >>> list(dp)
+        [(0, 0), (1, 10), (2, 20), (3, 30), ...]
+        >>> dp = IterableWrapper([(i, i) for i in range(50)])
+        >>> dp = dp.async_map_batches(mul_ten, 16, input_col=1, output_col=-1)
+        >>> list(dp)
+        [(0, 0, 0), (1, 1, 10), (2, 2, 20), (3, 3, 30), ...]
+        # Async fetching html from remote
+        >>> from aiohttp import ClientSession
+        >>> async def fetch_html(url: str, **kwargs):
+        ...     async with ClientSession() as session:
+        ...         resp = await session.request(method="GET", url=url, **kwargs)
+        ...         resp.raise_for_status()
+        ...         html = await resp.text()
+        ...     return html
+        >>> dp = IterableWrapper(urls)
+        >>> dp = dp.async_map_batches(fetch_html, 16)
+    """
+
+    def __new__(
+        self,
+        source_datapipe,
+        async_fn: Callable,
+        batch_size: int,
+        input_col=None,
+        output_col=None,
+        max_concurrency: int = 32,
+    ):
+        dp = source_datapipe.batch(batch_size)
+        dp = _BatchAsyncMapperIterDataPipe(dp, async_fn, input_col, output_col, max_concurrency)
+        dp = dp.flatmap()
+        return dp

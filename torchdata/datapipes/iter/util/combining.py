@@ -174,20 +174,33 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
             from ``map_datapipe``
         map_datapipe: MapDataPipe that takes a key from ``key_fn``, and returns an item
         key_fn: Function that maps each item from ``source_iterdatapipe`` to a key that exists in ``map_datapipe``
+        keep_key: Option to yield the matching key along with the items in a tuple,
+            resulting in ``(key, merge_fn(item1, item2))``.
         merge_fn: Function that combines the item from ``source_iterdatapipe`` and the matching item
             from ``map_datapipe``, by default a tuple is created
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper
-        >>> from torchdata.datapipes.map import SequenceWrapper
-        >>> from operator import itemgetter
-        >>> def merge_fn(tuple_from_iter, value_from_map):
-        >>>     return tuple_from_iter[0], tuple_from_iter[1] + value_from_map
-        >>> dp1 = IterableWrapper([('a', 1), ('b', 2), ('c', 3)])
-        >>> mapdp = SequenceWrapper({'a': 100, 'b': 200, 'c': 300, 'd': 400})
-        >>> res_dp = dp1.zip_with_map(map_datapipe=mapdp, key_fn=itemgetter(0), merge_fn=merge_fn)
-        >>> list(res_dp)
+
+    .. testsetup::
+
+        from operator import itemgetter
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import IterableWrapper
+        from torchdata.datapipes.map import SequenceWrapper
+
+        def merge_fn(tuple_from_iter, value_from_map):
+            return tuple_from_iter[0], tuple_from_iter[1] + value_from_map
+        dp1 = IterableWrapper([('a', 1), ('b', 2), ('c', 3)])
+        mapdp = SequenceWrapper({'a': 100, 'b': 200, 'c': 300, 'd': 400})
+        res_dp = dp1.zip_with_map(map_datapipe=mapdp, key_fn=itemgetter(0), merge_fn=merge_fn)
+        print(list(res_dp))
+
+    .. testoutput::
+
         [('a', 101), ('b', 202), ('c', 303)]
+
     """
 
     def __init__(
@@ -196,6 +209,7 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
         map_datapipe: MapDataPipe,
         key_fn: Callable,
         merge_fn: Optional[Callable] = None,
+        keep_key: bool = False,
     ):
         if not isinstance(map_datapipe, MapDataPipe):
             raise TypeError(f"map_datapipe must be a MapDataPipe, but its type is {type(map_datapipe)} instead.")
@@ -206,6 +220,7 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
         if merge_fn is not None:
             _check_unpickable_fn(merge_fn)
         self.merge_fn: Optional[Callable] = merge_fn
+        self.keep_key = keep_key
 
     def __iter__(self) -> Iterator:
         for item in self.source_iterdatapipe:
@@ -214,7 +229,11 @@ class MapKeyZipperIterDataPipe(IterDataPipe[T_co]):
                 map_item = self.map_datapipe[key]
             except (KeyError, IndexError):
                 raise KeyError(f"key_fn maps {item} to {key}, which is not a valid key in the given MapDataPipe.")
-            yield self.merge_fn(item, map_item) if self.merge_fn else (item, map_item)
+            res = self.merge_fn(item, map_item) if self.merge_fn else (item, map_item)
+            if self.keep_key:
+                yield key, res
+            else:
+                yield res
 
     def __len__(self) -> int:
         return len(self.source_iterdatapipe)
@@ -257,9 +276,9 @@ class RoundRobinDemultiplexerIterDataPipe(IterDataPipe):
             raise ValueError(f"Expected `num_instaces` larger than 0, but {num_instances} is found")
         if num_instances == 1:
             warnings.warn(
-                "The operation of `round_robin_demux` with `num_instances=1` is an no-op and returns the provided `datapipe` directly"
+                "The operation of `round_robin_demux` with `num_instances=1` is an no-op and returns the provided `datapipe` in a list directly"
             )
-            return datapipe
+            return [datapipe]
 
         datapipe = datapipe.enumerate()
         container = _RoundRobinDemultiplexerIterDataPipe(datapipe, num_instances, buffer_size=buffer_size)

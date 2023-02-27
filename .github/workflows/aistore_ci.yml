@@ -24,7 +24,6 @@ jobs:
           - macos-latest
           - ubuntu-latest
         python-version:
-          - 3.7
           - 3.8
           - 3.9
     steps:
@@ -52,7 +51,7 @@ jobs:
         uses: NVIDIA/aistore@master
       - name: Build TorchData
         run: |
-          python setup.py install
+          pip3 install .
       - name: Install test requirements
         run: pip3 install -r test/requirements_aistore.txt
       - name: Run AIStore DataPipe tests with pytest

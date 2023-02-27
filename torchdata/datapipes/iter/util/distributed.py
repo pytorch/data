@@ -139,10 +139,10 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
         if not dist.is_available():
             raise RuntimeError("Torch Distributed is required to be available")
         self.datapipe = datapipe
-        self.timeout = timeout
+        self.timeout: int = timeout
 
-        self._process_group = None
-        self._world_size = 1
+        self._process_group: Optional[dist.ProcessGroup] = None
+        self._world_size: int = 1
 
         self._lock = threading.RLock()
         self._cv = threading.Condition(lock=self._lock)
@@ -174,7 +174,8 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
 
         if not (dist.is_available() and dist.is_initialized()):
             raise RuntimeError("Torch Distributed is required to be initialized")
-        self._process_group = dist.new_group(backend="gloo")
+        if self._process_group is None:
+            self._process_group = dist.new_group(backend="gloo")
         self._world_size = dist.get_world_size()
 
         self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)
@@ -200,12 +201,14 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
         if self._executor is not None:
             self._executor.shutdown()
             self._executor = None
-        self._process_group = None
         self._world_size = 1
         with self._cv:
             self._error = None
             self._sync_counter = torch.tensor([0], dtype=torch.int32)
             self._done_callback = False
+
+    def is_replicable(self):
+        return False
 
     def __getstate__(self):
         state = (
@@ -226,3 +229,13 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
         self._error = None
         self._sync_counter = torch.tensor([0], dtype=torch.int32)
         self._done_callback = False
+
+    def pause(self):
+        raise RuntimeError("`pause` is not supported for FullSync at the moment.")
+        # if self._executor is not None:
+        #     self._executor.shutdown()
+        #     self._executor = None
+
+    def resume(self):
+        raise RuntimeError("`resume` is not supported for FullSync at the moment.")
+        # self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)

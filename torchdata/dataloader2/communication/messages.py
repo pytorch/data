@@ -4,6 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from torchdata._utils import ExceptionWrapper
+
 
 class DataLoaderQueueMessage:
     pass
@@ -33,6 +35,22 @@ class ResetEpochRequest(Request):
 
 
 class ResetEpochResponse(Response):
+    pass
+
+
+class PauseRequest(Request):
+    pass
+
+
+class PauseResponse(Response):
+    pass
+
+
+class ResumeRequest(Request):
+    pass
+
+
+class ResumeResponse(Response):
     pass
 
 
@@ -92,3 +110,10 @@ class InvalidStateResponse(Response):
     """
 
     pass
+
+
+class WorkerExceptionResponse(Response):
+    __slots__ = "exc"
+
+    def __init__(self, exc: ExceptionWrapper):
+        self.exc: ExceptionWrapper = exc
