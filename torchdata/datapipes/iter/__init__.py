@@ -68,6 +68,7 @@ from torchdata.datapipes.iter.transform.bucketbatcher import (
 from torchdata.datapipes.iter.transform.callable import (
     BatchAsyncMapperIterDataPipe as BatchAsyncMapper,
     BatchMapperIterDataPipe as BatchMapper,
+    BatchThreadPoolMapperIterDataPipe as BatchThreadPoolMapper,
     DropperIterDataPipe as Dropper,
     FlatMapperIterDataPipe as FlatMapper,
     FlattenIterDataPipe as Flattener,

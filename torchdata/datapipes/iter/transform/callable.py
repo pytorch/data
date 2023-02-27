@@ -7,6 +7,7 @@
 import asyncio
 import inspect
 import warnings
+from concurrent import futures
 
 from typing import Callable, Hashable, Iterator, List, Optional, Set, Sized, TypeVar, Union
 
@@ -584,4 +585,180 @@ class BatchAsyncMapperIterDataPipe(IterDataPipe):
         dp = source_datapipe.batch(batch_size)
         dp = _BatchAsyncMapperIterDataPipe(dp, async_fn, input_col, output_col, max_concurrency)
         dp = dp.flatmap()
+        return dp
+
+
+class _BatchThreadPoolMapperIterDataPipe(IterDataPipe):
+    datapipe: IterDataPipe
+    fn: Callable
+
+    def __init__(
+        self,
+        source_datapipe: IterDataPipe,
+        fn: Callable,
+        input_col=None,
+        output_col=None,
+        max_workers: Optional[int] = None,
+        **threadpool_kwargs,
+    ):
+        self.source_datapipe = source_datapipe
+        self.fn = fn  # type: ignore[assignment]
+        if input_col is None and output_col is not None:
+            raise ValueError("`output_col` must be None when `input_col` is None.")
+        self.input_col = input_col
+        if isinstance(output_col, (list, tuple)):
+            if len(output_col) > 1:
+                raise ValueError("`output_col` must be a single-element list or tuple")
+            output_col = output_col[0]
+        self.output_col = output_col
+        self.max_workers = max_workers
+        self.threadpool_kwargs = threadpool_kwargs
+
+    def __iter__(self):
+        with futures.ThreadPoolExecutor(max_workers=self.max_workers, **self.threadpool_kwargs) as executor:
+            for batch in self.source_datapipe:
+                prepared_batch = self.preparebatch(batch)
+                results = executor.map(self.fn, prepared_batch)
+                return_batch = self.merge_batch_with_result(batch, results)
+                yield return_batch
+
+    def preparebatch(self, batch):
+        if self.input_col is None:
+            return batch
+
+        prepared_batch = []
+        for data in batch:
+            if isinstance(self.input_col, (list, tuple)):
+                args = tuple(batch[col] for col in self.input_col)
+                prepared_batch.append(args)
+            else:
+                prepared_batch.append(data[self.input_col])
+        return prepared_batch
+
+    def merge_batch_with_result(self, orig_batch, results):
+        if self.input_col is None:
+            return results
+
+        new_batch = []
+        for data, res in zip(orig_batch, results):
+            t_flag = isinstance(data, tuple)
+            if t_flag:
+                data = list(data)
+
+            if self.output_col is None:
+                if isinstance(self.input_col, (list, tuple)):
+                    data[self.input_col[0]] = res
+                    for idx in sorted(self.input_col[1:], reverse=True):
+                        del data[idx]
+                else:
+                    data[self.input_col] = res
+            elif self.output_col == -1:
+                data.append(res)
+            else:
+                data[self.output_col] = res
+
+            if t_flag:
+                data = tuple(data)
+
+            new_batch.append(data)
+        return new_batch
+
+
+@functional_datapipe("thread_map_batches")
+class BatchThreadPoolMapperIterDataPipe(IterDataPipe):
+    r"""
+    Combines elements from the source DataPipe to batches and applies a function
+    over each element within the batch concurrently using ``ThreadPoolExecutor``, then flattens the output to a
+    single, unnested IterDataPipe (functional name: ``thread_map_batches``).
+
+    Args:
+        source_datapipe: Source IterDataPipe
+        fn: The function to be applied to each element within batch of data
+        batch_size: The size of batch to be aggregated from ``source_datapipe``
+        input_col: Index or indices of data which ``fn`` is applied, such as:
+            - ``None`` as default to apply ``fn`` to the data directly.
+            - Integer(s) is used for list/tuple.
+            - Key(s) is used for dict.
+        output_col: Index of data where result of ``fn`` is placed. ``output_col`` can be specified
+            only when ``input_col`` is not ``None``
+            - ``None`` as default to replace the index that ``input_col`` specified; For ``input_col`` with
+              multiple indices, the left-most one is used, and other indices will be removed.
+            - Integer is used for list/tuple. ``-1`` represents to append result at the end.
+            - Key is used for dict. New key is acceptable.
+        max_workers: Maximum num of threads to execute function calls. (Default value: None)
+
+    Note:
+         For more information about ``max_workers`` and please refer to: https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
+
+    Example:
+
+    .. testsetup::
+
+        from torchdata.datapipes.iter import IterableWrapper
+        import requests
+        import time
+        from unittest.mock import MagicMock
+
+        requests.get = MagicMock()
+        urls = []
+
+    .. testcode::
+
+        def mul_ten(x):
+            time.sleep(0.1)
+            return x * 10
+        dp = IterableWrapper(range(50))
+        dp = dp.thread_map_batches(mul_ten, 16)
+        print(list(dp))
+
+    .. testoutput::
+
+        [0, 10, 20, 30, ...]
+
+    .. testcode::
+
+        dp = IterableWrapper([(i, i) for i in range(50)])
+        dp = dp.thread_map_batches(mul_ten, 16, input_col=1)
+        print(list(dp))
+
+    .. testoutput::
+
+        [(0, 0), (1, 10), (2, 20), (3, 30), ...]
+
+    .. testcode::
+
+        dp = IterableWrapper([(i, i) for i in range(50)])
+        dp = dp.thread_map_batches(mul_ten, 16, input_col=1, output_col=-1)
+        print(list(dp))
+
+    .. testoutput::
+
+        [(0, 0, 0), (1, 1, 10), (2, 2, 20), (3, 3, 30), ...]
+
+    .. testcode::
+
+        # fetching html from remote
+        def fetch_html(url: str, **kwargs):
+            r = requests.get(url, **kwargs)
+            r.raise_for_status()
+            return r.content
+        dp = IterableWrapper(urls)
+        dp = dp.thread_map_batches(fetch_html, 16)
+
+    """
+
+    def __new__(
+        cls,
+        source_datapipe,
+        fn: Callable,
+        batch_size: int,
+        input_col=None,
+        output_col=None,
+        max_workers: Optional[int] = None,
+        **threadpool_kwargs,
+    ):
+        dp = source_datapipe.batch(batch_size)
+        dp = _BatchThreadPoolMapperIterDataPipe(dp, fn, input_col, output_col, max_workers, **threadpool_kwargs)
+        dp = dp.flatmap()
+
         return dp

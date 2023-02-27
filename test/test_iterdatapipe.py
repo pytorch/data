@@ -12,6 +12,7 @@ import unittest
 import warnings
 
 from collections import defaultdict
+from functools import partial
 from typing import Dict
 
 import expecttest
@@ -1618,6 +1619,45 @@ class TestIterDataPipe(expecttest.TestCase):
         for v1, v2, exp in zip(dp1, dp2, [i * 10 for i in range(50)]):
             self.assertEqual(v1, exp)
             self.assertEqual(v2, exp)
+
+    def test_threadpool_map_batches(self):
+        batch_size = 16
+        target_length = 30
+        input_dp = IterableWrapper(range(target_length))
+
+        def fn(item, dtype=torch.float, *, sum=False):
+            data = torch.tensor(item, dtype=dtype)
+            return data if not sum else data.sum()
+
+        # Functional Test: apply to each element correctly
+        map_dp = input_dp.thread_map_batches(fn, batch_size)
+        # self.assertEqual(target_length, len(map_dp))
+        for x, y in zip(map_dp, range(target_length)):
+            self.assertEqual(x, torch.tensor(y, dtype=torch.float))
+
+        # Functional Test: works with partial function
+        map_dp = input_dp.thread_map_batches(partial(fn, dtype=torch.int, sum=True), batch_size)
+        for x, y in zip(map_dp, range(target_length)):
+            self.assertEqual(x, torch.tensor(y, dtype=torch.int).sum())
+
+        # __len__ Test: inherits length from source DataPipe
+        # this doesn't work atm
+        # self.assertEqual(target_length, len(map_dp))
+
+        input_dp_nl = IDP_NoLen(range(target_length))
+        map_dp_nl = input_dp_nl.thread_map_batches((lambda x: x), batch_size)
+        for x, y in zip(map_dp_nl, range(target_length)):
+            self.assertEqual(x, torch.tensor(y, dtype=torch.float))
+
+        # __len__ Test: inherits length from source DataPipe - raises error when invalid
+        # with self.assertRaisesRegex(TypeError, r"instance doesn't have valid length$"):
+        #     len(map_dp_nl)
+
+        # Reset Test: DataPipe resets properly
+        n_elements_before_reset = 5
+        res_before_reset, res_after_reset = reset_after_n_next_calls(map_dp, n_elements_before_reset)
+        self.assertEqual(list(range(n_elements_before_reset)), res_before_reset)
+        self.assertEqual(list(range(target_length)), res_after_reset)
 
 
 if __name__ == "__main__":
