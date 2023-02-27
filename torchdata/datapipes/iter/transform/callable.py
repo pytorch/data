@@ -447,9 +447,16 @@ class _BatchAsyncMapperIterDataPipe(IterDataPipe):
         self.max_concurrency = max_concurrency
 
     def __iter__(self):
-        for batch in self.source_datapipe:
-            new_batch = asyncio.run(self.processbatch(batch))
-            yield new_batch
+        policy = asyncio.get_event_loop_policy()
+        loop = policy.new_event_loop()
+        try:
+            for batch in self.source_datapipe:
+                policy.set_event_loop(loop)
+                new_batch = loop.run_until_complete(self.processbatch(batch))
+                yield new_batch
+        finally:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
 
     async def processbatch(self, batch):
         sem = asyncio.Semaphore(self.max_concurrency)
