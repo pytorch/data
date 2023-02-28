@@ -30,7 +30,7 @@ def _no_op_fn(*args):
 class BatchMapperIterDataPipe(IterDataPipe[T_co]):
     r"""
     Combines elements from the source DataPipe to batches and applies a function
-    over each batch, then flattens the outpus to a single, unnested IterDataPipe
+    over each batch, then flattens the outputs to a single, unnested IterDataPipe
     (functional name: ``map_batches``).
 
     Args:
@@ -38,6 +38,7 @@ class BatchMapperIterDataPipe(IterDataPipe[T_co]):
         fn: The function to be applied to each batch of data
         batch_size: The size of batch to be aggregated from ``datapipe``
         input_col: Index or indices of data which ``fn`` is applied, such as:
+
             - ``None`` as default to apply ``fn`` to the data directly.
             - Integer(s) is used for list/tuple.
             - Key(s) is used for dict.
@@ -118,6 +119,7 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
         datapipe: Source IterDataPipe
         fn: the function to be applied to each element in the DataPipe, the output must be a Sequence
         input_col: Index or indices of data which ``fn`` is applied, such as:
+
             - ``None`` as default to apply ``fn`` to the data directly.
             - Integer(s) is/are used for list/tuple.
             - Key(s) is/are used for dict.
@@ -137,9 +139,9 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
         [1, 2, 3, 4, 5, 6]
     """
     datapipe: IterDataPipe
-    fn: Callable
+    fn: Optional[Callable]
 
-    def __init__(self, datapipe: IterDataPipe, fn: Callable = None, input_col=None) -> None:
+    def __init__(self, datapipe: IterDataPipe, fn: Optional[Callable] = None, input_col=None) -> None:
         self.datapipe = datapipe
 
         if fn is None:
@@ -151,12 +153,12 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
 
     def _apply_fn(self, data):
         if self.input_col is None:
-            return self.fn(data)
+            return self.fn(data)  # type: ignore[misc]
         elif isinstance(self.input_col, (list, tuple)):
             args = tuple(data[col] for col in self.input_col)
-            return self.fn(*args)
+            return self.fn(*args)  # type: ignore[misc]
         else:
-            return self.fn(data[self.input_col])
+            return self.fn(data[self.input_col])  # type: ignore[misc]
 
     def __iter__(self) -> Iterator[T_co]:
         for d in self.datapipe:
@@ -174,6 +176,9 @@ class DropperIterDataPipe(IterDataPipe[T_co]):
     Args:
         datapipe: IterDataPipe with columns to be dropped
         indices: a single column index to be dropped or a list of indices
+
+            - Integer(s) is/are used for list/tuple.
+            - Key(s) is/are used for dict.
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper, ZipperMapDataPipe
@@ -241,8 +246,13 @@ class SliceIterDataPipe(IterDataPipe[T_co]):
     Args:
         datapipe: IterDataPipe with iterable elements
         index: a single start index for the slice or a list of indices to be returned instead of a start/stop slice
-        stop: the slice stop. ignored if index is a list
-        step: step to be taken from start to stop. ignored if index is a list
+
+            - Integer(s) is/are used for list/tuple.
+            - Key(s) is/are used for dict.
+
+
+        stop: the slice stop. ignored if index is a list or if element is a dict
+        step: step to be taken from start to stop. ignored if index is a list or if element is a dict
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
@@ -289,6 +299,8 @@ class SliceIterDataPipe(IterDataPipe[T_co]):
             elif isinstance(old_item, dict):
                 if isinstance(self.index, list):
                     new_item = {k: v for (k, v) in old_item.items() if k in self.index}  # type: ignore[assignment]
+                elif self.index in old_item.keys():
+                    new_item = {self.index: old_item.get(self.index)}  # type: ignore[assignment]
                 else:
                     new_item = old_item  # type: ignore[assignment]
                     warnings.warn(
@@ -332,6 +344,9 @@ class FlattenIterDataPipe(IterDataPipe[T_co]):
     Args:
         datapipe: IterDataPipe with iterable elements
         indices: a single index/key for the item to flatten from an iterator item or a list of indices/keys to be flattened
+
+            - Integer(s) is/are used for list/tuple.
+            - Key(s) is/are used for dict.
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
