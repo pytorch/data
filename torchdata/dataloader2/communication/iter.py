@@ -13,6 +13,7 @@ from functools import partial
 from typing import Callable, Deque, List
 
 from torch.utils.data import IterDataPipe
+from torchdata._utils import ExceptionWrapper
 from torchdata.dataloader2 import communication
 from torchdata.dataloader2.graph import DataPipe, list_dps, traverse_dps
 from torchdata.dataloader2.random import SeedGenerator
@@ -57,12 +58,6 @@ class TerminateRequired(Exception):
     """
 
     pass
-
-
-class WorkerException(Exception):
-    """
-    Returned by DataPipe when there is a failure/exception from a worker process
-    """
 
 
 class NonBlocking(IterDataPipe):
@@ -121,7 +116,9 @@ def EnsureNonBlockingDataPipe(validated_datapipe):
     return validated_datapipe
 
 
-def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, reset_iterator_counter=None):
+def DataPipeBehindQueues(
+    source_datapipe, protocol, process_name, blocking_request_get=False, reset_iterator_counter=None
+):
     """
     Indefinitely iterates over ``req_queue`` and passing values from source_datapipe to ``res_queue``.
 
@@ -134,6 +131,7 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
     Args:
         source_datapipe: DataPipe
         protocol: ``IterDataPipeQueueProtocolServer`` that contains ``req_queue`` and ``res_queue``
+        process_name: Process name
         blocking_request_get: determines if ``protocol.get_new_request`` will block
         reset_iterator_counter: Optional counter to synchronize all loops that have received
             `ResetIteratorRequest` within the dispatching process. It would guarantee that
@@ -218,8 +216,9 @@ def DataPipeBehindQueues(source_datapipe, protocol, blocking_request_get=False, 
                     protocol.response_invalid_state()
                     yield True
                     break
-                except Exception as e:
-                    protocol.response_worker_exception(e)
+                except Exception:
+                    exc = ExceptionWrapper(where=f"in {process_name}")
+                    protocol.response_worker_exception(exc)
                     return
                 protocol.response_next(value)
                 yield True  # Returns control
@@ -332,7 +331,7 @@ class _IterateQueueDataPipes(IterDataPipe):
                     if isinstance(response, communication.messages.TerminateResponse):
                         raise communication.iter.TerminateRequired
                     if isinstance(response, communication.messages.WorkerExceptionResponse):
-                        raise communication.iter.WorkerException(f"Exception from worker {idx}") from response.exception
+                        response.exc.reraise()
                     if len(self.res_buffers[idx]) == 0:  # Only request if buffer is empty
                         self.datapipes[idx].protocol.request_next()
                     yield response.value
