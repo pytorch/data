@@ -1606,6 +1606,15 @@ class TestIterDataPipe(expecttest.TestCase):
             output_col=1,
         )
 
+        # Test multiple asyncio eventloops
+        dp1 = IterableWrapper(range(50))
+        dp1 = dp1.async_map_batches(_async_mul_ten, 16)
+        dp2 = IterableWrapper(range(50))
+        dp2 = dp2.async_map_batches(_async_mul_ten, 16)
+        for v1, v2, exp in zip(dp1, dp2, [i * 10 for i in range(50)]):
+            self.assertEqual(v1, exp)
+            self.assertEqual(v2, exp)
+
 
 if __name__ == "__main__":
     unittest.main()
