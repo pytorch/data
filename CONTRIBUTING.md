@@ -86,8 +86,8 @@ the checks automatically before every `git commit`, you can install them with `p
 
 When adding a new DataPipe, there are few things that need to be done to ensure it is working and documented properly.
 
-1. Naming - please following the naming convention as
-   [described here](https://github.com/pytorch/data/blob/main/docs/source/tutorial.rst#naming).
+1. Naming - please follow the naming convention as
+   [described here](https://pytorch.org/data/main/dp_tutorial.html#naming).
 2. Testing - please add unit tests to ensure that the DataPipe is functioning properly. Here are the
    [test requirements](https://github.com/pytorch/data/issues/106) that we have.
    - One test that is commonly missed is the serialization test. Please add the new DataPipe to
@@ -98,14 +98,14 @@ When adding a new DataPipe, there are few things that need to be done to ensure 
 3. Documentation - ensure that the DataPipe has docstring, usage example, and that it is added to the right category of
    the right RST file to be rendered.
    - If your DataPipe has a functional form (i.e. `@functional_datapipe(...)`), include at the
-     [end of the first sentence](https://github.com/pytorch/data/blob/main/torchdata/datapipes/iter/util/combining.py#L119)
+     [end of the first sentence](https://github.com/pytorch/data/blob/main/torchdata/datapipes/iter/util/combining.py#L25)
      of your docstring. This will make sure it correctly shows up in the
      [summary table](https://pytorch.org/data/main/torchdata.datapipes.iter.html#archive-datapipes) of our
      documentation.
 4. Import - import the DataPipe in the correct `__init__.py` file.
 5. Interface - if the DataPipe has a functional form, make sure that is generated properly by `gen_pyi.py` into the
    relevant interface file.
-   - You can re-generate the pyi files by re-running `python setup.py develop`, then you can examine the new outputs.
+   - You can re-generate the pyi files by re-running `pip install -e .`, then you can examine the new outputs.
 
 ## Contributor License Agreement ("CLA")
 

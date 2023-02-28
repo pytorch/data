@@ -272,6 +272,11 @@ class TestIterDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(KeyError, "is not a valid key in the given MapDataPipe"):
             next(it)
 
+        # Functional test: ensure that keep_key option works
+        result_dp = source_dp.zip_with_map(map_dp, odd_even, keep_key=True)
+        expected_res_keep_key = [(key, (i, odd_even_string(i))) for i, key in zip(range(10), [0, 1] * 5)]
+        self.assertEqual(expected_res_keep_key, list(result_dp))
+
         # Reset Test:
         n_elements_before_reset = 4
         result_dp = source_dp.zip_with_map(map_dp, odd_even)
@@ -1236,7 +1241,7 @@ class TestIterDataPipe(expecttest.TestCase):
         slice_dp = input_dp.slice(0, 2, 2)
         self.assertEqual([(0,), (3,), (6,)], list(slice_dp))
 
-        # Functional Test: filter with list of indices for tuple
+        # Functional Test: slice with list of indices for tuple
         slice_dp = input_dp.slice([0, 1])
         self.assertEqual([(0, 1), (3, 4), (6, 7)], list(slice_dp))
 
@@ -1251,14 +1256,18 @@ class TestIterDataPipe(expecttest.TestCase):
         slice_dp = input_dp.slice(0, 2)
         self.assertEqual([[0, 1], [3, 4], [6, 7]], list(slice_dp))
 
-        # Functional Test: filter with list of indices for list
+        # Functional Test: slice with list of indices for list
         slice_dp = input_dp.slice(0, 2)
         self.assertEqual([[0, 1], [3, 4], [6, 7]], list(slice_dp))
 
         # dict tests
         input_dp = IterableWrapper([{"a": 1, "b": 2, "c": 3}, {"a": 3, "b": 4, "c": 5}, {"a": 5, "b": 6, "c": 7}])
 
-        # Functional Test: filter with list of indices for dict
+        # Functional Test: slice with key for dict
+        slice_dp = input_dp.slice("a")
+        self.assertEqual([{"a": 1}, {"a": 3}, {"a": 5}], list(slice_dp))
+
+        # Functional Test: slice with list of keys for dict
         slice_dp = input_dp.slice(["a", "b"])
         self.assertEqual([{"a": 1, "b": 2}, {"a": 3, "b": 4}, {"a": 5, "b": 6}], list(slice_dp))
 
@@ -1600,6 +1609,15 @@ class TestIterDataPipe(expecttest.TestCase):
             input_col=(0, 2),
             output_col=1,
         )
+
+        # Test multiple asyncio eventloops
+        dp1 = IterableWrapper(range(50))
+        dp1 = dp1.async_map_batches(_async_mul_ten, 16)
+        dp2 = IterableWrapper(range(50))
+        dp2 = dp2.async_map_batches(_async_mul_ten, 16)
+        for v1, v2, exp in zip(dp1, dp2, [i * 10 for i in range(50)]):
+            self.assertEqual(v1, exp)
+            self.assertEqual(v2, exp)
 
 
 if __name__ == "__main__":

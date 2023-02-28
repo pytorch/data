@@ -75,6 +75,13 @@ semantic classes. Here is a
 <https://github.com/tcapelle/torchdata/blob/main/01_Camvid_segmentation_with_datapipes.ipynb>`_
 created by our community.
 
+laion2B-en-joined
+^^^^^^^^^^^^^^^^^^^^^^
+The `laion2B-en-joined dataset <https://huggingface.co/datasets/laion/laion2B-en-joined>`_ is a subset of the `LAION-5B dataset <https://laion.ai/blog/laion-5b/>`_ containing english captions, URls pointing to images,
+and other metadata. It contains around 2.32 billion entries.
+Currently (February 2023) around 86% of the URLs still point to valid images. Here is a `DataPipe implementation of laion2B-en-joined
+<https://github.com/pytorch/data/blob/main/examples/vision/laion5b.py>`_ that filters out unsafe images and images with watermarks and loads the images from the URLs.
+
 Additional Datasets in TorchVision
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 In a separate PyTorch domain library `TorchVision <https://github.com/pytorch/vision>`_, you will find some of the most
