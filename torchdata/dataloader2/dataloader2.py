@@ -362,7 +362,7 @@ class DataLoader2(Generic[T_co]):
         self._datapipe_before_reading_service_adapt = clone(self.datapipe)
 
     def _restore_checkpoint_beginning_of_epoch(self) -> None:
-        pass  # TODO: You don't actually have to do anything? Once you restore state, you are good to go.
+        self._seed_generator = self._initial_seed_generator
 
     def _pause(self):
         if hasattr(self.reading_service, "_pause"):
