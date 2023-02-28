@@ -539,15 +539,19 @@ class BatchAsyncMapperIterDataPipe(IterDataPipe):
         async_fn: The coroutine function to be applied to each batch of data
         batch_size: The size of batch to be aggregated from ``source_datapipe``
         input_col: Index or indices of data which ``fn`` is applied, such as:
+
             - ``None`` as default to apply ``fn`` to the data directly.
             - Integer(s) is used for list/tuple.
             - Key(s) is used for dict.
+
         output_col: Index of data where result of ``fn`` is placed. ``output_col`` can be specified
             only when ``input_col`` is not ``None``
+
             - ``None`` as default to replace the index that ``input_col`` specified; For ``input_col`` with
               multiple indices, the left-most one is used, and other indices will be removed.
             - Integer is used for list/tuple. ``-1`` represents to append result at the end.
             - Key is used for dict. New key is acceptable.
+
         max_concurrency: Maximum concurrency to call async functions. (Default value: 32)
 
     Example:
@@ -630,11 +634,11 @@ class _BatchThreadPoolMapperIterDataPipe(IterDataPipe):
     def __iter__(self):
         with futures.ThreadPoolExecutor(max_workers=self.max_workers, **self.threadpool_kwargs) as executor:
             for batch in self.source_datapipe:
-                prepared_batch = self.preparebatch(batch)
+                prepared_batch = self._prepare_batch(batch)
                 results = executor.map(self.fn, prepared_batch)
                 yield _merge_batch_with_result(batch, results, self.input_col, self.output_col)
 
-    def preparebatch(self, batch):
+    def _prepare_batch(self, batch):
         if self.input_col is None:
             return batch
 
@@ -660,19 +664,25 @@ class BatchThreadPoolMapperIterDataPipe(IterDataPipe):
         fn: The function to be applied to each element within batch of data
         batch_size: The size of batch to be aggregated from ``source_datapipe``
         input_col: Index or indices of data which ``fn`` is applied, such as:
+
             - ``None`` as default to apply ``fn`` to the data directly.
             - Integer(s) is used for list/tuple.
             - Key(s) is used for dict.
+
         output_col: Index of data where result of ``fn`` is placed. ``output_col`` can be specified
             only when ``input_col`` is not ``None``
+
             - ``None`` as default to replace the index that ``input_col`` specified; For ``input_col`` with
               multiple indices, the left-most one is used, and other indices will be removed.
             - Integer is used for list/tuple. ``-1`` represents to append result at the end.
             - Key is used for dict. New key is acceptable.
-        max_workers: Maximum num of threads to execute function calls. (Default value: None)
+
+        max_workers: Maximum number of threads to execute function calls. (Default value: None)
+        **threadpool_kwargs: additional arguments to be given to the ``ThreadPoolExecutor``
 
     Note:
-         For more information about ``max_workers`` and please refer to: https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
+         For more information about ``max_workers`` and additional arguments for the ``ThreadPoolExecutor``
+         please refer to: https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
 
     Example:
 
