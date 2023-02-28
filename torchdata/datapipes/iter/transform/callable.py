@@ -27,6 +27,35 @@ def _no_op_fn(*args):
     return args
 
 
+def _merge_batch_with_result(orig_batch, results, input_col, output_col):
+    if input_col is None:
+        return results
+
+    new_batch = []
+    for data, res in zip(orig_batch, results):
+        t_flag = isinstance(data, tuple)
+        if t_flag:
+            data = list(data)
+
+        if output_col is None:
+            if isinstance(input_col, (list, tuple)):
+                data[input_col[0]] = res
+                for idx in sorted(input_col[1:], reverse=True):
+                    del data[idx]
+            else:
+                data[input_col] = res
+        elif output_col == -1:
+            data.append(res)
+        else:
+            data[output_col] = res
+
+        if t_flag:
+            data = tuple(data)
+
+        new_batch.append(data)
+    return new_batch
+
+
 @functional_datapipe("map_batches")
 class BatchMapperIterDataPipe(IterDataPipe[T_co]):
     r"""
@@ -495,30 +524,7 @@ class _BatchAsyncMapperIterDataPipe(IterDataPipe):
             else:
                 coroutines.append(controlled_async_fn(self.async_fn, data[self.input_col]))
         results = await asyncio.gather(*coroutines)
-
-        new_batch = []
-        for data, res in zip(batch, results):
-            t_flag = isinstance(data, tuple)
-            if t_flag:
-                data = list(data)
-
-            if self.output_col is None:
-                if isinstance(self.input_col, (list, tuple)):
-                    data[self.input_col[0]] = res
-                    for idx in sorted(self.input_col[1:], reverse=True):
-                        del data[idx]
-                else:
-                    data[self.input_col] = res
-            elif self.output_col == -1:
-                data.append(res)
-            else:
-                data[self.output_col] = res
-
-            if t_flag:
-                data = tuple(data)
-
-            new_batch.append(data)
-        return new_batch
+        return _merge_batch_with_result(batch, results, self.input_col, self.output_col)
 
 
 @functional_datapipe("async_map_batches")
@@ -602,14 +608,21 @@ class _BatchThreadPoolMapperIterDataPipe(IterDataPipe):
         **threadpool_kwargs,
     ):
         self.source_datapipe = source_datapipe
-        self.fn = fn  # type: ignore[assignment]
+        self.fn = fn
+        self.input_col = input_col
+        validate_input_col(fn, input_col)
         if input_col is None and output_col is not None:
             raise ValueError("`output_col` must be None when `input_col` is None.")
-        self.input_col = input_col
         if isinstance(output_col, (list, tuple)):
             if len(output_col) > 1:
                 raise ValueError("`output_col` must be a single-element list or tuple")
             output_col = output_col[0]
+        if isinstance(self.input_col, (list, tuple)):
+
+            def wrapper_fn(args):
+                return fn(*args)
+
+            self.fn = wrapper_fn
         self.output_col = output_col
         self.max_workers = max_workers
         self.threadpool_kwargs = threadpool_kwargs
@@ -619,8 +632,7 @@ class _BatchThreadPoolMapperIterDataPipe(IterDataPipe):
             for batch in self.source_datapipe:
                 prepared_batch = self.preparebatch(batch)
                 results = executor.map(self.fn, prepared_batch)
-                return_batch = self.merge_batch_with_result(batch, results)
-                yield return_batch
+                yield _merge_batch_with_result(batch, results, self.input_col, self.output_col)
 
     def preparebatch(self, batch):
         if self.input_col is None:
@@ -629,39 +641,11 @@ class _BatchThreadPoolMapperIterDataPipe(IterDataPipe):
         prepared_batch = []
         for data in batch:
             if isinstance(self.input_col, (list, tuple)):
-                args = tuple(batch[col] for col in self.input_col)
+                args = tuple(data[col] for col in self.input_col)
                 prepared_batch.append(args)
             else:
                 prepared_batch.append(data[self.input_col])
         return prepared_batch
-
-    def merge_batch_with_result(self, orig_batch, results):
-        if self.input_col is None:
-            return results
-
-        new_batch = []
-        for data, res in zip(orig_batch, results):
-            t_flag = isinstance(data, tuple)
-            if t_flag:
-                data = list(data)
-
-            if self.output_col is None:
-                if isinstance(self.input_col, (list, tuple)):
-                    data[self.input_col[0]] = res
-                    for idx in sorted(self.input_col[1:], reverse=True):
-                        del data[idx]
-                else:
-                    data[self.input_col] = res
-            elif self.output_col == -1:
-                data.append(res)
-            else:
-                data[self.output_col] = res
-
-            if t_flag:
-                data = tuple(data)
-
-            new_batch.append(data)
-        return new_batch
 
 
 @functional_datapipe("thread_map_batches")
@@ -760,5 +744,4 @@ class BatchThreadPoolMapperIterDataPipe(IterDataPipe):
         dp = source_datapipe.batch(batch_size)
         dp = _BatchThreadPoolMapperIterDataPipe(dp, fn, input_col, output_col, max_workers, **threadpool_kwargs)
         dp = dp.flatmap()
-
         return dp
