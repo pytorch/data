@@ -608,7 +608,7 @@ class _BatchThreadPoolMapperIterDataPipe(IterDataPipe):
         **threadpool_kwargs,
     ):
         self.source_datapipe = source_datapipe
-        self.fn = fn
+        self.fn = fn  # type: ignore[assignment]
         self.input_col = input_col
         validate_input_col(fn, input_col)
         if input_col is None and output_col is not None:
@@ -622,7 +622,7 @@ class _BatchThreadPoolMapperIterDataPipe(IterDataPipe):
             def wrapper_fn(args):
                 return fn(*args)
 
-            self.fn = wrapper_fn
+            self.fn = wrapper_fn  # type: ignore[assignment]
         self.output_col = output_col
         self.max_workers = max_workers
         self.threadpool_kwargs = threadpool_kwargs
