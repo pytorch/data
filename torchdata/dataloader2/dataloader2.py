@@ -218,6 +218,7 @@ class DataLoader2(Generic[T_co]):
                     self.datapipe = self.reading_service.restore(self.datapipe, self.reading_service_state)
                 self._adapted = True
 
+            # TODO: To allow arbitrary checkpointing, add and execute `restore_iteration` here instead.
             if self.reading_service is not None:
                 iter_reset_fn = self.reading_service.initialize_iteration(self._seed_generator)
                 if iter_reset_fn:
