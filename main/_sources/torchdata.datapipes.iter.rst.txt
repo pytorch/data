@@ -188,6 +188,7 @@ A miscellaneous set of DataPipes with different functionalities.
     Prefetcher
     RandomSplitter
     ShardingFilter
+    ShardingRoundRobinDispatcher
 
 Selecting DataPipes
 -------------------------

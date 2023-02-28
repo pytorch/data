@@ -220,7 +220,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.7.0a0+daabdac ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.7.0a0+0fef12a ) &#x25BC</a>
     </div>
     
 
@@ -406,6 +406,12 @@ semantic classes. Here is a
 <a class="reference external" href="https://github.com/tcapelle/torchdata/blob/main/01_Camvid_segmentation_with_datapipes.ipynb">DataPipe implementation of CamVid</a>
 created by our community.</p>
 </section>
+<section id="laion2b-en-joined">
+<h3>laion2B-en-joined<a class="headerlink" href="#laion2b-en-joined" title="Permalink to this heading">¶</a></h3>
+<p>The <a class="reference external" href="https://huggingface.co/datasets/laion/laion2B-en-joined">laion2B-en-joined dataset</a> is a subset of the <a class="reference external" href="https://laion.ai/blog/laion-5b/">LAION-5B dataset</a> containing english captions, URls pointing to images,
+and other metadata. It contains around 2.32 billion entries.
+Currently (February 2023) around 86% of the URLs still point to valid images. Here is a <a class="reference external" href="https://github.com/pytorch/data/blob/main/examples/vision/laion5b.py">DataPipe implementation of laion2B-en-joined</a> that filters out unsafe images and images with watermarks and loads the images from the URLs.</p>
+</section>
 <section id="additional-datasets-in-torchvision">
 <h3>Additional Datasets in TorchVision<a class="headerlink" href="#additional-datasets-in-torchvision" title="Permalink to this heading">¶</a></h3>
 <p>In a separate PyTorch domain library <a class="reference external" href="https://github.com/pytorch/vision">TorchVision</a>, you will find some of the most
@@ -526,6 +532,7 @@ labels of more than 1.5 million object instances across 80 object categories sto
 <li><a class="reference internal" href="#caltech-101">Caltech 101</a></li>
 <li><a class="reference internal" href="#caltech-256">Caltech 256</a></li>
 <li><a class="reference internal" href="#camvid-semantic-segmentation-community-example">CamVid - Semantic Segmentation (community example)</a></li>
+<li><a class="reference internal" href="#laion2b-en-joined">laion2B-en-joined</a></li>
 <li><a class="reference internal" href="#additional-datasets-in-torchvision">Additional Datasets in TorchVision</a></li>
 </ul>
 </li>

@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>RarArchiveLoader &mdash; TorchData main documentation</title>
+  <title>ShardingRoundRobinDispatcher &mdash; TorchData main documentation</title>
   
 
   
@@ -34,8 +34,8 @@
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="TarArchiveLoader" href="torchdata.datapipes.iter.TarArchiveLoader.html" />
-    <link rel="prev" title="Decompressor" href="torchdata.datapipes.iter.Decompressor.html" />
+    <link rel="next" title="Filter" href="torchdata.datapipes.iter.Filter.html" />
+    <link rel="prev" title="ShardingFilter" href="torchdata.datapipes.iter.ShardingFilter.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -310,13 +310,13 @@
         
           <li><a href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a> &gt;</li>
         
-      <li>RarArchiveLoader</li>
+      <li>ShardingRoundRobinDispatcher</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/generated/torchdata.datapipes.iter.RarArchiveLoader.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/generated/torchdata.datapipes.iter.ShardingRoundRobinDispatcher.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -342,35 +342,46 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="rararchiveloader">
-<h1>RarArchiveLoader<a class="headerlink" href="#rararchiveloader" title="Permalink to this heading">¶</a></h1>
+  <section id="shardingroundrobindispatcher">
+<h1>ShardingRoundRobinDispatcher<a class="headerlink" href="#shardingroundrobindispatcher" title="Permalink to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="torchdata.datapipes.iter.RarArchiveLoader">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">RarArchiveLoader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">BufferedIOBase</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.RarArchiveLoader" title="Permalink to this definition">¶</a></dt>
-<dd><p>Decompresses rar binary streams from input Iterable Datapipes which contains tuples of path name and rar
-binary stream, and yields  a tuple of path name and extracted binary stream (functional name: <code class="docutils literal notranslate"><span class="pre">load_from_rar</span></code>).</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The nested RAR archive is not supported by this DataPipe
-due to the limitation of the archive type. Please extract
-outer RAR archive before reading the inner archive.</p>
-</div>
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.ShardingRoundRobinDispatcher">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">ShardingRoundRobinDispatcher</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">sharding_group_filter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">SHARDING_PRIORITIES</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.ShardingRoundRobinDispatcher" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper that indicates the prior section of <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph is non-replicable and will be
+iterated in a separate, single dispatching process to distribute data to worker processes
+in a round-robin manner when multiprocessing is being used.
+(functional name: <code class="docutils literal notranslate"><span class="pre">sharding_round_robin_dispatch</span></code>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>datapipe</strong> – Iterable DataPipe that provides tuples of path name and rar binary stream</p></li>
-<li><p><strong>length</strong> – Nominal length of the DataPipe</p></li>
+<li><p><strong>source_datapipe</strong> – Iterable DataPipe that will be sharded</p></li>
+<li><p><strong>sharding_group_filter</strong> – Optional <code class="docutils literal notranslate"><span class="pre">SHARDING_PRIORITIES</span></code> value</p></li>
 </ul>
 </dd>
 </dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">FileLister</span><span class="p">,</span> <span class="n">FileOpener</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">datapipe1</span> <span class="o">=</span> <span class="n">FileLister</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;*.rar&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">datapipe2</span> <span class="o">=</span> <span class="n">FileOpener</span><span class="p">(</span><span class="n">datapipe1</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;b&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">rar_loader_dp</span> <span class="o">=</span> <span class="n">datapipe2</span><span class="o">.</span><span class="n">load_from_rar</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">stream</span> <span class="ow">in</span> <span class="n">rar_loader_dp</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="nb">print</span><span class="p">(</span><span class="n">stream</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
-<span class="go">b&#39;0123456789abcdef&#39;</span>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">sharding_group_filter</span></code> only accepts <code class="docutils literal notranslate"><span class="pre">SHARDING_PRIORITIES.MULTIPROCESSING</span></code> for now</p></li>
+<li><p>When using distributed training, you can add a <code class="docutils literal notranslate"><span class="pre">sharding_filter()</span></code> prior to this DataPipe
+to distribute samples among worker nodes.</p></li>
+</ul>
+</div>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># xdoctest: +SKIP</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torch.utils.data.datapipes.iter.sharding</span> <span class="kn">import</span> <span class="n">SHARDING_PRIORITIES</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># `.shuffle()` will be executed in a single dispatching processing, then the samples are distributed</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># to worker processes</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span><span class="o">.</span><span class="n">sharding_round_robin_dispatch</span><span class="p">(</span><span class="n">SHARDING_PRIORITIES</span><span class="o">.</span><span class="n">MULTIPROCESSING</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># `.map()` will be executed within each worker process</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Distributed case: the 10 samples will be distributed among the nodes</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span><span class="o">.</span><span class="n">sharding_filter</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># `.map()` will be executed in a single dispatching processing in each node</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># You may apply further transformation after within each worker process</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sharding_round_robin_dispatch</span><span class="p">(</span><span class="n">SHARDING_PRIORITIES</span><span class="o">.</span><span class="n">MULTIPROCESSING</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -385,10 +396,10 @@ outer RAR archive before reading the inner archive.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="torchdata.datapipes.iter.TarArchiveLoader.html" class="btn btn-neutral float-right" title="TarArchiveLoader" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.datapipes.iter.Filter.html" class="btn btn-neutral float-right" title="Filter" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.iter.Decompressor.html" class="btn btn-neutral" title="Decompressor" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="torchdata.datapipes.iter.ShardingFilter.html" class="btn btn-neutral" title="ShardingFilter" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -420,7 +431,7 @@ outer RAR archive before reading the inner archive.</p>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">RarArchiveLoader</a></li>
+<li><a class="reference internal" href="#">ShardingRoundRobinDispatcher</a></li>
 </ul>
 
             </div>
