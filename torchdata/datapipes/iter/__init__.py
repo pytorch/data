@@ -66,6 +66,7 @@ from torchdata.datapipes.iter.transform.bucketbatcher import (
     MaxTokenBucketizerIterDataPipe as MaxTokenBucketizer,
 )
 from torchdata.datapipes.iter.transform.callable import (
+    BatchAsyncMapperIterDataPipe as BatchAsyncMapper,
     BatchMapperIterDataPipe as BatchMapper,
     DropperIterDataPipe as Dropper,
     FlatMapperIterDataPipe as FlatMapper,
@@ -108,7 +109,10 @@ from torchdata.datapipes.iter.util.plain_text_reader import (
     CSVParserIterDataPipe as CSVParser,
     LineReaderIterDataPipe as LineReader,
 )
-from torchdata.datapipes.iter.util.prefetcher import PrefetcherIterDataPipe as Prefetcher
+from torchdata.datapipes.iter.util.prefetcher import (
+    PinMemoryIterDataPipe as PinMemory,
+    PrefetcherIterDataPipe as Prefetcher,
+)
 from torchdata.datapipes.iter.util.randomsplitter import RandomSplitterIterDataPipe as RandomSplitter
 from torchdata.datapipes.iter.util.rararchiveloader import RarArchiveLoaderIterDataPipe as RarArchiveLoader
 from torchdata.datapipes.iter.util.rows2columnar import Rows2ColumnarIterDataPipe as Rows2Columnar
@@ -133,6 +137,7 @@ from torchdata.datapipes.map.util.converter import MapToIterConverterIterDataPip
 __all__ = [
     "AISFileLister",
     "AISFileLoader",
+    "BatchAsyncMapper",
     "BatchMapper",
     "Batcher",
     "BucketBatcher",
@@ -187,6 +192,7 @@ __all__ = [
     "OnlineReader",
     "ParagraphAggregator",
     "ParquetDataFrameLoader",
+    "PinMemory",
     "Prefetcher",
     "RandomSplitter",
     "RarArchiveLoader",

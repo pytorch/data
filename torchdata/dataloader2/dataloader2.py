@@ -19,7 +19,7 @@ from torchdata.dataloader2.reading_service import CheckpointableReadingServiceIn
 T_co = TypeVar("T_co", covariant=True)
 SERIALIZED_DATAPIPE_KEY_NAME = "serialized_datapipe"
 READING_SERVICE_STATE_KEY_NAME = "reading_service_state"
-INITIAL_SEED_GEN_STATE_KEY_NAME = "initial_seed_gen_state"
+RANDOMNESS_STATE_KEY_NAME = "randomness_state"
 
 
 @dataclass
@@ -181,10 +181,9 @@ class DataLoader2(Generic[T_co]):
         self._datapipe_before_reading_service_adapt: DataPipe = clone(self.datapipe)
         self._seed_generator: SeedGenerator = SeedGenerator()
         self._seed: Optional[int] = None
-        self._reset_seed: bool = True
+        self._reset_seed: bool = True  # TODO: Consider moving `_reset_seed` to inside of SeedGenerator
         # Seed generator as of beginning of each epoch
         self._initial_seed_generator: SeedGenerator = clone(self._seed_generator)
-        self._skip_iteration_seeding: bool = False
 
     def __iter__(self) -> DataLoader2Iterator[T_co]:
         r"""
@@ -204,8 +203,6 @@ class DataLoader2(Generic[T_co]):
                 if self._reset_seed:
                     self._seed_generator.seed(self._seed)
                     self._reset_seed = False
-            elif self._skip_iteration_seeding:
-                self._skip_iteration_seeding = False
             else:
                 self._seed_generator.seed()
 
@@ -243,7 +240,6 @@ class DataLoader2(Generic[T_co]):
             raise ValueError(f"Expected an uint64 seed, but got {seed}.")
         self._seed = seed
         self._reset_seed = True
-        self._skip_iteration_seeding = False
 
     def __del__(self) -> None:
         self.shutdown()
@@ -284,12 +280,17 @@ class DataLoader2(Generic[T_co]):
 
         # Serialize datapipe after applying adapters and before reading service adaption
         serialized_datapipe = serialize_datapipe(self._datapipe_before_reading_service_adapt)
-        serialized_initial_seed_generator = pickle.dumps(self._initial_seed_generator)
+        serialized_randomness_state = (
+            self._seed,
+            self._reset_seed,
+            pickle.dumps(self._seed_generator),
+            pickle.dumps(self._initial_seed_generator),
+        )
 
         return {
             SERIALIZED_DATAPIPE_KEY_NAME: serialized_datapipe,
             READING_SERVICE_STATE_KEY_NAME: reading_service_state,
-            INITIAL_SEED_GEN_STATE_KEY_NAME: serialized_initial_seed_generator,
+            RANDOMNESS_STATE_KEY_NAME: serialized_randomness_state,
         }
 
     @classmethod
@@ -297,7 +298,6 @@ class DataLoader2(Generic[T_co]):
         cls,
         state: Dict[str, Any],
         reading_service: CheckpointableReadingServiceInterface,
-        restore_initial_seed_generator: bool = False,
     ) -> "DataLoader2[T_co]":
         """
         Create new ``DataLoader2`` with ``DataPipe`` graph and ``ReadingService`` restored
@@ -313,16 +313,14 @@ class DataLoader2(Generic[T_co]):
         )
         data_loader.reading_service_state = reading_service_state
 
-        if restore_initial_seed_generator:
-            serialized_generator = state[INITIAL_SEED_GEN_STATE_KEY_NAME]
-            deserialized_seed_generator = pickle.loads(serialized_generator)
-            assert deserialized_seed_generator is not None
-            data_loader._seed_generator = deserialized_seed_generator
-            data_loader._skip_iteration_seeding = True
+        randomness_state = state[RANDOMNESS_STATE_KEY_NAME]
+        data_loader._seed, data_loader._reset_seed = randomness_state[0], randomness_state[1]
+        data_loader._seed_generator = pickle.loads(randomness_state[2])
+        data_loader._initial_seed_generator = pickle.loads(randomness_state[3])
 
         return data_loader
 
-    def load_state_dict(self, state_dict: Dict[str, Any], restore_initial_seed_generator: bool = False) -> None:
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         """
         For the existing ``DataLoader2``, load serialized state to restore ``DataPipe`` graph
         and reset the internal state of ``ReadingService``.
@@ -346,18 +344,19 @@ class DataLoader2(Generic[T_co]):
         self.datapipe = deserialized_datapipe
         self.reading_service_state = reading_service_state
 
-        if restore_initial_seed_generator:
-            serialized_generator = state_dict[INITIAL_SEED_GEN_STATE_KEY_NAME]
-            deserialized_seed_generator = pickle.loads(serialized_generator)
-            assert deserialized_seed_generator is not None
-            self._seed_generator = deserialized_seed_generator
-            self._skip_iteration_seeding = True
+        randomness_state = state_dict[RANDOMNESS_STATE_KEY_NAME]
+        self._seed, self._reset_seed = randomness_state[0], randomness_state[1]
+        self._seed_generator = pickle.loads(randomness_state[2])
+        self._initial_seed_generator = pickle.loads(randomness_state[3])
 
         # re-initialize datapipe_adapter_fn and _datapipe_before_reading_service_adapt
         if self.datapipe_adapter_fns is not None:
             for adapter_fn in self.datapipe_adapter_fns:
                 self.datapipe = adapter_fn(self.datapipe)
         self._datapipe_before_reading_service_adapt = clone(self.datapipe)
+
+    def _restore_checkpoint_beginning_of_epoch(self) -> None:
+        pass  # TODO: You don't actually have to do anything? Once you restore state, you are good to go.
 
     def _pause(self):
         if hasattr(self.reading_service, "_pause"):
