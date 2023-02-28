@@ -162,6 +162,7 @@ These DataPipes apply the a given function to each element in the DataPipe.
     :toctree: generated/
     :template: class_template.rst
 
+    BatchAsyncMapper
     BatchMapper
     FlatMapper
     Mapper
@@ -183,9 +184,11 @@ A miscellaneous set of DataPipes with different functionalities.
     LengthSetter
     MapToIterConverter
     OnDiskCacheHolder
+    PinMemory
     Prefetcher
     RandomSplitter
     ShardingFilter
+    ShardingRoundRobinDispatcher
 
 Selecting DataPipes
 -------------------------
