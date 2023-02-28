@@ -1230,7 +1230,7 @@ class TestIterDataPipe(expecttest.TestCase):
         slice_dp = input_dp.slice(0, 2, 2)
         self.assertEqual([(0,), (3,), (6,)], list(slice_dp))
 
-        # Functional Test: filter with list of indices for tuple
+        # Functional Test: slice with list of indices for tuple
         slice_dp = input_dp.slice([0, 1])
         self.assertEqual([(0, 1), (3, 4), (6, 7)], list(slice_dp))
 
@@ -1245,14 +1245,18 @@ class TestIterDataPipe(expecttest.TestCase):
         slice_dp = input_dp.slice(0, 2)
         self.assertEqual([[0, 1], [3, 4], [6, 7]], list(slice_dp))
 
-        # Functional Test: filter with list of indices for list
+        # Functional Test: slice with list of indices for list
         slice_dp = input_dp.slice(0, 2)
         self.assertEqual([[0, 1], [3, 4], [6, 7]], list(slice_dp))
 
         # dict tests
         input_dp = IterableWrapper([{"a": 1, "b": 2, "c": 3}, {"a": 3, "b": 4, "c": 5}, {"a": 5, "b": 6, "c": 7}])
 
-        # Functional Test: filter with list of indices for dict
+        # Functional Test: slice with key for dict
+        slice_dp = input_dp.slice("a")
+        self.assertEqual([{"a": 1}, {"a": 3}, {"a": 5}], list(slice_dp))
+
+        # Functional Test: slice with list of keys for dict
         slice_dp = input_dp.slice(["a", "b"])
         self.assertEqual([{"a": 1, "b": 2}, {"a": 3, "b": 4}, {"a": 5, "b": 6}], list(slice_dp))
 

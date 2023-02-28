@@ -72,7 +72,7 @@ into the ``DataLoader``. For detailed documentation related to ``DataLoader``,
 please visit `this PyTorch Core page <https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading>`_.
 
 
-Please refer to `this page <dlv2_tutorial.html>`_ about using ``DataPipe`` with ``DataLoader2``.
+Please refer to :doc:`this page <dlv2_tutorial>` about using ``DataPipe`` with ``DataLoader2``.
 
 
 For this example, we will first have a helper function that generates some CSV files with random label and data.
