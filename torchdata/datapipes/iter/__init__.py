@@ -71,6 +71,7 @@ from torchdata.datapipes.iter.transform.callable import (
     DropperIterDataPipe as Dropper,
     FlatMapperIterDataPipe as FlatMapper,
     FlattenIterDataPipe as Flattener,
+    ShuffledFlatMapperIterDataPipe as ShuffledFlatMapper,
     SliceIterDataPipe as Slicer,
 )
 from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
