@@ -68,11 +68,11 @@ from torchdata.datapipes.iter.transform.bucketbatcher import (
 from torchdata.datapipes.iter.transform.callable import (
     BatchAsyncMapperIterDataPipe as BatchAsyncMapper,
     BatchMapperIterDataPipe as BatchMapper,
-    BatchThreadPoolMapperIterDataPipe as BatchThreadPoolMapper,
     DropperIterDataPipe as Dropper,
     FlatMapperIterDataPipe as FlatMapper,
     FlattenIterDataPipe as Flattener,
     SliceIterDataPipe as Slicer,
+    ThreadPoolMapperIterDataPipe as ThreadPoolMapper,
 )
 from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
 from torchdata.datapipes.iter.util.cacheholder import (

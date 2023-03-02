@@ -598,7 +598,7 @@ class BatchAsyncMapperIterDataPipe(IterDataPipe):
         return dp
 
 
-class _BatchThreadPoolMapperIterDataPipe(IterDataPipe):
+class _ThreadPoolMapperIterDataPipe(IterDataPipe):
     datapipe: IterDataPipe
     fn: Callable
 
@@ -652,12 +652,12 @@ class _BatchThreadPoolMapperIterDataPipe(IterDataPipe):
         return prepared_batch
 
 
-@functional_datapipe("thread_map_batches")
-class BatchThreadPoolMapperIterDataPipe(IterDataPipe):
+@functional_datapipe("threadpool_map")
+class ThreadPoolMapperIterDataPipe(IterDataPipe):
     r"""
     Combines elements from the source DataPipe to batches and applies a function
     over each element within the batch concurrently using ``ThreadPoolExecutor``, then flattens the output to a
-    single, unnested IterDataPipe (functional name: ``thread_map_batches``).
+    single, unnested IterDataPipe (functional name: ``threadpool_map``).
 
     Args:
         source_datapipe: Source IterDataPipe
@@ -752,6 +752,6 @@ class BatchThreadPoolMapperIterDataPipe(IterDataPipe):
         **threadpool_kwargs,
     ):
         dp = source_datapipe.batch(batch_size)
-        dp = _BatchThreadPoolMapperIterDataPipe(dp, fn, input_col, output_col, max_workers, **threadpool_kwargs)
+        dp = _ThreadPoolMapperIterDataPipe(dp, fn, input_col, output_col, max_workers, **threadpool_kwargs)
         dp = dp.flatmap()
         return dp
