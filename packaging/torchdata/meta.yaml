@@ -14,12 +14,13 @@ requirements:
     # - {{ compiler('c') }} # [win]
     # - {{ compiler('cxx') }} # [win]
     - python
-    # - setuptools
     - cpuonly
     - curl # [not win]
     - openssl # [unix]
     - zlib # [unix]
     {{ environ.get('CONDA_PYTORCH_BUILD_CONSTRAINT') }}
+  host:
+    - setuptools
   run:
     - python
     - urllib3>=1.25
