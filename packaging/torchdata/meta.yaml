@@ -20,10 +20,7 @@ requirements:
     - zlib # [unix]
     {{ environ.get('CONDA_PYTORCH_BUILD_CONSTRAINT') }}
   host:
-    - python
     - setuptools
-    - pkg-config  # [not win]
-    - cmake
   run:
     - python
     - urllib3>=1.25
