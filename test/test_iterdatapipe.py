@@ -1710,7 +1710,7 @@ class TestIterDataPipe(expecttest.TestCase):
                         res_dp = datapipe.thread_map_batches(fn, batch_size, input_col, output_col)
                         list(res_dp)
                 else:
-                    res_dp = datapipe.map(fn, input_col, output_col)
+                    res_dp = datapipe.thread_map_batches(fn, batch_size, input_col, output_col)
                     ref_dp = datapipe.map(ref_fn)
                     if constr is list:
                         ref_dp = ref_dp.map(list)
