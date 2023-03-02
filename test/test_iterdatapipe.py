@@ -1621,7 +1621,7 @@ class TestIterDataPipe(expecttest.TestCase):
             self.assertEqual(v1, exp)
             self.assertEqual(v2, exp)
 
-    def test_threadpool_map_batches(self):
+    def test_threadpool_map(self):
         batch_size = 16
         target_length = 30
         input_dp = IterableWrapper(range(target_length))
@@ -1669,7 +1669,7 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual(list(range(target_length)), res_after_reset)
 
     @suppress_warnings  # Suppress warning for lambda fn
-    def test_threadpool_map_batches_tuple_list_with_col_iterdatapipe(self):
+    def test_threadpool_map_tuple_list_with_col_iterdatapipe(self):
         batch_size = 3
 
         def fn_11(d):
@@ -1775,7 +1775,7 @@ class TestIterDataPipe(expecttest.TestCase):
         _helper(lambda data: (data[0], data[1], int(data[2])), int, 2)
 
     @suppress_warnings  # Suppress warning for lambda fn
-    def test_threadpool_map_batches_dict_with_col_iterdatapipe(self):
+    def test_threadpool_map_dict_with_col_iterdatapipe(self):
         batch_size = 3
 
         def fn_11(d):
