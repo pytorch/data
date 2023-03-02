@@ -41,13 +41,20 @@ class DecompressorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         file_type: Optional `string` or ``CompressionType`` that represents what compression format of the inputs
 
     Example:
-        >>> from torchdata.datapipes.iter import FileLister, FileOpener
-        >>> tar_file_dp = FileLister(self.temp_dir.name, "*.tar")
-        >>> tar_load_dp = FileOpener(tar_file_dp, mode="b")
-        >>> tar_decompress_dp = Decompressor(tar_load_dp, file_type="tar")
-        >>> for _, stream in tar_decompress_dp:
-        >>>     print(stream.read())
+
+    .. testcode::
+        :skipif: faulty_test
+
+        tar_file_dp = FileLister(self.temp_dir.name, "*.tar")
+        tar_load_dp = tar_file_dp.open_files(mode="b")
+        tar_decompress_dp = tar_load_dp.decompress(file_type="tar")
+        for _, stream in tar_decompress_dp:
+            print(stream.read())
+
+    .. testoutput::
+
         b'0123456789abcdef'
+
     """
 
     types = CompressionType

@@ -31,7 +31,7 @@ class RandomSplitterIterDataPipe(IterDataPipe):
             resulting DataPipes' length values to be known in advance.
         seed: random _seed used to determine the randomness of the split
         total_length: Length of the ``source_datapipe``, optional but providing an integer is highly encouraged,
-            because not all ``IterDataPipe`` has ``len``, espeically ones that can be easily known in advance.
+            because not all ``IterDataPipe`` has ``len``, especially ones that can be easily known in advance.
         target: Optional key (that must exist in ``weights``) to indicate the specific group to return.
             If set to the default ``None``, returns ``List[IterDataPipe]``.
             If target is specified, returns ``IterDataPipe``.

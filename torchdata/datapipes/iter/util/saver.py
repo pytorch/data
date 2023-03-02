@@ -27,16 +27,25 @@ class SaverIterDataPipe(IterDataPipe[str]):
         filepath_fn: Function that takes in metadata and returns the target path of the new file
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper
-        >>> import os
-        >>> def filepath_fn(name: str) -> str:
-        >>>     return os.path.join(".", os.path.basename(name))
-        >>> name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
-        >>> source_dp = IterableWrapper(sorted(name_to_data.items()))
-        >>> saver_dp = source_dp.save_to_disk(filepath_fn=filepath_fn, mode="wb")
-        >>> res_file_paths = list(saver_dp)
-        >>> res_file_paths
+
+    .. testcode::
+        :skipif: not seperator_is_slash
+
+        import os
+
+        def filepath_fn(name: str) -> str:
+            return os.path.join(".", os.path.basename(name))
+
+        name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
+        source_dp = IterableWrapper(sorted(name_to_data.items()))
+        saver_dp = source_dp.save_to_disk(filepath_fn=filepath_fn, mode="wb")
+        print(list(saver_dp))
+
+    .. testoutput::
+        :skipif: not seperator_is_slash
+
         ['./1.txt', './2.txt', './3.txt']
+
     """
 
     def __init__(

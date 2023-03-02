@@ -99,14 +99,21 @@ class LineReaderIterDataPipe(IterDataPipe[Union[Str_Or_Bytes, Tuple[str, Str_Or_
             than just the contents
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper
-        >>> import io
-        >>> text1 = "Line1\nLine2"
-        >>> text2 = "Line2,1\r\nLine2,2\r\nLine2,3"
-        >>> source_dp = IterableWrapper([("file1", io.StringIO(text1)), ("file2", io.StringIO(text2))])
-        >>> line_reader_dp = source_dp.readlines()
-        >>> list(line_reader_dp)
+
+    .. testcode::
+
+        import io
+
+        text1 = "Line1\nLine2"
+        text2 = "Line2,1\r\nLine2,2\r\nLine2,3"
+        source_dp = IterableWrapper([("file1", io.StringIO(text1)), ("file2", io.StringIO(text2))])
+        line_reader_dp = source_dp.readlines()
+        print(list(line_reader_dp))
+
+    .. testoutput::
+
         [('file1', 'Line1'), ('file1', 'Line2'), ('file2', 'Line2,1'), ('file2', 'Line2,2'), ('file2', 'Line2,3')]
+
     """
 
     def __init__(
@@ -192,16 +199,25 @@ class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
         as_tuple: if ``True``, each line will return a tuple instead of a list
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper, FileOpener
-        >>> import os
-        >>> def get_name(path_and_stream):
-        >>>     return os.path.basename(path_and_stream[0]), path_and_stream[1]
-        >>> datapipe1 = IterableWrapper(["1.csv", "empty.csv", "empty2.csv"])
-        >>> datapipe2 = FileOpener(datapipe1, mode="b")
-        >>> datapipe3 = datapipe2.map(get_name)
-        >>> csv_parser_dp = datapipe3.parse_csv()
-        >>> list(csv_parser_dp)
+
+    .. testcode::
+        :skipif: faulty_test
+
+        import os
+
+        def get_name(path_and_stream):
+            return os.path.basename(path_and_stream[0]), path_and_stream[1]
+
+        source_dp = IterableWrapper(["1.csv", "empty.csv", "empty2.csv"])
+        files_dp = source_dp.open_files(mode="b")
+        name_and_stream_dp = files_dp.map(get_name)
+        csv_parser_dp = name_and_stream_dp.parse_csv()
+        print(list(csv_parser_dp))
+
+    .. testoutput::
+
         [['key', 'item'], ['a', '1'], ['b', '2'], []]
+
     """
 
     def __init__(
@@ -250,15 +266,23 @@ class CSVDictParserIterDataPipe(_CSVBaseParserIterDataPipe):
             than just the contents
 
     Example:
-        >>> from torchdata.datapipes.iter import FileLister, FileOpener
-        >>> import os
-        >>> def get_name(path_and_stream):
-        >>>     return os.path.basename(path_and_stream[0]), path_and_stream[1]
-        >>> datapipe1 = FileLister(".", "*.csv")
-        >>> datapipe2 = FileOpener(datapipe1, mode="b")
-        >>> datapipe3 = datapipe2.map(get_name)
-        >>> csv_dict_parser_dp = datapipe3.parse_csv_as_dict()
-        >>> list(csv_dict_parser_dp)
+
+    .. testcode::
+        :skipif: faulty_test
+
+        import os
+
+        def get_name(path_and_stream):
+            return os.path.basename(path_and_stream[0]), path_and_stream[1]
+
+        source_dp = IterableWrapper(["1.csv", "empty.csv", "empty2.csv"])
+        files_dp = source_dp.open_files(mode="b")
+        name_and_stream_dp = files_dp.map(get_name)
+        csv_dict_parser_dp = name_and_stream_dp.parse_csv_as_dict()
+        print(list(csv_dict_parser_dp))
+
+    .. testoutput::
+
         [{'key': 'a', 'item': '1'}, {'key': 'b', 'item': '2'}]
     """
 

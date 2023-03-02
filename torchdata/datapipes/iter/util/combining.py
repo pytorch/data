@@ -43,16 +43,24 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
             by default a tuple is created
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper
-        >>> from operator import itemgetter
-        >>> def merge_fn(t1, t2):
-        >>>     return t1[1] + t2[1]
-        >>> dp1 = IterableWrapper([('a', 100), ('b', 200), ('c', 300)])
-        >>> dp2 = IterableWrapper([('a', 1), ('b', 2), ('c', 3), ('d', 4)])
-        >>> res_dp = dp1.zip_with_iter(dp2, key_fn=itemgetter(0),
-        >>>                            ref_key_fn=itemgetter(0), keep_key=True, merge_fn=merge_fn)
-        >>> list(res_dp)
+
+    .. testcode::
+
+        from operator import itemgetter
+
+        def merge_fn(t1, t2):
+            return t1[1] + t2[1]
+
+        dp1 = IterableWrapper([('a', 100), ('b', 200), ('c', 300)])
+        dp2 = IterableWrapper([('a', 1), ('b', 2), ('c', 3), ('d', 4)])
+        res_dp = dp1.zip_with_iter(dp2, key_fn=itemgetter(0),
+                                   ref_key_fn=itemgetter(0), keep_key=True, merge_fn=merge_fn)
+        print(list(res_dp))
+
+    .. testoutput::
+
         [('a', 101), ('b', 202), ('c', 303)]
+
     """
 
     def __init__(

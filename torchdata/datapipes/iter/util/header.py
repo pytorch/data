@@ -78,17 +78,21 @@ class LengthSetterIterDataPipe(IterDataPipe[T_co]):
         length: the integer value that will be set as the length
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper
-        >>> dp = IterableWrapper(range(10)).filter(lambda x: x < 5).set_length(3)
-        >>> list(dp)  # Notice that the number of elements yielded is unchanged
-        [0, 1, 2, 3, 4]
-        >>> len(dp)
-        3
-        >>> header_dp = IterableWrapper(range(10)).filter(lambda x: x < 5).header(3)
-        >>> list(header_dp)  # Use `.header()` if you want to limit the number of elements yielded
-        [0, 1, 2]
-        >>> len(header_dp)
-        3
+
+    .. testcode::
+
+        dp = IterableWrapper(range(10)).filter(lambda x: x < 5).set_length(3)
+        # Notice that the number of elements yielded is unchanged
+        assert list(dp) == [0, 1, 2, 3, 4]
+        assert len(dp) == 3
+
+    .. testcode::
+
+        header_dp = IterableWrapper(range(10)).filter(lambda x: x < 5).header(3)
+        # Use `.header()` if you want to limit the number of elements yielded
+        assert list(header_dp) == [0, 1, 2]
+        assert len(header_dp) == 3
+
     """
 
     def __init__(self, source_datapipe: IterDataPipe[T_co], length: int) -> None:

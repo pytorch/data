@@ -33,13 +33,20 @@ class Bz2FileLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         or let Python's GC close them periodically.
 
     Example:
-        >>> from torchdata.datapipes.iter import FileLister, FileOpener
-        >>> datapipe1 = FileLister(".", "*.bz2")
-        >>> datapipe2 = FileOpener(datapipe1, mode="b")
-        >>> bz2_loader_dp = datapipe2.load_from_bz2()
-        >>> for _, stream in bz2_loader_dp:
-        >>>     print(stream.read())
+
+    .. testcode::
+        :skipif: faulty_test
+
+        filenames_dp = FileLister(".", "*.bz2")
+        files_dp = filenames_dp.open_files(mode="b")
+        bz2_loader_dp = files_dp.load_from_bz2()
+        for _, stream in bz2_loader_dp:
+            print(stream.read())
+
+    .. testoutput::
+
         b'0123456789abcdef'
+
     """
 
     def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1) -> None:

@@ -31,6 +31,7 @@ class CyclerIterDataPipe(IterDataPipe[T_co]):
         >>> dp = dp.cycle(2)
         >>> list(dp)
         [0, 1, 2, 0, 1, 2]
+
     """
 
     def __init__(self, source_datapipe: IterDataPipe[T_co], count: Optional[int] = None) -> None:
@@ -73,6 +74,7 @@ class RepeaterIterDataPipe(IterDataPipe[T_co]):
         >>> dp = dp.repeat(2)
         >>> list(dp)
         [0, 0, 1, 1, 2, 2]
+
     """
 
     def __init__(self, source_datapipe: IterDataPipe[T_co], times: int) -> None:

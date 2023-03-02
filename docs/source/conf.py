@@ -61,6 +61,16 @@ extensions = [
 # be successively migrated to sphinx's doctest directive.
 doctest_test_doctest_blocks = ""
 
+doctest_global_setup = """
+import os
+import torch
+from torchdata.datapipes.iter import IterableWrapper, FileLister, FileOpener
+
+seperator_is_slash = os.sep == "/"
+
+faulty_test = True
+"""
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 

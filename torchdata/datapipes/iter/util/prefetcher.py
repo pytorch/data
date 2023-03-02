@@ -49,8 +49,15 @@ class PrefetcherIterDataPipe(IterDataPipe):
         buffer_size: the size of the buffer which stores the prefetched samples
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper
-        >>> dp = IterableWrapper(file_paths).open_files().prefetch(5)
+
+    .. testsetup::
+
+        file_paths = []
+
+    .. testcode::
+
+        dp = IterableWrapper(file_paths).open_files().prefetch(5)
+
     """
 
     def __init__(self, source_datapipe, buffer_size: int = 10):
@@ -157,8 +164,17 @@ class PinMemoryIterDataPipe(PrefetcherIterDataPipe):
             A ``pin_memory_fn`` to handle general objects is provided by default.
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper
-        >>> dp = IterableWrapper(file_paths).open_files().readlines().map(tokenize_fn).pin_memory()
+
+    .. testsetup::
+
+        file_paths = []
+        tokenize_fn = lambda x : x
+
+    .. testcode::
+        :skipif: not torch.cuda.is_available()
+
+        dp = IterableWrapper(file_paths).open_files().readlines().map(tokenize_fn).pin_memory()
+
     """
 
     def __init__(self, source_datapipe, device=None, pin_memory_fn=pin_memory_fn):

@@ -38,8 +38,7 @@ class XzFileLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         >>> datapipe2 = FileOpener(datapipe1, mode="b")
         >>> xz_loader_dp = datapipe2.load_from_xz()
         >>> for _, stream in xz_loader_dp:
-        >>>     print(stream.read())
-        b'0123456789abcdef'
+        ...     print(stream.read())
     """
 
     def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1) -> None:

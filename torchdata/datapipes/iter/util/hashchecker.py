@@ -33,19 +33,23 @@ class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, U]]):
             does not work with non-seekable stream, e.g. HTTP)
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper, FileOpener
-        >>> expected_MD5_hash = "bb9675028dd39d2dd2bf71002b93e66c"
-        File is from "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
-        >>> file_dp = FileOpener(IterableWrapper(["LICENSE.txt"]), mode='rb')
-        >>> # An exception is only raised when the hash doesn't match, otherwise (path, stream) is returned
-        >>> check_hash_dp = file_dp.check_hash({"LICENSE.txt": expected_MD5_hash}, "md5", rewind=True)
-        >>> reader_dp = check_hash_dp.readlines()
-        >>> it = iter(reader_dp)
-        >>> path, line = next(it)
-        >>> path
-        LICENSE.txt
-        >>> line
-        b'BSD 3-Clause License'
+
+    .. testcode::
+        :skipif: faulty_test
+
+        expected_MD5_hash = "bb9675028dd39d2dd2bf71002b93e66c"
+        # File is from "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
+        file_dp = FileOpener(IterableWrapper(["LICENSE.txt"]), mode='rb')
+        # An exception is only raised when the hash doesn't match, otherwise (path, stream) is returned
+        check_hash_dp = file_dp.check_hash({"LICENSE.txt": expected_MD5_hash}, "md5", rewind=True)
+        reader_dp = check_hash_dp.readlines()
+
+        it = iter(reader_dp)
+        path, line = next(it)
+        assert path == LICENSE.txt
+        assert line == b'BSD 3-Clause License'
+
+
     """
 
     def __init__(
