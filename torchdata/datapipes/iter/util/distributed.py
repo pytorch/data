@@ -170,6 +170,9 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
             self._cv.notify()
 
     def __iter__(self) -> Iterator[T_co]:
+        if self._world_size == 1:  # The below functionalities are not needed if `_world_size == 1`
+            yield from self.datapipe
+
         assert self._executor is None
 
         if not (dist.is_available() and dist.is_initialized()):
@@ -231,11 +234,13 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
         self._done_callback = False
 
     def pause(self):
-        raise RuntimeError("`pause` is not supported for FullSync at the moment.")
+        if self._world_size > 1:
+            raise RuntimeError("`pause` is not supported for FullSync at the moment.")
         # if self._executor is not None:
         #     self._executor.shutdown()
         #     self._executor = None
 
     def resume(self):
-        raise RuntimeError("`resume` is not supported for FullSync at the moment.")
+        if self._world_size > 1:
+            raise RuntimeError("`resume` is not supported for FullSync at the moment.")
         # self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)
