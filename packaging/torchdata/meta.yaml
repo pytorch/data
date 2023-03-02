@@ -19,8 +19,6 @@ requirements:
     - openssl # [unix]
     - zlib # [unix]
     {{ environ.get('CONDA_PYTORCH_BUILD_CONSTRAINT') }}
-  host:
-    - setuptools
   run:
     - python
     - urllib3>=1.25
