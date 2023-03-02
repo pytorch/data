@@ -14,7 +14,7 @@ requirements:
     # - {{ compiler('c') }} # [win]
     # - {{ compiler('cxx') }} # [win]
     - python
-    - setuptools
+    # - setuptools
     - cpuonly
     - curl # [not win]
     - openssl # [unix]
