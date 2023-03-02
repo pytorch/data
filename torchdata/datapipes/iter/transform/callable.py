@@ -702,7 +702,7 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe):
             time.sleep(0.1)
             return x * 10
         dp = IterableWrapper(range(50))
-        dp = dp.thread_map_batches(mul_ten, 16)
+        dp = dp.threadpool_map(mul_ten, 16)
         print(list(dp))
 
     .. testoutput::
@@ -712,7 +712,7 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe):
     .. testcode::
 
         dp = IterableWrapper([(i, i) for i in range(50)])
-        dp = dp.thread_map_batches(mul_ten, 16, input_col=1)
+        dp = dp.threadpool_map(mul_ten, 16, input_col=1)
         print(list(dp))
 
     .. testoutput::
@@ -722,7 +722,7 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe):
     .. testcode::
 
         dp = IterableWrapper([(i, i) for i in range(50)])
-        dp = dp.thread_map_batches(mul_ten, 16, input_col=1, output_col=-1)
+        dp = dp.threadpool_map(mul_ten, 16, input_col=1, output_col=-1)
         print(list(dp))
 
     .. testoutput::
@@ -737,7 +737,7 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe):
             r.raise_for_status()
             return r.content
         dp = IterableWrapper(urls)
-        dp = dp.thread_map_batches(fetch_html, 16)
+        dp = dp.threadpool_map(fetch_html, 16)
 
     """
 
