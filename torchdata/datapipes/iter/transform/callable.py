@@ -250,7 +250,7 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
         else:
             return self.fn(data[self.input_col])  # type: ignore[misc]
 
-    def _yield_one(self, buffer: list[Iterator[T_co]]) -> Iterator[T_co]:
+    def _yield_one(self, buffer: List[Iterator[T_co]]) -> Iterator[T_co]:
         idx = self._rng.randint(0, len(buffer) - 1) if self._enabled else 0
         try:
             yield next(buffer[idx])
@@ -262,7 +262,7 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
             for x in self.datapipe:
                 yield from self._apply_fn(x)
         else:
-            buffer: list[Iterator[T_co]] = []  # the buffer should not be shared between iterators
+            buffer: List[Iterator[T_co]] = []  # the buffer should not be shared between iterators
             for x in self.datapipe:
                 while len(buffer) == self.buffer_size:
                     yield from self._yield_one(buffer)
