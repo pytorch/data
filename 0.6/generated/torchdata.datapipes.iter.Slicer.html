@@ -352,9 +352,14 @@
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>datapipe</strong> – IterDataPipe with iterable elements</p></li>
-<li><p><strong>index</strong> – a single start index for the slice or a list of indices to be returned instead of a start/stop slice</p></li>
-<li><p><strong>stop</strong> – the slice stop. ignored if index is a list</p></li>
-<li><p><strong>step</strong> – step to be taken from start to stop. ignored if index is a list</p></li>
+<li><p><strong>index</strong> – <p>a single start index for the slice or a list of indices to be returned instead of a start/stop slice</p>
+<ul>
+<li><p>Integer(s) is/are used for list/tuple.</p></li>
+<li><p>Key(s) is/are used for dict.</p></li>
+</ul>
+</p></li>
+<li><p><strong>stop</strong> – the slice stop. ignored if index is a list or if element is a dict</p></li>
+<li><p><strong>step</strong> – step to be taken from start to stop. ignored if index is a list or if element is a dict</p></li>
 </ul>
 </dd>
 </dl>

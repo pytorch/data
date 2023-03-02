@@ -402,10 +402,10 @@ class constructors. A pipeline can be assembled as the following:</p>
 <section id="working-with-dataloader">
 <h2>Working with DataLoader<a class="headerlink" href="#working-with-dataloader" title="Permalink to this heading">¶</a></h2>
 <p>In this section, we will demonstrate how you can use <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> with <code class="docutils literal notranslate"><span class="pre">DataLoader</span></code>.
-For the most part, you should be able to use it just by passing <code class="docutils literal notranslate"><span class="pre">dataset=datapipe</span></code> as an input arugment
+For the most part, you should be able to use it just by passing <code class="docutils literal notranslate"><span class="pre">dataset=datapipe</span></code> as an input argument
 into the <code class="docutils literal notranslate"><span class="pre">DataLoader</span></code>. For detailed documentation related to <code class="docutils literal notranslate"><span class="pre">DataLoader</span></code>,
-please visit <a class="reference external" href="https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading">this page</a>.</p>
-<p>Please refer to <a class="reference external" href="dlv2_tutorial.html">this page</a> about using <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> with <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code>.</p>
+please visit <a class="reference external" href="https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading">this PyTorch Core page</a>.</p>
+<p>Please refer to <a class="reference internal" href="dlv2_tutorial.html"><span class="doc">this page</span></a> about using <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> with <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code>.</p>
 <p>For this example, we will first have a helper function that generates some CSV files with random label and data.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">csv</span>
 <span class="kn">import</span> <span class="nn">random</span>
@@ -428,7 +428,7 @@ pass defined functions to DataPipes rather than lambda functions because the for
 <span class="k">def</span> <span class="nf">filter_for_data</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
     <span class="k">return</span> <span class="s2">&quot;sample_data&quot;</span> <span class="ow">in</span> <span class="n">filename</span> <span class="ow">and</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.csv&quot;</span><span class="p">)</span>
 
-<span class="k">def</span> <span class="nf">row_processer</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">row_processor</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span> <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)}</span>
 
 <span class="k">def</span> <span class="nf">build_datapipes</span><span class="p">(</span><span class="n">root_dir</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">):</span>
@@ -438,7 +438,7 @@ pass defined functions to DataPipes rather than lambda functions because the for
     <span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">parse_csv</span><span class="p">(</span><span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">skip_lines</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
     <span class="c1"># Shuffle will happen as long as you do NOT set `shuffle=False` later in the DataLoader</span>
     <span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span>
-    <span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">row_processer</span><span class="p">)</span>
+    <span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">row_processor</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">datapipe</span>
 </pre></div>
 </div>
@@ -498,7 +498,7 @@ batch size of 5, that gives us 6 batches per worker. With 2 workers, we get 12 t
 <li><p>Place <code class="docutils literal notranslate"><span class="pre">ShardingFilter</span></code> (<code class="docutils literal notranslate"><span class="pre">datapipe.sharding_filter</span></code>) as early as possible in the pipeline, especially before expensive
 operations such as decoding, in order to avoid repeating these expensive operations across worker/distributed processes.</p></li>
 <li><p>For the data source that needs to be sharded, it is crucial to add <code class="docutils literal notranslate"><span class="pre">Shuffler</span></code> before <code class="docutils literal notranslate"><span class="pre">ShardingFilter</span></code>
-to ensure data are globally shuffled before splitted into shards. Otherwise, each worker process would
+to ensure data are globally shuffled before being split into shards. Otherwise, each worker process would
 always process the same shard of data for all epochs. And, it means each batch would only consist of data
 from the same shard, which leads to low accuracy during training. However, it doesn’t apply to the data
 source that has already been sharded for each multi-/distributed process, since <code class="docutils literal notranslate"><span class="pre">ShardingFilter</span></code> is no

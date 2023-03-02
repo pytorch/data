@@ -348,7 +348,7 @@
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.BatchMapper">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">BatchMapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.BatchMapper" title="Permalink to this definition">¶</a></dt>
 <dd><p>Combines elements from the source DataPipe to batches and applies a function
-over each batch, then flattens the outpus to a single, unnested IterDataPipe
+over each batch, then flattens the outputs to a single, unnested IterDataPipe
 (functional name: <code class="docutils literal notranslate"><span class="pre">map_batches</span></code>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -356,10 +356,13 @@ over each batch, then flattens the outpus to a single, unnested IterDataPipe
 <li><p><strong>datapipe</strong> – Source IterDataPipe</p></li>
 <li><p><strong>fn</strong> – The function to be applied to each batch of data</p></li>
 <li><p><strong>batch_size</strong> – The size of batch to be aggregated from <code class="docutils literal notranslate"><span class="pre">datapipe</span></code></p></li>
-<li><p><strong>input_col</strong> – Index or indices of data which <code class="docutils literal notranslate"><span class="pre">fn</span></code> is applied, such as:
-- <code class="docutils literal notranslate"><span class="pre">None</span></code> as default to apply <code class="docutils literal notranslate"><span class="pre">fn</span></code> to the data directly.
-- Integer(s) is used for list/tuple.
-- Key(s) is used for dict.</p></li>
+<li><p><strong>input_col</strong> – <p>Index or indices of data which <code class="docutils literal notranslate"><span class="pre">fn</span></code> is applied, such as:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">None</span></code> as default to apply <code class="docutils literal notranslate"><span class="pre">fn</span></code> to the data directly.</p></li>
+<li><p>Integer(s) is used for list/tuple.</p></li>
+<li><p>Key(s) is used for dict.</p></li>
+</ul>
+</p></li>
 </ul>
 </dd>
 </dl>

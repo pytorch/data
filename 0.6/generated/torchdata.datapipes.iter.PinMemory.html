@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>UnZipper &mdash; TorchData 0.6.0 (beta) documentation</title>
+  <title>PinMemory &mdash; TorchData 0.6.0 (beta) documentation</title>
   
 
   
@@ -34,8 +34,8 @@
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Zipper" href="torchdata.datapipes.map.Zipper.html" />
-    <link rel="prev" title="Shuffler" href="torchdata.datapipes.map.Shuffler.html" />
+    <link rel="next" title="Prefetcher" href="torchdata.datapipes.iter.Prefetcher.html" />
+    <link rel="prev" title="OnDiskCacheHolder" href="torchdata.datapipes.iter.OnDiskCacheHolder.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -247,8 +247,8 @@
             
               <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="../torchdata.datapipes.map.html">Map-style DataPipes</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.map.html">Map-style DataPipes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.utils.html">Utility Functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../dataloader2.html">DataLoader2</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reading_service.html">ReadingService</a></li>
@@ -308,15 +308,15 @@
       </li>
 
         
-          <li><a href="../torchdata.datapipes.map.html">Map-style DataPipes</a> &gt;</li>
+          <li><a href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a> &gt;</li>
         
-      <li>UnZipper</li>
+      <li>PinMemory</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/generated/torchdata.datapipes.map.UnZipper.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/generated/torchdata.datapipes.iter.PinMemory.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -342,39 +342,27 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="unzipper">
-<h1>UnZipper<a class="headerlink" href="#unzipper" title="Permalink to this heading">¶</a></h1>
+  <section id="pinmemory">
+<h1>PinMemory<a class="headerlink" href="#pinmemory" title="Permalink to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="torchdata.datapipes.map.UnZipper">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.map.</span></span><span class="sig-name descname"><span class="pre">UnZipper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sequence_length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns_to_skip</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.map.UnZipper" title="Permalink to this definition">¶</a></dt>
-<dd><p>Takes in a DataPipe of Sequences, unpacks each Sequence, and return the elements in separate DataPipes
-based on their position in the Sequence (functional name: <code class="docutils literal notranslate"><span class="pre">unzip</span></code>). The number of instances produced
-equals to the <code class="docutils literal notranslate"><span class="pre">sequence_legnth</span></code> minus the number of columns to skip.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Each sequence within the DataPipe should have the same length, specified by
-the input argument <cite>sequence_length</cite>.</p>
-</div>
+<dt class="sig sig-object py" id="torchdata.datapipes.iter.PinMemory">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">PinMemory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pin_memory_fn=&lt;function</span> <span class="pre">pin_memory_fn&gt;</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.PinMemory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prefetches one element from the source DataPipe and moves it to pinned memory (functional name: <code class="docutils literal notranslate"><span class="pre">pin_memory</span></code>).
+When used with <code class="docutils literal notranslate"><span class="pre">MultiProcessingReadingService</span></code>, this DataPipe would be kept in the main process to prevent
+duplicated CUDA context creation.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>source_datapipe</strong> – Iterable DataPipe with sequences of data</p></li>
-<li><p><strong>sequence_length</strong> – Length of the sequence within the source_datapipe. All elements should have the same length.</p></li>
-<li><p><strong>columns_to_skip</strong> – optional indices of columns that the DataPipe should skip (each index should be
-an integer from 0 to sequence_length - 1)</p></li>
+<li><p><strong>source_datapipe</strong> – IterDataPipe from which samples are moved to pinned memory.</p></li>
+<li><p><strong>device</strong> – The device to pin samples.</p></li>
+<li><p><strong>pin_memory_fn</strong> – Optional callable function to move data to pinned memory.
+A <code class="docutils literal notranslate"><span class="pre">pin_memory_fn</span></code> to handle general objects is provided by default.</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.map</span> <span class="kn">import</span> <span class="n">SequenceWrapper</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">source_dp</span> <span class="o">=</span> <span class="n">SequenceWrapper</span><span class="p">([(</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">10</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">20</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dp1</span><span class="p">,</span> <span class="n">dp2</span><span class="p">,</span> <span class="n">dp3</span> <span class="o">=</span> <span class="n">source_dp</span><span class="o">.</span><span class="n">unzip</span><span class="p">(</span><span class="n">sequence_length</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">dp1</span><span class="p">)</span>
-<span class="go">[0, 1, 2]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">dp2</span><span class="p">)</span>
-<span class="go">[10, 11, 12]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">dp3</span><span class="p">)</span>
-<span class="go">[20, 21, 22]</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="n">file_paths</span><span class="p">)</span><span class="o">.</span><span class="n">open_files</span><span class="p">()</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">tokenize_fn</span><span class="p">)</span><span class="o">.</span><span class="n">pin_memory</span><span class="p">()</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -389,10 +377,10 @@ an integer from 0 to sequence_length - 1)</p></li>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="torchdata.datapipes.map.Zipper.html" class="btn btn-neutral float-right" title="Zipper" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.datapipes.iter.Prefetcher.html" class="btn btn-neutral float-right" title="Prefetcher" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.map.Shuffler.html" class="btn btn-neutral" title="Shuffler" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="torchdata.datapipes.iter.OnDiskCacheHolder.html" class="btn btn-neutral" title="OnDiskCacheHolder" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -424,7 +412,7 @@ an integer from 0 to sequence_length - 1)</p></li>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">UnZipper</a></li>
+<li><a class="reference internal" href="#">PinMemory</a></li>
 </ul>
 
             </div>
