@@ -37,7 +37,6 @@ class TarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     Example:
 
     .. testcode::
-        :skipif: faulty_test
 
         files_dp = FileLister(".", "*.tar").open_files(mode="b")
         tar_loader_dp = files_dp.load_from_tar()
@@ -45,6 +44,7 @@ class TarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
             print(stream.read())
 
     .. testoutput::
+        :skipif: io_doctest
 
         b'0123456789abcdef'
 

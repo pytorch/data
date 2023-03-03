@@ -23,14 +23,18 @@ class JsonParserIterDataPipe(IterDataPipe[Tuple[str, Dict]]):
     Example:
 
     .. testcode::
-        :skipif: faulty_test
+        :skipif: io_doctest
+
+        # assume the files look like this:
+        # 1.json: '["foo", {"bar":["baz", null, 1.0, 2]}]'
+        # 2.json: '{"__complex__": true, "real": 1, "imag": 2}'
 
         import os
 
         def get_name(path_and_stream):
             return os.path.basename(path_and_stream[0]), path_and_stream[1]
 
-        source_dp = IterableWrapper(["empty.json", "1.json", "2.json"])
+        source_dp = IterableWrapper(["1.json", "2.json"])
         datapipe2 = source_dp.open_files(mode="b")
         datapipe3 = datapipe2.map(get_name)
         json_dp = datapipe3.parse_json_files()

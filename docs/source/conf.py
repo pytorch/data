@@ -68,7 +68,18 @@ from torchdata.datapipes.iter import IterableWrapper, FileLister, FileOpener
 
 seperator_is_slash = os.sep == "/"
 
-faulty_test = True
+io_doctest = True
+
+try:
+    import torcharrow.dtypes as dt
+except ImportError:
+    dt = None
+
+try:
+    import rarfile
+    rarfile.tool_setup()
+except Exception:
+    rarfile = None
 """
 
 # Add any paths that contain templates here, relative to this directory.

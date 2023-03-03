@@ -55,15 +55,8 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
 
     Example:
 
-    .. testsetup::
-
-        try:
-            import torcharrow.dtypes as dt
-        except ImportError:
-            dt = None
-
     .. testcode::
-        :skipif: faulty_test or dt is None
+        :skipif: dt is None
 
         import torcharrow.dtypes as dt
         source_data = [(i,) for i in range(3)]
@@ -73,6 +66,7 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
         print(list(df_dp)[0])
 
     .. testoutput::
+        :skipif: dt is None
 
           index    Values
         -------  --------
@@ -120,15 +114,8 @@ class ParquetDFLoaderIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDat
 
     Example:
 
-    .. testsetup::
-
-        try:
-            import torcharrow.dtypes as dt
-        except ImportError:
-            dt = None
-
     .. testcode::
-        :skipif: faulty_test or dt is None
+        :skipif: dt is None
 
         import torcharrow.dtypes as dt
         DTYPE = dt.Struct([dt.Field("Values", dt.int32)])
@@ -137,6 +124,7 @@ class ParquetDFLoaderIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDat
         print(list(parquet_df_dp)[0])
 
     .. testoutput::
+        :skipif: dt is None
 
           index    Values
         -------  --------

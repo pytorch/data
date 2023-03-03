@@ -35,7 +35,7 @@ class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, U]]):
     Example:
 
     .. testcode::
-        :skipif: faulty_test
+        :skipif: io_doctest
 
         expected_MD5_hash = "bb9675028dd39d2dd2bf71002b93e66c"
         # File is from "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"

@@ -201,7 +201,12 @@ class CSVParserIterDataPipe(_CSVBaseParserIterDataPipe):
     Example:
 
     .. testcode::
-        :skipif: faulty_test
+        :skipif: io_doctest
+
+        # assume the files look like this:
+        # 1.csv: "key,item\na,1\nb,2"
+        # empty.csv: ""
+        # empty2.csv: "\n"
 
         import os
 
@@ -268,7 +273,12 @@ class CSVDictParserIterDataPipe(_CSVBaseParserIterDataPipe):
     Example:
 
     .. testcode::
-        :skipif: faulty_test
+        :skipif: io_doctest
+
+        # assume the files look like this:
+        # 1.csv: "key,item\na,1\nb,2"
+        # empty.csv: ""
+        # empty2.csv: "\n"
 
         import os
 
@@ -284,6 +294,7 @@ class CSVDictParserIterDataPipe(_CSVBaseParserIterDataPipe):
     .. testoutput::
 
         [{'key': 'a', 'item': '1'}, {'key': 'b', 'item': '2'}]
+
     """
 
     def __init__(

@@ -43,15 +43,15 @@ class DecompressorIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     Example:
 
     .. testcode::
-        :skipif: faulty_test
 
-        tar_file_dp = FileLister(self.temp_dir.name, "*.tar")
+        tar_file_dp = FileLister(".", "*.tar")
         tar_load_dp = tar_file_dp.open_files(mode="b")
         tar_decompress_dp = tar_load_dp.decompress(file_type="tar")
         for _, stream in tar_decompress_dp:
             print(stream.read())
 
     .. testoutput::
+        :skipif: io_doctest
 
         b'0123456789abcdef'
 

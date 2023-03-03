@@ -35,7 +35,6 @@ class Bz2FileLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
     Example:
 
     .. testcode::
-        :skipif: faulty_test
 
         filenames_dp = FileLister(".", "*.bz2")
         files_dp = filenames_dp.open_files(mode="b")
@@ -44,6 +43,7 @@ class Bz2FileLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
             print(stream.read())
 
     .. testoutput::
+        :skipif: io_doctest
 
         b'0123456789abcdef'
 

@@ -58,7 +58,7 @@ class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
     Example:
 
     .. testcode::
-        :skipif: faulty_test
+        :skipif: rarfile is None
 
         datapipe1 = FileLister(".", "*.rar")
         datapipe2 = FileOpener(datapipe1, mode="b")
@@ -67,6 +67,7 @@ class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
             print(stream.read())
 
     .. testoutput::
+        :skipif: io_doctest
 
         b'0123456789abcdef'
 
