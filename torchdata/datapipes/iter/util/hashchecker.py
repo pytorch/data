@@ -49,7 +49,6 @@ class HashCheckerIterDataPipe(IterDataPipe[Tuple[str, U]]):
         assert path == LICENSE.txt
         assert line == b'BSD 3-Clause License'
 
-
     """
 
     def __init__(

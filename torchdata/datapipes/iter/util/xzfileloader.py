@@ -33,12 +33,21 @@ class XzFileLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         or let Python's GC close them periodically.
 
     Example:
-        >>> from torchdata.datapipes.iter import FileLister, FileOpener
-        >>> datapipe1 = FileLister(".", "*.xz")
-        >>> datapipe2 = FileOpener(datapipe1, mode="b")
-        >>> xz_loader_dp = datapipe2.load_from_xz()
-        >>> for _, stream in xz_loader_dp:
-        ...     print(stream.read())
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import FileLister
+        datapipe1 = FileLister(".", "*.xz")
+        datapipe2 = datapipe1.open_files(mode="b")
+        xz_loader_dp = datapipe2.load_from_xz()
+        for _, stream in xz_loader_dp:
+            print(stream.read())
+
+    .. testoutput::
+        :skipif: io_doctest
+
+        b'0123456789abcdef'
+
     """
 
     def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1) -> None:

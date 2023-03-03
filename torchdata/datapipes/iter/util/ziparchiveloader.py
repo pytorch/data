@@ -35,12 +35,20 @@ class ZipArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
         the data_stream variable below cannot be closed within the scope of this function.
 
     Example:
-        >>> from torchdata.datapipes.iter import FileLister, FileOpener
-        >>> datapipe1 = FileLister(".", "*.zip")
-        >>> datapipe2 = FileOpener(datapipe1, mode="b")
-        >>> zip_loader_dp = datapipe2.load_from_zip()
-        >>> for _, stream in zip_loader_dp:
-        ...     print(stream.read())
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import FileLister
+        datapipe1 = FileLister(".", "*.zip")
+        datapipe2 = datapipe1.open_files(mode="b")
+        zip_loader_dp = datapipe2.load_from_zip()
+        for _, stream in zip_loader_dp:
+             print(stream.read())
+
+    .. testoutput::
+        :skipif: io_doctest
+
+        b'0123456789abcdef'
     """
 
     def __init__(self, datapipe: Iterable[Tuple[str, BufferedIOBase]], length: int = -1) -> None:
