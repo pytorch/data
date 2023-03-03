@@ -753,5 +753,6 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe):
     ):
         dp = source_datapipe.batch(batch_size)
         dp = _ThreadPoolMapperIterDataPipe(dp, fn, input_col, output_col, max_workers, **threadpool_kwargs)
+        dp = dp.prefetch(buffer_size=2)  # start working on the next batch before previous batch is exhausted
         dp = dp.flatmap()
         return dp
