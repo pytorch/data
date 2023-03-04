@@ -77,7 +77,6 @@ def gen_pyi() -> None:
         "read_from_xz": "IterDataPipe",
         "read_from_zip": "IterDataPipe",
         "round_robin_demux": "List[IterDataPipe]",
-        "threadpool_map": "IterDataPipe",
         "to_map_datapipe": "MapDataPipe",
         "unzip": "List[IterDataPipe]",
     }
