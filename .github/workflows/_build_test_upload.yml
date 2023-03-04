@@ -381,7 +381,7 @@ jobs:
             conda install -yq conda-build -c malfet -c conda-forge
             export CONDA_CHANNEL_FLAGS="${CONDA_CHANNEL_FLAGS} -c malfet"
           else
-            conda install -yq conda-build -c conda-forge
+            conda install -yq conda-build
           fi
           packaging/build_conda.sh
           conda index ./conda-bld
