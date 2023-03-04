@@ -214,6 +214,7 @@ __all__ = [
     "StreamReader",
     "TFRecordLoader",
     "TarArchiveLoader",
+    "ThreadPoolMapper",
     "UnBatcher",
     "UnZipper",
     "WebDataset",

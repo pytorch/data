@@ -594,7 +594,7 @@ class BatchAsyncMapperIterDataPipe(IterDataPipe):
 
 
 @functional_datapipe("threadpool_map")
-class ThreadPoolMapperIterDataPipe(IterDataPipe):
+class ThreadPoolMapperIterDataPipe(IterDataPipe[T_co]):
     r"""
     Applies a function over each item from the source DataPipe concurrently
     using ``ThreadPoolExecutor`` (functional name: ``threadpool_map``).
