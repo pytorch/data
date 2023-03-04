@@ -690,7 +690,8 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe[T_co]):
         scheduled_tasks: int = 64,
         max_workers: Optional[int] = None,
         **threadpool_kwargs,
-    ):
+    ) -> None:
+        super().__init__()
         self.datapipe = datapipe
 
         _check_unpickable_fn(fn)
@@ -749,7 +750,7 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe[T_co]):
         # Convert list back to tuple
         return tuple(data) if t_flag else data
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[T_co]:
         with futures.ThreadPoolExecutor(max_workers=self.max_workers, **self.threadpool_kwargs) as executor:
             futures_deque: deque = deque()
             has_next = True
