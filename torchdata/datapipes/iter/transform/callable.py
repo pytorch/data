@@ -649,7 +649,7 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe):
             r.raise_for_status()
             return r.content
         dp = IterableWrapper(urls)
-        dp = dp.threadpool_map(fetch_html, batch_size=32,max_workers=16)
+        dp = dp.threadpool_map(fetch_html,max_workers=16)
 
     .. testcode::
 
@@ -658,7 +658,7 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe):
             return x * 10
 
         dp = IterableWrapper([(i, i) for i in range(50)])
-        dp = dp.threadpool_map(mul_ten, 16, input_col=1)
+        dp = dp.threadpool_map(mul_ten, input_col=1)
         print(list(dp))
 
     .. testoutput::
@@ -668,7 +668,7 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe):
     .. testcode::
 
         dp = IterableWrapper([(i, i) for i in range(50)])
-        dp = dp.threadpool_map(mul_ten, 16, input_col=1, output_col=-1)
+        dp = dp.threadpool_map(mul_ten, input_col=1, output_col=-1)
         print(list(dp))
 
     .. testoutput::
