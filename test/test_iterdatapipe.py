@@ -1622,7 +1622,6 @@ class TestIterDataPipe(expecttest.TestCase):
             self.assertEqual(v2, exp)
 
     def test_threadpool_map(self):
-        batch_size = 16
         target_length = 30
         input_dp = IterableWrapper(range(target_length))
         input_dp_parallel = IterableWrapper(range(target_length))
@@ -1632,32 +1631,30 @@ class TestIterDataPipe(expecttest.TestCase):
             return data if not sum else data.sum()
 
         # Functional Test: apply to each element correctly
-        map_dp = input_dp.threadpool_map(fn, batch_size)
-        # self.assertEqual(target_length, len(map_dp))
+        map_dp = input_dp.threadpool_map(fn)
+        self.assertEqual(target_length, len(map_dp))
         for x, y in zip(map_dp, range(target_length)):
             self.assertEqual(x, torch.tensor(y, dtype=torch.float))
 
         # Functional Test: works with partial function
-        map_dp = input_dp.threadpool_map(partial(fn, dtype=torch.int, sum=True), batch_size)
+        map_dp = input_dp.threadpool_map(partial(fn, dtype=torch.int, sum=True))
         for x, y in zip(map_dp, range(target_length)):
             self.assertEqual(x, torch.tensor(y, dtype=torch.int).sum())
 
-        # this doesn't work atm
         # __len__ Test: inherits length from source DataPipe
-        # self.assertEqual(target_length, len(map_dp))
+        self.assertEqual(target_length, len(map_dp))
 
         input_dp_nl = IDP_NoLen(range(target_length))
-        map_dp_nl = input_dp_nl.threadpool_map((lambda x: x), batch_size)
+        map_dp_nl = input_dp_nl.threadpool_map(lambda x: x)
         for x, y in zip(map_dp_nl, range(target_length)):
             self.assertEqual(x, torch.tensor(y, dtype=torch.float))
 
-        # this doesn't work atm
         # __len__ Test: inherits length from source DataPipe - raises error when invalid
-        # with self.assertRaisesRegex(TypeError, r"instance doesn't have valid length$"):
-        #     len(map_dp_nl)
+        with self.assertRaisesRegex(TypeError, r"instance doesn't have valid length$"):
+            len(map_dp_nl)
 
         # Test: two independent ThreadPoolExecutors running at the same time
-        map_dp_parallel = input_dp_parallel.threadpool_map(fn, batch_size)
+        map_dp_parallel = input_dp_parallel.threadpool_map(fn)
         for x, y, z in zip(map_dp, map_dp_parallel, range(target_length)):
             self.assertEqual(x, torch.tensor(z, dtype=torch.float))
             self.assertEqual(y, torch.tensor(z, dtype=torch.float))
@@ -1670,8 +1667,6 @@ class TestIterDataPipe(expecttest.TestCase):
 
     @suppress_warnings  # Suppress warning for lambda fn
     def test_threadpool_map_tuple_list_with_col_iterdatapipe(self):
-        batch_size = 3
-
         def fn_11(d):
             return -d
 
@@ -1707,10 +1702,10 @@ class TestIterDataPipe(expecttest.TestCase):
                 datapipe = IterableWrapper([constr((0, 1, 2)), constr((3, 4, 5)), constr((6, 7, 8))])
                 if ref_fn is None:
                     with self.assertRaises(error):
-                        res_dp = datapipe.threadpool_map(fn, batch_size, input_col, output_col)
+                        res_dp = datapipe.threadpool_map(fn, input_col, output_col)
                         list(res_dp)
                 else:
-                    res_dp = datapipe.threadpool_map(fn, batch_size, input_col, output_col)
+                    res_dp = datapipe.threadpool_map(fn, input_col, output_col)
                     ref_dp = datapipe.map(ref_fn)
                     if constr is list:
                         ref_dp = ref_dp.map(list)
@@ -1776,8 +1771,6 @@ class TestIterDataPipe(expecttest.TestCase):
 
     @suppress_warnings  # Suppress warning for lambda fn
     def test_threadpool_map_dict_with_col_iterdatapipe(self):
-        batch_size = 3
-
         def fn_11(d):
             return -d
 
@@ -1825,10 +1818,10 @@ class TestIterDataPipe(expecttest.TestCase):
             datapipe = IterableWrapper([{"x": 0, "y": 1, "z": 2}, {"x": 3, "y": 4, "z": 5}, {"x": 6, "y": 7, "z": 8}])
             if ref_fn is None:
                 with self.assertRaises(error):
-                    res_dp = datapipe.threadpool_map(fn, batch_size, input_col, output_col)
+                    res_dp = datapipe.threadpool_map(fn, input_col, output_col)
                     list(res_dp)
             else:
-                res_dp = datapipe.threadpool_map(fn, batch_size, input_col, output_col)
+                res_dp = datapipe.threadpool_map(fn, input_col, output_col)
                 ref_dp = datapipe.map(ref_fn)
                 self.assertEqual(list(res_dp), list(ref_dp), "First test failed")
                 # Reset

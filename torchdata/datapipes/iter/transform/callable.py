@@ -7,6 +7,7 @@
 import asyncio
 import inspect
 import warnings
+from collections import deque
 from concurrent import futures
 
 from typing import Callable, Hashable, Iterator, List, Optional, Set, Sized, TypeVar, Union
@@ -25,35 +26,6 @@ def _no_op_fn(*args):
     if len(args) == 1:
         return args[0]
     return args
-
-
-def _merge_batch_with_result(orig_batch, results, input_col, output_col):
-    if input_col is None:
-        return results
-
-    new_batch = []
-    for data, res in zip(orig_batch, results):
-        t_flag = isinstance(data, tuple)
-        if t_flag:
-            data = list(data)
-
-        if output_col is None:
-            if isinstance(input_col, (list, tuple)):
-                data[input_col[0]] = res
-                for idx in sorted(input_col[1:], reverse=True):
-                    del data[idx]
-            else:
-                data[input_col] = res
-        elif output_col == -1:
-            data.append(res)
-        else:
-            data[output_col] = res
-
-        if t_flag:
-            data = tuple(data)
-
-        new_batch.append(data)
-    return new_batch
 
 
 @functional_datapipe("map_batches")
@@ -524,7 +496,30 @@ class _BatchAsyncMapperIterDataPipe(IterDataPipe):
             else:
                 coroutines.append(controlled_async_fn(self.async_fn, data[self.input_col]))
         results = await asyncio.gather(*coroutines)
-        return _merge_batch_with_result(batch, results, self.input_col, self.output_col)
+
+        new_batch = []
+        for data, res in zip(batch, results):
+            t_flag = isinstance(data, tuple)
+            if t_flag:
+                data = list(data)
+
+            if self.output_col is None:
+                if isinstance(self.input_col, (list, tuple)):
+                    data[self.input_col[0]] = res
+                    for idx in sorted(self.input_col[1:], reverse=True):
+                        del data[idx]
+                else:
+                    data[self.input_col] = res
+            elif self.output_col == -1:
+                data.append(res)
+            else:
+                data[self.output_col] = res
+
+            if t_flag:
+                data = tuple(data)
+
+            new_batch.append(data)
+        return new_batch
 
 
 @functional_datapipe("async_map_batches")
@@ -598,60 +593,6 @@ class BatchAsyncMapperIterDataPipe(IterDataPipe):
         return dp
 
 
-class _ThreadPoolMapperIterDataPipe(IterDataPipe):
-    datapipe: IterDataPipe
-    fn: Callable
-
-    def __init__(
-        self,
-        source_datapipe: IterDataPipe,
-        fn: Callable,
-        input_col=None,
-        output_col=None,
-        max_workers: Optional[int] = None,
-        **threadpool_kwargs,
-    ):
-        self.source_datapipe = source_datapipe
-        self.fn = fn  # type: ignore[assignment]
-        self.input_col = input_col
-        validate_input_col(fn, input_col)
-        if input_col is None and output_col is not None:
-            raise ValueError("`output_col` must be None when `input_col` is None.")
-        if isinstance(output_col, (list, tuple)):
-            if len(output_col) > 1:
-                raise ValueError("`output_col` must be a single-element list or tuple")
-            output_col = output_col[0]
-        if isinstance(self.input_col, (list, tuple)):
-
-            def wrapper_fn(args):
-                return fn(*args)
-
-            self.fn = wrapper_fn  # type: ignore[assignment]
-        self.output_col = output_col
-        self.max_workers = max_workers
-        self.threadpool_kwargs = threadpool_kwargs
-
-    def __iter__(self):
-        with futures.ThreadPoolExecutor(max_workers=self.max_workers, **self.threadpool_kwargs) as executor:
-            for batch in self.source_datapipe:
-                prepared_batch = self._prepare_batch(batch)
-                results = executor.map(self.fn, prepared_batch)
-                yield _merge_batch_with_result(batch, results, self.input_col, self.output_col)
-
-    def _prepare_batch(self, batch):
-        if self.input_col is None:
-            return batch
-
-        prepared_batch = []
-        for data in batch:
-            if isinstance(self.input_col, (list, tuple)):
-                args = tuple(data[col] for col in self.input_col)
-                prepared_batch.append(args)
-            else:
-                prepared_batch.append(data[self.input_col])
-        return prepared_batch
-
-
 @functional_datapipe("threadpool_map")
 class ThreadPoolMapperIterDataPipe(IterDataPipe):
     r"""
@@ -662,7 +603,6 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe):
     Args:
         source_datapipe: Source IterDataPipe
         fn: The function to be applied to each element within batch of data
-        batch_size: The size of batch to be aggregated from ``source_datapipe``
         input_col: Index or indices of data which ``fn`` is applied, such as:
 
             - ``None`` as default to apply ``fn`` to the data directly.
@@ -677,12 +617,17 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe):
             - Integer is used for list/tuple. ``-1`` represents to append result at the end.
             - Key is used for dict. New key is acceptable.
 
+        scheduled_tasks: How many tasks will be scheduled at any given time (Default value: 64)
         max_workers: Maximum number of threads to execute function calls. (Default value: None)
         **threadpool_kwargs: additional arguments to be given to the ``ThreadPoolExecutor``
 
     Note:
          For more information about ``max_workers`` and additional arguments for the ``ThreadPoolExecutor``
          please refer to: https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
+
+    Note:
+        For optimal use of all threads, we recommend ``scheduled_tasks`` > ``max_workers``. High value of ``scheduled_tasks``
+        might lead to long waiting period until the first element is yielded.
 
     Example:
 
@@ -698,18 +643,19 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe):
 
     .. testcode::
 
+        # fetching html from remote
+        def fetch_html(url: str, **kwargs):
+            r = requests.get(url, **kwargs)
+            r.raise_for_status()
+            return r.content
+        dp = IterableWrapper(urls)
+        dp = dp.threadpool_map(fetch_html, batch_size=32,max_workers=16)
+
+    .. testcode::
+
         def mul_ten(x):
             time.sleep(0.1)
             return x * 10
-        dp = IterableWrapper(range(50))
-        dp = dp.threadpool_map(mul_ten, 16)
-        print(list(dp))
-
-    .. testoutput::
-
-        [0, 10, 20, 30, ...]
-
-    .. testcode::
 
         dp = IterableWrapper([(i, i) for i in range(50)])
         dp = dp.threadpool_map(mul_ten, 16, input_col=1)
@@ -729,30 +675,99 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe):
 
         [(0, 0, 0), (1, 1, 10), (2, 2, 20), (3, 3, 30), ...]
 
-    .. testcode::
-
-        # fetching html from remote
-        def fetch_html(url: str, **kwargs):
-            r = requests.get(url, **kwargs)
-            r.raise_for_status()
-            return r.content
-        dp = IterableWrapper(urls)
-        dp = dp.threadpool_map(fetch_html, 16)
-
     """
 
-    def __new__(
-        cls,
-        source_datapipe,
+    datapipe: IterDataPipe
+    fn: Callable
+
+    def __init__(
+        self,
+        datapipe: IterDataPipe,
         fn: Callable,
-        batch_size: int,
         input_col=None,
         output_col=None,
+        scheduled_tasks: int = 64,
         max_workers: Optional[int] = None,
         **threadpool_kwargs,
     ):
-        dp = source_datapipe.batch(batch_size)
-        dp = _ThreadPoolMapperIterDataPipe(dp, fn, input_col, output_col, max_workers, **threadpool_kwargs)
-        dp = dp.prefetch(buffer_size=2)  # start working on the next batch before previous batch is exhausted
-        dp = dp.flatmap()
-        return dp
+        self.datapipe = datapipe
+
+        _check_unpickable_fn(fn)
+        self.fn = fn  # type: ignore[assignment]
+
+        if scheduled_tasks <= 0:
+            raise ValueError("'scheduled_tasks' is required to be a positive integer.")
+        self.scheduled_tasks = scheduled_tasks
+        if max_workers is not None and max_workers <= 0:
+            raise ValueError("'max_workers' is required to be a positive integer.")
+        self.max_workers = max_workers
+        self.threadpool_kwargs = threadpool_kwargs
+
+        self.input_col = input_col
+        if input_col is None and output_col is not None:
+            raise ValueError("`output_col` must be None when `input_col` is None.")
+        if isinstance(output_col, (list, tuple)):
+            if len(output_col) > 1:
+                raise ValueError("`output_col` must be a single-element list or tuple")
+            output_col = output_col[0]
+        self.output_col = output_col
+        validate_input_col(fn, input_col)
+
+    def _apply_fn(self, data):
+        if self.input_col is None and self.output_col is None:
+            return self.fn(data)
+
+        if self.input_col is None:
+            res = self.fn(data)
+        elif isinstance(self.input_col, (list, tuple)):
+            args = tuple(data[col] for col in self.input_col)
+            res = self.fn(*args)
+        else:
+            res = self.fn(data[self.input_col])
+
+        # Copy tuple to list and run in-place modification because tuple is immutable.
+        if isinstance(data, tuple):
+            t_flag = True
+            data = list(data)
+        else:
+            t_flag = False
+
+        if self.output_col is None:
+            if isinstance(self.input_col, (list, tuple)):
+                data[self.input_col[0]] = res
+                for idx in sorted(self.input_col[1:], reverse=True):
+                    del data[idx]
+            else:
+                data[self.input_col] = res
+        else:
+            if self.output_col == -1:
+                data.append(res)
+            else:
+                data[self.output_col] = res
+
+        # Convert list back to tuple
+        return tuple(data) if t_flag else data
+
+    def __iter__(self):
+        with futures.ThreadPoolExecutor(max_workers=self.max_workers, **self.threadpool_kwargs) as executor:
+            futures_deque: deque = deque()
+            has_next = True
+            itr = iter(self.datapipe)
+            for _ in range(self.scheduled_tasks):
+                try:
+                    futures_deque.append(executor.submit(self._apply_fn, next(itr)))
+                except StopIteration:
+                    has_next = False
+                    break
+            while len(futures_deque) > 0:
+                if has_next:
+                    try:
+                        futures_deque.append(executor.submit(self._apply_fn, next(itr)))
+                    except StopIteration:
+                        has_next = False
+                yield futures_deque.popleft().result()
+
+    def __len__(self) -> int:
+        if isinstance(self.datapipe, Sized):
+            return len(self.datapipe)
+        raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
