@@ -751,23 +751,31 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe[T_co]):
         return tuple(data) if t_flag else data
 
     def __iter__(self) -> Iterator[T_co]:
-        with futures.ThreadPoolExecutor(max_workers=self.max_workers, **self.threadpool_kwargs) as executor:
-            futures_deque: deque = deque()
-            has_next = True
-            itr = iter(self.datapipe)
-            for _ in range(self.scheduled_tasks):
-                try:
-                    futures_deque.append(executor.submit(self._apply_fn, next(itr)))
-                except StopIteration:
-                    has_next = False
-                    break
+        executor = futures.ThreadPoolExecutor(max_workers=self.max_workers, **self.threadpool_kwargs)
+        futures_deque: deque = deque()
+        has_next = True
+        itr = iter(self.datapipe)
+        for _ in range(self.scheduled_tasks):
+            try:
+                futures_deque.append(executor.submit(self._apply_fn, next(itr)))
+            except StopIteration:
+                has_next = False
+                break
+
+        # Yield must be hidden in closure so that the futures are submitted
+        # before the first iterator value is required.
+        def result_iterator(executor):
             while len(futures_deque) > 0:
+                nonlocal has_next
                 if has_next:
                     try:
                         futures_deque.append(executor.submit(self._apply_fn, next(itr)))
                     except StopIteration:
                         has_next = False
                 yield futures_deque.popleft().result()
+            executor.shutdown()
+
+        return result_iterator(executor)
 
     def __len__(self) -> int:
         if isinstance(self.datapipe, Sized):
