@@ -596,13 +596,14 @@ class BatchAsyncMapperIterDataPipe(IterDataPipe):
 @functional_datapipe("threadpool_map")
 class ThreadPoolMapperIterDataPipe(IterDataPipe):
     r"""
-    Combines elements from the source DataPipe to batches and applies a function
-    over each element within the batch concurrently using ``ThreadPoolExecutor``, then flattens the output to a
-    single, unnested IterDataPipe (functional name: ``threadpool_map``).
+    Applies a function over each item from the source DataPipe concurrently
+    using ``ThreadPoolExecutor`` (functional name: ``threadpool_map``).
+    The function can be any regular Python function or partial object. Lambda
+    function is not recommended as it is not supported by pickle.
 
     Args:
         source_datapipe: Source IterDataPipe
-        fn: The function to be applied to each element within batch of data
+        fn: Function being applied over each item
         input_col: Index or indices of data which ``fn`` is applied, such as:
 
             - ``None`` as default to apply ``fn`` to the data directly.
@@ -627,7 +628,7 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe):
 
     Note:
         For optimal use of all threads, we recommend ``scheduled_tasks`` > ``max_workers``. High value of ``scheduled_tasks``
-        might lead to long waiting period until the first element is yielded.
+        might lead to long waiting period until the first element is yielded as tasks are executed out of order.
 
     Example:
 
