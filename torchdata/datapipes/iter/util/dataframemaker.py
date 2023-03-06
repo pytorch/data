@@ -66,7 +66,7 @@ class DataFrameMakerIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IData
         print(list(df_dp)[0])
 
     .. testoutput::
-        :skipif: dt is None
+        :skipif: io_doctest
 
           index    Values
         -------  --------
@@ -124,7 +124,7 @@ class ParquetDFLoaderIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDat
         print(list(parquet_df_dp)[0])
 
     .. testoutput::
-        :skipif: dt is None
+        :skipif: io_doctest
 
           index    Values
         -------  --------
