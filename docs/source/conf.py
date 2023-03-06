@@ -62,11 +62,8 @@ extensions = [
 doctest_test_doctest_blocks = ""
 
 doctest_global_setup = """
-import os
 import torch
 from torchdata.datapipes.iter import IterableWrapper, FileLister, FileOpener
-
-seperator_is_slash = os.sep == "/"
 
 io_doctest = True
 

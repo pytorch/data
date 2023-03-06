@@ -29,7 +29,7 @@ class SaverIterDataPipe(IterDataPipe[str]):
     Example:
 
     .. testcode::
-        :skipif: not seperator_is_slash
+        :skipif: io_doctest
 
         import os
 
@@ -42,7 +42,7 @@ class SaverIterDataPipe(IterDataPipe[str]):
         print(list(saver_dp))
 
     .. testoutput::
-        :skipif: not seperator_is_slash
+        :skipif: io_doctest
 
         ['./1.txt', './2.txt', './3.txt']
 
