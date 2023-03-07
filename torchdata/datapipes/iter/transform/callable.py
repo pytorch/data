@@ -199,6 +199,12 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
         >>> shuffled_flatmapped_dp = source_dp.shuffled_flatmap(buffer_size=2)
         >>> list(shuffled_flatmapped_dp)
         ['a', 'b', 'c', 1, 'd', 'A', 'B', 'C', 2, 'D', 3, 4]
+        >>>
+        >>> # To shuffle all the elements, you can combine `shuffled_flatmap` with `in_batch_shuffle` like this:
+        >>> fully_shuffled_flatmapped_dp = source_dp.in_batch_shuffle()
+        >>> fully_shuffled_flatmapped_dp = fully_shuffled_flatmapped_dp.shuffled_flatmap()
+        >>> list(fully_shuffled_flatmapped_dp)
+        ['b', 3, 'c', 'd', 'C', 'A', 'a', 2, 'B', 'D', 4, 1]
     """
     datapipe: IterDataPipe[T_co]
     fn: Optional[Callable]
