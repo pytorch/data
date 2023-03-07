@@ -15,6 +15,7 @@ def collect_init_dps(init_file_location):
             if line.startswith("__all__ "):
                 while (line := init_file.readline()) != "" and (stripped_line := line.strip()).startswith('"'):
                     init_dps.add(stripped_line.replace(",", "").replace('"', ""))
+                break
     return init_dps
 
 
@@ -30,11 +31,9 @@ def collect_rst_dps(rst_file_location):
 
 
 def compare_sets(set_a, set_b, ignore_set=None):
-    set_a_copy = set_a.copy()
+    res = set_a.difference(set_b)
     if ignore_set is not None:
-        for elem in ignore_set:
-            set_a_copy.discard(elem)
-    res = set_a_copy.difference(set_b)
+        res.difference_update(ignore_set)
     return res
 
 
@@ -55,7 +54,7 @@ def main():
         dif_rst = compare_sets(rst_set, init_set)
 
         for elem in dif_init:
-            print(f"{elem} is missing from {rst_path}")
+            print(f"Please add {elem} to {rst_path}")
             exit_code = 1
         for elem in dif_rst:
             print(f"{elem} is present in {rst_path} but not in {init_path}")
