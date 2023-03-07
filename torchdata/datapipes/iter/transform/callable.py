@@ -11,8 +11,7 @@ import warnings
 
 from typing import Callable, Hashable, Iterator, List, Optional, Set, Sized, TypeVar, Union
 
-from torch import empty as torch_empty, int64 as torch_int64
-
+import torch
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, validate_input_col
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -243,7 +242,7 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
     def reset(self) -> None:
         if self._enabled:
             if self._seed is None:
-                self._seed = int(torch_empty((), dtype=torch_int64).random_().item())
+                self._seed = int(torch.empty((), dtype=torch.int64).random_().item())
             self._rng.seed(self._seed)
             self._seed = None
 
