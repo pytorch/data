@@ -208,7 +208,7 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
     _rng: random.Random
 
     def __init__(
-        self, datapipe: IterDataPipe, fn: Optional[Callable] = None, input_col=None, buffer_size: int = 10000
+        self, datapipe: IterDataPipe, fn: Optional[Callable] = None, input_col=None, buffer_size: int = 100
     ) -> None:
         super().__init__()
         self.datapipe = datapipe
