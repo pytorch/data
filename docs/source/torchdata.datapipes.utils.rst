@@ -24,6 +24,7 @@ Common Utility Functions
     :toctree: generated/
     :template: function.rst
 
+    janitor
     pin_memory_fn
 
 
