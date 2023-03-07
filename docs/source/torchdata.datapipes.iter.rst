@@ -53,6 +53,7 @@ These DataPipes help opening and decompressing archive files of different format
     Decompressor
     RarArchiveLoader
     TarArchiveLoader
+    TFRecordLoader
     WebDataset
     XzFileLoader
     ZipArchiveLoader
@@ -178,6 +179,7 @@ A miscellaneous set of DataPipes with different functionalities.
 
     DataFrameMaker
     EndOnDiskCacheHolder
+    FullSync
     HashChecker
     InMemoryCacheHolder
     IterableWrapper
@@ -187,6 +189,7 @@ A miscellaneous set of DataPipes with different functionalities.
     PinMemory
     Prefetcher
     RandomSplitter
+    ShardExpander
     ShardingFilter
     ShardingRoundRobinDispatcher
 
