@@ -208,6 +208,7 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
     datapipe: IterDataPipe[T_co]
     fn: Optional[Callable]
     buffer_size: int
+    _buffer: List[Iterator[T_co]]
     _enabled: bool
     _seed: Optional[int]
     _rng: random.Random
@@ -216,6 +217,7 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
         self, datapipe: IterDataPipe, fn: Optional[Callable] = None, input_col=None, buffer_size: int = 100
     ) -> None:
         super().__init__()
+        self._buffer = []
         self.datapipe = datapipe
 
         if fn is None:
@@ -240,6 +242,7 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
         return self
 
     def reset(self) -> None:
+        self._buffer = []
         if self._enabled:
             if self._seed is None:
                 self._seed = int(torch.empty((), dtype=torch.int64).random_().item())
@@ -255,25 +258,26 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
         else:
             return self.fn(data[self.input_col])  # type: ignore[misc]
 
-    def _yield_one(self, buffer: List[Iterator[T_co]]) -> Iterator[T_co]:
-        idx = self._rng.randint(0, len(buffer) - 1) if self._enabled else 0
-        try:
-            yield next(buffer[idx])
-        except StopIteration:
-            buffer.pop(idx)
-
     def __iter__(self) -> Iterator[T_co]:
         if not self._enabled:  # equivalent to flatmap
             for x in self.datapipe:
                 yield from self._apply_fn(x)
         else:
-            buffer: List[Iterator[T_co]] = []  # the buffer should not be shared between iterators
+            idx = self._rng.randint(0, self.buffer_size - 1)  # if self._enabled else 0
             for x in self.datapipe:
-                while len(buffer) == self.buffer_size:
-                    yield from self._yield_one(buffer)
-                buffer.append(iter(self._apply_fn(x)))
-            while buffer:
-                yield from self._yield_one(buffer)
+                while len(self._buffer) == self.buffer_size:
+                    try:
+                        yield next(self._buffer[idx])
+                        idx = self._rng.randint(0, self.buffer_size - 1)  # if self._enabled else 0
+                    except StopIteration:
+                        self._buffer.pop(idx)
+                self._buffer.append(iter(self._apply_fn(x)))
+            while self._buffer:
+                try:
+                    idx = self._rng.randint(0, len(self._buffer) - 1)  # if self._enabled else 0
+                    yield next(self._buffer[idx])
+                except StopIteration:
+                    self._buffer.pop(idx)
 
     def __len__(self) -> int:
         raise TypeError(f"{type(self).__name__}'s length relies on the output of its function.")
@@ -284,6 +288,7 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
             self.fn,
             self.input_col,
             self.buffer_size,
+            self._buffer,
             self._enabled,
             self._seed,
             self._rng.getstate(),
@@ -300,6 +305,7 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
             self.fn,
             self.input_col,
             self.buffer_size,
+            self._buffer,
             self._enabled,
             self._seed,
             rng_state,
@@ -308,6 +314,9 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
         ) = state
         self._rng = random.Random()
         self._rng.setstate(rng_state)
+
+    def __del__(self):
+        self._buffer.clear()
 
 
 @functional_datapipe("drop")
