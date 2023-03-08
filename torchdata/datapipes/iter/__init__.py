@@ -209,6 +209,7 @@ __all__ = [
     "ShardExpander",
     "ShardingFilter",
     "ShardingRoundRobinDispatcher",
+    "ShuffledFlatMapper",
     "Shuffler",
     "Slicer",
     "StreamReader",
