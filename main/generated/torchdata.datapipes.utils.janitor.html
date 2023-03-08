@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Batcher &mdash; TorchData main documentation</title>
+  <title>janitor &mdash; TorchData main documentation</title>
   
 
   
@@ -34,8 +34,8 @@
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="BucketBatcher" href="torchdata.datapipes.iter.BucketBatcher.html" />
-    <link rel="prev" title="ZipperLongest" href="torchdata.datapipes.iter.ZipperLongest.html" />
+    <link rel="next" title="pin_memory_fn" href="torchdata.datapipes.utils.pin_memory_fn.html" />
+    <link rel="prev" title="to_graph" href="torchdata.datapipes.utils.to_graph.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -247,9 +247,9 @@
             
               <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.map.html">Map-style DataPipes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.utils.html">Utility Functions</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../torchdata.datapipes.utils.html">Utility Functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../dataloader2.html">DataLoader2</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reading_service.html">ReadingService</a></li>
 </ul>
@@ -308,15 +308,15 @@
       </li>
 
         
-          <li><a href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a> &gt;</li>
+          <li><a href="../torchdata.datapipes.utils.html">Utility Functions</a> &gt;</li>
         
-      <li>Batcher</li>
+      <li>janitor</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/generated/torchdata.datapipes.iter.Batcher.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/generated/torchdata.datapipes.utils.janitor.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -342,34 +342,13 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="batcher">
-<h1>Batcher<a class="headerlink" href="#batcher" title="Permalink to this heading">¶</a></h1>
-<dl class="py class">
-<dt class="sig sig-object py" id="torchdata.datapipes.iter.Batcher">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Batcher</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_last</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrapper_class</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">List</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.Batcher" title="Permalink to this definition">¶</a></dt>
-<dd><p>Creates mini-batches of data (functional name: <code class="docutils literal notranslate"><span class="pre">batch</span></code>). An outer dimension will be added as
-<code class="docutils literal notranslate"><span class="pre">batch_size</span></code> if <code class="docutils literal notranslate"><span class="pre">drop_last</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, or <code class="docutils literal notranslate"><span class="pre">length</span> <span class="pre">%</span> <span class="pre">batch_size</span></code> for the
-last batch if <code class="docutils literal notranslate"><span class="pre">drop_last</span></code> is set to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>datapipe</strong> – Iterable DataPipe being batched</p></li>
-<li><p><strong>batch_size</strong> – The size of each batch</p></li>
-<li><p><strong>drop_last</strong> – Option to drop the last batch if it’s not full</p></li>
-<li><p><strong>wrapper_class</strong> – wrapper to apply onto each batch (type <code class="docutils literal notranslate"><span class="pre">List</span></code>) before yielding,
-defaults to <code class="docutils literal notranslate"><span class="pre">DataChunk</span></code></p></li>
-</ul>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># xdoctest: +SKIP</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">batch</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">drop_last</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">dp</span><span class="p">)</span>
-<span class="go">[[0, 1, 2], [3, 4, 5], [6, 7, 8]]</span>
-</pre></div>
-</div>
+  <section id="janitor">
+<h1>janitor<a class="headerlink" href="#janitor" title="Permalink to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="torchdata.datapipes.utils.janitor">
+<span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.utils.</span></span><span class="sig-name descname"><span class="pre">janitor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.utils.janitor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Invokes various <cite>obj</cite> cleanup procedures such as:
+- Closing streams</p>
 </dd></dl>
 
 </section>
@@ -382,10 +361,10 @@ defaults to <code class="docutils literal notranslate"><span class="pre">DataChu
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="torchdata.datapipes.iter.BucketBatcher.html" class="btn btn-neutral float-right" title="BucketBatcher" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.datapipes.utils.pin_memory_fn.html" class="btn btn-neutral float-right" title="pin_memory_fn" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.iter.ZipperLongest.html" class="btn btn-neutral" title="ZipperLongest" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="torchdata.datapipes.utils.to_graph.html" class="btn btn-neutral" title="to_graph" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -417,7 +396,7 @@ defaults to <code class="docutils literal notranslate"><span class="pre">DataChu
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">Batcher</a></li>
+<li><a class="reference internal" href="#">janitor</a></li>
 </ul>
 
             </div>
