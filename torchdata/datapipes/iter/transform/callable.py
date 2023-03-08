@@ -263,18 +263,18 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
             for x in self.datapipe:
                 yield from self._apply_fn(x)
         else:
-            idx = self._rng.randint(0, self.buffer_size - 1)  # if self._enabled else 0
+            idx = self._rng.randint(0, self.buffer_size - 1)
             for x in self.datapipe:
                 while len(self._buffer) == self.buffer_size:
                     try:
                         yield next(self._buffer[idx])
-                        idx = self._rng.randint(0, self.buffer_size - 1)  # if self._enabled else 0
+                        idx = self._rng.randint(0, self.buffer_size - 1)
                     except StopIteration:
                         self._buffer.pop(idx)
                 self._buffer.append(iter(self._apply_fn(x)))
             while self._buffer:
                 try:
-                    idx = self._rng.randint(0, len(self._buffer) - 1)  # if self._enabled else 0
+                    idx = self._rng.randint(0, len(self._buffer) - 1)
                     yield next(self._buffer[idx])
                 except StopIteration:
                     self._buffer.pop(idx)
