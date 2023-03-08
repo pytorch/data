@@ -183,3 +183,12 @@ class QueueWrapperForMap(NonBlockingMap):
         except communication.protocol.EmptyQueue:
             raise NotAvailable
         return response.len
+
+    def state_dict(self):
+        if self.protocol.can_take_request():
+            self.protocol.request_state()
+        try:
+            response = self.protocol.get_response_state(block=True, timeout=self._response_wait_time)
+        except communication.protocol.EmptyQueue:
+            raise NotAvailable
+        return response.value

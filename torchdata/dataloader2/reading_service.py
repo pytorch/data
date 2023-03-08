@@ -376,6 +376,22 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         self._worker_processes = []
         self._dispatch_process = None
 
+    def snapshot(self):
+        """
+        Captures the state_dict of the underlying worker datapipes via the consumer datapipe.
+        We only capture the worker datapipes's states and not the prefetching datapipe.
+        This is a PoC for now so there is no corresponding restoring action to make it properly checkpointable.
+        """
+        if self.num_workers == 0:
+            raise RuntimeError(
+                "If you would like to use `snapshot` with `MultiProcessingReadingService`, please use more than 0 workers."
+            )
+
+        self._pause()
+        result = self._worker_consumer_datapipe.state_dict()
+        self._resume()
+        return result
+
     def _pause(self):
         """
         Pauses DataPipes' activities such as prefetching, in order to collect state.

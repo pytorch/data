@@ -276,10 +276,44 @@ class TestMultiProcessingReadingService(TestCase):
     # cumulative_res.extend(res)
     # self.assertEqual(list(range(n_elements)), sorted(cumulative_res))
 
+    @mp_ctx_parametrize
+    @dp_parametrize
+    @parametrize("n_workers,worker_prefetch_cnt,main_prefetch_cnt", [(2, 1, 1), (4, 1, 0), (4, 0, 0)])
+    def test_reading_service_snapshot(self, ctx, dp, n_workers, worker_prefetch_cnt, main_prefetch_cnt) -> None:
+        # Functional Test: Confirms that `snapshot` does capture the state of the underlying DataPipes properly
+        rs = MultiProcessingReadingService(
+            num_workers=n_workers,
+            worker_prefetch_cnt=worker_prefetch_cnt,
+            main_prefetch_cnt=main_prefetch_cnt,
+            multiprocessing_context=ctx,
+        )
+        dl: DataLoader2 = DataLoader2(dp, reading_service=rs)
+        res = []
+        stop_index = 3
+        for i, x in enumerate(dl):
+            res.append(x)
+            if i == stop_index:
+                snapshot = dl.reading_service.snapshot()
+                break
+        self.assertEqual(
+            n_workers,
+            len(snapshot),
+            msg=f"The test is failing with '{ctx}', num_workers = {rs.num_workers}, "
+            f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, main_prefetch_cnt = {rs.main_prefetch_cnt}",
+        )
+
+        if worker_prefetch_cnt == 0 and main_prefetch_cnt == 0 and dp == dp1:
+            for snapshot_worker in snapshot:
+                self.assertAlmostEqual(
+                    stop_index + worker_prefetch_cnt,
+                    snapshot_worker["_number_of_samples_yielded"],
+                    delta=2,
+                    msg=f"The test is failing with '{ctx}', num_workers = {rs.num_workers}, "
+                    f"worker_prefetch_cnt = {rs.worker_prefetch_cnt}, main_prefetch_cnt = {rs.main_prefetch_cnt}",
+                )
+        dl.shutdown()
+
     # TODO: Implemented in an upcoming PR
-    # def test_reading_service_snapshot(self) -> None:
-    #     pass
-    #
     # def test_dataloader2_snapshot(self) -> None:
     #     pass
 

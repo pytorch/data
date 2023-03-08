@@ -193,6 +193,15 @@ def DataPipeBehindQueues(
             forever = False
             protocol.response_terminate()
 
+        elif isinstance(request, communication.messages.GetStateRequest):
+            datapipe_state = source_datapipe.__getstate__()
+            # Remove pickle-incompatible keys from the state
+            datapipe_state = {
+                k: v for k, v in datapipe_state.items() if not callable(v) and not isinstance(v, types.GeneratorType)
+            }
+            protocol.response_state(datapipe_state)
+            yield True  # Return control
+
         elif isinstance(request, communication.messages.GetNextRequest):
             while forever:
                 if protocol.is_paused():
@@ -272,6 +281,14 @@ class QueueWrapper(NonBlocking):
             except communication.protocol.EmptyQueue:
                 if NonBlocking.not_available_hook is not None:
                     NonBlocking.not_available_hook()
+
+    def state_dict(self):
+        self.protocol.request_state()
+        try:
+            response = self.protocol.get_response_state(block=True, timeout=self._response_wait_time)
+        except communication.protocol.EmptyQueue:
+            raise NotAvailable
+        return response.value
 
     def nonblocking_next(self):
         if self._stop_iteration:
@@ -374,3 +391,6 @@ class _IterateQueueDataPipes(IterDataPipe):
     def request_resume(self):
         for dp in self.datapipes:
             dp.resume()
+
+    def state_dict(self):
+        return [dp.state_dict() for dp in self.datapipes]
