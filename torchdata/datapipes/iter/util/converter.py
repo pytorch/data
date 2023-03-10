@@ -49,7 +49,7 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
 
         source_dp2 = IterableWrapper([('a', 1), ('b', 2), ('c', 1)])
         map_dp2 = source_dp2.to_map_datapipe()
-        assert map_dp2['a']) == 1
+        assert map_dp2['a'] == 1
 
     .. testcode::
 
@@ -91,6 +91,7 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
                 self._load_next_item()
             except StopIteration:
                 self._depleted = True
+                self._itr = None
 
     def __getitem__(self, index):
         try:
@@ -105,6 +106,7 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
                     return value
             except StopIteration:
                 self._depleted = True
+                self._itr = None
         raise IndexError(f"Index {index} is invalid for IterToMapConverter.")
 
     def _load_next_item(self):
@@ -145,10 +147,10 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
             dill_key_value_fn = dill.dumps(self.key_value_fn)
         else:
             dill_key_value_fn = self.key_value_fn
-        return (self.datapipe, dill_key_value_fn, self._map, self._itr, self._depleted)
+        return (self.datapipe, dill_key_value_fn, self._map, self._depleted)
 
     def __setstate__(self, state):
-        (self.datapipe, dill_key_value_fn, self._map, self._itr, self._depleted) = state
+        (self.datapipe, dill_key_value_fn, self._map, self._depleted) = state
         if DILL_AVAILABLE:
             self.key_value_fn = dill.loads(dill_key_value_fn)  # type: ignore[assignment]
         else:
