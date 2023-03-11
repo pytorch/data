@@ -143,6 +143,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
                 while not self.prefetch_data.paused:
                     time.sleep(PRODUCER_SLEEP_INTERVAL * 10)
 
+    @final
     def resume(self):
         if self.thread is not None and (
             not self.prefetch_data.stop_iteration or len(self.prefetch_data.prefetch_buffer) > 0

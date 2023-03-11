@@ -267,6 +267,7 @@ class QueueWrapper(NonBlocking):
                 if NonBlocking.not_available_hook is not None:
                     NonBlocking.not_available_hook()
 
+    @final
     def resume(self):
         self.protocol.request_resume()
         while True:
