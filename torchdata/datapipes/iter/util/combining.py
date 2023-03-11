@@ -255,7 +255,7 @@ class RoundRobinDemultiplexerIterDataPipe(IterDataPipe):
         num_instances: number of instances of the DataPipe to create
         buffer_size: this defines the maximum number of inputs that the buffer can hold across all child
             DataPipes while waiting for their values to be yielded.
-            Defaults to ``1000``. Use ``-1`` for the unlimited buffer.
+            Defaults to ``1000``. Use ``None`` for the unlimited buffer.
 
     Examples:
         >>> from torchdata.datapipes.iter import IterableWrapper
@@ -271,7 +271,7 @@ class RoundRobinDemultiplexerIterDataPipe(IterDataPipe):
         2
     """
 
-    def __new__(cls, datapipe: IterDataPipe, num_instances: int, buffer_size: int = 1000):
+    def __new__(cls, datapipe: IterDataPipe, num_instances: int, buffer_size: int = 10000):
         if num_instances < 1:
             raise ValueError(f"Expected `num_instaces` larger than 0, but {num_instances} is found")
         if num_instances == 1:
@@ -314,7 +314,7 @@ class UnZipperIterDataPipe(IterDataPipe[T]):
         source_datapipe: Iterable DataPipe with sequences of data
         sequence_length: Length of the sequence within the source_datapipe. All elements should have the same length.
         buffer_size: this restricts how far ahead the leading child DataPipe can read relative
-            to the slowest child DataPipe. Use -1 for the unlimited buffer.
+            to the slowest child DataPipe. Use None for the unlimited buffer.
         columns_to_skip: optional indices of columns that the DataPipe should skip (each index should be
             an integer from 0 to sequence_length - 1)
 
@@ -334,7 +334,7 @@ class UnZipperIterDataPipe(IterDataPipe[T]):
         cls,
         source_datapipe: IterDataPipe[Sequence[T]],
         sequence_length: int,
-        buffer_size: int = 1000,
+        buffer_size: int = 10000,
         columns_to_skip: Optional[Sequence[int]] = None,
     ):
         if columns_to_skip is None:
@@ -355,7 +355,7 @@ class UnZipperIterDataPipe(IterDataPipe[T]):
 
 
 class _UnZipperIterDataPipe(_ForkerIterDataPipe):
-    def __init__(self, datapipe: IterDataPipe, instance_ids: List[int], buffer_size: int = 1000):
+    def __init__(self, datapipe: IterDataPipe, instance_ids: List[int], buffer_size: int = 10000):
         super().__init__(datapipe, len(instance_ids), buffer_size)  # type: ignore[arg-type]
         self.instance_ids = instance_ids
 

@@ -218,6 +218,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
 
     Note that batches are bucketized starting from the smallest size in a buffer.
     This can limit the variablity of batches if ``buffer_size`` is large.
+    If it's specified as ``None``, the buffer size is set as infinite.
     To increase variablity, apply ``torchdata.datapipes.iter.Shuffler`` before and after this DataPipe,
     and keep ``buffer_size`` small.
 
@@ -256,7 +257,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         len_fn: Callable = _default_len_fn,
         min_len: int = 0,
         max_len: Optional[int] = None,
-        buffer_size: int = 1000,
+        buffer_size: int = 10000,
         include_padding: bool = False,
     ) -> None:
         if max_len is None:
@@ -266,8 +267,8 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
             raise ValueError("``min_len`` should be larger than 0 and equal to or smaller than ``max_len``.")
         if max_len > max_token_count:
             raise ValueError("``max_token_count`` must be equal to or greater than ``max_len``.")
-        if buffer_size <= 0:
-            raise ValueError("'buffer_size' is required to be a positive integer.")
+        if buffer_size is not None and buffer_size <= 0:
+            raise ValueError("'buffer_size' is required to be a positive integer or None.")
         self.datapipe = datapipe.map(partial(_token_len_fn, len_fn=len_fn))
         self.datapipe = self.datapipe.filter(partial(_token_filter_fn, min_len=min_len, max_len=max_len))
         self.max_token_count = max_token_count
@@ -281,7 +282,7 @@ class MaxTokenBucketizerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
         max_length: int = 0
         for d in self.datapipe:
             heapq.heappush(buffer, d)
-            if len(buffer) == self.buffer_size:
+            if self.buffer_size is not None and len(buffer) == self.buffer_size:
                 buffer, batch, batch_size, max_length, data_chunk = self._pop_buffer(
                     buffer, batch, batch_size, max_length
                 )
