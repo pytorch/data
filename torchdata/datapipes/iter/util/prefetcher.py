@@ -8,7 +8,7 @@ import threading
 import time
 
 from collections import deque
-from typing import Deque, Optional
+from typing import Deque, Optional, final
 
 import torch
 
@@ -125,6 +125,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
         self.buffer_size = state["buffer_size"]
         self.thread = None
 
+    @final
     def reset(self):
         if self.thread is not None:
             self.prefetch_data.run_prefetcher = False

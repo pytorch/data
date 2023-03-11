@@ -10,7 +10,7 @@ from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable, Deque, Iterator, Optional, TypeVar
+from typing import Callable, Deque, Iterator, Optional, TypeVar, final
 
 import torch
 import torch.distributed as dist
@@ -197,6 +197,7 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
                 break
             yield data
 
+    @final
     def reset(self):
         if self._executor is not None:
             self._executor.shutdown()

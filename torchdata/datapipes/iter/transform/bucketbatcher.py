@@ -9,7 +9,7 @@ import random
 
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Callable, Generic, Iterator, List, Optional, TypeVar
+from typing import Callable, Generic, Iterator, List, Optional, TypeVar, final
 
 import torch
 
@@ -63,6 +63,7 @@ class InBatchShufflerIterDataPipe(IterDataPipe[DataChunk[T_co]]):
                 new_batch = self._rng.sample(batch, len(batch))
                 yield DataChunk(new_batch)
 
+    @final
     def reset(self) -> None:
         if self._enabled:
             if self._seed is None:

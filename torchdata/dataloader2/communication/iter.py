@@ -10,7 +10,7 @@ import warnings
 
 from collections import deque
 from functools import partial
-from typing import Callable, Deque, List
+from typing import Callable, Deque, List, final
 
 from torch.utils.data import IterDataPipe
 from torchdata._utils import ExceptionWrapper
@@ -347,6 +347,7 @@ class _IterateQueueDataPipes(IterDataPipe):
                         self.datapipes[idx].protocol.request_next()
                     yield response.value
 
+    @final
     def reset(self):
         # NonBlocking DataPipes do not reset automatically, have to do it manually
         for dp in self.datapipes:

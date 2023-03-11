@@ -7,7 +7,7 @@
 import warnings
 
 from collections import OrderedDict
-from typing import Callable, Iterator, List, Optional, Sequence, TypeVar
+from typing import Callable, Iterator, List, Optional, Sequence, TypeVar, final
 
 from torch.utils.data import functional_datapipe, IterDataPipe, MapDataPipe
 from torch.utils.data.datapipes.iter.combining import _ChildDataPipe, _DemultiplexerIterDataPipe, _ForkerIterDataPipe
@@ -125,6 +125,7 @@ class IterKeyZipperIterDataPipe(IterDataPipe[T_co]):
     def __len__(self) -> int:
         return len(self.source_datapipe)
 
+    @final
     def reset(self) -> None:
         self.buffer = OrderedDict()
 
