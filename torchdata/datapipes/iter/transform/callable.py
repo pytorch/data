@@ -618,7 +618,7 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe[T_co]):
             - Integer is used for list/tuple. ``-1`` represents to append result at the end.
             - Key is used for dict. New key is acceptable.
 
-        scheduled_tasks: How many tasks will be scheduled at any given time (Default value: 64)
+        scheduled_tasks: How many tasks will be scheduled at any given time (Default value: 128)
         max_workers: Maximum number of threads to execute function calls
         **threadpool_kwargs: additional arguments to be given to the ``ThreadPoolExecutor``
 
@@ -627,9 +627,16 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe[T_co]):
          please refer to: https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
 
     Note:
-        For optimal use of all threads, we recommend ``scheduled_tasks`` > ``max_workers``. High value of ``scheduled_tasks``
-        might lead to long waiting period until the first element is yielded as ``next`` is called
-        ``scheduled_tasks`` many times on ``source_datapipe``  before yielding.
+        For optimal use of all threads, ``scheduled_tasks`` > ``max_workers`` is strongly recommended. The higher the
+        variance of the time needed to finish execution of the given ``fn`` is, the higher the value
+        of ``scheduled_tasks`` needs to be to avoid threads sitting idle while waiting
+        for the next result (as results are returned in correct order).
+
+        However, too high value of ``scheduled_tasks`` might lead to long waiting period until the first element is yielded
+        as ``next`` is called ``scheduled_tasks`` many times on ``source_datapipe`` before yielding.
+
+        We encourage you to try out different values of ``max_workers`` and ``scheduled_tasks``
+        in search for optimal values for your use-case.
 
     Example:
 
@@ -688,7 +695,7 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe[T_co]):
         fn: Callable,
         input_col=None,
         output_col=None,
-        scheduled_tasks: int = 64,
+        scheduled_tasks: int = 128,
         max_workers: Optional[int] = None,
         **threadpool_kwargs,
     ) -> None:
