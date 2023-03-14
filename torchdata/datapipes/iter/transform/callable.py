@@ -205,10 +205,10 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
         >>> list(fully_shuffled_flatmapped_dp)
         ['b', 3, 'c', 'd', 'C', 'A', 'a', 2, 'B', 'D', 4, 1]
     """
-    datapipe: IterDataPipe[T_co]
+    datapipe: IterDataPipe
     fn: Optional[Callable]
     buffer_size: int
-    _buffer: List[Iterator[T_co]]
+    _buffer: List[Iterator]
     _enabled: bool
     _seed: Optional[int]
     _rng: random.Random
@@ -217,7 +217,7 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
         self, datapipe: IterDataPipe, fn: Optional[Callable] = None, input_col=None, buffer_size: int = 100
     ) -> None:
         super().__init__()
-        self._buffer: List[Iterator[T_co]] = []
+        self._buffer = []
         self.datapipe = datapipe
 
         if fn is None:
@@ -249,7 +249,7 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
             self._rng.seed(self._seed)
             self._seed = None
 
-    def _apply_fn(self, data) -> Iterator[T_co]:
+    def _apply_fn(self, data):
         if self.input_col is None:
             return self.fn(data)  # type: ignore[misc]
         elif isinstance(self.input_col, (list, tuple)):
