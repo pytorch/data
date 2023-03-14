@@ -73,6 +73,7 @@ from torchdata.datapipes.iter.transform.callable import (
     FlattenIterDataPipe as Flattener,
     ShuffledFlatMapperIterDataPipe as ShuffledFlatMapper,
     SliceIterDataPipe as Slicer,
+    ThreadPoolMapperIterDataPipe as ThreadPoolMapper,
 )
 from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
 from torchdata.datapipes.iter.util.cacheholder import (
@@ -215,6 +216,7 @@ __all__ = [
     "StreamReader",
     "TFRecordLoader",
     "TarArchiveLoader",
+    "ThreadPoolMapper",
     "UnBatcher",
     "UnZipper",
     "WebDataset",
