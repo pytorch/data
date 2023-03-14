@@ -167,6 +167,7 @@ These DataPipes apply the a given function to each element in the DataPipe.
     BatchMapper
     FlatMapper
     Mapper
+    ThreadPoolMapper
 
 Other DataPipes
 -------------------------
