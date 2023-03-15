@@ -192,7 +192,7 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
             - ``None`` as default to apply ``fn`` to the data directly.
             - Integer(s) is/are used for list/tuple.
             - Key(s) is/are used for dict.
-        buffer_size: The buffer size for sampling the iterables (default to ``100``)
+        buffer_size: the max number of iterables this DataPipe can hold at a time (default to ``100``)
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
