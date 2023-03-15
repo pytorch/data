@@ -216,6 +216,7 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
     _enabled: bool
     _seed: Optional[int]
     _rng: random.Random
+    _no_op_fn: bool = False
 
     def __init__(
         self, datapipe: IterDataPipe, fn: Optional[Callable] = None, input_col=None, buffer_size: int = 100
@@ -226,6 +227,7 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
 
         if fn is None:
             fn = _no_op_fn
+            self._no_op_fn = True
         _check_unpickable_fn(fn)
         self.fn = fn  # type: ignore[assignment]
         self.input_col = input_col
@@ -284,6 +286,8 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
                     self._buffer.pop(idx)
 
     def __len__(self) -> int:
+        if self._no_op_fn:
+            return sum(map(len, self.datapipe))
         raise TypeError(f"{type(self).__name__}'s length relies on the output of its function.")
 
     def __getstate__(self):

@@ -941,6 +941,11 @@ class TestIterDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "length relies on the output of its function."):
             len(shuffled_flatmapped_dp)
 
+        # __len__ when no fn specified:
+        dp = IterableWrapper([[1, 2], [], [3], [4, 5, 6, [7, 8]]])
+        dp = dp.shuffled_flatmap()
+        self.assertEqual(len(dp), 7)
+
         # Tests with .set_shuffle(False)
         # In this case, the expected behavior is similar to flatmap
 
