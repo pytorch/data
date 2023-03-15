@@ -9,7 +9,7 @@ import random
 
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Callable, Generic, Iterator, List, Optional, TypeVar, final
+from typing import Callable, final, Generic, Iterator, List, Optional, TypeVar
 
 import torch
 

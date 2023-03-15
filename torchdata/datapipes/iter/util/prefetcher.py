@@ -8,7 +8,7 @@ import threading
 import time
 
 from collections import deque
-from typing import Deque, Optional, final
+from typing import Deque, final, Optional
 
 import torch
 

@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import random
-from typing import Dict, List, Optional, TypeVar, Union, final
+from typing import Dict, final, List, Optional, TypeVar, Union
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe

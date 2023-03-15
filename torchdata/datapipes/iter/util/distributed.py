@@ -10,7 +10,7 @@ from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable, Deque, Iterator, Optional, TypeVar, final
+from typing import Callable, Deque, final, Iterator, Optional, TypeVar
 
 import torch
 import torch.distributed as dist

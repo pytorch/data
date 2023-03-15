@@ -7,7 +7,7 @@
 import warnings
 
 from collections import OrderedDict
-from typing import Callable, Iterator, List, Optional, Sequence, TypeVar, final
+from typing import Callable, final, Iterator, List, Optional, Sequence, TypeVar
 
 from torch.utils.data import functional_datapipe, IterDataPipe, MapDataPipe
 from torch.utils.data.datapipes.iter.combining import _ChildDataPipe, _DemultiplexerIterDataPipe, _ForkerIterDataPipe

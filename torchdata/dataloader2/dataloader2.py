@@ -7,7 +7,7 @@
 
 import warnings
 
-from typing import Any, Dict, Generic, Iterable, Iterator, Optional, TypeVar, Union, final
+from typing import Any, Dict, Generic, Iterable, Iterator, Optional, TypeVar, Union
 
 from torchdata.dataloader2.adapter import Adapter
 from torchdata.dataloader2.error import PauseIteration
@@ -86,7 +86,6 @@ class DataLoader2Iterator(Iterator[T_co]):
         self.dataloader._pause()
         self.limit_counter = 0
 
-    @final
     def resume(self) -> None:
         r"""
         Restarts the threads within ``DataLoader2`` and allows it to yield additional batches.

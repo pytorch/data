@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Callable, Iterator, List, Tuple, TypeVar, final
+from typing import Callable, final, Iterator, List, Tuple, TypeVar
 
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
 

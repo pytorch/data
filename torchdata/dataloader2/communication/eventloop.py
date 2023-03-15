@@ -9,7 +9,6 @@ import threading
 import time
 
 from itertools import zip_longest
-from typing import final
 
 import torch
 
@@ -56,7 +55,6 @@ class _ResetCounter:
             self._reached = True
         return self._reached
 
-    @final
     def reset(self) -> None:
         if self._reached:
             self._reached = False
