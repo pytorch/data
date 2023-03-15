@@ -221,7 +221,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.7.0a0+f1283eb ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.7.0a0+fea20d4 ) &#x25BC</a>
     </div>
     
 
@@ -356,17 +356,18 @@ single, unnested IterDataPipe (functional name: <code class="docutils literal no
 <li><p><strong>source_datapipe</strong> – Source IterDataPipe</p></li>
 <li><p><strong>async_fn</strong> – The coroutine function to be applied to each batch of data</p></li>
 <li><p><strong>batch_size</strong> – The size of batch to be aggregated from <code class="docutils literal notranslate"><span class="pre">source_datapipe</span></code></p></li>
-<li><p><strong>input_col</strong> – Index or indices of data which <code class="docutils literal notranslate"><span class="pre">fn</span></code> is applied, such as:
-- <code class="docutils literal notranslate"><span class="pre">None</span></code> as default to apply <code class="docutils literal notranslate"><span class="pre">fn</span></code> to the data directly.
-- Integer(s) is used for list/tuple.
-- Key(s) is used for dict.</p></li>
-<li><p><strong>output_col</strong> – <p>Index of data where result of <code class="docutils literal notranslate"><span class="pre">fn</span></code> is placed. <code class="docutils literal notranslate"><span class="pre">output_col</span></code> can be specified
-only when <code class="docutils literal notranslate"><span class="pre">input_col</span></code> is not <code class="docutils literal notranslate"><span class="pre">None</span></code>
-- <code class="docutils literal notranslate"><span class="pre">None</span></code> as default to replace the index that <code class="docutils literal notranslate"><span class="pre">input_col</span></code> specified; For <code class="docutils literal notranslate"><span class="pre">input_col</span></code> with</p>
-<blockquote>
-<div><p>multiple indices, the left-most one is used, and other indices will be removed.</p>
-</div></blockquote>
+<li><p><strong>input_col</strong> – <p>Index or indices of data which <code class="docutils literal notranslate"><span class="pre">fn</span></code> is applied, such as:</p>
 <ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">None</span></code> as default to apply <code class="docutils literal notranslate"><span class="pre">fn</span></code> to the data directly.</p></li>
+<li><p>Integer(s) is used for list/tuple.</p></li>
+<li><p>Key(s) is used for dict.</p></li>
+</ul>
+</p></li>
+<li><p><strong>output_col</strong> – <p>Index of data where result of <code class="docutils literal notranslate"><span class="pre">fn</span></code> is placed. <code class="docutils literal notranslate"><span class="pre">output_col</span></code> can be specified
+only when <code class="docutils literal notranslate"><span class="pre">input_col</span></code> is not <code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">None</span></code> as default to replace the index that <code class="docutils literal notranslate"><span class="pre">input_col</span></code> specified; For <code class="docutils literal notranslate"><span class="pre">input_col</span></code> with
+multiple indices, the left-most one is used, and other indices will be removed.</p></li>
 <li><p>Integer is used for list/tuple. <code class="docutils literal notranslate"><span class="pre">-1</span></code> represents to append result at the end.</p></li>
 <li><p>Key is used for dict. New key is acceptable.</p></li>
 </ul>
