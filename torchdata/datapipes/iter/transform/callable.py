@@ -180,6 +180,8 @@ class ShuffledFlatMapperIterDataPipe(IterDataPipe):
     then, at every iteration, chooses at random one of the iterables in the buffer
     and yields one item from this iterable (functional name: ``shuffled_flatmap``).
 
+    When the buffer is full, the DataPipe will begin to yield elements from iterables within the buffer.
+    New iterables will be added to the buffer once the existing ones run out of elements.
     Note:
         The output from ``fn`` must be an Iterable. Otherwise, an error will be raised.
         If ``fn`` is ``None``, source DataPipe will be just flattened vertically, provided that items can be unpacked.
