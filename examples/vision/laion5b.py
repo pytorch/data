@@ -11,10 +11,8 @@ from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
 from torchdata.datapipes.iter import HuggingFaceHubReader
 
 try:
-    import PIL
     from PIL import Image
 except ImportError:
-    PIL = None
     Image = None
 
 
@@ -29,6 +27,7 @@ def is_sfw(x):
 def load_image(url):
     try:
         r = requests.get(url, timeout=5)
+        r.raise_for_status()
         return Image.open(BytesIO(r.content))
     except Exception:
         return None
@@ -50,7 +49,7 @@ def laion2b_en(name=NAME):
     dp = dp.filter(is_sfw)
     dp = dp.shuffle().sharding_filter()
     dp = dp.slice(index=["TEXT", "URL"])
-    dp = dp.map(fn=load_image, input_col="URL", output_col="IMAGE")  # this needs multithreading
+    dp = dp.threadpool_map(fn=load_image, input_col="URL", output_col="IMAGE")
     dp = dp.filter(filter_fn=image_was_loaded, input_col="IMAGE")
     dp = dp.drop("URL")
     dp = dp.batch(20)
@@ -59,18 +58,15 @@ def laion2b_en(name=NAME):
 
 def print_label_and_copyright(label, image):
     try:
-        try:
-            exif = image.getexif()
-            # 0x8298 is the EXIF-tag for copyright
-            copyright_info = exif.get(0x8298, "no info")
-        except Exception:
-            copyright_info = "EXIF data is corrupted"
-        if copyright_info != "no info" and copyright_info != "EXIF data is corrupted":
-            print(f"image {i}: {label=}, {copyright_info=} ")
-        else:
-            print(f"image {i}: {label=}")
-    except PIL.UnidentifiedImageError:
-        print(f"image {i}: corrupted")
+        exif = image.getexif()
+        # 0x8298 is the EXIF-tag for copyright
+        copyright_info = exif.get(0x8298, "no info")
+    except Exception:
+        copyright_info = "EXIF data is corrupted"
+    if copyright_info != "no info" and copyright_info != "EXIF data is corrupted":
+        print(f"image {i}: {label=}, {copyright_info=} ")
+    else:
+        print(f"image {i}: {label=}")
 
 
 if __name__ == "__main__":

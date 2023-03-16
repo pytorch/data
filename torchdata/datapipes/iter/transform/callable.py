@@ -618,7 +618,7 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe[T_co]):
             - Integer is used for list/tuple. ``-1`` represents to append result at the end.
             - Key is used for dict. New key is acceptable.
 
-        scheduled_tasks: How many tasks will be scheduled at any given time (Default value: 128)
+        scheduled_tasks: How many tasks will be scheduled at any given time (Default value: 500)
         max_workers: Maximum number of threads to execute function calls
         **threadpool_kwargs: additional arguments to be given to the ``ThreadPoolExecutor``
 
@@ -634,6 +634,7 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe[T_co]):
 
         However, too high value of ``scheduled_tasks`` might lead to long waiting period until the first element is yielded
         as ``next`` is called ``scheduled_tasks`` many times on ``source_datapipe`` before yielding.
+        Additionally, will lead to higher memory utilization.
 
         We encourage you to try out different values of ``max_workers`` and ``scheduled_tasks``
         in search for optimal values for your use-case.
@@ -695,7 +696,7 @@ class ThreadPoolMapperIterDataPipe(IterDataPipe[T_co]):
         fn: Callable,
         input_col=None,
         output_col=None,
-        scheduled_tasks: int = 128,
+        scheduled_tasks: int = 500,
         max_workers: Optional[int] = None,
         **threadpool_kwargs,
     ) -> None:
