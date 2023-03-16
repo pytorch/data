@@ -13,7 +13,7 @@ import warnings
 
 from collections import defaultdict
 from functools import partial
-from typing import Dict
+from typing import Dict, NamedTuple
 
 import expecttest
 import torch
@@ -89,6 +89,11 @@ async def _async_mul_ten(x):
 async def _async_x_mul_y(x, y):
     await asyncio.sleep(0.1)
     return x * y
+
+
+class NamedTensors(NamedTuple):
+    x: torch.Tensor
+    y: torch.Tensor
 
 
 class TestIterDataPipe(expecttest.TestCase):
@@ -1520,6 +1525,10 @@ class TestIterDataPipe(expecttest.TestCase):
         # Dict of Tensors
         dp = IterableWrapper([{str(i): (i, i + 1)} for i in range(10)]).map(_convert_to_tensor).pin_memory()
         self.assertTrue(all(v.is_pinned() for d in dp for v in d.values()))
+
+        # NamedTuple
+        dp = IterableWrapper([NamedTensors(torch.tensor(i), torch.tensor(i + 1)) for i in range(10)]).pin_memory()
+        self.assertTrue(all(v.is_pinned() for d in dp for v in d))
 
         # Dict of List of Tensors
         dp = (
