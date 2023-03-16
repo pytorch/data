@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import asyncio
 import io
 import itertools
 import pickle
@@ -11,7 +12,7 @@ import unittest
 import warnings
 
 from collections import defaultdict
-from typing import Dict
+from typing import Dict, NamedTuple
 
 import expecttest
 import torch
@@ -76,6 +77,21 @@ def _convert_to_tensor(data):
     elif isinstance(data, list):
         return [_convert_to_tensor(v) for v in data]
     return torch.tensor(data)
+
+
+async def _async_mul_ten(x):
+    await asyncio.sleep(0.1)
+    return x * 10
+
+
+async def _async_x_mul_y(x, y):
+    await asyncio.sleep(0.1)
+    return x * y
+
+
+class NamedTensors(NamedTuple):
+    x: torch.Tensor
+    y: torch.Tensor
 
 
 class TestIterDataPipe(expecttest.TestCase):
@@ -1507,6 +1523,10 @@ class TestIterDataPipe(expecttest.TestCase):
         # Dict of Tensors
         dp = IterableWrapper([{str(i): (i, i + 1)} for i in range(10)]).map(_convert_to_tensor).pin_memory()
         self.assertTrue(all(v.is_pinned() for d in dp for v in d.values()))
+
+        # NamedTuple
+        dp = IterableWrapper([NamedTensors(torch.tensor(i), torch.tensor(i + 1)) for i in range(10)]).pin_memory()
+        self.assertTrue(all(v.is_pinned() for d in dp for v in d))
 
         # Dict of List of Tensors
         dp = (
