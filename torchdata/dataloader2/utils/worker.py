@@ -78,6 +78,7 @@ def process_init_fn(
     else:
         assert len(non_replicable_dp) == 1
         assert not (dispatching_req_queue is None and dispatching_res_queue is None)
+        dispatching_req_queue.cancel_join_thread()  # type: ignore[union-attr]
         non_dispatching_branches = find_non_dispatching_branches(graph)
         for dp in non_dispatching_branches:
             torch.utils.data.graph_settings.apply_sharding(
