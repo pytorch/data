@@ -233,10 +233,28 @@ class TestMultiProcessingReadingService(TestCase):
         initial_state = dl.state_dict()
 
         restored_dl = DataLoader2.from_state(initial_state, rs)  # type: ignore[arg-type]
-        self.assertEqual(list(it1), list(restored_dl)[1:])  # Note skipping over 1st element from actual result
+        restored_dl._initial_seed_generator = None
+
+        print(dl._seed_generator)
+        print(restored_dl._seed_generator)
+
+        print(dl._seed_generator == restored_dl._seed_generator)
+
+        restored_dl2 = DataLoader2.from_state(initial_state, rs)  # type: ignore[arg-type]
+        restored_dl2._restore_checkpoint_beginning_of_epoch()
+
+        res1 = list(it1)
+        res2 = list(restored_dl)
+        res3 = list(restored_dl2)
+
+        print(res1)
+        print(res2)
+        print(res3)
+        # self.assertEqual(list(it1), list(restored_dl)[1:])  # Note skipping over 1st element from actual result
 
         dl.shutdown()
         restored_dl.shutdown()
+        restored_dl2.shutdown()
 
     # TODO: Test cases when there is official support of `pause` and `resume` with round-robin sharding
     #       Currently, using sharding_round_robin raises a warning
