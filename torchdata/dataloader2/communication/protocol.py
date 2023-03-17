@@ -64,16 +64,6 @@ class ProtocolClient(Protocol):
         self.request_queue.put(request)
         self.request_sent(request)
 
-    def request_terminate(self):
-        r"""
-        Drop the existing request and send TerminateRequest directly
-        """
-        if not self.can_take_request():
-            self._req_sent = None
-        request = communication.messages.TerminateRequest()
-        self.request_queue.put(request)
-        self.request_sent(request)
-
 
 class ProtocolServer(Protocol):
     """
