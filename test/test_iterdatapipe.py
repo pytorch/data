@@ -915,6 +915,16 @@ class TestIterDataPipe(expecttest.TestCase):
         input_col_1_dp = tuple_source_dp.shuffled_flatmap(fn, input_col=1, buffer_size=1)
         self.assertEqual(expected_list, list(input_col_1_dp))
 
+        # With generator as fn
+        def gen_fn(e):
+            yield e
+            yield e * 10
+
+        shuffled_flatmapped_dp = source_dp.shuffled_flatmap(gen_fn, buffer_size=1)
+        expected_list = list(itertools.chain(*[(e, e * 10) for e in source_dp]))
+
+        self.assertEqual(expected_list, list(shuffled_flatmapped_dp))
+
         # Multiple input_col
         def mul_fn(a, b):
             return [a - b, b - a]
