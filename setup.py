@@ -110,7 +110,7 @@ def _get_requirements():
 
 
 # Use new version of torch on main branch
-pytorch_package_dep = "torch>1.13"
+pytorch_package_dep = "torch>2.0"
 if os.getenv("PYTORCH_VERSION"):
     pytorch_package_dep = pytorch_package_dep.split(">")[0]
     pytorch_package_dep += "==" + os.getenv("PYTORCH_VERSION")
