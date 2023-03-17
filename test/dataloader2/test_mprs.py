@@ -197,6 +197,47 @@ class TestMultiProcessingReadingService(TestCase):
             res.append(x)
         self.assertEqual(9, len(res))
 
+    def test_initial_epoch_checkpointing(self):
+        dp = IterableWrapper(range(20)).shuffle().sharding_filter()
+        rs = MultiProcessingReadingService(num_workers=2)
+
+        # Functional Test: Saving state before iterator is created
+        dl: DataLoader2 = DataLoader2(datapipe=dp, reading_service=rs)
+        dl.seed(1)
+        initial_state = dl.state_dict()
+        it1 = iter(dl)
+
+        restored_dl: DataLoader2 = DataLoader2.from_state(initial_state, rs)  # type: ignore[arg-type]
+        self.assertEqual(list(it1), list(restored_dl))
+
+        dl.shutdown()
+        restored_dl.shutdown()
+
+        # Functional Test: Saving state after iterator is created
+        dl = DataLoader2(datapipe=dp, reading_service=rs)
+        dl.seed(1)
+        it1 = iter(dl)
+        initial_state = dl.state_dict()
+
+        restored_dl = DataLoader2.from_state(initial_state, rs)  # type: ignore[arg-type]
+        self.assertEqual(list(it1), list(restored_dl))
+
+        dl.shutdown()
+        restored_dl.shutdown()
+
+        # Functional Test: Saving state after iterator is created and began iterating
+        dl = DataLoader2(datapipe=dp, reading_service=rs)
+        dl.seed(1)
+        it1 = iter(dl)
+        next(it1)  # Starts iterating
+        initial_state = dl.state_dict()
+
+        restored_dl = DataLoader2.from_state(initial_state, rs)  # type: ignore[arg-type]
+        self.assertEqual(list(it1), list(restored_dl)[1:])  # Note skipping over 1st element from actual result
+
+        dl.shutdown()
+        restored_dl.shutdown()
+
     # TODO: Test cases when there is official support of `pause` and `resume` with round-robin sharding
     #       Currently, using sharding_round_robin raises a warning
     # def test_round_robin_dispatching_pause_limit(self):

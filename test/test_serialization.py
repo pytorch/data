@@ -297,6 +297,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.TarArchiveLoader, None, (), {}),
             # TODO(594): Add serialization tests for optional DataPipe
             #  (iterdp.TFRecordLoader, None, (), {}),
+            (iterdp.ThreadPoolMapper, None, (_fake_fn_ls,), {}),
             (iterdp.UnZipper, IterableWrapper([(i, i + 10) for i in range(10)]), (), {"sequence_length": 2}),
             (iterdp.WebDataset, IterableWrapper([("foo.txt", b"1"), ("bar.txt", b"2")]), (), {}),
             (iterdp.XzFileLoader, None, (), {}),
@@ -366,6 +367,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.MapKeyZipper, (ref_mdp, lambda x: x), {}),
             (iterdp.OnDiskCacheHolder, (lambda x: x,), {}),
             (iterdp.ParagraphAggregator, (lambda x: x,), {}),
+            (iterdp.ThreadPoolMapper, (lambda x: x,), {}),
         ]
         # Skipping value comparison for these DataPipes
         dp_skip_comparison = {iterdp.OnDiskCacheHolder, iterdp.ParagraphAggregator}
