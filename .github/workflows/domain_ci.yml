@@ -32,7 +32,7 @@ jobs:
       - name: Install torch and torchvision from nightlies
         run: |
           pip install numpy networkx
-          pip install --pre torch torchvision -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
+          pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu
 
       - name: Check out torchdata repository
         uses: actions/checkout@v3
@@ -81,7 +81,7 @@ jobs:
       - name: Install torch and torchtext from nightlies
         run: |
           pip install numpy networkx
-          pip install --pre torch torchtext -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
+          pip install --pre torch torchtext --index-url https://download.pytorch.org/whl/nightly/cpu
 
       - name: Check out torchdata repository
         uses: actions/checkout@v3
@@ -124,7 +124,7 @@ jobs:
       - name: Install torch and torchaudio from nightlies
         run: |
           pip install networkx
-          pip install --pre torch torchaudio -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
+          pip install --pre torch torchaudio --index-url https://download.pytorch.org/whl/nightly/cpu
 
       - name: Check out torchdata repository
         uses: actions/checkout@v3
