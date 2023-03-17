@@ -7,7 +7,6 @@
 
 import warnings
 
-from dataclasses import dataclass
 from typing import Any, Dict, Generic, Iterable, Iterator, Optional, TypeVar, Union
 
 from torchdata.dataloader2.adapter import Adapter
@@ -20,14 +19,6 @@ from torchdata.dataloader2.reading_service import CheckpointableReadingServiceIn
 T_co = TypeVar("T_co", covariant=True)
 SERIALIZED_DATAPIPE_KEY_NAME = "serialized_datapipe"
 READING_SERVICE_STATE_KEY_NAME = "reading_service_state"
-
-
-@dataclass
-class ConcurrencySpec:
-    num_workers: int
-    timeout: Optional[int] = None
-    prefetch_factor: int = 2
-    persistent_workers: bool = False
 
 
 class DataLoader2Iterator(Iterator[T_co]):
@@ -200,7 +191,7 @@ class DataLoader2(Generic[T_co]):
             raise RuntimeError("Cannot iterate over the DataLoader as it has already been shut down")
 
         if self._reset_iter:
-            if self._seed:
+            if self._seed is not None:
                 if self._reset_seed:
                     self._seed_generator.seed(self._seed)
                     self._reset_seed = False

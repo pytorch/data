@@ -227,8 +227,6 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             self._end_datapipe = datapipe
             return datapipe
 
-        graph = traverse_dps(datapipe)
-
         ctx = mp.get_context(self.multiprocessing_context)
 
         # Launch dispatching process for the lowest common ancestor of non-replicable DataPipes
@@ -359,7 +357,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
                 pass
 
         # Clean up dispatching process
-        if self._dispatch_process:
+        if self._dispatch_process is not None:
             try:
                 # Send TerminateRequest to all loops to make sure `zip_longest` exits
                 for req_queue in self._dispatch_process[1]:
