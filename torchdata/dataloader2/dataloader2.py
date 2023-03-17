@@ -188,7 +188,7 @@ class DataLoader2(Generic[T_co]):
         self._datapipe_before_reading_service_adapt: DataPipe = clone(self.datapipe)
         self._seed_generator: SeedGenerator = SeedGenerator()
         self._seed: Optional[int] = None
-        self._reset_seed: bool = True  # TODO: Consider moving `_reset_seed` to inside of SeedGenerator
+        self._reset_seed: bool = True
         # Seed generator as of beginning of each epoch
         self._initial_seed_generator: SeedGenerator = clone(self._seed_generator)
 
