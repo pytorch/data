@@ -16,7 +16,7 @@ from torchdata.dataloader2.random import SeedGenerator
 from torchdata.dataloader2.random.seed_generator import _UINT64_UPPER_BOUND
 from torchdata.dataloader2.reading_service import (
     CheckpointableReadingServiceInterface,
-    PrototypeMultiProcessingReadingService,
+    MultiProcessingReadingService,
     ReadingServiceInterface,
 )
 
@@ -104,6 +104,8 @@ class DataLoader2Iterator(Iterator[T_co]):
         Restarts the threads within ``DataLoader2`` and allows it to yield additional batches.
         """
         self.dataloader._resume()
+        if self.dataloader._datapipe_iter and hasattr(self.dataloader._datapipe_iter, "resume"):
+            self.dataloader._datapipe_iter.resume()  # type: ignore[attr-defined]
 
     def limit(self, num_batches: Optional[int]) -> None:
         """
@@ -122,7 +124,8 @@ class DataLoader2Iterator(Iterator[T_co]):
         """
         self.limit_counter = 0
         self.limit_threshold = num_batches
-        self.dataloader._limit(num_batches)
+        if self.dataloader._datapipe_iter and hasattr(self.dataloader._datapipe_iter, "limit"):
+            self.dataloader._datapipe_iter.limit(num_batches)  # type: ignore[attr-defined]
 
     def __getattr__(self, name):
         """
@@ -368,8 +371,11 @@ class DataLoader2(Generic[T_co]):
         if hasattr(self.reading_service, "_pause"):
             self._is_paused = True
             self.reading_service._pause()
-        else:
-            warnings.warn("ReadingService doesn't support `pause`.")
+        # TODO: the condition should be `else` once `self._datapipe_iter.pause/limit()` is no longer used
+        elif self._datapipe_iter is None or not (
+            hasattr(self._datapipe_iter, "limit") or hasattr(self._datapipe_iter, "pause")
+        ):
+            warnings.warn("ReadingService doesn't support pause.")
 
     def _resume(self):
         if hasattr(self.reading_service, "_resume"):
@@ -391,9 +397,9 @@ class DataLoader2(Generic[T_co]):
         """
         Return a snapshot of the DataPipe
         """
-        if not isinstance(self.reading_service, PrototypeMultiProcessingReadingService):
+        if not isinstance(self.reading_service, MultiProcessingReadingService):
             raise RuntimeError(
-                "Only `PrototypeMultiProcessingReadingService` " "currently supports naive DataPipe snapshotting."
+                "Only `MultiProcessingReadingService` " "currently supports naive DataPipe snapshotting."
             )
         self._pause()
         n_samples_yielded, _initial_seed = self.reading_service._get_naive_datapipe_snapshot()
@@ -401,9 +407,9 @@ class DataLoader2(Generic[T_co]):
         return n_samples_yielded, _initial_seed
 
     def _restore_naive_datapipe_snapshot(self, n_samples_yielded, initial_seed) -> None:
-        if not isinstance(self.reading_service, PrototypeMultiProcessingReadingService):
+        if not isinstance(self.reading_service, MultiProcessingReadingService):
             raise RuntimeError(
-                "Only `PrototypeMultiProcessingReadingService` " "currently supports naive DataPipe snapshotting."
+                "Only `MultiProcessingReadingService` " "currently supports naive DataPipe snapshotting."
             )
         if not self._adapted:
             self.datapipe = self.reading_service.initialize(self.datapipe)

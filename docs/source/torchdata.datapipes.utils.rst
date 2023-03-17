@@ -15,7 +15,7 @@ DataPipe Graph Visualization
 
     to_graph
 
-Commond Utility Functions
+Common Utility Functions
 --------------------------------------
 .. currentmodule:: torchdata.datapipes.utils
 
@@ -24,6 +24,7 @@ Commond Utility Functions
     :toctree: generated/
     :template: function.rst
 
+    janitor
     pin_memory_fn
 
 
@@ -47,7 +48,8 @@ For documentation related to DataLoader, please refer to the
 ``torch.utils.data`` `documentation <https://pytorch.org/docs/stable/data.html>`_. Or, more specifically, the
 `DataLoader API section <https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader>`_.
 
-DataLoader v2 is currently in development. You should see an update here by mid-2022.
+DataLoader v2 is currently in development. For more information please refer to :doc:`dataloader2`.
+
 
 Sampler
 -------------------------------------

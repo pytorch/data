@@ -31,7 +31,7 @@ class UnZipperMapDataPipe(MapDataPipe):
             an integer from 0 to sequence_length - 1)
 
     Example:
-        >>> from torchdata.datapipes.iter import SequenceWrapper
+        >>> from torchdata.datapipes.map import SequenceWrapper
         >>> source_dp = SequenceWrapper([(i, i + 10, i + 20) for i in range(3)])
         >>> dp1, dp2, dp3 = source_dp.unzip(sequence_length=3)
         >>> list(dp1)

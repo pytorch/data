@@ -214,7 +214,6 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         self._main_prefetch_datapipe = None
         self._end_datapipe = None
         self._mp = num_workers > 0
-        self._initial_seed = None
 
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         r"""
@@ -228,8 +227,6 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             process_init_fn(datapipe, worker_info, self.worker_init_fn)
             self._end_datapipe = datapipe
             return datapipe
-
-        graph = traverse_dps(datapipe)
 
         ctx = mp.get_context(self.multiprocessing_context)
 
@@ -315,17 +312,9 @@ class MultiProcessingReadingService(ReadingServiceInterface):
     def initialize_iteration(
         self, seed_generator: SeedGenerator, iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None
     ) -> Optional[Callable[[DataPipe], DataPipe]]:
-
-        # TODO: Store the initial state of generator here
-        self._initial_seed = seed_generator
-
         assert self._end_datapipe is not None
 
         set_graph_random_seed(self._end_datapipe, seed_generator)
-
-        assert self.end_datapipe is not None
-
-        set_graph_random_seed(self.end_datapipe, seed_generator)
 
         if self._mp:
             if self.main_prefetch_cnt > 0:
@@ -424,12 +413,11 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         pass
 
     def _get_naive_datapipe_snapshot(self):
-        return self.end_datapipe._number_of_samples_yielded, self._initial_seed
+        return 0 if self._end_datapipe is None else self._end_datapipe._number_of_samples_yielded
 
-    def _restore_naive_datapipe_snapshot(self, n_samples_yielded, initial_seed):
-        initial_seed_generator = torch.Generator()
-        initial_seed_generator.manual_seed(initial_seed)
-        _simple_graph_snapshot_restoration(self.end_datapipe, n_samples_yielded, initial_seed_generator)
+    def _restore_naive_datapipe_snapshot(self, initial_seed_generator: SeedGenerator, n_samples_yielded):
+        assert self._end_datapipe is not None  # `self.initialize()` needs to be called prior
+        _simple_graph_snapshot_restoration(self._end_datapipe, n_samples_yielded, initial_seed_generator)
         # TODO: I might want to skip `initialize_iteration` after this????
 
 

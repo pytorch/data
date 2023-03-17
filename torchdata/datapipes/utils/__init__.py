@@ -10,4 +10,12 @@ from torchdata.datapipes.utils._visualization import to_graph
 from torchdata.datapipes.utils.janitor import janitor
 from torchdata.datapipes.utils.pin_memory import pin_memory_fn
 
-__all__ = ["StreamWrapper", "janitor", "pin_memory_fn", "to_graph"]
+__all__ = [
+    "StreamWrapper",
+    "janitor",
+    "pin_memory_fn",
+    "to_graph",
+]
+
+# Please keep this list sorted
+assert __all__ == sorted(__all__)
