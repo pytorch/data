@@ -221,7 +221,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.7.0a0+8eecb77 ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.7.0a0+0061177 ) &#x25BC</a>
     </div>
     
 
@@ -651,7 +651,10 @@ saving files, and listing the files in directories).</p>
 <tr class="row-even"><td><p><a class="reference internal" href="generated/torchdata.datapipes.iter.Mapper.html#torchdata.datapipes.iter.Mapper" title="torchdata.datapipes.iter.Mapper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapper</span></code></a></p></td>
 <td><p>Applies a function over each item from the source DataPipe (functional name: <code class="docutils literal notranslate"><span class="pre">map</span></code>).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.datapipes.iter.ThreadPoolMapper.html#torchdata.datapipes.iter.ThreadPoolMapper" title="torchdata.datapipes.iter.ThreadPoolMapper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ThreadPoolMapper</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/torchdata.datapipes.iter.ShuffledFlatMapper.html#torchdata.datapipes.iter.ShuffledFlatMapper" title="torchdata.datapipes.iter.ShuffledFlatMapper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ShuffledFlatMapper</span></code></a></p></td>
+<td><p>Applies a function over each item from the source DataPipe, then collects the iterables returned in a buffer, then, at every iteration, chooses at random one of the iterables in the buffer and yields one item from this iterable (functional name: <code class="docutils literal notranslate"><span class="pre">shuffled_flatmap</span></code>).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/torchdata.datapipes.iter.ThreadPoolMapper.html#torchdata.datapipes.iter.ThreadPoolMapper" title="torchdata.datapipes.iter.ThreadPoolMapper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ThreadPoolMapper</span></code></a></p></td>
 <td><p>Applies a function over each item from the source DataPipe concurrently using <code class="docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code> (functional name: <code class="docutils literal notranslate"><span class="pre">threadpool_map</span></code>).</p></td>
 </tr>
 </tbody>
