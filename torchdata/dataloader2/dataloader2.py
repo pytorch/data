@@ -49,11 +49,7 @@ class DataLoader2Iterator(Iterator[T_co]):
         if self.iterator_id == self.dataloader.valid_iterator_id:
             self.dataloader._reset_iter = True
             try:
-                if self.dataloader._is_paused or (
-                    self.limit_threshold is not None and self.limit_counter >= self.limit_threshold  # type: ignore[operator]
-                ):
-                    if not self.dataloader._is_paused:
-                        self._pause()
+                if self.dataloader._is_paused:
                     raise PauseIteration("DataLoader2 has been paused. `resume` must be called before continuing.")
                 else:
                     next_val = next(self.dataloader._datapipe_iter)  # type: ignore[arg-type]
@@ -70,6 +66,14 @@ class DataLoader2Iterator(Iterator[T_co]):
                 if self.dataloader:
                     self.dataloader.shutdown()
                 raise
+            finally:
+                # Call `pause` if threshold is reached
+                if (
+                    not self.dataloader._is_paused
+                    and self.limit_threshold is not None
+                    and self.limit_counter >= self.limit_threshold  # type: ignore[operator]
+                ):
+                    self._pause()
         else:  # `iterator_id` is not valid
             if self.dataloader.reading_service is not None:
                 self.dataloader.reading_service.finalize_iteration()
@@ -248,6 +252,7 @@ class DataLoader2(Generic[T_co]):
                 if self.reading_service is not None:
                     self.reading_service.finalize_iteration()
                     self.reading_service.finalize()
+            if not self._reset_iter:
                 self._reset_iter = True
                 self._datapipe_iter = None
         # Ignore AttributeError in case any attribute has been removed before `__del__`
