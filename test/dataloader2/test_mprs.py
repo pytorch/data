@@ -9,7 +9,10 @@ import multiprocessing as mp
 import unittest
 from unittest import TestCase
 
-from torch.testing._internal.common_utils import instantiate_parametrized_tests, parametrize
+from torch.testing._internal.common_utils import instantiate_parametrized_tests, parametrize, subtest
+
+from torch.utils.data.datapipes.iter.sharding import SHARDING_PRIORITIES
+
 from torchdata.dataloader2 import DataLoader2, DataLoader2Iterator, MultiProcessingReadingService
 from torchdata.datapipes.iter import IterableWrapper
 
@@ -29,11 +32,59 @@ mp_ctx_parametrize = parametrize("ctx", mp.get_all_start_methods())
 dp_parametrize = parametrize("dp", test_dps)
 
 
+def _non_dispatching_dp(n_elements=1000):
+    dp = IterableWrapper(list(range(n_elements))).shuffle()
+    dp = dp.sharding_filter()
+    dp = dp.map(_add_one).batch(8)
+    return dp
+
+
+def _dispatching_dp(n_elements=1000):
+    dp = IterableWrapper(list(range(n_elements))).shuffle()
+    dp = dp.sharding_round_robin_dispatch(SHARDING_PRIORITIES.MULTIPROCESSING)
+    dp = dp.map(_add_one).batch(16)
+    return dp
+
+
 class TestMultiProcessingReadingService(TestCase):
     r"""
     This tests specific functionalities of MultiProcessingReadingService, notably
     `pause`, `resume`, `snapshot`.
     """
+
+    @mp_ctx_parametrize
+    @parametrize("dp_fn", [subtest(_non_dispatching_dp, "non_dispatch"), subtest(_dispatching_dp, "dispatch")])
+    @parametrize("main_prefetch", [0, 10])
+    @parametrize("worker_prefetch", [0, 10])
+    def test_early_exit(self, ctx, dp_fn, main_prefetch, worker_prefetch) -> None:
+        dp = dp_fn(1000)
+        rs = MultiProcessingReadingService(
+            num_workers=2,
+            main_prefetch_cnt=main_prefetch,
+            worker_prefetch_cnt=worker_prefetch,
+            multiprocessing_context=ctx,
+        )
+        dl = DataLoader2(dp, reading_service=rs)
+        it = iter(dl)
+        for _ in range(10):
+            _ = next(it)
+        dl.shutdown()
+
+    @mp_ctx_parametrize
+    @parametrize("dp_fn", [subtest(_non_dispatching_dp, "non_dispatch"), subtest(_dispatching_dp, "dispatch")])
+    @parametrize("main_prefetch", [0, 10])
+    @parametrize("worker_prefetch", [0, 10])
+    def test_exit(self, ctx, dp_fn, main_prefetch, worker_prefetch) -> None:
+        dp = dp_fn(1000)
+        rs = MultiProcessingReadingService(
+            num_workers=2,
+            main_prefetch_cnt=main_prefetch,
+            worker_prefetch_cnt=worker_prefetch,
+            multiprocessing_context=ctx,
+        )
+        dl = DataLoader2(dp, reading_service=rs)
+        _ = list(dl)
+        dl.shutdown()
 
     @mp_ctx_parametrize
     def test_reading_service_pause_resume_0_worker(self, ctx) -> None:
