@@ -55,6 +55,7 @@ def process_init_fn(
     datapipe: DataPipe,
     worker_info: WorkerInfo,
     custom_init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]] = None,
+    worker_prefetch_cnt: int = 0,
     dispatching_req_queue: Optional[Queue] = None,
     dispatching_res_queue: Optional[Queue] = None,
 ) -> DataPipe:
@@ -95,6 +96,9 @@ def process_init_fn(
     if custom_init_fn is not None:
         datapipe = custom_init_fn(datapipe, worker_info)
         assert isinstance(datapipe, (IterDataPipe, MapDataPipe))
+
+    if worker_prefetch_cnt > 0:
+        datapipe = datapipe.prefetch(worker_prefetch_cnt)
 
     return datapipe
 
