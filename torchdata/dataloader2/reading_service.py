@@ -227,8 +227,6 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             self._end_datapipe = datapipe
             return datapipe
 
-        graph = traverse_dps(datapipe)
-
         ctx = mp.get_context(self.multiprocessing_context)
 
         # Launch dispatching process for the lowest common ancestor of non-replicable DataPipes
@@ -357,7 +355,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             req_queue.close()
 
         # Clean up dispatching process
-        if self._dispatch_process:
+        if self._dispatch_process is not None:
             try:
                 self._dispatch_process[0].join(default_dl2_worker_join_timeout_in_s)
             except TimeoutError:
