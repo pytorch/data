@@ -223,7 +223,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         if not self._mp:
             # TODO(616): Warn and recommend usage of InProcessReadingService
             worker_info = WorkerInfo(1, 0)
-            process_init_fn(datapipe, worker_info, self.worker_init_fn)
+            datapipe = process_init_fn(datapipe, worker_info, self.worker_init_fn)
             self._end_datapipe = datapipe
             return datapipe
 

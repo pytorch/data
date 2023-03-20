@@ -109,7 +109,7 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, process_name, ca
     source_datapipe = extract_wrapper(source_datapipe)
 
     if call_on_process_init is not None:
-        call_on_process_init(source_datapipe)
+        source_datapipe = call_on_process_init(source_datapipe)
 
     torch.set_num_threads(1)
 
