@@ -13,7 +13,10 @@ from torchdata.datapipes.iter import HuggingFaceHubReader
 try:
     from PIL import Image
 except ImportError:
-    Image = None
+    raise ModuleNotFoundError(
+        "Package `PIL` is required to be installed to run this example. "
+        "Please use `pip install Pillow` or `conda install -c anaconda pillow` to install it."
+    )
 
 
 def has_no_watermark(x):
