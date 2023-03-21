@@ -223,11 +223,9 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         if not self._mp:
             # TODO(616): Warn and recommend usage of InProcessReadingService
             worker_info = WorkerInfo(1, 0)
-            process_init_fn(datapipe, worker_info, self.worker_init_fn)
+            datapipe = process_init_fn(datapipe, worker_info, self.worker_init_fn)
             self._end_datapipe = datapipe
             return datapipe
-
-        graph = traverse_dps(datapipe)
 
         ctx = mp.get_context(self.multiprocessing_context)
 
@@ -262,9 +260,6 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             len(replicable_dps) == 1
         ), "MultiProcessingReadingService only supports single replicable branch currently"
         replicable_dp = replicable_dps[0]
-
-        if self.worker_prefetch_cnt > 0:
-            replicable_dp = replicable_dp.prefetch(self.worker_prefetch_cnt)
         replicable_dp = attach_wrapper(replicable_dp)
 
         for worker_id in range(self.num_workers):
@@ -276,6 +271,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
                 process_init_fn,
                 worker_info=worker_info,
                 custom_init_fn=self.worker_init_fn,
+                worker_prefetch_cnt=self.worker_prefetch_cnt,
                 dispatching_req_queue=dispatching_req_queue,
                 dispatching_res_queue=dispatching_res_queue,
             )
@@ -357,7 +353,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             req_queue.close()
 
         # Clean up dispatching process
-        if self._dispatch_process:
+        if self._dispatch_process is not None:
             try:
                 self._dispatch_process[0].join(default_dl2_worker_join_timeout_in_s)
             except TimeoutError:
