@@ -223,7 +223,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         if not self._mp:
             # TODO(616): Warn and recommend usage of InProcessReadingService
             worker_info = WorkerInfo(1, 0)
-            process_init_fn(datapipe, worker_info, self.worker_init_fn)
+            datapipe = process_init_fn(datapipe, worker_info, self.worker_init_fn)
             self._end_datapipe = datapipe
             return datapipe
 
@@ -260,9 +260,6 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             len(replicable_dps) == 1
         ), "MultiProcessingReadingService only supports single replicable branch currently"
         replicable_dp = replicable_dps[0]
-
-        if self.worker_prefetch_cnt > 0:
-            replicable_dp = replicable_dp.prefetch(self.worker_prefetch_cnt)
         replicable_dp = attach_wrapper(replicable_dp)
 
         for worker_id in range(self.num_workers):
@@ -274,6 +271,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
                 process_init_fn,
                 worker_info=worker_info,
                 custom_init_fn=self.worker_init_fn,
+                worker_prefetch_cnt=self.worker_prefetch_cnt,
                 dispatching_req_queue=dispatching_req_queue,
                 dispatching_res_queue=dispatching_res_queue,
             )
