@@ -197,6 +197,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.Dropper, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), ([1]), {}),
             (iterdp.Enumerator, None, (2,), {}),
             (iterdp.FlatMapper, None, (_fake_fn_ls,), {}),
+            (iterdp.ShuffledFlatMapper, None, (_fake_fn_ls,), {"buffer_size": 1}),
             (iterdp.Flattener, IterableWrapper([(0, (0, 1)), (0, (0, 1)), (0, (0, 1)), (0, (0, 1))]), ([1]), {}),
             (iterdp.FSSpecFileLister, ".", (), {}),
             (iterdp.FSSpecFileOpener, None, (), {}),
@@ -363,6 +364,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         unpicklable_datapipes: List = [
             (iterdp.BatchMapper, (lambda batch: [d + 1 for d in batch], 2), {}),
             (iterdp.FlatMapper, (lambda x: [x, x],), {}),
+            (iterdp.ShuffledFlatMapper, (lambda x: [x, x],), {"buffer_size": 1}),
             (iterdp.IterKeyZipper, (ref_idp, lambda x: x, None, True, 100), {}),
             (iterdp.MapKeyZipper, (ref_mdp, lambda x: x), {}),
             (iterdp.OnDiskCacheHolder, (lambda x: x,), {}),

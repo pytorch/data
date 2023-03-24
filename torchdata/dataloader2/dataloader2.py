@@ -6,7 +6,6 @@
 import pickle
 import warnings
 
-from dataclasses import dataclass
 from typing import Any, Dict, Generic, Iterable, Iterator, Optional, TypeVar, Union
 
 from torchdata.dataloader2.adapter import Adapter
@@ -20,14 +19,6 @@ T_co = TypeVar("T_co", covariant=True)
 SERIALIZED_DATAPIPE_KEY_NAME = "serialized_datapipe"
 READING_SERVICE_STATE_KEY_NAME = "reading_service_state"
 RANDOMNESS_STATE_KEY_NAME = "randomness_state"
-
-
-@dataclass
-class ConcurrencySpec:
-    num_workers: int
-    timeout: Optional[int] = None
-    prefetch_factor: int = 2
-    persistent_workers: bool = False
 
 
 class DataLoader2Iterator(Iterator[T_co]):
@@ -202,7 +193,7 @@ class DataLoader2(Generic[T_co]):
             raise RuntimeError("Cannot iterate over the DataLoader as it has already been shut down")
 
         if self._reset_iter:
-            if self._seed:
+            if self._seed is not None:
                 if self._reset_seed:
                     self._seed_generator.seed(self._seed)
                     self._reset_seed = False
@@ -252,14 +243,14 @@ class DataLoader2(Generic[T_co]):
         Shuts down ``ReadingService`` and clean up iterator.
         """
         try:
-            if not self._reset_iter:
-                self._reset_iter = True
-                self._datapipe_iter = None
             if not self._terminated:
+                self._terminated = True
                 if self.reading_service is not None:
                     self.reading_service.finalize_iteration()
                     self.reading_service.finalize()
-                self._terminated = True
+            if not self._reset_iter:
+                self._reset_iter = True
+                self._datapipe_iter = None
         # Ignore AttributeError in case any attribute has been removed before `__del__`
         except AttributeError:
             pass
@@ -359,6 +350,14 @@ class DataLoader2(Generic[T_co]):
         self._datapipe_before_reading_service_adapt = clone(self.datapipe)
 
     def _restore_checkpoint_beginning_of_epoch(self) -> None:
+        r"""
+        At the beginning of each iteration (epoch), the initial state of randomness is automatically saved.
+        That state is also saved as part of ``state_dict``. This method restores the current DataLoader2 RNG state
+        to that initial state.
+
+        The common use case is to invoke this method after ``DataLoader2``'s state is restored (through
+        ``.from_state(...)`` or ``load_state_dict(...)``) in order to resume from the beginning of the last-ran epoch.
+        """
         self._seed_generator = self._initial_seed_generator
 
     def _pause(self):

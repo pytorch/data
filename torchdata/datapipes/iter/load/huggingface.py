@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 
-import warnings
 from typing import Any, Iterator, Tuple
 
 from torchdata.datapipes.iter import IterDataPipe
@@ -19,14 +18,10 @@ except ImportError:
 
 def _get_response_from_huggingface_hub(
     dataset: str,
-    split: str = "train",
-    revision: str = "main",
     streaming: bool = True,
     **config_kwargs,
 ) -> Iterator[Any]:
-    hf_dataset = datasets.load_dataset(
-        path=dataset, streaming=streaming, split=split, revision=revision, **config_kwargs
-    )
+    hf_dataset = datasets.load_dataset(path=dataset, streaming=streaming, **config_kwargs)
     return iter(hf_dataset)
 
 
@@ -34,14 +29,14 @@ class HuggingFaceHubReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
     r"""
     Takes in dataset names and returns an Iterable HuggingFace dataset.
     Please refer to https://huggingface.co/docs/datasets/loading for the meaning and type of each argument.
-    Contrary to their implementation, default behavior differs in the following (this will be changed in version 0.7):
+    Contrary to their implementation, default behavior differs in the following:
 
-    * ``split`` is set to ``"train"``
-    * ``revision`` is set to ``"main"``
     * ``streaming`` is set to ``True``
 
     Args:
-        source_datapipe: a DataPipe that contains dataset names which will be accepted by the HuggingFace datasets library
+        dataset: path or name of the dataset
+        **config_kwargs: additional arguments for ``datasets.load_dataset()``
+
     Example:
 
     .. testsetup::
@@ -62,8 +57,6 @@ class HuggingFaceHubReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     """
 
-    source_datapipe: IterDataPipe[str]
-
     def __init__(
         self,
         dataset: str,
@@ -78,10 +71,6 @@ class HuggingFaceHubReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
         self.dataset = dataset
         self.config_kwargs = config_kwargs
-        if "split" not in self.config_kwargs:
-            warnings.warn("Default value of `split` will be changed to None in version 0.7", FutureWarning)
-        if "revision" not in self.config_kwargs:
-            warnings.warn("Default value of `revision` will be changed to None in version 0.7", FutureWarning)
 
     def __iter__(self) -> Iterator[Any]:
         return _get_response_from_huggingface_hub(dataset=self.dataset, **self.config_kwargs)
