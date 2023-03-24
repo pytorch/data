@@ -55,6 +55,7 @@ def process_init_fn(
     datapipe: DataPipe,
     worker_info: WorkerInfo,
     custom_init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]] = None,
+    worker_prefetch_cnt: int = 0,
     dispatching_req_queue: Optional[Queue] = None,
     dispatching_res_queue: Optional[Queue] = None,
 ) -> DataPipe:
@@ -78,6 +79,7 @@ def process_init_fn(
     else:
         assert len(non_replicable_dp) == 1
         assert not (dispatching_req_queue is None and dispatching_res_queue is None)
+        dispatching_req_queue.cancel_join_thread()  # type: ignore[union-attr]
         non_dispatching_branches = find_non_dispatching_branches(graph)
         for dp in non_dispatching_branches:
             torch.utils.data.graph_settings.apply_sharding(
@@ -94,6 +96,9 @@ def process_init_fn(
     if custom_init_fn is not None:
         datapipe = custom_init_fn(datapipe, worker_info)
         assert isinstance(datapipe, (IterDataPipe, MapDataPipe))
+
+    if worker_prefetch_cnt > 0:
+        datapipe = datapipe.prefetch(worker_prefetch_cnt)
 
     return datapipe
 

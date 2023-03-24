@@ -894,6 +894,142 @@ class TestIterDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(TypeError, "length relies on the output of its function."):
             len(flatmapped_dp)
 
+    def test_shuffled_flatmap_iterdatapipe(self):
+        source_dp = IterableWrapper(list(range(20)))
+
+        def fn(e):
+            return [e, e * 10]
+
+        # Tests with buffer_size=1
+        # In this case, the expected behavior is similar to flatmap
+
+        shuffled_flatmapped_dp = source_dp.shuffled_flatmap(fn, buffer_size=1)
+        expected_list = list(itertools.chain(*[(e, e * 10) for e in source_dp]))
+
+        self.assertEqual(expected_list, list(shuffled_flatmapped_dp))
+
+        # Funtional Test: Specify input_col
+        tuple_source_dp = IterableWrapper([(d - 1, d, d + 1) for d in range(20)])
+
+        # Single input_col
+        input_col_1_dp = tuple_source_dp.shuffled_flatmap(fn, input_col=1, buffer_size=1)
+        self.assertEqual(expected_list, list(input_col_1_dp))
+
+        # With generator as fn
+        def gen_fn(e):
+            yield e
+            yield e * 10
+
+        shuffled_flatmapped_dp = source_dp.shuffled_flatmap(gen_fn, buffer_size=1)
+        expected_list = list(itertools.chain(*[(e, e * 10) for e in source_dp]))
+
+        self.assertEqual(expected_list, list(shuffled_flatmapped_dp))
+
+        # Multiple input_col
+        def mul_fn(a, b):
+            return [a - b, b - a]
+
+        input_col_2_dp = tuple_source_dp.shuffled_flatmap(mul_fn, input_col=(0, 2), buffer_size=1)
+        self.assertEqual(list(itertools.chain(*[(-2, 2) for _ in range(20)])), list(input_col_2_dp))
+
+        # shuffled_flatmap with no fn specified
+        default_dp = tuple_source_dp.shuffled_flatmap(buffer_size=1)
+        self.assertEqual(list(itertools.chain(*[(n - 1, n, n + 1) for n in range(20)])), list(default_dp))
+
+        # shuffled_flatmap with no fn specified, multiple input_col
+        default_dp = tuple_source_dp.shuffled_flatmap(input_col=(0, 2), buffer_size=1)
+        self.assertEqual(list(itertools.chain(*[(n - 1, n + 1) for n in range(20)])), list(default_dp))
+
+        # shuffled_flatmap with no fn specified, some special input
+        tuple_source_dp = IterableWrapper([[1, 2, [3, 4]], [5, 6, [7, 8]]])
+        default_dp = tuple_source_dp.shuffled_flatmap(input_col=(0, 2), buffer_size=1)
+        self.assertEqual([1, [3, 4], 5, [7, 8]], list(default_dp))
+
+        # Reset Test: reset the DataPipe after reading part of it
+        n_elements_before_reset = 5
+        res_before_reset, res_after_reset = reset_after_n_next_calls(shuffled_flatmapped_dp, n_elements_before_reset)
+
+        self.assertEqual(expected_list[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_list, res_after_reset)
+
+        # __len__ Test: length should be len(source_dp)*len(fn->out_shape) which we can't know
+        with self.assertRaisesRegex(TypeError, "length relies on the output of its function."):
+            len(shuffled_flatmapped_dp)
+
+        # __len__ when no fn specified:
+        dp = IterableWrapper([[1, 2], [], [3], [4, 5, 6, [7, 8]]])
+        dp = dp.shuffled_flatmap()
+        self.assertEqual(len(dp), 7)
+
+        # Tests with .set_shuffle(False)
+        # In this case, the expected behavior is similar to flatmap
+
+        shuffled_flatmapped_dp = source_dp.shuffled_flatmap(fn).set_shuffle(False)
+        expected_list = list(itertools.chain(*[(e, e * 10) for e in source_dp]))
+
+        self.assertEqual(expected_list, list(shuffled_flatmapped_dp))
+
+        # Funtional Test: Specify input_col
+        tuple_source_dp = IterableWrapper([(d - 1, d, d + 1) for d in range(20)])
+
+        # Single input_col
+        input_col_1_dp = tuple_source_dp.shuffled_flatmap(fn, input_col=1, buffer_size=1)
+        self.assertEqual(expected_list, list(input_col_1_dp))
+
+        # Multiple input_col
+        input_col_2_dp = tuple_source_dp.shuffled_flatmap(mul_fn, input_col=(0, 2)).set_shuffle(False)
+        self.assertEqual(list(itertools.chain(*[(-2, 2) for _ in range(20)])), list(input_col_2_dp))
+
+        # shuffled_flatmap with no fn specified
+        default_dp = tuple_source_dp.shuffled_flatmap().set_shuffle(False)
+        self.assertEqual(list(itertools.chain(*[(n - 1, n, n + 1) for n in range(20)])), list(default_dp))
+
+        # shuffled_flatmap with no fn specified, multiple input_col
+        default_dp = tuple_source_dp.shuffled_flatmap(input_col=(0, 2)).set_shuffle(False)
+        self.assertEqual(list(itertools.chain(*[(n - 1, n + 1) for n in range(20)])), list(default_dp))
+
+        # shuffled_flatmap with no fn specified, some special input
+        tuple_source_dp = IterableWrapper([[1, 2, [3, 4]], [5, 6, [7, 8]]])
+        default_dp = tuple_source_dp.shuffled_flatmap(input_col=(0, 2)).set_shuffle(False)
+        self.assertEqual([1, [3, 4], 5, [7, 8]], list(default_dp))
+
+        # Reset Test: reset the DataPipe after reading part of it
+        n_elements_before_reset = 5
+        res_before_reset, res_after_reset = reset_after_n_next_calls(shuffled_flatmapped_dp, n_elements_before_reset)
+
+        self.assertEqual(expected_list[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_list, res_after_reset)
+
+        # Other tests
+
+        # Test no empty buffers:
+        with self.assertRaises(AssertionError):
+            _ = source_dp.shuffled_flatmap(buffer_size=0)
+
+        # Functional Test: No seed
+        consecutive_tuple_source_dp = IterableWrapper([(d, d + 1, d + 2) for d in range(0, 21, 3)])
+        shuffled_flatmapped_dp = consecutive_tuple_source_dp.shuffled_flatmap()
+        self.assertEqual(set(range(21)), set(shuffled_flatmapped_dp))
+
+        # Functional Test: With global seed
+        torch.manual_seed(123)
+        shuffled_flatmapped_dp = tuple_source_dp.shuffled_flatmap()
+        res = list(shuffled_flatmapped_dp)
+        torch.manual_seed(123)
+        self.assertEqual(list(shuffled_flatmapped_dp), res)
+
+        # Functional Test: Set seed
+        shuffled_flatmapped_dp = tuple_source_dp.shuffled_flatmap().set_seed(123)
+        res = list(shuffled_flatmapped_dp)
+        shuffled_flatmapped_dp.set_seed(123)
+        self.assertEqual(list(shuffled_flatmapped_dp), res)
+
+        # Reset Test:
+        shuffled_flatmapped_dp = tuple_source_dp.shuffled_flatmap()
+        n_elements_before_reset = 5
+        res_before_reset, res_after_reset = reset_after_n_next_calls(shuffled_flatmapped_dp, n_elements_before_reset)
+        self.assertEqual(5, len(res_before_reset))
+
     def test_round_robin_demux_iterdatapipe(self):
         source_dp = IterableWrapper(list(range(23)))
         with self.assertRaisesRegex(ValueError, "Expected `num_instaces`"):

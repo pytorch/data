@@ -40,7 +40,7 @@ class TestHuggingFaceHubReader(expecttest.TestCase):
         assert elem["id"] == "7bd227d9-afc9-11e6-aba1-c4b301cdf627"
         assert elem["package_name"] == "com.mantz_it.rfanalyzer"
         mock_load_dataset.assert_called_with(
-            path="lhoestq/demo1", streaming=False, split="train", revision="branch", use_auth_token=True
+            path="lhoestq/demo1", streaming=False, revision="branch", use_auth_token=True
         )
         with self.assertRaises(StopIteration):
             next(iterator)

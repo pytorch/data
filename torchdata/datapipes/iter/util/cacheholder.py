@@ -19,7 +19,7 @@ from typing import Any, Callable, Deque, Dict, Iterator, List, Optional, Tuple, 
 try:
     import portalocker
 except ImportError:
-    protalocker = None
+    portalocker = None
 
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, DILL_AVAILABLE
 
