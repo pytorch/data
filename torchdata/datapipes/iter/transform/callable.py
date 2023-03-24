@@ -6,12 +6,14 @@
 
 import asyncio
 import inspect
+import random
 import warnings
 from collections import deque
 from concurrent import futures
 
 from typing import Callable, Hashable, Iterator, List, Optional, Set, Sized, TypeVar, Union
 
+import torch
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, validate_input_col
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -168,6 +170,161 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
 
     def __len__(self) -> int:
         raise TypeError(f"{type(self).__name__}'s length relies on the output of its function.")
+
+
+@functional_datapipe("shuffled_flatmap")
+class ShuffledFlatMapperIterDataPipe(IterDataPipe):
+    r"""
+    Applies a function over each item from the source DataPipe,
+    then collects the iterables returned in a buffer,
+    then, at every iteration, chooses at random one of the iterables in the buffer
+    and yields one item from this iterable (functional name: ``shuffled_flatmap``).
+
+    When the buffer is full, the DataPipe will begin to yield elements from iterables within the buffer.
+    New iterables will be added to the buffer once the existing ones run out of elements.
+    Note:
+        The output from ``fn`` must be an Iterable. Otherwise, an error will be raised.
+        If ``fn`` is ``None``, source DataPipe will be just flattened vertically, provided that items can be unpacked.
+
+    Args:
+        datapipe: Source IterDataPipe
+        fn: the function to be applied to each element in the DataPipe, the output must be a Sequence
+        input_col: Index or indices of data which ``fn`` is applied, such as:
+
+            - ``None`` as default to apply ``fn`` to the data directly.
+            - Integer(s) is/are used for list/tuple.
+            - Key(s) is/are used for dict.
+        buffer_size: the max number of iterables this DataPipe can hold at a time (default to ``100``)
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> source_dp = IterableWrapper([[1, 2, 3, 4], 'abcd', 'ABCD'])
+        >>> shuffled_flatmapped_dp = source_dp.shuffled_flatmap(buffer_size=2)
+        >>> list(shuffled_flatmapped_dp)
+        ['a', 'b', 'c', 1, 'd', 'A', 'B', 'C', 2, 'D', 3, 4]
+        >>>
+        >>> # To shuffle all the elements, you can combine `shuffled_flatmap` with `in_batch_shuffle` like this:
+        >>> fully_shuffled_flatmapped_dp = source_dp.in_batch_shuffle()
+        >>> fully_shuffled_flatmapped_dp = fully_shuffled_flatmapped_dp.shuffled_flatmap()
+        >>> list(fully_shuffled_flatmapped_dp)
+        ['b', 3, 'c', 'd', 'C', 'A', 'a', 2, 'B', 'D', 4, 1]
+    """
+    datapipe: IterDataPipe
+    fn: Optional[Callable]
+    buffer_size: int
+    _buffer: List[Iterator]
+    _enabled: bool
+    _seed: Optional[int]
+    _rng: random.Random
+    _no_op_fn: bool = False
+
+    def __init__(
+        self, datapipe: IterDataPipe, fn: Optional[Callable] = None, input_col=None, buffer_size: int = 100
+    ) -> None:
+        super().__init__()
+        self._buffer = []
+        self.datapipe = datapipe
+
+        if fn is None:
+            fn = _no_op_fn
+            self._no_op_fn = True
+        _check_unpickable_fn(fn)
+        self.fn = fn  # type: ignore[assignment]
+        self.input_col = input_col
+        validate_input_col(fn, input_col)
+
+        assert buffer_size > 0, "buffer_size should be larger than 0"
+        self.buffer_size = buffer_size
+        self._enabled = True
+        self._seed = None
+        self._rng = random.Random()
+
+    def set_shuffle(self, shuffle=True):
+        self._enabled = shuffle
+        return self
+
+    def set_seed(self, seed: int):
+        self._seed = seed
+        return self
+
+    def reset(self) -> None:
+        self._buffer = []
+        if self._enabled:
+            if self._seed is None:
+                self._seed = int(torch.empty((), dtype=torch.int64).random_().item())
+            self._rng.seed(self._seed)
+            self._seed = None
+
+    def _apply_fn(self, data):
+        if self.input_col is None:
+            return self.fn(data)  # type: ignore[misc]
+        elif isinstance(self.input_col, (list, tuple)):
+            args = tuple(data[col] for col in self.input_col)
+            return self.fn(*args)  # type: ignore[misc]
+        else:
+            return self.fn(data[self.input_col])  # type: ignore[misc]
+
+    def __iter__(self) -> Iterator[T_co]:
+        if not self._enabled:  # equivalent to flatmap
+            for x in self.datapipe:
+                yield from self._apply_fn(x)
+        else:
+            idx = self._rng.randint(0, self.buffer_size - 1)
+            for x in self.datapipe:
+                while len(self._buffer) == self.buffer_size:
+                    try:
+                        yield next(self._buffer[idx])
+                        idx = self._rng.randint(0, self.buffer_size - 1)
+                    except StopIteration:
+                        self._buffer.pop(idx)
+                self._buffer.append(iter(self._apply_fn(x)))
+            while self._buffer:
+                try:
+                    idx = self._rng.randint(0, len(self._buffer) - 1)
+                    yield next(self._buffer[idx])
+                except StopIteration:
+                    self._buffer.pop(idx)
+
+    def __len__(self) -> int:
+        if self._no_op_fn:
+            return sum(map(len, self.datapipe))
+        raise TypeError(f"{type(self).__name__}'s length relies on the output of its function.")
+
+    def __getstate__(self):
+        state = (
+            self.datapipe,
+            self.fn,
+            self.input_col,
+            self.buffer_size,
+            self._buffer,
+            self._enabled,
+            self._seed,
+            self._rng.getstate(),
+            self._valid_iterator_id,
+            self._number_of_samples_yielded,
+        )
+        if IterDataPipe.getstate_hook is not None:
+            return IterDataPipe.getstate_hook(state)
+        return state
+
+    def __setstate__(self, state):
+        (
+            self.datapipe,
+            self.fn,
+            self.input_col,
+            self.buffer_size,
+            self._buffer,
+            self._enabled,
+            self._seed,
+            rng_state,
+            self._valid_iterator_id,
+            self._number_of_samples_yielded,
+        ) = state
+        self._rng = random.Random()
+        self._rng.setstate(rng_state)
+
+    def __del__(self):
+        self._buffer.clear()
 
 
 @functional_datapipe("drop")

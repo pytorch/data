@@ -65,6 +65,13 @@ def MultipleDataPipesToQueuesLoop(source_datapipes, req_queues, res_queues, proc
     r"""
     Set the appropriate pipes and protocol server type, and create a loop over multiple datapipes
     with the protocol server in a non-blocking manner.
+
+    Args:
+        source_datapipe: DataPipe being iterated in the dispatching process
+        req_queue: Multiprocessing queue providing requests from the worker process
+        res_queue: Multiprocessing queue sending results to the worker process
+        process_name: The name of process (used for logging and exception handling)
+        call_on_process_init: Not allowed by dispatching process for now.
     """
     assert call_on_process_init is None, "``MultipleDataPipesToQueuesLoop`` does not support call_on_process_init"
     num_loops = len(source_datapipes)
@@ -104,12 +111,20 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, process_name, ca
     r"""
     Initialize with the given init function, set the appropriate pipe and protocol server type, and
     create a loop with the protocol server.
+
+    Args:
+        source_datapipe: DataPipe being iterated in the worker process
+        req_queue: Multiprocessing queue providing requests from the main process
+        res_queue: Multiprocessing queue sending results to the main process
+        process_name: The name of process (used for logging and exception handling)
+        call_on_process_init: Callable function will be called at the time of worker process initialization.
+            Users can provide it to modify the DataPipe grpah in the worker process.
     """
     # Extract Serialization Wrapper
     source_datapipe = extract_wrapper(source_datapipe)
 
     if call_on_process_init is not None:
-        call_on_process_init(source_datapipe)
+        source_datapipe = call_on_process_init(source_datapipe)
 
     torch.set_num_threads(1)
 

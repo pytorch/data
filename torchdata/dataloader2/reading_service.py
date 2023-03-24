@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import multiprocessing as py_mp
-import queue
 import warnings
 
 from abc import ABC, abstractmethod
@@ -23,7 +22,7 @@ from torch.utils.data.datapipes.utils.snapshot import _simple_graph_snapshot_res
 
 from torchdata._constants import default_dl2_worker_join_timeout_in_s, default_timeout_in_s
 from torchdata.dataloader2 import communication
-from torchdata.dataloader2.graph import DataPipe, replace_dp, set_graph_random_seed, traverse_dps
+from torchdata.dataloader2.graph import DataPipe, list_dps, replace_dp, set_graph_random_seed, traverse_dps
 from torchdata.dataloader2.graph._serialization import attach_wrapper
 from torchdata.dataloader2.graph.utils import _find_replicable_branches
 from torchdata.dataloader2.random import dist_share_seed, SeedGenerator
@@ -186,6 +185,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
     _main_prefetch_datapipe: Optional[DataPipe]
     _end_datapipe: Optional[DataPipe]
     _mp: bool
+    _finalized: bool = False
 
     def __init__(
         self,
@@ -224,7 +224,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         if not self._mp:
             # TODO(616): Warn and recommend usage of InProcessReadingService
             worker_info = WorkerInfo(1, 0)
-            process_init_fn(datapipe, worker_info, self.worker_init_fn)
+            datapipe = process_init_fn(datapipe, worker_info, self.worker_init_fn)
             self._end_datapipe = datapipe
             return datapipe
 
@@ -246,13 +246,13 @@ class MultiProcessingReadingService(ReadingServiceInterface):
                 ctx, round_robin_dps, process_name="dispatching process"
             )
             assert len(req_queues) == self.num_workers and len(res_queues) == self.num_workers
-            process.daemon = True
-            process.start()
-            self._dispatch_process = (process, req_queues, res_queues)
             for req_queue in req_queues:
                 req_queue.cancel_join_thread()
             for res_queue in res_queues:
                 res_queue.cancel_join_thread()
+            process.daemon = True
+            process.start()
+            self._dispatch_process = (process, req_queues, res_queues)
 
         # Find replicable branches for worker processes
         # The rest of non-replicable DataPipes will remain in the main process
@@ -261,9 +261,6 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             len(replicable_dps) == 1
         ), "MultiProcessingReadingService only supports single replicable branch currently"
         replicable_dp = replicable_dps[0]
-
-        if self.worker_prefetch_cnt > 0:
-            replicable_dp = replicable_dp.prefetch(self.worker_prefetch_cnt)
         replicable_dp = attach_wrapper(replicable_dp)
 
         for worker_id in range(self.num_workers):
@@ -275,6 +272,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
                 process_init_fn,
                 worker_info=worker_info,
                 custom_init_fn=self.worker_init_fn,
+                worker_prefetch_cnt=self.worker_prefetch_cnt,
                 dispatching_req_queue=dispatching_req_queue,
                 dispatching_res_queue=dispatching_res_queue,
             )
@@ -284,6 +282,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
                 process_name=f"worker process {worker_id}",
                 call_on_process_init=call_on_process_init,
             )
+            req_queue.cancel_join_thread()
             process.daemon = True
             process.start()
             self._worker_processes.append((process, req_queue, res_queue))  # These queues are independent
@@ -314,6 +313,8 @@ class MultiProcessingReadingService(ReadingServiceInterface):
     ) -> Optional[Callable[[DataPipe], DataPipe]]:
         assert self._end_datapipe is not None
 
+        # Set random seeds for DataPipe that are in the main process (NOT those in worker processes)
+        # Worker seeds are set in `process_reset_fn`
         set_graph_random_seed(self._end_datapipe, seed_generator)
 
         if self._mp:
@@ -339,54 +340,53 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         r"""
         ``MultiProcessingReadingService`` invalidate states & properly exits all subprocesses.
         """
-        # TODO(618): Check if anyone stuck with messages
-        def clean_me(process, req_queue, res_queue):
-            # TODO(619): Can send terminations simultaneously
-            # TODO(620): Make termination a function of QueueWrapperDataPipe (similar to reset)
-            req_queue.put(communication.messages.TerminateRequest())
-            try:
-                _ = res_queue.get(timeout=default_dl2_worker_join_timeout_in_s)
-            except queue.Empty:
-                pass
-            process.join(default_dl2_worker_join_timeout_in_s)
+        if self._finalized:
+            return
+        self._finalized = True
 
+        # TODO(618): Check if anyone stuck with messages
         # Clean up worker processes
-        for process, req_queue, res_queue in self._worker_processes:
+        if self.num_workers > 0:
+            self._worker_consumer_datapipe.request_terminate()  # type: ignore[union-attr]
+        for process, req_queue, _ in self._worker_processes:
             try:
-                clean_me(process, req_queue, res_queue)
+                process.join(default_dl2_worker_join_timeout_in_s)
             except TimeoutError:
                 pass
+            req_queue.close()
 
         # Clean up dispatching process
-        if self._dispatch_process:
+        if self._dispatch_process is not None:
             try:
-                # Send TerminateRequest to all loops to make sure `zip_longest` exits
-                for req_queue in self._dispatch_process[1]:
-                    req_queue.put(communication.messages.TerminateRequest())
-                for res_queue in self._dispatch_process[2]:
-                    try:
-                        _ = res_queue.get(timeout=default_dl2_worker_join_timeout_in_s)
-                    except queue.Empty:
-                        pass
                 self._dispatch_process[0].join(default_dl2_worker_join_timeout_in_s)
             except TimeoutError:
                 pass
+            for req_queue in self._dispatch_process[1]:
+                req_queue.close()
 
         self._worker_processes = []
         self._dispatch_process = None
 
     def _pause(self):
         """
-        Pauses DataPipes' activities such as prefetching, in order to collect state.
+        Pauses DataPipes' activities such as prefetching within main/worker/dispatching processes,
+        in order to collect state.
         """
-        if self.main_prefetch_cnt > 0 and self.num_workers > 0:
-            # Stop prefetching of main loop first
-            self._main_prefetch_datapipe.pause()  # type: ignore[union-attr]
+        assert self._end_datapipe is not None
+        dp_list = list_dps(traverse_dps(self._end_datapipe))
+        for dp in dp_list:
+            # TODO: Combine QueueWrapper and _IterateQueueDataPipes,
+            #       and attach pause method. Then, no need to call
+            #       self._worker_consumer_datapipe.request_pause()
+            if isinstance(dp, communication.iter.QueueWrapper):
+                continue
+            if hasattr(dp, "pause") and callable(dp.pause):
+                dp.pause()
         if self.num_workers > 0:
             self._worker_consumer_datapipe.request_pause()  # type: ignore[union-attr]
         else:
             raise RuntimeError(
-                "If you would like to use `pause` with `PrototypeMultiProcessingReadingService`, "
+                "If you would like to use `pause` with `MultiProcessingReadingService`, "
                 "please use more than 0 worker."
             )
 
@@ -399,7 +399,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             self._worker_consumer_datapipe.request_resume()  # type: ignore[union-attr]
         else:
             raise RuntimeError(
-                "If you would like to use `resume` with `PrototypeMultiProcessingReadingService`, "
+                "If you would like to use `resume` with `MultiProcessingReadingService`, "
                 "please use more than 0 worker."
             )
         if self.main_prefetch_cnt > 0 and self.num_workers > 0:
