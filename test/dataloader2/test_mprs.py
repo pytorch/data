@@ -297,13 +297,13 @@ class TestMultiProcessingReadingService(TestCase):
         dl = DataLoader2(datapipe=dp, reading_service=rs)
         dl.seed(1)
         it1 = iter(dl)
-        next(it1)  # Starts iterating
+        temp = next(it1)  # Starts iterating
         initial_state = dl.state_dict()
 
         restored_dl = DataLoader2.from_state(initial_state, rs)  # type: ignore[arg-type]
         restored_dl._restore_checkpoint_beginning_of_epoch()
 
-        self.assertEqual(list(it1), list(restored_dl)[1:])  # Note skipping over 1st element from actual result
+        self.assertEqual([temp] + list(it1), list(restored_dl))  # Note skipping over 1st element from actual result
 
         dl.shutdown()
         restored_dl.shutdown()
