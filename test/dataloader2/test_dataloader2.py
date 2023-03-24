@@ -386,9 +386,21 @@ class MultiProcessingReadingServiceTest(TestCase):
         )
         dl = DataLoader2(dp, reading_service=rs)
 
-        # Test worker_reset_fn to set the same random seed across epoches
         res1 = list(dl)
         res2 = list(dl)
+
+        # Test worker_init_fn to set sharding
+        def _expand_fn(res):
+            result = []
+            for batch in res:
+                result.extend(batch)
+            return result
+
+        exp = list(range(100))
+        self.assertEqual(sorted(_expand_fn(res1)), exp)
+        self.assertEqual(sorted(_expand_fn(res2)), exp)
+
+        # Test worker_reset_fn to set the same random seed across epoches
         self.assertEqual(res1, res2)
 
     @mp_ctx_parametrize
