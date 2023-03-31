@@ -55,8 +55,16 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
         S3 URL is supported only with ``iopath``>=0.1.9.
 
     Example:
-        >>> from torchdata.datapipes.iter import IoPathFileLister
-        >>> datapipe = IoPathFileLister(root=S3URL)
+
+    .. testsetup::
+
+        s3_url = "path"
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import IoPathFileLister
+
+        datapipe = IoPathFileLister(root=s3_url)
     """
 
     def __init__(
@@ -113,9 +121,17 @@ class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         S3 URL is supported only with `iopath`>=0.1.9.
 
     Example:
-        >>> from torchdata.datapipes.iter import IoPathFileLister
-        >>> datapipe = IoPathFileLister(root=S3URL)
-        >>> file_dp = datapipe.open_files_by_iopath()
+
+    .. testsetup::
+
+        s3_url = "path"
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import IoPathFileLister
+
+        datapipe = IoPathFileLister(root=s3_url)
+        file_dp = datapipe.open_files_by_iopath()
     """
 
     def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r", pathmgr=None) -> None:
@@ -161,13 +177,31 @@ class IoPathSaverIterDataPipe(IterDataPipe[str]):
         S3 URL is supported only with `iopath`>=0.1.9.
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper
-        >>> def filepath_fn(name: str) -> str:
-        >>>     return S3URL + name
-        >>> name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
-        >>> source_dp = IterableWrapper(sorted(name_to_data.items()))
-        >>> iopath_saver_dp = source_dp.save_by_iopath(filepath_fn=filepath_fn, mode="wb")
-        >>> res_file_paths = list(iopath_saver_dp)
+
+    .. testsetup::
+
+        s3_url = "url"
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import IterableWrapper
+
+
+        def filepath_fn(name: str) -> str:
+            return s3_url + name
+
+
+        name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
+        source_dp = IterableWrapper(sorted(name_to_data.items()))
+        iopath_saver_dp = source_dp.save_by_iopath(filepath_fn=filepath_fn, mode="wb")
+        res_file_paths = list(iopath_saver_dp)
+
+    .. testcleanup::
+
+        import os
+
+        for file in ["1.txt", "1.txt.lock", "2.txt", "2.txt.lock", "3.txt", "3.txt.lock"]:
+            os.remove(s3_url + file)
     """
 
     def __init__(

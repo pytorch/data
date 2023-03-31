@@ -47,8 +47,16 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
             e.g. host, port, username, password, etc.
 
     Example:
-        >>> from torchdata.datapipes.iter import FSSpecFileLister
-        >>> datapipe = FSSpecFileLister(root=dir_path)
+
+    .. testsetup::
+
+        dir_path = "path"
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import FSSpecFileLister
+
+        datapipe = FSSpecFileLister(root=dir_path)
     """
 
     def __init__(
@@ -127,9 +135,17 @@ class FSSpecFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
             e.g. host, port, username, password, etc.
 
     Example:
-        >>> from torchdata.datapipes.iter import FSSpecFileLister
-        >>> datapipe = FSSpecFileLister(root=dir_path)
-        >>> file_dp = datapipe.open_files_by_fsspec()
+
+    .. testsetup::
+
+        dir_path = "path"
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import FSSpecFileLister
+
+        datapipe = FSSpecFileLister(root=dir_path)
+        file_dp = datapipe.open_files_by_fsspec()
     """
 
     def __init__(
@@ -169,13 +185,31 @@ class FSSpecSaverIterDataPipe(IterDataPipe[str]):
 
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper
-        >>> def filepath_fn(name: str) -> str:
-        >>>     return dir_path + name
-        >>> name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
-        >>> source_dp = IterableWrapper(sorted(name_to_data.items()))
-        >>> fsspec_saver_dp = source_dp.save_by_fsspec(filepath_fn=filepath_fn, mode="wb")
-        >>> res_file_paths = list(fsspec_saver_dp)
+
+    .. testsetup::
+
+        file_prefix = "file"
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import IterableWrapper
+
+
+        def filepath_fn(name: str) -> str:
+            return file_prefix + name
+
+
+        name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
+        source_dp = IterableWrapper(sorted(name_to_data.items()))
+        fsspec_saver_dp = source_dp.save_by_fsspec(filepath_fn=filepath_fn, mode="wb")
+        res_file_paths = list(fsspec_saver_dp)
+
+    .. testcleanup::
+
+        import os
+
+        for name in name_to_data.keys():
+            os.remove(file_prefix + name)
     """
 
     def __init__(
