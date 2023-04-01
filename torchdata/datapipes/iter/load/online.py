@@ -54,18 +54,25 @@ class HTTPReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         **kwargs: a Dictionary to pass optional arguments that requests takes. For the full list check out https://docs.python-requests.org/en/master/api/
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper, HttpReader
-        >>> file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
-        >>> query_params = {"auth" : ("fake_username", "fake_password"), "allow_redirects" : True}
-        >>> timeout = 120
-        >>> http_reader_dp = HttpReader(IterableWrapper([file_url]), timeout=timeout, query_params)
-        >>> reader_dp = http_reader_dp.readlines()
-        >>> it = iter(reader_dp)
-        >>> path, line = next(it)
-        >>> path
-        https://raw.githubusercontent.com/pytorch/data/main/LICENSE
-        >>> line
-        b'BSD 3-Clause License'
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import IterableWrapper, HttpReader
+
+        file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
+        query_params = {"auth" : ("fake_username", "fake_password"), "allow_redirects" : True}
+        timeout = 120
+        http_reader_dp = HttpReader(IterableWrapper([file_url]), timeout=timeout, **query_params)
+        reader_dp = http_reader_dp.readlines()
+        it = iter(reader_dp)
+        path, line = next(it)
+        print((path, line))
+
+    Output:
+
+    .. testoutput::
+
+        ('https://raw.githubusercontent.com/pytorch/data/main/LICENSE', b'BSD 3-Clause License')
     """
 
     def __init__(
@@ -154,16 +161,31 @@ class GDriveReaderDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         **kwargs: a Dictionary to pass optional arguments that requests takes. For the full list check out https://docs.python-requests.org/en/master/api/
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper, GDriveReader
-        >>> gdrive_file_url = "https://drive.google.com/uc?export=download&id=SomeIDToAGDriveFile"
-        >>> gdrive_reader_dp = GDriveReader(IterableWrapper([gdrive_file_url]))
-        >>> reader_dp = gdrive_reader_dp.readlines()
-        >>> it = iter(reader_dp)
-        >>> path, line = next(it)
-        >>> path
-        https://drive.google.com/uc?export=download&id=SomeIDToAGDriveFile
-        >>> line
-        <First line from the GDrive File>
+
+    .. testsetup::
+
+        from torchdata.datapipes.iter import GDriveReader
+
+        GDriveReader.readlines = lambda self: [
+            ("https://drive.google.com/uc?export=download&id=SomeIDToAGDriveFile", b"<First line from the GDrive File>")
+        ]
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import IterableWrapper, GDriveReader
+
+        gdrive_file_url = "https://drive.google.com/uc?export=download&id=SomeIDToAGDriveFile"
+        gdrive_reader_dp = GDriveReader(IterableWrapper([gdrive_file_url]))
+        reader_dp = gdrive_reader_dp.readlines()
+        it = iter(reader_dp)
+        path, line = next(it)
+        print((path, line))
+
+    Output:
+
+    .. testoutput::
+
+        ('https://drive.google.com/uc?export=download&id=SomeIDToAGDriveFile', b'<First line from the GDrive File>')
     """
     source_datapipe: IterDataPipe[str]
 
@@ -207,16 +229,23 @@ class OnlineReaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         **kwargs: a Dictionary to pass optional arguments that requests takes. For the full list check out https://docs.python-requests.org/en/master/api/
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper, OnlineReader
-        >>> file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
-        >>> online_reader_dp = OnlineReader(IterableWrapper([file_url]))
-        >>> reader_dp = online_reader_dp.readlines()
-        >>> it = iter(reader_dp)
-        >>> path, line = next(it)
-        >>> path
-        https://raw.githubusercontent.com/pytorch/data/main/LICENSE
-        >>> line
-        b'BSD 3-Clause License'
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import IterableWrapper, OnlineReader
+
+        file_url = "https://raw.githubusercontent.com/pytorch/data/main/LICENSE"
+        online_reader_dp = OnlineReader(IterableWrapper([file_url]))
+        reader_dp = online_reader_dp.readlines()
+        it = iter(reader_dp)
+        path, line = next(it)
+        print((path, line))
+
+    Output:
+
+    .. testoutput::
+
+        ('https://raw.githubusercontent.com/pytorch/data/main/LICENSE', b'BSD 3-Clause License')
     """
     source_datapipe: IterDataPipe[str]
 
