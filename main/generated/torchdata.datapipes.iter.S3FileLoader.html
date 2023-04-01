@@ -221,7 +221,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.7.0a0+4ba17dd ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.7.0a0+837ede1 ) &#x25BC</a>
     </div>
     
 
@@ -370,21 +370,24 @@ setup and AWS config, please see the <a class="reference external" href="https:/
 </ul>
 </dd>
 </dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span><span class="p">,</span> <span class="n">S3FileLoader</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dp_s3_urls</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([</span><span class="s1">&#39;s3://bucket-name/folder/&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span><span class="o">.</span><span class="n">list_files_by_s3</span><span class="p">()</span>
-<span class="go"># In order to make sure data are shuffled and sharded in the</span>
-<span class="go"># distributed environment, `shuffle`  and `sharding_filter`</span>
-<span class="go"># are required. For detail, please check our tutorial in:</span>
-<span class="go"># https://pytorch.org/data/main/tutorial.html#working-with-dataloader</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">sharded_s3_urls</span> <span class="o">=</span> <span class="n">dp_s3_urls</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span><span class="o">.</span><span class="n">sharding_filter</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dp_s3_files</span> <span class="o">=</span> <span class="n">S3FileLoader</span><span class="p">(</span><span class="n">sharded_s3_urls</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">url</span><span class="p">,</span> <span class="n">fd</span> <span class="ow">in</span> <span class="n">dp_s3_files</span><span class="p">:</span> <span class="c1"># Start loading data</span>
-<span class="gp">... </span>    <span class="n">data</span> <span class="o">=</span> <span class="n">fd</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-<span class="go"># Functional API</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dp_s3_files</span> <span class="o">=</span> <span class="n">sharded_s3_urls</span><span class="o">.</span><span class="n">load_files_by_s3</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">256</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">url</span><span class="p">,</span> <span class="n">fd</span> <span class="ow">in</span> <span class="n">dp_s3_files</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="n">data</span> <span class="o">=</span> <span class="n">fd</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<p>Example:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span><span class="p">,</span> <span class="n">S3FileLoader</span>
+
+<span class="n">dp_s3_urls</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([</span><span class="s1">&#39;s3://bucket-name/folder/&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span><span class="o">.</span><span class="n">list_files_by_s3</span><span class="p">()</span>
+<span class="c1"># In order to make sure data are shuffled and sharded in the</span>
+<span class="c1"># distributed environment, `shuffle`  and `sharding_filter`</span>
+<span class="c1"># are required. For detail, please check our tutorial in:</span>
+<span class="c1"># https://pytorch.org/data/main/tutorial.html#working-with-dataloader</span>
+<span class="n">sharded_s3_urls</span> <span class="o">=</span> <span class="n">dp_s3_urls</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span><span class="o">.</span><span class="n">sharding_filter</span><span class="p">()</span>
+
+<span class="n">dp_s3_files</span> <span class="o">=</span> <span class="n">S3FileLoader</span><span class="p">(</span><span class="n">sharded_s3_urls</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">url</span><span class="p">,</span> <span class="n">fd</span> <span class="ow">in</span> <span class="n">dp_s3_files</span><span class="p">:</span> <span class="c1"># Start loading data</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">fd</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+<span class="c1"># Functional API</span>
+<span class="n">dp_s3_files</span> <span class="o">=</span> <span class="n">sharded_s3_urls</span><span class="o">.</span><span class="n">load_files_by_s3</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">256</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">url</span><span class="p">,</span> <span class="n">fd</span> <span class="ow">in</span> <span class="n">dp_s3_files</span><span class="p">:</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">fd</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
 </pre></div>
 </div>
 </dd></dl>
