@@ -20,6 +20,7 @@ T_co = TypeVar("T_co", covariant=True)
 SERIALIZED_DATAPIPE_KEY_NAME = "serialized_datapipe"
 READING_SERVICE_STATE_KEY_NAME = "reading_service_state"
 RANDOMNESS_STATE_KEY_NAME = "randomness_state"
+NUM_PREV_YIELDED_BATCH_KEY_NAME = "num_of_previously_yielded_batches"
 
 
 class DataLoader2Iterator(Iterator[T_co]):
@@ -36,6 +37,7 @@ class DataLoader2Iterator(Iterator[T_co]):
         self.iterator_id = iterator_id
         self.limit_counter: Optional[int] = None
         self.limit_threshold: Optional[int] = None
+        self._batch_yielded: int = 0
 
     def __next__(self) -> T_co:
         if self.iterator_id == self.dataloader.valid_iterator_id:
@@ -47,6 +49,7 @@ class DataLoader2Iterator(Iterator[T_co]):
                     next_val = next(self.dataloader._datapipe_iter)  # type: ignore[arg-type]
                     if self.limit_threshold is not None:
                         self.limit_counter = self.limit_counter + 1  # type: ignore[operator]
+                    self._batch_yielded += 1
                     return next_val
             except PauseIteration:  # This can be used for raising `StopIteration` without `finalize_iteration`
                 raise StopIteration
@@ -179,6 +182,8 @@ class DataLoader2(Generic[T_co]):
         self._reset_seed: bool = True
         # Seed generator as of beginning of each epoch
         self._initial_seed_generator: SeedGenerator = clone(self._seed_generator)
+        self._iterator = None
+        self._num_prev_yielded_batches = None
 
     def __iter__(self) -> DataLoader2Iterator[T_co]:
         r"""
@@ -222,7 +227,8 @@ class DataLoader2(Generic[T_co]):
             self._reset_iter = False
 
         self.valid_iterator_id = 0 if self.valid_iterator_id is None else self.valid_iterator_id + 1
-        return DataLoader2Iterator(self, self.valid_iterator_id)
+        self._iterator = DataLoader2Iterator(self, self.valid_iterator_id)
+        return self._iterator
 
     def seed(self, seed: int) -> None:
         r"""
@@ -281,11 +287,13 @@ class DataLoader2(Generic[T_co]):
             pickle.dumps(self._seed_generator),
             pickle.dumps(self._initial_seed_generator),
         )
+        num_of_previously_yielded_batches = None if self._iterator is None else self._iterator._batch_yielded
 
         return {
             SERIALIZED_DATAPIPE_KEY_NAME: serialized_datapipe,
             READING_SERVICE_STATE_KEY_NAME: reading_service_state,
             RANDOMNESS_STATE_KEY_NAME: serialized_randomness_state,
+            NUM_PREV_YIELDED_BATCH_KEY_NAME: num_of_previously_yielded_batches,
         }
 
     @classmethod
@@ -300,6 +308,7 @@ class DataLoader2(Generic[T_co]):
         """
         serialized_datapipe = state[SERIALIZED_DATAPIPE_KEY_NAME]
         reading_service_state = state[READING_SERVICE_STATE_KEY_NAME]
+        num_of_previously_yielded_batches = state[NUM_PREV_YIELDED_BATCH_KEY_NAME]
 
         data_loader: "DataLoader2[T_co]" = DataLoader2(
             datapipe=deserialize_datapipe(serialized_datapipe),
@@ -307,6 +316,7 @@ class DataLoader2(Generic[T_co]):
             reading_service=reading_service,
         )
         data_loader.reading_service_state = reading_service_state
+        data_loader._num_prev_yielded_batches = num_of_previously_yielded_batches
 
         randomness_state = state[RANDOMNESS_STATE_KEY_NAME]
         data_loader._seed, data_loader._reset_seed = randomness_state[0], randomness_state[1]
@@ -330,6 +340,7 @@ class DataLoader2(Generic[T_co]):
 
         serialized_datapipe = state_dict[SERIALIZED_DATAPIPE_KEY_NAME]
         reading_service_state = state_dict[READING_SERVICE_STATE_KEY_NAME]
+        num_of_previously_yielded_batches = state_dict[NUM_PREV_YIELDED_BATCH_KEY_NAME]
 
         # deserialize datapipe
         deserialized_datapipe = deserialize_datapipe(serialized_datapipe)
@@ -338,6 +349,7 @@ class DataLoader2(Generic[T_co]):
         # override existing datapipe and reading service state
         self.datapipe = deserialized_datapipe
         self.reading_service_state = reading_service_state
+        self._num_prev_yielded_batches = num_of_previously_yielded_batches
 
         randomness_state = state_dict[RANDOMNESS_STATE_KEY_NAME]
         self._seed, self._reset_seed = randomness_state[0], randomness_state[1]
@@ -360,6 +372,28 @@ class DataLoader2(Generic[T_co]):
         ``.from_state(...)`` or ``load_state_dict(...)``) in order to resume from the beginning of the last-ran epoch.
         """
         self._seed_generator = self._initial_seed_generator
+
+    def _restore_naive_checkpoint(self, num_prev_yielded_batches: Optional[int] = None) -> DataLoader2Iterator[T_co]:
+        """
+        Given the number of batches previously yielded, restore the state of ``DataLoader2`` to that point in
+        time by creating an iterator and calling ``next()`` that number of times, returning a ``DataLoader2Iterator``.
+
+        Args:
+            num_prev_yielded_batches (``Optional[int]``): if ``None``, defaults to the value from when
+                ``DataLoader2``'s state was previously restored
+        """
+        if num_prev_yielded_batches is None:
+            if self._num_prev_yielded_batches is None:
+                raise RuntimeError(
+                    "Attempting to restore naive checkpoint, "
+                    "but the number of batches previously yielded is unknown."
+                )
+            num_prev_yielded_batches = self._num_prev_yielded_batches
+        self._restore_checkpoint_beginning_of_epoch()
+        it = iter(self)
+        for _ in range(num_prev_yielded_batches):
+            next(it)
+        return self._iterator
 
     def _pause(self):
         if hasattr(self.reading_service, "_pause"):
