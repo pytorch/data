@@ -78,7 +78,6 @@ jobs:
       - name: Install test requirements
         run: pip3 install -r test/requirements.txt
       - name: Test documentation examples
-        if: matrix.os != 'macos-latest'
         run: |
           cd ./docs
           pip3 install -r requirements.txt
