@@ -182,7 +182,7 @@ class DataLoader2(Generic[T_co]):
         self._reset_seed: bool = True
         # Seed generator as of beginning of each epoch
         self._initial_seed_generator: SeedGenerator = clone(self._seed_generator)
-        self._iterator = None
+        self._iterator: Optional[DataLoader2Iterator] = None
         self._num_prev_yielded_batches = None
 
     def __iter__(self) -> DataLoader2Iterator[T_co]:
@@ -393,7 +393,7 @@ class DataLoader2(Generic[T_co]):
         it = iter(self)
         for _ in range(num_prev_yielded_batches):
             next(it)
-        return self._iterator
+        return self._iterator  # type: ignore[return-value]
 
     def _pause(self):
         if hasattr(self.reading_service, "_pause"):
