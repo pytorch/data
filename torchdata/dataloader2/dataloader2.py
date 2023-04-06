@@ -308,7 +308,6 @@ class DataLoader2(Generic[T_co]):
         """
         serialized_datapipe = state[SERIALIZED_DATAPIPE_KEY_NAME]
         reading_service_state = state[READING_SERVICE_STATE_KEY_NAME]
-        num_of_previously_yielded_batches = state[NUM_PREV_YIELDED_BATCH_KEY_NAME]
 
         data_loader: "DataLoader2[T_co]" = DataLoader2(
             datapipe=deserialize_datapipe(serialized_datapipe),
@@ -316,12 +315,17 @@ class DataLoader2(Generic[T_co]):
             reading_service=reading_service,
         )
         data_loader.reading_service_state = reading_service_state
-        data_loader._num_prev_yielded_batches = num_of_previously_yielded_batches
 
-        randomness_state = state[RANDOMNESS_STATE_KEY_NAME]
-        data_loader._seed, data_loader._reset_seed = randomness_state[0], randomness_state[1]
-        data_loader._seed_generator = pickle.loads(randomness_state[2])
-        data_loader._initial_seed_generator = pickle.loads(randomness_state[3])
+        # This check is needed for backward compatibility of `state_dict` for users loading from older version
+        if RANDOMNESS_STATE_KEY_NAME in state:
+            randomness_state = state[RANDOMNESS_STATE_KEY_NAME]
+            data_loader._seed, data_loader._reset_seed = randomness_state[0], randomness_state[1]
+            data_loader._seed_generator = pickle.loads(randomness_state[2])
+            data_loader._initial_seed_generator = pickle.loads(randomness_state[3])
+
+        if NUM_PREV_YIELDED_BATCH_KEY_NAME in state:
+            num_of_previously_yielded_batches = state[NUM_PREV_YIELDED_BATCH_KEY_NAME]
+            data_loader._num_prev_yielded_batches = num_of_previously_yielded_batches
 
         return data_loader
 
@@ -340,7 +344,6 @@ class DataLoader2(Generic[T_co]):
 
         serialized_datapipe = state_dict[SERIALIZED_DATAPIPE_KEY_NAME]
         reading_service_state = state_dict[READING_SERVICE_STATE_KEY_NAME]
-        num_of_previously_yielded_batches = state_dict[NUM_PREV_YIELDED_BATCH_KEY_NAME]
 
         # deserialize datapipe
         deserialized_datapipe = deserialize_datapipe(serialized_datapipe)
@@ -349,12 +352,17 @@ class DataLoader2(Generic[T_co]):
         # override existing datapipe and reading service state
         self.datapipe = deserialized_datapipe
         self.reading_service_state = reading_service_state
-        self._num_prev_yielded_batches = num_of_previously_yielded_batches
 
-        randomness_state = state_dict[RANDOMNESS_STATE_KEY_NAME]
-        self._seed, self._reset_seed = randomness_state[0], randomness_state[1]
-        self._seed_generator = pickle.loads(randomness_state[2])
-        self._initial_seed_generator = pickle.loads(randomness_state[3])
+        # This check is needed for backward compatibility of `state_dict` for users loading from older version
+        if RANDOMNESS_STATE_KEY_NAME in state_dict:
+            randomness_state = state_dict[RANDOMNESS_STATE_KEY_NAME]
+            self._seed, self._reset_seed = randomness_state[0], randomness_state[1]
+            self._seed_generator = pickle.loads(randomness_state[2])
+            self._initial_seed_generator = pickle.loads(randomness_state[3])
+
+        if NUM_PREV_YIELDED_BATCH_KEY_NAME in state_dict:
+            num_of_previously_yielded_batches = state_dict[NUM_PREV_YIELDED_BATCH_KEY_NAME]
+            self._num_prev_yielded_batches = num_of_previously_yielded_batches
 
         # re-initialize datapipe_adapter_fn and _datapipe_before_reading_service_adapt
         if self.datapipe_adapter_fns is not None:
