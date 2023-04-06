@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-
+import pickle
 import warnings
 
 from typing import Any, Dict, Generic, Iterable, Iterator, Optional, TypeVar, Union
@@ -19,6 +19,7 @@ from torchdata.dataloader2.reading_service import CheckpointableReadingServiceIn
 T_co = TypeVar("T_co", covariant=True)
 SERIALIZED_DATAPIPE_KEY_NAME = "serialized_datapipe"
 READING_SERVICE_STATE_KEY_NAME = "reading_service_state"
+RANDOMNESS_STATE_KEY_NAME = "randomness_state"
 
 
 class DataLoader2Iterator(Iterator[T_co]):
@@ -176,6 +177,8 @@ class DataLoader2(Generic[T_co]):
         self._seed_generator: SeedGenerator = SeedGenerator()
         self._seed: Optional[int] = None
         self._reset_seed: bool = True
+        # Seed generator as of beginning of each epoch
+        self._initial_seed_generator: SeedGenerator = clone(self._seed_generator)
 
     def __iter__(self) -> DataLoader2Iterator[T_co]:
         r"""
@@ -197,6 +200,9 @@ class DataLoader2(Generic[T_co]):
                     self._reset_seed = False
             else:
                 self._seed_generator.seed()
+
+            # Saving initial seed generator state
+            self._initial_seed_generator = clone(self._seed_generator)
 
             if not self._adapted and self.reading_service is not None:
                 if self.reading_service_state is None:
@@ -269,10 +275,17 @@ class DataLoader2(Generic[T_co]):
 
         # Serialize datapipe after applying adapters and before reading service adaption
         serialized_datapipe = serialize_datapipe(self._datapipe_before_reading_service_adapt)
+        serialized_randomness_state = (
+            self._seed,
+            self._reset_seed,
+            pickle.dumps(self._seed_generator),
+            pickle.dumps(self._initial_seed_generator),
+        )
 
         return {
             SERIALIZED_DATAPIPE_KEY_NAME: serialized_datapipe,
             READING_SERVICE_STATE_KEY_NAME: reading_service_state,
+            RANDOMNESS_STATE_KEY_NAME: serialized_randomness_state,
         }
 
     @classmethod
@@ -294,6 +307,14 @@ class DataLoader2(Generic[T_co]):
             reading_service=reading_service,
         )
         data_loader.reading_service_state = reading_service_state
+
+        # This check is needed for backward compatibility of `state_dict` for users loading from older version
+        if RANDOMNESS_STATE_KEY_NAME in state:
+            randomness_state = state[RANDOMNESS_STATE_KEY_NAME]
+            data_loader._seed, data_loader._reset_seed = randomness_state[0], randomness_state[1]
+            data_loader._seed_generator = pickle.loads(randomness_state[2])
+            data_loader._initial_seed_generator = pickle.loads(randomness_state[3])
+
         return data_loader
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
@@ -320,11 +341,29 @@ class DataLoader2(Generic[T_co]):
         self.datapipe = deserialized_datapipe
         self.reading_service_state = reading_service_state
 
+        # This check is needed for backward compatibility of `state_dict` for users loading from older version
+        if RANDOMNESS_STATE_KEY_NAME in state_dict:
+            randomness_state = state_dict[RANDOMNESS_STATE_KEY_NAME]
+            self._seed, self._reset_seed = randomness_state[0], randomness_state[1]
+            self._seed_generator = pickle.loads(randomness_state[2])
+            self._initial_seed_generator = pickle.loads(randomness_state[3])
+
         # re-initialize datapipe_adapter_fn and _datapipe_before_reading_service_adapt
         if self.datapipe_adapter_fns is not None:
             for adapter_fn in self.datapipe_adapter_fns:
                 self.datapipe = adapter_fn(self.datapipe)
         self._datapipe_before_reading_service_adapt = clone(self.datapipe)
+
+    def _restore_checkpoint_beginning_of_epoch(self) -> None:
+        r"""
+        At the beginning of each iteration (epoch), the initial state of randomness is automatically saved.
+        That state is also saved as part of ``state_dict``. This method restores the current DataLoader2 RNG state
+        to that initial state.
+
+        The common use case is to invoke this method after ``DataLoader2``'s state is restored (through
+        ``.from_state(...)`` or ``load_state_dict(...)``) in order to resume from the beginning of the last-ran epoch.
+        """
+        self._seed_generator = self._initial_seed_generator
 
     def _pause(self):
         if hasattr(self.reading_service, "_pause"):
