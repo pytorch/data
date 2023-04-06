@@ -312,6 +312,8 @@ class MultiProcessingReadingService(ReadingServiceInterface):
     ) -> Optional[Callable[[DataPipe], DataPipe]]:
         assert self._end_datapipe is not None
 
+        # Set random seeds for DataPipe that are in the main process (NOT those in worker processes)
+        # Worker seeds are set in `process_reset_fn`
         set_graph_random_seed(self._end_datapipe, seed_generator)
 
         if self._mp:
