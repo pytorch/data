@@ -73,3 +73,16 @@ jobs:
             echo 'Please fix the above mypy warnings.'
             false
           fi
+
+  complete_documentation:
+    if: ${{ github.repository_owner == 'pytorch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - name: Check out source repository
+        uses: actions/checkout@v3
+      - name: Check if documentation is complete
+        run: python ./.github/scripts/check_complete_doc.py

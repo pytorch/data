@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import random
-from typing import Dict, List, Optional, TypeVar, Union
+from typing import Dict, final, List, Optional, TypeVar, Union
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -119,6 +119,7 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
         total_weight = sum(weights)
         return [float(w) * total_length / total_weight for w in weights]
 
+    @final
     def reset(self) -> None:
         self._rng = random.Random(self._seed)
         self.weights = self.norm_weights.copy()

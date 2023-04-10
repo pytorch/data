@@ -10,7 +10,7 @@ from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable, Deque, Iterator, Optional, TypeVar
+from typing import Callable, Deque, final, Iterator, Optional, TypeVar
 
 import torch
 import torch.distributed as dist
@@ -197,6 +197,7 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
                 break
             yield data
 
+    @final
     def reset(self):
         if self._executor is not None:
             self._executor.shutdown()
@@ -236,6 +237,7 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
         #     self._executor.shutdown()
         #     self._executor = None
 
+    @final
     def resume(self):
         raise RuntimeError("`resume` is not supported for FullSync at the moment.")
         # self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)

@@ -110,7 +110,7 @@ def _get_requirements():
 
 
 # Use new version of torch on main branch
-pytorch_package_dep = "torch>1.13"
+pytorch_package_dep = "torch>2.0"
 if os.getenv("PYTORCH_VERSION"):
     pytorch_package_dep = pytorch_package_dep.split(">")[0]
     pytorch_package_dep += "==" + os.getenv("PYTORCH_VERSION")
@@ -161,6 +161,8 @@ if __name__ == "__main__":
         name="torchdata",
         version=VERSION,
         description="Composable data loading modules for PyTorch",
+        long_description=Path("README.md").read_text(encoding="utf-8"),
+        long_description_content_type="text/markdown",
         url="https://github.com/pytorch/data",
         author="PyTorch Team",
         author_email="packages@pytorch.org",
@@ -176,6 +178,7 @@ if __name__ == "__main__":
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",
             "Programming Language :: Python :: 3.10",
+            "Programming Language :: Python :: 3.11",
             "Programming Language :: Python :: Implementation :: CPython",
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],

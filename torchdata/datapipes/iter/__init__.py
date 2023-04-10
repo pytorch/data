@@ -71,7 +71,9 @@ from torchdata.datapipes.iter.transform.callable import (
     DropperIterDataPipe as Dropper,
     FlatMapperIterDataPipe as FlatMapper,
     FlattenIterDataPipe as Flattener,
+    ShuffledFlatMapperIterDataPipe as ShuffledFlatMapper,
     SliceIterDataPipe as Slicer,
+    ThreadPoolMapperIterDataPipe as ThreadPoolMapper,
 )
 from torchdata.datapipes.iter.util.bz2fileloader import Bz2FileLoaderIterDataPipe as Bz2FileLoader
 from torchdata.datapipes.iter.util.cacheholder import (
@@ -208,11 +210,13 @@ __all__ = [
     "ShardExpander",
     "ShardingFilter",
     "ShardingRoundRobinDispatcher",
+    "ShuffledFlatMapper",
     "Shuffler",
     "Slicer",
     "StreamReader",
     "TFRecordLoader",
     "TarArchiveLoader",
+    "ThreadPoolMapper",
     "UnBatcher",
     "UnZipper",
     "WebDataset",
