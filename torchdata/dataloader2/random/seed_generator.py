@@ -83,13 +83,3 @@ class SeedGenerator:
             self._worker_rng = self._worker_rng.spawn(worker_id)
             return self
         return SeedGenerator(seed=None, _rngs=(self._shared_rng.clone(), self._worker_rng.spawn(worker_id)))
-
-    def __getstate__(self):
-        state = (
-            self._shared_rng,
-            self._worker_rng,
-        )
-        return state
-
-    def __setstate__(self, state):
-        self._shared_rng, self._worker_rng = state
