@@ -8,7 +8,7 @@ import threading
 import time
 
 from collections import deque
-from typing import Deque, Optional
+from typing import Deque, final, Optional
 
 import torch
 
@@ -27,6 +27,7 @@ class _PrefetchData:
         self.buffer_size: int = buffer_size
         self.source_datapipe = source_datapipe
         self.stop_iteration: bool = False
+        self.paused: bool = False
 
 
 @functional_datapipe("prefetch")
@@ -77,6 +78,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
                 else:  # Buffer is full, waiting for main thread to consume items
                     # TODO: Calculate sleep interval based on previous consumption speed
                     time.sleep(PRODUCER_SLEEP_INTERVAL)
+            prefetch_data.paused = True
             # Sleep longer when this prefetcher thread is paused
             time.sleep(PRODUCER_SLEEP_INTERVAL * 10)
 
@@ -123,10 +125,12 @@ class PrefetcherIterDataPipe(IterDataPipe):
         self.buffer_size = state["buffer_size"]
         self.thread = None
 
+    @final
     def reset(self):
         if self.thread is not None:
             self.prefetch_data.run_prefetcher = False
             self.prefetch_data.stop_iteration = True
+            self.prefetch_data.paused = False
             self.thread.join()
             self.thread = None
 
@@ -134,13 +138,19 @@ class PrefetcherIterDataPipe(IterDataPipe):
         if self.thread is not None:
             assert self.prefetch_data is not None
             self.prefetch_data.run_prefetcher = False
+            if self.thread.is_alive():
+                # Blocking until the thread is paused
+                while not self.prefetch_data.paused:
+                    time.sleep(PRODUCER_SLEEP_INTERVAL * 10)
 
+    @final
     def resume(self):
         if self.thread is not None and (
             not self.prefetch_data.stop_iteration or len(self.prefetch_data.prefetch_buffer) > 0
         ):
             assert self.prefetch_data is not None
             self.prefetch_data.run_prefetcher = True
+            self.prefetch_data.paused = False
 
 
 @functional_datapipe("pin_memory")

@@ -15,7 +15,7 @@ from typing import Callable, Deque, List
 from torch.utils.data import IterDataPipe
 from torchdata._utils import ExceptionWrapper
 from torchdata.dataloader2 import communication
-from torchdata.dataloader2.graph import DataPipe, list_dps, traverse_dps
+from torchdata.dataloader2.graph import DataPipe, find_dps, list_dps, traverse_dps
 from torchdata.dataloader2.random import SeedGenerator
 from torchdata.dataloader2.utils import WorkerInfo
 
@@ -170,7 +170,7 @@ def DataPipeBehindQueues(
             dp_list = list_dps(traverse_dps(source_datapipe))
             for dp in dp_list:
                 # TODO: Remove this condition after there is `pause` support for round-robin sharding
-                if isinstance(dp, QueueWrapper):
+                if isinstance(dp, _IterateQueueDataPipes):
                     warnings.warn("There is no support for `pause` with round-robin sharding at the moment.")
                 elif hasattr(dp, "pause") and callable(dp.pause):
                     dp.pause()
@@ -182,7 +182,7 @@ def DataPipeBehindQueues(
             dp_list = list_dps(traverse_dps(source_datapipe))
             for dp in reversed(dp_list):
                 # TODO: Remove this condition after there is `resume` support for round-robin sharding
-                if isinstance(dp, QueueWrapper):
+                if isinstance(dp, _IterateQueueDataPipes):
                     raise RuntimeError("There is no support for `resume` with round-robin sharding at the moment.")
                 elif hasattr(dp, "resume") and callable(dp.resume):
                     dp.resume()
@@ -191,6 +191,10 @@ def DataPipeBehindQueues(
 
         elif isinstance(request, communication.messages.TerminateRequest):
             forever = False
+            dispatch_dps = find_dps(traverse_dps(source_datapipe), _IterateQueueDataPipes)
+            for dispatch_dp in dispatch_dps:
+                dispatch_dp.request_terminate()
+
             protocol.response_terminate()
 
         elif isinstance(request, communication.messages.GetNextRequest):
@@ -305,6 +309,7 @@ class _IterateQueueDataPipes(IterDataPipe):
                 raise Exception("Source datapipes should be an instance of iter.QueueWrapper")
         self.datapipes = datapipes
         self.res_buffers: List[Deque] = [deque() for _ in range(len(datapipes))]
+        self._terminated: bool = False
 
     def __iter__(self):
         total_pipes = len(self.datapipes)
@@ -321,7 +326,13 @@ class _IterateQueueDataPipes(IterDataPipe):
                     if len(self.res_buffers[idx]):
                         response = self.res_buffers[idx].popleft()
                     else:
-                        response = self.datapipes[idx].protocol.get_response_next(block=True)
+                        while not self._terminated:
+                            try:
+                                # Using non-blocking next to make sure termination reached
+                                response = self.datapipes[idx].protocol.get_response_next(block=False)
+                                break
+                            except communication.protocol.EmptyQueue:
+                                time.sleep(DEFAULT_NON_BLOCKING_SLEEP)
                     if isinstance(response, communication.messages.StopIterationResponse):
                         disabled_pipe[idx] = True
                         cnt_disabled_pipes += 1
@@ -374,3 +385,8 @@ class _IterateQueueDataPipes(IterDataPipe):
     def request_resume(self):
         for dp in self.datapipes:
             dp.resume()
+
+    def request_terminate(self):
+        self._terminated = True
+        for dp in self.datapipes:
+            dp.protocol.request_terminate()

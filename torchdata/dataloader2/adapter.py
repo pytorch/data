@@ -67,7 +67,6 @@ class Shuffle(Adapter):
         dp = IterableWrapper(range(size)).shuffle()
         dl = DataLoader2(dp, [Shuffle(False)])
         assert list(range(size)) == list(dl)
-
     """
 
     def __init__(self, enable=True):
@@ -86,7 +85,19 @@ class CacheTimeout(Adapter):
         timeout: int - amount of seconds parallel processes will wait for cached files to appear.
 
     Example:
-        >>>  dl = DataLoader2(dp, [CacheTimeout(600)])
+
+    .. testsetup::
+
+        from torchdata.datapipes.iter import IterableWrapper
+        from torchdata.dataloader2 import DataLoader2
+        from torchdata.dataloader2.adapter import CacheTimeout
+
+        size = 12
+
+    .. testcode::
+
+        dp = IterableWrapper(range(size)).shuffle()
+        dl = DataLoader2(dp, [CacheTimeout(600)])
     """
 
     def __init__(self, timeout=None):
