@@ -542,4 +542,3 @@ Here is an example of loading a CSV file - the famous Titanic dataset (`download
     # [{'label': array(0, dtype=int32), 'data': array([ 3., 22.], dtype=float32)},
     #  {'label': array(1, dtype=int32), 'data': array([ 1., 38.], dtype=float32)},
     #  {'label': array(1, dtype=int32), 'data': array([ 3., 26.], dtype=float32)}]
-
