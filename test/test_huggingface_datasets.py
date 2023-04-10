@@ -45,6 +45,8 @@ class TestHuggingFaceHubReader(expecttest.TestCase):
         with self.assertRaises(StopIteration):
             next(iterator)
             next(iterator)
+        with self.assertRaises(TypeError):
+            len(datapipe)
 
 
 if __name__ == "__main__":

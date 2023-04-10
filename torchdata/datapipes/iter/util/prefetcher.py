@@ -8,7 +8,7 @@ import threading
 import time
 
 from collections import deque
-from typing import Deque, final, Optional
+from typing import Deque, final, Optional, Sized
 
 import torch
 
@@ -151,6 +151,11 @@ class PrefetcherIterDataPipe(IterDataPipe):
             assert self.prefetch_data is not None
             self.prefetch_data.run_prefetcher = True
             self.prefetch_data.paused = False
+
+    def __len__(self) -> int:
+        if isinstance(self.source_datapipe, Sized):
+            return len(self.source_datapipe)
+        raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
 
 
 @functional_datapipe("pin_memory")
