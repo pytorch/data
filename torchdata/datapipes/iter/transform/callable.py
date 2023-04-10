@@ -6,10 +6,14 @@
 
 import asyncio
 import inspect
+import random
 import warnings
+from collections import deque
+from concurrent import futures
 
 from typing import Callable, Hashable, Iterator, List, Optional, Set, Sized, TypeVar, Union
 
+import torch
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, validate_input_col
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -166,6 +170,161 @@ class FlatMapperIterDataPipe(IterDataPipe[T_co]):
 
     def __len__(self) -> int:
         raise TypeError(f"{type(self).__name__}'s length relies on the output of its function.")
+
+
+@functional_datapipe("shuffled_flatmap")
+class ShuffledFlatMapperIterDataPipe(IterDataPipe):
+    r"""
+    Applies a function over each item from the source DataPipe,
+    then collects the iterables returned in a buffer,
+    then, at every iteration, chooses at random one of the iterables in the buffer
+    and yields one item from this iterable (functional name: ``shuffled_flatmap``).
+
+    When the buffer is full, the DataPipe will begin to yield elements from iterables within the buffer.
+    New iterables will be added to the buffer once the existing ones run out of elements.
+    Note:
+        The output from ``fn`` must be an Iterable. Otherwise, an error will be raised.
+        If ``fn`` is ``None``, source DataPipe will be just flattened vertically, provided that items can be unpacked.
+
+    Args:
+        datapipe: Source IterDataPipe
+        fn: the function to be applied to each element in the DataPipe, the output must be a Sequence
+        input_col: Index or indices of data which ``fn`` is applied, such as:
+
+            - ``None`` as default to apply ``fn`` to the data directly.
+            - Integer(s) is/are used for list/tuple.
+            - Key(s) is/are used for dict.
+        buffer_size: the max number of iterables this DataPipe can hold at a time (default to ``100``)
+
+    Example:
+        >>> from torchdata.datapipes.iter import IterableWrapper
+        >>> source_dp = IterableWrapper([[1, 2, 3, 4], 'abcd', 'ABCD'])
+        >>> shuffled_flatmapped_dp = source_dp.shuffled_flatmap(buffer_size=2)
+        >>> list(shuffled_flatmapped_dp)
+        ['a', 'b', 'c', 1, 'd', 'A', 'B', 'C', 2, 'D', 3, 4]
+        >>>
+        >>> # To shuffle all the elements, you can combine `shuffled_flatmap` with `in_batch_shuffle` like this:
+        >>> fully_shuffled_flatmapped_dp = source_dp.in_batch_shuffle()
+        >>> fully_shuffled_flatmapped_dp = fully_shuffled_flatmapped_dp.shuffled_flatmap()
+        >>> list(fully_shuffled_flatmapped_dp)
+        ['b', 3, 'c', 'd', 'C', 'A', 'a', 2, 'B', 'D', 4, 1]
+    """
+    datapipe: IterDataPipe
+    fn: Optional[Callable]
+    buffer_size: int
+    _buffer: List[Iterator]
+    _enabled: bool
+    _seed: Optional[int]
+    _rng: random.Random
+    _no_op_fn: bool = False
+
+    def __init__(
+        self, datapipe: IterDataPipe, fn: Optional[Callable] = None, input_col=None, buffer_size: int = 100
+    ) -> None:
+        super().__init__()
+        self._buffer = []
+        self.datapipe = datapipe
+
+        if fn is None:
+            fn = _no_op_fn
+            self._no_op_fn = True
+        _check_unpickable_fn(fn)
+        self.fn = fn  # type: ignore[assignment]
+        self.input_col = input_col
+        validate_input_col(fn, input_col)
+
+        assert buffer_size > 0, "buffer_size should be larger than 0"
+        self.buffer_size = buffer_size
+        self._enabled = True
+        self._seed = None
+        self._rng = random.Random()
+
+    def set_shuffle(self, shuffle=True):
+        self._enabled = shuffle
+        return self
+
+    def set_seed(self, seed: int):
+        self._seed = seed
+        return self
+
+    def reset(self) -> None:
+        self._buffer = []
+        if self._enabled:
+            if self._seed is None:
+                self._seed = int(torch.empty((), dtype=torch.int64).random_().item())
+            self._rng.seed(self._seed)
+            self._seed = None
+
+    def _apply_fn(self, data):
+        if self.input_col is None:
+            return self.fn(data)  # type: ignore[misc]
+        elif isinstance(self.input_col, (list, tuple)):
+            args = tuple(data[col] for col in self.input_col)
+            return self.fn(*args)  # type: ignore[misc]
+        else:
+            return self.fn(data[self.input_col])  # type: ignore[misc]
+
+    def __iter__(self) -> Iterator[T_co]:
+        if not self._enabled:  # equivalent to flatmap
+            for x in self.datapipe:
+                yield from self._apply_fn(x)
+        else:
+            idx = self._rng.randint(0, self.buffer_size - 1)
+            for x in self.datapipe:
+                while len(self._buffer) == self.buffer_size:
+                    try:
+                        yield next(self._buffer[idx])
+                        idx = self._rng.randint(0, self.buffer_size - 1)
+                    except StopIteration:
+                        self._buffer.pop(idx)
+                self._buffer.append(iter(self._apply_fn(x)))
+            while self._buffer:
+                try:
+                    idx = self._rng.randint(0, len(self._buffer) - 1)
+                    yield next(self._buffer[idx])
+                except StopIteration:
+                    self._buffer.pop(idx)
+
+    def __len__(self) -> int:
+        if self._no_op_fn:
+            return sum(map(len, self.datapipe))
+        raise TypeError(f"{type(self).__name__}'s length relies on the output of its function.")
+
+    def __getstate__(self):
+        state = (
+            self.datapipe,
+            self.fn,
+            self.input_col,
+            self.buffer_size,
+            self._buffer,
+            self._enabled,
+            self._seed,
+            self._rng.getstate(),
+            self._valid_iterator_id,
+            self._number_of_samples_yielded,
+        )
+        if IterDataPipe.getstate_hook is not None:
+            return IterDataPipe.getstate_hook(state)
+        return state
+
+    def __setstate__(self, state):
+        (
+            self.datapipe,
+            self.fn,
+            self.input_col,
+            self.buffer_size,
+            self._buffer,
+            self._enabled,
+            self._seed,
+            rng_state,
+            self._valid_iterator_id,
+            self._number_of_samples_yielded,
+        ) = state
+        self._rng = random.Random()
+        self._rng.setstate(rng_state)
+
+    def __del__(self):
+        self._buffer.clear()
 
 
 @functional_datapipe("drop")
@@ -532,15 +691,19 @@ class BatchAsyncMapperIterDataPipe(IterDataPipe):
         async_fn: The coroutine function to be applied to each batch of data
         batch_size: The size of batch to be aggregated from ``source_datapipe``
         input_col: Index or indices of data which ``fn`` is applied, such as:
+
             - ``None`` as default to apply ``fn`` to the data directly.
             - Integer(s) is used for list/tuple.
             - Key(s) is used for dict.
+
         output_col: Index of data where result of ``fn`` is placed. ``output_col`` can be specified
             only when ``input_col`` is not ``None``
+
             - ``None`` as default to replace the index that ``input_col`` specified; For ``input_col`` with
               multiple indices, the left-most one is used, and other indices will be removed.
             - Integer is used for list/tuple. ``-1`` represents to append result at the end.
             - Key is used for dict. New key is acceptable.
+
         max_concurrency: Maximum concurrency to call async functions. (Default value: 32)
 
     Example:
@@ -585,3 +748,194 @@ class BatchAsyncMapperIterDataPipe(IterDataPipe):
         dp = _BatchAsyncMapperIterDataPipe(dp, async_fn, input_col, output_col, max_concurrency)
         dp = dp.flatmap()
         return dp
+
+
+@functional_datapipe("threadpool_map")
+class ThreadPoolMapperIterDataPipe(IterDataPipe[T_co]):
+    r"""
+    Applies a function over each item from the source DataPipe concurrently
+    using ``ThreadPoolExecutor`` (functional name: ``threadpool_map``).
+    The function can be any regular Python function or partial object. Lambda
+    function is not recommended as it is not supported by pickle.
+
+    Args:
+        source_datapipe: Source IterDataPipe
+        fn: Function being applied over each item
+        input_col: Index or indices of data which ``fn`` is applied, such as:
+
+            - ``None`` as default to apply ``fn`` to the data directly.
+            - Integer(s) is used for list/tuple.
+            - Key(s) is used for dict.
+
+        output_col: Index of data where result of ``fn`` is placed. ``output_col`` can be specified
+            only when ``input_col`` is not ``None``
+
+            - ``None`` as default to replace the index that ``input_col`` specified; For ``input_col`` with
+              multiple indices, the left-most one is used, and other indices will be removed.
+            - Integer is used for list/tuple. ``-1`` represents to append result at the end.
+            - Key is used for dict. New key is acceptable.
+
+        scheduled_tasks: How many tasks will be scheduled at any given time (Default value: 128)
+        max_workers: Maximum number of threads to execute function calls
+        **threadpool_kwargs: additional arguments to be given to the ``ThreadPoolExecutor``
+
+    Note:
+         For more information about ``max_workers`` and additional arguments for the ``ThreadPoolExecutor``
+         please refer to: https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
+
+    Note:
+        For optimal use of all threads, ``scheduled_tasks`` > ``max_workers`` is strongly recommended. The higher the
+        variance of the time needed to finish execution of the given ``fn`` is, the higher the value
+        of ``scheduled_tasks`` needs to be to avoid threads sitting idle while waiting
+        for the next result (as results are returned in correct order).
+
+        However, too high value of ``scheduled_tasks`` might lead to long waiting period until the first element is yielded
+        as ``next`` is called ``scheduled_tasks`` many times on ``source_datapipe`` before yielding.
+
+        We encourage you to try out different values of ``max_workers`` and ``scheduled_tasks``
+        in search for optimal values for your use-case.
+
+    Example:
+
+    .. testsetup::
+
+        from torchdata.datapipes.iter import IterableWrapper
+        import requests
+        import time
+        from unittest.mock import MagicMock
+
+        requests.get = MagicMock()
+        urls = []
+
+    .. testcode::
+
+        # fetching html from remote
+        def fetch_html(url: str, **kwargs):
+            r = requests.get(url, **kwargs)
+            r.raise_for_status()
+            return r.content
+        dp = IterableWrapper(urls)
+        dp = dp.threadpool_map(fetch_html,max_workers=16)
+
+    .. testcode::
+
+        def mul_ten(x):
+            time.sleep(0.1)
+            return x * 10
+
+        dp = IterableWrapper([(i, i) for i in range(50)])
+        dp = dp.threadpool_map(mul_ten, input_col=1)
+        print(list(dp))
+
+    .. testoutput::
+
+        [(0, 0), (1, 10), (2, 20), (3, 30), ...]
+
+    .. testcode::
+
+        dp = IterableWrapper([(i, i) for i in range(50)])
+        dp = dp.threadpool_map(mul_ten, input_col=1, output_col=-1)
+        print(list(dp))
+
+    .. testoutput::
+
+        [(0, 0, 0), (1, 1, 10), (2, 2, 20), (3, 3, 30), ...]
+
+    """
+
+    datapipe: IterDataPipe
+    fn: Callable
+
+    def __init__(
+        self,
+        source_datapipe: IterDataPipe,
+        fn: Callable,
+        input_col=None,
+        output_col=None,
+        scheduled_tasks: int = 128,
+        max_workers: Optional[int] = None,
+        **threadpool_kwargs,
+    ) -> None:
+        super().__init__()
+        self.datapipe = source_datapipe
+
+        _check_unpickable_fn(fn)
+        self.fn = fn  # type: ignore[assignment]
+
+        if scheduled_tasks <= 0:
+            raise ValueError("'scheduled_tasks' is required to be a positive integer.")
+        self.scheduled_tasks = scheduled_tasks
+        if max_workers is not None and max_workers <= 0:
+            raise ValueError("'max_workers' is required to be a positive integer.")
+        self.max_workers = max_workers
+        self.threadpool_kwargs = threadpool_kwargs
+
+        self.input_col = input_col
+        if input_col is None and output_col is not None:
+            raise ValueError("`output_col` must be None when `input_col` is None.")
+        if isinstance(output_col, (list, tuple)):
+            if len(output_col) > 1:
+                raise ValueError("`output_col` must be a single-element list or tuple")
+            output_col = output_col[0]
+        self.output_col = output_col
+        validate_input_col(fn, input_col)
+
+    def _apply_fn(self, data):
+        if self.input_col is None and self.output_col is None:
+            return self.fn(data)
+
+        if self.input_col is None:
+            res = self.fn(data)
+        elif isinstance(self.input_col, (list, tuple)):
+            args = tuple(data[col] for col in self.input_col)
+            res = self.fn(*args)
+        else:
+            res = self.fn(data[self.input_col])
+
+        # Copy tuple to list and run in-place modification because tuple is immutable.
+        if isinstance(data, tuple):
+            t_flag = True
+            data = list(data)
+        else:
+            t_flag = False
+
+        if self.output_col is None:
+            if isinstance(self.input_col, (list, tuple)):
+                data[self.input_col[0]] = res
+                for idx in sorted(self.input_col[1:], reverse=True):
+                    del data[idx]
+            else:
+                data[self.input_col] = res
+        else:
+            if self.output_col == -1:
+                data.append(res)
+            else:
+                data[self.output_col] = res
+
+        # Convert list back to tuple
+        return tuple(data) if t_flag else data
+
+    def __iter__(self) -> Iterator[T_co]:
+        with futures.ThreadPoolExecutor(max_workers=self.max_workers, **self.threadpool_kwargs) as executor:
+            futures_deque: deque = deque()
+            has_next = True
+            itr = iter(self.datapipe)
+            for _ in range(self.scheduled_tasks):
+                try:
+                    futures_deque.append(executor.submit(self._apply_fn, next(itr)))
+                except StopIteration:
+                    has_next = False
+                    break
+
+            while len(futures_deque) > 0:
+                if has_next:
+                    try:
+                        futures_deque.append(executor.submit(self._apply_fn, next(itr)))
+                    except StopIteration:
+                        has_next = False
+                yield futures_deque.popleft().result()
+
+    def __len__(self) -> int:
+        if isinstance(self.datapipe, Sized):
+            return len(self.datapipe)
+        raise TypeError(f"{type(self).__name__} instance doesn't have valid length")

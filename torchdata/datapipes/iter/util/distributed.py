@@ -10,7 +10,7 @@ from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable, Deque, Iterator, Optional, TypeVar
+from typing import Callable, Deque, final, Iterator, Optional, TypeVar
 
 import torch
 import torch.distributed as dist
@@ -170,9 +170,6 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
             self._cv.notify()
 
     def __iter__(self) -> Iterator[T_co]:
-        if self._world_size == 1:  # The below functionalities are not needed if `_world_size == 1`
-            yield from self.datapipe
-
         assert self._executor is None
 
         if not (dist.is_available() and dist.is_initialized()):
@@ -200,6 +197,7 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
                 break
             yield data
 
+    @final
     def reset(self):
         if self._executor is not None:
             self._executor.shutdown()
@@ -234,13 +232,12 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
         self._done_callback = False
 
     def pause(self):
-        if self._world_size > 1 and self._executor is not None:
-            raise RuntimeError("`pause` is not supported for FullSync at the moment.")
+        raise RuntimeError("`pause` is not supported for FullSync at the moment.")
         # if self._executor is not None:
         #     self._executor.shutdown()
         #     self._executor = None
 
+    @final
     def resume(self):
-        if self._world_size > 1 and self._executor is not None:
-            raise RuntimeError("`resume` is not supported for FullSync at the moment.")
+        raise RuntimeError("`resume` is not supported for FullSync at the moment.")
         # self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)

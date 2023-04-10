@@ -4,14 +4,16 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-
 import multiprocessing as mp
 import unittest
 from unittest import TestCase
 
-from torch.testing._internal.common_utils import instantiate_parametrized_tests, parametrize
+from torch.testing._internal.common_utils import instantiate_parametrized_tests, parametrize, subtest
+
+from torch.utils.data.datapipes.iter.sharding import SHARDING_PRIORITIES
+
 from torchdata.dataloader2 import DataLoader2, DataLoader2Iterator, MultiProcessingReadingService
-from torchdata.datapipes.iter import IterableWrapper
+from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 
 
 def _add_one(x: int) -> int:
@@ -29,11 +31,70 @@ mp_ctx_parametrize = parametrize("ctx", mp.get_all_start_methods())
 dp_parametrize = parametrize("dp", test_dps)
 
 
+def _non_dispatching_dp(n_elements=1000):
+    dp = IterableWrapper(list(range(n_elements))).shuffle()
+    dp = dp.sharding_filter()
+    dp = dp.map(_add_one).batch(8)
+    return dp
+
+
+def _dispatching_dp(n_elements=1000):
+    dp = IterableWrapper(list(range(n_elements))).shuffle()
+    dp = dp.sharding_round_robin_dispatch(SHARDING_PRIORITIES.MULTIPROCESSING)
+    dp = dp.map(_add_one).batch(16)
+    return dp
+
+
+class NonShardableDataPipe(IterDataPipe):
+    def __init__(self, dp: IterDataPipe):
+        self.dp = dp
+
+    def is_replicable(self):
+        return False
+
+    def __iter__(self):
+        yield from self.dp
+
+
 class TestMultiProcessingReadingService(TestCase):
     r"""
     This tests specific functionalities of MultiProcessingReadingService, notably
     `pause`, `resume`, `snapshot`.
     """
+
+    @mp_ctx_parametrize
+    @parametrize("dp_fn", [subtest(_non_dispatching_dp, "non_dispatch"), subtest(_dispatching_dp, "dispatch")])
+    @parametrize("main_prefetch", [0, 10])
+    @parametrize("worker_prefetch", [0, 10])
+    def test_early_exit(self, ctx, dp_fn, main_prefetch, worker_prefetch) -> None:
+        dp = dp_fn(1000)
+        rs = MultiProcessingReadingService(
+            num_workers=2,
+            main_prefetch_cnt=main_prefetch,
+            worker_prefetch_cnt=worker_prefetch,
+            multiprocessing_context=ctx,
+        )
+        dl: DataLoader2 = DataLoader2(dp, reading_service=rs)
+        it = iter(dl)
+        for _ in range(10):
+            _ = next(it)
+        dl.shutdown()
+
+    @mp_ctx_parametrize
+    @parametrize("dp_fn", [subtest(_non_dispatching_dp, "non_dispatch"), subtest(_dispatching_dp, "dispatch")])
+    @parametrize("main_prefetch", [0, 10])
+    @parametrize("worker_prefetch", [0, 10])
+    def test_exit(self, ctx, dp_fn, main_prefetch, worker_prefetch) -> None:
+        dp = dp_fn(1000)
+        rs = MultiProcessingReadingService(
+            num_workers=2,
+            main_prefetch_cnt=main_prefetch,
+            worker_prefetch_cnt=worker_prefetch,
+            multiprocessing_context=ctx,
+        )
+        dl: DataLoader2 = DataLoader2(dp, reading_service=rs)
+        _ = list(dl)
+        dl.shutdown()
 
     @mp_ctx_parametrize
     def test_reading_service_pause_resume_0_worker(self, ctx) -> None:
@@ -196,6 +257,54 @@ class TestMultiProcessingReadingService(TestCase):
         for x in it2:
             res.append(x)
         self.assertEqual(9, len(res))
+
+    def test_initial_epoch_checkpointing(self):
+        dp = IterableWrapper(range(20)).shuffle().sharding_filter()
+        # Note that the second `shuffle` occurs in the main process, which uses a different RNG from
+        # the `shuffle` done in the worker processes
+        dp = NonShardableDataPipe(dp).shuffle()  # type: ignore[assignment, arg-type]
+        rs = MultiProcessingReadingService(num_workers=2)
+
+        # Functional Test: Saving state before iterator is created
+        dl: DataLoader2 = DataLoader2(datapipe=dp, reading_service=rs)
+        dl.seed(1)
+        initial_state = dl.state_dict()
+        it1 = iter(dl)
+
+        restored_dl: DataLoader2 = DataLoader2.from_state(initial_state, rs)  # type: ignore[arg-type]
+        restored_dl._restore_checkpoint_beginning_of_epoch()
+        self.assertEqual(list(it1), list(restored_dl))
+
+        dl.shutdown()
+        restored_dl.shutdown()
+
+        # Functional Test: Saving state after iterator is created
+        dl = DataLoader2(datapipe=dp, reading_service=rs)
+        dl.seed(1)
+        it1 = iter(dl)
+        initial_state = dl.state_dict()
+
+        restored_dl = DataLoader2.from_state(initial_state, rs)  # type: ignore[arg-type]
+        restored_dl._restore_checkpoint_beginning_of_epoch()
+        self.assertEqual(list(it1), list(restored_dl))
+
+        dl.shutdown()
+        restored_dl.shutdown()
+
+        # Functional Test: Saving state after iterator is created and began iterating
+        dl = DataLoader2(datapipe=dp, reading_service=rs)
+        dl.seed(1)
+        it1 = iter(dl)
+        temp = next(it1)  # Starts iterating
+        initial_state = dl.state_dict()
+
+        restored_dl = DataLoader2.from_state(initial_state, rs)  # type: ignore[arg-type]
+        restored_dl._restore_checkpoint_beginning_of_epoch()
+
+        self.assertEqual([temp] + list(it1), list(restored_dl))  # Note skipping over 1st element from actual result
+
+        dl.shutdown()
+        restored_dl.shutdown()
 
     # TODO: Test cases when there is official support of `pause` and `resume` with round-robin sharding
     #       Currently, using sharding_round_robin raises a warning
