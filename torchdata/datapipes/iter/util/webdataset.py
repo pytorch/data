@@ -99,6 +99,3 @@ class WebDatasetIterDataPipe(IterDataPipe[Dict]):
             sample[suffix] = data
         if sample != {}:
             yield sample
-
-    def __len__(self) -> int:
-        return len(self.source_datapipe)

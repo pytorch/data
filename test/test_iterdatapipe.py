@@ -305,6 +305,9 @@ class TestIterDataPipe(expecttest.TestCase):
         actual = list(prefetched_dp)
         self.assertEqual(expected, actual)
 
+        # __len__ Test: returns the same length as source
+        self.assertEqual(len(source_dp), len(prefetched_dp))
+
     def test_repeater_iterdatapipe(self) -> None:
         import itertools
 
