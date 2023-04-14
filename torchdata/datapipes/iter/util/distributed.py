@@ -170,35 +170,35 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
             self._cv.notify()
 
     def __iter__(self) -> Iterator[T_co]:
-        if self._world_size == 1:  # The below functionalities are not needed if `_world_size == 1`
-            yield from self.datapipe
-
         assert self._executor is None
-
         if not (dist.is_available() and dist.is_initialized()):
-            raise RuntimeError("Torch Distributed is required to be initialized")
+            raise RuntimeError("Torch Distributed is required to be initialized to use `FullSync`.")
+
         if self._process_group is None:
             self._process_group = dist.new_group(backend="gloo")
         self._world_size = dist.get_world_size()
 
-        self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)
-        while True:
-            with self._cv:
-                is_success = self._cv.wait_for(
-                    lambda: self._done_callback is True,
-                    self.timeout,
-                )
-                if not is_success:
-                    raise PrefetchTimeoutError(self.timeout)
-                if self._error is not None:
-                    raise self._error
-                if bool(self._sync_counter < self._world_size):
+        if self._world_size == 1:  # The below functionalities are not needed if `_world_size == 1`
+            yield from self.datapipe
+        else:
+            self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)
+            while True:
+                with self._cv:
+                    is_success = self._cv.wait_for(
+                        lambda: self._done_callback is True,
+                        self.timeout,
+                    )
+                    if not is_success:
+                        raise PrefetchTimeoutError(self.timeout)
+                    if self._error is not None:
+                        raise self._error
+                    if bool(self._sync_counter < self._world_size):
+                        break
+                    self._done_callback = False
+                    data = self._executor.return_next()  # type: ignore[attr-defined]
+                if isinstance(data, _EndOfPrefetch):
                     break
-                self._done_callback = False
-                data = self._executor.return_next()  # type: ignore[attr-defined]
-            if isinstance(data, _EndOfPrefetch):
-                break
-            yield data
+                yield data
 
     @final
     def reset(self):
@@ -234,15 +234,12 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
         self._sync_counter = torch.tensor([0], dtype=torch.int32)
         self._done_callback = False
 
+    @final
     def pause(self):
         if self._world_size > 1 and self._executor is not None:
             raise RuntimeError("`pause` is not supported for FullSync at the moment.")
-        # if self._executor is not None:
-        #     self._executor.shutdown()
-        #     self._executor = None
 
     @final
     def resume(self):
         if self._world_size > 1 and self._executor is not None:
             raise RuntimeError("`resume` is not supported for FullSync at the moment.")
-        # self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)
