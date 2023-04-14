@@ -704,7 +704,9 @@ class BatchAsyncMapperIterDataPipe(IterDataPipe):
             - Integer is used for list/tuple. ``-1`` represents to append result at the end.
             - Key is used for dict. New key is acceptable.
 
-        max_concurrency: Maximum concurrency to call async functions. (Default value: 32)
+        max_concurrency: Maximum concurrency to call async functions. (Default: ``32``)
+        flatten: Determine if the batches get flatten in the end (Default: ``True``)
+                 If ``False``, outputs will be in batches of size ``batch_size``
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper
@@ -743,10 +745,12 @@ class BatchAsyncMapperIterDataPipe(IterDataPipe):
         input_col=None,
         output_col=None,
         max_concurrency: int = 32,
+        flatten: bool = True,
     ):
         dp = source_datapipe.batch(batch_size)
         dp = _BatchAsyncMapperIterDataPipe(dp, async_fn, input_col, output_col, max_concurrency)
-        dp = dp.flatmap()
+        if flatten:
+            dp = dp.flatmap()
         return dp
 
 
