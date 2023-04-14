@@ -35,7 +35,8 @@ jobs:
       pre-script: ""
       post-script: ""
       package-name: torchdata
-      smoke-test-script: test/smoke_test.py
+      env-var-script: packaging/env-var-script.txt
+      smoke-test-script: test/smoke_test/smoke_test.py
       runner-type: macos-12
       trigger-event: dev
     secrets:
