@@ -246,6 +246,7 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
         self._sync_counter = torch.tensor([0], dtype=torch.int32)
         self._done_callback = False
 
+    @final
     def pause(self):
         if self._executor is not None:
             self._executor.pause()
