@@ -34,8 +34,9 @@ jobs:
       pre-script: "" 
       post-script: ""
       package-name: torchdata
+      env-var-script: packaging/env-var-script.txt
       runner-type: macos-m1-12
-      smoke-test-script: test/smoke_test.py
+      smoke-test-script: test/smoke_test/smoke_test.py
       trigger-event: dev
     secrets:
       AWS_PYTORCH_UPLOADER_ACCESS_KEY_ID: ${{ secrets.AWS_PYTORCH_UPLOADER_ACCESS_KEY_ID }}

@@ -23,19 +23,20 @@ jobs:
       test-infra-ref: main
   build:
     needs: generate-matrix
-    name: pytorch/vision
+    name: pytorch/data
     uses: pytorch/test-infra/.github/workflows/build_conda_macos.yml@main
     with:
-      conda-package-directory: packaging/torchvision
-      repository: pytorch/vision
+      conda-package-directory: packaging/torchdata
+      repository: pytorch/data
       ref: ""
       test-infra-repository: pytorch/test-infra
       test-infra-ref: main
       build-matrix: ${{ needs.generate-matrix.outputs.matrix }}
       pre-script: ""
       post-script: ""
-      package-name: torchvision
-      smoke-test-script: test/smoke_test.py
+      package-name: torchdata
+      env-var-script: packaging/env-var-script.txt
+      smoke-test-script: test/smoke_test/smoke_test.py
       runner-type: macos-m1-12
       trigger-event: dev
     secrets:
