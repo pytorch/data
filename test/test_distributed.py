@@ -42,6 +42,8 @@ if dist.is_mpi_available():
 if dist.is_nccl_available() and torch.cuda.device_count() > 0:
     _backends.append("nccl")
 
+
+world_size_parametrize = parametrize("world_size", [1, DEFAULT_WORLD_SIZE])
 backend_parametrize = parametrize("backend", _backends)
 
 
@@ -149,6 +151,7 @@ class DistributedTest(TestCase):
 
         _finalize_distributed_queue(rank, q)
 
+    @world_size_parametrize
     @backend_parametrize
     def test_fullsync(self, backend) -> None:
         world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()

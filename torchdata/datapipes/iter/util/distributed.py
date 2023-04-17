@@ -180,25 +180,26 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
 
         if self._world_size == 1:  # The below functionalities are not needed if `_world_size == 1`
             yield from self.datapipe
-        else:
-            self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)
-            while True:
-                with self._cv:
-                    is_success = self._cv.wait_for(
-                        lambda: self._done_callback is True,
-                        self.timeout,
-                    )
-                    if not is_success:
-                        raise PrefetchTimeoutError(self.timeout)
-                    if self._error is not None:
-                        raise self._error
-                    if bool(self._sync_counter < self._world_size):
-                        break
-                    self._done_callback = False
-                    data = self._executor.return_next()  # type: ignore[attr-defined]
-                if isinstance(data, _EndOfPrefetch):
+            return
+
+        self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)
+        while True:
+            with self._cv:
+                is_success = self._cv.wait_for(
+                    lambda: self._done_callback is True,
+                    self.timeout,
+                )
+                if not is_success:
+                    raise PrefetchTimeoutError(self.timeout)
+                if self._error is not None:
+                    raise self._error
+                if bool(self._sync_counter < self._world_size):
                     break
-                yield data
+                self._done_callback = False
+                data = self._executor.return_next()  # type: ignore[attr-defined]
+            if isinstance(data, _EndOfPrefetch):
+                break
+            yield data
 
     @final
     def reset(self):

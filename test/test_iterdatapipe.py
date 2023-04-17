@@ -305,6 +305,9 @@ class TestIterDataPipe(expecttest.TestCase):
         actual = list(prefetched_dp)
         self.assertEqual(expected, actual)
 
+        # __len__ Test: returns the same length as source
+        self.assertEqual(len(source_dp), len(prefetched_dp))
+
     def test_repeater_iterdatapipe(self) -> None:
         import itertools
 
@@ -1687,9 +1690,9 @@ class TestIterDataPipe(expecttest.TestCase):
     def test_async_map_batches(self):
         batch_size = 16
 
-        def _helper(input_data, exp_res, async_fn, input_col=None, output_col=None, max_concurrency=32):
+        def _helper(input_data, exp_res, async_fn, input_col=None, output_col=None, max_concurrency=32, flatten=True):
             dp = IterableWrapper(input_data)
-            dp = dp.async_map_batches(async_fn, batch_size, input_col, output_col, max_concurrency)
+            dp = dp.async_map_batches(async_fn, batch_size, input_col, output_col, max_concurrency, flatten)
             self.assertEqual(
                 exp_res,
                 list(dp),
@@ -1755,6 +1758,13 @@ class TestIterDataPipe(expecttest.TestCase):
             _async_x_mul_y,
             input_col=(0, 2),
             output_col=1,
+        )
+        # Skip over `flatten` operation
+        _helper(
+            range(32),
+            [[i * 10 for i in range(16)], [i * 10 for i in range(16, 32)]],
+            _async_mul_ten,
+            flatten=False,
         )
 
         # Test multiple asyncio eventloops
