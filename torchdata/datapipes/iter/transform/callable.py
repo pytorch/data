@@ -754,13 +754,12 @@ class BatchAsyncMapperIterDataPipe(IterDataPipe):
         dp = _BatchAsyncMapperIterDataPipe(dp, async_fn, input_col, output_col, max_concurrency)
         if flatten:
             dp = dp.flatmap()
-        try:
-            if flatten:
+            try:
                 source_length = len(source_datapipe)
                 if isinstance(source_length, int) and source_length >= 0:
                     dp = dp.set_length(source_length)
-        except (TypeError, NotImplementedError):
-            pass
+            except (TypeError, NotImplementedError):
+                pass
         return dp
 
 
