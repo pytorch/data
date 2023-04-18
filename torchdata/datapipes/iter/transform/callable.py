@@ -678,6 +678,9 @@ class _BatchAsyncMapperIterDataPipe(IterDataPipe):
             new_batch.append(data)
         return new_batch
 
+    def __len__(self):
+        return len(self.source_datapipe)
+
 
 @functional_datapipe("async_map_batches")
 class BatchAsyncMapperIterDataPipe(IterDataPipe):
@@ -751,6 +754,12 @@ class BatchAsyncMapperIterDataPipe(IterDataPipe):
         dp = _BatchAsyncMapperIterDataPipe(dp, async_fn, input_col, output_col, max_concurrency)
         if flatten:
             dp = dp.flatmap()
+            try:
+                source_length = len(source_datapipe)
+                if isinstance(source_length, int) and source_length >= 0:
+                    dp = dp.set_length(source_length)
+            except (TypeError, NotImplementedError):
+                pass
         return dp
 
 

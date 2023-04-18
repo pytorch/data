@@ -1698,6 +1698,8 @@ class TestIterDataPipe(expecttest.TestCase):
                 list(dp),
                 msg=f"Async map test with {async_fn=}, {input_col=}, {output_col=}, {max_concurrency=}",
             )
+            if flatten:
+                self.assertEqual(len(input_data), len(dp))
 
         _helper(range(50), [i * 10 for i in range(50)], _async_mul_ten)
 
