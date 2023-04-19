@@ -20,7 +20,11 @@ from torchdata.dataloader2.graph._serialization import (
 )
 from torchdata.dataloader2.random import SeedGenerator
 from torchdata.dataloader2.random.seed_generator import _UINT64_UPPER_BOUND
-from torchdata.dataloader2.reading_service import CheckpointableReadingServiceInterface, ReadingServiceInterface
+from torchdata.dataloader2.reading_service import (
+    CheckpointableReadingServiceInterface,
+    ReadingServiceInterface,
+    SingleProcessingReadingService,
+)
 
 T_co = TypeVar("T_co", covariant=True)
 SERIALIZED_DATAPIPE_KEY_NAME = "serialized_datapipe"
@@ -146,7 +150,7 @@ class DataLoader2(Generic[T_co]):
             right after the creation of the DataLoader.
         datapipe_adapter_fn (``Iterable[Adapter]`` or ``Adapter``, optional): ``Adapter`` function(s) that
             will be applied to the DataPipe (default: ``None``).
-        reading_service (ReadingServiceInterface, optional): defines how ``DataLoader2`` should execute operations over
+        reading_service (ReadingServiceInterface): defines how ``DataLoader2`` should execute operations over
             the ``DataPipe``, e.g. multiprocessing/distributed (default: ``None``). A deepcopy of this will be
             created during initialization, allowing the ReadingService to be re-used in a different
             ``DataLoader2`` without sharing states.
@@ -178,6 +182,7 @@ class DataLoader2(Generic[T_co]):
             self.datapipe_adapter_fns = datapipe_adapter_fn
         else:
             self.datapipe_adapter_fns = [datapipe_adapter_fn]
+
         self.reading_service = clone(reading_service)
         self.reading_service_state: Optional[bytes] = None  # is not `None` when `load_state_dict` is called
         self._terminated: bool = False

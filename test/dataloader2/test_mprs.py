@@ -12,7 +12,12 @@ from torch.testing._internal.common_utils import instantiate_parametrized_tests,
 
 from torch.utils.data.datapipes.iter.sharding import SHARDING_PRIORITIES
 
-from torchdata.dataloader2 import DataLoader2, DataLoader2Iterator, MultiProcessingReadingService
+from torchdata.dataloader2 import (
+    DataLoader2,
+    DataLoader2Iterator,
+    MultiProcessingReadingService,
+    SingleProcessingReadingService,
+)
 from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 
 
@@ -29,6 +34,152 @@ test_dps = [dp1, double_pause_dp]
 
 mp_ctx_parametrize = parametrize("ctx", mp.get_all_start_methods())
 dp_parametrize = parametrize("dp", test_dps)
+
+
+class TestSingleProcessingReadingService(TestCase):
+    r"""
+    This tests specific functionalities of SingleProcessingReadingService, notably
+    `pause`, `resume`, `snapshot`.
+    """
+
+    @dp_parametrize
+    def test_reading_service_pause_resume(self, dp) -> None:
+
+        # Functional Test: Testing various configuration of DataPipe/ReadingService to ensure the pipeline
+        #                  properly pauses and resumes
+        rs = SingleProcessingReadingService()
+        dl: DataLoader2 = DataLoader2(dp, reading_service=rs)
+        res = []
+        for i, x in enumerate(dl):
+            res.append(x)
+            if i in {2, n_elements - 2}:
+                dl._pause()
+                dl._resume()
+
+        self.assertEqual(list(range(n_elements)), sorted(res))
+        dl.shutdown()
+
+    @dp_parametrize
+    def test_reading_service_pause_stop_yield(self, dp) -> None:
+
+        # Functional Test: Confirms that `dl` will stop yielding elements after `_pause` is called
+        rs = SingleProcessingReadingService()
+        dl: DataLoader2 = DataLoader2(dp, reading_service=rs)
+        res = []
+        for i, x in enumerate(dl):
+            res.append(x)
+            if i in {2}:
+                dl._pause()
+        self.assertEqual(3, len(res))
+        dl.shutdown()
+
+    @dp_parametrize
+    def test_reading_service_limit(self, dp) -> None:
+
+        rs = SingleProcessingReadingService()
+
+        dl: DataLoader2 = DataLoader2(dp, reading_service=rs)
+        res = []
+        cumulative_res = []
+        n_limit = 3
+
+        it: DataLoader2Iterator = iter(dl)
+        it.limit(n_limit)
+        for x in it:
+            res.append(x)
+        # Functional Test: Verify that the number of elements yielded equals to the specified limit
+        self.assertEqual(n_limit, len(res))  # 3
+        cumulative_res.extend(res)
+
+        # Functional Test: Calling `next` after `limit` will trigger `StopIteration`
+        with self.assertRaises(StopIteration):
+            next(it)
+
+        # Functional Test: Verify that `limit` persists without the need to set it again
+        it.resume()
+        res = []
+        for x in it:
+            res.append(x)
+        self.assertEqual(n_limit, len(res))  # 3
+        cumulative_res.extend(res)
+
+        # Functional Test: Clear the `limit` and yield the rest of the elements
+        it.limit(None)
+        it.resume()
+        res = []
+        for x in it:
+            res.append(x)
+        self.assertEqual(n_elements - 2 * n_limit, len(res))  # 4
+
+        cumulative_res.extend(res)
+        self.assertEqual(list(range(n_elements)), sorted(cumulative_res))
+
+        # Functional Test: Setting `limit` to a different value during after each mini-epoch
+        dl2: DataLoader2 = DataLoader2(double_pause_dp, reading_service=rs)
+        res = []
+        it2: DataLoader2Iterator = iter(dl2)
+        it2.limit(3)
+        for x in it2:
+            res.append(x)
+
+        # Limit can be set before `resume`
+        it2.limit(4)
+        it2.resume()
+        for x in it2:
+            res.append(x)
+        self.assertEqual(7, len(res))
+
+        # Limit can also be set after `resume`, but before the next `for` loop
+        it2.resume()
+        it2.limit(2)
+        for x in it2:
+            res.append(x)
+        self.assertEqual(9, len(res))
+
+    def test_initial_epoch_checkpointing(self):
+        dp = IterableWrapper(range(20)).shuffle()
+        rs = SingleProcessingReadingService()
+
+        # Functional Test: Saving state before iterator is created
+        dl: DataLoader2 = DataLoader2(datapipe=dp, reading_service=rs)
+        dl.seed(1)
+        initial_state = dl.state_dict()
+        it1 = iter(dl)
+
+        restored_dl: DataLoader2 = DataLoader2.from_state(initial_state, rs)  # type: ignore[arg-type]
+        restored_dl._restore_checkpoint_beginning_of_epoch()
+        self.assertEqual(list(it1), list(restored_dl))
+
+        dl.shutdown()
+        restored_dl.shutdown()
+
+        # Functional Test: Saving state after iterator is created
+        dl = DataLoader2(datapipe=dp, reading_service=rs)
+        dl.seed(1)
+        it1 = iter(dl)
+        initial_state = dl.state_dict()
+
+        restored_dl = DataLoader2.from_state(initial_state, rs)  # type: ignore[arg-type]
+        restored_dl._restore_checkpoint_beginning_of_epoch()
+        self.assertEqual(list(it1), list(restored_dl))
+
+        dl.shutdown()
+        restored_dl.shutdown()
+
+        # Functional Test: Saving state after iterator is created and began iterating
+        dl = DataLoader2(datapipe=dp, reading_service=rs)
+        dl.seed(1)
+        it1 = iter(dl)
+        temp = next(it1)  # Starts iterating
+        initial_state = dl.state_dict()
+
+        restored_dl = DataLoader2.from_state(initial_state, rs)  # type: ignore[arg-type]
+        restored_dl._restore_checkpoint_beginning_of_epoch()
+
+        self.assertEqual([temp] + list(it1), list(restored_dl))  # Note skipping over 1st element from actual result
+
+        dl.shutdown()
+        restored_dl.shutdown()
 
 
 def _non_dispatching_dp(n_elements=1000):
@@ -63,6 +214,12 @@ class TestMultiProcessingReadingService(TestCase):
     `pause`, `resume`, `snapshot`.
     """
 
+    def test_zero_worker(self) -> None:
+        rs = MultiProcessingReadingService(
+            num_workers=0,
+        )
+        self.assertTrue(isinstance(rs, SingleProcessingReadingService))
+
     @mp_ctx_parametrize
     @parametrize("dp_fn", [subtest(_non_dispatching_dp, "non_dispatch"), subtest(_dispatching_dp, "dispatch")])
     @parametrize("main_prefetch", [0, 10])
@@ -96,25 +253,6 @@ class TestMultiProcessingReadingService(TestCase):
         dl: DataLoader2 = DataLoader2(dp, reading_service=rs)
         _ = list(dl)
         dl.shutdown()
-
-    @mp_ctx_parametrize
-    def test_reading_service_pause_resume_0_worker(self, ctx) -> None:
-
-        # Functional Test: Verifies that this ReadingService will raise error when `pause/resume` is used
-        #                  with `num_workers = 0`
-        rs0 = MultiProcessingReadingService(
-            num_workers=0, worker_prefetch_cnt=0, main_prefetch_cnt=0, multiprocessing_context=ctx
-        )
-        dl0: DataLoader2 = DataLoader2(dp1, reading_service=rs0)
-        res0 = []
-        for i, x in enumerate(dl0):
-            res0.append(x)
-            if i in {2}:
-                with self.assertRaisesRegex(RuntimeError, r"pause"):
-                    dl0._pause()
-                with self.assertRaisesRegex(RuntimeError, r"resume"):
-                    dl0._resume()
-        dl0.shutdown()
 
     @mp_ctx_parametrize
     @dp_parametrize
@@ -394,6 +532,7 @@ class TestMultiProcessingReadingService(TestCase):
     #     pass
 
 
+instantiate_parametrized_tests(TestSingleProcessingReadingService)
 instantiate_parametrized_tests(TestMultiProcessingReadingService)
 
 

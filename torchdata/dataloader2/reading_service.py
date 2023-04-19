@@ -146,6 +146,71 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         return MultiProcessingReadingService(*args, **kwargs)
 
 
+class SingleProcessingReadingService(ReadingServiceInterface):
+    r"""
+    Default ReadingService to serve the ``DataPipe` graph in the main process,
+    and apply graph settings like determinism control to the graph.
+
+    Args:
+        init_fn: (Callable, optional): Custom function to be called when the main
+            process starts to iterate over ``DataPipe`` graph.
+        reset_fn: (Callable, optional): Custom function to be called at the beginning
+            of each epoch with ``DataPipe``, ``WorkerInfo`` and ``SeedGenerator``
+            as the expected arguments.
+    """
+    _init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]]
+    _reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]]
+    _end_datapipe: Optional[DataPipe]
+
+    def __init__(
+        self,
+        init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]] = None,
+        reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
+    ) -> None:
+        self._init_fn = init_fn
+        self._reset_fn = reset_fn
+        self._end_datapipe = None
+
+    def initialize(self, datapipe: DataPipe) -> DataPipe:
+        worker_info = WorkerInfo(1, 0)
+        datapipe = process_init_fn(datapipe, worker_info, self._init_fn)
+        self._end_datapipe = datapipe
+        return datapipe
+
+    def initialize_iteration(
+        self, seed_generator: SeedGenerator, iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
+        assert self._end_datapipe is not None
+
+        # Set random seeds for DataPipe that are in the main process (NOT those in worker processes)
+        # Worker seeds are set in `process_reset_fn`
+        set_graph_random_seed(self._end_datapipe, seed_generator)
+
+        return None
+
+    def _pause(self):
+        """
+        Pauses DataPipes' activities in the main process in order to collect state.
+        """
+        assert self._end_datapipe is not None
+
+        dp_list = list_dps(traverse_dps(self._end_datapipe))
+        for dp in dp_list:
+            if hasattr(dp, "pause") and callable(dp.pause):
+                dp.pause()
+
+    def _resume(self):
+        """
+        Resumes DataPipes' activities. This is required to be called after `_pause` before
+        the DataLoader can keep yielding elements.
+        """
+        dp_list = list_dps(traverse_dps(self._end_datapipe))
+        # Reversed order
+        for dp in dp_list[::-1]:
+            if hasattr(dp, "resume") and callable(dp.resume):
+                dp.resume()
+
+
 class MultiProcessingReadingService(ReadingServiceInterface):
     r"""
     Spawns multiple worker processes to load data from the ``DataPipe`` graph.
@@ -157,7 +222,6 @@ class MultiProcessingReadingService(ReadingServiceInterface):
 
     Args:
         num_workers (int, optional): How many subprocesses to use for data loading.
-            ``0`` will be replaced by ``InProcessReadingService`` in the future.
         multiprocessing_context (str, optional): Multiprocessing starting method.
             If method is None then the default context is returned.
             Otherwise, method should be 'fork', 'spawn'.
@@ -186,6 +250,20 @@ class MultiProcessingReadingService(ReadingServiceInterface):
     _mp: bool
     _finalized: bool = False
 
+    def __new__(
+        cls,
+        num_workers: int = 0,
+        multiprocessing_context: Optional[str] = None,
+        worker_prefetch_cnt: int = 10,
+        main_prefetch_cnt: int = 10,
+        worker_init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]] = None,
+        worker_reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
+    ):
+        if num_workers == 0:
+            warnings.warn(f"`SingleProcessingReadingService` is used when {num_workers=}")
+            return SingleProcessingReadingService(worker_init_fn, worker_reset_fn)
+        return super().__new__(cls)
+
     def __init__(
         self,
         num_workers: int = 0,
@@ -195,6 +273,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         worker_init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]] = None,
         worker_reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
     ) -> None:
+        assert num_workers > 0
         self.num_workers = num_workers
         if multiprocessing_context is not None:
             _all_start_methods = mp.get_all_start_methods()
@@ -212,7 +291,6 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         self._worker_consumer_datapipe = None
         self._main_prefetch_datapipe = None
         self._end_datapipe = None
-        self._mp = num_workers > 0
 
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         r"""
@@ -220,13 +298,6 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         separates graph by multiple pieces and reconnects it using queues.
         creates subprocesses.
         """
-        if not self._mp:
-            # TODO(616): Warn and recommend usage of InProcessReadingService
-            worker_info = WorkerInfo(1, 0)
-            datapipe = process_init_fn(datapipe, worker_info, self.worker_init_fn)
-            self._end_datapipe = datapipe
-            return datapipe
-
         ctx = mp.get_context(self.multiprocessing_context)
 
         # Launch dispatching process for the lowest common ancestor of non-replicable DataPipes
