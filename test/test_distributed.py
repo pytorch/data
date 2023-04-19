@@ -153,8 +153,8 @@ class DistributedTest(TestCase):
 
     @world_size_parametrize
     @backend_parametrize
-    def test_fullsync(self, backend) -> None:
-        world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
+    def test_fullsync(self, world_size, backend) -> None:
+        world_size = world_size if backend != "nccl" else torch.cuda.device_count()
         launch_distributed_training(backend, world_size, fn=DistributedTest._test_fullsync)
 
     @staticmethod
