@@ -37,10 +37,10 @@ copyright = "2021 - Present, Torch Contributors"
 author = "Torch Contributors"
 
 # The short X.Y version
-version = "0.6.0"
+version = "0.6.1"
 
 # The full version, including alpha/beta/rc tags
-release = "0.6.0 (beta)"
+release = "0.6.1 (beta)"
 
 
 # -- General configuration ---------------------------------------------------
