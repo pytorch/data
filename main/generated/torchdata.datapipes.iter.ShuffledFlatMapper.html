@@ -221,7 +221,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.7.0a0+f2bfd3d ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.7.0a0+d13a7e1 ) &#x25BC</a>
     </div>
     
 
@@ -380,7 +380,7 @@ If ``fn`` is ``None``, source DataPipe will be just flattened vertically, provid
 <span class="gp">&gt;&gt;&gt; </span><span class="n">shuffled_flatmapped_dp</span> <span class="o">=</span> <span class="n">source_dp</span><span class="o">.</span><span class="n">shuffled_flatmap</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">shuffled_flatmapped_dp</span><span class="p">)</span>
 <span class="go">[&#39;a&#39;, &#39;b&#39;, &#39;c&#39;, 1, &#39;d&#39;, &#39;A&#39;, &#39;B&#39;, &#39;C&#39;, 2, &#39;D&#39;, 3, 4]</span>
-<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># To shuffle all the elements, you can combine `shuffled_flatmap` with `in_batch_shuffle` like this:</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">fully_shuffled_flatmapped_dp</span> <span class="o">=</span> <span class="n">source_dp</span><span class="o">.</span><span class="n">in_batch_shuffle</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">fully_shuffled_flatmapped_dp</span> <span class="o">=</span> <span class="n">fully_shuffled_flatmapped_dp</span><span class="o">.</span><span class="n">shuffled_flatmap</span><span class="p">()</span>
