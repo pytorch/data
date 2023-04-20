@@ -14,10 +14,6 @@ export CU_VERSION=cpu
 export NO_CUDA_PACKAGE=1
 export BUILD_TYPE="conda"
 
-if [[ "$PYTHON_VERSION" == "3.11" ]]; then
-  export CONDA_CHANNEL_FLAGS="${CONDA_CHANNEL_FLAGS} -c malfet"
-fi
-
 export SOURCE_ROOT_DIR="$PWD"
 setup_env
 setup_conda_pytorch_constraint
