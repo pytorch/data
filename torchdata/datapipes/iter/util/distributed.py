@@ -186,12 +186,16 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
 
     def __iter__(self) -> Iterator[T_co]:
         assert self._executor is None
-
         if not (dist.is_available() and dist.is_initialized()):
-            raise RuntimeError("Torch Distributed is required to be initialized")
+            raise RuntimeError("Torch Distributed is required to be initialized to use `FullSync`.")
+
         if self._process_group is None:
             self._process_group = dist.new_group(backend="gloo")
         self._world_size = dist.get_world_size()
+
+        if self._world_size == 1:  # The below functionalities are not needed if `_world_size == 1`
+            yield from self.datapipe
+            return
 
         self._executor = _PrefetchExecutor(iter(self.datapipe), 1, self._callback_fn, self.timeout)
         while True:
