@@ -1,1 +1,2 @@
 export BUILD_S3="1"
+export MACOSX_DEPLOYMENT_TARGET="10.13"
