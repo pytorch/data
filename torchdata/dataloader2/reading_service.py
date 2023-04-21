@@ -204,6 +204,8 @@ class SingleProcessingReadingService(ReadingServiceInterface):
         Resumes DataPipes' activities. This is required to be called after `_pause` before
         the DataLoader can keep yielding elements.
         """
+        assert self._end_datapipe is not None
+
         dp_list = list_dps(traverse_dps(self._end_datapipe))
         # Reversed order
         for dp in dp_list[::-1]:
