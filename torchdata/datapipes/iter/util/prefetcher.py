@@ -21,13 +21,37 @@ CONSUMER_SLEEP_INTERVAL = 0.0001  # Interval between checking items availability
 
 
 class _PrefetchData:
-    def __init__(self, source_datapipe, buffer_size: int):
+    def __init__(self, source_datapipe, buffer_size: int, profiling: bool = False):
         self.run_prefetcher: bool = True
         self.prefetch_buffer: Deque = deque()
         self.buffer_size: int = buffer_size
         self.source_datapipe = source_datapipe
         self.stop_iteration: bool = False
         self.paused: bool = False
+
+        self.profiling = profiling
+        self.sleep_time = 0
+        self.fetch_count = 0
+        self.aggregate_queue_size_at_yield = 0
+        self.initial_time = None
+        self.latest_time = None
+
+    def get_average_fetch_time(self) -> float:
+        if not self.profiling:
+            raise RuntimeError("Prefetcher must be profiling to know the average_fetch_time.")
+        total_time = self.latest_time - self.initial_time
+        return total_time / self.fetch_count
+
+    def get_percent_sleep_time(self) -> float:
+        if not self.profiling:
+            raise RuntimeError("Prefetcher must be profiling to know the percent_sleep_time.")
+        total_time = self.latest_time - self.initial_time
+        return self.sleep_time / total_time
+
+    def get_average_queue_size_at_yield(self, n_samples_yielded: int) -> float:
+        if not self.profiling:
+            raise RuntimeError("Prefetcher must be profiling to know the average_queue_size_at_yield.")
+        return (self.aggregate_queue_size_at_yield / n_samples_yielded) / self.buffer_size
 
 
 @functional_datapipe("prefetch")
@@ -54,12 +78,13 @@ class PrefetcherIterDataPipe(IterDataPipe):
         >>> dp = IterableWrapper(file_paths).open_files().prefetch(5)
     """
 
-    def __init__(self, source_datapipe, buffer_size: int = 10):
+    def __init__(self, source_datapipe, buffer_size: int = 10, profiling: bool = False):
         self.source_datapipe = source_datapipe
         if buffer_size <= 0:
             raise ValueError("'buffer_size' is required to be a positive integer.")
         self.buffer_size = buffer_size
         self.thread: Optional[threading.Thread] = None
+        self.profiling = profiling
 
     @staticmethod
     def thread_worker(prefetch_data: _PrefetchData):
@@ -70,6 +95,12 @@ class PrefetcherIterDataPipe(IterDataPipe):
                 if len(prefetch_data.prefetch_buffer) < prefetch_data.buffer_size:
                     try:
                         item = next(itr)
+                        if prefetch_data.profiling:
+                            t = time.time()
+                            if prefetch_data.fetch_count == 0:
+                                prefetch_data.initial_time = t
+                            prefetch_data.latest_time = t
+                            prefetch_data.fetch_count += 1
                         prefetch_data.prefetch_buffer.append(item)
                     except Exception as e:
                         prefetch_data.run_prefetcher = False
@@ -77,14 +108,35 @@ class PrefetcherIterDataPipe(IterDataPipe):
                         prefetch_data.prefetch_buffer.append(e)
                 else:  # Buffer is full, waiting for main thread to consume items
                     # TODO: Calculate sleep interval based on previous consumption speed
+                    if prefetch_data.profiling:
+                        prefetch_data.sleep_time += PRODUCER_SLEEP_INTERVAL
                     time.sleep(PRODUCER_SLEEP_INTERVAL)
             prefetch_data.paused = True
             # Sleep longer when this prefetcher thread is paused
             time.sleep(PRODUCER_SLEEP_INTERVAL * 10)
 
+    def get_average_fetch_time(self):
+        if self.prefetch_data and self.profiling:
+            return self.prefetch_data.get_average_fetch_time()
+        else:
+            raise RuntimeError("Usage of prefetch worker and `profiling=True` are required to get this statistic.")
+
+    def get_percent_sleep_time(self):
+        if self.prefetch_data and self.profiling:
+            return self.prefetch_data.get_percent_sleep_time()
+        else:
+            raise RuntimeError("Usage of prefetch worker and `profiling=True` are required to get this statistic.")
+
+    def get_average_queue_size_at_yield(self):
+        """If this percentage is very low, it may mean consumers are faster than what prefetch allows."""
+        if self.prefetch_data and self.profiling:
+            return self.prefetch_data.get_average_queue_size_at_yield(self._number_of_samples_yielded)
+        else:
+            raise RuntimeError("Usage of prefetch worker and `profiling=True` are required to get this statistic.")
+
     def __iter__(self):
         try:
-            prefetch_data = _PrefetchData(self.source_datapipe, self.buffer_size)
+            prefetch_data = _PrefetchData(self.source_datapipe, self.buffer_size, profiling=self.profiling)
             self.prefetch_data = prefetch_data
             thread = threading.Thread(target=PrefetcherIterDataPipe.thread_worker, args=(prefetch_data,), daemon=True)
             thread.start()
@@ -100,6 +152,8 @@ class PrefetcherIterDataPipe(IterDataPipe):
                         if isinstance(data, (StopIteration, communication.iter.TerminateRequired)):
                             break
                         raise data
+                    if self.profiling:
+                        prefetch_data.aggregate_queue_size_at_yield += len(prefetch_data.prefetch_buffer)
                     yield data
                 else:
                     time.sleep(CONSUMER_SLEEP_INTERVAL)
