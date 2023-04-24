@@ -22,8 +22,8 @@ from torchdata.dataloader2.random import SeedGenerator
 from torchdata.dataloader2.random.seed_generator import _UINT64_UPPER_BOUND
 from torchdata.dataloader2.reading_service import (
     CheckpointableReadingServiceInterface,
+    InProcessReadingService,
     ReadingServiceInterface,
-    SingleProcessingReadingService,
 )
 
 T_co = TypeVar("T_co", covariant=True)
@@ -150,7 +150,7 @@ class DataLoader2(Generic[T_co]):
             right after the creation of the DataLoader.
         datapipe_adapter_fn (``Iterable[Adapter]`` or ``Adapter``, optional): ``Adapter`` function(s) that
             will be applied to the DataPipe (default: ``None``).
-        reading_service (ReadingServiceInterface): defines how ``DataLoader2`` should execute operations over
+        reading_service (ReadingServiceInterface, optional): defines how ``DataLoader2`` should execute operations over
             the ``DataPipe``, e.g. multiprocessing/distributed (default: ``None``). A deepcopy of this will be
             created during initialization, allowing the ReadingService to be re-used in a different
             ``DataLoader2`` without sharing states.

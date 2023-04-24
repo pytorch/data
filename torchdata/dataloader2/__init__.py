@@ -10,11 +10,11 @@ from torchdata.dataloader2.error import PauseIteration
 from torchdata.dataloader2.reading_service import (
     CheckpointableReadingServiceInterface,
     DistributedReadingService,
+    InProcessReadingService,
     MultiProcessingReadingService,
     PrototypeMultiProcessingReadingService,
     ReadingServiceInterface,
     SequentialReadingService,
-    SingleProcessingReadingService,
 )
 from torchdata.dataloader2.shuffle_spec import ShuffleSpec
 
@@ -23,13 +23,13 @@ __all__ = [
     "DataLoader2",
     "DataLoader2Iterator",
     "DistributedReadingService",
+    "InProcessReadingService",
     "MultiProcessingReadingService",
     "PauseIteration",
     "PrototypeMultiProcessingReadingService",
     "ReadingServiceInterface",
     "SequentialReadingService",
     "ShuffleSpec",
-    "SingleProcessingReadingService",
 ]
 
 assert __all__ == sorted(__all__)

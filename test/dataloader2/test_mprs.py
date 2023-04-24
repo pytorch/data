@@ -15,8 +15,8 @@ from torch.utils.data.datapipes.iter.sharding import SHARDING_PRIORITIES
 from torchdata.dataloader2 import (
     DataLoader2,
     DataLoader2Iterator,
+    InProcessReadingService,
     MultiProcessingReadingService,
-    SingleProcessingReadingService,
 )
 from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 
@@ -36,9 +36,9 @@ mp_ctx_parametrize = parametrize("ctx", mp.get_all_start_methods())
 dp_parametrize = parametrize("dp", test_dps)
 
 
-class TestSingleProcessingReadingService(TestCase):
+class TestInProcessReadingService(TestCase):
     r"""
-    This tests specific functionalities of SingleProcessingReadingService, notably
+    This tests specific functionalities of InProcessReadingService, notably
     `pause`, `resume`, `snapshot`.
     """
 
@@ -47,23 +47,35 @@ class TestSingleProcessingReadingService(TestCase):
 
         # Functional Test: Testing various configuration of DataPipe/ReadingService to ensure the pipeline
         #                  properly pauses and resumes
-        rs = SingleProcessingReadingService()
-        dl: DataLoader2 = DataLoader2(dp, reading_service=rs)
+        rs1 = InProcessReadingService()
+        dl1: DataLoader2 = DataLoader2(dp, reading_service=rs1)
         res = []
-        for i, x in enumerate(dl):
+        for i, x in enumerate(dl1):
             res.append(x)
             if i in {2, n_elements - 2}:
-                dl._pause()
-                dl._resume()
+                dl1._pause()
+                dl1._resume()
 
         self.assertEqual(list(range(n_elements)), sorted(res))
-        dl.shutdown()
+        dl1.shutdown()
+
+        rs2 = InProcessReadingService(5)
+        dl2: DataLoader2 = DataLoader2(dp, reading_service=rs2)
+        res = []
+        for i, x in enumerate(dl2):
+            res.append(x)
+            if i in {2, n_elements - 2}:
+                dl2._pause()
+                dl2._resume()
+
+        self.assertEqual(list(range(n_elements)), sorted(res))
+        dl2.shutdown()
 
     @dp_parametrize
     def test_reading_service_pause_stop_yield(self, dp) -> None:
 
         # Functional Test: Confirms that `dl` will stop yielding elements after `_pause` is called
-        rs = SingleProcessingReadingService()
+        rs = InProcessReadingService(5)
         dl: DataLoader2 = DataLoader2(dp, reading_service=rs)
         res = []
         for i, x in enumerate(dl):
@@ -76,7 +88,7 @@ class TestSingleProcessingReadingService(TestCase):
     @dp_parametrize
     def test_reading_service_limit(self, dp) -> None:
 
-        rs = SingleProcessingReadingService()
+        rs = InProcessReadingService(5)
 
         dl: DataLoader2 = DataLoader2(dp, reading_service=rs)
         res = []
@@ -138,7 +150,7 @@ class TestSingleProcessingReadingService(TestCase):
 
     def test_initial_epoch_checkpointing(self):
         dp = IterableWrapper(range(20)).shuffle()
-        rs = SingleProcessingReadingService()
+        rs = InProcessReadingService(5)
 
         # Functional Test: Saving state before iterator is created
         dl: DataLoader2 = DataLoader2(datapipe=dp, reading_service=rs)
@@ -218,7 +230,7 @@ class TestMultiProcessingReadingService(TestCase):
         rs = MultiProcessingReadingService(
             num_workers=0,
         )
-        self.assertTrue(isinstance(rs, SingleProcessingReadingService))
+        self.assertTrue(isinstance(rs, InProcessReadingService))
 
     @mp_ctx_parametrize
     @parametrize("dp_fn", [subtest(_non_dispatching_dp, "non_dispatch"), subtest(_dispatching_dp, "dispatch")])
@@ -532,7 +544,7 @@ class TestMultiProcessingReadingService(TestCase):
     #     pass
 
 
-instantiate_parametrized_tests(TestSingleProcessingReadingService)
+instantiate_parametrized_tests(TestInProcessReadingService)
 instantiate_parametrized_tests(TestMultiProcessingReadingService)
 
 

@@ -146,27 +146,31 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
         return MultiProcessingReadingService(*args, **kwargs)
 
 
-class SingleProcessingReadingService(ReadingServiceInterface):
+class InProcessReadingService(ReadingServiceInterface):
     r"""
     Default ReadingService to serve the ``DataPipe` graph in the main process,
     and apply graph settings like determinism control to the graph.
 
     Args:
+        prefetch_cnt: (int, 0 by default): Number of data will be prefetched in the main process.
         init_fn: (Callable, optional): Custom function to be called when the main
             process starts to iterate over ``DataPipe`` graph.
         reset_fn: (Callable, optional): Custom function to be called at the beginning
             of each epoch with ``DataPipe``, ``WorkerInfo`` and ``SeedGenerator``
             as the expected arguments.
     """
+    _prefetch_cnt: int
     _init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]]
     _reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]]
     _end_datapipe: Optional[DataPipe]
 
     def __init__(
         self,
+        prefetch_cnt: int = 0,
         init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]] = None,
         reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
     ) -> None:
+        self._prefetch_cnt = prefetch_cnt
         self._init_fn = init_fn
         self._reset_fn = reset_fn
         self._end_datapipe = None
@@ -262,8 +266,8 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         worker_reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
     ):
         if num_workers == 0:
-            warnings.warn(f"`SingleProcessingReadingService` is used when {num_workers=}")
-            return SingleProcessingReadingService(worker_init_fn, worker_reset_fn)
+            warnings.warn(f"`InProcessReadingService` is used when {num_workers=}")
+            return InProcessReadingService(worker_init_fn, worker_reset_fn)
         return super().__new__(cls)
 
     def __init__(

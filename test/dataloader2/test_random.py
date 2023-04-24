@@ -15,7 +15,7 @@ import numpy as np
 import torch
 
 from torch.testing._internal.common_utils import instantiate_parametrized_tests, IS_WINDOWS, parametrize
-from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService, SingleProcessingReadingService
+from torchdata.dataloader2 import DataLoader2, InProcessReadingService, MultiProcessingReadingService
 from torchdata.dataloader2.graph.settings import set_graph_random_seed
 from torchdata.dataloader2.random import SeedGenerator
 from torchdata.datapipes.iter import IterableWrapper
@@ -116,7 +116,7 @@ class DeterminismTest(TestCase):
 
         data_source = IterableWrapper(exp)
         dp = data_source.shuffle().sharding_filter().map(_random_fn)
-        rs = SingleProcessingReadingService()
+        rs = InProcessReadingService()
         dl = DataLoader2(dp, reading_service=rs)
 
         # No seed
