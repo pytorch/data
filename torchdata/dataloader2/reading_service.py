@@ -265,8 +265,11 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         worker_init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]] = None,
         worker_reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
     ) -> None:
-        assert num_workers > 0, "Please use `InProcessReadingService` for num_workers=0"
+        if num_workers == 0:
+            raise ValueError("Please use `InProcessReadingService` for num_workers=0")
+        assert num_workers > 0
         self.num_workers = num_workers
+
         if multiprocessing_context is not None:
             _all_start_methods = mp.get_all_start_methods()
             assert (
