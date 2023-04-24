@@ -226,12 +226,6 @@ class TestMultiProcessingReadingService(TestCase):
     `pause`, `resume`, `snapshot`.
     """
 
-    def test_zero_worker(self) -> None:
-        rs = MultiProcessingReadingService(
-            num_workers=0,
-        )
-        self.assertTrue(isinstance(rs, InProcessReadingService))
-
     @mp_ctx_parametrize
     @parametrize("dp_fn", [subtest(_non_dispatching_dp, "non_dispatch"), subtest(_dispatching_dp, "dispatch")])
     @parametrize("main_prefetch", [0, 10])

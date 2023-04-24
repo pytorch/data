@@ -227,7 +227,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
     process and eventually return the result to the main process.
 
     Args:
-        num_workers (int, optional): How many subprocesses to use for data loading.
+        num_workers (int): How many subprocesses to use for data loading.
         multiprocessing_context (str, optional): Multiprocessing starting method.
             If method is None then the default context is returned.
             Otherwise, method should be 'fork', 'spawn'.
@@ -256,30 +256,16 @@ class MultiProcessingReadingService(ReadingServiceInterface):
     _mp: bool
     _finalized: bool = False
 
-    def __new__(
-        cls,
-        num_workers: int = 0,
-        multiprocessing_context: Optional[str] = None,
-        worker_prefetch_cnt: int = 10,
-        main_prefetch_cnt: int = 10,
-        worker_init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]] = None,
-        worker_reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
-    ):
-        if num_workers == 0:
-            warnings.warn(f"`InProcessReadingService` is used when {num_workers=}")
-            return InProcessReadingService(worker_init_fn, worker_reset_fn)
-        return super().__new__(cls)
-
     def __init__(
         self,
-        num_workers: int = 0,
+        num_workers: int,
         multiprocessing_context: Optional[str] = None,
         worker_prefetch_cnt: int = 10,
         main_prefetch_cnt: int = 10,
         worker_init_fn: Optional[Callable[[DataPipe, WorkerInfo], DataPipe]] = None,
         worker_reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
     ) -> None:
-        assert num_workers > 0
+        assert num_workers > 0, "Please use `InProcessReadingService` for num_workers=0"
         self.num_workers = num_workers
         if multiprocessing_context is not None:
             _all_start_methods = mp.get_all_start_methods()
