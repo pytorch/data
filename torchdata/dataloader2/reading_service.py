@@ -404,6 +404,13 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         if self.main_prefetch_cnt > 0 and self.num_workers > 0:
             self._main_prefetch_datapipe.resume()  # type: ignore[union-attr]
 
+    def _limit(self, num_batches: Optional[int]) -> None:
+        """
+        For this ReadingService, `DataLoader2Iterator` and `DataLoader2` should sufficiently handle
+        the limit operation, such that nothing needs to be done here.
+        """
+        pass
+
 
 class DistributedReadingService(ReadingServiceInterface):
     r"""
