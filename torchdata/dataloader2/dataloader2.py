@@ -11,7 +11,13 @@ from typing import Any, Dict, Generic, Iterable, Iterator, Optional, TypeVar, Un
 
 from torchdata.dataloader2.adapter import Adapter
 from torchdata.dataloader2.error import PauseIteration
-from torchdata.dataloader2.graph._serialization import clone, DataPipe, deserialize_datapipe, serialize_datapipe
+from torchdata.dataloader2.graph._serialization import (
+    clone,
+    DataPipe,
+    deserialize_datapipe,
+    MapDataPipe,
+    serialize_datapipe,
+)
 from torchdata.dataloader2.random import SeedGenerator
 from torchdata.dataloader2.random.seed_generator import _UINT64_UPPER_BOUND
 from torchdata.dataloader2.reading_service import CheckpointableReadingServiceInterface, ReadingServiceInterface
@@ -92,8 +98,6 @@ class DataLoader2Iterator(Iterator[T_co]):
         Restarts the threads within ``DataLoader2`` and allows it to yield additional batches.
         """
         self.dataloader._resume()
-        if self.dataloader._datapipe_iter and hasattr(self.dataloader._datapipe_iter, "resume"):
-            self.dataloader._datapipe_iter.resume()  # type: ignore[attr-defined]
 
     def limit(self, num_batches: Optional[int]) -> None:
         """
@@ -112,8 +116,7 @@ class DataLoader2Iterator(Iterator[T_co]):
         """
         self.limit_counter = 0
         self.limit_threshold = num_batches
-        if self.dataloader._datapipe_iter and hasattr(self.dataloader._datapipe_iter, "limit"):
-            self.dataloader._datapipe_iter.limit(num_batches)  # type: ignore[attr-defined]
+        self.dataloader._limit(num_batches)
 
     def __getattr__(self, name):
         """
@@ -145,6 +148,13 @@ class DataLoader2(Generic[T_co]):
             the ``DataPipe``, e.g. multiprocessing/distributed (default: ``None``). A deepcopy of this will be
             created during initialization, allowing the ReadingService to be re-used in a different
             ``DataLoader2`` without sharing states.
+
+    Note:
+        When a ``MapDataPipe`` is passed into ``DataLoader2``, in order to iterate through
+        the data, ``DataLoader2`` will attempt to create an iterator via ``iter(datapipe)``.
+        If the object has a non-zero-indexed indices, this may fail.
+        Consider using ``.shuffle()`` (which converts ``MapDataPipe`` to ``IterDataPipe``)
+        or ``datapipe.to_iter_datapipe(custom_indices)``.
     """
 
     def __init__(
@@ -153,6 +163,8 @@ class DataLoader2(Generic[T_co]):
         datapipe_adapter_fn: Optional[Union[Iterable[Adapter], Adapter]] = None,
         reading_service: Optional[ReadingServiceInterface] = None,
     ) -> None:
+        if isinstance(datapipe, MapDataPipe):
+            datapipe = datapipe.to_iter_datapipe()
         self.datapipe = clone(datapipe) if datapipe is not None else None
         self._adapted: bool = False
         self._datapipe_iter: Optional[Iterator[T_co]] = None
@@ -369,11 +381,8 @@ class DataLoader2(Generic[T_co]):
         if hasattr(self.reading_service, "_pause"):
             self._is_paused = True
             self.reading_service._pause()
-        # TODO: the condition should be `else` once `self._datapipe_iter.pause/limit()` is no longer used
-        elif self._datapipe_iter is None or not (
-            hasattr(self._datapipe_iter, "limit") or hasattr(self._datapipe_iter, "pause")
-        ):
-            warnings.warn("ReadingService doesn't support pause.")
+        else:
+            warnings.warn("ReadingService doesn't support `pause`.")
 
     def _resume(self):
         if hasattr(self.reading_service, "_resume"):
@@ -382,6 +391,11 @@ class DataLoader2(Generic[T_co]):
             else:
                 self.reading_service._resume()
                 self._is_paused = False
-        # TODO: the condition should be `else` once `self._datapipe_iter.resume()` is no longer used
-        elif self._datapipe_iter is None or not hasattr(self._datapipe_iter, "resume"):
-            warnings.warn("ReadingService doesn't support resume.")
+        else:
+            warnings.warn("ReadingService doesn't support `resume`.")
+
+    def _limit(self, num_batches: Optional[int]) -> None:
+        if hasattr(self.reading_service, "_limit"):
+            self.reading_service._limit(num_batches)
+        else:
+            warnings.warn("ReadingService doesn't support `limit`.")

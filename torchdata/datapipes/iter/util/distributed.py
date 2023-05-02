@@ -6,6 +6,8 @@
 
 import threading
 
+import time
+
 from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError
 from dataclasses import dataclass
@@ -18,6 +20,8 @@ import torch.distributed as dist
 from torchdata._constants import default_timeout_in_s
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
+from torchdata.datapipes.iter.util.prefetcher import PRODUCER_SLEEP_INTERVAL
+
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -66,6 +70,7 @@ class _PrefetchExecutor:
         self._futures: Deque[Future] = deque()
         self._lock = threading.RLock()
         self._end_flag = False
+        self._paused = False
         self._idx = 0
         for _ in range(prefetch_size):
             with self._lock:
@@ -78,7 +83,11 @@ class _PrefetchExecutor:
                 self._idx += 1
 
     def fetch_next(self):
-        return next(self.datapipe_iterator)
+        while self._paused:
+            time.sleep(PRODUCER_SLEEP_INTERVAL * 10)
+
+        res = next(self.datapipe_iterator)
+        return res
 
     def _done_callback_fn(self, index: int, f: Future):
         if f.exception():
@@ -106,6 +115,12 @@ class _PrefetchExecutor:
 
     def shutdown(self):
         self._executor.shutdown(wait=True)
+
+    def pause(self):
+        self._paused = True
+
+    def resume(self):
+        self._paused = False
 
 
 @functional_datapipe("fullsync")
@@ -237,10 +252,10 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
 
     @final
     def pause(self):
-        if self._world_size > 1 and self._executor is not None:
-            raise RuntimeError("`pause` is not supported for FullSync at the moment.")
+        if self._executor is not None:
+            self._executor.pause()
 
     @final
     def resume(self):
-        if self._world_size > 1 and self._executor is not None:
-            raise RuntimeError("`resume` is not supported for FullSync at the moment.")
+        if self._executor is not None:
+            self._executor.resume()
