@@ -40,6 +40,7 @@ def _non_dispatching_dp(n_elements=1000):
 
 def _dispatching_dp(n_elements=1000):
     dp = IterableWrapper(list(range(n_elements))).shuffle()
+    dp = dp.prefetch()
     dp = dp.sharding_round_robin_dispatch(SHARDING_PRIORITIES.MULTIPROCESSING)
     dp = dp.map(_add_one).batch(16)
     return dp

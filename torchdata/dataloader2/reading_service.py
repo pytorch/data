@@ -366,12 +366,20 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         self._worker_processes = []
         self._dispatch_process = None
 
-    def _pause(self):
+    def _pause(
+        self, pause_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
         """
         Pauses DataPipes' activities such as prefetching within main/worker/dispatching processes,
         in order to collect state.
         """
+        if self.num_workers == 0:
+            raise RuntimeError(
+                "If you would like to use `pause` with `MultiProcessingReadingService`, "
+                "please use more than 0 worker."
+            )
         assert self._end_datapipe is not None
+        # Call pause for DataPipes in the main process (e.g. prefetch, fullsync)
         dp_list = list_dps(traverse_dps(self._end_datapipe))
         for dp in dp_list:
             # TODO: Combine QueueWrapper and _IterateQueueDataPipes,
@@ -381,35 +389,45 @@ class MultiProcessingReadingService(ReadingServiceInterface):
                 continue
             if hasattr(dp, "pause") and callable(dp.pause):
                 dp.pause()
-        if self.num_workers > 0:
-            self._worker_consumer_datapipe.request_pause()  # type: ignore[union-attr]
-        else:
-            raise RuntimeError(
-                "If you would like to use `pause` with `MultiProcessingReadingService`, "
-                "please use more than 0 worker."
-            )
+        self._worker_consumer_datapipe.request_pause(pause_fn)  # type: ignore[union-attr]
+        return None
 
-    def _resume(self):
+    def _resume(
+        self, resume_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
         """
         Resumes DataPipes' activities. This is required to be called after `_pause` before
         the DataLoader can keep yielding elements.
         """
         if self.num_workers > 0:
-            self._worker_consumer_datapipe.request_resume()  # type: ignore[union-attr]
+            self._worker_consumer_datapipe.request_resume(resume_fn)  # type: ignore[union-attr]
         else:
             raise RuntimeError(
                 "If you would like to use `resume` with `MultiProcessingReadingService`, "
                 "please use more than 0 worker."
             )
-        if self.main_prefetch_cnt > 0 and self.num_workers > 0:
-            self._main_prefetch_datapipe.resume()  # type: ignore[union-attr]
+        assert self._end_datapipe is not None
+        # Call resume for DataPipes in the main process (e.g. prefetch, fullsync)
+        dp_list = list_dps(traverse_dps(self._end_datapipe))
+        for dp in dp_list[::-1]:
+            # TODO: Combine QueueWrapper and _IterateQueueDataPipes,
+            #       and attach resume method. Then, no need to call
+            #       self._worker_consumer_datapipe.request_resume()
+            if isinstance(dp, communication.iter.QueueWrapper):
+                continue
+            if hasattr(dp, "resume") and callable(dp.resume):
+                dp.resume()
+        return None
 
-    def _limit(self, num_batches: Optional[int]) -> None:
+    def _limit(
+        self, num_batches: Optional[int], limit_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
         """
-        For this ReadingService, `DataLoader2Iterator` and `DataLoader2` should sufficiently handle
-        the limit operation, such that nothing needs to be done here.
+        Send limit_fn to worker/dispatching process to set the limit number to the specified DataPipes.
         """
-        pass
+        if limit_fn is not None:
+            self._worker_consumer_datapipe.request_limit(limit_fn)  # type: ignore[union-attr]
+        return None
 
 
 class DistributedReadingService(ReadingServiceInterface):
@@ -527,3 +545,27 @@ class SequentialReadingService(CheckpointableReadingServiceInterface):
             else:
                 warnings.warn(f"{rs} doesn't support `restore` from state, skipping...")
         return datapipe
+
+    def _pause(
+        self, pause_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
+        for rs in self.reading_services:
+            if hasattr(rs, "_pause"):
+                pause_fn = rs._pause(pause_fn)
+        return pause_fn
+
+    def _resume(
+        self, resume_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
+        for rs in self.reading_services:
+            if hasattr(rs, "_resume"):
+                resume_fn = rs._resume(resume_fn)
+        return resume_fn
+
+    def _limit(
+        self, num_batches: Optional[int], limit_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
+        for rs in self.reading_services:
+            if hasattr(rs, "_limit"):
+                limit_fn = rs._limit(num_batches, limit_fn)
+        return limit_fn
