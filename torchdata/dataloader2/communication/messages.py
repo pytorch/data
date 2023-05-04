@@ -38,8 +38,22 @@ class ResetEpochResponse(Response):
     pass
 
 
-class PauseRequest(Request):
+class LimitRequest(Request):
+    __slots__ = "limit_fn"
+
+    def __init__(self, limit_fn):
+        self.limit_fn = limit_fn
+
+
+class LimitResponse(Response):
     pass
+
+
+class PauseRequest(Request):
+    __slots__ = "pause_fn"
+
+    def __init__(self, pause_fn):
+        self.pause_fn = pause_fn
 
 
 class PauseResponse(Response):
@@ -47,7 +61,10 @@ class PauseResponse(Response):
 
 
 class ResumeRequest(Request):
-    pass
+    __slots__ = "resume_fn"
+
+    def __init__(self, resume_fn):
+        self.resume_fn = resume_fn
 
 
 class ResumeResponse(Response):
