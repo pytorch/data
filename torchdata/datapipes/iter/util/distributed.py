@@ -69,9 +69,11 @@ class _PrefetchExecutor:
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._futures: Deque[Future] = deque()
         self._lock = threading.RLock()
+        # `_end_flag` indicates the end of epoch or an exception has been raised,
+        # with the exception being handled by `callback_fn`
         self._end_flag: bool = False
         self._paused: bool = False
-        self._is_shutdown: bool = False
+        self._is_shutdown: bool = False  # indicates if `_executor` has been shutdown by `shutdown` method
         self._idx = 0
         for _ in range(prefetch_size):
             with self._lock:
@@ -95,6 +97,7 @@ class _PrefetchExecutor:
             with self._lock:
                 self._end_flag = True
         if self.callback_fn is not None and not self._is_shutdown:
+            # Doesn't invoke `callback_fn` if `shutdown` is caleld
             self._executor.submit(self.callback_fn, Expected(index, f.exception()))
 
     def return_next(self):
