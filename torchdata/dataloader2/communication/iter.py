@@ -10,7 +10,7 @@ import warnings
 
 from collections import deque
 from functools import partial
-from typing import Callable, Deque, List
+from typing import Callable, Deque, List, Optional
 
 from torch.utils.data import IterDataPipe
 from torchdata._utils import ExceptionWrapper
@@ -166,26 +166,50 @@ def DataPipeBehindQueues(
             source_datapipe.reset_iterator()
             protocol.response_reset_iterator()
 
+        elif isinstance(request, communication.messages.LimitRequest):
+            limit_fn = request.limit_fn
+            # Set limit to the dispatching process
+            dispatching_dps = find_dps(traverse_dps(source_datapipe), _IterateQueueDataPipes)
+            for dp in dispatching_dps:
+                dp.request_limit(limit_fn)
+            if limit_fn is not None:
+                source_datapipe = limit_fn(source_datapipe)
+            protocol.response_limit()
+            yield True  # Return control
+
         elif isinstance(request, communication.messages.PauseRequest):
-            dp_list = list_dps(traverse_dps(source_datapipe))
+            graph = traverse_dps(source_datapipe)
+            dp_list = list_dps(graph)
             for dp in dp_list:
                 # TODO: Remove this condition after there is `pause` support for round-robin sharding
                 if isinstance(dp, _IterateQueueDataPipes):
                     warnings.warn("There is no support for `pause` with round-robin sharding at the moment.")
                 elif hasattr(dp, "pause") and callable(dp.pause):
                     dp.pause()
-
+            # Send pause to the dispatching process
+            dispatching_dps = find_dps(graph, _IterateQueueDataPipes)
+            for dp in dispatching_dps:
+                dp.request_limit(request.pause_fn)
+            if request.pause_fn is not None:
+                source_datapipe = request.pause_fn(source_datapipe)
             protocol.response_pause()
             yield True  # Return control
 
         elif isinstance(request, communication.messages.ResumeRequest):
-            dp_list = list_dps(traverse_dps(source_datapipe))
+            graph = traverse_dps(source_datapipe)
+            dp_list = list_dps(graph)
             for dp in reversed(dp_list):
                 # TODO: Remove this condition after there is `resume` support for round-robin sharding
                 if isinstance(dp, _IterateQueueDataPipes):
                     raise RuntimeError("There is no support for `resume` with round-robin sharding at the moment.")
                 elif hasattr(dp, "resume") and callable(dp.resume):
                     dp.resume()
+            # Send resume to the dispatching process
+            dispatching_dps = find_dps(graph, _IterateQueueDataPipes)
+            for dp in dispatching_dps:
+                dp.request_limit(request.resume_fn)
+            if request.resume_fn is not None:
+                source_datapipe = request.resume_fn(source_datapipe)
             protocol.response_resume()
             yield True  # Return control
 
@@ -257,8 +281,18 @@ class QueueWrapper(NonBlocking):
                 if NonBlocking.not_available_hook is not None:
                     NonBlocking.not_available_hook()
 
-    def pause(self):
-        self.protocol.request_pause()
+    def limit(self, limit_fn: Optional[Callable[[DataPipe], DataPipe]] = None) -> None:
+        self.protocol.request_limit(limit_fn)
+        while True:
+            try:
+                self.protocol.get_response_limit()
+                break
+            except communication.protocol.EmptyQueue:
+                if NonBlocking.not_available_hook is not None:
+                    NonBlocking.not_available_hook()
+
+    def pause(self, pause_fn: Optional[Callable[[DataPipe], DataPipe]] = None) -> None:
+        self.protocol.request_pause(pause_fn)
         while True:
             try:
                 self.protocol.get_response_pause()
@@ -267,8 +301,8 @@ class QueueWrapper(NonBlocking):
                 if NonBlocking.not_available_hook is not None:
                     NonBlocking.not_available_hook()
 
-    def resume(self):
-        self.protocol.request_resume()
+    def resume(self, resume_fn: Optional[Callable[[DataPipe], DataPipe]] = None) -> None:
+        self.protocol.request_resume(resume_fn)
         while True:
             try:
                 self.protocol.get_response_resume()
@@ -373,18 +407,22 @@ class _IterateQueueDataPipes(IterDataPipe):
                     if NonBlocking.not_available_hook is not None:
                         NonBlocking.not_available_hook()
 
-    def request_pause(self):
+    def request_pause(self, pause_fn: Optional[Callable[[DataPipe], DataPipe]] = None) -> None:
         # Store results of pending requests
         for idx, dp in enumerate(self.datapipes):
             if dp.protocol.waiting_for_response():
                 res = dp.protocol.get_response_next(block=True)
                 self.res_buffers[idx].append(res)
         for dp in self.datapipes:
-            dp.pause()
+            dp.pause(pause_fn)
 
-    def request_resume(self):
+    def request_resume(self, resume_fn: Optional[Callable[[DataPipe], DataPipe]] = None) -> None:
         for dp in self.datapipes:
-            dp.resume()
+            dp.resume(resume_fn)
+
+    def request_limit(self, limit_fn: Optional[Callable[[DataPipe], DataPipe]] = None) -> None:
+        for dp in self.datapipes:
+            dp.limit(limit_fn)
 
     def request_terminate(self):
         self._terminated = True
