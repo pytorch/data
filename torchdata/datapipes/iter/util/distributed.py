@@ -114,6 +114,7 @@ class _PrefetchExecutor:
         return data
 
     def shutdown(self):
+        self._paused = False
         self._executor.shutdown(wait=True)
 
     def pause(self):
