@@ -73,6 +73,7 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
         masks: Union[str, List[str]] = "",
         *,
         pathmgr=None,
+        handler=None,
     ) -> None:
         if iopath is None:
             raise ModuleNotFoundError(
@@ -91,6 +92,8 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
             self.datapipe = root
         self.pathmgr = _create_default_pathmanager() if pathmgr is None else pathmgr
         self.masks = masks
+        if handler is not None:
+            self.register_handler(handler, allow_override=True)
 
     def register_handler(self, handler, allow_override=False):
         self.pathmgr.register_handler(handler, allow_override=allow_override)
@@ -134,7 +137,7 @@ class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         file_dp = datapipe.open_files_by_iopath()
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r", pathmgr=None) -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r", pathmgr=None, handler=None) -> None:
         if iopath is None:
             raise ModuleNotFoundError(
                 "Package `iopath` is required to be installed to use this datapipe."
@@ -145,6 +148,8 @@ class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.pathmgr = _create_default_pathmanager() if pathmgr is None else pathmgr
         self.mode: str = mode
+        if handler is not None:
+            self.register_handler(handler, allow_override=True)
 
     def register_handler(self, handler, allow_override=False):
         self.pathmgr.register_handler(handler, allow_override=allow_override)
@@ -211,6 +216,7 @@ class IoPathSaverIterDataPipe(IterDataPipe[str]):
         filepath_fn: Optional[Callable] = None,
         *,
         pathmgr=None,
+        handler=None,
     ):
         if iopath is None:
             raise ModuleNotFoundError(
@@ -223,6 +229,8 @@ class IoPathSaverIterDataPipe(IterDataPipe[str]):
         self.mode: str = mode
         self.filepath_fn: Optional[Callable] = filepath_fn
         self.pathmgr = _create_default_pathmanager() if pathmgr is None else pathmgr
+        if handler is not None:
+            self.register_handler(handler, allow_override=True)
 
     def __iter__(self) -> Iterator[str]:
         for meta, data in self.source_datapipe:
