@@ -16,7 +16,7 @@ def pathsplit(p):
 
     The prefix is used for grouping files into samples,
     the suffix is used as key in the output dictionary.
-    The suffix consists of all components after the last
+    The suffix consists of all components after the first
     "." in the filename.
 
     In torchdata, the prefix consists of the .tar file
