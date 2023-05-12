@@ -20,14 +20,14 @@ def pin_memory_fn(data, device=None):
     elif isinstance(data, collections.abc.Mapping):
         pinned_data = {k: pin_memory_fn(sample, device) for k, sample in data.items()}
         try:
-            return type(data)(**pinned_data)
+            return type(data)(pinned_data)
         except TypeError:
             # The mapping type may not support `__init__(iterable)`.
             return pinned_data
     elif isinstance(data, collections.abc.Sequence):
         pinned_data = [pin_memory_fn(sample, device) for sample in data]  # type: ignore[assignment]
         try:
-            return type(data)(*pinned_data)
+            return type(data)(pinned_data)
         except TypeError:
             # The sequence type may not support `__init__(iterable)` (e.g., `range`).
             return pinned_data
