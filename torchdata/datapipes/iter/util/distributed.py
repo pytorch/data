@@ -88,9 +88,7 @@ class _PrefetchExecutor:
     def fetch_next(self):
         while self._paused:
             time.sleep(PRODUCER_SLEEP_INTERVAL * 10)
-
-        res = next(self.datapipe_iterator)
-        return res
+        return next(self.datapipe_iterator)
 
     def _done_callback_fn(self, index: int, f: Future):
         if f.exception():
@@ -265,3 +263,12 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
     def resume(self):
         if self._executor is not None:
             self._executor.resume()
+
+    @final
+    def shutdown(self):
+        if self._executor is not None:
+            self._executor.shutdown()
+            self._executor = None
+
+    def __del__(self):
+        self.shutdown()

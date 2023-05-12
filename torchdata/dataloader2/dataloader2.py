@@ -377,31 +377,25 @@ class DataLoader2(Generic[T_co]):
         """
         self._seed_generator = self._initial_seed_generator
 
-    def _pause(self) -> None:
+    def _pause(self):
         if hasattr(self.reading_service, "_pause"):
             self._is_paused = True
-            pause_fn = self.reading_service._pause()
-            if pause_fn is not None:
-                self.datapipe = pause_fn(self.datapipe)
+            self.reading_service._pause()
         else:
             warnings.warn("ReadingService doesn't support `pause`.")
 
-    def _resume(self) -> None:
+    def _resume(self):
         if hasattr(self.reading_service, "_resume"):
             if not self._is_paused:
                 warnings.warn("Resume is called when `DataLoader2` is not paused. No operation is performed.")
             else:
-                resume_fn = self.reading_service._resume()
-                if resume_fn is not None:
-                    self.datapipe = resume_fn(self.datapipe)
+                self.reading_service._resume()
                 self._is_paused = False
         else:
             warnings.warn("ReadingService doesn't support `resume`.")
 
     def _limit(self, num_batches: Optional[int]) -> None:
         if hasattr(self.reading_service, "_limit"):
-            limit_fn = self.reading_service._limit(num_batches)
-            if limit_fn is not None:
-                self.datapipe = limit_fn(self.datapipe)
+            self.reading_service._limit(num_batches)
         else:
             warnings.warn("ReadingService doesn't support `limit`.")
