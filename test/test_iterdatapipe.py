@@ -1687,6 +1687,10 @@ class TestIterDataPipe(expecttest.TestCase):
         )
         self.assertTrue(all(d0.is_pinned() and d1.is_pinned() for batch in dp for d0, d1 in batch))
 
+        # Single str
+        dp = IterableWrapper(["hello", "world"]).batch(1).collate().pin_memory()
+        self.assertEqual(list(dp), [["hello"], ["world"]])
+
     def test_async_map_batches(self):
         batch_size = 16
 
