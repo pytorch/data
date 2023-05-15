@@ -69,8 +69,11 @@ class _PrefetchExecutor:
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._futures: Deque[Future] = deque()
         self._lock = threading.RLock()
-        self._end_flag = False
-        self._paused = False
+        # `_end_flag` indicates the end of epoch or an exception has been raised,
+        # with the exception being handled by `callback_fn`
+        self._end_flag: bool = False
+        self._paused: bool = False
+        self._is_shutdown: bool = False  # indicates if `_executor` has been shutdown by `shutdown` method
         self._idx = 0
         for _ in range(prefetch_size):
             with self._lock:
@@ -85,15 +88,14 @@ class _PrefetchExecutor:
     def fetch_next(self):
         while self._paused:
             time.sleep(PRODUCER_SLEEP_INTERVAL * 10)
-
-        res = next(self.datapipe_iterator)
-        return res
+        return next(self.datapipe_iterator)
 
     def _done_callback_fn(self, index: int, f: Future):
         if f.exception():
             with self._lock:
                 self._end_flag = True
-        if self.callback_fn is not None:
+        if self.callback_fn is not None and not self._is_shutdown:
+            # Doesn't invoke `callback_fn` if `shutdown` is caleld
             self._executor.submit(self.callback_fn, Expected(index, f.exception()))
 
     def return_next(self):
@@ -104,7 +106,7 @@ class _PrefetchExecutor:
             except TimeoutError:
                 raise PrefetchTimeoutError(self.timeout)
             with self._lock:
-                if not self._end_flag:
+                if not self._end_flag and not self._is_shutdown:
                     next_future = self._executor.submit(self.fetch_next)
                     next_future.add_done_callback(partial(self._done_callback_fn, self._idx))
                     self._futures.append(next_future)
@@ -114,6 +116,8 @@ class _PrefetchExecutor:
         return data
 
     def shutdown(self):
+        self._paused = False
+        self._is_shutdown = True
         self._executor.shutdown(wait=True)
 
     def pause(self):
@@ -259,3 +263,12 @@ class FullSyncIterDataPipe(IterDataPipe[T_co]):
     def resume(self):
         if self._executor is not None:
             self._executor.resume()
+
+    @final
+    def shutdown(self):
+        if self._executor is not None:
+            self._executor.shutdown()
+            self._executor = None
+
+    def __del__(self):
+        self.shutdown()
