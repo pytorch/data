@@ -149,6 +149,14 @@ class DistributedTest(TestCase):
         except Exception as e:
             assert isinstance(e, PrefetchTimeoutError)
 
+        # Test that reset/shutdown does not hang while paused
+        dp3 = dp.fullsync()
+        it = iter(dp3)
+        next(it)
+        dp3.pause()
+        it2 = iter(dp3)  # Reset
+        next(it2)
+
         _finalize_distributed_queue(rank, q)
 
     @world_size_parametrize
