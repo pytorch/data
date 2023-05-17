@@ -104,9 +104,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
                 else:
                     time.sleep(CONSUMER_SLEEP_INTERVAL)
         finally:
-            prefetch_data.run_prefetcher = False
-            prefetch_data.stop_iteration = True
-            thread.join()
+            self.shutdown()
 
     def __getstate__(self):
         """
@@ -151,6 +149,17 @@ class PrefetcherIterDataPipe(IterDataPipe):
             assert self.prefetch_data is not None
             self.prefetch_data.run_prefetcher = True
             self.prefetch_data.paused = False
+
+    @final
+    def shutdown(self):
+        if self.prefetch_data:
+            self.prefetch_data.run_prefetcher = False
+            self.prefetch_data.stop_iteration = True
+        if self.thread:
+            self.thread.join()
+
+    def __del__(self):
+        self.shutdown()
 
     def __len__(self) -> int:
         if isinstance(self.source_datapipe, Sized):
