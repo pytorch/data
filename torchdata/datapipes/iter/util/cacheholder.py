@@ -97,11 +97,12 @@ class InMemoryCacheHolderIterDataPipe(IterDataPipe[T_co]):
 
     def __iter__(self) -> Iterator[T_co]:
         if self.cache:
-            for idx, data in enumerate(self.source_dp):
-                if idx < self.idx:
-                    yield data
-                else:
-                    break
+            if self.idx > 0:
+                for idx, data in enumerate(self.source_dp):
+                    if idx < self.idx:
+                        yield data
+                    else:
+                        break
             yield from self.cache
         else:
             # Local cache
