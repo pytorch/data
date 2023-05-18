@@ -371,7 +371,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         Pauses DataPipes' activities such as prefetching within main/worker/dispatching processes,
         in order to collect state.
         """
-        assert self._end_datapipe is not None
+        assert self._end_datapipe is not None, "datapipe must not be `None` when `pause` is called by MultiProcessingRS"
         dp_list = list_dps(traverse_dps(self._end_datapipe))
         for dp in dp_list:
             # TODO: Combine QueueWrapper and _IterateQueueDataPipes,
@@ -465,6 +465,38 @@ class DistributedReadingService(ReadingServiceInterface):
         seed_generator = seed_generator.spawn(self._rank, inplace=True)
         set_graph_random_seed(self._datapipe, seed_generator)
         return None
+
+    def _pause(self):
+        """
+        Pauses DataPipes' activities such as FullSync or prefetching in the main process,
+        in order to collect state.
+        """
+        assert self._datapipe is not None, "datapipe must not be `None` when `pause` is called by DistributedRS"
+        dp_list = list_dps(traverse_dps(self._datapipe))
+        for dp in dp_list:
+            # TODO: Combine QueueWrapper and _IterateQueueDataPipes,
+            #       and attach pause method. Then, no need to call
+            #       self._worker_consumer_datapipe.request_pause()
+            if isinstance(dp, communication.iter.QueueWrapper):
+                continue
+            if hasattr(dp, "pause") and callable(dp.pause):
+                dp.pause()
+
+    def _resume(self):
+        """
+        Resumes DataPipes' activities. This is required to be called after `_pause` before
+        the DataLoader can keep yielding elements.
+        """
+        assert self._datapipe is not None, "datapipe must not be `None` when `resume` is called by DistributedRS"
+        dp_list = list_dps(traverse_dps(self._datapipe))
+        for dp in dp_list:
+            # TODO: Combine QueueWrapper and _IterateQueueDataPipes,
+            #       and attach resume method. Then, no need to call
+            #       self._worker_consumer_datapipe.request_resume()
+            if isinstance(dp, communication.iter.QueueWrapper):
+                continue
+            if hasattr(dp, "resume") and callable(dp.resume):
+                dp.resume()
 
     def finalize(self) -> None:
         r"""
