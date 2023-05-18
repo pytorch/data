@@ -60,6 +60,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
             raise ValueError("'buffer_size' is required to be a positive integer.")
         self.buffer_size = buffer_size
         self.thread: Optional[threading.Thread] = None
+        self.prefetch_data: Optional[_PrefetchData] = None
 
     @staticmethod
     def thread_worker(prefetch_data: _PrefetchData):
@@ -128,11 +129,13 @@ class PrefetcherIterDataPipe(IterDataPipe):
     @final
     def reset(self):
         if self.thread is not None:
+            self.thread.join()
+            self.thread = None
+        if self.prefetch_data is not None:
             self.prefetch_data.run_prefetcher = False
             self.prefetch_data.stop_iteration = True
             self.prefetch_data.paused = False
-            self.thread.join()
-            self.thread = None
+            self.prefetch_data = None
 
     def pause(self):
         if self.thread is not None:
@@ -145,10 +148,11 @@ class PrefetcherIterDataPipe(IterDataPipe):
 
     @final
     def resume(self):
-        if self.thread is not None and (
-            not self.prefetch_data.stop_iteration or len(self.prefetch_data.prefetch_buffer) > 0
+        if (
+            self.thread is not None
+            and self.prefetch_data is not None
+            and (not self.prefetch_data.stop_iteration or len(self.prefetch_data.prefetch_buffer) > 0)
         ):
-            assert self.prefetch_data is not None
             self.prefetch_data.run_prefetcher = True
             self.prefetch_data.paused = False
 
@@ -157,6 +161,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
         if self.prefetch_data:
             self.prefetch_data.run_prefetcher = False
             self.prefetch_data.stop_iteration = True
+            self.prefetch_data = None
         if self.thread:
             self.thread.join()
 
