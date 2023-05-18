@@ -128,14 +128,14 @@ class PrefetcherIterDataPipe(IterDataPipe):
 
     @final
     def reset(self):
-        if self.thread is not None:
-            self.thread.join()
-            self.thread = None
         if self.prefetch_data is not None:
             self.prefetch_data.run_prefetcher = False
             self.prefetch_data.stop_iteration = True
             self.prefetch_data.paused = False
             self.prefetch_data = None
+        if self.thread is not None:
+            self.thread.join()
+            self.thread = None
 
     def pause(self):
         if self.thread is not None:
