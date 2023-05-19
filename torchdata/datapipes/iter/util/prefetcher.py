@@ -128,12 +128,10 @@ class PrefetcherIterDataPipe(IterDataPipe):
 
     @final
     def reset(self):
-        if self.prefetch_data is not None:
+        if self.thread is not None:
             self.prefetch_data.run_prefetcher = False
             self.prefetch_data.stop_iteration = True
             self.prefetch_data.paused = False
-            self.prefetch_data = None
-        if self.thread is not None:
             self.thread.join()
             self.thread = None
 
@@ -201,6 +199,7 @@ class PinMemoryIterDataPipe(PrefetcherIterDataPipe):
             device = torch.cuda.current_device()
         self.device = device
         self.pin_memory_fn = pin_memory_fn
+        self.prefetch_data: Optional[_PrefetchData] = None
 
     def is_replicable(self) -> bool:
         return False
