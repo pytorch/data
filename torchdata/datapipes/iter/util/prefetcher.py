@@ -105,7 +105,12 @@ class PrefetcherIterDataPipe(IterDataPipe):
                 else:
                     time.sleep(CONSUMER_SLEEP_INTERVAL)
         finally:
-            self.shutdown()
+            if "prefetch_data" in locals():
+                prefetch_data.run_prefetcher = False
+                prefetch_data.stop_iteration = True
+                prefetch_data.paused = False
+            if "thread" in locals():
+                thread.join()
 
     def __getstate__(self):
         """
@@ -244,7 +249,12 @@ class PinMemoryIterDataPipe(PrefetcherIterDataPipe):
                 else:
                     time.sleep(CONSUMER_SLEEP_INTERVAL)
         finally:
-            self.shutdown()
+            if "prefetch_data" in locals():
+                prefetch_data.run_prefetcher = False
+                prefetch_data.stop_iteration = True
+                prefetch_data.paused = False
+            if "thread" in locals():
+                thread.join()
 
     def __getstate__(self):
         state = super().__getstate__()
