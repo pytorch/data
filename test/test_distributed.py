@@ -157,6 +157,13 @@ class DistributedTest(TestCase):
         it2 = iter(dp3)  # Reset
         next(it2)
 
+        dp4 = dp.prefetch(2)
+        it = iter(dp4)
+        next(it)
+        dp4.pause()
+        it2 = iter(dp4)  # Reset
+        next(it2)
+
         _finalize_distributed_queue(rank, q)
 
     @world_size_parametrize

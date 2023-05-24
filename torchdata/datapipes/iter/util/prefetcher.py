@@ -60,6 +60,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
             raise ValueError("'buffer_size' is required to be a positive integer.")
         self.buffer_size = buffer_size
         self.thread: Optional[threading.Thread] = None
+        self.prefetch_data: Optional[_PrefetchData] = None
 
     @staticmethod
     def thread_worker(prefetch_data: _PrefetchData):
@@ -104,9 +105,12 @@ class PrefetcherIterDataPipe(IterDataPipe):
                 else:
                     time.sleep(CONSUMER_SLEEP_INTERVAL)
         finally:
-            prefetch_data.run_prefetcher = False
-            prefetch_data.stop_iteration = True
-            thread.join()
+            if "prefetch_data" in locals():
+                prefetch_data.run_prefetcher = False
+                prefetch_data.stop_iteration = True
+                prefetch_data.paused = False
+            if "thread" in locals():
+                thread.join()
 
     def __getstate__(self):
         """
@@ -127,12 +131,7 @@ class PrefetcherIterDataPipe(IterDataPipe):
 
     @final
     def reset(self):
-        if self.thread is not None:
-            self.prefetch_data.run_prefetcher = False
-            self.prefetch_data.stop_iteration = True
-            self.prefetch_data.paused = False
-            self.thread.join()
-            self.thread = None
+        self.shutdown()
 
     def pause(self):
         if self.thread is not None:
@@ -145,12 +144,27 @@ class PrefetcherIterDataPipe(IterDataPipe):
 
     @final
     def resume(self):
-        if self.thread is not None and (
-            not self.prefetch_data.stop_iteration or len(self.prefetch_data.prefetch_buffer) > 0
+        if (
+            self.thread is not None
+            and self.prefetch_data is not None
+            and (not self.prefetch_data.stop_iteration or len(self.prefetch_data.prefetch_buffer) > 0)
         ):
-            assert self.prefetch_data is not None
             self.prefetch_data.run_prefetcher = True
             self.prefetch_data.paused = False
+
+    @final
+    def shutdown(self):
+        if hasattr(self, "prefetch_data") and self.prefetch_data is not None:
+            self.prefetch_data.run_prefetcher = False
+            self.prefetch_data.stop_iteration = True
+            self.prefetch_data.paused = False
+            self.prefetch_data = None
+        if hasattr(self, "thread") and self.thread is not None:
+            self.thread.join()
+            self.thread = None
+
+    def __del__(self):
+        self.shutdown()
 
     def __len__(self) -> int:
         if isinstance(self.source_datapipe, Sized):
@@ -235,9 +249,12 @@ class PinMemoryIterDataPipe(PrefetcherIterDataPipe):
                 else:
                     time.sleep(CONSUMER_SLEEP_INTERVAL)
         finally:
-            prefetch_data.run_prefetcher = False
-            prefetch_data.stop_iteration = True
-            thread.join()
+            if "prefetch_data" in locals():
+                prefetch_data.run_prefetcher = False
+                prefetch_data.stop_iteration = True
+                prefetch_data.paused = False
+            if "thread" in locals():
+                thread.join()
 
     def __getstate__(self):
         state = super().__getstate__()
