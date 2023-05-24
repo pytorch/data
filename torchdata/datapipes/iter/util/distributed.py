@@ -118,6 +118,8 @@ class _PrefetchExecutor:
     def shutdown(self):
         self._paused = False
         self._is_shutdown = True
+        while self._futures:
+            self._futures.pop().cancel()
         self._executor.shutdown(wait=True)
 
     def pause(self):
