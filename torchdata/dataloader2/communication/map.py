@@ -10,6 +10,7 @@ import types
 from torch.utils.data import MapDataPipe
 from torchdata._utils import ExceptionWrapper
 from torchdata.dataloader2 import communication
+from torchdata.dataloader2.utils import process_reset_fn
 
 DEFAULT_NON_BLOCKING_SLEEP = 0.001
 
@@ -85,7 +86,14 @@ def EnsureNonBlockingMapDataPipe(validated_datapipe):
 
 
 def DataPipeBehindQueues(
-    source_datapipe, protocol, process_name, blocking_request_get=False, reset_iterator_counter=None
+    source_datapipe,
+    protocol,
+    process_name,
+    loop_id,
+    worker_info,
+    custom_reset_fn,
+    blocking_request_get=False,
+    request_counter=None,
 ):
     """
     Indefinitely iterates over req_queue and passing values from source_datapipe to res_queue.
@@ -94,6 +102,9 @@ def DataPipeBehindQueues(
         source_datapipe: DataPipe
         protocol: ``MapDataPipeQueueProtocolServer`` that contains ``req_queue`` and ``res_queue``
         process_name: Process name
+        loop_id: Loop ID
+        worker_info: Worker info include worker id and number of workers
+        custom_reset_fn: function to call after each request is received
         blocking_request_get: determines if ``protocol.get_new_request`` will block
     """
     if not isinstance(protocol, communication.protocol.MapDataPipeQueueProtocolServer):
@@ -109,7 +120,15 @@ def DataPipeBehindQueues(
             continue
 
         if isinstance(request, communication.messages.ResetEpochRequest):
-            source_datapipe = request.reset_fn(source_datapipe)
+            distributed_shared_seed = request_counter is not None
+            source_datapipe = process_reset_fn(
+                source_datapipe,
+                worker_info,
+                request.seed_generator,
+                distributed_shared_seed,
+                request.iter_reset_fn,
+                custom_reset_fn,
+            )
             protocol.response_reset_epoch()
 
         elif isinstance(request, communication.messages.TerminateRequest):
@@ -133,7 +152,7 @@ def DataPipeBehindQueues(
                     yield True
                     break
                 except Exception:
-                    exc = ExceptionWrapper(where=f"in {process_name}")
+                    exc = ExceptionWrapper(where=f"in {process_name} {loop_id}")
                     protocol.response_worker_exception(exc)
                     break
                 protocol.response_item(request.key, value)

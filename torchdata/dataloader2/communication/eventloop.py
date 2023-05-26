@@ -4,11 +4,10 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import pickle
-import threading
 import time
 
 from itertools import zip_longest
+from typing import Dict, List
 
 import torch
 
@@ -32,36 +31,47 @@ __all__ = [
     "DataPipeToQueuesLoop",
     "CreateProcessForDataPipeline",
     "CreateProcessForMultipleDataPipelines",
-    "CreateThreadForDataPipeline",
 ]
 
 
-class _ResetCounter:
+class _RequestCounter:
+    r"""
+    _RequestCounter is used to synchronize between eventloops within the dispatching
+    process. It guarantees to only handle the limit/pause/reset_epoch/resume request
+    util all loops have received the same message.
+    """
     exp_cnt: int
-    cnt: int
-    _reached: bool
+    _keys: List[str] = ["limit", "pause", "reset_epoch", "resume"]
+    _cnt: Dict[str, int]
+    _reached: Dict[str, bool]
 
     def __init__(self, exp_cnt: int):
         self.exp_cnt = exp_cnt
-        self.cnt = 0
-        self._reached = False
+        self._cnt = {k: 0 for k in self._keys}
+        self._reached = {k: False for k in self._keys}
 
-    def increment(self) -> None:
-        self.cnt += 1
-        assert self.cnt <= self.exp_cnt
+    def increment(self, key: str) -> None:
+        assert key in self._reached
+        self._cnt[key] += 1
+        assert self._cnt[key] <= self.exp_cnt
+        if self._cnt[key] == self.exp_cnt:
+            self._reached[key] = True
 
-    def is_reached(self) -> bool:
-        if self.cnt == self.exp_cnt:
-            self._reached = True
-        return self._reached
+    def is_reached(self, key: str) -> bool:
+        assert key in self._reached
+        return self._reached[key]
 
-    def reset(self) -> None:
-        if self._reached:
-            self._reached = False
-            self.cnt = 0
+    def reset(self, key: str) -> None:
+        assert key in self._reached and self._reached[key]
+        assert self._cnt[key] >= 1
+        self._cnt[key] -= 1
+        if self._cnt[key] == 0:
+            self._reached[key] = False
 
 
-def MultipleDataPipesToQueuesLoop(source_datapipes, req_queues, res_queues, process_name, call_on_process_init=None):
+def MultipleDataPipesToQueuesLoop(
+    source_datapipes, req_queues, res_queues, process_name, worker_info, call_on_process_init=None, custom_reset_fn=None
+):
     r"""
     Set the appropriate pipes and protocol server type, and create a loop over multiple datapipes
     with the protocol server in a non-blocking manner.
@@ -71,7 +81,9 @@ def MultipleDataPipesToQueuesLoop(source_datapipes, req_queues, res_queues, proc
         req_queue: Multiprocessing queue providing requests from the worker process
         res_queue: Multiprocessing queue sending results to the worker process
         process_name: The name of process (used for logging and exception handling)
+        worker_info: Worker information (worker id and number of workers)
         call_on_process_init: Not allowed by dispatching process for now.
+        custom_reset_fn: Optional callable function to reset the DataPipe.
     """
     assert call_on_process_init is None, "``MultipleDataPipesToQueuesLoop`` does not support call_on_process_init"
     num_loops = len(source_datapipes)
@@ -82,21 +94,24 @@ def MultipleDataPipesToQueuesLoop(source_datapipes, req_queues, res_queues, proc
     torch.set_num_threads(1)
 
     loops = []
-    reset_iterator_counter = _ResetCounter(num_loops)
+    request_counter = _RequestCounter(num_loops)
 
+    loop_id = 0
     for source_datapipe, req_queue, res_queue in zip(source_datapipes, req_queues, res_queues):
-        # Extract Serialization Wrapper
-        source_datapipe = extract_wrapper(source_datapipe)
         loops.append(
             _create_datapipe_queue_loop(
                 source_datapipe,
                 req_queue,
                 res_queue,
                 process_name,
+                loop_id,
+                worker_info,
+                custom_reset_fn,
                 blocking_request_get=False,
-                reset_iterator_counter=reset_iterator_counter,
+                request_counter=request_counter,
             )
         )  # Non-blocking request with reset counters
+        loop_id += 1
 
     # Using `zip_longest` to guarantee the process is terminated only when
     # all loops have received `TerminateRequest`
@@ -107,7 +122,9 @@ def MultipleDataPipesToQueuesLoop(source_datapipes, req_queues, res_queues, proc
         time.sleep(0)
 
 
-def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, process_name, call_on_process_init=None):
+def DataPipeToQueuesLoop(
+    source_datapipe, req_queue, res_queue, process_name, worker_info, call_on_process_init=None, custom_reset_fn=None
+):
     r"""
     Initialize with the given init function, set the appropriate pipe and protocol server type, and
     create a loop with the protocol server.
@@ -117,8 +134,10 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, process_name, ca
         req_queue: Multiprocessing queue providing requests from the main process
         res_queue: Multiprocessing queue sending results to the main process
         process_name: The name of process (used for logging and exception handling)
+        worker_info: Worker information (worker id and number of workers)
         call_on_process_init: Callable function will be called at the time of worker process initialization.
             Users can provide it to modify the DataPipe grpah in the worker process.
+        custom_reset_fn: Optional callable function to reset the DataPipe.
     """
     # Extract Serialization Wrapper
     source_datapipe = extract_wrapper(source_datapipe)
@@ -128,7 +147,16 @@ def DataPipeToQueuesLoop(source_datapipe, req_queue, res_queue, process_name, ca
 
     torch.set_num_threads(1)
 
-    loop = _create_datapipe_queue_loop(source_datapipe, req_queue, res_queue, process_name, blocking_request_get=True)
+    loop = _create_datapipe_queue_loop(
+        source_datapipe,
+        req_queue,
+        res_queue,
+        process_name,
+        worker_info.worker_id,
+        worker_info,
+        custom_reset_fn,
+        blocking_request_get=True,
+    )
 
     for _ in loop:
         pass
@@ -139,8 +167,11 @@ def _create_datapipe_queue_loop(
     req_queue,
     res_queue,
     process_name,
+    loop_id,
+    worker_info,
+    custom_reset_fn=None,
     blocking_request_get=True,
-    reset_iterator_counter=None,
+    request_counter=None,
 ):
     if isinstance(source_datapipe, IterDataPipe):
         pipe_type = communication.iter
@@ -155,12 +186,17 @@ def _create_datapipe_queue_loop(
         source_datapipe,
         protocol_type(req_queue, res_queue),
         process_name=process_name,
+        loop_id=loop_id,
+        worker_info=worker_info,
+        custom_reset_fn=custom_reset_fn,
         blocking_request_get=blocking_request_get,
-        reset_iterator_counter=reset_iterator_counter,
+        request_counter=request_counter,
     )
 
 
-def CreateProcessForDataPipeline(multiprocessing_ctx, datapipe, process_name, call_on_process_init=None):
+def CreateProcessForDataPipeline(
+    multiprocessing_ctx, datapipe, process_name, worker_info, call_on_process_init=None, custom_reset_fn=None
+):
     r"""
     Given a DataPipe, creates a new process with ``DataPipeToQueuesLoop`` as target,
     and returns ``(process, req_queue, res_queue)``.
@@ -168,38 +204,15 @@ def CreateProcessForDataPipeline(multiprocessing_ctx, datapipe, process_name, ca
     req_queue = multiprocessing_ctx.Queue()
     res_queue = multiprocessing_ctx.Queue()
     process = multiprocessing_ctx.Process(
-        target=DataPipeToQueuesLoop, args=(datapipe, req_queue, res_queue, process_name, call_on_process_init)
+        target=DataPipeToQueuesLoop,
+        args=(datapipe, req_queue, res_queue, process_name, worker_info, call_on_process_init, custom_reset_fn),
     )
     return process, req_queue, res_queue
 
 
-def CreateThreadForDataPipeline(datapipe, thread_name):
-    r"""
-    Given a DataPipe, creates a copy of the DataPipe, starts a new Thread with ``DataPipeToQueuesLoop`` as target,
-    and returns ``(process, req_queue, res_queue, new_copied_datapipe)``.
-    """
-    req_queue = communication.queue.ThreadingQueue()
-    res_queue = communication.queue.ThreadingQueue()
-
-    try:
-        new_datapipe = pickle.loads(pickle.dumps(datapipe))
-    except Exception as pe:
-        if HAS_DILL:
-            try:
-                new_datapipe = dill.loads(dill.dumps(datapipe))
-            except Exception as de:
-                raise Exception("Unable to dill DataPipe to make thread local copy", de)
-
-        else:
-            raise Exception("Unable to pickle DataPipe to make thread local copy (consider installing `dill`)", pe)
-
-    process = threading.Thread(
-        target=DataPipeToQueuesLoop, args=(new_datapipe, req_queue, res_queue, thread_name), daemon=True
-    )
-    return process, req_queue, res_queue, new_datapipe
-
-
-def CreateProcessForMultipleDataPipelines(multiprocessing_ctx, datapipes, process_name):
+def CreateProcessForMultipleDataPipelines(
+    multiprocessing_ctx, datapipes, process_name, worker_info, custom_reset_fn=None
+):
     r"""
     Given a DataPipe, creates a new process with ``MultipleDataPipesToQueuesLoop`` as target,
     and returns ``(process, [req_queue_0, ...], [res_queue_0, ...])``.
@@ -211,6 +224,7 @@ def CreateProcessForMultipleDataPipelines(multiprocessing_ctx, datapipes, proces
         res_queues.append(multiprocessing_ctx.Queue())
 
     process = multiprocessing_ctx.Process(
-        target=MultipleDataPipesToQueuesLoop, args=(datapipes, req_queues, res_queues, process_name)
+        target=MultipleDataPipesToQueuesLoop,
+        args=(datapipes, req_queues, res_queues, process_name, worker_info, custom_reset_fn),
     )
     return process, req_queues, res_queues

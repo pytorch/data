@@ -50,17 +50,24 @@ class ProtocolClient(Protocol):
             response = self.response_queue.get(block=True)
             self.request_served(response)
 
-    def request_pause(self):
+    def request_limit(self, num_batches, limit_fn=None, worker_num_batches=None):
         if not self.can_take_request():
-            raise Exception("Can not `pause` while we are still waiting response for previous request")
-        request = communication.messages.PauseRequest()
+            raise Exception("Can not `limit` while we are still waiting response for previous request")
+        request = communication.messages.LimitRequest(num_batches, limit_fn, worker_num_batches)
         self.request_queue.put(request)
         self.request_sent(request)
 
-    def request_resume(self):
+    def request_pause(self, pause_fn=None):
+        if not self.can_take_request():
+            raise Exception("Can not `pause` while we are still waiting response for previous request")
+        request = communication.messages.PauseRequest(pause_fn)
+        self.request_queue.put(request)
+        self.request_sent(request)
+
+    def request_resume(self, resume_fn=None):
         if not self.can_take_request():
             raise Exception("Can not `resume` while we are still waiting response for previous request")
-        request = communication.messages.ResumeRequest()
+        request = communication.messages.ResumeRequest(resume_fn)
         self.request_queue.put(request)
         self.request_sent(request)
 
@@ -124,6 +131,14 @@ class ProtocolServer(Protocol):
         self.response_queue.put(communication.messages.ResetEpochResponse())
         self._req_received = None
 
+    def response_limit(self):
+        if not self.have_pending_request():
+            raise Exception("Attempting to reply with pending request")
+        if not isinstance(self._req_received, communication.messages.LimitRequest):
+            raise Exception("Replaying with `limit` status to other type of message")
+        self.response_queue.put(communication.messages.LimitResponse())
+        self._req_received = None
+
     def response_pause(self):
         if not self.have_pending_request():
             raise Exception("Attempting to reply with pending request")
@@ -177,10 +192,10 @@ class MapDataPipeQueueProtocolClient(ProtocolClient):
         self.request_queue.put(request)
         self.request_sent(request)
 
-    def request_reset_epoch(self, reset_fn):
+    def request_reset_epoch(self, seed_generator, iter_reset_fn):
         if not self.can_take_request():
             raise Exception("Can not reset while we are still waiting response for previous request")
-        request = communication.messages.ResetEpochRequest(reset_fn)
+        request = communication.messages.ResetEpochRequest(seed_generator, iter_reset_fn)
         self.request_queue.put(request)
         self.request_sent(request)
 
@@ -221,14 +236,6 @@ class EmptyQueue(Exception):
 
 
 class IterDataPipeQueueProtocolServer(ProtocolServer):
-    def response_reset_iterator(self):
-        if not self.have_pending_request():
-            raise Exception("Attempting to reply with pending request")
-        if not isinstance(self._req_received, communication.messages.ResetIteratorRequest):
-            raise Exception("Replaying with reset status to other type of message")
-        self.response_queue.put(communication.messages.ResetIteratorResponse())
-        self._req_received = None
-
     def response_next(self, value):
         if not self.have_pending_request():
             raise Exception("Attempting to reply with pending request")
@@ -249,17 +256,10 @@ class IterDataPipeQueueProtocolServer(ProtocolServer):
 
 
 class IterDataPipeQueueProtocolClient(ProtocolClient):
-    def request_reset_iterator(self):
+    def request_reset_epoch(self, seed_generator, iter_reset_fn):
         if not self.can_take_request():
             raise Exception("Can not reset while we are still waiting response for previous request")
-        request = communication.messages.ResetIteratorRequest()
-        self.request_queue.put(request)
-        self.request_sent(request)
-
-    def request_reset_epoch(self, reset_fn):
-        if not self.can_take_request():
-            raise Exception("Can not reset while we are still waiting response for previous request")
-        request = communication.messages.ResetEpochRequest(reset_fn)
+        request = communication.messages.ResetEpochRequest(seed_generator, iter_reset_fn)
         self.request_queue.put(request)
         self.request_sent(request)
 
@@ -270,16 +270,6 @@ class IterDataPipeQueueProtocolClient(ProtocolClient):
         self.request_queue.put(request)
         self.request_sent(request)
 
-    def get_response_reset_iterator(self, block=False):
-        try:
-            response = self.response_queue.get(block=block)
-        except EmptyException:
-            raise EmptyQueue("queue is empty")
-        self.request_served(response)
-
-        if not isinstance(response, communication.messages.ResetIteratorResponse):
-            raise Exception("Invalid response received")
-
     def get_response_reset_epoch(self, block=False):
         try:
             response = self.response_queue.get(block=block)
@@ -289,6 +279,16 @@ class IterDataPipeQueueProtocolClient(ProtocolClient):
 
         if not isinstance(response, communication.messages.ResetEpochResponse):
             raise Exception("Invalid response received")
+
+    def get_response_limit(self, block=False):
+        try:
+            response = self.response_queue.get(block=block)
+        except EmptyException:
+            raise EmptyQueue("queue is empty")
+        self.request_served(response)
+
+        if not isinstance(response, communication.messages.LimitResponse):
+            raise Exception("Invalid response received when expecting `LimitResponse`")
 
     def get_response_pause(self, block=False):
         try:
