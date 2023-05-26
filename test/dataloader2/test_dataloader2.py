@@ -23,7 +23,6 @@ from torch.testing._internal.common_utils import instantiate_parametrized_tests,
 from torch.utils.data.datapipes.iter.sharding import SHARDING_PRIORITIES
 
 from torchdata.dataloader2 import (
-    communication,
     DataLoader2,
     DistributedReadingService,
     MultiProcessingReadingService,
@@ -35,7 +34,6 @@ from torchdata.dataloader2.dataloader2 import READING_SERVICE_STATE_KEY_NAME, SE
 from torchdata.dataloader2.graph import DataPipe, list_dps, replace_dp, set_datapipes_seed, traverse_dps
 from torchdata.dataloader2.random import SeedGenerator
 from torchdata.datapipes.iter import IterableWrapper, IterDataPipe, ShardingRoundRobinDispatcher
-from torchdata.datapipes.map import SequenceWrapper
 
 try:
     import dill
@@ -257,73 +255,6 @@ class DataLoader2ConsistencyTest(TestCase):
     def test_dataloader2_shuffle(self) -> None:
         # TODO(589): Add shuffle test
         pass
-
-
-@unittest.skipIf(
-    TEST_WITH_TSAN,
-    "Fails with TSAN with the following error: starting new threads after multi-threaded "
-    "fork is not supported. Dying (set die_after_fork=0 to override)",
-)
-class TestDataLoader2EventLoop(TestCase):
-    # TODO: This needs fixing, see issue 624
-    # @skipIfNoDill
-    # def test_basic_threading(self):
-    #     def clean_me(process, req_queue, res_queue):
-    #         req_queue.put(communication.messages.TerminateRequest())
-    #         _ = res_queue.get()
-    #         process.join()
-    #
-    #     it = list(range(100))
-    #     numbers_dp = IterableWrapper(it)
-    #     (process, req_queue, res_queue, _thread_local_datapipe) = communication.eventloop.CreateThreadForDataPipeline(numbers_dp)
-    #
-    #     process.start()
-    #     local_datapipe = communication.iter.QueueWrapper(
-    #         communication.protocol.IterDataPipeQueueProtocolClient(req_queue, res_queue))
-    #
-    #     actual = list(local_datapipe)
-    #     clean_me(process, req_queue, res_queue)
-    #
-    #     self.assertEqual(list(range(100)), actual)
-
-    @skipIfNoDill
-    def test_basic_mapdatapipe_threading(self):
-        def clean_me(process, req_queue, res_queue):
-            req_queue.put(communication.messages.TerminateRequest())
-            _ = res_queue.get()
-            process.join()
-
-        input_len = 100
-        it = list(range(input_len))
-        numbers_dp = SequenceWrapper(it)
-        (process, req_queue, res_queue, _thread_local_datapipe) = communication.eventloop.CreateThreadForDataPipeline(
-            numbers_dp,
-            thread_name="worker thread",
-        )
-
-        process.start()
-
-        # Functional Test: Ensure that you can retrieve every element from the Queue and DataPipe
-        local_datapipe = communication.map.QueueWrapperForMap(
-            communication.protocol.MapDataPipeQueueProtocolClient(req_queue, res_queue)
-        )
-        actual = list(local_datapipe)
-        self.assertEqual([(x, x) for x in range(100)], actual)
-
-        # Functional Test: raise Error when input
-        local_datapipe = communication.map.QueueWrapperForMap(
-            communication.protocol.MapDataPipeQueueProtocolClient(req_queue, res_queue)
-        )
-        with self.assertRaisesRegex(IndexError, "out of bound"):
-            local_datapipe[1000]
-
-        # __len__ Test: Ensure that the correct length is returned
-        local_datapipe = communication.map.QueueWrapperForMap(
-            communication.protocol.MapDataPipeQueueProtocolClient(req_queue, res_queue)
-        )
-        self.assertEqual(input_len, len(local_datapipe))
-
-        clean_me(process, req_queue, res_queue)
 
 
 def _x_mult_2(d):

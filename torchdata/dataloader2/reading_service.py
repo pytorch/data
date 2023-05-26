@@ -25,7 +25,7 @@ from torchdata.dataloader2.graph import DataPipe, list_dps, replace_dp, set_grap
 from torchdata.dataloader2.graph._serialization import attach_wrapper
 from torchdata.dataloader2.graph.utils import _find_replicable_branches
 from torchdata.dataloader2.random import dist_share_seed, SeedGenerator
-from torchdata.dataloader2.utils import process_init_fn, process_reset_fn, WorkerInfo
+from torchdata.dataloader2.utils import process_init_fn, WorkerInfo
 from torchdata.dataloader2.utils.dispatch import _DummyIterDataPipe, find_lca_round_robin_sharding_dp
 from torchdata.datapipes.iter import FullSync
 
@@ -238,11 +238,15 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             graph = replace_dp(graph, dispatching_dp, dummy_dp)  # type: ignore[arg-type]
             datapipe = list(graph.values())[0][0]
             # TODO(ejguan): Determine buffer_size at runtime or use unlimited buffer
-            dispatching_dp = attach_wrapper(dispatching_dp)
             round_robin_dps = dispatching_dp.round_robin_demux(num_instances=self.num_workers)
             # TODO(ejguan): Benchmark if we need to prefetch in dispatching process
+            worker_info = WorkerInfo(self.num_workers, 0)
             process, req_queues, res_queues = communication.eventloop.CreateProcessForMultipleDataPipelines(
-                ctx, round_robin_dps, process_name="dispatching process"
+                ctx,
+                round_robin_dps,
+                process_name="dispatching process",
+                worker_info=worker_info,
+                custom_reset_fn=self.worker_reset_fn,
             )
             assert len(req_queues) == self.num_workers and len(res_queues) == self.num_workers
             for req_queue in req_queues:
@@ -265,8 +269,8 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         for worker_id in range(self.num_workers):
             worker_info = WorkerInfo(self.num_workers, worker_id)
             # Dispatching process for non-replicable DataPipes exists
-            dispatching_req_queue = self._dispatch_process[1][worker_id] if self._dispatch_process is not None else None
-            dispatching_res_queue = self._dispatch_process[2][worker_id] if self._dispatch_process is not None else None
+            dispatching_req_queue = None if self._dispatch_process is None else self._dispatch_process[1][worker_id]
+            dispatching_res_queue = None if self._dispatch_process is None else self._dispatch_process[2][worker_id]
             call_on_process_init = partial(
                 process_init_fn,
                 worker_info=worker_info,
@@ -278,8 +282,10 @@ class MultiProcessingReadingService(ReadingServiceInterface):
             (process, req_queue, res_queue) = communication.eventloop.CreateProcessForDataPipeline(
                 ctx,
                 replicable_dp,
-                process_name=f"worker process {worker_id}",
+                process_name="worker process",
+                worker_info=worker_info,
                 call_on_process_init=call_on_process_init,
+                custom_reset_fn=self.worker_reset_fn,
             )
             req_queue.cancel_join_thread()
             process.daemon = True
@@ -321,11 +327,8 @@ class MultiProcessingReadingService(ReadingServiceInterface):
                 # Stop prefetching first
                 self._main_prefetch_datapipe.reset()  # type: ignore[union-attr]
             # Send the shared seed to subprocesses
-            call_on_epoch_reset = partial(
-                process_reset_fn, iter_reset_fn=iter_reset_fn, custom_reset_fn=self.worker_reset_fn
-            )
             assert self._worker_consumer_datapipe is not None
-            self._worker_consumer_datapipe.reset_epoch(call_on_epoch_reset, seed_generator)
+            self._worker_consumer_datapipe.reset_epoch(seed_generator, iter_reset_fn)
         # In-process (num_workers == 0)
         else:
             # Technically speaking, we should call `_process_reset_fn` to reset global RNGs
@@ -366,50 +369,63 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         self._worker_processes = []
         self._dispatch_process = None
 
-    def _pause(self):
-        """
+    def _pause(
+        self, pause_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
+        r"""
         Pauses DataPipes' activities such as prefetching within main/worker/dispatching processes,
-        in order to collect state.
+        in order to collect state. The provided ``pause_fn`` will be executed in
+        worker/dispatching processes.
         """
-        assert self._end_datapipe is not None
-        dp_list = list_dps(traverse_dps(self._end_datapipe))
-        for dp in dp_list:
-            # TODO: Combine QueueWrapper and _IterateQueueDataPipes,
-            #       and attach pause method. Then, no need to call
-            #       self._worker_consumer_datapipe.request_pause()
-            if isinstance(dp, communication.iter.QueueWrapper):
-                continue
-            if hasattr(dp, "pause") and callable(dp.pause):
-                dp.pause()
-        if self.num_workers > 0:
-            self._worker_consumer_datapipe.request_pause()  # type: ignore[union-attr]
-        else:
+        if self.num_workers == 0:
             raise RuntimeError(
                 "If you would like to use `pause` with `MultiProcessingReadingService`, "
                 "please use more than 0 worker."
             )
+        assert self._end_datapipe is not None
+        # Call pause for DataPipes in the main process (e.g. prefetch, fullsync)
+        dp_list = list_dps(traverse_dps(self._end_datapipe))
+        for dp in dp_list:
+            if hasattr(dp, "pause") and callable(dp.pause):
+                dp.pause()
+        self._worker_consumer_datapipe.request_pause(pause_fn)  # type: ignore[union-attr]
+        return None
 
-    def _resume(self):
-        """
+    def _resume(
+        self, resume_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
+        r"""
         Resumes DataPipes' activities. This is required to be called after `_pause` before
         the DataLoader can keep yielding elements.
         """
         if self.num_workers > 0:
-            self._worker_consumer_datapipe.request_resume()  # type: ignore[union-attr]
+            self._worker_consumer_datapipe.request_resume(resume_fn)  # type: ignore[union-attr]
         else:
             raise RuntimeError(
                 "If you would like to use `resume` with `MultiProcessingReadingService`, "
                 "please use more than 0 worker."
             )
-        if self.main_prefetch_cnt > 0 and self.num_workers > 0:
-            self._main_prefetch_datapipe.resume()  # type: ignore[union-attr]
+        assert self._end_datapipe is not None
+        # Call resume for DataPipes in the main process (e.g. prefetch, fullsync)
+        dp_list = list_dps(traverse_dps(self._end_datapipe))
+        for dp in dp_list[::-1]:
+            if hasattr(dp, "resume") and callable(dp.resume):
+                dp.resume()
+        return None
 
-    def _limit(self, num_batches: Optional[int]) -> None:
+    def _limit(
+        self, num_batches: Optional[int], limit_fn: Optional[Callable[[DataPipe, Optional[int]], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe, Optional[int]], DataPipe]]:
+        r"""
+        Send limit_fn to worker/dispatching process to set the limit number to the specified DataPipes.
         """
-        For this ReadingService, `DataLoader2Iterator` and `DataLoader2` should sufficiently handle
-        the limit operation, such that nothing needs to be done here.
-        """
-        pass
+        if limit_fn is not None:
+            # Only propogate limit when dispatching process exists
+            num_batches = None if self._dispatch_process is None else num_batches
+            self._worker_consumer_datapipe.request_limit(num_batches, limit_fn)  # type: ignore[union-attr]
+            # TODO: Remove when flexible checkpoint is supported
+            limit_fn(self._end_datapipe, num_batches)  # type: ignore[arg-type]
+        return None
 
 
 class DistributedReadingService(ReadingServiceInterface):
@@ -527,3 +543,42 @@ class SequentialReadingService(CheckpointableReadingServiceInterface):
             else:
                 warnings.warn(f"{rs} doesn't support `restore` from state, skipping...")
         return datapipe
+
+    def _pause(
+        self, pause_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
+        r"""
+        Pause the ``DataPipe`` graph defined in all ``ReadingServices``. For example of
+        ``MultiProcessingReadingService`` would accept a ``pause_fn`` from a prior ``ReadingService``
+        to execute custom pause logic within worker/dispatching processes.
+        """
+        for rs in self.reading_services:
+            if hasattr(rs, "_pause"):
+                pause_fn = rs._pause(pause_fn)
+        return pause_fn
+
+    def _resume(
+        self, resume_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
+        r"""
+        Resume the ``DataPipe`` graph defined in all ``ReadingServices``. For example of
+        ``MultiProcessingReadingService`` would accept a ``resume_fn`` from a prior ``ReadingService``
+        to execute custom resume logic within worker/dispatching processes.
+        """
+        for rs in self.reading_services:
+            if hasattr(rs, "_resume"):
+                resume_fn = rs._resume(resume_fn)
+        return resume_fn
+
+    def _limit(
+        self, num_batches: Optional[int], limit_fn: Optional[Callable[[DataPipe, Optional[int]], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe, Optional[int]], DataPipe]]:
+        r"""
+        Limit the ``DataPipe`` graph defined in all ``ReadingServices``. For example of
+        ``MultiProcessingReadingService`` would accept a ``limit_fn`` from a prior ``ReadingService``
+        to set limit to ``DataPipes` within worker/dispatching processes.
+        """
+        for rs in self.reading_services:
+            if hasattr(rs, "_limit"):
+                limit_fn = rs._limit(num_batches, limit_fn)
+        return limit_fn

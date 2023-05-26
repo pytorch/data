@@ -109,7 +109,9 @@ class DataLoader2Iterator(Iterator[T_co]):
         After ``DataLoader2`` is paused, ``resume()`` must be called before it can start yielding again.
 
         Note:
-            ``limit_threshold`` persists after ``pause`` and ``resume``. Use ``.limit(None)`` to remove it.
+            - ``limit_threshold`` persists after ``pause`` and ``resume``. Use ``.limit(None)`` to remove it.
+            - If dispatching process is present, in order to make sure limit is in sync across processes,
+              please place 1-to-N ``DataPipes`` in the dispatching process (before ``sharding_round_robin_dispatch``)
 
         Args:
             num_batches: Number of batches after which the DataLoader2 will pause, use ``None`` to remove the limit
@@ -377,25 +379,31 @@ class DataLoader2(Generic[T_co]):
         """
         self._seed_generator = self._initial_seed_generator
 
-    def _pause(self):
+    def _pause(self) -> None:
         if hasattr(self.reading_service, "_pause"):
             self._is_paused = True
-            self.reading_service._pause()
+            pause_fn = self.reading_service._pause()
+            if pause_fn is not None:
+                self.datapipe = pause_fn(self.datapipe)
         else:
             warnings.warn("ReadingService doesn't support `pause`.")
 
-    def _resume(self):
+    def _resume(self) -> None:
         if hasattr(self.reading_service, "_resume"):
             if not self._is_paused:
                 warnings.warn("Resume is called when `DataLoader2` is not paused. No operation is performed.")
             else:
-                self.reading_service._resume()
+                resume_fn = self.reading_service._resume()
+                if resume_fn is not None:
+                    self.datapipe = resume_fn(self.datapipe)
                 self._is_paused = False
         else:
             warnings.warn("ReadingService doesn't support `resume`.")
 
     def _limit(self, num_batches: Optional[int]) -> None:
         if hasattr(self.reading_service, "_limit"):
-            self.reading_service._limit(num_batches)
+            limit_fn = self.reading_service._limit(num_batches)
+            if limit_fn is not None:
+                self.datapipe = limit_fn(self.datapipe, num_batches)
         else:
             warnings.warn("ReadingService doesn't support `limit`.")

@@ -9,15 +9,15 @@ import types
 import warnings
 
 from collections import deque
-from functools import partial
-from typing import Callable, Deque, List
+from itertools import cycle
+from typing import Callable, Deque, List, Optional
 
 from torch.utils.data import IterDataPipe
 from torchdata._utils import ExceptionWrapper
 from torchdata.dataloader2 import communication
 from torchdata.dataloader2.graph import DataPipe, find_dps, list_dps, traverse_dps
 from torchdata.dataloader2.random import SeedGenerator
-from torchdata.dataloader2.utils import WorkerInfo
+from torchdata.dataloader2.utils import process_reset_fn
 
 
 DEFAULT_NON_BLOCKING_SLEEP = 0.001
@@ -71,8 +71,6 @@ class NonBlocking(IterDataPipe):
         while True:
             try:
                 return self.nonblocking_next()
-            except StopIteration:
-                raise StopIteration
             except NotAvailable:
                 if NonBlocking.not_available_hook is not None:
                     NonBlocking.not_available_hook()
@@ -116,25 +114,53 @@ def EnsureNonBlockingDataPipe(validated_datapipe):
     return validated_datapipe
 
 
+def _sync_recv(request_counter, msg):
+    if request_counter is not None:
+        request_counter.increment(msg)
+        # Make sure all loops have reached
+        while not request_counter.is_reached(msg):
+            yield True
+
+
+def _sync_resp(request_counter, msg):
+    if request_counter is not None:
+        request_counter.reset(msg)
+        while request_counter.is_reached(msg):
+            yield True
+
+
 def DataPipeBehindQueues(
-    source_datapipe, protocol, process_name, blocking_request_get=False, reset_iterator_counter=None
+    source_datapipe,
+    protocol,
+    process_name,
+    loop_id,
+    worker_info,
+    custom_reset_fn,
+    blocking_request_get=False,
+    request_counter=None,
 ):
     """
     Indefinitely iterates over ``req_queue`` and passing values from source_datapipe to ``res_queue``.
 
     Request Types:
-        `ResetEpoch` - Call the `reset_epoch_fn` on the protocol's DataPipe
-        `ResetIterator` - Reset the iterator by calling `QueueWrapper`'s `reset_iterator` method
+        `ResetEpoch` - Call the `reset_epoch_fn` on the protocol's DataPipe and reset DataPipe iterator
         `Terminate` - exits the infinite while loop
         `GetNext` - returns the value from the DataPipe, and handles exceptions such as `StopIteration` as appropriate
+        `Limit` - Set limit to the DataPipe graph
+        `Pause` - Pause
+        the DataPipe graph
+        `Resume` - Resume the DataPipe graph
 
     Args:
         source_datapipe: DataPipe
         protocol: ``IterDataPipeQueueProtocolServer`` that contains ``req_queue`` and ``res_queue``
         process_name: Process name
+        loop_id: Loop ID
+        worker_info: Worker info include worker id and number of workers
+        custom_reset_fn: function to call after each request is received
         blocking_request_get: determines if ``protocol.get_new_request`` will block
-        reset_iterator_counter: Optional counter to synchronize all loops that have received
-            `ResetIteratorRequest` within the dispatching process. It would guarantee that
+        request_counter: Optional counter to synchronize all loops that have received requests for
+            reset/limit/pause/resume within the dispatching process. It would guarantee that
             all loops starts to reset iterator and get next element at the same time.
     """
     if not isinstance(protocol, communication.protocol.IterDataPipeQueueProtocolServer):
@@ -149,53 +175,87 @@ def DataPipeBehindQueues(
             yield True
             continue
 
+        # TODO: Handle Error caused by requests other than GetNext and send it to main process
         if isinstance(request, communication.messages.ResetEpochRequest):
-            source_datapipe = request.reset_fn(source_datapipe)
-            protocol.response_reset_epoch()
-
-        elif isinstance(request, communication.messages.ResetIteratorRequest):
-            # Ensure only reset iterator once for the dispatching process
-            if reset_iterator_counter is not None:
-                reset_iterator_counter.increment()
-                while not reset_iterator_counter.is_reached():
-                    yield True
-                # Sync between loops within the dispatching process
-                source_datapipe.reset_iterator()
-                yield True
-                reset_iterator_counter.reset()
+            yield from _sync_recv(request_counter, "reset_epoch")
+            distributed_shared_seed = request_counter is not None
+            if request_counter is None or loop_id == 0:
+                seed_generator = request.seed_generator
+                iter_reset_fn = request.iter_reset_fn
+                dispatching_dps = find_dps(traverse_dps(source_datapipe), _IterateQueueDataPipes)
+                for dp in dispatching_dps:
+                    dp.reset_epoch(seed_generator, iter_reset_fn)
+                source_datapipe = process_reset_fn(
+                    source_datapipe,
+                    worker_info,
+                    seed_generator,
+                    distributed_shared_seed,
+                    iter_reset_fn,
+                    custom_reset_fn,
+                )
             source_datapipe.reset_iterator()
-            protocol.response_reset_iterator()
+            yield from _sync_resp(request_counter, "reset_epoch")
+            protocol.response_reset_epoch()
+            yield True  # Returns control
+
+        elif isinstance(request, communication.messages.LimitRequest):
+            yield from _sync_recv(request_counter, "limit")
+            if request_counter is None or loop_id == 0:
+                num_batches = request.num_batches
+                limit_fn = request.limit_fn
+                worker_num_batches = num_batches if request.worker_num_batches is None else request.worker_num_batches
+                # Send limit to the worker/dispatching process
+                dispatching_dps = find_dps(traverse_dps(source_datapipe), _IterateQueueDataPipes)
+                for dp in dispatching_dps:
+                    dp.request_limit(num_batches, limit_fn, worker_num_batches)
+                if limit_fn is not None:
+                    # Set limit to the DataPipe graph in worker/dispatching process
+                    source_datapipe = limit_fn(source_datapipe, worker_num_batches)
+            yield from _sync_resp(request_counter, "limit")
+            protocol.response_limit()
+            yield True  # Returns control
 
         elif isinstance(request, communication.messages.PauseRequest):
-            dp_list = list_dps(traverse_dps(source_datapipe))
-            for dp in dp_list:
-                # TODO: Remove this condition after there is `pause` support for round-robin sharding
-                if isinstance(dp, _IterateQueueDataPipes):
-                    warnings.warn("There is no support for `pause` with round-robin sharding at the moment.")
-                elif hasattr(dp, "pause") and callable(dp.pause):
-                    dp.pause()
-
+            yield from _sync_recv(request_counter, "pause")
+            if request_counter is None or loop_id == 0:
+                graph = traverse_dps(source_datapipe)
+                dp_list = list_dps(graph)
+                for dp in dp_list:
+                    if hasattr(dp, "pause") and callable(dp.pause):
+                        dp.pause()
+                dispatching_dps = find_dps(graph, _IterateQueueDataPipes)
+                for dp in dispatching_dps:
+                    dp.request_pause(request.pause_fn)
+                if request.pause_fn is not None:
+                    source_datapipe = request.pause_fn(source_datapipe)
+            yield from _sync_resp(request_counter, "pause")
             protocol.response_pause()
-            yield True  # Return control
+            yield True  # Returns control
 
         elif isinstance(request, communication.messages.ResumeRequest):
-            dp_list = list_dps(traverse_dps(source_datapipe))
-            for dp in reversed(dp_list):
-                # TODO: Remove this condition after there is `resume` support for round-robin sharding
-                if isinstance(dp, _IterateQueueDataPipes):
-                    raise RuntimeError("There is no support for `resume` with round-robin sharding at the moment.")
-                elif hasattr(dp, "resume") and callable(dp.resume):
-                    dp.resume()
+            yield from _sync_recv(request_counter, "resume")
+            if request_counter is None or loop_id == 0:
+                if request.resume_fn is not None:
+                    source_datapipe = request.resume_fn(source_datapipe)
+                graph = traverse_dps(source_datapipe)
+                # Send resume to the dispatching process
+                dispatching_dps = find_dps(graph, _IterateQueueDataPipes)
+                for dp in dispatching_dps:
+                    dp.request_resume(request.resume_fn)
+                for dp in reversed(list_dps(graph)):
+                    if hasattr(dp, "resume") and callable(dp.resume):
+                        dp.resume()
+            yield from _sync_resp(request_counter, "resume")
             protocol.response_resume()
-            yield True  # Return control
+            yield True  # Returns control
 
         elif isinstance(request, communication.messages.TerminateRequest):
             forever = False
             dispatch_dps = find_dps(traverse_dps(source_datapipe), _IterateQueueDataPipes)
             for dispatch_dp in dispatch_dps:
                 dispatch_dp.request_terminate()
-
             protocol.response_terminate()
+            yield True  # Returns control
 
         elif isinstance(request, communication.messages.GetNextRequest):
             while forever:
@@ -221,7 +281,7 @@ def DataPipeBehindQueues(
                     yield True
                     break
                 except Exception:
-                    exc = ExceptionWrapper(where=f"in {process_name}")
+                    exc = ExceptionWrapper(where=f"in {process_name} {loop_id}")
                     protocol.response_worker_exception(exc)
                     return
                 protocol.response_next(value)
@@ -245,37 +305,47 @@ class QueueWrapper(NonBlocking):
         self._stop_iteration = False
         self._response_wait_time = response_wait_time
 
-    def reset_iterator(self):
+    def request_reset_epoch(self, seed_generator, iter_reset_fn):
         self._stop_iteration = False
         self.counter = 0
-        self.protocol.request_reset_iterator()
+        self.protocol.request_reset_epoch(seed_generator, iter_reset_fn)
+
+    def _get_response(self, fn_name) -> None:
+        assert hasattr(self.protocol, fn_name) and callable(getattr(self.protocol, fn_name))
+        get_response_fn = getattr(self.protocol, fn_name)
         while True:
             try:
-                self.protocol.get_response_reset_iterator()
+                get_response_fn()
                 break
             except communication.protocol.EmptyQueue:
                 if NonBlocking.not_available_hook is not None:
                     NonBlocking.not_available_hook()
 
-    def pause(self):
-        self.protocol.request_pause()
-        while True:
-            try:
-                self.protocol.get_response_pause()
-                break
-            except communication.protocol.EmptyQueue:
-                if NonBlocking.not_available_hook is not None:
-                    NonBlocking.not_available_hook()
+    def get_reset_epoch_response(self) -> None:
+        self._get_response("get_response_reset_epoch")
 
-    def resume(self):
-        self.protocol.request_resume()
-        while True:
-            try:
-                self.protocol.get_response_resume()
-                break
-            except communication.protocol.EmptyQueue:
-                if NonBlocking.not_available_hook is not None:
-                    NonBlocking.not_available_hook()
+    def request_limit(
+        self,
+        num_batches: Optional[int],
+        limit_fn: Optional[Callable[[DataPipe, Optional[int]], DataPipe]] = None,
+        worker_num_batches: Optional[int] = None,
+    ) -> None:
+        self.protocol.request_limit(num_batches, limit_fn, worker_num_batches)
+
+    def get_limit_response(self) -> None:
+        self._get_response("get_response_limit")
+
+    def request_pause(self, pause_fn: Optional[Callable[[DataPipe], DataPipe]] = None) -> None:
+        self.protocol.request_pause(pause_fn)
+
+    def get_pause_response(self) -> None:
+        self._get_response("get_response_pause")
+
+    def request_resume(self, resume_fn: Optional[Callable[[DataPipe], DataPipe]] = None) -> None:
+        self.protocol.request_resume(resume_fn)
+
+    def get_resume_response(self) -> None:
+        self._get_response("get_response_resume")
 
     def nonblocking_next(self):
         if self._stop_iteration:
@@ -308,83 +378,118 @@ class _IterateQueueDataPipes(IterDataPipe):
             if not isinstance(dp, communication.iter.QueueWrapper):
                 raise Exception("Source datapipes should be an instance of iter.QueueWrapper")
         self.datapipes = datapipes
+        self._num_processes = len(datapipes)
         self.res_buffers: List[Deque] = [deque() for _ in range(len(datapipes))]
         self._terminated: bool = False
+        self._limit: Optional[int] = None
+        self._request_cnt: int = 0
 
     def __iter__(self):
-        total_pipes = len(self.datapipes)
         disabled_pipe = [False] * len(self.datapipes)
         cnt_disabled_pipes = 0
 
-        for idx in range(total_pipes):
-            self.datapipes[idx].protocol.request_next()
+        total_req_cnt = 0
+        req_idx_cycle = cycle(range(self._num_processes))
+        req_idx = next(req_idx_cycle)
+        total_res_cnt = 0
+        res_idx_cycle = cycle(range(self._num_processes))
+        res_idx = next(res_idx_cycle)
 
-        while cnt_disabled_pipes < total_pipes:
-            for idx in range(total_pipes):
-                if not disabled_pipe[idx]:
-                    # Check if buffer of the DataPipe is empty, if not, yield one before requesting next
-                    if len(self.res_buffers[idx]):
-                        response = self.res_buffers[idx].popleft()
+        while cnt_disabled_pipes < self._num_processes:
+            # Send a round of requests until limit is reached (limit is smaller than total pipes)
+            for _ in range(self._num_processes):
+                if not disabled_pipe[req_idx]:
+                    self.datapipes[req_idx].protocol.request_next()
+                    self._request_cnt += 1
+                total_req_cnt += 1
+                req_idx = next(req_idx_cycle)
+                if self._limit is not None and self._request_cnt == self._limit:
+                    break
+            # Receive responses from each of the workers with pending requests
+            while total_res_cnt < total_req_cnt and cnt_disabled_pipes < self._num_processes:
+                disabled = disabled_pipe[res_idx]
+                if not disabled:
+                    if len(self.res_buffers[res_idx]):
+                        response = self.res_buffers[res_idx].popleft()
                     else:
                         while not self._terminated:
                             try:
                                 # Using non-blocking next to make sure termination reached
-                                response = self.datapipes[idx].protocol.get_response_next(block=False)
+                                response = self.datapipes[res_idx].protocol.get_response_next(block=False)
                                 break
                             except communication.protocol.EmptyQueue:
                                 time.sleep(DEFAULT_NON_BLOCKING_SLEEP)
-                    if isinstance(response, communication.messages.StopIterationResponse):
-                        disabled_pipe[idx] = True
-                        cnt_disabled_pipes += 1
-                        continue
                     if isinstance(response, communication.messages.InvalidStateResponse):
                         raise communication.iter.InvalidStateResetRequired
                     if isinstance(response, communication.messages.TerminateResponse):
                         raise communication.iter.TerminateRequired
                     if isinstance(response, communication.messages.WorkerExceptionResponse):
                         response.exc.reraise()
-                    if len(self.res_buffers[idx]) == 0:  # Only request if buffer is empty
-                        self.datapipes[idx].protocol.request_next()
+                    if isinstance(response, communication.messages.StopIterationResponse):
+                        disabled_pipe[res_idx] = True
+                        cnt_disabled_pipes += 1
+                        disabled = True
+                    else:
+                        # Only request if buffer is empty and has not reached the limit
+                        if len(self.res_buffers[res_idx]) == 0 and (
+                            self._limit is None or self._request_cnt < self._limit
+                        ):
+                            self.datapipes[req_idx].protocol.request_next()
+                            self._request_cnt += 1
+                            total_req_cnt += 1
+                            req_idx = next(req_idx_cycle)
+                total_res_cnt += 1
+                res_idx = next(res_idx_cycle)
+                if not disabled:
                     yield response.value
 
-    def reset(self):
-        # NonBlocking DataPipes do not reset automatically, have to do it manually
-        for dp in self.datapipes:
-            dp.reset_iterator()
-
     def reset_epoch(
-        self, reset_fn: Callable[[WorkerInfo, SeedGenerator, DataPipe], DataPipe], seed_generator: SeedGenerator
+        self,
+        seed_generator: SeedGenerator,
+        iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]],
     ):
+        self._request_cnt = 0
         for dp in self.datapipes:
             dp.protocol.discard_existing_request()
-        num_workers = len(self.datapipes)
         for worker_id, dp in enumerate(self.datapipes):
-            worker_info = WorkerInfo(num_workers, worker_id)
             worker_seed_generator = seed_generator.spawn(worker_id)
-            dp.protocol.request_reset_epoch(
-                partial(reset_fn, worker_info=worker_info, seed_generator=worker_seed_generator)
-            )
+            dp.request_reset_epoch(worker_seed_generator, iter_reset_fn)
         for dp in self.datapipes:
-            while True:
-                try:
-                    dp.protocol.get_response_reset_epoch()
-                    break
-                except communication.protocol.EmptyQueue:
-                    if NonBlocking.not_available_hook is not None:
-                        NonBlocking.not_available_hook()
+            dp.get_reset_epoch_response()
 
-    def request_pause(self):
+    def request_pause(self, pause_fn: Optional[Callable[[DataPipe], DataPipe]] = None) -> None:
         # Store results of pending requests
         for idx, dp in enumerate(self.datapipes):
             if dp.protocol.waiting_for_response():
                 res = dp.protocol.get_response_next(block=True)
                 self.res_buffers[idx].append(res)
         for dp in self.datapipes:
-            dp.pause()
-
-    def request_resume(self):
+            dp.request_pause(pause_fn)
         for dp in self.datapipes:
-            dp.resume()
+            dp.get_pause_response()
+
+    def request_resume(self, resume_fn: Optional[Callable[[DataPipe], DataPipe]] = None) -> None:
+        for dp in self.datapipes:
+            dp.request_resume(resume_fn)
+        for dp in self.datapipes:
+            dp.get_resume_response()
+        self._request_cnt = 0
+
+    def request_limit(
+        self,
+        num_batches: Optional[int],
+        limit_fn: Optional[Callable[[DataPipe, Optional[int]], DataPipe]] = None,
+        worker_num_batches: Optional[int] = None,
+    ) -> None:
+        self._limit = num_batches if worker_num_batches is None else worker_num_batches
+        avg_num_batches = num_batches if num_batches is None else num_batches // self._num_processes
+        batch_remainder = 0 if num_batches is None else num_batches % self._num_processes
+        for idx, dp in enumerate(self.datapipes):
+            ext_batch = 1 if batch_remainder > idx else 0
+            wnb = None if avg_num_batches is None or worker_num_batches is not None else avg_num_batches + ext_batch
+            dp.request_limit(num_batches, limit_fn, wnb)
+        for dp in self.datapipes:
+            dp.get_limit_response()
 
     def request_terminate(self):
         self._terminated = True
