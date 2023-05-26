@@ -94,9 +94,9 @@ class _PrefetchExecutor:
         if f.exception():
             with self._lock:
                 self._end_flag = True
-        if self.callback_fn is not None and not self._is_shutdown:
-            # Doesn't invoke `callback_fn` if `shutdown` is caleld
-            self._executor.submit(self.callback_fn, Expected(index, f.exception()))
+        if self.callback_fn is not None:
+            # Invoke `callback_fn` in order to set `FullSyncDP._done_callback` to `True`
+            self.callback_fn(Expected(index, f.exception()))
 
     def return_next(self):
         if self._futures:
@@ -118,6 +118,8 @@ class _PrefetchExecutor:
     def shutdown(self):
         self._paused = False
         self._is_shutdown = True
+        while self._futures:
+            self._futures.popleft().cancel()
         self._executor.shutdown(wait=True)
 
     def pause(self):
