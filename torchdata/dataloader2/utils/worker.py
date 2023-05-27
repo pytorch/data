@@ -7,7 +7,6 @@
 import random
 
 from dataclasses import dataclass
-from functools import partial
 from multiprocessing.queues import Queue
 from typing import Callable, Optional
 
@@ -117,41 +116,11 @@ def _set_global_random_state(seed_generator: SeedGenerator, distributed_shared: 
         numpy.random.seed(np_seed)
 
 
-def dispatch_process_reset_fn(
-    datapipe: DataPipe,
-    worker_info: WorkerInfo,
-    seed_generator: SeedGenerator,
-    iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None,
-    custom_reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
-) -> DataPipe:
-    r"""
-    Based on the distributed shared random seed, this function is used to set the random state
-    of the non-repliable ``DataPipe`` graph and the global random states for the dispatch process.
-    This function would guarantee that all distributed dispatching processes share the
-    same random state to ensure the same shuffle order.
-    """
-    # Set global random states
-    _set_global_random_state(seed_generator, distributed_shared=True)
-
-    graph = traverse_dps(datapipe)
-    dps = list_dps(graph)
-    set_datapipes_seed(dps, seed_generator=seed_generator, distributed_shared=True)
-
-    if iter_reset_fn is not None:
-        datapipe = iter_reset_fn(datapipe)
-        assert isinstance(datapipe, (IterDataPipe, MapDataPipe))
-
-    if custom_reset_fn is not None:
-        datapipe = custom_reset_fn(datapipe, worker_info, seed_generator)
-        assert isinstance(datapipe, (IterDataPipe, MapDataPipe))
-
-    return datapipe
-
-
 def process_reset_fn(
     datapipe: DataPipe,
     worker_info: WorkerInfo,
     seed_generator: SeedGenerator,
+    distributed_shared_seed: bool = False,
     iter_reset_fn: Optional[Callable[[DataPipe], DataPipe]] = None,
     custom_reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
 ) -> DataPipe:
@@ -160,25 +129,15 @@ def process_reset_fn(
     reset the random state of the ``DataPipe`` graph and the global random states for ``torch``,
     ``random`` and ``numpy``.
     """
-    # Reset non-sharding process first
-    graph = traverse_dps(datapipe)
-    dispatch_process_consumer_dps = find_dps(graph, communication.iter._IterateQueueDataPipes)
-
-    if len(dispatch_process_consumer_dps) > 0:
-        assert len(dispatch_process_consumer_dps) == 1
-        dispatch_process_consumer_dp = dispatch_process_consumer_dps[0]
-        # Only send the reset epoch message once
-        if worker_info.worker_id == 0:
-            # Use WorkerInfo(1, 0)
-            dispatch_reset_fn = partial(
-                dispatch_process_reset_fn, iter_reset_fn=iter_reset_fn, custom_reset_fn=custom_reset_fn
-            )
-            dispatch_process_consumer_dp.reset_epoch(dispatch_reset_fn, seed_generator)
-
     # Set global random states
-    _set_global_random_state(seed_generator)
+    _set_global_random_state(seed_generator, distributed_shared=distributed_shared_seed)
 
-    set_graph_random_seed(datapipe, seed_generator)
+    if distributed_shared_seed:
+        graph = traverse_dps(datapipe)
+        dps = list_dps(graph)
+        set_datapipes_seed(dps, seed_generator=seed_generator, distributed_shared=distributed_shared_seed)
+    else:
+        set_graph_random_seed(datapipe, seed_generator)
 
     if iter_reset_fn is not None:
         datapipe = iter_reset_fn(datapipe)
