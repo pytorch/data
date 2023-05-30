@@ -266,8 +266,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         worker_reset_fn: Optional[Callable[[DataPipe, WorkerInfo, SeedGenerator], DataPipe]] = None,
     ) -> None:
         if num_workers == 0:
-            raise ValueError("Please use `InProcessReadingService` for num_workers=0")
-        assert num_workers > 0
+            warnings.warn("Please use `InProcessReadingService` for num_workers=0")
         self.num_workers = num_workers
 
         if multiprocessing_context is not None:
@@ -286,6 +285,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         self._worker_consumer_datapipe = None
         self._main_prefetch_datapipe = None
         self._end_datapipe = None
+        self._mp = num_workers > 0
 
     def initialize(self, datapipe: DataPipe) -> DataPipe:
         r"""
@@ -293,6 +293,13 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         separates graph by multiple pieces and reconnects it using queues.
         creates subprocesses.
         """
+        if not self._mp:
+            # TODO(616): Warn and recommend usage of InProcessReadingService
+            worker_info = WorkerInfo(1, 0)
+            datapipe = process_init_fn(datapipe, worker_info, self.worker_init_fn)
+            self._end_datapipe = datapipe
+            return datapipe
+
         ctx = mp.get_context(self.multiprocessing_context)
 
         # Launch dispatching process for the lowest common ancestor of non-replicable DataPipes
