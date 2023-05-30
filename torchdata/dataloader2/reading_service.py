@@ -192,7 +192,9 @@ class InProcessReadingService(ReadingServiceInterface):
 
         return None
 
-    def _pause(self):
+    def _pause(
+        self, pause_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
         """
         Pauses DataPipes' activities in the main process in order to collect state.
         """
@@ -202,8 +204,11 @@ class InProcessReadingService(ReadingServiceInterface):
         for dp in dp_list:
             if hasattr(dp, "pause") and callable(dp.pause):
                 dp.pause()
+        return None
 
-    def _resume(self):
+    def _resume(
+        self, resume_fn: Optional[Callable[[DataPipe], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe], DataPipe]]:
         """
         Resumes DataPipes' activities. This is required to be called after `_pause` before
         the DataLoader can keep yielding elements.
@@ -215,6 +220,18 @@ class InProcessReadingService(ReadingServiceInterface):
         for dp in dp_list[::-1]:
             if hasattr(dp, "resume") and callable(dp.resume):
                 dp.resume()
+        return None
+
+    def _limit(
+        self, num_batches: Optional[int], limit_fn: Optional[Callable[[DataPipe, Optional[int]], DataPipe]] = None
+    ) -> Optional[Callable[[DataPipe, Optional[int]], DataPipe]]:
+        r"""
+        Apply limit_fn to the DataPipe graph.
+        """
+        if limit_fn is not None:
+            # TODO: Remove when flexible checkpoint is supported
+            limit_fn(self._end_datapipe, num_batches)  # type: ignore[arg-type]
+        return None
 
 
 class MultiProcessingReadingService(ReadingServiceInterface):
