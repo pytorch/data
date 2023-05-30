@@ -275,7 +275,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
 
     def __init__(
         self,
-        num_workers: int,
+        num_workers: int = 0,
         multiprocessing_context: Optional[str] = None,
         worker_prefetch_cnt: int = 10,
         main_prefetch_cnt: int = 10,
