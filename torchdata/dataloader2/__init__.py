@@ -10,6 +10,7 @@ from torchdata.dataloader2.error import PauseIteration
 from torchdata.dataloader2.reading_service import (
     CheckpointableReadingServiceInterface,
     DistributedReadingService,
+    InProcessReadingService,
     MultiProcessingReadingService,
     PrototypeMultiProcessingReadingService,
     ReadingServiceInterface,
@@ -22,6 +23,7 @@ __all__ = [
     "DataLoader2",
     "DataLoader2Iterator",
     "DistributedReadingService",
+    "InProcessReadingService",
     "MultiProcessingReadingService",
     "PauseIteration",
     "PrototypeMultiProcessingReadingService",
