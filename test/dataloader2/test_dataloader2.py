@@ -25,6 +25,7 @@ from torch.utils.data.datapipes.iter.sharding import SHARDING_PRIORITIES
 from torchdata.dataloader2 import (
     DataLoader2,
     DistributedReadingService,
+    InProcessReadingService,
     MultiProcessingReadingService,
     ReadingServiceInterface,
     SequentialReadingService,
@@ -221,8 +222,8 @@ class DataLoader2ConsistencyTest(TestCase):
         return MultiProcessingReadingService(num_workers=2)
 
     @staticmethod
-    def _get_mp_reading_service_zero_workers():
-        return MultiProcessingReadingService(num_workers=0)
+    def _get_in_process_reading_service():
+        return InProcessReadingService()
 
     def _collect_data(self, datapipe, reading_service_gen):
         dl: DataLoader2 = DataLoader2(datapipe, reading_service=reading_service_gen())
@@ -245,7 +246,7 @@ class DataLoader2ConsistencyTest(TestCase):
 
         reading_service_generators = (
             self._get_mp_reading_service,
-            self._get_mp_reading_service_zero_workers,
+            self._get_in_process_reading_service,
         )
         for reading_service_gen in reading_service_generators:
             actual = self._collect_data(dp, reading_service_gen=reading_service_gen)
