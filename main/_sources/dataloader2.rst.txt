@@ -31,6 +31,7 @@ ReadingService
     :template: class_method_template.rst
 
     DistributedReadingService
+    InProcessReadingService
     MultiProcessingReadingService
     SequentialReadingService
 

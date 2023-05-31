@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Saver &mdash; TorchData main documentation</title>
+  <title>InProcessReadingService &mdash; TorchData main documentation</title>
   
 
   
@@ -34,8 +34,8 @@
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="BatchAsyncMapper" href="torchdata.datapipes.iter.BatchAsyncMapper.html" />
-    <link rel="prev" title="S3FileLoader" href="torchdata.datapipes.iter.S3FileLoader.html" />
+    <link rel="next" title="MultiProcessingReadingService" href="torchdata.dataloader2.MultiProcessingReadingService.html" />
+    <link rel="prev" title="DistributedReadingService" href="torchdata.dataloader2.DistributedReadingService.html" />
   <!-- Google Analytics -->
   
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-117752657-2"></script>
@@ -247,10 +247,10 @@
             
               <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.map.html">Map-style DataPipes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.utils.html">Utility Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../dataloader2.html">DataLoader2</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../dataloader2.html">DataLoader2</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reading_service.html">ReadingService</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
@@ -308,15 +308,15 @@
       </li>
 
         
-          <li><a href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a> &gt;</li>
+          <li><a href="../dataloader2.html">DataLoader2</a> &gt;</li>
         
-      <li>Saver</li>
+      <li>InProcessReadingService</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/generated/torchdata.datapipes.iter.Saver.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/generated/torchdata.dataloader2.InProcessReadingService.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -342,36 +342,65 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="saver">
-<h1>Saver<a class="headerlink" href="#saver" title="Permalink to this heading">¶</a></h1>
+  <section id="inprocessreadingservice">
+<h1>InProcessReadingService<a class="headerlink" href="#inprocessreadingservice" title="Permalink to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="torchdata.datapipes.iter.Saver">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Saver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">bytes</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bytearray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'w'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepath_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.Saver" title="Permalink to this definition">¶</a></dt>
-<dd><p>Takes in a DataPipe of tuples of metadata and data, saves the data
-to the target path generated by the <code class="docutils literal notranslate"><span class="pre">filepath_fn</span></code> and metadata, and yields file path on local file
-system (functional name: <code class="docutils literal notranslate"><span class="pre">save_to_disk</span></code>).</p>
+<dt class="sig sig-object py" id="torchdata.dataloader2.InProcessReadingService">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.dataloader2.</span></span><span class="sig-name descname"><span class="pre">InProcessReadingService</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefetch_cnt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">WorkerInfo</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reset_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">WorkerInfo</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">SeedGenerator</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.dataloader2.InProcessReadingService" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default ReadingService to serve the <a href="#id1"><span class="problematic" id="id2">``</span></a>DataPipe` graph in the main process,
+and apply graph settings like determinism control to the graph.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>source_datapipe</strong> – Iterable DataPipe with tuples of metadata and data</p></li>
-<li><p><strong>mode</strong> – Node in which the file will be opened for write the data (<code class="docutils literal notranslate"><span class="pre">&quot;w&quot;</span></code> by default)</p></li>
-<li><p><strong>filepath_fn</strong> – Function that takes in metadata and returns the target path of the new file</p></li>
+<li><p><strong>prefetch_cnt</strong> – (int, 0 by default): Number of data will be prefetched in the main process.</p></li>
+<li><p><strong>init_fn</strong> – (Callable, optional): Custom function to be called when the main
+process starts to iterate over <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.</p></li>
+<li><p><strong>reset_fn</strong> – (Callable, optional): Custom function to be called at the beginning
+of each epoch with <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code>, <code class="docutils literal notranslate"><span class="pre">WorkerInfo</span></code> and <code class="docutils literal notranslate"><span class="pre">SeedGenerator</span></code>
+as the expected arguments.</p></li>
 </ul>
 </dd>
 </dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.dataloader2.InProcessReadingService.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.datapipes.datapipe.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torch.utils.data.datapipes.datapipe.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.dataloader2.InProcessReadingService.initialize" title="Permalink to this definition">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> takes a <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph, adapts it into a new <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph based on the custom need.
+Called once in creating <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> iterator at first time. Prior to calling this method,
+the <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> object must be picklable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>datapipe</strong> – Original <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>An adapted or a new <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.dataloader2.InProcessReadingService.initialize_iteration">
+<span class="sig-name descname"><span class="pre">initialize_iteration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed_generator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SeedGenerator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iter_reset_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torchdata.datapipes.map.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.datapipes.datapipe.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torch.utils.data.datapipes.datapipe.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torch.utils.data.datapipes.datapipe.IterDataPipe"><span class="pre">IterDataPipe</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../torchdata.datapipes.map.html#torchdata.datapipes.map.MapDataPipe" title="torch.utils.data.datapipes.datapipe.MapDataPipe"><span class="pre">MapDataPipe</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.dataloader2.InProcessReadingService.initialize_iteration" title="Permalink to this definition">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> spins up service for an epoch. Called at the beginning
+of every time getting <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> iterator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seed_generator</strong> – SeedGenerator object created and managed by DataLoader2. As the single
+source of randomness, it will govern the determinism for all of random operations
+with the graph of DataPipes.</p></li>
+<li><p><strong>iter_reset_fn</strong> – Optional reset function from the prior <code class="docutils literal notranslate"><span class="pre">ReadingServcie</span></code>
+when <code class="docutils literal notranslate"><span class="pre">SequentialReadingService</span></code> chains multiple <code class="docutils literal notranslate"><span class="pre">ReadingServices</span></code></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A new <code class="docutils literal notranslate"><span class="pre">iter_reset_fn</span></code> to be used by subseqeuent <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code></p>
+</dd>
+</dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">os</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">filepath_fn</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">name_to_data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;1.txt&quot;</span><span class="p">:</span> <span class="sa">b</span><span class="s2">&quot;DATA1&quot;</span><span class="p">,</span> <span class="s2">&quot;2.txt&quot;</span><span class="p">:</span> <span class="sa">b</span><span class="s2">&quot;DATA2&quot;</span><span class="p">,</span> <span class="s2">&quot;3.txt&quot;</span><span class="p">:</span> <span class="sa">b</span><span class="s2">&quot;DATA3&quot;</span><span class="p">}</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">source_dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">name_to_data</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">saver_dp</span> <span class="o">=</span> <span class="n">source_dp</span><span class="o">.</span><span class="n">save_to_disk</span><span class="p">(</span><span class="n">filepath_fn</span><span class="o">=</span><span class="n">filepath_fn</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;wb&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">res_file_paths</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">saver_dp</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">res_file_paths</span>
-<span class="go">[&#39;./1.txt&#39;, &#39;./2.txt&#39;, &#39;./3.txt&#39;]</span>
-</pre></div>
-</div>
+<p>MultiProcessingReadingService starts setting worker seeds per process and prefetching
+items from the graph.</p>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -384,10 +413,10 @@ system (functional name: <code class="docutils literal notranslate"><span class=
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="torchdata.datapipes.iter.BatchAsyncMapper.html" class="btn btn-neutral float-right" title="BatchAsyncMapper" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.dataloader2.MultiProcessingReadingService.html" class="btn btn-neutral float-right" title="MultiProcessingReadingService" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.iter.S3FileLoader.html" class="btn btn-neutral" title="S3FileLoader" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="torchdata.dataloader2.DistributedReadingService.html" class="btn btn-neutral" title="DistributedReadingService" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -419,7 +448,7 @@ system (functional name: <code class="docutils literal notranslate"><span class=
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">Saver</a></li>
+<li><a class="reference internal" href="#">InProcessReadingService</a></li>
 </ul>
 
             </div>
