@@ -395,7 +395,7 @@ class _IterateQueueDataPipes(IterDataPipe):
         res_idx_cycle = cycle(range(self._num_processes))
         res_idx = next(res_idx_cycle)
 
-        while cnt_disabled_pipes < self._num_processes:
+        while cnt_disabled_pipes < self._num_processes and not self._terminated:
             # Send a round of requests until limit is reached (limit is smaller than total pipes)
             for _ in range(self._num_processes):
                 if not disabled_pipe[req_idx]:
@@ -425,6 +425,8 @@ class _IterateQueueDataPipes(IterDataPipe):
                         raise communication.iter.TerminateRequired
                     if isinstance(response, communication.messages.WorkerExceptionResponse):
                         response.exc.reraise()
+                    if self._terminated:
+                        break
                     if isinstance(response, communication.messages.StopIterationResponse):
                         disabled_pipe[res_idx] = True
                         cnt_disabled_pipes += 1
@@ -437,8 +439,8 @@ class _IterateQueueDataPipes(IterDataPipe):
                             self.datapipes[req_idx].protocol.request_next()
                             self._request_cnt += 1
                             total_req_cnt += 1
-                            req_idx = next(req_idx_cycle)
-                total_res_cnt += 1
+                    total_res_cnt += 1
+                req_idx = next(req_idx_cycle)
                 res_idx = next(res_idx_cycle)
                 if not disabled:
                     yield response.value
@@ -493,5 +495,7 @@ class _IterateQueueDataPipes(IterDataPipe):
 
     def request_terminate(self):
         self._terminated = True
+        for dp in self.datapipes:
+            dp.protocol.discard_existing_request()
         for dp in self.datapipes:
             dp.protocol.request_terminate()
