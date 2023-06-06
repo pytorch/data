@@ -48,16 +48,8 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
             e.g. host, port, username, password, etc.
 
     Example:
-
-    .. testsetup::
-
-        dir_path = "path"
-
-    .. testcode::
-
-        from torchdata.datapipes.iter import FSSpecFileLister
-
-        datapipe = FSSpecFileLister(root=dir_path)
+        >>> from torchdata.datapipes.iter import FSSpecFileLister
+        >>> datapipe = FSSpecFileLister(root=dir_path, recursive=True)
     """
 
     def __init__(
@@ -99,10 +91,10 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
             if self.recursive:
                 for current_path, dirs, files in fs.walk(path):
                     for file_name in files:
-                        if not match_masks(file_name, self.masks):
-                            continue
 
                         abs_path = os.path.join(current_path, file_name) if is_local else posixpath.join(current_path, file_name)
+                        if not match_masks(abs_path, self.masks):
+                            continue
 
                         if any(file_name.startswith(protocol) for protocol in protocol_list):
                             yield file_name
@@ -112,10 +104,10 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
                             yield abs_path
             else:
                 for file_name in fs.ls(path, detail=False):  # Ensure it returns List[str], not List[Dict]
-                    if not match_masks(file_name, self.masks):
-                        continue
-
                     abs_path = os.path.join(path, file_name) if is_local else posixpath.join(path, file_name)
+
+                    if not match_masks(abs_path, self.masks):
+                        continue
 
                     if any(file_name.startswith(protocol) for protocol in protocol_list):
                         yield file_name
