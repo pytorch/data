@@ -632,9 +632,7 @@ class SequentialReadingService(CheckpointableReadingServiceInterface):
             if hasattr(rs, "restore") and callable(rs.restore):
                 datapipe = rs.restore(datapipe, state)
             else:
-                warnings.warn(
-                    f"{rs} doesn't support `restore` from state, initialize from scratch"
-                )
+                warnings.warn(f"{rs} doesn't support `restore` from state, initialize from scratch")
                 datapipe = rs.initialize(datapipe)
         return datapipe
 

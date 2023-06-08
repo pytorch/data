@@ -431,16 +431,17 @@ class _IterateQueueDataPipes(IterDataPipe):
                         disabled_pipe[res_idx] = True
                         cnt_disabled_pipes += 1
                         disabled = True
+                        req_idx = next(req_idx_cycle)
                     else:
                         # Only request if buffer is empty and has not reached the limit
                         if len(self.res_buffers[res_idx]) == 0 and (
                             self._limit is None or self._request_cnt < self._limit
                         ):
                             self.datapipes[req_idx].protocol.request_next()
+                            req_idx = next(req_idx_cycle)
                             self._request_cnt += 1
                             total_req_cnt += 1
                     total_res_cnt += 1
-                req_idx = next(req_idx_cycle)
                 res_idx = next(res_idx_cycle)
                 if not disabled:
                     yield response.value
