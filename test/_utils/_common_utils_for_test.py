@@ -87,9 +87,7 @@ def check_hash_fn(filepath, expected_hash, hash_type="md5"):
         raise ValueError("Invalid hash_type requested, should be one of {}".format(["sha256", "md5"]))
 
     with open(filepath, "rb") as f:
-        chunk = f.read(1024 ** 2)
-        while chunk:
+        while chunk := f.read(1024 ** 2):
             hash_fn.update(chunk)
-            chunk = f.read(1024 ** 2)
 
     return hash_fn.hexdigest() == expected_hash

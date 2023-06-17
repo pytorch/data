@@ -150,10 +150,8 @@ def _hash_check(filepath, hash_dict, hash_type):
     # TODO(634): Line above will require all readers (Win) to obtain proper locks,
     # I'm putting it on hold as we need to modify PyTorch core codebase heavily.
     with open(filepath, "rb") as f:
-        chunk = f.read(1024 ** 2)
-        while chunk:
+        while chunk := f.read(1024 ** 2):
             hash_func.update(chunk)
-            chunk = f.read(1024 ** 2)
 
     return hash_func.hexdigest() == hash_dict[filepath]
 
