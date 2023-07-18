@@ -1,14 +1,10 @@
-# TorchData
+# TorchData (see note below on current status)
 
 [**Why TorchData?**](#why-composable-data-loading) | [**Install guide**](#installation) |
 [**What are DataPipes?**](#what-are-datapipes) | [**Beta Usage and Feedback**](#beta-usage-and-feedback) |
 [**Contributing**](#contributing) | [**Future Plans**](#future-plans)
 
-**This library is currently in the Beta stage and new features are under active development. The API may change based on
-user feedback or performance. We are committed to bring this library to stable release, but a few future changes may not
-be completely backward compatible. If you install from source or use the nightly version of this library, use it along
-with the PyTorch nightly binaries. If you have suggestions on the API or use cases you'd like to be covered, please open
-a GitHub issue. We'd love to hear thoughts and feedback.**
+**:warning: As of July 2023, we have paused active development on TorchData and have paused new releases. We have learnt a lot from building it and hearing from users, but also believe we need to re-evaluate the technical design and approach given how much the industry has changed since we began the project. During the rest of 2023 we will be re-evaluating our plans in this space. Please reach out if you suggestions or comments (please use [#1196](https://github.com/pytorch/data/issues/1196) for feedback).**
 
 `torchdata` is a library of common modular data loading primitives for easily constructing flexible and performant data
 pipelines.
