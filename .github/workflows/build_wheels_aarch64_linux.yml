@@ -1,4 +1,4 @@
-name: Build Linux Wheels
+name: Build AARCH64 Linux Wheels
 
 on:
   pull_request:
