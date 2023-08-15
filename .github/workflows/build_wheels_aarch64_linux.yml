@@ -41,6 +41,7 @@ jobs:
       package-name: ${{ matrix.package-name }}
       env-var-script: packaging/env-var-script.txt
       architecture: aarch64
+      setup-miniconda: false
       # Using "development" as trigger event so these binaries are not uploaded to official channels yet
       trigger-event: development
     secrets:
