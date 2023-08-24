@@ -245,6 +245,7 @@ jobs:
     if: always() && inputs.branch != '' && inputs.do-upload == true
     needs: [get_release_type, wheel_build_test]
     runs-on: ubuntu-latest
+    environment: pytorchbot-env
     outputs:
       upload: ${{ steps.trigger_upload.outputs.value }}
     steps:
@@ -397,6 +398,7 @@ jobs:
     needs: [get_release_type, conda_build_test]
     runs-on: ubuntu-latest
     container: continuumio/miniconda3
+    environment: pytorchbot-env
     outputs:
       upload: ${{ steps.trigger_upload.outputs.value }}
     steps:
