@@ -1202,6 +1202,18 @@ class TestIterDataPipe(expecttest.TestCase):
             self.assertEqual(len(wa), 1)
             self.assertRegex(str(wa[0].message), r"Found duplicate key")
 
+        # More lazily: load only until necessary
+        source_dp = IterableWrapper(list(zip(keys, values)))
+        lazy_map_dp = source_dp.to_map_datapipe()
+        _ = lazy_map_dp["k" + str(4)]
+        self.assertEqual(len(lazy_map_dp._map), 5)
+        _ = lazy_map_dp["k" + str(7)]
+        self.assertEqual(len(lazy_map_dp._map), 8)
+        try:
+            _ = lazy_map_dp["k" + str(20)]
+        except IndexError:
+            self.assertEqual(len(lazy_map_dp._map), 10)
+
     def test_mux_longest_iterdatapipe(self):
 
         # Functional Test: Elements are yielded one at a time from each DataPipe, until they are all exhausted
