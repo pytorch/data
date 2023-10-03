@@ -170,8 +170,10 @@ jobs:
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
             conda activate wheel_build_env
+            conda run -n wheel_build_env packaging/build_wheel.sh
+          else
+            packaging/build_wheel.sh
           fi
-          packaging/build_wheel.sh
       - name: Validate TorchData Wheel
         shell: bash -l {0}
         env:
@@ -213,8 +215,10 @@ jobs:
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
             conda activate wheel_build_env
+            conda run -n wheel_build_env pip3 install dist/torchdata*.whl
+          else
+            pip3 install dist/torchdata*.whl
           fi
-          pip3 install dist/torchdata*.whl
       - name: Run Smoke Tests
         shell: bash -l {0}
         env:
@@ -228,11 +232,13 @@ jobs:
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
             conda activate wheel_build_env
-          fi
-          if ${{ matrix.python-version == 'pure' }}; then
-            python test/smoke_test/smoke_test.py --no-s3
+            conda run -n wheel_build_env python test/smoke_test/smoke_test.py
           else
-            python test/smoke_test/smoke_test.py
+            if ${{ matrix.python-version == 'pure' }}; then
+              python test/smoke_test/smoke_test.py --no-s3
+            else
+              python test/smoke_test/smoke_test.py
+            fi
           fi
       - name: Upload Wheels to Github
         if: always()
