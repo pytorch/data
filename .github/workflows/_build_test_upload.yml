@@ -112,7 +112,7 @@ jobs:
         shell: bash -l {0}
         run: |
           conda init bash
-          conda create -y --name wheel_build_env python=${{ matrix.python-version }}
+          conda create -y --name wheel_build_env_${{ matrix.python-version }} python=${{ matrix.python-version }}
       - name: Setup msbuild on Windows
         if: startsWith( matrix.os, 'windows' )
         uses: microsoft/setup-msbuild@v1.1
@@ -137,7 +137,7 @@ jobs:
             fi
           else
             if ${{ startsWith( matrix.os, 'macos' ) }}; then
-              conda activate wheel_build_env
+              conda activate wheel_build_env_${{ matrix.python-version }}
             fi
             pip install cmake ninja
             echo "/home/runner/.local/bin" >> $GITHUB_PATH
@@ -169,8 +169,8 @@ jobs:
             fi
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
-            conda activate wheel_build_env
-            conda run -n wheel_build_env packaging/build_wheel.sh
+            conda activate wheel_build_env_${{ matrix.python-version }}
+            conda run -n wheel_build_env_${{ matrix.python-version }} packaging/build_wheel.sh
           else
             packaging/build_wheel.sh
           fi
@@ -187,7 +187,7 @@ jobs:
             pip3 install auditwheel
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
-            conda activate wheel_build_env
+            conda activate wheel_build_env_${{ matrix.python-version }}
           fi
           pip3 install pkginfo
           for pkg in dist/torchdata*.whl; do
@@ -214,8 +214,8 @@ jobs:
             source packaging/manylinux/python_helper.sh
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
-            conda activate wheel_build_env
-            conda run -n wheel_build_env pip3 install dist/torchdata*.whl
+            conda activate wheel_build_env_${{ matrix.python-version }}
+            conda run -n wheel_build_env_${{ matrix.python-version }} pip3 install dist/torchdata*.whl
           else
             pip3 install dist/torchdata*.whl
           fi
@@ -231,8 +231,8 @@ jobs:
             source packaging/manylinux/python_helper.sh
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
-            conda activate wheel_build_env
-            conda run -n wheel_build_env python test/smoke_test/smoke_test.py
+            conda activate wheel_build_env_${{ matrix.python-version }}
+            conda run -n wheel_build_env_${{ matrix.python-version }} python test/smoke_test/smoke_test.py
           else
             if ${{ matrix.python-version == 'pure' }}; then
               python test/smoke_test/smoke_test.py --no-s3
