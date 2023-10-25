@@ -24,7 +24,6 @@ requirements:
     - python
     - urllib3>=1.25
     - requests
-    - portalocker>=2.0.0
     {{ environ.get('CONDA_PYTORCH_CONSTRAINT') }}
 
 build:
@@ -36,6 +35,7 @@ build:
 test:
   imports:
     - torchdata
+    - torchdata.dataloader2
     - torchdata.datapipes
   source_files:
     - test
@@ -43,7 +43,8 @@ test:
     - cpuonly
     - pytest
     - expecttest
-    - fsspec
+    # fsspec doesn't support Python 3.11
+    # - fsspec
     # The following packages are not on the default conda channel
     # - iopath
     # - rarfile

@@ -5,9 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 from io import BytesIO
-from typing import Iterator, Tuple
+from typing import Iterator, List, Tuple, Union
 
 import torchdata
+
+from torch.utils.data.datapipes.utils.common import match_masks
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
 from torchdata.datapipes.utils import StreamWrapper
@@ -38,30 +40,58 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
         region: region for access files (inferred from credentials by default)
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper, S3FileLister
-        >>> s3_prefixes = IterableWrapper(['s3://bucket-name/folder/', ...])
-        >>> dp_s3_urls = S3FileLister(s3_prefixes)
-        >>> for d in dp_s3_urls:
-        ...     pass
+
+    .. testsetup::
+
+        from unittest import mock
+        from torchdata.datapipes.iter import IterableWrapper, S3FileLister
+
+        file_lister_patch = mock.patch.object(S3FileLister, "__iter__", return_value=iter([]))
+        file_lister_patch.start()
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import IterableWrapper, S3FileLister
+
+        s3_prefixes = IterableWrapper(['s3://bucket-name/folder/', ...])
+
+        dp_s3_urls = S3FileLister(s3_prefixes)
+        for d in dp_s3_urls:
+            pass
+
         # Functional API
-        >>> dp_s3_urls = s3_prefixes.list_files_by_s3(request_timeout_ms=100)
-        >>> for d in dp_s3_urls:
-        ...     pass
+        dp_s3_urls = s3_prefixes.list_files_by_s3(request_timeout_ms=100)
+        for d in dp_s3_urls:
+            pass
+
+    .. testcleanup::
+
+        file_lister_patch.stop()
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], length: int = -1, request_timeout_ms=-1, region="") -> None:
+    def __init__(
+        self,
+        source_datapipe: IterDataPipe[str],
+        length: int = -1,
+        request_timeout_ms=-1,
+        region="",
+        masks: Union[str, List[str]] = "",
+    ) -> None:
         if not hasattr(torchdata, "_torchdata") or not hasattr(torchdata._torchdata, "S3Handler"):
             raise ModuleNotFoundError("TorchData must be built with BUILD_S3=1 to use this datapipe.")
 
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.length: int = length
         self.handler = torchdata._torchdata.S3Handler(request_timeout_ms, region)
+        self.masks = masks
 
     def __iter__(self) -> Iterator[str]:
         for prefix in self.source_datapipe:
             while True:
                 urls = self.handler.list_files(prefix)
-                yield from urls
+                for url in urls:
+                    if match_masks(url, self.masks):
+                        yield url
                 if not urls:
                     break
             self.handler.clear_marker()
@@ -96,20 +126,38 @@ class S3FileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         multi_part_download: flag to split each chunk into small packets and download those packets in parallel (enabled by default)
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper, S3FileLoader
-        >>> dp_s3_urls = IterableWrapper(['s3://bucket-name/folder/', ...]).list_files_by_s3()
+
+    .. testsetup::
+
+        from unittest import mock
+        from torchdata.datapipes.iter import S3FileLister
+
+        file_lister_patch = mock.patch.object(S3FileLister, "__iter__", return_value=iter([]))
+        file_lister_patch.start()
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import IterableWrapper, S3FileLoader
+
+        dp_s3_urls = IterableWrapper(['s3://bucket-name/folder/', ...]).list_files_by_s3()
         # In order to make sure data are shuffled and sharded in the
         # distributed environment, `shuffle`  and `sharding_filter`
         # are required. For detail, please check our tutorial in:
         # https://pytorch.org/data/main/tutorial.html#working-with-dataloader
-        >>> sharded_s3_urls = dp_s3_urls.shuffle().sharding_filter()
-        >>> dp_s3_files = S3FileLoader(sharded_s3_urls)
-        >>> for url, fd in dp_s3_files: # Start loading data
-        ...     data = fd.read()
+        sharded_s3_urls = dp_s3_urls.shuffle().sharding_filter()
+
+        dp_s3_files = S3FileLoader(sharded_s3_urls)
+        for url, fd in dp_s3_files: # Start loading data
+            data = fd.read()
+
         # Functional API
-        >>> dp_s3_files = sharded_s3_urls.load_files_by_s3(buffer_size=256)
-        >>> for url, fd in dp_s3_files:
-        ...     data = fd.read()
+        dp_s3_files = sharded_s3_urls.load_files_by_s3(buffer_size=256)
+        for url, fd in dp_s3_files:
+            data = fd.read()
+
+    .. testcleanup::
+
+        file_lister_patch.stop()
     """
 
     def __init__(

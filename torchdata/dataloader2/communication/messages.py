@@ -4,6 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from torchdata._utils import ExceptionWrapper
+
 
 class DataLoaderQueueMessage:
     pass
@@ -17,22 +19,50 @@ class Response(DataLoaderQueueMessage):
     pass
 
 
-class ResetIteratorRequest(Request):
-    pass
-
-
-class ResetIteratorResponse(Response):
-    pass
-
-
 class ResetEpochRequest(Request):
-    __slots__ = "args"
+    __slots__ = ("seed_generator", "iter_reset_fn")
 
-    def __init__(self, args):
-        self.args = args
+    def __init__(self, seed_generator, iter_reset_fn):
+        self.seed_generator = seed_generator
+        self.iter_reset_fn = iter_reset_fn
 
 
 class ResetEpochResponse(Response):
+    pass
+
+
+class LimitRequest(Request):
+    __slots__ = ("num_batches", "limit_fn", "worker_num_batches")
+
+    def __init__(self, num_batches, limit_fn, worker_num_batches=None):
+        self.num_batches = num_batches
+        self.limit_fn = limit_fn
+        self.worker_num_batches = worker_num_batches
+
+
+class LimitResponse(Response):
+    pass
+
+
+class PauseRequest(Request):
+    __slots__ = "pause_fn"
+
+    def __init__(self, pause_fn):
+        self.pause_fn = pause_fn
+
+
+class PauseResponse(Response):
+    pass
+
+
+class ResumeRequest(Request):
+    __slots__ = "resume_fn"
+
+    def __init__(self, resume_fn):
+        self.resume_fn = resume_fn
+
+
+class ResumeResponse(Response):
     pass
 
 
@@ -92,3 +122,10 @@ class InvalidStateResponse(Response):
     """
 
     pass
+
+
+class WorkerExceptionResponse(Response):
+    __slots__ = "exc"
+
+    def __init__(self, exc: ExceptionWrapper):
+        self.exc: ExceptionWrapper = exc

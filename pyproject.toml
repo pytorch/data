@@ -11,6 +11,7 @@ target-version = ["py37"]
 requires = [
     "setuptools",
     "wheel",
+    "ninja",
     "cmake",
     "torch",
 ]

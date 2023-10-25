@@ -21,7 +21,6 @@ jobs:
           - ubuntu-latest
           - windows-latest
         python-version:
-          - 3.7
           - 3.8
           - 3.9
     steps:
@@ -31,7 +30,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install torch and torchvision from nightlies
-        run: pip install --pre torch torchvision -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
+        run: |
+          pip install numpy networkx
+          pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu
 
       - name: Check out torchdata repository
         uses: actions/checkout@v3
@@ -39,14 +40,14 @@ jobs:
       - name: Install torchdata
         run: |
           pip install -r requirements.txt
-          python setup.py install
+          pip install .
 
       - name: Install test requirements
         run: pip install pytest pytest-mock scipy iopath pycocotools h5py
 
       - name: Extract torchvision ref
         id: torchvision
-        run: echo "::set-output name=ref::$(python -c 'import torchvision; print(torchvision.version.git_version)')"
+        run: echo "ref=$(python -c 'import torchvision; print(torchvision.version.git_version)')" >> $GITHUB_OUTPUT
 
       - name: Check out torchvision repository
         uses: actions/checkout@v3
@@ -69,7 +70,6 @@ jobs:
           - ubuntu-latest
           - windows-latest
         python-version:
-          - 3.7
           - 3.8
           - 3.9
     steps:
@@ -79,7 +79,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install torch and torchtext from nightlies
-        run: pip install --pre torch torchtext -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
+        run: |
+          pip install numpy networkx
+          pip install --pre torch torchtext --index-url https://download.pytorch.org/whl/nightly/cpu
 
       - name: Check out torchdata repository
         uses: actions/checkout@v3
@@ -112,8 +114,6 @@ jobs:
           - ubuntu-latest
           # - windows-latest
         python-version:
-          # - 3.7
-          # - 3.8
           - 3.9
     steps:
       - name: Setup Python ${{ matrix.python-version }}
@@ -122,7 +122,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install torch and torchaudio from nightlies
-        run: pip install --pre torch torchaudio -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
+        run: |
+          pip install networkx
+          pip install --pre torch torchaudio --index-url https://download.pytorch.org/whl/nightly/cpu
 
       - name: Check out torchdata repository
         uses: actions/checkout@v3
@@ -155,7 +157,6 @@ jobs:
           - ubuntu-latest
           # - windows-latest
         python-version:
-          - 3.7
           - 3.8
           - 3.9
     steps:

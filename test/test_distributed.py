@@ -20,12 +20,12 @@ import numpy as np
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
-from torch.testing._internal.common_utils import instantiate_parametrized_tests, IS_WINDOWS, parametrize
+from torch.testing._internal.common_utils import instantiate_parametrized_tests, parametrize
 from torch.utils.data import DataLoader
 
-from torchdata.dataloader2 import DataLoader2, DistributedReadingService, PrototypeMultiProcessingReadingService
+from torchdata.dataloader2 import DataLoader2, DistributedReadingService
 from torchdata.datapipes.iter import IterableWrapper
-from torchdata.datapipes.iter.util.prefetch import PrefetchTimeoutError
+from torchdata.datapipes.iter.util.distributed import PrefetchTimeoutError
 
 TEST_MASTER_ADDR = "127.0.0.1"
 DEFAULT_WORLD_SIZE = 2
@@ -42,6 +42,8 @@ if dist.is_mpi_available():
 if dist.is_nccl_available() and torch.cuda.device_count() > 0:
     _backends.append("nccl")
 
+
+world_size_parametrize = parametrize("world_size", [1, DEFAULT_WORLD_SIZE])
 backend_parametrize = parametrize("backend", _backends)
 
 
@@ -125,45 +127,6 @@ def _finalize_distributed_queue(rank, q):
     dist.destroy_process_group(pg)
 
 
-def _random_fn(data):
-    r"""
-    Used to validate the randomness of subprocess-local RNGs are set deterministically.
-    """
-    py_random_num = random.randint(0, 2 ** 32)
-    np_random_num = np.random.randint(0, 2 ** 32)
-    torch_random_num = torch.randint(0, 2 ** 32, size=[]).item()
-    return (data, py_random_num, np_random_num, torch_random_num)
-
-
-def _test_proto_distributed_training(rank, world_size, backend, q, num_workers):
-    dist.init_process_group(backend, rank=rank, world_size=world_size)
-    # Balanced data
-    data_length = world_size * 8
-    if num_workers > 0:
-        data_length *= num_workers
-
-    data_source = IterableWrapper(list(range(data_length)))
-    dp = data_source.shuffle().sharding_filter().map(_random_fn)
-    rs = PrototypeMultiProcessingReadingService(num_workers=num_workers)
-    dl = DataLoader2(dp, reading_service=rs)
-
-    # No seed
-    res = _dist_iterate_one_epoch(dl, seed=None)
-    q.put((0, rank, res))
-
-    # Shuffle with seed
-    for epoch in range(2):
-        res = _dist_iterate_one_epoch(dl, seed=123)
-        q.put((epoch + 1, rank, res))
-
-    # Different seed
-    res = _dist_iterate_one_epoch(dl, seed=321)
-    q.put((3, rank, res))
-
-    _finalize_distributed_queue(rank, q)
-    dl.shutdown()
-
-
 class DistributedTest(TestCase):
     @staticmethod
     def _test_fullsync(rank, world_size, backend, q):
@@ -186,11 +149,27 @@ class DistributedTest(TestCase):
         except Exception as e:
             assert isinstance(e, PrefetchTimeoutError)
 
+        # Test that reset/shutdown does not hang while paused
+        dp3 = dp.fullsync()
+        it = iter(dp3)
+        next(it)
+        dp3.pause()
+        it2 = iter(dp3)  # Reset
+        next(it2)
+
+        dp4 = dp.prefetch(2)
+        it = iter(dp4)
+        next(it)
+        dp4.pause()
+        it2 = iter(dp4)  # Reset
+        next(it2)
+
         _finalize_distributed_queue(rank, q)
 
+    @world_size_parametrize
     @backend_parametrize
-    def test_fullsync(self, backend) -> None:
-        world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
+    def test_fullsync(self, world_size, backend) -> None:
+        world_size = world_size if backend != "nccl" else torch.cuda.device_count()
         launch_distributed_training(backend, world_size, fn=DistributedTest._test_fullsync)
 
     @staticmethod
@@ -245,10 +224,6 @@ class DistributedTest(TestCase):
         world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
         launch_distributed_training(backend, world_size, fn=partial(DistributedTest._test_distributed_training, True))
 
-    @unittest.skipIf(
-        IS_WINDOWS,
-        "Torch Elastic is not working properly on Windows. See: https://github.com/pytorch/pytorch/issues/85427",
-    )
     @backend_parametrize
     def test_elastic_training_dl2(self, backend) -> None:
         world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
@@ -271,10 +246,6 @@ class DistributedTest(TestCase):
         world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
         launch_distributed_training(backend, world_size, fn=partial(DistributedTest._test_distributed_training, False))
 
-    @unittest.skipIf(
-        IS_WINDOWS,
-        "Torch Elastic is not working properly on Windows. See: https://github.com/pytorch/pytorch/issues/85427",
-    )
     @unittest.skipIf(sys.version_info < (3, 8), "Torch Elastic requires Python >= 3.8")
     @backend_parametrize
     def test_elastic_training_dl1(self, backend) -> None:
@@ -292,36 +263,6 @@ class DistributedTest(TestCase):
                 "--dl1",
             ],
         )
-
-    @unittest.skipIf(IS_WINDOWS, "Remove when https://github.com/pytorch/data/issues/857 is fixed")
-    @backend_parametrize
-    @parametrize("num_workers", [0, 8])
-    def test_proto_rs_dl2(self, backend, num_workers) -> None:
-        world_size = DEFAULT_WORLD_SIZE if backend != "nccl" else torch.cuda.device_count()
-        res = launch_distributed_training(backend, world_size, num_workers, fn=_test_proto_distributed_training)
-        result = ({}, {}, {}, {})
-        for epoch, rank, r in res:
-            d, *ran_nums = list(zip(*r))
-            result[epoch][rank] = (d, ran_nums)
-        # Same seed generate the same order of data and the same random state
-        self.assertEqual(result[1], result[2])
-        # Different seeds
-        for rank in range(world_size):
-            # Different shuffle order
-            self.assertNotEqual(result[1][rank][0], result[3][rank][0])
-            # Different subprocess-local random state
-            self.assertNotEqual(result[1][rank][1], result[3][rank][1])
-
-        # Mutually exclusive and collectively exhaustive with/without seed
-        data_length = world_size * 8
-        if num_workers > 0:
-            data_length *= num_workers
-        exp = list(range(data_length))
-        for res in result:
-            concat_res = []
-            for r in res.values():
-                concat_res.extend(r[0])
-            self.assertEqual(sorted(concat_res), exp)
 
 
 instantiate_parametrized_tests(DistributedTest)

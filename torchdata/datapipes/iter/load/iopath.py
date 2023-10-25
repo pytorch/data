@@ -55,8 +55,16 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
         S3 URL is supported only with ``iopath``>=0.1.9.
 
     Example:
-        >>> from torchdata.datapipes.iter import IoPathFileLister
-        >>> datapipe = IoPathFileLister(root=S3URL)
+
+    .. testsetup::
+
+        s3_url = "path"
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import IoPathFileLister
+
+        datapipe = IoPathFileLister(root=s3_url)
     """
 
     def __init__(
@@ -65,6 +73,7 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
         masks: Union[str, List[str]] = "",
         *,
         pathmgr=None,
+        handler=None,
     ) -> None:
         if iopath is None:
             raise ModuleNotFoundError(
@@ -83,6 +92,8 @@ class IoPathFileListerIterDataPipe(IterDataPipe[str]):
             self.datapipe = root
         self.pathmgr = _create_default_pathmanager() if pathmgr is None else pathmgr
         self.masks = masks
+        if handler is not None:
+            self.register_handler(handler, allow_override=True)
 
     def register_handler(self, handler, allow_override=False):
         self.pathmgr.register_handler(handler, allow_override=allow_override)
@@ -113,12 +124,20 @@ class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         S3 URL is supported only with `iopath`>=0.1.9.
 
     Example:
-        >>> from torchdata.datapipes.iter import IoPathFileLister
-        >>> datapipe = IoPathFileLister(root=S3URL)
-        >>> file_dp = datapipe.open_files_by_iopath()
+
+    .. testsetup::
+
+        s3_url = "path"
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import IoPathFileLister
+
+        datapipe = IoPathFileLister(root=s3_url)
+        file_dp = datapipe.open_files_by_iopath()
     """
 
-    def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r", pathmgr=None) -> None:
+    def __init__(self, source_datapipe: IterDataPipe[str], mode: str = "r", pathmgr=None, handler=None) -> None:
         if iopath is None:
             raise ModuleNotFoundError(
                 "Package `iopath` is required to be installed to use this datapipe."
@@ -129,6 +148,8 @@ class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         self.source_datapipe: IterDataPipe[str] = source_datapipe
         self.pathmgr = _create_default_pathmanager() if pathmgr is None else pathmgr
         self.mode: str = mode
+        if handler is not None:
+            self.register_handler(handler, allow_override=True)
 
     def register_handler(self, handler, allow_override=False):
         self.pathmgr.register_handler(handler, allow_override=allow_override)
@@ -140,10 +161,6 @@ class IoPathFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
 
     def __len__(self) -> int:
         return len(self.source_datapipe)
-
-
-# Register for functional API for backward compatibility
-IterDataPipe.register_datapipe_as_function("open_file_by_iopath", IoPathFileOpenerIterDataPipe)
 
 
 @functional_datapipe("save_by_iopath")
@@ -165,13 +182,31 @@ class IoPathSaverIterDataPipe(IterDataPipe[str]):
         S3 URL is supported only with `iopath`>=0.1.9.
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper
-        >>> def filepath_fn(name: str) -> str:
-        >>>     return S3URL + name
-        >>> name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
-        >>> source_dp = IterableWrapper(sorted(name_to_data.items()))
-        >>> iopath_saver_dp = source_dp.save_by_iopath(filepath_fn=filepath_fn, mode="wb")
-        >>> res_file_paths = list(iopath_saver_dp)
+
+    .. testsetup::
+
+        s3_url = "url"
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import IterableWrapper
+
+
+        def filepath_fn(name: str) -> str:
+            return s3_url + name
+
+
+        name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
+        source_dp = IterableWrapper(sorted(name_to_data.items()))
+        iopath_saver_dp = source_dp.save_by_iopath(filepath_fn=filepath_fn, mode="wb")
+        res_file_paths = list(iopath_saver_dp)
+
+    .. testcleanup::
+
+        import os
+
+        for file in ["1.txt", "1.txt.lock", "2.txt", "2.txt.lock", "3.txt", "3.txt.lock"]:
+            os.remove(s3_url + file)
     """
 
     def __init__(
@@ -181,6 +216,7 @@ class IoPathSaverIterDataPipe(IterDataPipe[str]):
         filepath_fn: Optional[Callable] = None,
         *,
         pathmgr=None,
+        handler=None,
     ):
         if iopath is None:
             raise ModuleNotFoundError(
@@ -193,6 +229,8 @@ class IoPathSaverIterDataPipe(IterDataPipe[str]):
         self.mode: str = mode
         self.filepath_fn: Optional[Callable] = filepath_fn
         self.pathmgr = _create_default_pathmanager() if pathmgr is None else pathmgr
+        if handler is not None:
+            self.register_handler(handler, allow_override=True)
 
     def __iter__(self) -> Iterator[str]:
         for meta, data in self.source_datapipe:

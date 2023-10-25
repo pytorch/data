@@ -57,7 +57,7 @@ class Node:
 
 def to_nodes(dp, *, debug: bool) -> Set[Node]:
     def recurse(dp_graph, child=None):
-        for dp_node, dp_parents in dp_graph.items():
+        for _dp_id, (dp_node, dp_parents) in dp_graph.items():
             node = Node(dp_node)
             if child is not None:
                 node.add_child(child)

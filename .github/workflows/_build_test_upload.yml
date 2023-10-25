@@ -50,7 +50,7 @@ jobs:
             fi
           fi
           echo "Release Type: $RELEASE_TYPE"
-          echo "::set-output name=type::$RELEASE_TYPE"
+          echo "type=$RELEASE_TYPE" >> $GITHUB_OUTPUT
         id: get_release_type
 
   wheel_build_test:
@@ -66,26 +66,31 @@ jobs:
           - windows-latest
           - macos-m1-12
         python-version:
-          - 3.7
           - 3.8
           - 3.9
           - "3.10"
-        # Python 3.7 is not officially provided on Apple Silicon
+          - "3.11"
+          - pure
         exclude:
+          - os: macos-latest
+            python-version: pure
+          - os: windows-latest
+            python-version: pure
           - os: macos-m1-12
-            python-version: 3.7
+            python-version: pure
     steps:
       - name: Checkout Source Repository
         uses: actions/checkout@v3
         with:
           ref: ${{ inputs.branch }}
           submodules: recursive
-      - name: Setup Python ${{ matrix.python-version }}
+      - name: Setup Python ${{ matrix.python-version }} for Windows
         if: ${{ startsWith( matrix.os, 'windows' ) }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
       - name: Add temp runner environment variables
+        if: ${{ startsWith( matrix.os, 'macos' ) }}
         shell: bash -l {0}
         run: |
           echo "MINICONDA_INSTALL_PATH_MACOS=${RUNNER_TEMP}/miniconda" >> "${GITHUB_ENV}"
@@ -122,12 +127,14 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
-            source packaging/manylinux/python_helper.sh
-            yum -y install ninja-build zlib-static
-            # Docker path is /__w by default
-            export WORKSPACE="/__w"
-            # Install static OpenSSL/libcrypto library
-            ./packaging/manylinux/install_openssl_curl.sh
+            if ${{ matrix.python-version != 'pure' }}; then
+              source packaging/manylinux/python_helper.sh
+              yum -y install ninja-build zlib-static
+              # Docker path is /__w by default
+              export WORKSPACE="/__w"
+              # Install static OpenSSL/libcrypto library
+              ./packaging/manylinux/install_openssl_curl.sh
+            fi
           else
             if ${{ startsWith( matrix.os, 'macos' ) }}; then
               conda activate wheel_build_env
@@ -140,31 +147,42 @@ jobs:
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
-          BUILD_S3: 1
+          BUILD_S3: ${{ matrix.python-version != 'pure' }}
         run: |
           set -ex
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            # Use Python 3.8 for pure python build
+            if ${{ matrix.python-version == 'pure' }}; then
+              export PYTHON_VERSION=3.8
+            fi
             source packaging/manylinux/python_helper.sh
             # Docker path is /__w by default
             export WORKSPACE="/__w"
             # See: https://github.com/actions/checkout/issues/760
             git config --global --add safe.directory "$WORKSPACE/data/data"
-            # AWSSDK uses $CMAKE_PREFIX_PATH to find openssl
-            export OPENSSL_ROOT_DIR="$WORKSPACE/ssl"
-            export CURL_ROOT_DIR="$WORKSPACE/curl"
-            export CMAKE_PREFIX_PATH="$OPENSSL_ROOT_DIR:$CURL_ROOT_DIR:$CMAKE_PREFIX_PATH"
-            export STATIC_DEPS=TRUE
+            if ${{ matrix.python-version != 'pure' }}; then
+              # AWSSDK uses $CMAKE_PREFIX_PATH to find openssl
+              export OPENSSL_ROOT_DIR="$WORKSPACE/ssl"
+              export CURL_ROOT_DIR="$WORKSPACE/curl"
+              export CMAKE_PREFIX_PATH="$OPENSSL_ROOT_DIR:$CURL_ROOT_DIR:$CMAKE_PREFIX_PATH"
+              export STATIC_DEPS=TRUE
+            fi
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
             conda activate wheel_build_env
+            conda run -n wheel_build_env packaging/build_wheel.sh
+          else
+            packaging/build_wheel.sh
           fi
-          packaging/build_wheel.sh
       - name: Validate TorchData Wheel
         shell: bash -l {0}
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            if ${{ matrix.python-version == 'pure' }}; then
+              export PYTHON_VERSION=3.8
+            fi
             source packaging/manylinux/python_helper.sh
             pip3 install auditwheel
           fi
@@ -175,12 +193,12 @@ jobs:
           for pkg in dist/torchdata*.whl; do
               echo "PkgInfo of $pkg:"
               pkginfo $pkg
-              if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+              if ${{ startsWith( matrix.os, 'ubuntu' ) && matrix.python-version != 'pure' }}; then
                 auditwheel show $pkg
                 auditwheel repair $pkg --plat manylinux2014_x86_64 -w wheelhouse
               fi
           done
-          if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+          if ${{ startsWith( matrix.os, 'ubuntu' ) && matrix.python-version != 'pure' }}; then
             mv dist temp
             mv wheelhouse dist
           fi
@@ -190,28 +208,41 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            if ${{ matrix.python-version == 'pure' }}; then
+              export PYTHON_VERSION=3.8
+            fi
             source packaging/manylinux/python_helper.sh
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
             conda activate wheel_build_env
+            conda run -n wheel_build_env pip3 install dist/torchdata*.whl
+          else
+            pip3 install dist/torchdata*.whl
           fi
-          pip3 install dist/torchdata*.whl
-      - name: Run DataPipes Tests with pytest
+      - name: Run Smoke Tests
         shell: bash -l {0}
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           if ${{ startsWith( matrix.os, 'ubuntu' ) }}; then
+            if ${{ matrix.python-version == 'pure' }}; then
+              export PYTHON_VERSION=3.8
+            fi
             source packaging/manylinux/python_helper.sh
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
             conda activate wheel_build_env
+            conda run -n wheel_build_env python test/smoke_test/smoke_test.py
+          else
+            if ${{ matrix.python-version == 'pure' }}; then
+              python test/smoke_test/smoke_test.py --no-s3
+            else
+              python test/smoke_test/smoke_test.py
+            fi
           fi
-          pip3 install -r test/requirements.txt
-          pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Wheels to Github
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: torchdata-artifact
           path: dist/torchdata*.whl
@@ -220,12 +251,13 @@ jobs:
     if: always() && inputs.branch != '' && inputs.do-upload == true
     needs: [get_release_type, wheel_build_test]
     runs-on: ubuntu-latest
+    environment: pytorchbot-env
     outputs:
       upload: ${{ steps.trigger_upload.outputs.value }}
     steps:
       - name: Download Artifacts from Github
         continue-on-error: true
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: torchdata-artifact
       - name: Determine if Wheel Uploading is needed
@@ -235,7 +267,7 @@ jobs:
             upload=true
             break
           done
-          echo "::set-output name=value::$upload"
+          echo "value=$upload" >> $GITHUB_OUTPUT
         id: trigger_upload
       - name: Display All TorchData Wheels
         if: steps.trigger_upload.outputs.value == 'true'
@@ -282,14 +314,10 @@ jobs:
           - windows-latest
           - macos-m1-12
         python-version:
-          - 3.7
           - 3.8
           - 3.9
           - "3.10"
-        # Python 3.7 is not officially provided on Apple Silicon
-        exclude:
-          - os: macos-m1-12
-            python-version: 3.7
+          - "3.11"
     steps:
       - name: Checkout Source Repository
         uses: actions/checkout@v3
@@ -304,7 +332,7 @@ jobs:
           else
             BUILD_S3=1
           fi
-          echo "::set-output name=value::$BUILD_S3"
+          echo "value=$BUILD_S3" >> $GITHUB_OUTPUT
         id: build_s3
       - name: Add temp runner environment variables
         shell: bash -l {0}
@@ -338,7 +366,12 @@ jobs:
         shell: bash -l {0}
         run: |
           source "${MINICONDA_INSTALL_PATH}/etc/profile.d/conda.sh"
-          conda create -y -p "${CONDA_ENV_PATH}" python=${{ matrix.python-version }}
+
+          if [[ ${{ matrix.python-version }} = "3.11" ]]; then
+            conda create -y -p "${CONDA_ENV_PATH}" python=3.8
+          else
+            conda create -y -p "${CONDA_ENV_PATH}" python=${{ matrix.python-version }}
+          fi
       - name: Build TorchData for Conda
         shell: bash -l {0}
         env:
@@ -351,34 +384,17 @@ jobs:
             source "${MINICONDA_INSTALL_PATH}/etc/profile.d/conda.sh"
           fi
           conda activate "${CONDA_ENV_PATH}"
-          conda install -yq conda-build -c conda-forge
+          if [[ "${PYTHON_VERSION}" = "3.11" ]]; then
+            conda install -yq conda-build -c malfet -c conda-forge
+            export CONDA_CHANNEL_FLAGS="${CONDA_CHANNEL_FLAGS} -c malfet"
+          else
+            conda install -yq conda-build
+          fi
           packaging/build_conda.sh
           conda index ./conda-bld
-      - name: Install TorchData Conda Package
-        shell: bash -l {0}
-        run: |
-          if ${{ ! startsWith( matrix.os, 'windows' ) }}; then
-            source "${MINICONDA_INSTALL_PATH}/etc/profile.d/conda.sh"
-          fi
-          conda activate "${CONDA_ENV_PATH}"
-          if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
-            CONDA_CHANNEL=pytorch
-          else
-            CONDA_CHANNEL=pytorch-${{ needs.get_release_type.outputs.type }}
-          fi
-          conda install pytorch torchdata cpuonly -c $(pwd)/conda-bld/ -c "$CONDA_CHANNEL"
-      - name: Run DataPipes Tests with pytest
-        shell: bash -l {0}
-        run: |
-          if ${{ ! startsWith( matrix.os, 'windows' ) }}; then
-            source "${MINICONDA_INSTALL_PATH}/etc/profile.d/conda.sh"
-          fi
-          conda activate "${CONDA_ENV_PATH}"
-          conda env update --file test/requirements.yml
-          python -m pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py --ignore=test/test_audio_examples.py
       - name: Upload Conda Package to Github
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: torchdata-artifact
           path: conda-bld/*/torchdata-*.tar.bz2
@@ -388,12 +404,13 @@ jobs:
     needs: [get_release_type, conda_build_test]
     runs-on: ubuntu-latest
     container: continuumio/miniconda3
+    environment: pytorchbot-env
     outputs:
       upload: ${{ steps.trigger_upload.outputs.value }}
     steps:
       - name: Download Artifacts from Github
         continue-on-error: true
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: torchdata-artifact
       - name: Determine if Conda Uploading is needed
@@ -403,7 +420,7 @@ jobs:
             upload=true
             break
           done
-          echo "::set-output name=value::$upload"
+          echo "value=$upload" >> $GITHUB_OUTPUT
         id: trigger_upload
       - name: Display All TorchData Conda Package
         if: steps.trigger_upload.outputs.value == 'true'
@@ -504,12 +521,13 @@ jobs:
           fi
 
           pip3 install -r requirements.txt
-          python3 setup.py install
+          pip3 install .
       - name: Check env
         run: echo `which spinx-build`
       - name: Build the docset
         run: |
           cd ./docs
+          sudo apt-get install -y graphviz
           pip3 install -r requirements.txt
           make html
           cd ..
@@ -526,10 +544,10 @@ jobs:
             fi
             TARGET_FOLDER=${TARGET_FOLDER:1}
           fi
-          echo "::set-output name=value::$TARGET_FOLDER"
+          echo "value=$TARGET_FOLDER" >> $GITHUB_OUTPUT
         id: target_folder
       - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4.2.5
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages # The branch the action should deploy to.

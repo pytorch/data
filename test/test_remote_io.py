@@ -5,19 +5,18 @@
 # LICENSE file in the root directory of this source tree.
 
 import io
+import json
 import os
+import subprocess
 import unittest
 import warnings
+from unittest.mock import patch
 
 import expecttest
 
-import torchdata
-
-from _utils._common_utils_for_test import check_hash_fn, create_temp_dir, IS_WINDOWS
+from _utils._common_utils_for_test import check_hash_fn, create_temp_dir, IS_M1, IS_WINDOWS
 from torch.utils.data import DataLoader
-
 from torchdata.datapipes.iter import (
-    EndOnDiskCacheHolder,
     FileOpener,
     FSSpecFileLister,
     FSSpecFileOpener,
@@ -27,15 +26,30 @@ from torchdata.datapipes.iter import (
     S3FileLister,
     S3FileLoader,
 )
+from torchdata.datapipes.iter.load.online import _get_proxies
 
 try:
     import fsspec
+
+    HAS_FSSPEC = True
+except ImportError:
+    HAS_FSSPEC = False
+
+try:
     import s3fs
 
     HAS_FSSPEC_S3 = True
 except ImportError:
     HAS_FSSPEC_S3 = False
-skipIfNoFSSpecS3 = unittest.skipIf(not HAS_FSSPEC_S3, "no FSSpec with S3fs")
+skipIfNoFSSpecS3 = unittest.skipIf(not (HAS_FSSPEC and HAS_FSSPEC_S3), "no FSSpec with S3fs")
+
+try:
+    import adlfs
+
+    HAS_FSSPEC_AZ = True
+except ImportError:
+    HAS_FSSPEC_AZ = False
+skipIfNoFSSpecAZ = unittest.skipIf(not (HAS_FSSPEC and HAS_FSSPEC_AZ), "no FSSpec with adlfs")
 
 try:
     from torchdata._torchdata import S3Handler
@@ -45,6 +59,14 @@ except ImportError:
     HAS_AWS = False
 skipIfAWS = unittest.skipIf(HAS_AWS, "AWSSDK Enabled")
 skipIfNoAWS = unittest.skipIf(not HAS_AWS, "No AWSSDK Enabled")
+
+try:
+    import portalocker
+
+    HAS_PORTALOCKER = True
+except ImportError:
+    HAS_PORTALOCKER = False
+skipIfNoPortalocker = unittest.skipIf(not HAS_PORTALOCKER, "No portalocker installed")
 
 
 class TestDataPipeRemoteIO(expecttest.TestCase):
@@ -86,9 +108,32 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         # Error Test: test if the Http Reader raises an error when the url is invalid
         error_url = "https://github.com/pytorch/data/this/url/dont/exist"
         http_error_dp = HttpReader(IterableWrapper([error_url]), timeout=timeout)
-        with self.assertRaisesRegex(Exception, "[404]"):
+        with self.assertRaisesRegex(Exception, f"404.+{error_url}"):
             next(iter(http_error_dp.readlines()))
 
+        # Feature skip-error Test: test if the Http Reader skips urls causing problems
+        http_skip_error_dp = HttpReader(IterableWrapper([error_url, file_url]), timeout=timeout, skip_on_error=True)
+        reader_dp = http_skip_error_dp.readlines()
+        with self.assertWarnsRegex(Warning, f"404.+{error_url}.+skipping"):
+            it = iter(reader_dp)
+            path, line = next(it)
+            self.assertEqual(expected_file_name, os.path.basename(path))
+            self.assertTrue(b"BSD" in line)
+
+        # test if GET-request is done with correct arguments
+        with patch("requests.Session.get") as mock_get:
+            http_reader_dp = HttpReader(IterableWrapper([file_url]), timeout=timeout, **query_params)
+            _ = next(iter(http_reader_dp))
+            mock_get.assert_called_with(
+                file_url,
+                timeout=timeout,
+                proxies=_get_proxies(),
+                stream=True,
+                auth=query_params["auth"],
+                allow_redirects=query_params["allow_redirects"],
+            )
+
+    @skipIfNoPortalocker
     def test_on_disk_cache_holder_iterdatapipe(self):
         tar_file_url = "https://raw.githubusercontent.com/pytorch/data/main/test/_fakedata/csv.tar.gz"
         expected_file_name = os.path.join(self.temp_dir.name, "csv.tar.gz")
@@ -189,29 +234,70 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             res = list(dl)
             self.assertEqual(sorted(expected), sorted(res))
 
+    def __get_s3_cnt(self, s3_pths: list, recursive=True):
+        """Return the count of the total objects collected from a list s3 paths"""
+        tot_objs = set()
+        for p in s3_pths:
+            pth_parts = p.split("s3://")[1].split("/", 1)
+            if len(pth_parts) == 1:
+                bkt_name, prefix = pth_parts[0], ""
+            else:
+                bkt_name, prefix = pth_parts
+
+            aws_cmd = f"aws --output json s3api list-objects  --bucket {bkt_name} --no-sign-request"
+            if prefix.strip():
+                aws_cmd += f" --prefix {prefix}"
+            if not recursive:
+                aws_cmd += " --delimiter /"
+
+            res = subprocess.run(aws_cmd, shell=True, check=True, capture_output=True)
+            json_res = json.loads(res.stdout)
+            if "Contents" in json_res:
+                objs = [v["Key"] for v in json_res["Contents"]]
+            else:
+                objs = [v["Prefix"] for v in json_res["CommonPrefixes"]]
+            tot_objs |= set(objs)
+
+        return len(tot_objs)
+
     @skipIfNoFSSpecS3
     def test_fsspec_io_iterdatapipe(self):
         input_list = [
-            (["s3://ai2-public-datasets"], 39),  # bucket without '/'
-            (["s3://ai2-public-datasets/charades/"], 18),  # bucket with '/'
-            (
-                [
-                    "s3://ai2-public-datasets/charades/Charades_v1.zip",
-                    "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
-                    "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
-                    "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
-                ],
-                4,
-            ),  # multiple files
+            ["s3://ai2-public-datasets"],  # bucket without '/'
+            ["s3://ai2-public-datasets/charades/"],  # bucket with '/'
+            [
+                "s3://ai2-public-datasets/charades/Charades_v1.zip",
+                "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
+                "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
+                "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
+            ],  # multiple files
         ]
-        for urls, num in input_list:
+        for urls in input_list:
             fsspec_lister_dp = FSSpecFileLister(IterableWrapper(urls), anon=True)
-            self.assertEqual(sum(1 for _ in fsspec_lister_dp), num, f"{urls} failed")
+            self.assertEqual(
+                sum(1 for _ in fsspec_lister_dp), self.__get_s3_cnt(urls, recursive=False), f"{urls} failed"
+            )
 
         url = "s3://ai2-public-datasets/charades/"
         fsspec_loader_dp = FSSpecFileOpener(FSSpecFileLister(IterableWrapper([url]), anon=True), anon=True)
         res = list(fsspec_loader_dp)
         self.assertEqual(len(res), 18, f"{input} failed")
+
+    @unittest.skipIf(True, "Needs authentications. See: https://github.com/pytorch/data/issues/904")
+    @skipIfNoFSSpecAZ
+    def test_fsspec_azure_blob(self):
+        url = "public/curated/covid-19/ecdc_cases/latest/ecdc_cases.csv"
+        account_name = "pandemicdatalake"
+        azure_prefixes = ["abfs", "az"]
+        fsspec_loader_dp = {}
+
+        for prefix in azure_prefixes:
+            fsspec_lister_dp = FSSpecFileLister(f"{prefix}://{url}", account_name=account_name)
+            fsspec_loader_dp[prefix] = FSSpecFileOpener(fsspec_lister_dp, account_name=account_name).parse_csv()
+
+        res_abfs = list(fsspec_loader_dp["abfs"])[0]
+        res_az = list(fsspec_loader_dp["az"])[0]
+        self.assertEqual(res_abfs, res_az, f"{input} failed")
 
     @skipIfAWS
     def test_disabled_s3_io_iterdatapipe(self):
@@ -222,45 +308,37 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             _ = S3FileLoader(IterableWrapper(file_urls))
 
     @skipIfNoAWS
+    @unittest.skipIf(IS_M1, "PyTorch M1 CI Machine doesn't allow accessing")
     def test_s3_io_iterdatapipe(self):
         # S3FileLister: different inputs
         input_list = [
-            [["s3://ai2-public-datasets"], 77],  # bucket without '/'
-            [["s3://ai2-public-datasets/"], 77],  # bucket with '/'
-            [["s3://ai2-public-datasets/charades"], 18],  # folder without '/'
-            [["s3://ai2-public-datasets/charades/"], 18],  # folder without '/'
-            [["s3://ai2-public-datasets/charad"], 18],  # prefix
+            ["s3://ai2-public-datasets"],  # bucket without '/'
+            ["s3://ai2-public-datasets/"],  # bucket with '/'
+            ["s3://ai2-public-datasets/charades"],  # folder without '/'
+            ["s3://ai2-public-datasets/charades/"],  # folder without '/'
+            ["s3://ai2-public-datasets/charad"],  # prefix
             [
-                [
-                    "s3://ai2-public-datasets/charades/Charades_v1",
-                    "s3://ai2-public-datasets/charades/Charades_vu17",
-                ],
-                12,
+                "s3://ai2-public-datasets/charades/Charades_v1",
+                "s3://ai2-public-datasets/charades/Charades_vu17",
             ],  # prefixes
-            [["s3://ai2-public-datasets/charades/Charades_v1.zip"], 1],  # single file
+            ["s3://ai2-public-datasets/charades/Charades_v1.zip"],  # single file
             [
-                [
-                    "s3://ai2-public-datasets/charades/Charades_v1.zip",
-                    "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
-                    "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
-                    "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
-                ],
-                4,
+                "s3://ai2-public-datasets/charades/Charades_v1.zip",
+                "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
+                "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
+                "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
             ],  # multiple files
             [
-                [
-                    "s3://ai2-public-datasets/charades/Charades_v1.zip",
-                    "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
-                    "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
-                    "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
-                    "s3://ai2-public-datasets/charades/Charades_vu17",
-                ],
-                10,
+                "s3://ai2-public-datasets/charades/Charades_v1.zip",
+                "s3://ai2-public-datasets/charades/Charades_v1_flow.tar",
+                "s3://ai2-public-datasets/charades/Charades_v1_rgb.tar",
+                "s3://ai2-public-datasets/charades/Charades_v1_480.zip",
+                "s3://ai2-public-datasets/charades/Charades_vu17",
             ],  # files + prefixes
         ]
         for input in input_list:
-            s3_lister_dp = S3FileLister(IterableWrapper(input[0]), region="us-west-2")
-            self.assertEqual(sum(1 for _ in s3_lister_dp), input[1], f"{input[0]} failed")
+            s3_lister_dp = S3FileLister(IterableWrapper(input), region="us-west-2")
+            self.assertEqual(sum(1 for _ in s3_lister_dp), self.__get_s3_cnt(input), f"{input} failed")
 
         # S3FileLister: prefixes + different region
         file_urls = [
@@ -282,14 +360,6 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
                 s3_lister_dp = S3FileLister(IterableWrapper(input), region="us-east-1")
                 for _ in s3_lister_dp:
                     pass
-
-        # S3FileLoader: loader
-        input = [
-            "s3://charades-tar-shards/charades-video-0.tar",
-            "s3://charades-tar-shards/charades-video-1.tar",
-        ]  # multiple files
-        s3_loader_dp = S3FileLoader(input, region="us-west-2")
-        self.assertEqual(sum(1 for _ in s3_loader_dp), 2, f"{input} failed")
 
         input = [["s3://aft-vbi-pds/bin-images/100730.jpg"], 1]
         s3_loader_dp = S3FileLoader(input[0], region="us-east-1")

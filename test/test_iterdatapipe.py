@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import asyncio
 import io
 import itertools
 import pickle
@@ -11,14 +12,16 @@ import unittest
 import warnings
 
 from collections import defaultdict
-from typing import Dict
+from functools import partial
+from typing import Dict, NamedTuple
 
 import expecttest
-import torch.utils.data.datapipes.iter
+import torch
 
 import torchdata
 
 from _utils._common_utils_for_test import IDP_NoLen, reset_after_n_next_calls
+from torch.testing._internal.common_utils import suppress_warnings
 
 from torch.utils.data.datapipes.utils.snapshot import _simple_graph_snapshot_restoration
 from torchdata.datapipes.iter import (
@@ -41,6 +44,8 @@ from torchdata.datapipes.iter import (
     UnZipper,
 )
 from torchdata.datapipes.map import MapDataPipe, SequenceWrapper
+
+skipIfNoCUDA = unittest.skipIf(not torch.cuda.is_available(), "CUDA is not available")
 
 
 def test_torchdata_pytorch_consistency() -> None:
@@ -66,6 +71,29 @@ def test_torchdata_pytorch_consistency() -> None:
             "but not under `torchdata.datapipes.iter`:\n"
         )
         raise AssertionError(msg + "\n".join(sorted(missing_datapipes)))
+
+
+def _convert_to_tensor(data):
+    if isinstance(data, dict):
+        return {k: _convert_to_tensor(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [_convert_to_tensor(v) for v in data]
+    return torch.tensor(data)
+
+
+async def _async_mul_ten(x):
+    await asyncio.sleep(0.1)
+    return x * 10
+
+
+async def _async_x_mul_y(x, y):
+    await asyncio.sleep(0.1)
+    return x * y
+
+
+class NamedTensors(NamedTuple):
+    x: torch.Tensor
+    y: torch.Tensor
 
 
 class TestIterDataPipe(expecttest.TestCase):
@@ -251,6 +279,11 @@ class TestIterDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(KeyError, "is not a valid key in the given MapDataPipe"):
             next(it)
 
+        # Functional test: ensure that keep_key option works
+        result_dp = source_dp.zip_with_map(map_dp, odd_even, keep_key=True)
+        expected_res_keep_key = [(key, (i, odd_even_string(i))) for i, key in zip(range(10), [0, 1] * 5)]
+        self.assertEqual(expected_res_keep_key, list(result_dp))
+
         # Reset Test:
         n_elements_before_reset = 4
         result_dp = source_dp.zip_with_map(map_dp, odd_even)
@@ -263,7 +296,7 @@ class TestIterDataPipe(expecttest.TestCase):
         self.assertEqual(len(source_dp), len(result_dp))
 
     def test_prefetcher_iterdatapipe(self) -> None:
-        source_dp = IterableWrapper(range(50000))
+        source_dp = IterableWrapper(range(5000))
         prefetched_dp = source_dp.prefetch(10)
         # check if early termination resets child thread properly
         for _, _ in zip(range(100), prefetched_dp):
@@ -271,6 +304,9 @@ class TestIterDataPipe(expecttest.TestCase):
         expected = list(source_dp)
         actual = list(prefetched_dp)
         self.assertEqual(expected, actual)
+
+        # __len__ Test: returns the same length as source
+        self.assertEqual(len(source_dp), len(prefetched_dp))
 
     def test_repeater_iterdatapipe(self) -> None:
         import itertools
@@ -344,6 +380,11 @@ class TestIterDataPipe(expecttest.TestCase):
         header_dp = source_dp.header(100)
         self.assertEqual(list(range(5)), list(header_dp))
 
+        # Functional Test: ensure the source is not modified if limit is set to None
+        source_dp = IterableWrapper(range(5))
+        header_dp = source_dp.header(None)
+        self.assertEqual(list(range(5)), list(header_dp))
+
         # Reset Test:
         source_dp = IterableWrapper(range(20))
         header_dp = Header(source_dp, 5)
@@ -360,6 +401,10 @@ class TestIterDataPipe(expecttest.TestCase):
         header_dp = source_dp.header(30)
         self.assertEqual(20, len(header_dp))
 
+        # __len__ Test: returns the length of source when limit is set to None
+        header_dp = source_dp.header(None)
+        self.assertEqual(20, len(header_dp))
+
         # __len__ Test: returns limit if source doesn't have length
         source_dp_NoLen = IDP_NoLen(list(range(20)))
         header_dp = source_dp_NoLen.header(30)
@@ -370,10 +415,16 @@ class TestIterDataPipe(expecttest.TestCase):
                 str(wa[0].message), r"length of this HeaderIterDataPipe is inferred to be equal to its limit"
             )
 
-        # __len__ Test: returns limit if source doesn't have length, but it has been iterated through once
+        # __len__ Test: raises TypeError if source doesn't have length and limit is set to None
+        header_dp = source_dp_NoLen.header(None)
+        with self.assertRaisesRegex(TypeError, "The length of this HeaderIterDataPipe cannot be determined."):
+            len(header_dp)
+
+        # __len__ Test: returns limit if source doesn't have length, even when it has been iterated through once
+        header_dp = source_dp_NoLen.header(30)
         for _ in header_dp:
             pass
-        self.assertEqual(20, len(header_dp))
+        self.assertEqual(30, len(header_dp))
 
     def test_enumerator_iterdatapipe(self) -> None:
         letters = "abcde"
@@ -682,52 +733,59 @@ class TestIterDataPipe(expecttest.TestCase):
         with self.assertRaises(ValueError, msg="``max_token_count`` must be equal to or greater than ``max_len``."):
             source_dp.max_token_bucketize(max_token_count=2, max_len=3)
 
+        def _validate_batch_size(res, exp_batch_len, len_fn=lambda d: len(d)):
+            self.assertEqual(len(res), len(exp_batch_len))
+
+            for batch, exp_token_lens in zip(res, exp_batch_len):
+                self.assertEqual(len(batch), len(exp_token_lens))
+                for token, exp_token_len in zip(batch, exp_token_lens):
+                    self.assertEqual(len_fn(token), exp_token_len)
+
         # Functional Test: Filter out min_len
         batch_dp = source_dp.max_token_bucketize(max_token_count=5, min_len=2, buffer_size=10)
-        exp_batch = [["11", "22"], ["111"], ["222"], ["1111"], ["2222"], ["11111"], ["22222"]]
-        self.assertEqual(list(batch_dp), exp_batch)
+        exp_batch_len = [(2, 2), (3,), (3,), (4,), (4,), (5,), (5,)]
+        _validate_batch_size(list(batch_dp), exp_batch_len)
 
         # Functional Test: Filter out max_len
         batch_dp = source_dp.max_token_bucketize(max_token_count=5, max_len=4, buffer_size=10)
-        exp_batch = [["1", "2", "11"], ["22", "111"], ["222"], ["1111"], ["2222"]]
-        self.assertEqual(list(batch_dp), exp_batch)
+        exp_batch_len = [(1, 1, 2), (2, 3), (3,), (4,), (4,)]
+        _validate_batch_size(list(batch_dp), exp_batch_len)
 
         def _custom_len_fn(token):
             return len(token) + 1
 
         # Functional Test: Custom length function
         batch_dp = source_dp.max_token_bucketize(max_token_count=7, len_fn=_custom_len_fn, buffer_size=10)
-        exp_batch = [["1", "2", "11"], ["22", "111"], ["222"], ["1111"], ["2222"], ["11111"], ["22222"]]
-        self.assertEqual(list(batch_dp), exp_batch)
+        exp_batch_len = [(1, 1, 2), (2, 3), (3,), (4,), (4,), (5,), (5,)]
+        _validate_batch_size(list(batch_dp), exp_batch_len)
 
         # Functional Test: Small buffer
         batch_dp = source_dp.max_token_bucketize(max_token_count=10, buffer_size=4)
-        exp_batch = [["1", "11", "2", "22", "111"], ["222", "1111"], ["2222", "11111"], ["22222"]]
-        self.assertEqual(list(batch_dp), exp_batch)
+        exp_batch_len = [(1, 2, 1, 2, 3), (3, 4), (4, 5), (5,)]
+        _validate_batch_size(list(batch_dp), exp_batch_len)
 
         # Reset Test:
         batch_dp = MaxTokenBucketizer(source_dp, max_token_count=5, buffer_size=10)
         n_elements_before_reset = 2
         res_before_reset, res_after_reset = reset_after_n_next_calls(batch_dp, n_elements_before_reset)
-        exp_before_reset = [["1", "2", "11"], ["22", "111"]]
-        exp_after_reset = [["1", "2", "11"], ["22", "111"], ["222"], ["1111"], ["2222"], ["11111"], ["22222"]]
-        self.assertEqual(res_before_reset, exp_before_reset)
-        self.assertEqual(res_after_reset, exp_after_reset)
+        exp_batch_len_before_reset = [(1, 1, 2), (2, 3)]
+        exp_batch_len_after_reset = [(1, 1, 2), (2, 3), (3,), (4,), (4,), (5,), (5,)]
+        _validate_batch_size(res_before_reset, exp_batch_len_before_reset)
+        _validate_batch_size(res_after_reset, exp_batch_len_after_reset)
 
         # Functional test: Padded tokens exceeding max_token_count
         source_data = ["111", "1111", "11111"]  # 3, 4, 5
         source_dp = IterableWrapper(source_data)
         batch_dp = source_dp.max_token_bucketize(max_token_count=7)
-        exp_batch = [["111", "1111"], ["11111"]]
-
-        self.assertEqual(list(batch_dp), exp_batch)
+        exp_batch_len = [(3, 4), (5,)]
+        _validate_batch_size(list(batch_dp), exp_batch_len)
 
         # Functional test: Padded tokens not exceeding max_token_count
         source_data = ["111", "111", "111", "1111"]  # 3, 3, 3, 4
         source_dp = IterableWrapper(source_data)
         batch_dp = source_dp.max_token_bucketize(max_token_count=7, include_padding=True)
-        exp_batch = [["111", "111"], ["111"], ["1111"]]
-        self.assertEqual(list(batch_dp), exp_batch)
+        exp_batch_len = [(3, 3), (3,), (4,)]
+        _validate_batch_size(list(batch_dp), exp_batch_len)
 
         # Functional test: sample length exceeding max_token_count
         source_data = ["111"]
@@ -735,6 +793,16 @@ class TestIterDataPipe(expecttest.TestCase):
         batch_dp = source_dp.max_token_bucketize(max_token_count=2)
         exp_batch = []
         self.assertEqual(list(batch_dp), exp_batch)
+
+        # Functional test: incomparable data for heapq
+        def _custom_len_fn(data):
+            return data["len"]
+
+        source_data = [{"len": 1}, {"len": 2}, {"len": 1}, {"len": 3}, {"len": 1}]
+        source_dp = IterableWrapper(source_data)
+        batch_dp = source_dp.max_token_bucketize(max_token_count=3, len_fn=_custom_len_fn)
+        exp_batch_len = [(1, 1, 1), (2,), (3,)]
+        _validate_batch_size(list(batch_dp), exp_batch_len, len_fn=_custom_len_fn)
 
         # __len__ Test: returns the number of batches
         with self.assertRaises(TypeError):
@@ -828,6 +896,158 @@ class TestIterDataPipe(expecttest.TestCase):
         # __len__ Test: length should be len(source_dp)*len(fn->out_shape) which we can't know
         with self.assertRaisesRegex(TypeError, "length relies on the output of its function."):
             len(flatmapped_dp)
+
+    def test_shuffled_flatmap_iterdatapipe(self):
+        source_dp = IterableWrapper(list(range(20)))
+
+        def fn(e):
+            return [e, e * 10]
+
+        # Tests with buffer_size=1
+        # In this case, the expected behavior is similar to flatmap
+
+        shuffled_flatmapped_dp = source_dp.shuffled_flatmap(fn, buffer_size=1)
+        expected_list = list(itertools.chain(*[(e, e * 10) for e in source_dp]))
+
+        self.assertEqual(expected_list, list(shuffled_flatmapped_dp))
+
+        # Funtional Test: Specify input_col
+        tuple_source_dp = IterableWrapper([(d - 1, d, d + 1) for d in range(20)])
+
+        # Single input_col
+        input_col_1_dp = tuple_source_dp.shuffled_flatmap(fn, input_col=1, buffer_size=1)
+        self.assertEqual(expected_list, list(input_col_1_dp))
+
+        # With generator as fn
+        def gen_fn(e):
+            yield e
+            yield e * 10
+
+        shuffled_flatmapped_dp = source_dp.shuffled_flatmap(gen_fn, buffer_size=1)
+        expected_list = list(itertools.chain(*[(e, e * 10) for e in source_dp]))
+
+        self.assertEqual(expected_list, list(shuffled_flatmapped_dp))
+
+        # Multiple input_col
+        def mul_fn(a, b):
+            return [a - b, b - a]
+
+        input_col_2_dp = tuple_source_dp.shuffled_flatmap(mul_fn, input_col=(0, 2), buffer_size=1)
+        self.assertEqual(list(itertools.chain(*[(-2, 2) for _ in range(20)])), list(input_col_2_dp))
+
+        # shuffled_flatmap with no fn specified
+        default_dp = tuple_source_dp.shuffled_flatmap(buffer_size=1)
+        self.assertEqual(list(itertools.chain(*[(n - 1, n, n + 1) for n in range(20)])), list(default_dp))
+
+        # shuffled_flatmap with no fn specified, multiple input_col
+        default_dp = tuple_source_dp.shuffled_flatmap(input_col=(0, 2), buffer_size=1)
+        self.assertEqual(list(itertools.chain(*[(n - 1, n + 1) for n in range(20)])), list(default_dp))
+
+        # shuffled_flatmap with no fn specified, some special input
+        tuple_source_dp = IterableWrapper([[1, 2, [3, 4]], [5, 6, [7, 8]]])
+        default_dp = tuple_source_dp.shuffled_flatmap(input_col=(0, 2), buffer_size=1)
+        self.assertEqual([1, [3, 4], 5, [7, 8]], list(default_dp))
+
+        # Reset Test: reset the DataPipe after reading part of it
+        n_elements_before_reset = 5
+        res_before_reset, res_after_reset = reset_after_n_next_calls(shuffled_flatmapped_dp, n_elements_before_reset)
+
+        self.assertEqual(expected_list[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_list, res_after_reset)
+
+        # __len__ Test: length should be len(source_dp)*len(fn->out_shape) which we can't know
+        with self.assertRaisesRegex(TypeError, "length relies on the output of its function."):
+            len(shuffled_flatmapped_dp)
+
+        # __len__ when no fn specified:
+        dp = IterableWrapper([[1, 2], [], [3], [4, 5, 6, [7, 8]]])
+        dp = dp.shuffled_flatmap()
+        self.assertEqual(len(dp), 7)
+
+        # Tests with .set_shuffle(False)
+        # In this case, the expected behavior is similar to flatmap
+
+        shuffled_flatmapped_dp = source_dp.shuffled_flatmap(fn).set_shuffle(False)
+        expected_list = list(itertools.chain(*[(e, e * 10) for e in source_dp]))
+
+        self.assertEqual(expected_list, list(shuffled_flatmapped_dp))
+
+        # Funtional Test: Specify input_col
+        tuple_source_dp = IterableWrapper([(d - 1, d, d + 1) for d in range(20)])
+
+        # Single input_col
+        input_col_1_dp = tuple_source_dp.shuffled_flatmap(fn, input_col=1, buffer_size=1)
+        self.assertEqual(expected_list, list(input_col_1_dp))
+
+        # Multiple input_col
+        input_col_2_dp = tuple_source_dp.shuffled_flatmap(mul_fn, input_col=(0, 2)).set_shuffle(False)
+        self.assertEqual(list(itertools.chain(*[(-2, 2) for _ in range(20)])), list(input_col_2_dp))
+
+        # shuffled_flatmap with no fn specified
+        default_dp = tuple_source_dp.shuffled_flatmap().set_shuffle(False)
+        self.assertEqual(list(itertools.chain(*[(n - 1, n, n + 1) for n in range(20)])), list(default_dp))
+
+        # shuffled_flatmap with no fn specified, multiple input_col
+        default_dp = tuple_source_dp.shuffled_flatmap(input_col=(0, 2)).set_shuffle(False)
+        self.assertEqual(list(itertools.chain(*[(n - 1, n + 1) for n in range(20)])), list(default_dp))
+
+        # shuffled_flatmap with no fn specified, some special input
+        tuple_source_dp = IterableWrapper([[1, 2, [3, 4]], [5, 6, [7, 8]]])
+        default_dp = tuple_source_dp.shuffled_flatmap(input_col=(0, 2)).set_shuffle(False)
+        self.assertEqual([1, [3, 4], 5, [7, 8]], list(default_dp))
+
+        # Reset Test: reset the DataPipe after reading part of it
+        n_elements_before_reset = 5
+        res_before_reset, res_after_reset = reset_after_n_next_calls(shuffled_flatmapped_dp, n_elements_before_reset)
+
+        self.assertEqual(expected_list[:n_elements_before_reset], res_before_reset)
+        self.assertEqual(expected_list, res_after_reset)
+
+        # Other tests
+
+        # Test no empty buffers:
+        with self.assertRaises(AssertionError):
+            _ = source_dp.shuffled_flatmap(buffer_size=0)
+
+        # Functional Test: No seed
+        consecutive_tuple_source_dp = IterableWrapper([(d, d + 1, d + 2) for d in range(0, 21, 3)])
+        shuffled_flatmapped_dp = consecutive_tuple_source_dp.shuffled_flatmap()
+        self.assertEqual(set(range(21)), set(shuffled_flatmapped_dp))
+
+        # Functional Test: With global seed
+        torch.manual_seed(123)
+        shuffled_flatmapped_dp = tuple_source_dp.shuffled_flatmap()
+        res = list(shuffled_flatmapped_dp)
+        torch.manual_seed(123)
+        self.assertEqual(list(shuffled_flatmapped_dp), res)
+
+        # Functional Test: Set seed
+        shuffled_flatmapped_dp = tuple_source_dp.shuffled_flatmap().set_seed(123)
+        res = list(shuffled_flatmapped_dp)
+        shuffled_flatmapped_dp.set_seed(123)
+        self.assertEqual(list(shuffled_flatmapped_dp), res)
+
+        # Reset Test:
+        shuffled_flatmapped_dp = tuple_source_dp.shuffled_flatmap()
+        n_elements_before_reset = 5
+        res_before_reset, res_after_reset = reset_after_n_next_calls(shuffled_flatmapped_dp, n_elements_before_reset)
+        self.assertEqual(5, len(res_before_reset))
+
+    def test_round_robin_demux_iterdatapipe(self):
+        source_dp = IterableWrapper(list(range(23)))
+        with self.assertRaisesRegex(ValueError, "Expected `num_instaces`"):
+            _ = source_dp.round_robin_demux(0)
+
+        # Funtional Test
+        dp1, dp2, dp3 = source_dp.round_robin_demux(3)
+        self.assertEqual(list(range(0, 23, 3)), list(dp1))
+        self.assertEqual(list(range(1, 23, 3)), list(dp2))
+        self.assertEqual(list(range(2, 23, 3)), list(dp3))
+
+        # __len__ Test
+        self.assertEqual(len(dp1), 8)
+        self.assertEqual(len(dp2), 8)
+        self.assertEqual(len(dp3), 7)
 
     def test_unzipper_iterdatapipe(self):
         source_dp = IterableWrapper([(i, i + 10, i + 20) for i in range(10)])
@@ -1040,6 +1260,35 @@ class TestIterDataPipe(expecttest.TestCase):
             testexpand("{999..123}")
         self.assertEqual(testexpand("{0..1}{0..1}"), "00 01 10 11".split())
 
+    def test_combining_infinite_iterdatapipe(self):
+        r"""
+        Test combining DataPipe can properly exit at the end of iteration
+        with an infinite DataPipe as the input.
+        """
+
+        def _get_dp(length=10):
+            source_dp = IterableWrapper(list(range(length)))
+            inf_dp = IterableWrapper(list(range(length))).cycle()
+            return source_dp, inf_dp
+
+        # zip
+        noinf_dp, inf_dp = _get_dp(10)
+        dp = inf_dp.zip(noinf_dp)
+        res = list(dp)
+        self.assertEqual(res, [(i, i) for i in range(10)])
+
+        # mux
+        noinf_dp, inf_dp = _get_dp(10)
+        dp = inf_dp.mux(noinf_dp)
+        res = list(dp)
+        self.assertEqual(res, [i for i in range(10) for _ in range(2)])
+
+        # zip_with_iter
+        noinf_dp, inf_dp = _get_dp(10)
+        dp = noinf_dp.zip_with_iter(inf_dp, key_fn=lambda x: x)
+        res = list(dp)
+        self.assertEqual(res, [(i, i) for i in range(10)])
+
     def test_zip_longest_iterdatapipe(self):
 
         # Functional Test: raises TypeError when an input is not of type `IterDataPipe`
@@ -1138,7 +1387,7 @@ class TestIterDataPipe(expecttest.TestCase):
         slice_dp = input_dp.slice(0, 2, 2)
         self.assertEqual([(0,), (3,), (6,)], list(slice_dp))
 
-        # Functional Test: filter with list of indices for tuple
+        # Functional Test: slice with list of indices for tuple
         slice_dp = input_dp.slice([0, 1])
         self.assertEqual([(0, 1), (3, 4), (6, 7)], list(slice_dp))
 
@@ -1153,14 +1402,18 @@ class TestIterDataPipe(expecttest.TestCase):
         slice_dp = input_dp.slice(0, 2)
         self.assertEqual([[0, 1], [3, 4], [6, 7]], list(slice_dp))
 
-        # Functional Test: filter with list of indices for list
+        # Functional Test: slice with list of indices for list
         slice_dp = input_dp.slice(0, 2)
         self.assertEqual([[0, 1], [3, 4], [6, 7]], list(slice_dp))
 
         # dict tests
         input_dp = IterableWrapper([{"a": 1, "b": 2, "c": 3}, {"a": 3, "b": 4, "c": 5}, {"a": 5, "b": 6, "c": 7}])
 
-        # Functional Test: filter with list of indices for dict
+        # Functional Test: slice with key for dict
+        slice_dp = input_dp.slice("a")
+        self.assertEqual([{"a": 1}, {"a": 3}, {"a": 5}], list(slice_dp))
+
+        # Functional Test: slice with list of keys for dict
         slice_dp = input_dp.slice(["a", "b"])
         self.assertEqual([{"a": 1, "b": 2}, {"a": 3, "b": 4}, {"a": 5, "b": 6}], list(slice_dp))
 
@@ -1397,6 +1650,404 @@ class TestIterDataPipe(expecttest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "iterator has been invalidated"):
             next(it_train)
         next(it_valid)  # No error, can keep going
+
+    @skipIfNoCUDA
+    def test_pin_memory(self):
+        # Tensor
+        dp = IterableWrapper([(i, i + 1) for i in range(10)]).map(_convert_to_tensor).pin_memory()
+        self.assertTrue(all(d.is_pinned() for d in dp))
+
+        # List of Tensors
+        dp = IterableWrapper([[(i - 1, i), (i, i + 1)] for i in range(10)]).map(_convert_to_tensor).pin_memory()
+        self.assertTrue(all(d0.is_pinned() and d1.is_pinned() for d0, d1 in dp))
+
+        # Dict of Tensors
+        dp = IterableWrapper([{str(i): (i, i + 1)} for i in range(10)]).map(_convert_to_tensor).pin_memory()
+        self.assertTrue(all(v.is_pinned() for d in dp for v in d.values()))
+
+        # NamedTuple
+        dp = IterableWrapper([NamedTensors(torch.tensor(i), torch.tensor(i + 1)) for i in range(10)]).pin_memory()
+        self.assertTrue(all(v.is_pinned() for d in dp for v in d))
+
+        # Dict of List of Tensors
+        dp = (
+            IterableWrapper([{str(i): [(i - 1, i), (i, i + 1)]} for i in range(10)])
+            .map(_convert_to_tensor)
+            .pin_memory()
+        )
+        self.assertTrue(all(v.is_pinned() for d in dp for batch in d.values() for v in batch))
+
+        # List of Dict of Tensors
+        dp = IterableWrapper([{str(i): (i, i + 1)} for i in range(10)]).map(_convert_to_tensor).batch(2).pin_memory()
+        self.assertTrue(all(v.is_pinned() for batch in dp for d in batch for v in d.values()))
+
+        # List of List of Tensors
+        dp = (
+            IterableWrapper([[(i - 1, i), (i, i + 1)] for i in range(10)]).map(_convert_to_tensor).batch(2).pin_memory()
+        )
+        self.assertTrue(all(d0.is_pinned() and d1.is_pinned() for batch in dp for d0, d1 in batch))
+
+        # Single str
+        dp = IterableWrapper(["hello", "world"]).batch(1).collate().pin_memory()
+        self.assertEqual(list(dp), [["hello"], ["world"]])
+
+    def test_async_map_batches(self):
+        batch_size = 16
+
+        def _helper(input_data, exp_res, async_fn, input_col=None, output_col=None, max_concurrency=32, flatten=True):
+            dp = IterableWrapper(input_data)
+            dp = dp.async_map_batches(async_fn, batch_size, input_col, output_col, max_concurrency, flatten)
+            self.assertEqual(
+                exp_res,
+                list(dp),
+                msg=f"Async map test with {async_fn=}, {input_col=}, {output_col=}, {max_concurrency=}",
+            )
+            if flatten:
+                self.assertEqual(len(input_data), len(dp))
+
+        _helper(range(50), [i * 10 for i in range(50)], _async_mul_ten)
+
+        # Smaller max_concurrency
+        _helper(range(50), [i * 10 for i in range(50)], _async_mul_ten, max_concurrency=6)
+
+        # Tuple with input_col
+        _helper([(i, i) for i in range(50)], [(i * 10, i) for i in range(50)], _async_mul_ten, input_col=0)
+        _helper([(i, i) for i in range(50)], [(i, i * 10) for i in range(50)], _async_mul_ten, input_col=1)
+        # Tuple with input_col and output_col
+        _helper(
+            [(i, i) for i in range(50)], [(i, i * 10) for i in range(50)], _async_mul_ten, input_col=0, output_col=1
+        )
+        _helper(
+            [(i, i) for i in range(50)], [(i, i, i * 10) for i in range(50)], _async_mul_ten, input_col=0, output_col=-1
+        )
+
+        # Dict with input_col
+        _helper(
+            [{"a": i, "b": i} for i in range(50)],
+            [{"a": i, "b": i * 10} for i in range(50)],
+            _async_mul_ten,
+            input_col="b",
+        )
+        # Dict with input_col and output_col
+        _helper(
+            [{"a": i, "b": i} for i in range(50)],
+            [{"a": i * 10, "b": i} for i in range(50)],
+            _async_mul_ten,
+            input_col="b",
+            output_col="a",
+        )
+        _helper(
+            [{"a": i, "b": i} for i in range(50)],
+            [{"a": i, "b": i, "c": i * 10} for i in range(50)],
+            _async_mul_ten,
+            input_col="b",
+            output_col="c",
+        )
+
+        # Multiple input_col
+        _helper(
+            [(i - 1, i, i + 1) for i in range(50)],
+            [((i - 1) * (i + 1), i) for i in range(50)],
+            _async_x_mul_y,
+            input_col=(0, 2),
+        )
+        _helper(
+            [(i - 1, i, i + 1) for i in range(50)],
+            [(i, (i - 1) * (i + 1)) for i in range(50)],
+            _async_x_mul_y,
+            input_col=(2, 0),
+        )
+        # Multiple input_col with output_col
+        _helper(
+            [(i - 1, i, i + 1) for i in range(50)],
+            [(i - 1, (i - 1) * (i + 1), i + 1) for i in range(50)],
+            _async_x_mul_y,
+            input_col=(0, 2),
+            output_col=1,
+        )
+        # Skip over `flatten` operation
+        _helper(
+            range(32),
+            [[i * 10 for i in range(16)], [i * 10 for i in range(16, 32)]],
+            _async_mul_ten,
+            flatten=False,
+        )
+
+        # Test multiple asyncio eventloops
+        dp1 = IterableWrapper(range(50))
+        dp1 = dp1.async_map_batches(_async_mul_ten, 16)
+        dp2 = IterableWrapper(range(50))
+        dp2 = dp2.async_map_batches(_async_mul_ten, 16)
+        for v1, v2, exp in zip(dp1, dp2, [i * 10 for i in range(50)]):
+            self.assertEqual(v1, exp)
+            self.assertEqual(v2, exp)
+
+    def test_threadpool_map(self):
+        target_length = 30
+        input_dp = IterableWrapper(range(target_length))
+        input_dp_parallel = IterableWrapper(range(target_length))
+
+        def fn(item, dtype=torch.float, *, sum=False):
+            data = torch.tensor(item, dtype=dtype)
+            return data if not sum else data.sum()
+
+        # Functional Test: apply to each element correctly
+        map_dp = input_dp.threadpool_map(fn)
+        self.assertEqual(target_length, len(map_dp))
+        for x, y in zip(map_dp, range(target_length)):
+            self.assertEqual(x, torch.tensor(y, dtype=torch.float))
+
+        # Functional Test: works with partial function
+        map_dp = input_dp.threadpool_map(partial(fn, dtype=torch.int, sum=True))
+        for x, y in zip(map_dp, range(target_length)):
+            self.assertEqual(x, torch.tensor(y, dtype=torch.int).sum())
+
+        # __len__ Test: inherits length from source DataPipe
+        self.assertEqual(target_length, len(map_dp))
+
+        input_dp_nl = IDP_NoLen(range(target_length))
+        map_dp_nl = input_dp_nl.threadpool_map(lambda x: x)
+        for x, y in zip(map_dp_nl, range(target_length)):
+            self.assertEqual(x, torch.tensor(y, dtype=torch.float))
+
+        # __len__ Test: inherits length from source DataPipe - raises error when invalid
+        with self.assertRaisesRegex(TypeError, r"instance doesn't have valid length$"):
+            len(map_dp_nl)
+
+        # Test: two independent ThreadPoolExecutors running at the same time
+        map_dp_parallel = input_dp_parallel.threadpool_map(fn)
+        for x, y, z in zip(map_dp, map_dp_parallel, range(target_length)):
+            self.assertEqual(x, torch.tensor(z, dtype=torch.float))
+            self.assertEqual(y, torch.tensor(z, dtype=torch.float))
+
+        # Reset Test: DataPipe resets properly
+        n_elements_before_reset = 5
+        res_before_reset, res_after_reset = reset_after_n_next_calls(map_dp, n_elements_before_reset)
+        self.assertEqual(list(range(n_elements_before_reset)), res_before_reset)
+        self.assertEqual(list(range(target_length)), res_after_reset)
+
+    @suppress_warnings  # Suppress warning for lambda fn
+    def test_threadpool_map_tuple_list_with_col_iterdatapipe(self):
+        def fn_11(d):
+            return -d
+
+        def fn_1n(d):
+            return -d, d
+
+        def fn_n1(d0, d1):
+            return d0 + d1
+
+        def fn_nn(d0, d1):
+            return -d0, -d1, d0 + d1
+
+        def fn_n1_def(d0, d1=1):
+            return d0 + d1
+
+        def fn_n1_kwargs(d0, d1, **kwargs):
+            return d0 + d1
+
+        def fn_n1_pos(d0, d1, *args):
+            return d0 + d1
+
+        def fn_n1_sep_pos(d0, *args, d1):
+            return d0 + d1
+
+        def fn_cmplx(d0, d1=1, *args, d2, **kwargs):
+            return d0 + d1
+
+        p_fn_n1 = partial(fn_n1, d1=1)
+        p_fn_cmplx = partial(fn_cmplx, d2=2)
+
+        def _helper(ref_fn, fn, input_col=None, output_col=None, error=None):
+            for constr in (list, tuple):
+                datapipe = IterableWrapper([constr((0, 1, 2)), constr((3, 4, 5)), constr((6, 7, 8))])
+                if ref_fn is None:
+                    with self.assertRaises(error):
+                        res_dp = datapipe.threadpool_map(fn, input_col, output_col)
+                        list(res_dp)
+                else:
+                    res_dp = datapipe.threadpool_map(fn, input_col, output_col)
+                    ref_dp = datapipe.map(ref_fn)
+                    if constr is list:
+                        ref_dp = ref_dp.map(list)
+                    self.assertEqual(list(res_dp), list(ref_dp), "First test failed")
+                    # Reset
+                    self.assertEqual(list(res_dp), list(ref_dp), "Test after reset failed")
+
+        _helper(lambda data: data, fn_n1_def, 0, 1)
+        _helper(lambda data: (data[0], data[1], data[0] + data[1]), fn_n1_def, [0, 1], 2)
+        _helper(lambda data: data, p_fn_n1, 0, 1)
+        _helper(lambda data: data, p_fn_cmplx, 0, 1)
+        _helper(lambda data: (data[0], data[1], data[0] + data[1]), p_fn_cmplx, [0, 1], 2)
+        _helper(lambda data: (data[0] + data[1],), fn_n1_pos, [0, 1, 2])
+
+        # Replacing with one input column and default output column
+        _helper(lambda data: (data[0], -data[1], data[2]), fn_11, 1)
+        _helper(lambda data: (data[0], (-data[1], data[1]), data[2]), fn_1n, 1)
+        # The index of input column is out of range
+        _helper(None, fn_1n, 3, error=IndexError)
+        # Unmatched input columns with fn arguments
+        _helper(None, fn_n1, 1, error=ValueError)
+        _helper(None, fn_n1, [0, 1, 2], error=ValueError)
+        _helper(None, lambda d0, d1: d0 + d1, 0, error=ValueError)
+        _helper(None, lambda d0, d1: d0 + d1, [0, 1, 2], error=ValueError)
+        _helper(None, fn_cmplx, 0, 1, ValueError)
+        _helper(None, fn_n1_pos, 1, error=ValueError)
+        _helper(None, fn_n1_def, [0, 1, 2], 1, error=ValueError)
+        _helper(None, p_fn_n1, [0, 1], error=ValueError)
+        _helper(None, fn_1n, [1, 2], error=ValueError)
+        # _helper(None, p_fn_cmplx, [0, 1, 2], error=ValueError)
+        _helper(None, fn_n1_sep_pos, [0, 1, 2], error=ValueError)
+        # Fn has keyword-only arguments
+        _helper(None, fn_n1_kwargs, 1, error=ValueError)
+        _helper(None, fn_cmplx, [0, 1], 2, ValueError)
+
+        # Replacing with multiple input columns and default output column (the left-most input column)
+        _helper(lambda data: (data[1], data[2] + data[0]), fn_n1, [2, 0])
+        _helper(lambda data: (data[0], (-data[2], -data[1], data[2] + data[1])), fn_nn, [2, 1])
+
+        # output_col can only be specified when input_col is not None
+        _helper(None, fn_n1, None, 1, error=ValueError)
+        # output_col can only be single-element list or tuple
+        _helper(None, fn_n1, None, [0, 1], error=ValueError)
+        # Single-element list as output_col
+        _helper(lambda data: (-data[1], data[1], data[2]), fn_11, 1, [0])
+        # Replacing with one input column and single specified output column
+        _helper(lambda data: (-data[1], data[1], data[2]), fn_11, 1, 0)
+        _helper(lambda data: (data[0], data[1], (-data[1], data[1])), fn_1n, 1, 2)
+        # The index of output column is out of range
+        _helper(None, fn_1n, 1, 3, error=IndexError)
+        _helper(lambda data: (data[0], data[0] + data[2], data[2]), fn_n1, [0, 2], 1)
+        _helper(lambda data: ((-data[1], -data[2], data[1] + data[2]), data[1], data[2]), fn_nn, [1, 2], 0)
+
+        # Appending the output at the end
+        _helper(lambda data: (*data, -data[1]), fn_11, 1, -1)
+        _helper(lambda data: (*data, (-data[1], data[1])), fn_1n, 1, -1)
+        _helper(lambda data: (*data, data[0] + data[2]), fn_n1, [0, 2], -1)
+        _helper(lambda data: (*data, (-data[1], -data[2], data[1] + data[2])), fn_nn, [1, 2], -1)
+
+        # Handling built-in functions (e.g. `dict`, `iter`, `int`, `str`) whose signatures cannot be inspected
+        _helper(lambda data: (str(data[0]), data[1], data[2]), str, 0)
+        _helper(lambda data: (data[0], data[1], int(data[2])), int, 2)
+
+    @suppress_warnings  # Suppress warning for lambda fn
+    def test_threadpool_map_dict_with_col_iterdatapipe(self):
+        def fn_11(d):
+            return -d
+
+        def fn_1n(d):
+            return -d, d
+
+        def fn_n1(d0, d1):
+            return d0 + d1
+
+        def fn_nn(d0, d1):
+            return -d0, -d1, d0 + d1
+
+        def fn_n1_def(d0, d1=1):
+            return d0 + d1
+
+        p_fn_n1 = partial(fn_n1, d1=1)
+
+        def fn_n1_pos(d0, d1, *args):
+            return d0 + d1
+
+        def fn_n1_kwargs(d0, d1, **kwargs):
+            return d0 + d1
+
+        def fn_kwonly(*, d0, d1):
+            return d0 + d1
+
+        def fn_has_nondefault_kwonly(d0, *, d1):
+            return d0 + d1
+
+        def fn_cmplx(d0, d1=1, *args, d2, **kwargs):
+            return d0 + d1
+
+        p_fn_cmplx = partial(fn_cmplx, d2=2)
+
+        # Prevent modification in-place to support resetting
+        def _dict_update(data, newdata, remove_idx=None):
+            _data = dict(data)
+            _data.update(newdata)
+            if remove_idx:
+                for idx in remove_idx:
+                    del _data[idx]
+            return _data
+
+        def _helper(ref_fn, fn, input_col=None, output_col=None, error=None):
+            datapipe = IterableWrapper([{"x": 0, "y": 1, "z": 2}, {"x": 3, "y": 4, "z": 5}, {"x": 6, "y": 7, "z": 8}])
+            if ref_fn is None:
+                with self.assertRaises(error):
+                    res_dp = datapipe.threadpool_map(fn, input_col, output_col)
+                    list(res_dp)
+            else:
+                res_dp = datapipe.threadpool_map(fn, input_col, output_col)
+                ref_dp = datapipe.map(ref_fn)
+                self.assertEqual(list(res_dp), list(ref_dp), "First test failed")
+                # Reset
+                self.assertEqual(list(res_dp), list(ref_dp), "Test after reset failed")
+
+        _helper(lambda data: data, fn_n1_def, "x", "y")
+        _helper(lambda data: data, p_fn_n1, "x", "y")
+        _helper(lambda data: data, p_fn_cmplx, "x", "y")
+        _helper(lambda data: _dict_update(data, {"z": data["x"] + data["y"]}), p_fn_cmplx, ["x", "y", "z"], "z")
+
+        _helper(lambda data: _dict_update(data, {"z": data["x"] + data["y"]}), fn_n1_def, ["x", "y"], "z")
+
+        _helper(None, fn_n1_pos, "x", error=ValueError)
+        _helper(None, fn_n1_kwargs, "x", error=ValueError)
+        # non-default kw-only args
+        _helper(None, fn_kwonly, ["x", "y"], error=ValueError)
+        _helper(None, fn_has_nondefault_kwonly, ["x", "y"], error=ValueError)
+        _helper(None, fn_cmplx, ["x", "y"], error=ValueError)
+
+        # Replacing with one input column and default output column
+        _helper(lambda data: _dict_update(data, {"y": -data["y"]}), fn_11, "y")
+        _helper(lambda data: _dict_update(data, {"y": (-data["y"], data["y"])}), fn_1n, "y")
+        # The key of input column is not in dict
+        _helper(None, fn_1n, "a", error=KeyError)
+        # Unmatched input columns with fn arguments
+        _helper(None, fn_n1, "y", error=ValueError)
+        _helper(None, fn_1n, ["x", "y"], error=ValueError)
+        _helper(None, fn_n1_def, ["x", "y", "z"], error=ValueError)
+        _helper(None, p_fn_n1, ["x", "y"], error=ValueError)
+        _helper(None, fn_n1_kwargs, ["x", "y", "z"], error=ValueError)
+        # Replacing with multiple input columns and default output column (the left-most input column)
+        _helper(lambda data: _dict_update(data, {"z": data["x"] + data["z"]}, ["x"]), fn_n1, ["z", "x"])
+        _helper(
+            lambda data: _dict_update(data, {"z": (-data["z"], -data["y"], data["y"] + data["z"])}, ["y"]),
+            fn_nn,
+            ["z", "y"],
+        )
+
+        # output_col can only be specified when input_col is not None
+        _helper(None, fn_n1, None, "x", error=ValueError)
+        # output_col can only be single-element list or tuple
+        _helper(None, fn_n1, None, ["x", "y"], error=ValueError)
+        # Single-element list as output_col
+        _helper(lambda data: _dict_update(data, {"x": -data["y"]}), fn_11, "y", ["x"])
+        # Replacing with one input column and single specified output column
+        _helper(lambda data: _dict_update(data, {"x": -data["y"]}), fn_11, "y", "x")
+        _helper(lambda data: _dict_update(data, {"z": (-data["y"], data["y"])}), fn_1n, "y", "z")
+        _helper(lambda data: _dict_update(data, {"y": data["x"] + data["z"]}), fn_n1, ["x", "z"], "y")
+        _helper(
+            lambda data: _dict_update(data, {"x": (-data["y"], -data["z"], data["y"] + data["z"])}),
+            fn_nn,
+            ["y", "z"],
+            "x",
+        )
+
+        # Adding new key to dict for the output
+        _helper(lambda data: _dict_update(data, {"a": -data["y"]}), fn_11, "y", "a")
+        _helper(lambda data: _dict_update(data, {"a": (-data["y"], data["y"])}), fn_1n, "y", "a")
+        _helper(lambda data: _dict_update(data, {"a": data["x"] + data["z"]}), fn_n1, ["x", "z"], "a")
+        _helper(
+            lambda data: _dict_update(data, {"a": (-data["y"], -data["z"], data["y"] + data["z"])}),
+            fn_nn,
+            ["y", "z"],
+            "a",
+        )
 
 
 if __name__ == "__main__":

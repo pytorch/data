@@ -47,8 +47,16 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
             e.g. host, port, username, password, etc.
 
     Example:
-        >>> from torchdata.datapipes.iter import FSSpecFileLister
-        >>> datapipe = FSSpecFileLister(root=dir_path)
+
+    .. testsetup::
+
+        dir_path = "path"
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import FSSpecFileLister
+
+        datapipe = FSSpecFileLister(root=dir_path)
     """
 
     def __init__(
@@ -79,11 +87,15 @@ class FSSpecFileListerIterDataPipe(IterDataPipe[str]):
             else:
                 protocol_list = fs.protocol
 
+            # fspec.core.url_to_fs will return "abfs" for both, "az://" and "abfs://" urls
+            if "abfs" in protocol_list:
+                protocol_list.append("az")
+
             is_local = fs.protocol == "file" or not any(root.startswith(protocol) for protocol in protocol_list)
             if fs.isfile(path):
                 yield root
             else:
-                for file_name in fs.ls(path):
+                for file_name in fs.ls(path, detail=False):  # Ensure it returns List[str], not List[Dict]
                     if not match_masks(file_name, self.masks):
                         continue
 
@@ -123,9 +135,17 @@ class FSSpecFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
             e.g. host, port, username, password, etc.
 
     Example:
-        >>> from torchdata.datapipes.iter import FSSpecFileLister
-        >>> datapipe = FSSpecFileLister(root=dir_path)
-        >>> file_dp = datapipe.open_files_by_fsspec()
+
+    .. testsetup::
+
+        dir_path = "path"
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import FSSpecFileLister
+
+        datapipe = FSSpecFileLister(root=dir_path)
+        file_dp = datapipe.open_files_by_fsspec()
     """
 
     def __init__(
@@ -148,10 +168,6 @@ class FSSpecFileOpenerIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
         return len(self.source_datapipe)
 
 
-# Register for functional API for backward compatibility
-IterDataPipe.register_datapipe_as_function("open_file_by_fsspec", FSSpecFileOpenerIterDataPipe)
-
-
 @functional_datapipe("save_by_fsspec")
 class FSSpecSaverIterDataPipe(IterDataPipe[str]):
     r"""
@@ -169,13 +185,31 @@ class FSSpecSaverIterDataPipe(IterDataPipe[str]):
 
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper
-        >>> def filepath_fn(name: str) -> str:
-        >>>     return dir_path + name
-        >>> name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
-        >>> source_dp = IterableWrapper(sorted(name_to_data.items()))
-        >>> fsspec_saver_dp = source_dp.save_by_fsspec(filepath_fn=filepath_fn, mode="wb")
-        >>> res_file_paths = list(fsspec_saver_dp)
+
+    .. testsetup::
+
+        file_prefix = "file"
+
+    .. testcode::
+
+        from torchdata.datapipes.iter import IterableWrapper
+
+
+        def filepath_fn(name: str) -> str:
+            return file_prefix + name
+
+
+        name_to_data = {"1.txt": b"DATA1", "2.txt": b"DATA2", "3.txt": b"DATA3"}
+        source_dp = IterableWrapper(sorted(name_to_data.items()))
+        fsspec_saver_dp = source_dp.save_by_fsspec(filepath_fn=filepath_fn, mode="wb")
+        res_file_paths = list(fsspec_saver_dp)
+
+    .. testcleanup::
+
+        import os
+
+        for name in name_to_data.keys():
+            os.remove(file_prefix + name)
     """
 
     def __init__(
@@ -200,7 +234,6 @@ class FSSpecSaverIterDataPipe(IterDataPipe[str]):
             filepath = meta if self.filepath_fn is None else self.filepath_fn(meta)
             fs, path = fsspec.core.url_to_fs(filepath, **self.kwargs_for_connection)
             with fs.open(path, self.mode, **self.kwargs_for_open) as f:
-                print(f)
                 f.write(data)
             yield filepath
 

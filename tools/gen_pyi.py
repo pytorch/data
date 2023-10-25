@@ -67,16 +67,18 @@ def gen_pyi() -> None:
     iterDP_files_to_exclude: Set[str] = {"__init__.py"}
     iterDP_deprecated_files: Set[str] = set()
     iterDP_method_to_special_output_type: Dict[str, str] = {
+        "async_map_batches": "IterDataPipe",
         "bucketbatch": "IterDataPipe",
         "dataframe": "torcharrow.DataFrame",
         "end_caching": "IterDataPipe",
-        "unzip": "List[IterDataPipe]",
+        "extract": "IterDataPipe",
         "random_split": "Union[IterDataPipe, List[IterDataPipe]]",
         "read_from_tar": "IterDataPipe",
         "read_from_xz": "IterDataPipe",
         "read_from_zip": "IterDataPipe",
-        "extract": "IterDataPipe",
+        "round_robin_demux": "List[IterDataPipe]",
         "to_map_datapipe": "MapDataPipe",
+        "unzip": "List[IterDataPipe]",
     }
     iter_method_name_exclusion: Set[str] = {"def extract", "read_from_tar", "read_from_xz", "read_from_zip"}
 

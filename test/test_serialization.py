@@ -92,6 +92,10 @@ def _filter_by_module_availability(datapipes):
     return [dp for dp in datapipes if dp[0] not in filter_set]
 
 
+def _convert_to_tensor(data):
+    return torch.tensor(data)
+
+
 class TestIterDataPipeSerialization(expecttest.TestCase):
     def setUp(self):
         self.temp_dir = create_temp_dir()
@@ -193,6 +197,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.Dropper, IterableWrapper([(0, 0), (0, 0), (0, 0), (0, 0)]), ([1]), {}),
             (iterdp.Enumerator, None, (2,), {}),
             (iterdp.FlatMapper, None, (_fake_fn_ls,), {}),
+            (iterdp.ShuffledFlatMapper, None, (_fake_fn_ls,), {"buffer_size": 1}),
             (iterdp.Flattener, IterableWrapper([(0, (0, 1)), (0, (0, 1)), (0, (0, 1)), (0, (0, 1))]), ([1]), {}),
             (iterdp.FSSpecFileLister, ".", (), {}),
             (iterdp.FSSpecFileOpener, None, (), {}),
@@ -272,6 +277,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 (),
                 {},
             ),
+            (iterdp.Prefetcher, None, (), {}),
             (iterdp.ParquetDataFrameLoader, None, (), {"dtype": DTYPE}),
             (iterdp.RarArchiveLoader, None, (), {}),
             (
@@ -292,6 +298,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
             (iterdp.TarArchiveLoader, None, (), {}),
             # TODO(594): Add serialization tests for optional DataPipe
             #  (iterdp.TFRecordLoader, None, (), {}),
+            (iterdp.ThreadPoolMapper, None, (_fake_fn_ls,), {}),
             (iterdp.UnZipper, IterableWrapper([(i, i + 10) for i in range(10)]), (), {"sequence_length": 2}),
             (iterdp.WebDataset, IterableWrapper([("foo.txt", b"1"), ("bar.txt", b"2")]), (), {}),
             (iterdp.XzFileLoader, None, (), {}),
@@ -357,10 +364,12 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         unpicklable_datapipes: List = [
             (iterdp.BatchMapper, (lambda batch: [d + 1 for d in batch], 2), {}),
             (iterdp.FlatMapper, (lambda x: [x, x],), {}),
+            (iterdp.ShuffledFlatMapper, (lambda x: [x, x],), {"buffer_size": 1}),
             (iterdp.IterKeyZipper, (ref_idp, lambda x: x, None, True, 100), {}),
             (iterdp.MapKeyZipper, (ref_mdp, lambda x: x), {}),
             (iterdp.OnDiskCacheHolder, (lambda x: x,), {}),
             (iterdp.ParagraphAggregator, (lambda x: x,), {}),
+            (iterdp.ThreadPoolMapper, (lambda x: x,), {}),
         ]
         # Skipping value comparison for these DataPipes
         dp_skip_comparison = {iterdp.OnDiskCacheHolder, iterdp.ParagraphAggregator}

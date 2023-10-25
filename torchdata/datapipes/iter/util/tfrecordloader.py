@@ -26,7 +26,7 @@ except ImportError:
     import operator
     from functools import reduce
 
-    def prod(xs):
+    def prod(xs):  # type: ignore[no-redef]
         return reduce(operator.mul, xs, 1)
 
 

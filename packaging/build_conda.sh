@@ -19,4 +19,10 @@ setup_env
 setup_conda_pytorch_constraint
 
 mkdir -p conda-bld
-conda build $CONDA_CHANNEL_FLAGS --no-anaconda-upload --output-folder conda-bld --python "$PYTHON_VERSION" packaging/torchdata
+conda build \
+  -c defaults \
+  $CONDA_CHANNEL_FLAGS \
+  --no-anaconda-upload \
+  --output-folder conda-bld \
+  --python "$PYTHON_VERSION" \
+  packaging/torchdata

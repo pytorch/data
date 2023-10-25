@@ -27,7 +27,6 @@ jobs:
           - ubuntu-latest
           - windows-latest
         python-version:
-          - 3.7
           - 3.8
           - 3.9
           - "3.10"
@@ -40,7 +39,7 @@ jobs:
           else
             PT_CHANNEL="https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html"
           fi
-          echo "::set-output name=value::$PT_CHANNEL"
+          echo "value=$PT_CHANNEL" >> $GITHUB_OUTPUT
         id: pytorch_channel
       - name: Setup additional system libraries
         if: startsWith( matrix.os, 'ubuntu' )
@@ -67,12 +66,13 @@ jobs:
       - name: Install dependencies
         run: |
           pip3 install -r requirements.txt
+          pip3 install networkx
           pip3 install --pre torch -f "${{ steps.pytorch_channel.outputs.value }}"
           pip3 install cmake ninja
           echo "/home/runner/.local/bin" >> $GITHUB_PATH
       - name: Build TorchData
         run: |
-          python setup.py install
+          pip3 install .
         env:
           BUILD_S3: 1
       - name: Install test requirements

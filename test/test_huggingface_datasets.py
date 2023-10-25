@@ -4,15 +4,12 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import os
 import unittest
-import warnings
+from unittest.mock import patch
 
 import expecttest
 
-from _utils._common_utils_for_test import create_temp_dir, create_temp_files, reset_after_n_next_calls
-
-from torchdata.datapipes.iter import HuggingFaceHubReader, IterableWrapper
+from torchdata.datapipes.iter import HuggingFaceHubReader
 
 try:
     import datasets
@@ -25,32 +22,31 @@ skipIfNoDatasets = unittest.skipIf(not HAS_DATASETS, "no datasets")
 
 
 class TestHuggingFaceHubReader(expecttest.TestCase):
-    def setUp(self):
-        self.temp_dir = create_temp_dir()
-        self.temp_files = create_temp_files(self.temp_dir)
-        self.temp_sub_dir = create_temp_dir(self.temp_dir.name)
-        self.temp_sub_files = create_temp_files(self.temp_sub_dir, 4, False)
-
-        self.temp_dir_2 = create_temp_dir()
-        self.temp_files_2 = create_temp_files(self.temp_dir_2)
-        self.temp_sub_dir_2 = create_temp_dir(self.temp_dir_2.name)
-        self.temp_sub_files_2 = create_temp_files(self.temp_sub_dir_2, 4, False)
-
-    def tearDown(self):
-        try:
-            self.temp_sub_dir.cleanup()
-            self.temp_dir.cleanup()
-            self.temp_sub_dir_2.cleanup()
-            self.temp_dir_2.cleanup()
-        except Exception as e:
-            warnings.warn(f"HuggingFace datasets was not able to cleanup temp dir due to {e}")
-
     @skipIfNoDatasets
-    def test_huggingface_hubreader(self):
-        datapipe = HuggingFaceHubReader(dataset="lhoestq/demo1", revision="main", streaming=True)
-        elem = next(iter(datapipe))
+    @patch("datasets.load_dataset")
+    def test_huggingface_hubreader(self, mock_load_dataset):
+        mock_load_dataset.return_value = datasets.Dataset.from_dict(
+            {
+                "id": ["7bd227d9-afc9-11e6-aba1-c4b301cdf627", "7bd22905-afc9-11e6-a5dc-c4b301cdf627"],
+                "package_name": ["com.mantz_it.rfanalyzer"] * 2,
+            }
+        )
+
+        datapipe = HuggingFaceHubReader("lhoestq/demo1", revision="branch", streaming=False, use_auth_token=True)
+
+        iterator = iter(datapipe)
+        elem = next(iterator)
         assert type(elem) is dict
+        assert elem["id"] == "7bd227d9-afc9-11e6-aba1-c4b301cdf627"
         assert elem["package_name"] == "com.mantz_it.rfanalyzer"
+        mock_load_dataset.assert_called_with(
+            path="lhoestq/demo1", streaming=False, revision="branch", use_auth_token=True
+        )
+        with self.assertRaises(StopIteration):
+            next(iterator)
+            next(iterator)
+        with self.assertRaises(TypeError):
+            len(datapipe)
 
 
 if __name__ == "__main__":
