@@ -19,12 +19,12 @@ requirements:
     - curl # [not win]
     - openssl # [unix]
     - zlib # [unix]
-    {{ environ.get('CONDA_PYTORCH_BUILD_CONSTRAINT') }}
+    - pytorch>=2.0
   run:
     - python
     - urllib3>=1.25
     - requests
-    {{ environ.get('CONDA_PYTORCH_CONSTRAINT') }}
+    - pytorch>=2.0
 
 build:
   string: py{{py}}
