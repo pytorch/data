@@ -19,12 +19,12 @@ requirements:
     - curl # [not win]
     - openssl # [unix]
     - zlib # [unix]
-    - torch>=2.0
+    - pytorch>=2.0
   run:
     - python
     - urllib3>=1.25
     - requests
-    - torch>=2.0
+    - pytorch>=2.0
 
 build:
   string: py{{py}}
