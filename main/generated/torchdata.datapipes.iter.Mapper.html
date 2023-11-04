@@ -358,8 +358,8 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="torchdata.datapipes.iter.Mapper">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Mapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.Mapper" title="Permalink to this definition">¶</a></dt>
-<dd><p>Applies a function over each item from the source DataPipe (functional name: <code class="docutils literal notranslate"><span class="pre">map</span></code>).
-The function can be any regular Python function or partial object. Lambda
+<dd><p>Applies a function over each item from the source DataPipe (functional name: <code class="docutils literal notranslate"><span class="pre">map</span></code>).</p>
+<p>The function can be any regular Python function or partial object. Lambda
 function is not recommended as it is not supported by pickle.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
