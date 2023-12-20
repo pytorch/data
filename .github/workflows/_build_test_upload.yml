@@ -192,7 +192,7 @@ jobs:
           fi
           pip3 install pkginfo
           for pkg in dist/torchdata*.whl; do
-              echo "PkgInfo of $pkg:"
+              echo "PkgInfo of ${pkg}:"
               pkginfo $pkg
               if ${{ startsWith( matrix.os, 'ubuntu' ) && matrix.python-version != 'pure' }}; then
                 auditwheel show $pkg
