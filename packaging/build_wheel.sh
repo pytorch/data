@@ -16,7 +16,8 @@ export BUILD_TYPE="wheel"
 
 export SOURCE_ROOT_DIR="$PWD"
 setup_env
-pip_install future wheel distutils
+# Python 3.12 does comes with distutils anymore
+pip_install future wheel setuptools
 setup_pip_pytorch_version
 
 git submodule update --init --recursive
