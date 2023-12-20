@@ -108,12 +108,13 @@ jobs:
           bash "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh" -b -u -p "${MINICONDA_INSTALL_PATH_MACOS}"
           rm -rf "${MINICONDA_INSTALL_PATH_MACOS}/miniconda.sh"
           echo "${MINICONDA_INSTALL_PATH_MACOS}/bin" >> "$GITHUB_PATH"
+          echo "CONDA_EXE=${MINICONDA_INSTALL_PATH_MACOS}/bin/conda" >> "$GITHUB_ENV"
       - name: Setup Python ${{ matrix.python-version }} on MacOS
         if: ${{ startsWith( matrix.os, 'macos' ) }}
         shell: bash -l {0}
         run: |
-          conda init bash
-          conda create -y --name wheel_build_env python=${{ matrix.python-version }}
+          $CONDA_EXE init bash
+          $CONDA_EXE create -y --name wheel_build_env python=${{ matrix.python-version }}
       - name: Setup msbuild on Windows
         if: startsWith( matrix.os, 'windows' )
         uses: microsoft/setup-msbuild@v1.1
@@ -138,7 +139,7 @@ jobs:
             fi
           else
             if ${{ startsWith( matrix.os, 'macos' ) }}; then
-              conda activate wheel_build_env
+              $CONDA_EXE activate wheel_build_env
             fi
             pip install cmake ninja
             echo "/home/runner/.local/bin" >> $GITHUB_PATH
@@ -170,8 +171,8 @@ jobs:
             fi
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
-            conda activate wheel_build_env
-            conda run -n wheel_build_env packaging/build_wheel.sh
+            $CONDA_EXE activate wheel_build_env
+            $CONDA_EXE run -n wheel_build_env packaging/build_wheel.sh
           else
             packaging/build_wheel.sh
           fi
@@ -188,7 +189,7 @@ jobs:
             pip3 install auditwheel
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
-            conda activate wheel_build_env
+            $CONDA_EXE activate wheel_build_env
           fi
           pip3 install pkginfo
           for pkg in dist/torchdata*.whl; do
@@ -215,8 +216,8 @@ jobs:
             source packaging/manylinux/python_helper.sh
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
-            conda activate wheel_build_env
-            conda run -n wheel_build_env pip3 install dist/torchdata*.whl
+            $CONDA_EXE activate wheel_build_env
+            $CONDA_EXE run -n wheel_build_env pip3 install dist/torchdata*.whl
           else
             pip3 install dist/torchdata*.whl
           fi
@@ -232,8 +233,8 @@ jobs:
             source packaging/manylinux/python_helper.sh
           fi
           if ${{ startsWith( matrix.os, 'macos' ) }}; then
-            conda activate wheel_build_env
-            conda run -n wheel_build_env python test/smoke_test/smoke_test.py
+            $CONDA_EXE activate wheel_build_env
+            $CONDA_EXE run -n wheel_build_env python test/smoke_test/smoke_test.py
           else
             if ${{ matrix.python-version == 'pure' }}; then
               python test/smoke_test/smoke_test.py --no-s3
@@ -362,6 +363,7 @@ jobs:
           bash "${MINICONDA_INSTALL_PATH}/miniconda.sh" -b -u -p "${MINICONDA_INSTALL_PATH}"
           rm -rf "${MINICONDA_INSTALL_PATH}/miniconda.sh"
           echo "${MINICONDA_INSTALL_PATH}/bin" >> "$GITHUB_PATH"
+          echo "CONDA_EXE=${MINICONDA_INSTALL_PATH}/bin/conda" >> "$GITHUB_ENV"
           ${MINICONDA_INSTALL_PATH}/bin/conda init bash
       - name: Create Conda Env on MacOS and Linux
         if: ${{ ! startsWith( matrix.os, 'windows' ) }}
@@ -370,9 +372,9 @@ jobs:
           source "${MINICONDA_INSTALL_PATH}/etc/profile.d/conda.sh"
 
           if [[ ${{ matrix.python-version }} = "3.12" ]]; then
-            conda create -y -p "${CONDA_ENV_PATH}" python=3.9
+            $CONDA_EXE create -y -p "${CONDA_ENV_PATH}" python=3.9
           else
-            conda create -y -p "${CONDA_ENV_PATH}" python=${{ matrix.python-version }}
+            $CONDA_EXE create -y -p "${CONDA_ENV_PATH}" python=${{ matrix.python-version }}
           fi
       - name: Build TorchData for Conda
         shell: bash -l {0}
@@ -385,15 +387,10 @@ jobs:
           if ${{ ! startsWith( matrix.os, 'windows' ) }}; then
             source "${MINICONDA_INSTALL_PATH}/etc/profile.d/conda.sh"
           fi
-          conda activate "${CONDA_ENV_PATH}"
-          if [[ "${PYTHON_VERSION}" = "3.12" ]]; then
-            conda install -yq conda-build -c malfet -c conda-forge
-            export CONDA_CHANNEL_FLAGS="${CONDA_CHANNEL_FLAGS} -c malfet"
-          else
-            conda install -yq conda-build
-          fi
+          $CONDA_EXE activate "${CONDA_ENV_PATH}"
+          $CONDA_EXE install -yq conda-build
           packaging/build_conda.sh
-          conda index ./conda-bld
+          $CONDA_EXE index ./conda-bld
       - name: Upload Conda Package to Github
         if: always()
         uses: actions/upload-artifact@v3
