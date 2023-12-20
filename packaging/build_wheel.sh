@@ -16,7 +16,7 @@ export BUILD_TYPE="wheel"
 
 export SOURCE_ROOT_DIR="$PWD"
 setup_env
-pip_install future wheel
+pip_install future wheel distutils
 setup_pip_pytorch_version
 
 git submodule update --init --recursive
