@@ -97,13 +97,13 @@ def _convert_to_tensor(data):
 
 
 class TestIterDataPipeSerialization(expecttest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.temp_dir = create_temp_dir()
         self.temp_files = create_temp_files(self.temp_dir)
         self.temp_sub_dir = create_temp_dir(self.temp_dir.name)
         self.temp_sub_files = create_temp_files(self.temp_sub_dir, 4, False)
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         try:
             self.temp_sub_dir.cleanup()
             self.temp_dir.cleanup()
@@ -168,7 +168,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         self._serialization_test_helper(dp1, use_dill=use_dill)
         self._serialization_test_helper(dp2, use_dill=use_dill)
 
-    def test_serializable(self):
+    def test_serializable(self) -> None:
         # A tuple of 4 objects
         # (DataPipeConstructor, custom_input_datapipe=None, dp_args=(), dp_kwargs={})
         picklable_datapipes: List = [
@@ -355,7 +355,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
                 print(f"{dpipe} is failing.")
                 raise e
 
-    def test_serializable_with_dill(self):
+    def test_serializable_with_dill(self) -> None:
         """Only for DataPipes that take in a function as argument"""
         input_dp = IterableWrapper(range(10))
         ref_idp = IterableWrapper(range(10))
@@ -416,7 +416,7 @@ class TestMapDataPipeSerialization(expecttest.TestCase):
         self._serialization_test_helper(dp1)
         self._serialization_test_helper(dp2)
 
-    def test_serializable(self):
+    def test_serializable(self) -> None:
         picklable_datapipes: List = [
             (mapdp.InMemoryCacheHolder, None, (), {}),
             (mapdp.IterToMapConverter, IterableWrapper([(i, i) for i in range(10)]), (), {}),
@@ -447,7 +447,7 @@ class TestMapDataPipeSerialization(expecttest.TestCase):
                 print(f"{dpipe} is failing.")
                 raise e
 
-    def test_serializable_with_dill(self):
+    def test_serializable_with_dill(self) -> None:
         """Only for DataPipes that take in a function as argument"""
         pass
 
