@@ -35,7 +35,7 @@ skipIfNoPROTOBUF = unittest.skipIf(not HAS_PROTOBUF, "no google protobuf")
 
 
 class TestDataPipeTFRecord(expecttest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_fakedata", "tfrecord")
 
     def assertArrayEqual(self, arr1, arr2):
@@ -45,7 +45,7 @@ class TestDataPipeTFRecord(expecttest.TestCase):
             arr2 = torch.stack(arr2)
         torch.testing.assert_close(arr1, arr2, check_dtype=False)
 
-    def _ground_truth_data(self):
+    def _ground_truth_data(self) -> None:
         for i in range(4):
             x = torch.arange(i * 10, (i + 1) * 10)
             yield {
@@ -54,7 +54,7 @@ class TestDataPipeTFRecord(expecttest.TestCase):
                 "x_byte": [b"test str"],
             }
 
-    def _ground_truth_seq_data(self):
+    def _ground_truth_seq_data(self) -> None:
         for i in range(4):
             x = torch.arange(i * 10, (i + 1) * 10)
             rep = 2 * i + 3
@@ -69,7 +69,7 @@ class TestDataPipeTFRecord(expecttest.TestCase):
         IS_M1, "Protobuf 3.19.* is not supported on MacOS M1, but Tensorflow is incompatible with Protobuf 4"
     )
     @torch.no_grad()
-    def test_tfrecord_loader_example_iterdatapipe(self):
+    def test_tfrecord_loader_example_iterdatapipe(self) -> None:
         filename = f"{self.temp_dir}/example.tfrecord"
         datapipe1 = IterableWrapper([filename])
         datapipe2 = FileOpener(datapipe1, mode="b")
@@ -168,7 +168,7 @@ class TestDataPipeTFRecord(expecttest.TestCase):
         IS_M1, "Protobuf 3.19.* is not supported on MacOS M1, but Tensorflow is incompatible with Protobuf 4"
     )
     @torch.no_grad()
-    def test_tfrecord_loader_sequence_example_iterdatapipe(self):
+    def test_tfrecord_loader_sequence_example_iterdatapipe(self) -> None:
         filename = f"{self.temp_dir}/sequence_example.tfrecord"
         datapipe1 = IterableWrapper([filename])
         datapipe2 = FileOpener(datapipe1, mode="b")
