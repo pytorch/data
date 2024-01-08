@@ -31,10 +31,10 @@ class ToyModel(nn.Module):
         """
         Simple model forward function
         """
-        return self.a + self.b * x + self.c * x ** 2 + self.d * x ** 3
+        return self.a + self.b * x + self.c * x**2 + self.d * x**3
 
 
-if __name__ == "__main__":
+def main() -> None:
     model = ToyModel()
 
     os.environ["RANK"] = str(0)
@@ -84,7 +84,10 @@ if __name__ == "__main__":
 
             running_loss += loss.item()
             if step % 2000 == 1999:
-                print("[epoch: %d, %5d] loss: %.3f" % (epoch + 1, step + 1, running_loss / 2000))
+                print(
+                    "[epoch: %d, %5d] loss: %.3f"
+                    % (epoch + 1, step + 1, running_loss / 2000)
+                )
                 running_loss = 0.0
 
     print("Finished Training")
@@ -145,3 +148,7 @@ if __name__ == "__main__":
     Finished Training
 
     """
+
+
+if __name__ == "__main__":
+    main()  # pragma: no cover
