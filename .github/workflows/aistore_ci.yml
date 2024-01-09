@@ -48,7 +48,7 @@ jobs:
           pip3 install -r requirements.txt
           pip3 install --pre torch -f "${{ steps.pytorch_channel.outputs.value }}"
       - name: Run AIStore local deployment
-        uses: NVIDIA/aistore@master
+        uses: NVIDIA/aistore@main
       - name: Build TorchData
         run: |
           pip3 install .
