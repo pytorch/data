@@ -55,7 +55,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip3 install -r requirements.txt
-          pip3 install mypy==1.4.1 numpy types-requests
+          pip3 install mypy==0.960 numpy types-requests
       - name: Build TorchData
         run: |
           pip3 install .
