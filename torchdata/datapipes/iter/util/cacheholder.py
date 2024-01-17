@@ -47,7 +47,7 @@ def _assert_portalocker() -> None:
             raise ModuleNotFoundError(
                 "Package `portalocker` is required to be installed to use this datapipe."
                 "Please use `pip install 'portalocker>=2.0.0'` or"
-                "`conda install -c conda-forge 'portalocker>=2/0.0'`"
+                "`conda install -c conda-forge 'portalocker>=2.0.0'`"
                 "to install the package"
             )
 
