@@ -24,9 +24,7 @@ MAX_SEQ_LEN = 256
 
 
 XLMR_VOCAB_PATH = r"https://download.pytorch.org/models/text/xlmr.vocab.pt"
-XLMR_SPM_MODEL_PATH = (
-    r"https://download.pytorch.org/models/text/xlmr.sentencepiece.bpe.model"
-)
+XLMR_SPM_MODEL_PATH = r"https://download.pytorch.org/models/text/xlmr.sentencepiece.bpe.model"
 
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
@@ -70,9 +68,7 @@ def evaluate() -> None:
     counter = 0
     with torch.no_grad():
         for batch in eval_dataloader:
-            input = F.to_tensor(batch["token_ids"], padding_value=PADDING_IDX).to(
-                DEVICE
-            )
+            input = F.to_tensor(batch["token_ids"], padding_value=PADDING_IDX).to(DEVICE)
             target = torch.tensor(batch["target"]).to(DEVICE)
             loss, predictions = eval_step(input, target)
             total_loss += loss
@@ -101,9 +97,7 @@ def main() -> None:
     eval_dataloader = DataLoader2(datapipe=eval_datapipe)
     print("Created eval dataloader")
 
-    classifier_head = torchtext.models.RobertaClassificationHead(
-        num_classes=NUM_CLASSES, input_dim=INPUT_DIM
-    )
+    classifier_head = torchtext.models.RobertaClassificationHead(num_classes=NUM_CLASSES, input_dim=INPUT_DIM)
     model = torchtext.models.XLMR_BASE_ENCODER.get_model(head=classifier_head)
     model.to(DEVICE)
 
@@ -112,9 +106,7 @@ def main() -> None:
 
     for epoch in range(NUM_EPOCHS):
         for step, batch in enumerate(train_dataloader):
-            input = F.to_tensor(batch["token_ids"], padding_value=PADDING_IDX).to(
-                DEVICE
-            )
+            input = F.to_tensor(batch["token_ids"], padding_value=PADDING_IDX).to(DEVICE)
             target = torch.tensor(batch["target"]).to(DEVICE)
             train_step(input, target)
 

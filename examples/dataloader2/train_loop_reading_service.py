@@ -27,7 +27,7 @@ class ToyModel(torch.nn.Module):
         """
         Simple model forward function
         """
-        return self.a + self.b * x + self.c * x**2 + self.d * x**3
+        return self.a + self.b * x + self.c * x ** 2 + self.d * x ** 3
 
 
 def main() -> None:
@@ -63,10 +63,7 @@ def main() -> None:
 
             running_loss += loss.item()
             if step % 2000 == 1999:
-                print(
-                    "[epoch: %d, %5d] loss: %.3f"
-                    % (epoch + 1, step + 1, running_loss / 2000)
-                )
+                print("[epoch: %d, %5d] loss: %.3f" % (epoch + 1, step + 1, running_loss / 2000))
                 running_loss = 0.0
 
     print("Finished Training")
