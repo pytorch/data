@@ -7,7 +7,7 @@
 from functools import partial
 from typing import List, Optional, TypeVar
 
-from torch.utils.data.datapipes.utils.common import DILL_AVAILABLE
+from torch.utils._import_utils import dill_available
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -19,7 +19,7 @@ except ImportError:
     torcharrow = None
     parquet = None
 
-if DILL_AVAILABLE:
+if dill_available():
     import dill
 
     dill.extend(use_dill=False)
@@ -150,7 +150,7 @@ class ParquetDFLoaderIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDat
                 yield torcharrow.from_arrow(row_group, dtype=self.dtype)
 
     def __getstate__(self):
-        if DILL_AVAILABLE:
+        if dill_available():
             dill_dtype = dill.dumps(self.dtype)
         else:
             dill_dtype = self.dtype
@@ -161,7 +161,7 @@ class ParquetDFLoaderIterDataPipe(IterDataPipe):  # IterDataPipe[torcharrow.IDat
 
     def __setstate__(self, state):
         (self.source_dp, dill_dtype, self.columns, self.device, self.use_threads) = state
-        if DILL_AVAILABLE:
+        if dill_available():
             self.dtype = dill.loads(dill_dtype)  # type: ignore[assignment]
         else:
             self.dtype = dill_dtype  # type: ignore[assignment]
