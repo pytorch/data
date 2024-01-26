@@ -21,13 +21,13 @@ try:
 except ImportError:
     portalocker = None
 
-from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, DILL_AVAILABLE
+from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, dill_available
 
 from torch.utils.data.graph import traverse_dps
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterableWrapper, IterDataPipe
 
-if DILL_AVAILABLE:
+if dill_available:
     import dill
 
     dill.extend(use_dill=False)
