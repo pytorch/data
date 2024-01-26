@@ -17,11 +17,11 @@ import expecttest
 import torchdata.datapipes.iter as iterdp
 import torchdata.datapipes.map as mapdp
 from _utils._common_utils_for_test import create_temp_dir, create_temp_files
-from torch.utils.data.datapipes.utils.common import DILL_AVAILABLE
+from torch.utils._import_utils import dill_available
 from torchdata.datapipes.iter import IterableWrapper
 from torchdata.datapipes.map import SequenceWrapper
 
-if DILL_AVAILABLE:
+if dill_available():
     import dill
 
     dill.extend(use_dill=False)
@@ -87,7 +87,7 @@ def _filter_by_module_availability(datapipes):
         filter_set.update([iterdp.IoPathFileLister, iterdp.IoPathFileOpener, iterdp.IoPathSaver])
     if rarfile is None:
         filter_set.update([iterdp.RarArchiveLoader])
-    if torcharrow is None or not DILL_AVAILABLE:
+    if torcharrow is None or not dill_available():
         filter_set.update([iterdp.DataFrameMaker, iterdp.ParquetDataFrameLoader])
     return [dp for dp in datapipes if dp[0] not in filter_set]
 
@@ -374,7 +374,7 @@ class TestIterDataPipeSerialization(expecttest.TestCase):
         # Skipping value comparison for these DataPipes
         dp_skip_comparison = {iterdp.OnDiskCacheHolder, iterdp.ParagraphAggregator}
         for dpipe, dp_args, dp_kwargs in unpicklable_datapipes:
-            if DILL_AVAILABLE:
+            if dill_available():
                 try:
                     if dpipe in dp_skip_comparison:  # Make sure they are picklable/loadable (no value comparison)
                         datapipe = dpipe(input_dp, *dp_args, **dp_kwargs)  # type: ignore[call-arg]

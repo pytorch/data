@@ -8,10 +8,12 @@ import warnings
 
 from typing import Callable, Dict, Optional
 
-from torch.utils.data import IterDataPipe, MapDataPipe
-from torch.utils.data.datapipes.utils.common import _check_unpickable_fn, DILL_AVAILABLE
+from torch.utils._import_utils import dill_available
 
-if DILL_AVAILABLE:
+from torch.utils.data import IterDataPipe, MapDataPipe
+from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
+
+if dill_available():
     import dill
 
     dill.extend(use_dill=False)
@@ -108,7 +110,7 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
         return len(self._map)  # type: ignore[arg-type]
 
     def __getstate__(self):
-        if DILL_AVAILABLE:
+        if dill_available():
             dill_key_value_fn = dill.dumps(self.key_value_fn)
         else:
             dill_key_value_fn = self.key_value_fn
@@ -120,7 +122,7 @@ class IterToMapConverterMapDataPipe(MapDataPipe):
 
     def __setstate__(self, state):
         (self.datapipe, dill_key_value_fn, self._map) = state
-        if DILL_AVAILABLE:
+        if dill_available():
             self.key_value_fn = dill.loads(dill_key_value_fn)  # type: ignore[assignment]
         else:
             self.key_value_fn = dill_key_value_fn  # type: ignore[assignment]
