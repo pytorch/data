@@ -136,6 +136,8 @@ class DataLoader2Test(TestCase):
 
         restored_data_loader: DataLoader2 = DataLoader2(datapipe=None, reading_service=reading_service)
         restored_data_loader.load_state_dict(state)
+        new_state = restored_data_loader.state_dict()
+        self.assertDictEqual(state, new_state)
 
         restored_data_loader_datapipe = restored_data_loader.datapipe
         deserialized_datapipe = pickle.loads(state[SERIALIZED_DATAPIPE_KEY_NAME])
