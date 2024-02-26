@@ -193,6 +193,7 @@ class DataLoader2(Generic[T_co]):
         self._reset_seed: bool = True
         # Seed generator as of beginning of each epoch
         self._initial_seed_generator: SeedGenerator = clone(self._seed_generator)
+        self._state_dict: Optional[Dict[str, Any]] = None
 
     def __iter__(self) -> DataLoader2Iterator[T_co]:
         r"""
@@ -283,6 +284,13 @@ class DataLoader2(Generic[T_co]):
         - ``serialized_datapipe``:Serialized ``DataPipe`` before ``ReadingService`` adaption.
         - ``reading_service_state``: The state of ``ReadingService`` and adapted ``DataPipe``.
         """
+
+        # If state_dict is called right after load_state_dict calls, without iterator created in the middle,
+        # we should directly return the original state dict without triggering reading_service.checkpoint
+        # because the states are unchanged
+        if self.valid_iterator_id is None and self._state_dict is not None:
+            return self._state_dict
+
         reading_service_state = None
         if self.reading_service is not None and isinstance(self.reading_service, CheckpointableReadingServiceInterface):
             reading_service_state = self.reading_service.checkpoint()
@@ -329,6 +337,8 @@ class DataLoader2(Generic[T_co]):
             data_loader._seed_generator = pickle.loads(randomness_state[2])
             data_loader._initial_seed_generator = pickle.loads(randomness_state[3])
 
+        data_loader._state_dict = state
+
         return data_loader
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
@@ -343,6 +353,8 @@ class DataLoader2(Generic[T_co]):
                 "DataLoaderV2 iterator has already been created, `load_state_dict()` can’t be called. "
                 "Please create a new dataloader in order to use load state dict."
             )
+
+        self._state_dict = state_dict
 
         serialized_datapipe = state_dict[SERIALIZED_DATAPIPE_KEY_NAME]
         reading_service_state = state_dict[READING_SERVICE_STATE_KEY_NAME]
