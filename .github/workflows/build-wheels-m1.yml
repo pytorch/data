@@ -39,6 +39,6 @@ jobs:
       post-script: ""
       package-name: torchdata
       env-var-script: packaging/env-var-script.txt
-      runner-type: macos-m1-12
+      runner-type: macos-m1-stable
       smoke-test-script: test/smoke_test/smoke_test.py
       trigger-event: ${{ github.event_name }}
