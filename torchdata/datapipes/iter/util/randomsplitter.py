@@ -101,7 +101,7 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
         self._rng = random.Random(self._seed)
         self._lengths: List[int] = []
 
-    def draw(self) -> T:
+    def draw(self) -> T:  # type: ignore
         selected_key = self._rng.choices(self.keys, self.weights)[0]
         index = self.key_to_index[selected_key]
         self.weights[index] -= 1

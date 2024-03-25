@@ -54,8 +54,10 @@ jobs:
           pip3 install --pre torch -f "${{ steps.pytorch_channel.outputs.value }}"
       - name: Install dependencies
         run: |
+
+          pip3 install requests mypy==0.990 graphviz numpy
           pip3 install -r requirements.txt
-          pip3 install mypy==0.960 numpy types-requests
+
       - name: Build TorchData
         run: |
           pip3 install .
@@ -66,7 +68,7 @@ jobs:
         run: |
           set -eux
           STATUS=
-          if ! mypy --config=mypy.ini; then
+          if ! mypy --config=mypy.ini --enable-recursive-aliases --install-types --non-interactive; then
             STATUS=fail
           fi
           if [ -n "$STATUS" ]; then
