@@ -229,7 +229,8 @@ class TestMultiProcessingReadingService(TestCase):
     @parametrize("dp_fn", [subtest(_non_dispatching_dp, "non_dispatch"), subtest(_dispatching_dp, "dispatch")])
     @parametrize("main_prefetch", [0, 10])
     @parametrize("worker_prefetch", [0, 10])
-    def test_early_exit(self, ctx="forkserver", dp_fn, main_prefetch, worker_prefetch) -> None:
+    def test_early_exit(self, dp_fn, main_prefetch, worker_prefetch) -> None:
+        ctx = "forkserver"
         dp = dp_fn(1000)
         rs = MultiProcessingReadingService(
             num_workers=2,
@@ -246,7 +247,8 @@ class TestMultiProcessingReadingService(TestCase):
     @parametrize("dp_fn", [subtest(_non_dispatching_dp, "non_dispatch"), subtest(_dispatching_dp, "dispatch")])
     @parametrize("main_prefetch", [0, 10])
     @parametrize("worker_prefetch", [0, 10])
-    def test_exit(self, ctx="forkserver", dp_fn, main_prefetch, worker_prefetch) -> None:
+    def test_exit(self, dp_fn, main_prefetch, worker_prefetch) -> None:
+        ctx = "forkserver"
         dp = dp_fn(1000)
         rs = MultiProcessingReadingService(
             num_workers=2,
@@ -263,8 +265,8 @@ class TestMultiProcessingReadingService(TestCase):
         "n_workers,worker_prefetch_cnt,main_prefetch_cnt",
         [(1, 0, 0), (1, 0, 2), (2, 0, 0), (2, 2, 0), (2, 0, 2), (2, 2, 2)],
     )
-    def test_reading_service_pause_resume(self, ctx="forkserver", dp, n_workers, worker_prefetch_cnt, main_prefetch_cnt) -> None:
-
+    def test_reading_service_pause_resume(self, dp, n_workers, worker_prefetch_cnt, main_prefetch_cnt) -> None:
+        ctx = "forkserver"
         # Functional Test: Testing various configuration of DataPipe/ReadingService to ensure the pipeline
         #                  properly pauses and resumes
         rs = MultiProcessingReadingService(
@@ -292,8 +294,8 @@ class TestMultiProcessingReadingService(TestCase):
 
     @dp_parametrize
     @parametrize("n_workers,worker_prefetch_cnt,main_prefetch_cnt", [(2, 0, 1), (2, 1, 0), (2, 0, 0)])
-    def test_reading_service_pause_stop_yield(self, ctx="forkserver", dp, n_workers, worker_prefetch_cnt, main_prefetch_cnt) -> None:
-
+    def test_reading_service_pause_stop_yield(self, dp, n_workers, worker_prefetch_cnt, main_prefetch_cnt) -> None:
+        ctx = "forkserver"
         # Functional Test: Confirms that `dl` will stop yielding elements after `_pause` is called
         rs = MultiProcessingReadingService(
             num_workers=n_workers,
