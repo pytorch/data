@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import defaultdict
-from typing import Dict, Iterator, List, Union
+from typing import Dict, Iterator, List, Optional, Union
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -50,7 +50,9 @@ class Rows2ColumnarIterDataPipe(IterDataPipe[Dict]):
     """
     column_names: List[str]
 
-    def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], column_names: List[str] = None) -> None:
+    def __init__(
+        self, source_datapipe: IterDataPipe[List[Union[Dict, List]]], column_names: Optional[List[str]] = None
+    ) -> None:
         self.source_datapipe: IterDataPipe[List[Union[Dict, List]]] = source_datapipe
         self.column_names: List[str] = [] if column_names is None else column_names
 

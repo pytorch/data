@@ -202,7 +202,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         self,
         source_datapipe: IterDataPipe,
         filepath_fn: Optional[Callable] = None,
-        hash_dict: Dict[str, str] = None,
+        hash_dict: Optional[Dict[str, str]] = None,
         hash_type: str = "sha256",
         extra_check_fn: Optional[Callable[[str], bool]] = None,
     ):
@@ -258,8 +258,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         if not cached_file_exists:
             promise_filepath = _promise_filename(filepath, cache_uuid)
             dirname = os.path.dirname(promise_filepath)
-            if not os.path.exists(dirname):
-                os.makedirs(dirname)
+            os.makedirs(dirname, exist_ok=True)
 
             with portalocker.Lock(promise_filepath, "a+", flags=portalocker.LockFlags.EXCLUSIVE) as promise_fh:
                 promise_fh.seek(0)
