@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import multiprocessing as mp
+import platform
 import unittest
 from unittest import TestCase
 
@@ -41,6 +42,11 @@ class TestInProcessReadingService(TestCase):
     This tests specific functionalities of InProcessReadingService, notably
     `pause`, `resume`, `snapshot`.
     """
+
+    def _get_multiprocessing_context(self) -> str:
+        if platform.system() == "Windows":
+            return "spawn"
+        return "forkserver"
 
     @dp_parametrize
     def test_reading_service_pause_resume(self, dp) -> None:
@@ -230,7 +236,7 @@ class TestMultiProcessingReadingService(TestCase):
     @parametrize("main_prefetch", [0, 10])
     @parametrize("worker_prefetch", [0, 10])
     def test_early_exit(self, dp_fn, main_prefetch, worker_prefetch) -> None:
-        ctx = "forkserver"
+        ctx = _get_multiprocessing_context()
         dp = dp_fn(1000)
         rs = MultiProcessingReadingService(
             num_workers=2,
@@ -248,7 +254,7 @@ class TestMultiProcessingReadingService(TestCase):
     @parametrize("main_prefetch", [0, 10])
     @parametrize("worker_prefetch", [0, 10])
     def test_exit(self, dp_fn, main_prefetch, worker_prefetch) -> None:
-        ctx = "forkserver"
+        ctx = _get_multiprocessing_context()
         dp = dp_fn(1000)
         rs = MultiProcessingReadingService(
             num_workers=2,
@@ -266,7 +272,7 @@ class TestMultiProcessingReadingService(TestCase):
         [(1, 0, 0), (1, 0, 2), (2, 0, 0), (2, 2, 0), (2, 0, 2), (2, 2, 2)],
     )
     def test_reading_service_pause_resume(self, dp, n_workers, worker_prefetch_cnt, main_prefetch_cnt) -> None:
-        ctx = "forkserver"
+        ctx = _get_multiprocessing_context()
         # Functional Test: Testing various configuration of DataPipe/ReadingService to ensure the pipeline
         #                  properly pauses and resumes
         rs = MultiProcessingReadingService(
@@ -295,7 +301,7 @@ class TestMultiProcessingReadingService(TestCase):
     @dp_parametrize
     @parametrize("n_workers,worker_prefetch_cnt,main_prefetch_cnt", [(2, 0, 1), (2, 1, 0), (2, 0, 0)])
     def test_reading_service_pause_stop_yield(self, dp, n_workers, worker_prefetch_cnt, main_prefetch_cnt) -> None:
-        ctx = "forkserver"
+        ctx = _get_multiprocessing_context()
         # Functional Test: Confirms that `dl` will stop yielding elements after `_pause` is called
         rs = MultiProcessingReadingService(
             num_workers=n_workers,
