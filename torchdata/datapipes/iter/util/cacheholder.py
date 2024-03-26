@@ -202,7 +202,7 @@ class OnDiskCacheHolderIterDataPipe(IterDataPipe):
         self,
         source_datapipe: IterDataPipe,
         filepath_fn: Optional[Callable] = None,
-        hash_dict: Dict[str, str] = None,
+        hash_dict: Optional[Dict[str, str]] = None,
         hash_type: str = "sha256",
         extra_check_fn: Optional[Callable[[str], bool]] = None,
     ):
