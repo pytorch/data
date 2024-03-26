@@ -288,7 +288,7 @@ class RoundRobinDemultiplexerIterDataPipe(IterDataPipe):
             return [datapipe]
 
         datapipe = datapipe.enumerate()
-        container = _RoundRobinDemultiplexerIterDataPipe(datapipe, num_instances, buffer_size=buffer_size)
+        container = _RoundRobinDemultiplexerIterDataPipe(datapipe, num_instances, buffer_size=buffer_size)  # type: ignore
         return [_ChildDataPipe(container, i).map(_drop_index) for i in range(num_instances)]
 
 
@@ -357,7 +357,7 @@ class UnZipperIterDataPipe(IterDataPipe[T]):
             )
 
         # The implementation basically uses Forker but only yields a specific element within the sequence
-        container = _UnZipperIterDataPipe(source_datapipe, instance_ids, buffer_size)  # type: ignore[arg-type]
+        container = _UnZipperIterDataPipe(source_datapipe, instance_ids, buffer_size)  # type: ignore
         return [_ChildDataPipe(container, i) for i in range(len(instance_ids))]
 
 

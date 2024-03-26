@@ -325,7 +325,7 @@ class MultiProcessingReadingService(ReadingServiceInterface):
         dispatching_dp = find_lca_round_robin_sharding_dp(graph)
         # TODO(ejguan): When the last DataPipe is round_robin_sharding, use InPrcoessReadingService
         if dispatching_dp is not None:
-            dummy_dp = _DummyIterDataPipe()
+            dummy_dp = _DummyIterDataPipe()  # type: ignore
             graph = replace_dp(graph, dispatching_dp, dummy_dp)  # type: ignore[arg-type]
             datapipe = list(graph.values())[0][0]
             # TODO(ejguan): Determine buffer_size at runtime or use unlimited buffer
