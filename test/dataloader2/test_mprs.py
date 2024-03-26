@@ -43,11 +43,6 @@ class TestInProcessReadingService(TestCase):
     `pause`, `resume`, `snapshot`.
     """
 
-    def _get_multiprocessing_context(self) -> str:
-        if platform.system() == "Windows":
-            return "spawn"
-        return "forkserver"
-
     @dp_parametrize
     def test_reading_service_pause_resume(self, dp) -> None:
 
@@ -213,6 +208,10 @@ def _dispatching_dp(n_elements=1000):
     dp = dp.sharding_round_robin_dispatch(SHARDING_PRIORITIES.MULTIPROCESSING)
     dp = dp.map(_add_one).batch(16)
     return dp
+
+
+def _get_multiprocessing_context() -> str:
+    return "spawn" if platform.system() == "Windows" else "forkserver"
 
 
 class NonShardableDataPipe(IterDataPipe):
