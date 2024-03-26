@@ -72,7 +72,7 @@ class RandomSplitterIterDataPipe(IterDataPipe):
                     "RandomSplitter needs `total_length`, but it is unable to infer it from "
                     f"the `source_datapipe`: {source_datapipe}."
                 )
-        container = _RandomSplitterIterDataPipe(source_datapipe, total_length, weights, seed)
+        container = _RandomSplitterIterDataPipe(source_datapipe, total_length, weights, seed)  # type: ignore
         if target is None:
             return [SplitterIterator(container, k) for k in list(weights.keys())]
         else:
@@ -101,7 +101,7 @@ class _RandomSplitterIterDataPipe(IterDataPipe):
         self._rng = random.Random(self._seed)
         self._lengths: List[int] = []
 
-    def draw(self) -> T:
+    def draw(self) -> T:  # type: ignore
         selected_key = self._rng.choices(self.keys, self.weights)[0]
         index = self.key_to_index[selected_key]
         self.weights[index] -= 1
