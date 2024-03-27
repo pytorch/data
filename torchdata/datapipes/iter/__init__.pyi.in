@@ -15,7 +15,7 @@ from torch.utils.data import DataChunk, IterableDataset, default_collate
 from torch.utils.data.datapipes._typing import _DataPipeMeta
 from torch.utils.data.datapipes.iter.sharding import SHARDING_PRIORITIES
 
-from typing import Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union, Hashable
+from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, TypeVar, Union, Hashable
 
 try:
     import torcharrow
@@ -24,6 +24,7 @@ except ImportError:
 
 T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
+ForkIterDataPipeCopyOptions = Literal["shallow", "deep"]
 
 class IterDataPipe(IterableDataset[T_co], metaclass=_DataPipeMeta):
     functions: Dict[str, Callable] = ...
