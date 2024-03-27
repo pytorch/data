@@ -220,7 +220,6 @@ class NonShardableDataPipe(IterDataPipe):
         yield from self.dp
 
 
-@unittest.skip("skipping as these tests timeout and no further development planned yet")
 class TestMultiProcessingReadingService(TestCase):
     r"""
     This tests specific functionalities of MultiProcessingReadingService, notably
