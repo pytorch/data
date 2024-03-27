@@ -73,8 +73,6 @@ jobs:
       - name: Build TorchData
         run: |
           pip3 install .
-        env:
-          BUILD_S3: 1
       - name: Install test requirements
         run: pip3 install -r test/requirements.txt
       - name: Test documentation examples
@@ -83,22 +81,7 @@ jobs:
           pip3 install -r requirements.txt
           make doctest
           cd ..
-      - name: Run DataPipes tests with pytest
+      - name: Run tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run:
-          pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py
-          --ignore=test/test_audio_examples.py --ignore=test/test_aistore.py
-      - name: Run DataPipes tests with pytest (including slow tests)
-        if: ${{ contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run:
-          pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py
-          --ignore=test/test_audio_examples.py --ignore=test/test_aistore.py
-        env:
-          PYTORCH_TEST_WITH_SLOW: 1
-      - name: Run DataPipes period tests with pytest
-        if: ${{ contains(github.event.pull_request.labels.*.name, 'ciflow/period') }}
-        run:
-          pytest --no-header -v test/test_period.py --ignore=test/test_text_examples.py
-          --ignore=test/test_audio_examples.py --ignore=test/test_aistore.py
-        env:
-          PYTORCH_TEST_WITH_SLOW: 1
+          pytest torchdata/dl1ext
