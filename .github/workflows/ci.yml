@@ -1,4 +1,4 @@
-name: Run DataPipes Tests
+name: Run Unit Tests
 on:
   push:
     branches:
