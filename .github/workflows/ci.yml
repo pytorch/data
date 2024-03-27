@@ -83,5 +83,4 @@ jobs:
           cd ..
       - name: Run tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run:
-          pytest torchdata/dl1ext
+        run: pytest torchdata/dl1ext
