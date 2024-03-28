@@ -53,7 +53,7 @@ class XzFileLoaderIterDataPipe(IterDataPipe[Tuple[str, BufferedIOBase]]):
             pathname, data_stream = data
             try:
                 extracted_fobj = lzma.open(data_stream, mode="rb")  # type: ignore[call-overload]
-                new_pathname = pathname.rstrip(".xz")
+                new_pathname = pathname.rstrip(".xz")  # https://github.com/pytorch/data/issues/1240
                 yield new_pathname, StreamWrapper(extracted_fobj, data_stream, name=pathname)  # type: ignore[misc]
             except Exception as e:
                 warnings.warn(f"Unable to extract files from corrupted xz/lzma stream {pathname} due to: {e}, abort!")

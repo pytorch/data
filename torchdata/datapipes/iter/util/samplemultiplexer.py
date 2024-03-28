@@ -31,8 +31,8 @@ class SampleMultiplexerDataPipe(IterDataPipe[T_co]):
 
     Example:
         >>> from torchdata.datapipes.iter import IterableWrapper, SampleMultiplexer
-        >>> source_dp1 = IterableWrapper([0] * 10)
-        >>> source_dp2 = IterableWrapper([1] * 10)
+        >>> source_dp1 = IterableWrapper([0] * 5)
+        >>> source_dp2 = IterableWrapper([1] * 5)
         >>> d = {source_dp1: 99999999, source_dp2: 0.0000001}
         >>> sample_mul_dp = SampleMultiplexer(pipes_to_weights_dict=d, seed=0)
         >>> list(sample_mul_dp)
