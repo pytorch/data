@@ -24,7 +24,6 @@ from torch.utils.data import (
     TensorDataset,
     StackDataset,
     _utils,
-    # DataLoader,
 )
 from torchdata.stateful_dataloader import StatefulDataLoader as DataLoader
 from torch.utils.data._utils import MP_STATUS_CHECK_INTERVAL
@@ -2390,7 +2389,6 @@ class IntegrationTestDataLoaderDataPipe(TestCase):
     Verify the behavior of a certain ``DataPipes`` with ``DataLoader``
     """
 
-    @unittest.skip
     def test_shuffler_iterdatapipe(self):
         r"""
         Verify ``IterDataPipe.shuffle`` is controlled by ``DataLoader``

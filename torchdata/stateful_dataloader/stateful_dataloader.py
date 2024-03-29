@@ -17,7 +17,7 @@ import threading
 import uuid
 import warnings
 
-from typing import Any, Callable, Iterable, TypeVar, Generic, List, Optional, Union
+from typing import Any, Iterable, TypeVar, Generic, List, Optional, Union
 
 import multiprocessing as python_multiprocessing
 import torch
@@ -49,7 +49,7 @@ from torch.utils.data import (
     SequentialSampler,
     RandomSampler,
     BatchSampler,
-    Dataset,)
+    Dataset)
 
 from torch.utils.data.datapipes.datapipe import _IterDataPipeSerializationWrapper, _MapDataPipeSerializationWrapper
 
@@ -62,81 +62,11 @@ __all__ = [
     "default_convert",
 ]
 
-T_co = TypeVar('T_co', covariant=True)
-T = TypeVar('T')
-_worker_init_fn_t = Callable[[int], None]
+from torch.utils.data.dataloader import T_co, _collate_fn_t, _worker_init_fn_t, default_collate, default_convert, get_worker_info
 
-# Ideally we would parameterize `DataLoader` by the return type of `collate_fn`, but there is currently no way to have that
-# type parameter set to a default value if the user doesn't pass in a custom 'collate_fn'.
-# See https://github.com/python/mypy/issues/3737.
-_collate_fn_t = Callable[[List[T]], Any]
-
-
-# These functions used to be defined in this file. However, it was moved to
-# _utils/collate.py. Although it is rather hard to access this from user land
-# (one has to explicitly directly `import torch.utils.data.dataloader`), there
-# probably is user code out there using it. This aliasing maintains BC in this
-# aspect.
-default_collate: _collate_fn_t = _utils.collate.default_collate
-default_convert = _utils.collate.default_convert
-
-get_worker_info = _utils.worker.get_worker_info
+from torch.utils.data.dataloader import _DatasetKind, _InfiniteConstantSampler, _get_distributed_settings, _sharding_worker_init_fn, _share_dist_seed
 
 logger = logging.getLogger(__name__)
-
-
-class _DatasetKind:
-    Map = 0
-    Iterable = 1
-
-    @staticmethod
-    def create_fetcher(kind, dataset, auto_collation, collate_fn, drop_last):
-        if kind == _DatasetKind.Map:
-            return _utils.fetch._MapDatasetFetcher(dataset, auto_collation, collate_fn, drop_last)
-        else:
-            return _utils.fetch._IterableDatasetFetcher(dataset, auto_collation, collate_fn, drop_last)
-
-
-class _InfiniteConstantSampler(Sampler):
-    r"""Analogous to ``itertools.repeat(None, None)``.
-
-    Used as sampler for :class:`~torch.utils.data.IterableDataset`.
-    """
-
-    def __iter__(self):
-        while True:
-            yield None
-
-
-def _get_distributed_settings():
-    if dist.is_available() and dist.is_initialized():
-        return dist.get_world_size(), dist.get_rank()
-    else:
-        return 1, 0
-
-
-def _sharding_worker_init_fn(worker_init_fn, world_size, rank_id, worker_id):
-    global_worker_id = worker_id
-    info = torch.utils.data.get_worker_info()
-    assert info is not None
-    total_workers = info.num_workers
-    datapipe = info.dataset
-    assert isinstance(datapipe, (IterDataPipe, MapDataPipe))
-    # To distribute elements across distributed process evenly, we should shard data on distributed
-    # processes first then shard on worker processes
-    total_workers *= world_size
-    global_worker_id = global_worker_id * world_size + rank_id
-    # For BC, use default SHARDING_PRIORITIES
-    torch.utils.data.graph_settings.apply_sharding(datapipe, total_workers, global_worker_id)
-    if worker_init_fn is not None:
-        worker_init_fn(worker_id)
-
-
-def _share_dist_seed(generator, pg):
-    _shared_seed = torch.empty((), dtype=torch.int64).random_(generator=generator)
-    if isinstance(pg, dist.ProcessGroup):
-        dist.broadcast(_shared_seed, src=0, group=pg)
-    return _shared_seed.item()
 
 
 class StatefulDataLoader(Generic[T_co]):

@@ -7,7 +7,6 @@ static methods.
 import torch
 import random
 import copy
-import os
 import pickle
 import queue
 from dataclasses import dataclass
@@ -105,7 +104,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             shared_rng.manual_seed(shared_seed)
             dataset = apply_random_seed(dataset, shared_rng)
 
-        # global _worker_info
         torch.utils.data._utils.worker._worker_info = WorkerInfo(
             id=worker_id, num_workers=num_workers, seed=seed, dataset=dataset)
 
