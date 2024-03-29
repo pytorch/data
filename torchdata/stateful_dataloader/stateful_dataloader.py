@@ -1,27 +1,30 @@
-r"""Definition of the DataLoader and associated iterators that subclass _BaseDataLoaderIter.
+r"""Definition of the StatefulDataLoader and associated iterators.
 
-To support these two classes, in `./_utils` we define many utility methods and
-functions to be run in multiprocessing. E.g., the data loading worker loop is
-in `./_utils/worker.py`.
+This file is a stand-in for torch.utils.data.dataloader, and includes a
+StatefulDataLoader, which inherits from DataLoader and adds
+state_dict/load_state_dict methods, as well as implementations for
+single and multi-process iterators which are also stateful.
+
+Where possible, we import the original definitions from torch.utils.data.dataloader,
+and use inheritance for base classes only (StatefulDataLoader, _StatefulBaseDataLoaderIter).
+
+For the single and multi-process iterator implementations, we fork the code to avoid a
+diamond-shaped multiple-inheritance scheme.
 """
 
 import functools
 import itertools
 import logging
-import os
 import copy
 import collections
 import queue
 import random
 import threading
 import uuid
-import warnings
 
-from typing import Any, Iterable, TypeVar, Generic, List, Optional, Union
+from typing import Iterable, List, Optional, Union
 
-import multiprocessing as python_multiprocessing
 import torch
-import torch.distributed as dist
 import torch.multiprocessing as multiprocessing
 import torch.utils.data.graph_settings
 
@@ -36,22 +39,14 @@ try:
 except ModuleNotFoundError:
     HAS_NUMPY = False
 
-from torch.utils.data.datapipes.datapipe import (
-    _IterDataPipeSerializationWrapper,
-    _MapDataPipeSerializationWrapper,
-)
-
 from torch.utils.data import (
     IterDataPipe,
     MapDataPipe,
-    IterableDataset,
+    Dataset,
     Sampler,
-    SequentialSampler,
-    RandomSampler,
-    BatchSampler,
-    Dataset)
+    DataLoader)
 
-from torch.utils.data.datapipes.datapipe import _IterDataPipeSerializationWrapper, _MapDataPipeSerializationWrapper
+from torch.utils.data.dataloader import _BaseDataLoaderIter
 
 from torch.utils.data import _utils
 
@@ -64,19 +59,19 @@ __all__ = [
 
 from torch.utils.data.dataloader import T_co, _collate_fn_t, _worker_init_fn_t, default_collate, default_convert, get_worker_info
 
-from torch.utils.data.dataloader import _DatasetKind, _InfiniteConstantSampler, _get_distributed_settings, _sharding_worker_init_fn, _share_dist_seed
+from torch.utils.data.dataloader import _DatasetKind, _sharding_worker_init_fn
 
 logger = logging.getLogger(__name__)
 
 
-class StatefulDataLoader(Generic[T_co]):
+class StatefulDataLoader(DataLoader[T_co]):
     r"""
-    Data loader combines a dataset and a sampler, and provides an iterable over the given dataset.
+    This is a drop in replacement for :class:`~torch.utils.data.DataLoader`
+    that implements state_dict and load_state_dict methods, enabling mid-epoch
+    checkpointing.
 
-    The :class:`~torch.utils.data.DataLoader` supports both map-style and
-    iterable-style datasets with single- or multi-process loading, customizing
-    loading order and optional automatic batching (collation) and memory pinning.
-
+    All arguments are identical to :class:`~torch.utils.data.DataLoader`, with
+    a new kwarg: `snapshot_every_n_steps: Optional[int] = `.
     See :py:mod:`torch.utils.data` documentation page for more details.
 
     Args:
@@ -159,18 +154,6 @@ class StatefulDataLoader(Generic[T_co]):
         https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
     """
 
-    dataset: Dataset[T_co]
-    batch_size: Optional[int]
-    num_workers: int
-    pin_memory: bool
-    drop_last: bool
-    timeout: float
-    sampler: Union[Sampler, Iterable]
-    pin_memory_device: str
-    prefetch_factor: Optional[int]
-    _iterator : Optional['_BaseDataLoaderIter']
-    __initialized = False
-
     def __init__(self, dataset: Dataset[T_co], batch_size: Optional[int] = 1,
                  shuffle: Optional[bool] = None, sampler: Union[Sampler, Iterable, None] = None,
                  batch_sampler: Union[Sampler[List], Iterable[List], None] = None,
@@ -182,431 +165,37 @@ class StatefulDataLoader(Generic[T_co]):
                  persistent_workers: bool = False,
                  pin_memory_device: str = "",
                  checkpoint_every_n_steps: Optional[int] = 1):
-        torch._C._log_api_usage_once("python.data_loader")
 
-        if num_workers < 0:
-            raise ValueError('num_workers option should be non-negative; '
-                             'use num_workers=0 to disable multiprocessing.')
-
-        if timeout < 0:
-            raise ValueError('timeout option should be non-negative')
-
-        if num_workers == 0 and prefetch_factor is not None:
-            raise ValueError('prefetch_factor option could only be specified in multiprocessing.'
-                             'let num_workers > 0 to enable multiprocessing, otherwise set prefetch_factor to None.')
-        elif num_workers > 0 and prefetch_factor is None:
-            prefetch_factor = 2
-        elif prefetch_factor is not None and prefetch_factor < 0:
-            raise ValueError('prefetch_factor option should be non-negative')
-
-        if persistent_workers and num_workers == 0:
-            raise ValueError('persistent_workers option needs num_workers > 0')
-
-        self.dataset = dataset
-        self.num_workers = num_workers
-        self.prefetch_factor = prefetch_factor
-        self.pin_memory = pin_memory
-        self.pin_memory_device = pin_memory_device
-        self.timeout = timeout
-        self.worker_init_fn = worker_init_fn
-        self.multiprocessing_context = multiprocessing_context
+        super().__init__(
+            dataset=dataset, batch_size=batch_size, shuffle=shuffle, sampler=sampler,
+            batch_sampler=batch_sampler, num_workers=num_workers, collate_fn=collate_fn,
+            pin_memory=pin_memory, drop_last=drop_last, timeout=timeout,
+            worker_init_fn=worker_init_fn, multiprocessing_context=multiprocessing_context,
+            generator=generator, prefetch_factor=prefetch_factor, persistent_workers=persistent_workers,
+            pin_memory_device=pin_memory_device)
         self.checkpoint_every_n_steps = checkpoint_every_n_steps
-
-        # Adds forward compatibilities so classic DataLoader can work with DataPipes:
-        #   _DataPipeSerializationWrapper container makes it easier to serialize without redefining pickler
-        if isinstance(self.dataset, IterDataPipe):
-            self.dataset = _IterDataPipeSerializationWrapper(self.dataset)
-        elif isinstance(self.dataset, MapDataPipe):
-            self.dataset = _MapDataPipeSerializationWrapper(self.dataset)
-
-        # Arg-check dataset related before checking samplers because we want to
-        # tell users that iterable-style datasets are incompatible with custom
-        # samplers first, so that they don't learn that this combo doesn't work
-        # after spending time fixing the custom sampler errors.
-        if isinstance(dataset, IterableDataset):
-            self._dataset_kind = _DatasetKind.Iterable
-            # NOTE [ Custom Samplers and IterableDataset ]
-            #
-            # `IterableDataset` does not support custom `batch_sampler` or
-            # `sampler` since the key is irrelevant (unless we support
-            # generator-style dataset one day...).
-            #
-            # For `sampler`, we always create a dummy sampler. This is an
-            # infinite sampler even when the dataset may have an implemented
-            # finite `__len__` because in multi-process data loading, naive
-            # settings will return duplicated data (which may be desired), and
-            # thus using a sampler with length matching that of dataset will
-            # cause data lost (you may have duplicates of the first couple
-            # batches, but never see anything afterwards). Therefore,
-            # `Iterabledataset` always uses an infinite sampler, an instance of
-            # `_InfiniteConstantSampler` defined above.
-            #
-            # A custom `batch_sampler` essentially only controls the batch size.
-            # However, it is unclear how useful it would be since an iterable-style
-            # dataset can handle that within itself. Moreover, it is pointless
-            # in multi-process data loading as the assignment order of batches
-            # to workers is an implementation detail so users can not control
-            # how to batchify each worker's iterable. Thus, we disable this
-            # option. If this turns out to be useful in future, we can re-enable
-            # this, and support custom samplers that specify the assignments to
-            # specific workers.
-            if isinstance(dataset, IterDataPipe):
-                if shuffle is not None:
-                    dataset = torch.utils.data.graph_settings.apply_shuffle_settings(dataset, shuffle=shuffle)
-            # We cannot check `shuffle is not None` here, since previously `shuffle=False` was the default.
-            elif shuffle not in {False, None}:
-                raise ValueError(
-                    f"DataLoader with IterableDataset: expected unspecified shuffle option, but got shuffle={shuffle}")
-
-            if sampler is not None:
-                # See NOTE [ Custom Samplers and IterableDataset ]
-                raise ValueError(
-                    f"DataLoader with IterableDataset: expected unspecified sampler option, but got sampler={sampler}")
-            elif batch_sampler is not None:
-                # See NOTE [ Custom Samplers and IterableDataset ]
-                raise ValueError(
-                    "DataLoader with IterableDataset: expected unspecified "
-                    f"batch_sampler option, but got batch_sampler={batch_sampler}")
-        else:
-            shuffle = bool(shuffle)
-            self._dataset_kind = _DatasetKind.Map
-
-
-
-        if sampler is not None and shuffle:
-            raise ValueError('sampler option is mutually exclusive with '
-                             'shuffle')
-
-        if batch_sampler is not None:
-            # auto_collation with custom batch_sampler
-            if batch_size != 1 or shuffle or sampler is not None or drop_last:
-                raise ValueError('batch_sampler option is mutually exclusive '
-                                 'with batch_size, shuffle, sampler, and '
-                                 'drop_last')
-            batch_size = None
-            drop_last = False
-        elif batch_size is None:
-            # no auto_collation
-            if drop_last:
-                raise ValueError('batch_size=None option disables auto-batching '
-                                 'and is mutually exclusive with drop_last')
-
-        if sampler is None:  # give default samplers
-            if self._dataset_kind == _DatasetKind.Iterable:
-                # See NOTE [ Custom Samplers and IterableDataset ]
-                sampler = _InfiniteConstantSampler()
-            else:  # map-style
-                if shuffle:
-                    sampler = RandomSampler(dataset, generator=generator)  # type: ignore[arg-type]
-                else:
-                    sampler = SequentialSampler(dataset)  # type: ignore[arg-type]
-
-        if batch_size is not None and batch_sampler is None:
-            # auto_collation without custom batch_sampler
-            batch_sampler = BatchSampler(sampler, batch_size, drop_last)
-
-        self.batch_size = batch_size
-        self.drop_last = drop_last
-        self.sampler = sampler
-        self.batch_sampler = batch_sampler
-        self.generator = generator
-
-        if collate_fn is None:
-            if self._auto_collation:
-                collate_fn = _utils.collate.default_collate
-            else:
-                collate_fn = _utils.collate.default_convert
-
-        self.collate_fn = collate_fn
-        self.persistent_workers = persistent_workers
-
-        self.__initialized = True
-        self._IterableDataset_len_called = None  # See NOTE [ IterableDataset and __len__ ]
-
-        self._iterator = None
-
-        self.check_worker_number_rationality()
-
-        torch.set_vital('Dataloader', 'enabled', 'True')  # type: ignore[attr-defined]
 
     def _get_iterator(self) -> '_BaseDataLoaderIter':
         if self.num_workers == 0:
-            return _SingleProcessDataLoaderIter(self)
+            return _StatefulSingleProcessDataLoaderIter(self)
         else:
             self.check_worker_number_rationality()
-            return _MultiProcessingDataLoaderIter(self)
-
-    @property
-    def multiprocessing_context(self):
-        return self.__multiprocessing_context
-
-    @multiprocessing_context.setter
-    def multiprocessing_context(self, multiprocessing_context):
-        if multiprocessing_context is not None:
-            if self.num_workers > 0:
-                if isinstance(multiprocessing_context, str):
-                    valid_start_methods = multiprocessing.get_all_start_methods()
-                    if multiprocessing_context not in valid_start_methods:
-                        raise ValueError(
-                            'multiprocessing_context option '
-                            f'should specify a valid start method in {valid_start_methods!r}, but got '
-                            f'multiprocessing_context={multiprocessing_context!r}')
-                    multiprocessing_context = multiprocessing.get_context(multiprocessing_context)
-
-                if not isinstance(multiprocessing_context, python_multiprocessing.context.BaseContext):
-                    raise TypeError('multiprocessing_context option should be a valid context '
-                                    'object or a string specifying the start method, but got '
-                                    f'multiprocessing_context={multiprocessing_context}')
-            else:
-                raise ValueError('multiprocessing_context can only be used with '
-                                 'multi-process loading (num_workers > 0), but got '
-                                 f'num_workers={self.num_workers}')
-
-        self.__multiprocessing_context = multiprocessing_context
-
-    def __setattr__(self, attr, val):
-        if self.__initialized and attr in (
-                'batch_size', 'batch_sampler', 'sampler', 'drop_last', 'dataset', 'persistent_workers'):
-            raise ValueError(f'{attr} attribute should not be set after {self.__class__.__name__} is initialized')
-
-        super().__setattr__(attr, val)
-
-    # We quote '_BaseDataLoaderIter' since it isn't defined yet and the definition can't be moved up
-    # since '_BaseDataLoaderIter' references 'DataLoader'.
-    def __iter__(self) -> '_BaseDataLoaderIter':
-        # When using a single worker the returned iterator should be
-        # created everytime to avoid resetting its state
-        # However, in the case of a multiple workers iterator
-        # the iterator is only created once in the lifetime of the
-        # DataLoader object so that workers can be reused
-        if self.persistent_workers and self.num_workers > 0:
-            if self._iterator is None:
-                self._iterator = self._get_iterator()
-            else:
-                self._iterator._reset(self)
-            return self._iterator
-        else:
-            return self._get_iterator()
-
-    @property
-    def _auto_collation(self):
-        return self.batch_sampler is not None
-
-    @property
-    def _index_sampler(self):
-        # The actual sampler used for generating indices for `_DatasetFetcher`
-        # (see _utils/fetch.py) to read data at each time. This would be
-        # `.batch_sampler` if in auto-collation mode, and `.sampler` otherwise.
-        # We can't change `.sampler` and `.batch_sampler` attributes for BC
-        # reasons.
-        if self._auto_collation:
-            return self.batch_sampler
-        else:
-            return self.sampler
-
-    def __len__(self) -> int:
-        if self._dataset_kind == _DatasetKind.Iterable:
-            # NOTE [ IterableDataset and __len__ ]
-            #
-            # For `IterableDataset`, `__len__` could be inaccurate when one naively
-            # does multi-processing data loading, since the samples will be duplicated.
-            # However, no real use case should be actually using that behavior, so
-            # it should count as a user error. We should generally trust user
-            # code to do the proper thing (e.g., configure each replica differently
-            # in `__iter__`), and give us the correct `__len__` if they choose to
-            # implement it (this will still throw if the dataset does not implement
-            # a `__len__`).
-            #
-            # To provide a further warning, we track if `__len__` was called on the
-            # `DataLoader`, save the returned value in `self._len_called`, and warn
-            # if the iterator ends up yielding more than this number of samples.
-
-            # Cannot statically verify that dataset is Sized
-            length = self._IterableDataset_len_called = len(self.dataset)  # type: ignore[assignment, arg-type]
-            if self.batch_size is not None:  # IterableDataset doesn't allow custom sampler or batch_sampler
-                from math import ceil
-                if self.drop_last:
-                    length = length // self.batch_size
-                else:
-                    length = ceil(length / self.batch_size)
-            return length
-        else:
-            return len(self._index_sampler)
-
-    def check_worker_number_rationality(self):
-        # This function check whether the dataloader's worker number is rational based on
-        # current system's resource. Current rule is that if the number of workers this
-        # Dataloader will create is bigger than the number of logical cpus that is allowed to
-        # use, than we will pop up a warning to let user pay attention.
-        #
-        # eg. If current system has 2 physical CPUs with 16 cores each. And each core support 2
-        #     threads, then the total logical cpus here is 2 * 16 * 2 = 64. Let's say current
-        #     DataLoader process can use half of them which is 32, then the rational max number of
-        #     worker that initiated from this process is 32.
-        #     Now, let's say the created DataLoader has num_works = 40, which is bigger than 32.
-        #     So the warning message is triggered to notify the user to lower the worker number if
-        #     necessary.
-        #
-        #
-        # [Note] Please note that this function repects `cpuset` only when os.sched_getaffinity is
-        #        available (available in most of Linux system, but not OSX and Windows).
-        #        When os.sched_getaffinity is not available, os.cpu_count() is called instead, but
-        #        it doesn't repect cpuset.
-        #        We don't take threading into account since each worker process is single threaded
-        #        at this time.
-        #
-        #        We don't set any threading flags (eg. OMP_NUM_THREADS, MKL_NUM_THREADS, etc)
-        #        other than `torch.set_num_threads` to 1 in the worker process, if the passing
-        #        in functions use 3rd party modules that rely on those threading flags to determine
-        #        how many thread to create (eg. numpy, etc), then it is caller's responsibility to
-        #        set those flags correctly.
-        def _create_warning_msg(num_worker_suggest, num_worker_created, cpuset_checked):
-
-            suggested_max_worker_msg = ((
-                "Our suggested max number of worker in current system is {}{}, which is smaller "
-                "than what this DataLoader is going to create.").format(
-                    num_worker_suggest,
-                    ("" if cpuset_checked else " (`cpuset` is not taken into account)"))
-            ) if num_worker_suggest is not None else (
-                "DataLoader is not able to compute a suggested max number of worker in current system.")
-
-            warn_msg = (
-                "This DataLoader will create {} worker processes in total. {} "
-                "Please be aware that excessive worker creation might get DataLoader running slow or even freeze, "
-                "lower the worker number to avoid potential slowness/freeze if necessary.").format(
-                    num_worker_created,
-                    suggested_max_worker_msg)
-            return warn_msg
-
-        if not self.num_workers or self.num_workers == 0:
-            return
-
-        # try to compute a suggested max number of worker based on system's resource
-        max_num_worker_suggest = None
-        cpuset_checked = False
-        if hasattr(os, 'sched_getaffinity'):
-            try:
-                max_num_worker_suggest = len(os.sched_getaffinity(0))
-                cpuset_checked = True
-            except Exception:
-                pass
-        if max_num_worker_suggest is None:
-            # os.cpu_count() could return Optional[int]
-            # get cpu count first and check None in order to satisfy mypy check
-            cpu_count = os.cpu_count()
-            if cpu_count is not None:
-                max_num_worker_suggest = cpu_count
-
-        if max_num_worker_suggest is None:
-            warnings.warn(_create_warning_msg(
-                max_num_worker_suggest,
-                self.num_workers,
-                cpuset_checked))
-            return
-
-        if self.num_workers > max_num_worker_suggest:
-            warnings.warn(_create_warning_msg(
-                max_num_worker_suggest,
-                self.num_workers,
-                cpuset_checked))
+            return _StatefulMultiProcessingDataLoaderIter(self)
 
 
-class _BaseDataLoaderIter:
+class _StatefulBaseDataLoaderIter(_BaseDataLoaderIter):
     def __init__(self, loader: StatefulDataLoader) -> None:
-        self._dataset = loader.dataset
-        self._shared_seed = None
-        self._pg = None
-        if isinstance(self._dataset, IterDataPipe):
-            if dist.is_available() and dist.is_initialized():
-                self._pg = dist.new_group(backend="gloo")
-            self._shared_seed = _share_dist_seed(loader.generator, self._pg)
-            shared_rng = torch.Generator()
-            shared_rng.manual_seed(self._shared_seed)
-            self._dataset = torch.utils.data.graph_settings.apply_random_seed(self._dataset, shared_rng)
-        self._dataset_kind = loader._dataset_kind
-        self._IterableDataset_len_called = loader._IterableDataset_len_called
-        self._auto_collation = loader._auto_collation
-        self._drop_last = loader.drop_last
-        self._index_sampler = loader._index_sampler
-        self._num_workers = loader.num_workers
-        ws, rank = _get_distributed_settings()
-        self._world_size = ws
-        self._rank = rank
-        # for other backends, pin_memory_device need to set. if not set
-        # default behaviour is CUDA device. if pin_memory_device is selected
-        # and pin_memory is not set, the default behaviour false.
-        if (len(loader.pin_memory_device) == 0):
-            self._pin_memory = loader.pin_memory and torch.cuda.is_available()
-            self._pin_memory_device = None
-        else:
-            if not loader.pin_memory:
-                warn_msg = ("pin memory device is set and pin_memory flag is not used then device pinned memory won't be used"
-                            "please set pin_memory to true, if you need to use the device pin memory")
-                warnings.warn(warn_msg)
-
-            self._pin_memory = loader.pin_memory
-            self._pin_memory_device = loader.pin_memory_device
-        self._timeout = loader.timeout
-        self._collate_fn = loader.collate_fn
-        self._sampler_iter = iter(self._index_sampler)
-        self._base_seed = torch.empty((), dtype=torch.int64).random_(generator=loader.generator).item()
-        self._persistent_workers = loader.persistent_workers
-        self._num_yielded = 0
+        super().__init__(loader)
         self._sampler_iter_yielded = 0
-        self._profile_name = f"enumerate(DataLoader)#{self.__class__.__name__}.__next__"
-
-    def __iter__(self) -> '_BaseDataLoaderIter':
-        return self
 
     def _reset(self, loader, first_iter=False):
-        self._sampler_iter = iter(self._index_sampler)
+        super()._reset(loader, first_iter)
         self._sampler_iter_yielded = 0
-        self._num_yielded = 0
-        self._IterableDataset_len_called = loader._IterableDataset_len_called
-        if isinstance(self._dataset, IterDataPipe):
-            self._shared_seed = _share_dist_seed(loader.generator, self._pg)
-            shared_rng = torch.Generator()
-            shared_rng.manual_seed(self._shared_seed)
-            self._dataset = torch.utils.data.graph_settings.apply_random_seed(self._dataset, shared_rng)
 
     def _next_index(self):
-        idx = next(self._sampler_iter)  # may raise StopIteration
+        idx = super()._next_index() # may raise StopIteration
         self._sampler_iter_yielded += 1
         return idx
-
-    def _next_data(self):
-        raise NotImplementedError
-
-    def __next__(self) -> Any:
-        with torch.autograd.profiler.record_function(self._profile_name):
-            if self._sampler_iter is None:
-                # TODO(https://github.com/pytorch/pytorch/issues/76750)
-                self._reset()  # type: ignore[call-arg]
-            data = self._next_data()
-            self._num_yielded += 1
-            if self._dataset_kind == _DatasetKind.Iterable and \
-                    self._IterableDataset_len_called is not None and \
-                    self._num_yielded > self._IterableDataset_len_called:
-                warn_msg = ("Length of IterableDataset {} was reported to be {} (when accessing len(dataloader)), but {} "
-                            "samples have been fetched. ").format(self._dataset, self._IterableDataset_len_called,
-                                                                  self._num_yielded)
-                if self._num_workers > 0:
-                    warn_msg += ("For multiprocessing data-loading, this could be caused by not properly configuring the "
-                                 "IterableDataset replica at each worker. Please see "
-                                 "https://pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset for examples.")
-                warnings.warn(warn_msg)
-            return data
-
-    def __len__(self) -> int:
-        return len(self._index_sampler)
-
-    def __getstate__(self):
-        # TODO: add limited pickling support for sharing an iterator
-        # across multiple threads for HOGWILD.
-        # Probably the best way to do this is by moving the sample pushing
-        # to a separate thread and then just sharing the data queue
-        # but signalling the end is tricky without a non-blocking API
-        raise NotImplementedError("{} cannot be pickled", self.__class__.__name__)
 
     def state_dict(self):
         pass
@@ -615,7 +204,14 @@ class _BaseDataLoaderIter:
         pass
 
 
-class _SingleProcessDataLoaderIter(_BaseDataLoaderIter):
+class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
+    """ We avoid using inheritance here to share code because we quickly run in to,
+    a diamond which becomes difficult to reason about, so instead we fork the
+    code from torch.utils.data.dataloader for _SingleProcessDataLoaderIter and
+    _MultiProcessDataLoaderIter. This allows us to satisfy the original
+    dataloader __iter__'s return type of _BaseDataLoaderIter (since
+    _StatefulBaseDataLoader inherits from _BaseDataLoaderIter).
+    """
     def __init__(self, loader):
         super().__init__(loader)
         assert self._timeout == 0
@@ -685,7 +281,7 @@ class _SingleProcessDataLoaderIter(_BaseDataLoaderIter):
             self._dataset_fetcher.ended = state_dict["fetcher_state"]["ended"]
 
 
-class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
+class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
     r"""Iterates once over the DataLoader's dataset, as specified by the sampler."""
 
     # NOTE [ Data Loader Multiprocessing Shutdown Logic ]
