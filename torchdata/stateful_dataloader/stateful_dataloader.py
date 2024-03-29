@@ -26,6 +26,7 @@ import torch.multiprocessing as multiprocessing
 import torch.utils.data.graph_settings
 
 from torch._utils import ExceptionWrapper
+import torch.utils.data._utils.worker
 from .worker import try_to_deserialize, try_to_serialize
 
 try:
@@ -1478,7 +1479,10 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             if self._dataset_kind == _DatasetKind.Iterable:
                 # Check for _IterableDatasetStopIteration
                 if isinstance(data, _utils.worker._IterableDatasetStopIteration):
-                    self._workers_status[data.worker_id] = False
+                    if self._persistent_workers:
+                        self._workers_status[data.worker_id] = False
+                    else:
+                        self._mark_worker_as_unavailable(data.worker_id)
                     self._try_put_index()
                     assert state_dict is not None, "StopIteration should always be accompanied by a state_dict"
                     self._worker_snapshots[data.worker_id] = state_dict
@@ -1536,7 +1540,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             index = self._next_index()
             snapshot_main = False
             snapshot = False
-            if self._dataset_kind == _DatasetKind.Iterable:
+            if not self._snapshot_interval:
+                pass
+            elif self._dataset_kind == _DatasetKind.Iterable:
                 x = self._num_yielded % self._snapshot_interval
                 hi = x + 1 + self._num_workers * self._prefetch_factor
                 if hi >= self._snapshot_interval:
@@ -1579,7 +1585,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         # Update latest worker state
         if state_dict is not None:
             self._worker_snapshots[state_dict["worker_id"]] = state_dict
-        if (self._num_yielded + 1) % self._snapshot_interval == 0:
+        if self._snapshot_interval and ((self._num_yielded + 1) % self._snapshot_interval == 0):
             self._take_snapshot()
         return data
 

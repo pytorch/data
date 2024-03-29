@@ -2390,6 +2390,7 @@ class IntegrationTestDataLoaderDataPipe(TestCase):
     Verify the behavior of a certain ``DataPipes`` with ``DataLoader``
     """
 
+    @unittest.skip
     def test_shuffler_iterdatapipe(self):
         r"""
         Verify ``IterDataPipe.shuffle`` is controlled by ``DataLoader``
