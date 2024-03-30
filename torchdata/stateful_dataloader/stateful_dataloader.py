@@ -12,11 +12,11 @@ For the single and multi-process iterator implementations, we fork the code to a
 diamond-shaped multiple-inheritance scheme.
 """
 
+import collections
+import copy
 import functools
 import itertools
 import logging
-import copy
-import collections
 import queue
 import random
 import threading
@@ -26,11 +26,12 @@ from typing import Iterable, List, Optional, Union
 
 import torch
 import torch.multiprocessing as multiprocessing
+import torch.utils.data._utils.worker
 import torch.utils.data.graph_settings
 
 from torch._utils import ExceptionWrapper
-import torch.utils.data._utils.worker
-from .worker import try_to_deserialize, try_to_serialize
+
+from .worker import _LoadStateRequest, _LoadStateRequestComplete, try_to_deserialize, try_to_serialize
 
 try:
     import numpy as np
@@ -39,16 +40,9 @@ try:
 except ModuleNotFoundError:
     HAS_NUMPY = False
 
-from torch.utils.data import (
-    IterDataPipe,
-    MapDataPipe,
-    Dataset,
-    Sampler,
-    DataLoader)
+from torch.utils.data import _utils, DataLoader, Dataset, IterDataPipe, MapDataPipe, Sampler
 
 from torch.utils.data.dataloader import _BaseDataLoaderIter
-
-from torch.utils.data import _utils
 
 __all__ = [
     "StatefulDataLoader",
@@ -57,9 +51,16 @@ __all__ = [
     "default_convert",
 ]
 
-from torch.utils.data.dataloader import T_co, _collate_fn_t, _worker_init_fn_t, default_collate, default_convert, get_worker_info
-
-from torch.utils.data.dataloader import _DatasetKind, _sharding_worker_init_fn
+from torch.utils.data.dataloader import (
+    _collate_fn_t,
+    _DatasetKind,
+    _sharding_worker_init_fn,
+    _worker_init_fn_t,
+    default_collate,
+    default_convert,
+    get_worker_info,
+    T_co,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -154,28 +155,49 @@ class StatefulDataLoader(DataLoader[T_co]):
         https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
     """
 
-    def __init__(self, dataset: Dataset[T_co], batch_size: Optional[int] = 1,
-                 shuffle: Optional[bool] = None, sampler: Union[Sampler, Iterable, None] = None,
-                 batch_sampler: Union[Sampler[List], Iterable[List], None] = None,
-                 num_workers: int = 0, collate_fn: Optional[_collate_fn_t] = None,
-                 pin_memory: bool = False, drop_last: bool = False,
-                 timeout: float = 0, worker_init_fn: Optional[_worker_init_fn_t] = None,
-                 multiprocessing_context=None, generator=None,
-                 *, prefetch_factor: Optional[int] = None,
-                 persistent_workers: bool = False,
-                 pin_memory_device: str = "",
-                 checkpoint_every_n_steps: Optional[int] = 1):
+    def __init__(
+        self,
+        dataset: Dataset[T_co],
+        batch_size: Optional[int] = 1,
+        shuffle: Optional[bool] = None,
+        sampler: Union[Sampler, Iterable, None] = None,
+        batch_sampler: Union[Sampler[List], Iterable[List], None] = None,
+        num_workers: int = 0,
+        collate_fn: Optional[_collate_fn_t] = None,
+        pin_memory: bool = False,
+        drop_last: bool = False,
+        timeout: float = 0,
+        worker_init_fn: Optional[_worker_init_fn_t] = None,
+        multiprocessing_context=None,
+        generator=None,
+        *,
+        prefetch_factor: Optional[int] = None,
+        persistent_workers: bool = False,
+        pin_memory_device: str = "",
+        checkpoint_every_n_steps: Optional[int] = 1,
+    ):
 
         super().__init__(
-            dataset=dataset, batch_size=batch_size, shuffle=shuffle, sampler=sampler,
-            batch_sampler=batch_sampler, num_workers=num_workers, collate_fn=collate_fn,
-            pin_memory=pin_memory, drop_last=drop_last, timeout=timeout,
-            worker_init_fn=worker_init_fn, multiprocessing_context=multiprocessing_context,
-            generator=generator, prefetch_factor=prefetch_factor, persistent_workers=persistent_workers,
-            pin_memory_device=pin_memory_device)
+            dataset=dataset,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            sampler=sampler,
+            batch_sampler=batch_sampler,
+            num_workers=num_workers,
+            collate_fn=collate_fn,
+            pin_memory=pin_memory,
+            drop_last=drop_last,
+            timeout=timeout,
+            worker_init_fn=worker_init_fn,
+            multiprocessing_context=multiprocessing_context,
+            generator=generator,
+            prefetch_factor=prefetch_factor,
+            persistent_workers=persistent_workers,
+            pin_memory_device=pin_memory_device,
+        )
         self.checkpoint_every_n_steps = checkpoint_every_n_steps
 
-    def _get_iterator(self) -> '_BaseDataLoaderIter':
+    def _get_iterator(self) -> "_BaseDataLoaderIter":
         if self.num_workers == 0:
             return _StatefulSingleProcessDataLoaderIter(self)
         else:
@@ -193,7 +215,7 @@ class _StatefulBaseDataLoaderIter(_BaseDataLoaderIter):
         self._sampler_iter_yielded = 0
 
     def _next_index(self):
-        idx = super()._next_index() # may raise StopIteration
+        idx = super()._next_index()  # may raise StopIteration
         self._sampler_iter_yielded += 1
         return idx
 
@@ -205,13 +227,14 @@ class _StatefulBaseDataLoaderIter(_BaseDataLoaderIter):
 
 
 class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
-    """ We avoid using inheritance here to share code because we quickly run in to,
+    """We avoid using inheritance here to share code because we quickly run in to,
     a diamond which becomes difficult to reason about, so instead we fork the
     code from torch.utils.data.dataloader for _SingleProcessDataLoaderIter and
     _MultiProcessDataLoaderIter. This allows us to satisfy the original
     dataloader __iter__'s return type of _BaseDataLoaderIter (since
     _StatefulBaseDataLoader inherits from _BaseDataLoaderIter).
     """
+
     def __init__(self, loader):
         super().__init__(loader)
         assert self._timeout == 0
@@ -224,7 +247,8 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
             torch.utils.data.graph_settings.apply_sharding(self._dataset, self._world_size, self._rank)
 
         self._dataset_fetcher = _DatasetKind.create_fetcher(
-            self._dataset_kind, self._dataset, self._auto_collation, self._collate_fn, self._drop_last)
+            self._dataset_kind, self._dataset, self._auto_collation, self._collate_fn, self._drop_last
+        )
 
     def _next_data(self):
         index = self._next_index()  # may raise StopIteration
@@ -236,9 +260,7 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
     def state_dict(self):
         if self._dataset_kind == _DatasetKind.Iterable:
             fetcher_state = {
-                "dataset_iter": try_to_serialize(
-                    self._dataset_fetcher.dataset_iter, False
-                ),
+                "dataset_iter": try_to_serialize(self._dataset_fetcher.dataset_iter, False),
                 "ended": self._dataset_fetcher.ended,
             }
         else:
@@ -257,18 +279,13 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
 
     def load_state_dict(self, state_dict):
         self._index_sampler = (
-            try_to_deserialize(self._index_sampler, state_dict["_index_sampler"])
-            or self._index_sampler
+            try_to_deserialize(self._index_sampler, state_dict["_index_sampler"]) or self._index_sampler
         )
         self._sampler_iter_yielded = state_dict["_sampler_iter_yielded"]
-        sampler_iter = try_to_deserialize(
-            self._sampler_iter, state_dict["_sampler_iter"]
-        )
+        sampler_iter = try_to_deserialize(self._sampler_iter, state_dict["_sampler_iter"])
         if sampler_iter is None:
             # Fallback to fastforward
-            sampler_iter = itertools.islice(
-                self._index_sampler, self._sampler_iter_yielded, None
-            )
+            sampler_iter = itertools.islice(self._index_sampler, self._sampler_iter_yielded, None)
         self._sampler_iter = sampler_iter
         self._num_yielded = state_dict["_num_yielded"]
         self._IterableDataset_len_called = state_dict["_IterableDataset_len_called"]
@@ -610,7 +627,8 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         #   Additional worker init function will take care of sharding in MP and Distributed
         if isinstance(self._dataset, (IterDataPipe, MapDataPipe)):
             self._worker_init_fn = functools.partial(
-                _sharding_worker_init_fn, self._worker_init_fn, self._world_size, self._rank)
+                _sharding_worker_init_fn, self._worker_init_fn, self._world_size, self._rank
+            )
 
         # No certainty which module multiprocessing_context is
         self._worker_result_queue = multiprocessing_context.Queue()  # type: ignore[var-annotated]
@@ -628,11 +646,23 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             index_queue.cancel_join_thread()
             w = multiprocessing_context.Process(
                 target=_utils.worker._worker_loop,
-                args=(self._dataset_kind, self._dataset, index_queue,
-                      self._worker_result_queue, self._workers_done_event,
-                      self._auto_collation, self._collate_fn, self._drop_last,
-                      self._base_seed, self._worker_init_fn, i, self._num_workers,
-                      self._persistent_workers, self._shared_seed))
+                args=(
+                    self._dataset_kind,
+                    self._dataset,
+                    index_queue,
+                    self._worker_result_queue,
+                    self._workers_done_event,
+                    self._auto_collation,
+                    self._collate_fn,
+                    self._drop_last,
+                    self._base_seed,
+                    self._worker_init_fn,
+                    i,
+                    self._num_workers,
+                    self._persistent_workers,
+                    self._shared_seed,
+                ),
+            )
             w.daemon = True
             # NB: Process.start() actually take some time as it needs to
             #     start a process and pass the arguments over via a pipe.
@@ -658,9 +688,14 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                 current_device = torch.cuda.current_device()  # choose cuda for default
             pin_memory_thread = threading.Thread(
                 target=_utils.pin_memory._pin_memory_loop,
-                args=(self._worker_result_queue, self._data_queue,
-                      current_device,
-                      self._pin_memory_thread_done_event, self._pin_memory_device))
+                args=(
+                    self._worker_result_queue,
+                    self._data_queue,
+                    current_device,
+                    self._pin_memory_thread_done_event,
+                    self._pin_memory_device,
+                ),
+            )
             pin_memory_thread.daemon = True
             pin_memory_thread.start()
             # Similar to workers (see comment above), we only register
@@ -678,6 +713,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         # right sequence before main process exits
         if self._persistent_workers and self._pin_memory:
             import atexit
+
             for w in self._workers:
                 atexit.register(_MultiProcessingDataLoaderIter._clean_up_worker, w)
 
@@ -692,7 +728,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._snapshot = {
             "snapshot_step": 0,
             "num_workers": self._num_workers,
-            "last_yielded_worker_id": self._num_workers-1,
+            "last_yielded_worker_id": self._num_workers - 1,
         }
         self._worker_snapshots = {}
         self._main_snapshots = collections.deque()
@@ -751,15 +787,13 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                 ws = worker_states[idx]
             else:
                 ws = "skip"
-            self._index_queues[idx].put(
-                _utils.worker._LoadStateRequest(request_uuid, idx, ws)
-            )
+            self._index_queues[idx].put(_LoadStateRequest(request_uuid, idx, ws))
         acks = [None] * self._num_workers
         remaining = self._num_workers
         # TODO: add timeout
         while remaining > 0:
             return_idx, return_data = self._get_data()
-            if isinstance(return_idx, _utils.worker._LoadStateRequestComplete):
+            if isinstance(return_idx, _LoadStateRequestComplete):
                 if return_idx.uuid != request_uuid:
                     continue
                 assert acks[return_idx.worker_id] is None
@@ -816,12 +850,13 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                     failed_workers.append(w)
                     self._mark_worker_as_unavailable(worker_id)
             if len(failed_workers) > 0:
-                pids_str = ', '.join(str(w.pid) for w in failed_workers)
-                raise RuntimeError(f'DataLoader worker (pid(s) {pids_str}) exited unexpectedly') from e
+                pids_str = ", ".join(str(w.pid) for w in failed_workers)
+                raise RuntimeError(f"DataLoader worker (pid(s) {pids_str}) exited unexpectedly") from e
             if isinstance(e, queue.Empty):
                 return (False, None)
-            import tempfile
             import errno
+            import tempfile
+
             try:
                 # Raise an exception if we are this close to the FDs limit.
                 # Apparently, trying to open only one file is not a sufficient
@@ -837,105 +872,106 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                         " limit using `ulimit -n` in the shell or change the"
                         " sharing strategy by calling"
                         " `torch.multiprocessing.set_sharing_strategy('file_system')`"
-                        " at the beginning of your code") from None
+                        " at the beginning of your code"
+                    ) from None
             raise
 
-# NOTE [ DataLoader on Linux and open files limit ]
-#
-# On Linux when DataLoader is used with multiprocessing we pass the data between
-# the root process and the workers through SHM files. We remove those files from
-# the filesystem as soon as they are created and keep them alive by
-# passing around their file descriptors through AF_UNIX sockets. (See
-# docs/source/multiprocessing.rst and 'Multiprocessing Technical Notes` in
-# the wiki (https://github.com/pytorch/pytorch/wiki).)
-#
-# This sometimes leads us to exceeding the open files limit. When that happens,
-# and the offending file descriptor is coming over a socket, the `socket` Python
-# package silently strips the file descriptor from the message, setting only the
-# `MSG_CTRUNC` flag (which might be a bit misleading since the manpage says that
-# it _indicates that some control data were discarded due to lack of space in
-# the buffer for ancillary data_). This might reflect the C implementation of
-# AF_UNIX sockets.
-#
-# This behaviour can be reproduced with the script and instructions at the
-# bottom of this note.
-#
-# When that happens, the standard Python `multiprocessing` (and not
-# `torch.multiprocessing`) raises a `RuntimeError: received 0 items of ancdata`
-#
-# Sometimes, instead of the FD being stripped, you may get an `OSError:
-# Too many open files`, both in the script below and in DataLoader. However,
-# this is rare and seems to be nondeterministic.
-#
-#
-#   #!/usr/bin/env python3
-#   import sys
-#   import socket
-#   import os
-#   import array
-#   import shutil
-#   import socket
-#
-#
-#   if len(sys.argv) != 4:
-#       print("Usage: ", sys.argv[0], " tmp_dirname iteration (send|recv)")
-#       sys.exit(1)
-#
-#   if __name__ == '__main__':
-#       dirname = sys.argv[1]
-#       sock_path = dirname + "/sock"
-#       iterations = int(sys.argv[2])
-#       def dummy_path(i):
-#           return dirname + "/" + str(i) + ".dummy"
-#
-#
-#       if sys.argv[3] == 'send':
-#           while not os.path.exists(sock_path):
-#               pass
-#           client = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-#           client.connect(sock_path)
-#           for i in range(iterations):
-#               fd = os.open(dummy_path(i), os.O_WRONLY | os.O_CREAT)
-#               ancdata = array.array('i', [fd])
-#               msg = bytes([i % 256])
-#               print("Sending fd ", fd, " (iteration #", i, ")")
-#               client.sendmsg([msg], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, ancdata)])
-#
-#
-#       else:
-#           assert sys.argv[3] == 'recv'
-#
-#           if os.path.exists(dirname):
-#               raise Exception("Directory exists")
-#
-#           os.mkdir(dirname)
-#
-#           print("Opening socket...")
-#           server = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-#           server.bind(sock_path)
-#
-#           print("Listening...")
-#           for i in range(iterations):
-#               a = array.array('i')
-#               msg, ancdata, flags, addr = server.recvmsg(1, socket.CMSG_SPACE(a.itemsize))
-#               assert(len(ancdata) == 1)
-#               cmsg_level, cmsg_type, cmsg_data = ancdata[0]
-#               a.frombytes(cmsg_data)
-#               print("Received fd ", a[0], " (iteration #", i, ")")
-#
-#           shutil.rmtree(dirname)
-#
-# Steps to reproduce:
-#
-# 1. Run two shells and set lower file descriptor limit in the receiving one:
-# (shell1) ulimit -n 1020
-# (shell2) ulimit -n 1022
-#
-# 2. Run the script above with the `recv` option in the first shell
-# (shell1) ./test_socket.py sock_tmp 1017 recv
-#
-# 3. Run the script with the `send` option in the second shell:
-# (shell2) ./test_socket.py sock_tmp 1017 send
+    # NOTE [ DataLoader on Linux and open files limit ]
+    #
+    # On Linux when DataLoader is used with multiprocessing we pass the data between
+    # the root process and the workers through SHM files. We remove those files from
+    # the filesystem as soon as they are created and keep them alive by
+    # passing around their file descriptors through AF_UNIX sockets. (See
+    # docs/source/multiprocessing.rst and 'Multiprocessing Technical Notes` in
+    # the wiki (https://github.com/pytorch/pytorch/wiki).)
+    #
+    # This sometimes leads us to exceeding the open files limit. When that happens,
+    # and the offending file descriptor is coming over a socket, the `socket` Python
+    # package silently strips the file descriptor from the message, setting only the
+    # `MSG_CTRUNC` flag (which might be a bit misleading since the manpage says that
+    # it _indicates that some control data were discarded due to lack of space in
+    # the buffer for ancillary data_). This might reflect the C implementation of
+    # AF_UNIX sockets.
+    #
+    # This behaviour can be reproduced with the script and instructions at the
+    # bottom of this note.
+    #
+    # When that happens, the standard Python `multiprocessing` (and not
+    # `torch.multiprocessing`) raises a `RuntimeError: received 0 items of ancdata`
+    #
+    # Sometimes, instead of the FD being stripped, you may get an `OSError:
+    # Too many open files`, both in the script below and in DataLoader. However,
+    # this is rare and seems to be nondeterministic.
+    #
+    #
+    #   #!/usr/bin/env python3
+    #   import sys
+    #   import socket
+    #   import os
+    #   import array
+    #   import shutil
+    #   import socket
+    #
+    #
+    #   if len(sys.argv) != 4:
+    #       print("Usage: ", sys.argv[0], " tmp_dirname iteration (send|recv)")
+    #       sys.exit(1)
+    #
+    #   if __name__ == '__main__':
+    #       dirname = sys.argv[1]
+    #       sock_path = dirname + "/sock"
+    #       iterations = int(sys.argv[2])
+    #       def dummy_path(i):
+    #           return dirname + "/" + str(i) + ".dummy"
+    #
+    #
+    #       if sys.argv[3] == 'send':
+    #           while not os.path.exists(sock_path):
+    #               pass
+    #           client = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    #           client.connect(sock_path)
+    #           for i in range(iterations):
+    #               fd = os.open(dummy_path(i), os.O_WRONLY | os.O_CREAT)
+    #               ancdata = array.array('i', [fd])
+    #               msg = bytes([i % 256])
+    #               print("Sending fd ", fd, " (iteration #", i, ")")
+    #               client.sendmsg([msg], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, ancdata)])
+    #
+    #
+    #       else:
+    #           assert sys.argv[3] == 'recv'
+    #
+    #           if os.path.exists(dirname):
+    #               raise Exception("Directory exists")
+    #
+    #           os.mkdir(dirname)
+    #
+    #           print("Opening socket...")
+    #           server = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    #           server.bind(sock_path)
+    #
+    #           print("Listening...")
+    #           for i in range(iterations):
+    #               a = array.array('i')
+    #               msg, ancdata, flags, addr = server.recvmsg(1, socket.CMSG_SPACE(a.itemsize))
+    #               assert(len(ancdata) == 1)
+    #               cmsg_level, cmsg_type, cmsg_data = ancdata[0]
+    #               a.frombytes(cmsg_data)
+    #               print("Received fd ", a[0], " (iteration #", i, ")")
+    #
+    #           shutil.rmtree(dirname)
+    #
+    # Steps to reproduce:
+    #
+    # 1. Run two shells and set lower file descriptor limit in the receiving one:
+    # (shell1) ulimit -n 1020
+    # (shell2) ulimit -n 1022
+    #
+    # 2. Run the script above with the `recv` option in the first shell
+    # (shell1) ./test_socket.py sock_tmp 1017 recv
+    #
+    # 3. Run the script with the `send` option in the second shell:
+    # (shell2) ./test_socket.py sock_tmp 1017 send
 
     def _get_data(self):
         # Fetches data from `self._data_queue`.
@@ -953,7 +989,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             if success:
                 return data
             else:
-                raise RuntimeError(f'DataLoader timed out after {self._timeout} seconds')
+                raise RuntimeError(f"DataLoader timed out after {self._timeout} seconds")
         elif self._pin_memory:
             while self._pin_memory_thread.is_alive():
                 success, data = self._try_get_data()
@@ -961,7 +997,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                     return data
             else:
                 # while condition is false, i.e., pin_memory_thread died.
-                raise RuntimeError('Pin memory thread exited unexpectedly')
+                raise RuntimeError("Pin memory thread exited unexpectedly")
             # In this case, `self._data_queue` is a `queue.Queue`,. But we don't
             # need to call `.task_done()` because we don't use `.join()`.
         else:
@@ -1038,18 +1074,13 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
     def _restore_main_state(self, state_dict):
         assert self._num_workers == state_dict["_num_workers"]
         self._index_sampler = (
-            try_to_deserialize(self._index_sampler, state_dict["_index_sampler"])
-            or self._index_sampler
+            try_to_deserialize(self._index_sampler, state_dict["_index_sampler"]) or self._index_sampler
         )
         self._sampler_iter_yielded = state_dict["_sampler_iter_yielded"]
-        sampler_iter = try_to_deserialize(
-            self._sampler_iter, state_dict["_sampler_iter"]
-        )
+        sampler_iter = try_to_deserialize(self._sampler_iter, state_dict["_sampler_iter"])
         if sampler_iter is None:
             # Fallback to fastforward
-            sampler_iter = itertools.islice(
-                self._index_sampler, self._sampler_iter_yielded, None
-            )
+            sampler_iter = itertools.islice(self._index_sampler, self._sampler_iter_yielded, None)
         self._workers_status = state_dict["_workers_status"]
         self._sampler_iter = sampler_iter
         self._IterableDataset_len_called = state_dict["_IterableDataset_len_called"]
@@ -1172,7 +1203,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                 # Exit `pin_memory_thread` first because exiting workers may leave
                 # corrupted data in `worker_result_queue` which `pin_memory_thread`
                 # reads from.
-                if hasattr(self, '_pin_memory_thread'):
+                if hasattr(self, "_pin_memory_thread"):
                     # Use hasattr in case error happens before we set the attribute.
                     self._pin_memory_thread_done_event.set()
                     # Send something to pin_memory_thread in case it is waiting

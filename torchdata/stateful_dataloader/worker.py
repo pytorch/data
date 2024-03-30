@@ -4,39 +4,42 @@ These **needs** to be in global scope since Py2 doesn't support serializing
 static methods.
 """
 
-import torch
-import random
 import copy
 import pickle
 import queue
+import random
 from dataclasses import dataclass
 from typing import Any, Dict, Union
 
+import torch
+
 from torch._utils import ExceptionWrapper
-from torch.utils.data._utils import signal_handling, MP_STATUS_CHECK_INTERVAL, HAS_NUMPY
-from torch.utils.data._utils.worker import WorkerInfo, _generate_state
+from torch.utils.data._utils import HAS_NUMPY, MP_STATUS_CHECK_INTERVAL, signal_handling
 
-from torch.utils.data._utils.worker import _IterableDatasetStopIteration, _ResumeIteration, ManagerWatchdog
+from torch.utils.data._utils.worker import (
+    _generate_state,
+    _IterableDatasetStopIteration,
+    _ResumeIteration,
+    ManagerWatchdog,
+    WorkerInfo,
+)
 
-r"""Dummy class used to signal StateRequest"""
-@dataclass(frozen=True)
-class _StateRequest:
-    uuid: str
-    worker_id: int
+from .stateful import Stateful
 
-r"""Dummy class used to signal StateRequestComplete"""
-@dataclass(frozen=True)
-class _StateRequestComplete:
-    uuid: str
 
 r"""Dummy class used to signal LoadStateRequest"""
+
+
 @dataclass(frozen=True)
 class _LoadStateRequest:
     uuid: str
     worker_id: int
     state_dict: Dict[str, Any]
 
+
 r"""Dummy class used to signal LoadStateRequest"""
+
+
 @dataclass(frozen=True)
 class _LoadStateRequestComplete:
     uuid: str
@@ -44,7 +47,7 @@ class _LoadStateRequestComplete:
 
 
 def try_to_serialize(obj: Any, pickle: bool) -> Union[dict, bytes, None]:
-    if hasattr(obj, "state_dict") and hasattr(obj, "load_state_dict"):
+    if isinstance(obj, Stateful):
         obj_state = obj.state_dict()
     elif pickle:
         try:
@@ -61,7 +64,7 @@ def try_to_serialize(obj: Any, pickle: bool) -> Union[dict, bytes, None]:
 
 
 def try_to_deserialize(obj: Any, serialized: Union[dict, bytes, None]) -> Union[Any, None]:
-    if hasattr(obj, "load_state_dict"):
+    if isinstance(obj, Stateful):
         obj.load_state_dict(serialized)
         return obj
     else:
@@ -72,9 +75,22 @@ def try_to_deserialize(obj: Any, serialized: Union[dict, bytes, None]) -> Union[
     return obj
 
 
-def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
-                 auto_collation, collate_fn, drop_last, base_seed, init_fn, worker_id,
-                 num_workers, persistent_workers, shared_seed):
+def _worker_loop(
+    dataset_kind,
+    dataset,
+    index_queue,
+    data_queue,
+    done_event,
+    auto_collation,
+    collate_fn,
+    drop_last,
+    base_seed,
+    init_fn,
+    worker_id,
+    num_workers,
+    persistent_workers,
+    shared_seed,
+):
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
 
@@ -93,6 +109,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
         if HAS_NUMPY:
             np_seed = _generate_state(base_seed, worker_id)
             import numpy as np
+
             np.random.seed(np_seed)
 
         from torch.utils.data import IterDataPipe
@@ -105,7 +122,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             dataset = apply_random_seed(dataset, shared_rng)
 
         torch.utils.data._utils.worker._worker_info = WorkerInfo(
-            id=worker_id, num_workers=num_workers, seed=seed, dataset=dataset)
+            id=worker_id, num_workers=num_workers, seed=seed, dataset=dataset
+        )
 
         from torch.utils.data import _DatasetKind
 
@@ -133,19 +151,20 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 fetcher_state = None
             # Pick up any user-defined dataset state, for both map/iterable style datasets
             dataset_state = try_to_serialize(dataset, False)
-            initial_state_dict = copy.deepcopy({
-                "worker_id": worker_id,
-                "fetcher_state": fetcher_state,
-                "dataset_state": dataset_state,
-                "shared_rng": shared_rng.get_state(),
-                "random_rng_state": random.getstate(),
-                "torch_rng_state": torch.get_rng_state(),
-                "numpy_rng_state": numpy_state,
-                "iteration_end": False,
-            })
+            initial_state_dict = copy.deepcopy(
+                {
+                    "worker_id": worker_id,
+                    "fetcher_state": fetcher_state,
+                    "dataset_state": dataset_state,
+                    "shared_rng": shared_rng.get_state(),
+                    "random_rng_state": random.getstate(),
+                    "torch_rng_state": torch.get_rng_state(),
+                    "numpy_rng_state": numpy_state,
+                    "iteration_end": False,
+                }
+            )
         except Exception:
-            init_exception = ExceptionWrapper(
-                where=f"in DataLoader worker process {worker_id}")
+            init_exception = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
 
         # When using Iterable mode, some worker can exit earlier than others due
         # to the IterableDataset behaving differently for different workers.
@@ -177,7 +196,9 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     state_dict = r.state_dict
 
                 if state_dict["fetcher_state"] is not None:
-                    fetcher.dataset_iter = try_to_deserialize(fetcher.dataset_iter, state_dict["fetcher_state"]["dataset_iter"])
+                    fetcher.dataset_iter = try_to_deserialize(
+                        fetcher.dataset_iter, state_dict["fetcher_state"]["dataset_iter"]
+                    )
                     fetcher.ended = state_dict["fetcher_state"]["ended"]
                 if state_dict["dataset_state"] is not None:
                     dataset = try_to_deserialize(dataset, state_dict["dataset_state"])
@@ -203,8 +224,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     dataset = apply_random_seed(dataset, shared_rng)
 
                 # Recreate the fetcher for worker-reuse policy
-                fetcher = _DatasetKind.create_fetcher(
-                    dataset_kind, dataset, auto_collation, collate_fn, drop_last)
+                fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
                 continue
             elif r is None:
                 # Received the final signal
@@ -235,8 +255,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                         # It is important that we don't store exc_info in a variable.
                         # `ExceptionWrapper` does the correct thing.
                         # See NOTE [ Python Traceback Reference Cycle Problem ]
-                        data = ExceptionWrapper(
-                            where=f"in DataLoader worker process {worker_id}")
+                        data = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
                 if snapshot or iteration_end:
                     # always generate snapshot when Iterable raises StopIteration.
                     if HAS_NUMPY:
