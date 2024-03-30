@@ -66,11 +66,6 @@ def identity(x):
 
 
 class TestStatefulDataLoader(unittest.TestCase):
-    # @pytest.mark.parametrize("num_workers", [0, 3])
-    # @pytest.mark.parametrize("batch_size", [None, 7])
-    # @pytest.mark.parametrize("pw", [False, True])
-    # @pytest.mark.parametrize("interrupt", [0, 1, 10, None])
-    # @pytest.mark.parametrize("iter_state", [False, True])
     def test_single_shard(self):
         for num_workers, batch_size, pw, interrupt, iter_state in itertools.product(
             [0, 3],  # num_workers
@@ -84,8 +79,6 @@ class TestStatefulDataLoader(unittest.TestCase):
             ):
                 if num_workers == 0 and pw:
                     continue
-                if not iter_state:
-                    continue
                 dataset = DummyIterableDataset([(0, 100)])
                 dl = StatefulDataLoader(dataset=dataset, num_workers=num_workers, collate_fn=identity)
                 exp = list(dl)
@@ -94,16 +87,24 @@ class TestStatefulDataLoader(unittest.TestCase):
                     interrupt = len(exp)
 
                 batches = []
-                it = iter(dl) if iter_state else dl
+                it = iter(dl)
                 for i in range(interrupt):
                     batches.append(next(it))
-                state_dict = it.state_dict()
+                if iter_state:
+                    state_dict = it.state_dict()
+                else:
+                    state_dict = dl.state_dict()
+
                 self.assertEqual(batches, exp[:interrupt])
 
                 # Restore new instance from state
                 dl = StatefulDataLoader(dataset=dataset, num_workers=num_workers, collate_fn=identity)
-                it = iter(dl) if iter_state else dl
-                it.load_state_dict(state_dict)
+                if iter_state:
+                    it = iter(dl)
+                    it.load_state_dict(state_dict)
+                else:
+                    dl.load_state_dict(state_dict)
+                    it = iter(dl)
                 for batch in it:
                     batches.append(batch)
 
@@ -258,3 +259,7 @@ class TestStatefulDataLoader(unittest.TestCase):
     #     for batch in it:
     #         result.append([json.loads(x) for x in batch])
     #     self.assertEqual(result, exp_result)
+
+
+if __name__ ==  "__main__":
+    unittest.main()

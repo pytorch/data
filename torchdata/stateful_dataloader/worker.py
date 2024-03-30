@@ -189,8 +189,7 @@ def _worker_loop(
                 continue
             if isinstance(r, _LoadStateRequest):
                 # Restore state from r.state_dict
-                # index_buffer.clear()
-                if r.state_dict == "skip":  # TODO: is this used?
+                if r.state_dict == "skip":
                     state_dict = copy.deepcopy(initial_state_dict)
                 else:
                     state_dict = r.state_dict

@@ -22,7 +22,7 @@ import random
 import threading
 import uuid
 
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Optional, Union, Any, Dict
 
 import torch
 import torch.multiprocessing as multiprocessing
@@ -196,6 +196,7 @@ class StatefulDataLoader(DataLoader[T_co]):
             pin_memory_device=pin_memory_device,
         )
         self.checkpoint_every_n_steps = checkpoint_every_n_steps
+        self.next_iter_state = None
 
     def _get_iterator(self) -> "_BaseDataLoaderIter":
         if self.num_workers == 0:
@@ -203,6 +204,33 @@ class StatefulDataLoader(DataLoader[T_co]):
         else:
             self.check_worker_number_rationality()
             return _StatefulMultiProcessingDataLoaderIter(self)
+
+    def __iter__(self) -> '_BaseDataLoaderIter':
+        # When using a single worker the returned iterator should be
+        # created everytime to avoid resetting its state
+        # However, in the case of a multiple workers iterator
+        # the iterator is only created once in the lifetime of the
+        # DataLoader object so that workers can be reused
+        if self.persistent_workers and self.num_workers > 0:
+            if self._iterator is None:
+                self._iterator = self._get_iterator()
+            self._iterator._reset(self)
+        else:
+            self._iterator = self._get_iterator()
+        if self.next_iter_state:  # Could be {} or None
+            self._iterator.load_state_dict(self.next_iter_state)
+            self.next_iter_state = None
+        return self._iterator
+
+    def state_dict(self) -> Dict[str, Any]:
+        if self._iterator is None:
+            return {}
+        else:
+            return self._iterator.state_dict()
+
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
+        self._iterator = None  # Force a reset
+        self.next_iter_state = state_dict
 
 
 class _StatefulBaseDataLoaderIter(_BaseDataLoaderIter):
