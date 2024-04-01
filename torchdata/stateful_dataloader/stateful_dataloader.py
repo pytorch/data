@@ -233,7 +233,7 @@ class StatefulDataLoader(DataLoader[T_co]):
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         if self.iter_calls > 0:
             raise RuntimeError(
-                "Cannot restore state on DataLoader that has already had an iterator created!"
+                "Cannot restore state on DataLoader that has already created an iterator!"
             )
         self.next_iter_state = state_dict
 

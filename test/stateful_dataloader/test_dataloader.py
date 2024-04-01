@@ -2438,7 +2438,8 @@ class IntegrationTestDataLoaderDataPipe(TestCase):
                 self.assertEqual(sorted(dl_res[0]), sorted(dl_res[2]))
 
                 if dl._iterator is not None:
-                    dl._iterator._shutdown_workers()
+                    if num_workers > 0:
+                        dl._iterator._shutdown_workers()
                     dl._iterator = None
                 del dl
 
