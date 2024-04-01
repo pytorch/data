@@ -90,6 +90,7 @@ def _worker_loop(
     num_workers,
     persistent_workers,
     shared_seed,
+    worker_state,
 ):
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
@@ -130,39 +131,40 @@ def _worker_loop(
         init_exception = None
 
         fetcher = None
-        initial_state_dict = None
+        # initial_state_dict = None
         try:
             if init_fn is not None:
                 init_fn(worker_id)
 
             fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
 
-            if HAS_NUMPY:
-                numpy_state = np.random.get_state()
-            else:
-                numpy_state = None
+            # Restore worker state if provided
+            if worker_state:
+                # Always restore in this order:
+                #  1. try to restore dataset state
+                #  2. generate dataset iterator
+                #  3. try to restore iterator state
+                if worker_state["dataset_state"] is not None:
+                    dataset = try_to_deserialize(dataset, worker_state["dataset_state"])
+                    fetcher.dataset = dataset
+                    if dataset_kind == _DatasetKind.Iterable:
+                        fetcher.dataset_iter = iter(fetcher.dataset)
+                if worker_state["fetcher_state"] is not None:
+                    if dataset_kind == _DatasetKind.Iterable:
+                        dataset_iter = try_to_deserialize(
+                            fetcher.dataset_iter, worker_state["fetcher_state"]["dataset_iter"]
+                        )
+                        if dataset_iter is not None:
+                            fetcher.dataset_iter = dataset_iter
+                        fetcher.ended = worker_state["fetcher_state"]["ended"]
+                # shared_rng.set_state(worker_state["shared_rng"])
+                # random.setstate(worker_state["random_rng_state"])
+                # torch.set_rng_state(worker_state["torch_rng_state"])
+                # if HAS_NUMPY:
+                #     np.random.set_state(worker_state["numpy_rng_state"])
+                iteration_end = False
 
-            if dataset_kind == _DatasetKind.Iterable:
-                fetcher_state = {
-                    "dataset_iter": try_to_serialize(fetcher.dataset_iter, False),
-                    "ended": fetcher.ended,
-                }
-            else:
-                fetcher_state = None
-            # Pick up any user-defined dataset state, for both map/iterable style datasets
-            dataset_state = try_to_serialize(dataset, False)
-            initial_state_dict = copy.deepcopy(
-                {
-                    "worker_id": worker_id,
-                    "fetcher_state": fetcher_state,
-                    "dataset_state": dataset_state,
-                    "shared_rng": shared_rng.get_state(),
-                    "random_rng_state": random.getstate(),
-                    "torch_rng_state": torch.get_rng_state(),
-                    "numpy_rng_state": numpy_state,
-                    "iteration_end": False,
-                }
-            )
+                del worker_state
         except Exception:
             init_exception = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
 
@@ -187,32 +189,7 @@ def _worker_loop(
                 r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
             except queue.Empty:
                 continue
-            if isinstance(r, _LoadStateRequest):
-                # Restore state from r.state_dict
-                if r.state_dict == "skip":
-                    state_dict = copy.deepcopy(initial_state_dict)
-                else:
-                    state_dict = r.state_dict
-
-                if state_dict["fetcher_state"] is not None:
-                    fetcher.dataset_iter = try_to_deserialize(
-                        fetcher.dataset_iter, state_dict["fetcher_state"]["dataset_iter"]
-                    )
-                    fetcher.ended = state_dict["fetcher_state"]["ended"]
-                if state_dict["dataset_state"] is not None:
-                    dataset = try_to_deserialize(dataset, state_dict["dataset_state"])
-                shared_rng.set_state(state_dict["shared_rng"])
-                random.setstate(state_dict["random_rng_state"])
-                torch.set_rng_state(state_dict["torch_rng_state"])
-                if HAS_NUMPY:
-                    np.random.set_state(state_dict["numpy_rng_state"])
-                # iteration_end = state_dict["iteration_end"]
-                iteration_end = False
-
-                data_queue.put((_LoadStateRequestComplete(r.uuid, r.worker_id), None))
-                del state_dict
-                continue
-            elif isinstance(r, _ResumeIteration):
+            if isinstance(r, _ResumeIteration):
                 # Acknowledge the main process
                 data_queue.put((r, None))
                 iteration_end = False
@@ -275,10 +252,10 @@ def _worker_loop(
                         "worker_id": worker_id,
                         "fetcher_state": fetcher_state,
                         "dataset_state": dataset_state,
-                        "shared_rng": shared_rng.get_state(),
-                        "random_rng_state": random.getstate(),
-                        "torch_rng_state": torch.get_rng_state(),
-                        "numpy_rng_state": numpy_state,
+                        # "shared_rng": shared_rng.get_state(),
+                        # "random_rng_state": random.getstate(),
+                        # "torch_rng_state": torch.get_rng_state(),
+                        # "numpy_rng_state": numpy_state,
                     }
             data_queue.put((idx, (data, worker_id, state_dict)))
             del data, idx, index, r, state_dict  # save memory
