@@ -500,11 +500,9 @@ class TestSnapshotEnd(unittest.TestCase):
                 persistent_workers=pw,
                 batch_size=bs,
             )
-            exp = list(dl)
+            list(dl)
             state_end = dl.state_dict()
-
-            batches = list(dl)  # simple restart
-            self.assertEqual(batches, exp)
+            exp = list(dl)
 
             dataset = DummyMapDataset(100, shuffle=True)
             dl = StatefulDataLoader(
@@ -515,9 +513,6 @@ class TestSnapshotEnd(unittest.TestCase):
                 persistent_workers=pw,
                 batch_size=bs,
             )
-            it = iter(dl)
-            for _ in range(2):
-                next(it)
             dl.load_state_dict(state_end)
             batches = list(dl)
 
@@ -527,7 +522,7 @@ class TestSnapshotEnd(unittest.TestCase):
         num_workers = 3
         every_n_steps = 10
         for pw, bs in itertools.product([False, True], [None, 4]):
-            dataset = DummyMapDataset(100)
+            dataset = DummyMapDataset(100, shuffle=False)
             dl = StatefulDataLoader(
                 dataset=dataset,
                 shuffle=True,  # Use default RandomSampler
@@ -537,24 +532,20 @@ class TestSnapshotEnd(unittest.TestCase):
                 persistent_workers=pw,
                 batch_size=bs,
             )
-            exp = list(dl)
+            list(dl)
             state_end = dl.state_dict()
+            exp = list(dl)
 
-            batches = list(dl)  # simple restart
-            self.assertEqual(batches, exp)
-
-            dataset = DummyMapDataset(100)
+            dataset = DummyMapDataset(100, shuffle=False)
             dl = StatefulDataLoader(
                 dataset=dataset,
+                shuffle=True,  # Use default RandomSampler
                 num_workers=num_workers,
                 collate_fn=identity,
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
                 batch_size=bs,
             )
-            it = iter(dl)
-            for _ in range(2):
-                next(it)
             dl.load_state_dict(state_end)
             batches = list(dl)
 

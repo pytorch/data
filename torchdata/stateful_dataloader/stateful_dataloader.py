@@ -33,7 +33,7 @@ from torch._utils import ExceptionWrapper
 
 from .worker import try_to_deserialize, try_to_serialize
 from .stateful import Stateful
-from . import sampler
+from . import sampler  # noqa
 
 try:
     import numpy as np

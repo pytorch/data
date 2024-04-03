@@ -29,15 +29,12 @@ class RandomSampler(torch.utils.data.sampler.RandomSampler, Stateful):
 
     def __iter__(self):
         super_iter = super().__iter__()
-        self.yielded = 0
-        if self.next_yielded is not None:
-            for _ in range(self.next_yielded):
-                next(super_iter)
-                self.yielded += 1
-            self.next_yielded = None
+        self.yielded = self.next_yielded or 0
         while True:
             try:
-                yield next(super_iter)
+                val = next(super_iter)
+                # print("yielding", val)
+                yield val
                 self.yielded += 1
             except StopIteration:
                 return
@@ -85,14 +82,6 @@ class BatchSampler(torch.utils.data.sampler.BatchSampler, Stateful):
             self.sampler_iter = iter(self.sampler)
             self.samples_yielded = 0
 
-        # while True:
-        #     try:
-        #         yield next(super_iter)
-        #         self.yielded += 1
-        #     except StopIteration:
-        #         return
-
-        ##########
         if self.drop_last:
             while True:
                 try:
@@ -116,6 +105,7 @@ class BatchSampler(torch.utils.data.sampler.BatchSampler, Stateful):
                     batch = [0] * self.batch_size
             if idx_in_batch > 0:
                 yield batch[:idx_in_batch]
+
 
 torch.utils.data.sampler.BatchSampler = BatchSampler
 torch.utils.data.dataloader.BatchSampler = BatchSampler
