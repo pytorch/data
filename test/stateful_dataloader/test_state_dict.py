@@ -132,7 +132,7 @@ class TestStatefulDataLoaderIterable(unittest.TestCase):
         self.assertEqual(batches, exp)
 
     def test_no_mp(self):
-        for batch_size, interrupt in itertools.product([None, 7], [1, 10, None]):
+        for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
             with self.subTest(batch_size=batch_size, interrupt=interrupt):
                 self._run_and_checkpoint(
                     num_workers=0,
@@ -142,7 +142,7 @@ class TestStatefulDataLoaderIterable(unittest.TestCase):
                 )
 
     def test_mp_x(self):
-        for batch_size, interrupt in itertools.product([None, 7], [1, 10, None]):
+        for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
             with self.subTest(batch_size=batch_size, interrupt=interrupt):
                 self._run_and_checkpoint(
                     num_workers=3,
@@ -152,7 +152,7 @@ class TestStatefulDataLoaderIterable(unittest.TestCase):
                 )
 
     def test_mp_pw(self):
-        for batch_size, interrupt in itertools.product([None, 7], [1, 10, None]):
+        for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
             with self.subTest(batch_size=batch_size, interrupt=interrupt):
                 self._run_and_checkpoint(
                     num_workers=3,
@@ -163,7 +163,7 @@ class TestStatefulDataLoaderIterable(unittest.TestCase):
 
     def test_mp_every_n_steps(self):
         batch_size = 7
-        for every_n_steps, interrupt in itertools.product([2, 5], [1, 10, None]):
+        for every_n_steps, interrupt in itertools.product([2, 5], [0, 1, 10]):
             with self.subTest(
                 every_n_steps=every_n_steps, batch_size=batch_size, interrupt=interrupt
             ):
@@ -175,7 +175,7 @@ class TestStatefulDataLoaderIterable(unittest.TestCase):
                 )
 
     def test_random_state(self):
-        for num_workers, interrupt in itertools.product([0, 3], [1, 10, None]):
+        for num_workers, interrupt in itertools.product([0, 3], [0, 1, 10]):
             with self.subTest(num_workers=num_workers, interrupt=interrupt):
                 self._run_and_checkpoint(
                     num_workers=num_workers,
@@ -243,6 +243,7 @@ class GeneratorIterable(torch.utils.data.IterableDataset):
     def __init__(self, sizes_for_all_workers):
         self.sizes_for_all_workers = sizes_for_all_workers
         self.i = 0
+        self.resume = None
 
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
@@ -253,18 +254,22 @@ class GeneratorIterable(torch.utils.data.IterableDataset):
             num_workers = 1
             worker_id = 0
             self.sizes_for_all_workers = [sum(self.sizes_for_all_workers)]
-
+        self.i = 0
+        if self.resume is not None:
+            self.i = self.resume
+            self.resume = None
         start = sum(self.sizes_for_all_workers[:worker_id])
         skip = self.i
         for i in range(start+skip, start+self.sizes_for_all_workers[worker_id]):
             self.i += 1
             yield i
+        # self.i = 0
 
     def state_dict(self):
         return {"i": self.i}
 
     def load_state_dict(self, state):
-        self.i = state["i"]
+        self.resume = state["i"]
 
 
 class TestStatefulDataLoaderGenerator(TestStatefulDataLoaderIterable):
@@ -314,6 +319,246 @@ class TestStatefulDataLoaderGenerator(TestStatefulDataLoaderIterable):
             batches.append(batch)
 
         self.assertEqual(batches, exp)
+
+
+class TestSnapshotZero(unittest.TestCase):
+
+    def test_generator(self):
+        num_workers = 3
+        every_n_steps = 10
+        for pw in [False, True]:
+            dataset = GeneratorIterable([0, 100, 37])
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+            )
+
+            it = iter(dl)
+            state0 = dl.state_dict()
+            exp = list(it)
+
+            dl.load_state_dict(state0)
+            batches = list(dl)
+
+            self.assertEqual(batches, exp)
+
+    def test_iterable(self):
+        num_workers = 3
+        every_n_steps = 10
+        for pw in [False, True]:
+            dataset = DummyIterableDataset([0, 100, 37], shuffle=True)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+            )
+
+            it = iter(dl)
+            state0 = dl.state_dict()
+            exp = list(it)
+
+            dl.load_state_dict(state0)
+            batches = list(dl)
+
+            self.assertEqual(batches, exp)
+
+    def test_map(self):
+        num_workers = 3
+        every_n_steps = 10
+        for pw in [False, True]:
+            dataset = DummyMapDataset(100, shuffle=True)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+            )
+
+            it = iter(dl)
+            state0 = dl.state_dict()
+            exp = list(it)
+
+            dl.load_state_dict(state0)
+            batches = list(dl)
+
+            self.assertEqual(batches, exp)
+
+    def test_map_shuffle(self):
+        num_workers = 3
+        every_n_steps = 10
+        for pw in [False, True]:
+            dataset = DummyMapDataset(100, shuffle=False)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                shuffle=True,  # Use default RandomSampler
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+            )
+
+            it = iter(dl)
+            state0 = dl.state_dict()
+            exp = list(it)
+
+            dl.load_state_dict(state0)
+            batches = list(dl)
+
+            self.assertEqual(batches, exp)
+
+
+class TestSnapshotEnd(unittest.TestCase):
+
+    def test_generator(self):
+        num_workers = 3
+        every_n_steps = 10
+        for pw, bs in itertools.product([False, True], [None, 4]):
+            dataset = GeneratorIterable([0, 100, 37])
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+            )
+            exp = list(dl)
+            state_end = dl.state_dict()
+
+            batches = list(dl)  # simple restart
+            self.assertEqual(batches, exp)
+
+            dataset = GeneratorIterable([0, 100, 37])
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+            )
+            it = iter(dl)
+            for _ in range(2):
+                next(it)
+            dl.load_state_dict(state_end)
+            batches = list(dl)
+
+            self.assertEqual(batches, exp)
+
+    def test_iterable(self):
+        num_workers = 3
+        every_n_steps = 10
+        for pw, bs in itertools.product([False, True], [None, 4]):
+            dataset = DummyIterableDataset([0, 100, 37], shuffle=True)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+            )
+            exp = list(dl)
+            state_end = dl.state_dict()
+
+            batches = list(dl)  # simple restart
+            self.assertEqual(batches, exp)
+
+            dataset = DummyIterableDataset([0, 100, 37], shuffle=True)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+            )
+            it = iter(dl)
+            for _ in range(2):
+                next(it)
+            dl.load_state_dict(state_end)
+            batches = list(dl)
+
+            self.assertEqual(batches, exp)
+
+    def test_map(self):
+        num_workers = 3
+        every_n_steps = 10
+        for pw, bs in itertools.product([False, True], [None, 4]):
+            dataset = DummyMapDataset(100, shuffle=True)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+            )
+            exp = list(dl)
+            state_end = dl.state_dict()
+
+            batches = list(dl)  # simple restart
+            self.assertEqual(batches, exp)
+
+            dataset = DummyMapDataset(100, shuffle=True)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+            )
+            it = iter(dl)
+            for _ in range(2):
+                next(it)
+            dl.load_state_dict(state_end)
+            batches = list(dl)
+
+            self.assertEqual(batches, exp)
+
+    def test_map_shuffle(self):
+        num_workers = 3
+        every_n_steps = 10
+        for pw, bs in itertools.product([False, True], [None, 4]):
+            dataset = DummyMapDataset(100)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                shuffle=True,  # Use default RandomSampler
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+            )
+            exp = list(dl)
+            state_end = dl.state_dict()
+
+            batches = list(dl)  # simple restart
+            self.assertEqual(batches, exp)
+
+            dataset = DummyMapDataset(100)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+            )
+            it = iter(dl)
+            for _ in range(2):
+                next(it)
+            dl.load_state_dict(state_end)
+            batches = list(dl)
+
+            self.assertEqual(batches, exp)
 
 
 if __name__ == "__main__":

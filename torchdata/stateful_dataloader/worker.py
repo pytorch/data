@@ -4,12 +4,9 @@ These **needs** to be in global scope since Py2 doesn't support serializing
 static methods.
 """
 
-import copy
-import pickle
 import queue
 import random
-from dataclasses import dataclass
-from typing import Any, Dict, Union
+from typing import Any, TypeVar, Union
 
 import torch
 
@@ -27,51 +24,22 @@ from torch.utils.data._utils.worker import (
 from .stateful import Stateful
 
 
-r"""Dummy class used to signal LoadStateRequest"""
+T = TypeVar("T")
 
 
-@dataclass(frozen=True)
-class _LoadStateRequest:
-    uuid: str
-    worker_id: int
-    state_dict: Dict[str, Any]
-
-
-r"""Dummy class used to signal LoadStateRequest"""
-
-
-@dataclass(frozen=True)
-class _LoadStateRequestComplete:
-    uuid: str
-    worker_id: int
-
-
-def try_to_serialize(obj: Any, pickle: bool) -> Union[dict, bytes, None]:
+def try_to_serialize(obj: Any) -> Union[dict, None]:
     if isinstance(obj, Stateful):
         obj_state = obj.state_dict()
-    elif pickle:
-        try:
-            obj_state = pickle.dumps(obj)
-        except Exception:
-            # If pickle fails, we fall back to copying the state
-            # dict. This is not ideal, but it's better than
-            # failing entirely.
-            obj_state = None
     else:
         obj_state = None
 
     return obj_state
 
 
-def try_to_deserialize(obj: Any, serialized: Union[dict, bytes, None]) -> Union[Any, None]:
+def try_to_deserialize(obj: T, state_dict: Union[dict, None]) -> Union[T, None]:
     if isinstance(obj, Stateful):
-        obj.load_state_dict(serialized)
+        obj.load_state_dict(state_dict)
         return obj
-    else:
-        try:
-            obj = pickle.loads(serialized)
-        except:
-            obj = None
     return obj
 
 
@@ -131,12 +99,13 @@ def _worker_loop(
         init_exception = None
 
         fetcher = None
-        # initial_state_dict = None
         try:
             if init_fn is not None:
                 init_fn(worker_id)
 
-            fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
+            fetcher = _DatasetKind.create_fetcher(
+                dataset_kind, dataset, auto_collation, collate_fn, drop_last
+            )
 
             # Restore worker state if provided
             if worker_state:
@@ -152,21 +121,21 @@ def _worker_loop(
                 if worker_state["fetcher_state"] is not None:
                     if dataset_kind == _DatasetKind.Iterable:
                         dataset_iter = try_to_deserialize(
-                            fetcher.dataset_iter, worker_state["fetcher_state"]["dataset_iter"]
+                            fetcher.dataset_iter,
+                            worker_state["fetcher_state"]["dataset_iter"],
                         )
                         if dataset_iter is not None:
                             fetcher.dataset_iter = dataset_iter
-                        fetcher.ended = worker_state["fetcher_state"]["ended"]
-                # shared_rng.set_state(worker_state["shared_rng"])
-                # random.setstate(worker_state["random_rng_state"])
-                # torch.set_rng_state(worker_state["torch_rng_state"])
-                # if HAS_NUMPY:
-                #     np.random.set_state(worker_state["numpy_rng_state"])
+                        # We always force fetcher to request at least one batch even if
+                        # we know it will lead to immediate stop iteration
+                        fetcher.ended = False
                 iteration_end = False
 
                 del worker_state
         except Exception:
-            init_exception = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
+            init_exception = ExceptionWrapper(
+                where=f"in DataLoader worker process {worker_id}"
+            )
 
         # When using Iterable mode, some worker can exit earlier than others due
         # to the IterableDataset behaving differently for different workers.
@@ -200,7 +169,9 @@ def _worker_loop(
                     dataset = apply_random_seed(dataset, shared_rng)
 
                 # Recreate the fetcher for worker-reuse policy
-                fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
+                fetcher = _DatasetKind.create_fetcher(
+                    dataset_kind, dataset, auto_collation, collate_fn, drop_last
+                )
                 continue
             elif r is None:
                 # Received the final signal
@@ -221,7 +192,10 @@ def _worker_loop(
                 try:
                     data = fetcher.fetch(index)  # type: ignore[possibly-undefined]
                 except Exception as e:
-                    if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
+                    if (
+                        isinstance(e, StopIteration)
+                        and dataset_kind == _DatasetKind.Iterable
+                    ):
                         data = _IterableDatasetStopIteration(worker_id)
                         # Set `iteration_end`
                         #   (1) to save future `next(...)` calls, and
@@ -231,7 +205,9 @@ def _worker_loop(
                         # It is important that we don't store exc_info in a variable.
                         # `ExceptionWrapper` does the correct thing.
                         # See NOTE [ Python Traceback Reference Cycle Problem ]
-                        data = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
+                        data = ExceptionWrapper(
+                            where=f"in DataLoader worker process {worker_id}"
+                        )
                 if snapshot or iteration_end:
                     # always generate snapshot when Iterable raises StopIteration.
                     if HAS_NUMPY:
@@ -241,21 +217,17 @@ def _worker_loop(
 
                     if dataset_kind == _DatasetKind.Iterable:
                         fetcher_state = {
-                            "dataset_iter": try_to_serialize(fetcher.dataset_iter, False),
+                            "dataset_iter": try_to_serialize(fetcher.dataset_iter),
                             "ended": fetcher.ended,
                         }
                     else:
                         fetcher_state = None
                     # Pick up any user-defined dataset state, for both map/iterable style datasets
-                    dataset_state = try_to_serialize(dataset, False)
+                    dataset_state = try_to_serialize(dataset)
                     state_dict = {
                         "worker_id": worker_id,
                         "fetcher_state": fetcher_state,
                         "dataset_state": dataset_state,
-                        # "shared_rng": shared_rng.get_state(),
-                        # "random_rng_state": random.getstate(),
-                        # "torch_rng_state": torch.get_rng_state(),
-                        # "numpy_rng_state": numpy_state,
                     }
             data_queue.put((idx, (data, worker_id, state_dict)))
             del data, idx, index, r, state_dict  # save memory
