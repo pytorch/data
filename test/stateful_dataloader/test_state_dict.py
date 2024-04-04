@@ -47,25 +47,20 @@ class DummyIterableDataset(torch.utils.data.IterableDataset):
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
         if worker_info:
-            num_workers = worker_info.num_workers
             worker_id = worker_info.id
         else:
-            num_workers = 1
             worker_id = 0
             self.sizes_for_all_workers = [sum(self.sizes_for_all_workers)]
 
         start = sum(self.sizes_for_all_workers[:worker_id])
-        iter_data = list(range(start, start+self.sizes_for_all_workers[worker_id]))
+        iter_data = list(range(start, start + self.sizes_for_all_workers[worker_id]))
         return DummyIterator(iter_data, self.shuffle)
 
 
 class DummyMapDataset(torch.utils.data.Dataset):
     def __init__(self, size, shuffle):
         self.size = size
-        self.data = [
-            {"id": i, "strcol": f"strcol_{i}", "listcol": [i, i + 1, i + 2]}
-            for i in range(size)
-        ]
+        self.data = [{"id": i, "strcol": f"strcol_{i}", "listcol": [i, i + 1, i + 2]} for i in range(size)]
         self.shuffle = shuffle
         self.g = torch.Generator()
         self.g.manual_seed(1)
@@ -92,9 +87,7 @@ def identity(x):
 
 
 class TestStatefulDataLoaderIterable(unittest.TestCase):
-    def _run_and_checkpoint(
-        self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False
-    ):
+    def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
         dataset = DummyIterableDataset([0, 100, 37], shuffle=shuffle)
         dl = StatefulDataLoader(
             dataset=dataset,
@@ -105,7 +98,7 @@ class TestStatefulDataLoaderIterable(unittest.TestCase):
         )
         exp = list(dl)
 
-        if interrupt == None:
+        if interrupt is None:
             interrupt = len(exp)
 
         batches = []
@@ -164,9 +157,7 @@ class TestStatefulDataLoaderIterable(unittest.TestCase):
     def test_mp_every_n_steps(self):
         batch_size = 7
         for every_n_steps, interrupt in itertools.product([2, 5], [0, 1, 10]):
-            with self.subTest(
-                every_n_steps=every_n_steps, batch_size=batch_size, interrupt=interrupt
-            ):
+            with self.subTest(every_n_steps=every_n_steps, batch_size=batch_size, interrupt=interrupt):
                 self._run_and_checkpoint(
                     num_workers=3,
                     batch_size=batch_size,
@@ -185,10 +176,9 @@ class TestStatefulDataLoaderIterable(unittest.TestCase):
                     shuffle=True,
                 )
 
+
 class TestStatefulDataLoaderMap(TestStatefulDataLoaderIterable):
-    def _run_and_checkpoint(
-        self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False
-    ):
+    def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
         if num_workers == 0:
             return
         dataset = DummyMapDataset(100, shuffle=shuffle)
@@ -205,7 +195,7 @@ class TestStatefulDataLoaderMap(TestStatefulDataLoaderIterable):
             sampler=sampler,
         )
 
-        if interrupt == None:
+        if interrupt is None:
             interrupt = len(dl)
 
         it = iter(dl)
@@ -248,10 +238,8 @@ class GeneratorIterable(torch.utils.data.IterableDataset):
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
         if worker_info:
-            num_workers = worker_info.num_workers
             worker_id = worker_info.id
         else:
-            num_workers = 1
             worker_id = 0
             self.sizes_for_all_workers = [sum(self.sizes_for_all_workers)]
         self.i = 0
@@ -260,7 +248,7 @@ class GeneratorIterable(torch.utils.data.IterableDataset):
             self.resume = None
         start = sum(self.sizes_for_all_workers[:worker_id])
         skip = self.i
-        for i in range(start+skip, start+self.sizes_for_all_workers[worker_id]):
+        for i in range(start + skip, start + self.sizes_for_all_workers[worker_id]):
             self.i += 1
             yield i
         # self.i = 0
@@ -273,9 +261,7 @@ class GeneratorIterable(torch.utils.data.IterableDataset):
 
 
 class TestStatefulDataLoaderGenerator(TestStatefulDataLoaderIterable):
-    def _run_and_checkpoint(
-        self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False
-    ):
+    def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
         dataset = GeneratorIterable([0, 100, 37])
         dl = StatefulDataLoader(
             dataset=dataset,
@@ -286,7 +272,7 @@ class TestStatefulDataLoaderGenerator(TestStatefulDataLoaderIterable):
         )
         exp = list(dl)
 
-        if interrupt == None:
+        if interrupt is None:
             interrupt = len(exp)
 
         dataset = GeneratorIterable([0, 100, 37])
@@ -322,7 +308,6 @@ class TestStatefulDataLoaderGenerator(TestStatefulDataLoaderIterable):
 
 
 class TestSnapshotZero(unittest.TestCase):
-
     def test_generator(self):
         num_workers = 3
         every_n_steps = 10
@@ -414,7 +399,6 @@ class TestSnapshotZero(unittest.TestCase):
 
 
 class TestSnapshotEnd(unittest.TestCase):
-
     def test_generator(self):
         num_workers = 3
         every_n_steps = 10
