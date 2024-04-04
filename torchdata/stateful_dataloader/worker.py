@@ -36,7 +36,7 @@ def try_to_serialize(obj: Any) -> Union[dict, None]:
     return obj_state
 
 
-def try_to_deserialize(obj: T, state_dict: Union[dict, None]) -> Union[T, None]:
+def try_to_deserialize(obj: T, state_dict: dict) -> T:
     if isinstance(obj, Stateful):
         obj.load_state_dict(state_dict)
         return obj  # type: ignore[return-value]

@@ -148,6 +148,8 @@ class StatefulDataLoader(DataLoader[T_co]):
         https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
     """
 
+    _iterator: Optional["_StatefulBaseDataLoaderIter"]
+
     def __init__(
         self,
         dataset: Dataset[T_co],
@@ -189,10 +191,11 @@ class StatefulDataLoader(DataLoader[T_co]):
             pin_memory_device=pin_memory_device,
         )
         self.snapshot_every_n_steps = snapshot_every_n_steps
-        self.next_iter_state = None
+        self.next_iter_state: Optional[Dict[str, Any]] = None
         self.iter_calls = 0
 
-    def _get_iterator(self) -> "_BaseDataLoaderIter":
+    def _get_iterator(self) -> "_StatefulBaseDataLoaderIter":
+        it: _StatefulBaseDataLoaderIter
         if self.num_workers == 0:
             it = _StatefulSingleProcessDataLoaderIter(self, self.next_iter_state)
         else:
@@ -681,6 +684,8 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
     #     processing indices already in `index_queue` if we are already shutting
     #     down.
 
+    _last_yielded_worker_id: int
+
     def __init__(self, loader, next_iter_state):
         super().__init__(loader)
         self._snapshot_interval = loader.snapshot_every_n_steps
@@ -804,7 +809,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         _utils.signal_handling._set_worker_pids(id(self), tuple(w.pid for w in self._workers))  # type: ignore[misc]
         _utils.signal_handling._set_SIGCHLD_handler()
         self._worker_pids_set = True
-        self._snapshot, self._worker_snapshots, self._main_snapshots = {}, {}, collections.deque()
+        self._snapshot, self._worker_snapshots, self._main_snapshots = {}, {}, collections.deque()  # type: ignore[var-annotated]
 
         self._main_state_0 = self._get_main_state()
         self._reset(loader, first_iter=True, prime_prefetch=next_iter_state is None)
@@ -1366,4 +1371,4 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._shutdown_workers()
 
 
-torch.utils.data.DataLoader = StatefulDataLoader
+torch.utils.data.DataLoader = StatefulDataLoader  # type: ignore[misc]
