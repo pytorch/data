@@ -335,21 +335,39 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
         #  1. try to restore dataset state
         #  2. generate dataset iterator
         #  3. try to restore iterator state
-        if state_dict["dataset_state"] is not None:
-            self._dataset_fetcher.dataset = try_to_deserialize(
-                self._dataset_fetcher.dataset, state_dict["dataset_state"]
-            )
-            if self._dataset_kind == _DatasetKind.Iterable:
-                self._dataset_fetcher.dataset_iter = iter(self._dataset_fetcher.dataset)
-        if state_dict["fetcher_state"] is not None:
-            if self._dataset_kind == _DatasetKind.Iterable:
-                dataset_iter = try_to_deserialize(
-                    self._dataset_fetcher.dataset_iter,
-                    state_dict["fetcher_state"]["dataset_iter"],
+        if self._dataset_kind != _DatasetKind.Iterable:
+            # Map style just try to load dataset state
+            if state_dict["dataset_state"] is not None:
+                self._dataset_fetcher.dataset = try_to_deserialize(
+                    self._dataset_fetcher.dataset, state_dict["dataset_state"]
                 )
-                if dataset_iter is not None:
-                    self._dataset_fetcher.dataset_iter = dataset_iter
-                self._dataset_fetcher.ended = state_dict["fetcher_state"]["ended"]
+        else:
+            # Iterable
+            if isinstance(self._dataset_fetcher.dataset, Stateful) or isinstance(
+                self._dataset_fetcher.dataset_iter, Stateful
+            ):
+                if state_dict["dataset_state"] is not None:
+                    self._dataset_fetcher.dataset = try_to_deserialize(
+                        self._dataset_fetcher.dataset, state_dict["dataset_state"]
+                    )
+                    self._dataset_fetcher.dataset_iter = iter(self._dataset_fetcher.dataset)
+                if state_dict["fetcher_state"] is not None:
+                    if state_dict["fetcher_state"]["dataset_iter"] is not None:
+                        self._dataset_fetcher.dataset_iter = try_to_deserialize(
+                            self._dataset_fetcher.dataset_iter,
+                            state_dict["fetcher_state"]["dataset_iter"],
+                        )
+                    self._dataset_fetcher.ended = state_dict["fetcher_state"]["ended"]
+            else:
+                # No state, just try to fastforward
+                if self._num_yielded > 0:
+                    logger.warning(
+                        f"Neither dataset nor iter(dataset) defines state_dict/load_state_dict so we are "
+                        f"naively fast-forwarding your dataset by {self._num_yielded} steps. For more efficient "
+                        f"resumes, please implement `state_dict` and `load_state_dict` in your IterableDataset and/or iterator."
+                    )
+                    for _ in range(self._num_yielded):
+                        next(self)
         self._finished = state_dict["_finished"]
 
 
@@ -793,15 +811,40 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
 
         # Try to restore main state
         if next_iter_state is not None:
-            if "main_snapshot" in next_iter_state["snapshot"]:
-                self._restore_main_state(next_iter_state["snapshot"]["main_snapshot"])
-
+            self._restore_main_state(next_iter_state["snapshot"]["main_snapshot"])
             self._num_yielded = next_iter_state["snapshot"]["snapshot_step"]
-            self._last_yielded_worker_id = next_iter_state["snapshot"]["last_yielded_worker_id"]
-            for _ in range(self._last_yielded_worker_id + 1):
-                next(self._worker_queue_idx_cycle)
-            for _ in range(self._prefetch_factor * self._num_workers):
-                self._try_put_index()
+
+            fast_forward = False
+            if self._dataset_kind == _DatasetKind.Iterable:
+                for state in worker_states:
+                    if state is None:
+                        continue
+                    if state["dataset_state"] is None and state["fetcher_state"]["dataset_iter"] is None:
+                        fast_forward = True
+                    break
+
+            if fast_forward:
+                # If neither dataset / dataset iter are stateful, we will fast-forward
+                for _ in range(self._prefetch_factor * self._num_workers):
+                    self._try_put_index()
+                if self._num_yielded > 0:
+                    logger.warning(
+                        f"Neither dataset nor iter(dataset) defines state_dict/load_state_dict so we are "
+                        f"naively fast-forwarding your dataset by {self._num_yielded} steps. For more efficient "
+                        f"resumes, please implement `state_dict` and `load_state_dict` in your IterableDataset and/or iterator."
+                    )
+                    for _ in range(self._num_yielded):
+                        next(self)
+                # Check if last_yielded_worker_id matches
+                if self._last_yielded_worker_id != next_iter_state["snapshot"]["last_yielded_worker_id"]:
+                    raise ValueError("last_yielded_worker_id does not match, the dataset may have changed")
+            else:
+                self._last_yielded_worker_id = next_iter_state["snapshot"]["last_yielded_worker_id"]
+                for _ in range(self._last_yielded_worker_id + 1):
+                    next(self._worker_queue_idx_cycle)
+                for _ in range(self._prefetch_factor * self._num_workers):
+                    self._try_put_index()
+
             for i in range(next_iter_state["steps_since_snapshot"]):
                 next(self)
             self._finished = next_iter_state["_finished"]
@@ -809,6 +852,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
     def _reset_state_vars(self):
         self._worker_snapshots = {}
         self._main_snapshots = collections.deque()
+        self._last_yielded_worker_id = self._num_workers - 1
         self._update_snapshot(
             snapshot_step=0,
             last_yielded_worker_id=self._num_workers - 1,

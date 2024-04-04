@@ -208,7 +208,6 @@ class TestStatefulDataLoaderMap(TestStatefulDataLoaderIterable):
             exp.append(batch)
 
         # Restore new instance from state
-        # dataset = DummyMapDataset(100, shuffle=shuffle)
         generator = torch.Generator()
         generator.manual_seed(13)
         sampler = torch.utils.data.RandomSampler(dataset, generator=generator)
@@ -251,13 +250,27 @@ class GeneratorIterable(torch.utils.data.IterableDataset):
         for i in range(start + skip, start + self.sizes_for_all_workers[worker_id]):
             self.i += 1
             yield i
-        # self.i = 0
 
     def state_dict(self):
         return {"i": self.i}
 
     def load_state_dict(self, state):
         self.resume = state["i"]
+
+
+class GeneratorIterableNoState(torch.utils.data.IterableDataset):
+    def __init__(self, sizes_for_all_workers):
+        self.sizes_for_all_workers = sizes_for_all_workers
+
+    def __iter__(self):
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info:
+            worker_id = worker_info.id
+        else:
+            worker_id = 0
+            self.sizes_for_all_workers = [sum(self.sizes_for_all_workers)]
+        start = sum(self.sizes_for_all_workers[:worker_id])
+        yield from range(start, start + self.sizes_for_all_workers[worker_id])
 
 
 class TestStatefulDataLoaderGenerator(TestStatefulDataLoaderIterable):
@@ -293,6 +306,53 @@ class TestStatefulDataLoaderGenerator(TestStatefulDataLoaderIterable):
 
         # Restore new instance from state
         dataset = GeneratorIterable([0, 100, 37])
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            collate_fn=identity,
+            snapshot_every_n_steps=every_n_steps,
+            persistent_workers=pw,
+        )
+        dl.load_state_dict(state_dict)
+        for batch in dl:
+            batches.append(batch)
+
+        self.assertEqual(batches, exp)
+
+
+class TestStatefulDataLoaderGeneratorNoState(TestStatefulDataLoaderIterable):
+    def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
+        dataset = GeneratorIterableNoState([0, 100, 37])
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            collate_fn=identity,
+            snapshot_every_n_steps=every_n_steps,
+            persistent_workers=pw,
+        )
+        exp = list(dl)
+
+        if interrupt is None:
+            interrupt = len(exp)
+
+        dataset = GeneratorIterableNoState([0, 100, 37])
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            collate_fn=identity,
+            snapshot_every_n_steps=every_n_steps,
+            persistent_workers=pw,
+        )
+        batches = []
+        it = iter(dl)
+        for i in range(interrupt):
+            batches.append(next(it))
+        state_dict = dl.state_dict()
+
+        self.assertEqual(batches, exp[:interrupt])
+
+        # Restore new instance from state
+        dataset = GeneratorIterableNoState([0, 100, 37])
         dl = StatefulDataLoader(
             dataset=dataset,
             num_workers=num_workers,
@@ -419,6 +479,42 @@ class TestSnapshotEnd(unittest.TestCase):
             self.assertEqual(batches, exp)
 
             dataset = GeneratorIterable([0, 100, 37])
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+            )
+            it = iter(dl)
+            for _ in range(2):
+                next(it)
+            dl.load_state_dict(state_end)
+            batches = list(dl)
+
+            self.assertEqual(batches, exp)
+
+    def test_generator_no_state(self):
+        num_workers = 3
+        every_n_steps = 10
+        for pw, bs in itertools.product([False, True], [None, 4]):
+            dataset = GeneratorIterableNoState([0, 100, 37])
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+            )
+            exp = list(dl)
+            state_end = dl.state_dict()
+
+            batches = list(dl)  # simple restart
+            self.assertEqual(batches, exp)
+
+            dataset = GeneratorIterableNoState([0, 100, 37])
             dl = StatefulDataLoader(
                 dataset=dataset,
                 num_workers=num_workers,
