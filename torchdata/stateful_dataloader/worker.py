@@ -185,7 +185,7 @@ def _worker_loop(
             else:
                 try:
                     try:
-                        data = fetcher.fetch(index)  # type: ignore[possibly-undefined]
+                        data = fetcher.fetch(index)  # type: ignore[union-attr]
                     except StopIteration:
                         if not dataset_kind == _DatasetKind.Iterable:
                             raise
@@ -197,8 +197,8 @@ def _worker_loop(
                     if snapshot or iteration_end:
                         if dataset_kind == _DatasetKind.Iterable:
                             fetcher_state = {
-                                "dataset_iter": try_to_serialize(fetcher.dataset_iter),
-                                "ended": fetcher.ended,
+                                "dataset_iter": try_to_serialize(fetcher.dataset_iter),  # type: ignore[union-attr]
+                                "ended": fetcher.ended,  # type: ignore[union-attr]
                             }
                         else:
                             fetcher_state = None
