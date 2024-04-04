@@ -39,7 +39,7 @@ def try_to_serialize(obj: Any) -> Union[dict, None]:
 def try_to_deserialize(obj: T, state_dict: Union[dict, None]) -> Union[T, None]:
     if isinstance(obj, Stateful):
         obj.load_state_dict(state_dict)
-        return obj
+        return obj  # type: ignore[return-value]
     return obj
 
 
@@ -181,8 +181,9 @@ def _worker_loop(
             state_dict = None
             if init_exception is not None:
                 data = init_exception
-                # init_exception = None
+                init_exception = None
             else:
+                assert fetcher is not None
                 try:
                     data = fetcher.fetch(index)  # type: ignore[possibly-undefined]
                 except Exception as e:
@@ -222,4 +223,4 @@ def _worker_loop(
         data_queue.close()
 
 
-torch.utils.data._utils.worker._worker_loop = _worker_loop
+torch.utils.data._utils.worker._worker_loop = _worker_loop  # type: ignore[assignment]
