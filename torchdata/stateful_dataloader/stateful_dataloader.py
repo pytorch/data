@@ -13,16 +13,13 @@ diamond-shaped multiple-inheritance scheme.
 """
 
 import collections
-import copy
 import functools
 import itertools
 import logging
 import queue
-import random
 import threading
-import uuid
 
-from typing import Iterable, List, Optional, Union, Any, Dict
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import torch
 import torch.multiprocessing as multiprocessing
@@ -31,20 +28,14 @@ import torch.utils.data.graph_settings
 
 from torch._utils import ExceptionWrapper
 
-from .worker import try_to_deserialize, try_to_serialize
-from .stateful import Stateful
-from . import sampler  # noqa
-
-try:
-    import numpy as np
-
-    HAS_NUMPY = True
-except ModuleNotFoundError:
-    HAS_NUMPY = False
-
 from torch.utils.data import _utils, DataLoader, Dataset, IterDataPipe, MapDataPipe, Sampler
 
 from torch.utils.data.dataloader import _BaseDataLoaderIter
+
+from .sampler import BatchSampler, RandomSampler  # noqa
+from .stateful import Stateful
+
+from .worker import try_to_deserialize, try_to_serialize
 
 __all__ = [
     "StatefulDataLoader",
@@ -210,7 +201,7 @@ class StatefulDataLoader(DataLoader[T_co]):
         self.next_iter_state = None
         return it
 
-    def __iter__(self) -> '_BaseDataLoaderIter':
+    def __iter__(self) -> "_BaseDataLoaderIter":
         # When using a single worker the returned iterator should be
         # created everytime to avoid resetting its state
         # However, in the case of a multiple workers iterator
@@ -345,7 +336,9 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
         #  2. generate dataset iterator
         #  3. try to restore iterator state
         if state_dict["dataset_state"] is not None:
-            self._dataset_fetcher.dataset = try_to_deserialize(self._dataset_fetcher.dataset, state_dict["dataset_state"])
+            self._dataset_fetcher.dataset = try_to_deserialize(
+                self._dataset_fetcher.dataset, state_dict["dataset_state"]
+            )
             if self._dataset_kind == _DatasetKind.Iterable:
                 self._dataset_fetcher.dataset_iter = iter(self._dataset_fetcher.dataset)
         if state_dict["fetcher_state"] is not None:
@@ -701,7 +694,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._index_queues = []
         self._workers = []
 
-        worker_states = [None]*self._num_workers
+        worker_states = [None] * self._num_workers
         if next_iter_state is not None:
             wstates = next_iter_state["snapshot"].get("worker_snapshots", {})
             assert set(range(len(wstates))) == set(wstates.keys()), (len(wstates), wstates.keys())
@@ -818,7 +811,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._main_snapshots = collections.deque()
         self._update_snapshot(
             snapshot_step=0,
-            last_yielded_worker_id=self._num_workers-1,
+            last_yielded_worker_id=self._num_workers - 1,
             num_workers=self._num_workers,
             main_snapshot=self._main_state_0,
             worker_snapshots={},
@@ -907,7 +900,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                 # test.
                 # See NOTE [ DataLoader on Linux and open files limit ]
                 fds_limit_margin = 10
-                fs = [tempfile.NamedTemporaryFile() for i in range(fds_limit_margin)]
+                fs = [tempfile.NamedTemporaryFile() for i in range(fds_limit_margin)]  # noqa(F841)
             except OSError as e:
                 if e.errno == errno.EMFILE:
                     raise RuntimeError(
@@ -1198,11 +1191,22 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         while len(self._main_snapshots) and (self._main_snapshots[0][0] <= self._rcvd_idx - 1):
             main_snapshot_idx, main_snapshot = self._main_snapshots.popleft()
         assert main_snapshot_idx == self._rcvd_idx - 1, (main_snapshot_idx, self._rcvd_idx - 1)
-        self._update_snapshot(self._num_yielded + 1, self._last_yielded_worker_id, self._num_workers,
-            main_snapshot, self._worker_snapshots)
+        self._update_snapshot(
+            self._num_yielded + 1,
+            self._last_yielded_worker_id,
+            self._num_workers,
+            main_snapshot,
+            self._worker_snapshots,
+        )
 
-    def _update_snapshot(self, snapshot_step: int, last_yielded_worker_id: int, num_workers: int,
-        main_snapshot: Dict[str, Any], worker_snapshots: Dict[int, Any]):
+    def _update_snapshot(
+        self,
+        snapshot_step: int,
+        last_yielded_worker_id: int,
+        num_workers: int,
+        main_snapshot: Dict[str, Any],
+        worker_snapshots: Dict[int, Any],
+    ):
         self._snapshot = {
             "snapshot_step": snapshot_step,
             "last_yielded_worker_id": last_yielded_worker_id,

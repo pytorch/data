@@ -103,9 +103,7 @@ def _worker_loop(
             if init_fn is not None:
                 init_fn(worker_id)
 
-            fetcher = _DatasetKind.create_fetcher(
-                dataset_kind, dataset, auto_collation, collate_fn, drop_last
-            )
+            fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
 
             # Restore worker state if provided
             if worker_state:
@@ -133,9 +131,7 @@ def _worker_loop(
 
                 del worker_state
         except Exception:
-            init_exception = ExceptionWrapper(
-                where=f"in DataLoader worker process {worker_id}"
-            )
+            init_exception = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
 
         # When using Iterable mode, some worker can exit earlier than others due
         # to the IterableDataset behaving differently for different workers.
@@ -169,9 +165,7 @@ def _worker_loop(
                     dataset = apply_random_seed(dataset, shared_rng)
 
                 # Recreate the fetcher for worker-reuse policy
-                fetcher = _DatasetKind.create_fetcher(
-                    dataset_kind, dataset, auto_collation, collate_fn, drop_last
-                )
+                fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
                 continue
             elif r is None:
                 # Received the final signal
@@ -192,10 +186,7 @@ def _worker_loop(
                 try:
                     data = fetcher.fetch(index)  # type: ignore[possibly-undefined]
                 except Exception as e:
-                    if (
-                        isinstance(e, StopIteration)
-                        and dataset_kind == _DatasetKind.Iterable
-                    ):
+                    if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
                         data = _IterableDatasetStopIteration(worker_id)
                         # Set `iteration_end`
                         #   (1) to save future `next(...)` calls, and
@@ -205,16 +196,8 @@ def _worker_loop(
                         # It is important that we don't store exc_info in a variable.
                         # `ExceptionWrapper` does the correct thing.
                         # See NOTE [ Python Traceback Reference Cycle Problem ]
-                        data = ExceptionWrapper(
-                            where=f"in DataLoader worker process {worker_id}"
-                        )
+                        data = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
                 if snapshot or iteration_end:
-                    # always generate snapshot when Iterable raises StopIteration.
-                    if HAS_NUMPY:
-                        numpy_state = np.random.get_state()
-                    else:
-                        numpy_state = None
-
                     if dataset_kind == _DatasetKind.Iterable:
                         fetcher_state = {
                             "dataset_iter": try_to_serialize(fetcher.dataset_iter),
