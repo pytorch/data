@@ -15,3 +15,4 @@ datasets
 graphviz
 adlfs
 awscli>=1.27.66
+psutil
