@@ -1369,6 +1369,3 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
 
     def __del__(self):
         self._shutdown_workers()
-
-
-torch.utils.data.DataLoader = StatefulDataLoader  # type: ignore[misc]

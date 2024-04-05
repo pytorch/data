@@ -65,6 +65,20 @@ class DummyMapDataset(torch.utils.data.Dataset):
         self.g = torch.Generator()
         self.g.manual_seed(1)
 
+    def __getstate__(self):
+        """pickling generators fails on windows and mac, this makes sure
+        unit tests can proceed on those platforms
+        """
+        state = dict(self.__dict__)
+        del state["g"]
+        state["g_state"] = self.g.get_state()
+
+    def __setstate__(self, state):
+        g_state = state.pop("g_state")
+        self.__dict__ = state
+        self.g = torch.Generator()
+        self.g.set_state(g_state)
+
     def __len__(self):
         return self.size
 
