@@ -72,6 +72,7 @@ class DummyMapDataset(torch.utils.data.Dataset):
         state = dict(self.__dict__)
         del state["g"]
         state["g_state"] = self.g.get_state()
+        return state
 
     def __setstate__(self, state):
         g_state = state.pop("g_state")
