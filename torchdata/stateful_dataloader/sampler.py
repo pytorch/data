@@ -66,7 +66,7 @@ class BatchSampler(torch.utils.data.sampler.BatchSampler, Stateful):
         self.sampler_iter = iter(self.sampler)
         if "sampler_iter" in state_dict:
             assert isinstance(self.sampler_iter, Stateful)
-            self.sampler_iter.load_state_dict(state_dict["sampler"])
+            self.sampler_iter.load_state_dict(state_dict["sampler_iter"])
 
     def __iter__(self):
         if self.next_yielded is not None:

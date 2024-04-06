@@ -39,6 +39,36 @@ class DummyIterator(Iterator, Stateful):
         self.g.set_state(state_dict["g"])
 
 
+class DummySamplerIterator(Iterator, Stateful):
+    def __init__(self, size):
+        self.size = size
+        self.i = 0
+
+    def __next__(self):
+        idx = self.i
+        if idx >= self.size:
+            raise StopIteration
+        self.i += 1
+        return idx
+
+    def state_dict(self):
+        return {"i": self.i}
+
+    def load_state_dict(self, state_dict):
+        self.i = state_dict["i"]
+
+
+class DummySampler(torch.utils.data.Sampler):
+    def __init__(self, size):
+        self.size = size
+
+    def __iter__(self):
+        return DummySamplerIterator(self.size)
+
+    def __len__(self):
+        return self.size
+
+
 class DummyIterableDataset(torch.utils.data.IterableDataset):
     def __init__(self, sizes_for_all_workers, shuffle=False):
         self.sizes_for_all_workers = sizes_for_all_workers
@@ -226,6 +256,51 @@ class TestStatefulDataLoaderMap(TestStatefulDataLoaderIterable):
         generator = torch.Generator()
         generator.manual_seed(13)
         sampler = torch.utils.data.RandomSampler(dataset, generator=generator)
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            collate_fn=identity,
+            snapshot_every_n_steps=every_n_steps,
+            persistent_workers=pw,
+            batch_size=batch_size,
+            sampler=sampler,
+        )
+        dl.load_state_dict(state_dict)
+        batches = []
+        for batch in dl:
+            batches.append(batch)
+
+        self.assertEqual(batches, exp)
+
+
+class TestStatefulSampler(TestStatefulDataLoaderIterable):
+    def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
+        dataset = DummyMapDataset(100, shuffle=shuffle)
+        sampler = DummySampler(len(dataset))
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            collate_fn=identity,
+            snapshot_every_n_steps=every_n_steps,
+            persistent_workers=pw,
+            batch_size=batch_size,
+            sampler=sampler,
+        )
+
+        if interrupt is None:
+            interrupt = len(dl)
+
+        it = iter(dl)
+        for i in range(interrupt):
+            next(it)
+
+        state_dict = dl.state_dict()
+        exp = []
+        for batch in it:
+            exp.append(batch)
+
+        # Restore new instance from state
+        sampler = DummySampler(len(dataset))
         dl = StatefulDataLoader(
             dataset=dataset,
             num_workers=num_workers,
