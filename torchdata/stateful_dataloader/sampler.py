@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Sized
+from typing import Any, Dict, Iterator, Optional, Sized
 
 import torch.utils.data.sampler
 from torch.utils.data.dataloader import _InfiniteConstantSampler
@@ -6,37 +6,47 @@ from torch.utils.data.dataloader import _InfiniteConstantSampler
 from .stateful import Stateful
 
 
-class RandomSampler(torch.utils.data.sampler.RandomSampler, Stateful):
+class _StatefulRandomSamplerIterator(Iterator[int], Stateful):
+    def __init__(self, sampler, parent_iterator: Iterator[int]):
+        self.sampler = sampler
+        self.parent_iterator = parent_iterator
+        self.yielded = 0
+        self.next_yielded = None
+        self.generator_state = sampler.generator.get_state()
+
+    def __next__(self) -> int:
+        if self.next_yielded is not None:
+            for _ in range(self.next_yielded):
+                next(self.parent_iterator)
+
+            self.yielded = self.next_yielded
+            self.next_yielded = None
+
+        val = next(self.parent_iterator)
+        self.yielded += 1
+        return val
+
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
+        self.generator_state = state_dict["generator"]
+        self.sampler.generator.set_state(state_dict["generator"])
+        self.next_yielded = state_dict["yielded"]
+
+    def state_dict(self) -> Dict[str, Any]:
+        return {"generator": self.generator_state, "yielded": self.yielded}
+
+
+class RandomSampler(torch.utils.data.sampler.RandomSampler):
     def __init__(
         self, data_source: Sized, replacement: bool = False, num_samples: Optional[int] = None, generator=None
     ):
-
         if generator is None:
             # Ensure that underlying sampler has something repeatable
             generator = torch.Generator()
             generator.manual_seed(1)
         super().__init__(data_source, replacement, num_samples, generator)
-        self.yielded = 0
-        self.next_yielded = None
-
-    def state_dict(self) -> Dict[str, Any]:
-        return {"generator": self.generator.get_state() if self.generator else None, "yielded": self.yielded}
-
-    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
-        if state_dict["generator"] is not None:
-            self.generator.set_state(state_dict["generator"])
-        self.next_yielded = state_dict["yielded"]
 
     def __iter__(self):
-        super_iter = super().__iter__()
-        self.yielded = self.next_yielded or 0
-        while True:
-            try:
-                val = next(super_iter)
-                yield val
-                self.yielded += 1
-            except StopIteration:
-                return
+        return _StatefulRandomSamplerIterator(self, super().__iter__())
 
 
 torch.utils.data.sampler.RandomSampler = RandomSampler  # type: ignore[misc]

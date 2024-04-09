@@ -547,6 +547,39 @@ class TestSnapshotZero(unittest.TestCase):
 
             self.assertEqual(batches, exp)
 
+    def test_map_iterrupted_shuffle(self):
+        every_n_steps = 10
+
+        for pw, num_workers, every_n_steps in itertools.product([False, True], [0, 2], [1, 5, 10, 15]):
+            dataset = DummyMapDataset(10, shuffle=True)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                shuffle=True,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw if num_workers > 0 else False,
+            )
+
+            it = iter(dl)
+            state0 = dl.state_dict()
+            exp = []
+            for _ in range(4):
+                exp.append(next(it))
+            state1 = dl.state_dict()
+
+            dl.load_state_dict(state1)
+            it = iter(dl)
+            for data in it:
+                exp.append(data)
+
+            dl.load_state_dict(state0)
+            batches = []
+            for data in iter(dl):
+                batches.append(data)
+
+            self.assertEqual(batches, exp)
+
 
 class TestSnapshotEnd(unittest.TestCase):
     def test_generator(self):
