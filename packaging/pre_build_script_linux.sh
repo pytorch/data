@@ -8,4 +8,4 @@ export WORKSPACE="/__w"
 # Install static OpenSSL/libcrypto library
 ./packaging/manylinux/install_openssl_curl.sh
 
-pip install cmake ninja
+python -m pip install cmake ninja
