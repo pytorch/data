@@ -7,6 +7,9 @@ from .stateful import Stateful
 
 
 class _StatefulRandomSamplerIterator(Iterator[int], Stateful):
+    _GENERATOR = "generator"
+    _YIELDED = "yielded"
+
     def __init__(self, sampler, parent_iterator: Iterator[int]):
         self.sampler = sampler
         self.parent_iterator = parent_iterator
@@ -27,12 +30,12 @@ class _StatefulRandomSamplerIterator(Iterator[int], Stateful):
         return val
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
-        self.generator_state = state_dict["generator"]
-        self.sampler.generator.set_state(state_dict["generator"])
-        self.next_yielded = state_dict["yielded"]
+        self.generator_state = state_dict[self._GENERATOR]
+        self.sampler.generator.set_state(state_dict[self._GENERATOR])
+        self.next_yielded = state_dict[self._YIELDED]
 
     def state_dict(self) -> Dict[str, Any]:
-        return {"generator": self.generator_state, "yielded": self.yielded}
+        return {self._GENERATOR: self.generator_state, self._YIELDED: self.yielded}
 
 
 class RandomSampler(torch.utils.data.sampler.RandomSampler):
@@ -54,6 +57,10 @@ torch.utils.data.dataloader.RandomSampler = RandomSampler  # type: ignore[misc]
 
 
 class BatchSampler(torch.utils.data.sampler.BatchSampler, Stateful):
+    _SAMPLES_YIELDED = "samples_yielded"
+    _SAMPLER_STATE = "sampler_state"
+    _SAMPLER_ITER_STATE = "sampler_iter_state"
+
     def __init__(self, sampler, batch_size, drop_last):
         super().__init__(sampler, batch_size, drop_last)
         self.samples_yielded = 0
@@ -61,22 +68,22 @@ class BatchSampler(torch.utils.data.sampler.BatchSampler, Stateful):
         self.sampler_iter = iter(sampler)
 
     def state_dict(self) -> Dict[str, Any]:
-        sd: Dict[str, Any] = {"samples_yielded": self.samples_yielded}
+        sd: Dict[str, Any] = {self._SAMPLES_YIELDED: self.samples_yielded}
         if isinstance(self.sampler, Stateful):
-            sd["sampler"] = self.sampler.state_dict()
+            sd[self._SAMPLER_STATE] = self.sampler.state_dict()
         if isinstance(self.sampler_iter, Stateful):
-            sd["sampler_iter"] = self.sampler_iter.state_dict()
+            sd[self._SAMPLER_ITER_STATE] = self.sampler_iter.state_dict()
         return sd
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
-        self.next_yielded = state_dict["samples_yielded"]
-        if "sampler" in state_dict:
+        self.next_yielded = state_dict[self._SAMPLES_YIELDED]
+        if self._SAMPLER_STATE in state_dict:
             assert isinstance(self.sampler, Stateful)
-            self.sampler.load_state_dict(state_dict["sampler"])
+            self.sampler.load_state_dict(state_dict[self._SAMPLER_STATE])
         self.sampler_iter = iter(self.sampler)
-        if "sampler_iter" in state_dict:
+        if self._SAMPLER_ITER_STATE in state_dict:
             assert isinstance(self.sampler_iter, Stateful)
-            self.sampler_iter.load_state_dict(state_dict["sampler_iter"])
+            self.sampler_iter.load_state_dict(state_dict[self._SAMPLER_ITER_STATE])
 
     def __iter__(self):
         if self.next_yielded is not None:

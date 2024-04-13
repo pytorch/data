@@ -43,6 +43,13 @@ def try_to_deserialize(obj: T, state_dict: dict) -> T:
     return obj
 
 
+_WORKER_ID = "worker_id"
+_FETCHER_STATE = "fetcher_state"
+_FETCHER_ENDED = "fetcher_ended"
+_DATASET_STATE = "dataset_state"
+_DATASET_ITER_STATE = "dataset_iter_state"
+
+
 def _worker_loop(
     dataset_kind,
     dataset,
@@ -111,16 +118,16 @@ def _worker_loop(
                 #  1. try to restore dataset state
                 #  2. generate dataset iterator
                 #  3. try to restore iterator state
-                if worker_state["dataset_state"] is not None:
-                    dataset = try_to_deserialize(dataset, worker_state["dataset_state"])
+                if worker_state[_DATASET_STATE] is not None:
+                    dataset = try_to_deserialize(dataset, worker_state[_DATASET_STATE])
                     fetcher.dataset = dataset
                     if dataset_kind == _DatasetKind.Iterable:
                         fetcher.dataset_iter = iter(fetcher.dataset)
-                if worker_state["fetcher_state"] is not None:
+                if worker_state[_FETCHER_STATE] is not None:
                     if dataset_kind == _DatasetKind.Iterable:
                         dataset_iter = try_to_deserialize(
                             fetcher.dataset_iter,
-                            worker_state["fetcher_state"]["dataset_iter"],
+                            worker_state[_FETCHER_STATE][_DATASET_ITER_STATE],
                         )
                         if dataset_iter is not None:
                             fetcher.dataset_iter = dataset_iter
@@ -197,17 +204,17 @@ def _worker_loop(
                     if snapshot or iteration_end:
                         if dataset_kind == _DatasetKind.Iterable:
                             fetcher_state = {
-                                "dataset_iter": try_to_serialize(fetcher.dataset_iter),  # type: ignore[union-attr]
-                                "ended": fetcher.ended,  # type: ignore[union-attr]
+                                _DATASET_ITER_STATE: try_to_serialize(fetcher.dataset_iter),  # type: ignore[union-attr]
+                                _FETCHER_ENDED: fetcher.ended,  # type: ignore[union-attr]
                             }
                         else:
                             fetcher_state = None
                         # Pick up any user-defined dataset state, for both map/iterable style datasets
                         dataset_state = try_to_serialize(dataset)
                         state_dict = {
-                            "worker_id": worker_id,
-                            "fetcher_state": fetcher_state,
-                            "dataset_state": dataset_state,
+                            _WORKER_ID: worker_id,
+                            _FETCHER_STATE: fetcher_state,
+                            _DATASET_STATE: dataset_state,
                         }
                 except Exception:
                     # It is important that we don't store exc_info in a variable.

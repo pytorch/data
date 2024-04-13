@@ -35,7 +35,15 @@ from torch.utils.data.dataloader import _BaseDataLoaderIter
 from .sampler import BatchSampler, RandomSampler  # noqa
 from .stateful import Stateful
 
-from .worker import try_to_deserialize, try_to_serialize
+from .worker import (
+    _DATASET_ITER_STATE,
+    _DATASET_STATE,
+    _FETCHER_ENDED,
+    _FETCHER_STATE,
+    _WORKER_ID,
+    try_to_deserialize,
+    try_to_serialize,
+)
 
 __all__ = [
     "StatefulDataLoader",
@@ -56,6 +64,15 @@ from torch.utils.data.dataloader import (
 )
 
 logger = logging.getLogger(__name__)
+
+_INDEX_SAMPLER_STATE = "_index_sampler_state"
+_SAMPLER_ITER_STATE = "_sampler_iter_state"
+_SAMPLER_ITER_YIELDED = "_sampler_iter_yielded"
+_NUM_YIELDED = "_num_yielded"
+_ITERABLEDATASET_LEN_CALLED = "_IterableDataset_len_called"
+_SHARED_SEED = "_shared_seed"
+_BASE_SEED = "_base_seed"
+_ITERATOR_FINISHED = "_iterator_finished"
 
 
 class StatefulDataLoader(DataLoader[T_co]):
@@ -299,40 +316,40 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
     def state_dict(self):
         if self._dataset_kind == _DatasetKind.Iterable:
             fetcher_state = {
-                "dataset_iter": try_to_serialize(self._dataset_fetcher.dataset_iter),
-                "ended": self._dataset_fetcher.ended,
+                _DATASET_ITER_STATE: try_to_serialize(self._dataset_fetcher.dataset_iter),
+                _FETCHER_ENDED: self._dataset_fetcher.ended,
             }
         else:
             fetcher_state = None
         state_dict = {
-            "_index_sampler": try_to_serialize(self._index_sampler),
-            "_sampler_iter": try_to_serialize(self._sampler_iter),
-            "_sampler_iter_yielded": self._sampler_iter_yielded,
-            "_num_yielded": self._num_yielded,
-            "_IterableDataset_len_called": self._IterableDataset_len_called,
-            "_shared_seed": self._shared_seed,
-            "fetcher_state": fetcher_state,
-            "dataset_state": try_to_serialize(self._dataset_fetcher.dataset),
-            "_finished": self._finished,
+            _INDEX_SAMPLER_STATE: try_to_serialize(self._index_sampler),
+            _SAMPLER_ITER_STATE: try_to_serialize(self._sampler_iter),
+            _SAMPLER_ITER_YIELDED: self._sampler_iter_yielded,
+            _NUM_YIELDED: self._num_yielded,
+            _ITERABLEDATASET_LEN_CALLED: self._IterableDataset_len_called,
+            _SHARED_SEED: self._shared_seed,
+            _FETCHER_STATE: fetcher_state,
+            _DATASET_STATE: try_to_serialize(self._dataset_fetcher.dataset),
+            _ITERATOR_FINISHED: self._finished,
         }
 
         return state_dict
 
     def load_state_dict(self, state_dict):
         # Try to restore from either _index_sampler state_dict or _sampler_iter state_dict
-        self._sampler_iter_yielded = state_dict["_sampler_iter_yielded"]
+        self._sampler_iter_yielded = state_dict[_SAMPLER_ITER_YIELDED]
         if isinstance(self._index_sampler, Stateful) or isinstance(self._sampler_iter, Stateful):
-            self._index_sampler = try_to_deserialize(self._index_sampler, state_dict["_index_sampler"])
+            self._index_sampler = try_to_deserialize(self._index_sampler, state_dict[_INDEX_SAMPLER_STATE])
             self._sampler_iter = iter(self._index_sampler)
-            if state_dict["_sampler_iter"] is not None:
-                self._sampler_iter = try_to_deserialize(self._sampler_iter, state_dict["_sampler_iter"])
+            if state_dict[_SAMPLER_ITER_STATE] is not None:
+                self._sampler_iter = try_to_deserialize(self._sampler_iter, state_dict[_SAMPLER_ITER_STATE])
         else:
             if not isinstance(self._index_sampler, torch.utils.data.dataloader._InfiniteConstantSampler):
                 # Fallback to fastforward
                 self._sampler_iter = itertools.islice(self._index_sampler, self._sampler_iter_yielded, None)
-        self._num_yielded = state_dict["_num_yielded"]
-        self._IterableDataset_len_called = state_dict["_IterableDataset_len_called"]
-        self._shared_seed = state_dict["_shared_seed"]
+        self._num_yielded = state_dict[_NUM_YIELDED]
+        self._IterableDataset_len_called = state_dict[_ITERABLEDATASET_LEN_CALLED]
+        self._shared_seed = state_dict[_SHARED_SEED]
 
         # Always restore in this order:
         #  1. try to restore dataset state
@@ -340,27 +357,27 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
         #  3. try to restore iterator state
         if self._dataset_kind != _DatasetKind.Iterable:
             # Map style just try to load dataset state
-            if state_dict["dataset_state"] is not None:
+            if state_dict[_DATASET_STATE] is not None:
                 self._dataset_fetcher.dataset = try_to_deserialize(
-                    self._dataset_fetcher.dataset, state_dict["dataset_state"]
+                    self._dataset_fetcher.dataset, state_dict[_DATASET_STATE]
                 )
         else:
             # Iterable
             if isinstance(self._dataset_fetcher.dataset, Stateful) or isinstance(
                 self._dataset_fetcher.dataset_iter, Stateful
             ):
-                if state_dict["dataset_state"] is not None:
+                if state_dict[_DATASET_STATE] is not None:
                     self._dataset_fetcher.dataset = try_to_deserialize(
-                        self._dataset_fetcher.dataset, state_dict["dataset_state"]
+                        self._dataset_fetcher.dataset, state_dict[_DATASET_STATE]
                     )
                     self._dataset_fetcher.dataset_iter = iter(self._dataset_fetcher.dataset)
-                if state_dict["fetcher_state"] is not None:
-                    if state_dict["fetcher_state"]["dataset_iter"] is not None:
+                if state_dict[_FETCHER_STATE] is not None:
+                    if state_dict[_FETCHER_STATE][_DATASET_ITER_STATE] is not None:
                         self._dataset_fetcher.dataset_iter = try_to_deserialize(
                             self._dataset_fetcher.dataset_iter,
-                            state_dict["fetcher_state"]["dataset_iter"],
+                            state_dict[_FETCHER_STATE][_DATASET_ITER_STATE],
                         )
-                    self._dataset_fetcher.ended = state_dict["fetcher_state"]["ended"]
+                    self._dataset_fetcher.ended = state_dict[_FETCHER_STATE][_FETCHER_ENDED]
             else:
                 # No state, just try to fastforward
                 if self._num_yielded > 0:
@@ -371,7 +388,7 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
                     )
                     for _ in range(self._num_yielded):
                         next(self)
-        self._finished = state_dict["_finished"]
+        self._finished = state_dict[_ITERATOR_FINISHED]
 
 
 class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
@@ -685,6 +702,13 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
     #     down.
 
     _last_yielded_worker_id: int
+    _NUM_WORKERS = "_num_workers"
+    _SNAPSHOT = "_snapshot"
+    _MAIN_SNAPSHOT = "_main_snapshot"
+    _WORKER_SNAPSHOTS = "_worker_snapshots"
+    _SNAPSHOT_STEP = "_snapshot_step"
+    _STEPS_SINCE_SNAPSHOT = "_steps_since_snapshot"
+    _LAST_YIELDED_WORKER_ID = "_last_yielded_worker_id"
 
     def __init__(self, loader, next_iter_state):
         super().__init__(loader)
@@ -719,12 +743,14 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
 
         worker_states = [None] * self._num_workers
         if next_iter_state is not None:
-            wstates = next_iter_state["snapshot"].get("worker_snapshots", {})
+            wstates = next_iter_state[self._SNAPSHOT].get(self._WORKER_SNAPSHOTS, {})
             assert set(range(len(wstates))) == set(wstates.keys()), (len(wstates), wstates.keys())
             for wid, sd in wstates.items():
                 worker_states[wid] = sd
-            self._base_seed = next_iter_state["snapshot"]["main_snapshot"].get("_base_seed", self._base_seed)
-            self._shared_seed = next_iter_state["snapshot"]["main_snapshot"].get("_shared_seed", self._shared_seed)
+            self._base_seed = next_iter_state[self._SNAPSHOT][self._MAIN_SNAPSHOT].get(_BASE_SEED, self._base_seed)
+            self._shared_seed = next_iter_state[self._SNAPSHOT][self._MAIN_SNAPSHOT].get(
+                _SHARED_SEED, self._shared_seed
+            )
 
         for i in range(self._num_workers):
             # No certainty which module multiprocessing_context is
@@ -818,15 +844,15 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
 
         # Try to restore main state
         if next_iter_state is not None:
-            self._restore_main_state(next_iter_state["snapshot"]["main_snapshot"])
-            self._num_yielded = next_iter_state["snapshot"]["snapshot_step"]
+            self._restore_main_state(next_iter_state[self._SNAPSHOT][self._MAIN_SNAPSHOT])
+            self._num_yielded = next_iter_state[self._SNAPSHOT][self._SNAPSHOT_STEP]
 
             fast_forward = False
             if self._dataset_kind == _DatasetKind.Iterable:
                 for state in worker_states:
                     if state is None:
                         continue
-                    if state["dataset_state"] is None and state["fetcher_state"]["dataset_iter"] is None:
+                    if state[_DATASET_STATE] is None and state[_FETCHER_STATE][_DATASET_ITER_STATE] is None:
                         fast_forward = True
                     break
 
@@ -843,18 +869,18 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                     for _ in range(self._num_yielded):
                         next(self)
                 # Check if last_yielded_worker_id matches
-                if self._last_yielded_worker_id != next_iter_state["snapshot"]["last_yielded_worker_id"]:
+                if self._last_yielded_worker_id != next_iter_state[self._SNAPSHOT][self._LAST_YIELDED_WORKER_ID]:
                     raise ValueError("last_yielded_worker_id does not match, the dataset may have changed")
             else:
-                self._last_yielded_worker_id = next_iter_state["snapshot"]["last_yielded_worker_id"]
+                self._last_yielded_worker_id = next_iter_state[self._SNAPSHOT][self._LAST_YIELDED_WORKER_ID]
                 for _ in range(self._last_yielded_worker_id + 1):
                     next(self._worker_queue_idx_cycle)
                 for _ in range(self._prefetch_factor * self._num_workers):
                     self._try_put_index()
 
-            for i in range(next_iter_state["steps_since_snapshot"]):
+            for i in range(next_iter_state[self._STEPS_SINCE_SNAPSHOT]):
                 next(self)
-            self._finished = next_iter_state["_finished"]
+            self._finished = next_iter_state[_ITERATOR_FINISHED]
 
     def _reset_state_vars(self):
         self._worker_snapshots = {}
@@ -904,11 +930,11 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                 self._try_put_index()
 
     def state_dict(self):
-        steps_since_snapshot = self._num_yielded - self._snapshot["snapshot_step"]
+        steps_since_snapshot = self._num_yielded - self._snapshot[self._SNAPSHOT_STEP]
         state_dict = {
-            "snapshot": self._snapshot,
-            "steps_since_snapshot": steps_since_snapshot,
-            "_finished": self._finished,
+            self._SNAPSHOT: self._snapshot,
+            self._STEPS_SINCE_SNAPSHOT: steps_since_snapshot,
+            _ITERATOR_FINISHED: self._finished,
         }
 
         return state_dict
@@ -1158,31 +1184,31 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
 
     def _get_main_state(self):
         return {
-            "_num_workers": self._num_workers,
-            "_sampler_iter": try_to_serialize(self._sampler_iter),
-            "_index_sampler": try_to_serialize(self._index_sampler),
-            "_sampler_iter_yielded": self._sampler_iter_yielded,
-            "_IterableDataset_len_called": self._IterableDataset_len_called,
-            "_shared_seed": self._shared_seed,
-            "_base_seed": self._base_seed,
+            self._NUM_WORKERS: self._num_workers,
+            _SAMPLER_ITER_STATE: try_to_serialize(self._sampler_iter),
+            _INDEX_SAMPLER_STATE: try_to_serialize(self._index_sampler),
+            _SAMPLER_ITER_YIELDED: self._sampler_iter_yielded,
+            _ITERABLEDATASET_LEN_CALLED: self._IterableDataset_len_called,
+            _SHARED_SEED: self._shared_seed,
+            _BASE_SEED: self._base_seed,
         }
 
     def _restore_main_state(self, state_dict):
-        assert self._num_workers == state_dict["_num_workers"]
+        assert self._num_workers == state_dict[self._NUM_WORKERS]
         # Try to restore from either _index_sampler state_dict or _sampler_iter state_dict
-        self._sampler_iter_yielded = state_dict["_sampler_iter_yielded"]
+        self._sampler_iter_yielded = state_dict[_SAMPLER_ITER_YIELDED]
         if isinstance(self._index_sampler, Stateful) or isinstance(self._sampler_iter, Stateful):
-            self._index_sampler = try_to_deserialize(self._index_sampler, state_dict["_index_sampler"])
+            self._index_sampler = try_to_deserialize(self._index_sampler, state_dict[_INDEX_SAMPLER_STATE])
             self._sampler_iter = iter(self._index_sampler)
-            if state_dict["_sampler_iter"] is not None:
-                self._sampler_iter = try_to_deserialize(self._sampler_iter, state_dict["_sampler_iter"])
+            if state_dict[_SAMPLER_ITER_STATE] is not None:
+                self._sampler_iter = try_to_deserialize(self._sampler_iter, state_dict[_SAMPLER_ITER_STATE])
         else:
             if not isinstance(self._index_sampler, torch.utils.data.dataloader._InfiniteConstantSampler):
                 # Fallback to fastforward
                 self._sampler_iter = itertools.islice(self._index_sampler, self._sampler_iter_yielded, None)
-        self._IterableDataset_len_called = state_dict["_IterableDataset_len_called"]
-        self._shared_seed = state_dict["_shared_seed"]
-        self._base_seed = state_dict["_base_seed"]
+        self._IterableDataset_len_called = state_dict[_ITERABLEDATASET_LEN_CALLED]
+        self._shared_seed = state_dict[_SHARED_SEED]
+        self._base_seed = state_dict[_BASE_SEED]
 
     def _try_put_index(self):
         assert self._tasks_outstanding < self._prefetch_factor * self._num_workers
@@ -1235,7 +1261,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._last_yielded_worker_id = worker_id
         # Update latest worker state
         if state_dict is not None:
-            self._worker_snapshots[state_dict["worker_id"]] = state_dict
+            self._worker_snapshots[state_dict[_WORKER_ID]] = state_dict
         if self._snapshot_interval and ((self._num_yielded + 1) % self._snapshot_interval == 0):
             self._take_snapshot()
         return data
@@ -1261,11 +1287,10 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         worker_snapshots: Dict[int, Any],
     ):
         self._snapshot = {
-            "snapshot_step": snapshot_step,
-            "last_yielded_worker_id": last_yielded_worker_id,
-            "num_workers": num_workers,
-            "main_snapshot": main_snapshot,
-            "worker_snapshots": dict(worker_snapshots),  # shallow copy
+            self._SNAPSHOT_STEP: snapshot_step,
+            self._LAST_YIELDED_WORKER_ID: last_yielded_worker_id,
+            self._MAIN_SNAPSHOT: main_snapshot,
+            self._WORKER_SNAPSHOTS: dict(worker_snapshots),  # shallow copy
         }
 
     def _mark_worker_as_unavailable(self, worker_id, shutdown=False):
