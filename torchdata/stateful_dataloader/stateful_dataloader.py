@@ -68,10 +68,8 @@ logger = logging.getLogger(__name__)
 _INDEX_SAMPLER_STATE = "_index_sampler_state"
 _SAMPLER_ITER_STATE = "_sampler_iter_state"
 _SAMPLER_ITER_YIELDED = "_sampler_iter_yielded"
-_NUM_YIELDED = "_num_yielded"
 _ITERABLEDATASET_LEN_CALLED = "_IterableDataset_len_called"
 _SHARED_SEED = "_shared_seed"
-_BASE_SEED = "_base_seed"
 _ITERATOR_FINISHED = "_iterator_finished"
 
 
@@ -289,6 +287,8 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
     _StatefulBaseDataLoader inherits from _BaseDataLoaderIter).
     """
 
+    _NUM_YIELDED = "_num_yielded"
+
     def __init__(self, loader, next_iter_state=None):
         super().__init__(loader)
         assert self._timeout == 0
@@ -321,23 +321,27 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
             }
         else:
             fetcher_state = None
+
         state_dict = {
             _INDEX_SAMPLER_STATE: try_to_serialize(self._index_sampler),
             _SAMPLER_ITER_STATE: try_to_serialize(self._sampler_iter),
             _SAMPLER_ITER_YIELDED: self._sampler_iter_yielded,
-            _NUM_YIELDED: self._num_yielded,
+            self._NUM_YIELDED: self._num_yielded,
             _ITERABLEDATASET_LEN_CALLED: self._IterableDataset_len_called,
             _SHARED_SEED: self._shared_seed,
             _FETCHER_STATE: fetcher_state,
             _DATASET_STATE: try_to_serialize(self._dataset_fetcher.dataset),
             _ITERATOR_FINISHED: self._finished,
         }
-
         return state_dict
 
     def load_state_dict(self, state_dict):
-        # Try to restore from either _index_sampler state_dict or _sampler_iter state_dict
+        assert (
+            self._NUM_YIELDED in state_dict
+        ), f"State doesn't contain key '{self._NUM_YIELDED}' expected for single process dataloader"
         self._sampler_iter_yielded = state_dict[_SAMPLER_ITER_YIELDED]
+
+        # Try to restore from either _index_sampler state_dict or _sampler_iter state_dict
         if isinstance(self._index_sampler, Stateful) or isinstance(self._sampler_iter, Stateful):
             self._index_sampler = try_to_deserialize(self._index_sampler, state_dict[_INDEX_SAMPLER_STATE])
             self._sampler_iter = iter(self._index_sampler)
@@ -347,7 +351,7 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
             if not isinstance(self._index_sampler, torch.utils.data.dataloader._InfiniteConstantSampler):
                 # Fallback to fastforward
                 self._sampler_iter = itertools.islice(self._index_sampler, self._sampler_iter_yielded, None)
-        self._num_yielded = state_dict[_NUM_YIELDED]
+        self._num_yielded = state_dict[self._NUM_YIELDED]
         self._IterableDataset_len_called = state_dict[_ITERABLEDATASET_LEN_CALLED]
         self._shared_seed = state_dict[_SHARED_SEED]
 
@@ -709,6 +713,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
     _SNAPSHOT_STEP = "_snapshot_step"
     _STEPS_SINCE_SNAPSHOT = "_steps_since_snapshot"
     _LAST_YIELDED_WORKER_ID = "_last_yielded_worker_id"
+    _BASE_SEED = "_base_seed"
 
     def __init__(self, loader, next_iter_state):
         super().__init__(loader)
@@ -743,11 +748,14 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
 
         worker_states = [None] * self._num_workers
         if next_iter_state is not None:
+            assert (
+                self._SNAPSHOT in next_iter_state
+            ), f"State doesn't contain key '{self._SNAPSHOT}' expected for multiprocess dataloader"
             wstates = next_iter_state[self._SNAPSHOT].get(self._WORKER_SNAPSHOTS, {})
             assert set(range(len(wstates))) == set(wstates.keys()), (len(wstates), wstates.keys())
             for wid, sd in wstates.items():
                 worker_states[wid] = sd
-            self._base_seed = next_iter_state[self._SNAPSHOT][self._MAIN_SNAPSHOT].get(_BASE_SEED, self._base_seed)
+            self._base_seed = next_iter_state[self._SNAPSHOT][self._MAIN_SNAPSHOT].get(self._BASE_SEED, self._base_seed)
             self._shared_seed = next_iter_state[self._SNAPSHOT][self._MAIN_SNAPSHOT].get(
                 _SHARED_SEED, self._shared_seed
             )
@@ -1190,7 +1198,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             _SAMPLER_ITER_YIELDED: self._sampler_iter_yielded,
             _ITERABLEDATASET_LEN_CALLED: self._IterableDataset_len_called,
             _SHARED_SEED: self._shared_seed,
-            _BASE_SEED: self._base_seed,
+            self._BASE_SEED: self._base_seed,
         }
 
     def _restore_main_state(self, state_dict):
@@ -1208,7 +1216,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                 self._sampler_iter = itertools.islice(self._index_sampler, self._sampler_iter_yielded, None)
         self._IterableDataset_len_called = state_dict[_ITERABLEDATASET_LEN_CALLED]
         self._shared_seed = state_dict[_SHARED_SEED]
-        self._base_seed = state_dict[_BASE_SEED]
+        self._base_seed = state_dict[self._BASE_SEED]
 
     def _try_put_index(self):
         assert self._tasks_outstanding < self._prefetch_factor * self._num_workers

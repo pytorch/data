@@ -740,5 +740,37 @@ class TestSnapshotEnd(unittest.TestCase):
             self.assertEqual(batches, exp)
 
 
+class TestNumWorkersMismatch(unittest.TestCase):
+    def test_num_workers_mismatch(self):
+        for initial_num_workers, num_workers in itertools.product([0, 5], [0, 3, 7]):
+            if initial_num_workers == num_workers:
+                continue
+            dataset = DummyMapDataset(100, shuffle=False)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=initial_num_workers,
+                collate_fn=identity,
+            )
+            state = dl.state_dict()
+            self.assertEqual(len(state), 0)
+
+            iter(dl)
+            state = dl.state_dict()
+            self.assertTrue(len(state) > 0)
+
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+            )
+            dl.load_state_dict(state)
+            try:
+                iter(dl)
+                raise Exception("Expected AssertionError to be thrown")
+            except AssertionError:
+                continue
+            self.assertTrue(False, "Error should be of type AssertionError")
+
+
 if __name__ == "__main__":
     unittest.main()
