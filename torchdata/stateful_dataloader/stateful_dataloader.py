@@ -723,6 +723,8 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             assert set(range(len(wstates))) == set(wstates.keys()), (len(wstates), wstates.keys())
             for wid, sd in wstates.items():
                 worker_states[wid] = sd
+            self._base_seed = next_iter_state["snapshot"]["main_snapshot"].get("_base_seed", self._base_seed)
+            self._shared_seed = next_iter_state["snapshot"]["main_snapshot"].get("_shared_seed", self._shared_seed)
 
         for i in range(self._num_workers):
             # No certainty which module multiprocessing_context is
@@ -1162,6 +1164,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             "_sampler_iter_yielded": self._sampler_iter_yielded,
             "_IterableDataset_len_called": self._IterableDataset_len_called,
             "_shared_seed": self._shared_seed,
+            "_base_seed": self._base_seed,
         }
 
     def _restore_main_state(self, state_dict):
@@ -1179,6 +1182,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                 self._sampler_iter = itertools.islice(self._index_sampler, self._sampler_iter_yielded, None)
         self._IterableDataset_len_called = state_dict["_IterableDataset_len_called"]
         self._shared_seed = state_dict["_shared_seed"]
+        self._base_seed = state_dict["_base_seed"]
 
     def _try_put_index(self):
         assert self._tasks_outstanding < self._prefetch_factor * self._num_workers

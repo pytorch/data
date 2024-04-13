@@ -92,39 +92,22 @@ class DummyMapDataset(torch.utils.data.Dataset):
         self.size = size
         self.data = [{"id": i, "strcol": f"strcol_{i}", "listcol": [i, i + 1, i + 2]} for i in range(size)]
         self.shuffle = shuffle
-        self.g = torch.Generator()
-        self.g.manual_seed(1)
-
-    def __getstate__(self):
-        """pickling generators fails on windows and mac, this makes sure
-        unit tests can proceed on those platforms
-        """
-        state = dict(self.__dict__)
-        del state["g"]
-        state["g_state"] = self.g.get_state()
-        return state
-
-    def __setstate__(self, state):
-        g_state = state.pop("g_state")
-        self.__dict__ = state
-        self.g = torch.Generator()
-        self.g.set_state(g_state)
 
     def __len__(self):
         return self.size
 
     def __getitem__(self, i):
         if self.shuffle:
-            i = torch.randint(self.size, (1,), generator=self.g).item()
+            i = torch.randint(self.size, (1,)).item()
         return self.data[i]
 
     def state_dict(self):
         return {
-            "g": self.g.get_state(),
+            "g": torch.get_rng_state(),
         }
 
     def load_state_dict(self, state_dict):
-        self.g.set_state(state_dict["g"])
+        torch.set_rng_state(state_dict["g"])
 
 
 def identity(x):
@@ -695,6 +678,8 @@ class TestSnapshotEnd(unittest.TestCase):
         every_n_steps = 10
         for pw, bs in itertools.product([False, True], [None, 4]):
             dataset = DummyMapDataset(100, shuffle=True)
+            generator = torch.Generator()
+            generator.manual_seed(15)
             dl = StatefulDataLoader(
                 dataset=dataset,
                 num_workers=num_workers,
@@ -702,12 +687,14 @@ class TestSnapshotEnd(unittest.TestCase):
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
                 batch_size=bs,
+                generator=generator,
             )
             list(dl)
             state_end = dl.state_dict()
             exp = list(dl)
 
             dataset = DummyMapDataset(100, shuffle=True)
+            generator.manual_seed(15)
             dl = StatefulDataLoader(
                 dataset=dataset,
                 num_workers=num_workers,
@@ -715,6 +702,7 @@ class TestSnapshotEnd(unittest.TestCase):
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
                 batch_size=bs,
+                generator=generator,
             )
             dl.load_state_dict(state_end)
             batches = list(dl)
