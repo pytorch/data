@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 r"""Definition of the StatefulDataLoader and associated iterators.
 
 This file is a stand-in for torch.utils.data.dataloader, and includes a
@@ -886,7 +892,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                 for _ in range(self._prefetch_factor * self._num_workers):
                     self._try_put_index()
 
-            for i in range(next_iter_state[self._STEPS_SINCE_SNAPSHOT]):
+            for _ in range(next_iter_state[self._STEPS_SINCE_SNAPSHOT]):
                 next(self)
             self._finished = next_iter_state[_ITERATOR_FINISHED]
 

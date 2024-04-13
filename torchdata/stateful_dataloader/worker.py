@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 r""""Contains definitions of the methods used by the _BaseDataLoaderIter workers.
 
 These **needs** to be in global scope since Py2 doesn't support serializing

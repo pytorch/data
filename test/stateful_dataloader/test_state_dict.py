@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import copy
 import itertools
 import unittest
@@ -226,7 +232,7 @@ class TestStatefulDataLoaderMap(TestStatefulDataLoaderIterable):
             interrupt = len(dl)
 
         it = iter(dl)
-        for i in range(interrupt):
+        for _ in range(interrupt):
             next(it)
 
         state_dict = dl.state_dict()
@@ -273,7 +279,7 @@ class TestStatefulSampler(TestStatefulDataLoaderIterable):
             interrupt = len(dl)
 
         it = iter(dl)
-        for i in range(interrupt):
+        for _ in range(interrupt):
             next(it)
 
         state_dict = dl.state_dict()
@@ -370,7 +376,7 @@ class TestStatefulDataLoaderGenerator(TestStatefulDataLoaderIterable):
         )
         batches = []
         it = iter(dl)
-        for i in range(interrupt):
+        for _ in range(interrupt):
             batches.append(next(it))
         state_dict = dl.state_dict()
 
@@ -417,7 +423,7 @@ class TestStatefulDataLoaderGeneratorNoState(TestStatefulDataLoaderIterable):
         )
         batches = []
         it = iter(dl)
-        for i in range(interrupt):
+        for _ in range(interrupt):
             batches.append(next(it))
         state_dict = dl.state_dict()
 
