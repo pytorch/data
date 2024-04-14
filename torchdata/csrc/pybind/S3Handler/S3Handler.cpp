@@ -334,9 +334,9 @@ void S3Handler::S3Read(const std::string& file_url, std::string* result) {
   uint64_t offset = 0;
   uint64_t result_size = 0;
   uint64_t file_size = GetFileSize(bucket, object);
-  size_t part_count =
-      (std::
-           max)(static_cast<size_t>((file_size + buffer_size_ - 1) / buffer_size_), static_cast<size_t>(1));
+  size_t part_count = (std::max)(
+      static_cast<size_t>((file_size + buffer_size_ - 1) / buffer_size_),
+      static_cast<size_t>(1));
   result->resize(file_size);
 
   for (int i = 0; i < part_count; i++) {
