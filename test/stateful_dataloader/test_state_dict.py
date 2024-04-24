@@ -784,7 +784,7 @@ class TestTorchDataLazyImport(unittest.TestCase):
 
         self.assertFalse("datapipes" in torchdata.__dict__)
 
-        from torchdata import _extension, datapipes as dp, janitor  # noqa  # noqa
+        from torchdata import datapipes as dp, janitor  # noqa  # noqa
 
         self.assertTrue("datapipes" in torchdata.__dict__)
         dp.iter.IterableWrapper([1, 2])
