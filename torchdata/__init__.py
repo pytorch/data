@@ -22,8 +22,8 @@ assert __all__ == sorted(__all__)
 
 # Lazy import all modules
 def __getattr__(name):
-    if name in ("janitor", "datapipes"):
-        from torchdata import _extension  # noqa: F401
+    if not name.startswith("stateful_dataloader"):
+        importlib.import_module("._extension", __name__)
 
     if name == "janitor":
         return importlib.import_module(".datapipes.utils." + name, __name__)
