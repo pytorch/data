@@ -20,7 +20,7 @@ __all__ = [
 assert __all__ == sorted(__all__)
 
 
-# Lazy import these modules
+# Lazy import all modules
 def __getattr__(name):
     if name == "janitor":
         return importlib.import_module(".datapipes.utils." + name, __name__)
