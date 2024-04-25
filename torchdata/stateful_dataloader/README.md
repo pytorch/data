@@ -1,8 +1,9 @@
 # StatefulDataLoader
 
-[**Saving and Loading State**](#saving-and-loading-state) | [**Custom State: Map-Style**](#saving-custom-state-with) |
-[**Custom State: Iterable-Style**](#saving-custom-state-with-1) | [**Install guide**](#installation) |
-[**Beta Usage and Feedback**](#beta-usage-and-feedback) | [**License**](#license)
+[**Saving and Loading State**](#saving-and-loading-state) |
+[**Custom State: Map-Style**](#saving-custom-state-with-map-style-datasets) |
+[**Custom State: Iterable-Style**](#saving-custom-state-with-iterable-style-datasets) |
+[**Install guide**](#installation) | [**Beta Usage and Feedback**](#beta-usage-and-feedback) | [**License**](#license)
 
 `StatefulDataLoader` is a drop-in replacement for `torch.utils.data.DataLoader` which offers
 `state_dict/load_state_dict` methods for handling mid-epoch checkpointing which operate on the previous/next iterator
