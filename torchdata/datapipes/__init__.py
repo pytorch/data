@@ -6,6 +6,8 @@
 
 from torch.utils.data import DataChunk, functional_datapipe
 
+from torchdata import _extension  # noqa: F401
+
 from . import iter, map, utils
 
 __all__ = ["DataChunk", "functional_datapipe", "iter", "map", "utils"]
