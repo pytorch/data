@@ -21,7 +21,7 @@ handles aggregation and distribution of state across multiprocess workers (but n
 Using pip:
 
 ```bash
-pip install --pre torchdata --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+pip install --pre torchdata --index-url https://download.pytorch.org/whl/nightly/cpu
 ```
 
 Using conda:
@@ -65,6 +65,9 @@ import torch
 import torch.utils.data
 from torchdata.stateful_dataloader import StatefulDataLoader
 
+# If you are using the default RandomSampler and BatchSampler in torch.utils.data
+# they are patched when you import torchdata.stateful_dataloader so that defining
+# a custom sampler here is unnecessary
 class MySampler(torch.utils.data.Sampler[int]):
   def __init__(self, high: int, seed: int, limit: int):
     self.seed, self.high, self.limit = seed, high, limit
@@ -106,6 +109,7 @@ class NoisyRange(torch.utils.data.Dataset):
   def state_dict(self):
     return {"rng": torch.get_rng_state()}
 
+# Test both single/multiprocess dataloading
 for num_workers in [0, 2]:
   print(f"{num_workers=}")
   dl = StatefulDataLoader(NoisyRange(5, 1, 1), sampler=MySampler(5, 1, 10),
@@ -176,6 +180,7 @@ class MyIterableDataset(torch.utils.data.IterableDataset):
   def load_state_dict(self, state_dict):
     self.i = state_dict["i"]
 
+# Test both single/multiprocess dataloading
 for num_workers in [0, 2]:
   print(f"{num_workers=}")
   dl = StatefulDataLoader(
