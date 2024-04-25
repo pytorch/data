@@ -1638,6 +1638,7 @@ except RuntimeError as e:
                     list(self._get_data_loader(ds_cls(counting_ds_n), multiprocessing_context=ctx, **dl_common_args)),
                 )
 
+    @unittest.skipIf(IS_MACOS, "Not working on macos")
     def _test_multiprocessing_iterdatapipe(self, with_dill):
         # Testing to make sure that function from global scope (e.g. imported from library) can be serialized
         # and used with multiprocess DataLoader
