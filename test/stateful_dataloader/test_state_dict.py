@@ -778,5 +778,17 @@ class TestNumWorkersMismatch(unittest.TestCase):
             self.assertTrue(False, "Error should be of type AssertionError")
 
 
+class TestTorchDataLazyImport(unittest.TestCase):
+    def test_lazy_imports(self) -> None:
+        import torchdata
+
+        self.assertFalse("datapipes" in torchdata.__dict__)
+
+        from torchdata import datapipes as dp, janitor  # noqa
+
+        self.assertTrue("datapipes" in torchdata.__dict__)
+        dp.iter.IterableWrapper([1, 2])
+
+
 if __name__ == "__main__":
     unittest.main()

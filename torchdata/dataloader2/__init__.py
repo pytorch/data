@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from torchdata import _extension  # noqa: F401
 from torchdata.dataloader2.dataloader2 import DataLoader2, DataLoader2Iterator
 from torchdata.dataloader2.error import PauseIteration
 from torchdata.dataloader2.reading_service import (

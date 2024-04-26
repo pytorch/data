@@ -6,6 +6,8 @@
 
 from typing import List
 
+from torchdata import _extension  # noqa: F401
+
 # TODO: Add pyi generate script
 class S3Handler:
     def __init__(self, request_timeout_ms: int, region: str) -> None: ...
