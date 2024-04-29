@@ -10,7 +10,7 @@ import unittest
 from typing import Iterator
 
 import torch
-
+import torch.utils.data
 from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
 
 
@@ -788,6 +788,25 @@ class TestTorchDataLazyImport(unittest.TestCase):
 
         self.assertTrue("datapipes" in torchdata.__dict__)
         dp.iter.IterableWrapper([1, 2])
+
+
+class TestConcurrentDataLoaders(unittest.TestCase):
+    def test_two_dataloaders(self) -> None:
+        dataset = DummyMapDataset(100, shuffle=False)
+        sdl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=2,
+            collate_fn=identity,
+        )
+        exp = list(sdl)
+
+        dl = torch.utils.data.DataLoader(
+            dataset=dataset,
+            num_workers=2,
+            collate_fn=identity,
+        )
+        data = list(dl)
+        self.assertEqual(data, exp)
 
 
 if __name__ == "__main__":

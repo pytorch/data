@@ -235,6 +235,3 @@ def _worker_loop(
     if done_event.is_set():
         data_queue.cancel_join_thread()
         data_queue.close()
-
-
-torch.utils.data._utils.worker._worker_loop = _worker_loop  # type: ignore[assignment]

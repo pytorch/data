@@ -47,6 +47,7 @@ from .worker import (
     _FETCHER_ENDED,
     _FETCHER_STATE,
     _WORKER_ID,
+    _worker_loop,
     try_to_deserialize,
     try_to_serialize,
 )
@@ -774,7 +775,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             index_queue.cancel_join_thread()
 
             w = multiprocessing_context.Process(
-                target=_utils.worker._worker_loop,
+                target=_worker_loop,
                 args=(
                     self._dataset_kind,
                     self._dataset,
