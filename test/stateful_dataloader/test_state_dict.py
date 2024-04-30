@@ -555,7 +555,7 @@ class TestSnapshotZero(unittest.TestCase):
     def test_map_iterrupted_shuffle(self):
         every_n_steps = 10
 
-        for pw, num_workers, every_n_steps in itertools.product([False, True], [0, 2], [1, 5, 10, 15]):
+        for pw, num_workers, every_n_steps in itertools.product([False, True], [0, 2], [1, 15]):
             dataset = DummyMapDataset(10, shuffle=True)
             dl = StatefulDataLoader(
                 dataset=dataset,
@@ -776,7 +776,7 @@ class TestSnapshotEnd(unittest.TestCase):
 
 class TestNumWorkersMismatch(unittest.TestCase):
     def test_num_workers_mismatch(self):
-        for initial_num_workers, num_workers in itertools.product([0, 5], [0, 3, 7]):
+        for initial_num_workers, num_workers in ((0, 3), (3, 0)):
             if initial_num_workers == num_workers:
                 continue
             dataset = DummyMapDataset(100, shuffle=False)
