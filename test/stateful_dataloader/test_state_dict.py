@@ -784,7 +784,7 @@ class TestNumWorkersMismatch(unittest.TestCase):
                 dataset=dataset,
                 num_workers=initial_num_workers,
                 collate_fn=identity,
-                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
+                multiprocessing_context="forkserver" if IS_MACOS and initial_num_workers else None,
             )
             state = dl.state_dict()
             self.assertEqual(len(state), 0)
