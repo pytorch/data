@@ -86,7 +86,7 @@ jobs:
       - name: Run DataPipes tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run:
-          pytest --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py
+          pytest --durations=0 --no-header -v test --ignore=test/test_period.py --ignore=test/test_text_examples.py
           --ignore=test/test_audio_examples.py --ignore=test/test_aistore.py
           --ignore=test/dataloader2/test_dataloader2.py --ignore=test/dataloader2/test_mprs.py
           --ignore=test/test_distributed.py --ignore=test/stateful_dataloader/test_dataloader.py
