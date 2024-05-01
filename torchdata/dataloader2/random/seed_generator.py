@@ -15,11 +15,12 @@ _UINT64_UPPER_BOUND = 2 ** 64
 
 
 def _get_torch_random_seed():
-    iinfo = torch.iinfo(torch.int64)
-    seed = torch.randint(iinfo.min, iinfo.max, ()).item()
-    # Convert int64 to uint64
-    seed += 2 ** 63
-    return seed
+    with torch.random.fork_rng():
+        iinfo = torch.iinfo(torch.int64)
+        seed = torch.randint(iinfo.min, iinfo.max, ()).item()
+        # Convert int64 to uint64
+        seed += 2 ** 63
+        return seed
 
 
 class SeedGenerator:

@@ -85,4 +85,4 @@ jobs:
           cd ..
       - name: Run StatefulDataLoader tests with pytest
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run: pytest --no-header -v test/stateful_dataloader
+        run: pytest --durations=0 --no-header -v test/stateful_dataloader

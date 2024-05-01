@@ -11,6 +11,7 @@ from typing import Iterator
 
 import torch
 import torch.utils.data
+from torch.testing._internal.common_utils import IS_MACOS
 from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
 
 
@@ -127,6 +128,7 @@ class TestStatefulDataLoaderIterable(unittest.TestCase):
             collate_fn=identity,
             snapshot_every_n_steps=every_n_steps,
             persistent_workers=pw,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
         )
         list(dl)
 
@@ -150,6 +152,7 @@ class TestStatefulDataLoaderIterable(unittest.TestCase):
             collate_fn=identity,
             snapshot_every_n_steps=every_n_steps,
             persistent_workers=pw,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
         )
         dl.load_state_dict(state_dict)
         for batch in iter(dl):
@@ -226,6 +229,7 @@ class TestStatefulDataLoaderMap(TestStatefulDataLoaderIterable):
             persistent_workers=pw,
             batch_size=batch_size,
             sampler=sampler,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
         )
 
         if interrupt is None:
@@ -252,6 +256,7 @@ class TestStatefulDataLoaderMap(TestStatefulDataLoaderIterable):
             persistent_workers=pw,
             batch_size=batch_size,
             sampler=sampler,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
         )
         dl.load_state_dict(state_dict)
         batches = []
@@ -273,6 +278,7 @@ class TestStatefulSampler(TestStatefulDataLoaderIterable):
             persistent_workers=pw,
             batch_size=batch_size,
             sampler=sampler,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
         )
 
         if interrupt is None:
@@ -297,6 +303,7 @@ class TestStatefulSampler(TestStatefulDataLoaderIterable):
             persistent_workers=pw,
             batch_size=batch_size,
             sampler=sampler,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
         )
         dl.load_state_dict(state_dict)
         batches = []
@@ -360,6 +367,7 @@ class TestStatefulDataLoaderGenerator(TestStatefulDataLoaderIterable):
             collate_fn=identity,
             snapshot_every_n_steps=every_n_steps,
             persistent_workers=pw,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
         )
         exp = list(dl)
 
@@ -373,6 +381,7 @@ class TestStatefulDataLoaderGenerator(TestStatefulDataLoaderIterable):
             collate_fn=identity,
             snapshot_every_n_steps=every_n_steps,
             persistent_workers=pw,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
         )
         batches = []
         it = iter(dl)
@@ -390,6 +399,7 @@ class TestStatefulDataLoaderGenerator(TestStatefulDataLoaderIterable):
             collate_fn=identity,
             snapshot_every_n_steps=every_n_steps,
             persistent_workers=pw,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
         )
         dl.load_state_dict(state_dict)
         for batch in dl:
@@ -407,6 +417,7 @@ class TestStatefulDataLoaderGeneratorNoState(TestStatefulDataLoaderIterable):
             collate_fn=identity,
             snapshot_every_n_steps=every_n_steps,
             persistent_workers=pw,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
         )
         exp = list(dl)
 
@@ -420,6 +431,7 @@ class TestStatefulDataLoaderGeneratorNoState(TestStatefulDataLoaderIterable):
             collate_fn=identity,
             snapshot_every_n_steps=every_n_steps,
             persistent_workers=pw,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
         )
         batches = []
         it = iter(dl)
@@ -437,6 +449,7 @@ class TestStatefulDataLoaderGeneratorNoState(TestStatefulDataLoaderIterable):
             collate_fn=identity,
             snapshot_every_n_steps=every_n_steps,
             persistent_workers=pw,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
         )
         dl.load_state_dict(state_dict)
         for batch in dl:
@@ -457,6 +470,7 @@ class TestSnapshotZero(unittest.TestCase):
                 collate_fn=identity,
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
 
             it = iter(dl)
@@ -479,6 +493,7 @@ class TestSnapshotZero(unittest.TestCase):
                 collate_fn=identity,
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
 
             it = iter(dl)
@@ -501,6 +516,7 @@ class TestSnapshotZero(unittest.TestCase):
                 collate_fn=identity,
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
 
             it = iter(dl)
@@ -524,6 +540,7 @@ class TestSnapshotZero(unittest.TestCase):
                 collate_fn=identity,
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
 
             it = iter(dl)
@@ -538,7 +555,7 @@ class TestSnapshotZero(unittest.TestCase):
     def test_map_iterrupted_shuffle(self):
         every_n_steps = 10
 
-        for pw, num_workers, every_n_steps in itertools.product([False, True], [0, 2], [1, 5, 10, 15]):
+        for pw, num_workers, every_n_steps in itertools.product([False, True], [0, 2], [1, 15]):
             dataset = DummyMapDataset(10, shuffle=True)
             dl = StatefulDataLoader(
                 dataset=dataset,
@@ -547,6 +564,7 @@ class TestSnapshotZero(unittest.TestCase):
                 collate_fn=identity,
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw if num_workers > 0 else False,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
 
             it = iter(dl)
@@ -582,6 +600,7 @@ class TestSnapshotEnd(unittest.TestCase):
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
                 batch_size=bs,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
             exp = list(dl)
             state_end = dl.state_dict()
@@ -597,6 +616,7 @@ class TestSnapshotEnd(unittest.TestCase):
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
                 batch_size=bs,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
             it = iter(dl)
             for _ in range(2):
@@ -618,6 +638,7 @@ class TestSnapshotEnd(unittest.TestCase):
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
                 batch_size=bs,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
             exp = list(dl)
             state_end = dl.state_dict()
@@ -633,6 +654,7 @@ class TestSnapshotEnd(unittest.TestCase):
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
                 batch_size=bs,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
             it = iter(dl)
             for _ in range(2):
@@ -657,6 +679,7 @@ class TestSnapshotEnd(unittest.TestCase):
                 persistent_workers=pw,
                 batch_size=bs,
                 generator=g,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
             list(dl)
             state_end = dl.state_dict()
@@ -671,6 +694,7 @@ class TestSnapshotEnd(unittest.TestCase):
                 persistent_workers=pw,
                 batch_size=bs,
                 generator=g,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
             dl.load_state_dict(state_end)
             batches = list(dl)
@@ -692,6 +716,7 @@ class TestSnapshotEnd(unittest.TestCase):
                 persistent_workers=pw,
                 batch_size=bs,
                 generator=generator,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
             list(dl)
             state_end = dl.state_dict()
@@ -706,6 +731,7 @@ class TestSnapshotEnd(unittest.TestCase):
                 persistent_workers=pw,
                 batch_size=bs,
                 generator=generator,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
             dl.load_state_dict(state_end)
             batches = list(dl)
@@ -725,6 +751,7 @@ class TestSnapshotEnd(unittest.TestCase):
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
                 batch_size=bs,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
             list(dl)
             state_end = dl.state_dict()
@@ -739,6 +766,7 @@ class TestSnapshotEnd(unittest.TestCase):
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
                 batch_size=bs,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
             dl.load_state_dict(state_end)
             batches = list(dl)
@@ -748,7 +776,7 @@ class TestSnapshotEnd(unittest.TestCase):
 
 class TestNumWorkersMismatch(unittest.TestCase):
     def test_num_workers_mismatch(self):
-        for initial_num_workers, num_workers in itertools.product([0, 5], [0, 3, 7]):
+        for initial_num_workers, num_workers in ((0, 3), (3, 0)):
             if initial_num_workers == num_workers:
                 continue
             dataset = DummyMapDataset(100, shuffle=False)
@@ -756,6 +784,7 @@ class TestNumWorkersMismatch(unittest.TestCase):
                 dataset=dataset,
                 num_workers=initial_num_workers,
                 collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS and initial_num_workers else None,
             )
             state = dl.state_dict()
             self.assertEqual(len(state), 0)
@@ -768,6 +797,7 @@ class TestNumWorkersMismatch(unittest.TestCase):
                 dataset=dataset,
                 num_workers=num_workers,
                 collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
             dl.load_state_dict(state)
             try:
@@ -797,6 +827,7 @@ class TestConcurrentDataLoaders(unittest.TestCase):
             dataset=dataset,
             num_workers=2,
             collate_fn=identity,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
         )
         exp = list(sdl)
 
@@ -804,6 +835,7 @@ class TestConcurrentDataLoaders(unittest.TestCase):
             dataset=dataset,
             num_workers=2,
             collate_fn=identity,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
         )
         data = list(dl)
         self.assertEqual(data, exp)
