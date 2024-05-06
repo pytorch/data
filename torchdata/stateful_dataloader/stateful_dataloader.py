@@ -753,15 +753,18 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._index_queues = []
         self._workers = []
 
-        worker_states = [None] * self._num_workers
+        worker_states = {self._worker_key(i): None for i in range(self._num_workers)}
         if next_iter_state is not None:
             assert (
                 self._SNAPSHOT in next_iter_state
             ), f"State doesn't contain key '{self._SNAPSHOT}' expected for multiprocess dataloader"
             wstates = next_iter_state[self._SNAPSHOT].get(self._WORKER_SNAPSHOTS, {})
-            assert set(range(len(wstates))) == set(wstates.keys()), (len(wstates), wstates.keys())
-            for wid, sd in wstates.items():
-                worker_states[wid] = sd
+            assert set(map(self._worker_key, range(len(wstates)))) == set(wstates.keys()), (
+                len(wstates),
+                wstates.keys(),
+            )
+            for worker_key, sd in wstates.items():
+                worker_states[worker_key] = sd
             self._base_seed = next_iter_state[self._SNAPSHOT][self._MAIN_SNAPSHOT].get(self._BASE_SEED, self._base_seed)
             self._shared_seed = next_iter_state[self._SNAPSHOT][self._MAIN_SNAPSHOT].get(
                 _SHARED_SEED, self._shared_seed
@@ -791,7 +794,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                     self._num_workers,
                     self._persistent_workers,
                     self._shared_seed,
-                    worker_states[i],
+                    worker_states[self._worker_key(i)],
                 ),
             )
             w.daemon = True
@@ -863,11 +866,11 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             self._num_yielded = next_iter_state[self._SNAPSHOT][self._SNAPSHOT_STEP]
 
             # Back-fill the worker snapshots before starting, in case of failure before a full cycle
-            self._worker_snapshots = {i: state for i, state in enumerate(worker_states)}
+            self._worker_snapshots = worker_states
 
             fast_forward = False
             if self._dataset_kind == _DatasetKind.Iterable:
-                for state in worker_states:
+                for state in worker_states.values():
                     if state is None:
                         continue
                     if state[_DATASET_STATE] is None and state[_FETCHER_STATE][_DATASET_ITER_STATE] is None:
@@ -1138,6 +1141,9 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                 if success:
                     return data
 
+    def _worker_key(self, worker_id: int) -> str:
+        return f"worker_{worker_id}"
+
     def _next_data(self):
         while True:
             # If the worker responsible for `self._rcvd_idx` has already ended
@@ -1166,7 +1172,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             if len(self._task_info[self._rcvd_idx]) == 2:
                 data, worker_id, state_dict = self._task_info.pop(self._rcvd_idx)[1]
                 if isinstance(data, _utils.worker._IterableDatasetStopIteration):
-                    self._worker_snapshots[data.worker_id] = state_dict
+                    self._worker_snapshots[self._worker_key(data.worker_id)] = state_dict
                     self._rcvd_idx += 1
                     continue
                 else:
@@ -1194,7 +1200,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             else:
                 del self._task_info[idx]
                 if isinstance(data, _utils.worker._IterableDatasetStopIteration):
-                    self._worker_snapshots[data.worker_id] = state_dict
+                    self._worker_snapshots[self._worker_key(data.worker_id)] = state_dict
                     self._rcvd_idx += 1
                     continue
                 else:
@@ -1279,7 +1285,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._last_yielded_worker_id = worker_id
         # Update latest worker state
         if state_dict is not None:
-            self._worker_snapshots[state_dict[_WORKER_ID]] = state_dict
+            self._worker_snapshots[self._worker_key(state_dict[_WORKER_ID])] = state_dict
         if self._snapshot_interval and ((self._num_yielded + 1) % self._snapshot_interval == 0):
             self._take_snapshot()
         return data
