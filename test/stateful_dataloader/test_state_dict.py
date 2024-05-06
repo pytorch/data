@@ -99,10 +99,11 @@ class DummyIterableDataset(torch.utils.data.IterableDataset):
 
 
 class DummyMapDataset(torch.utils.data.Dataset):
-    def __init__(self, size, shuffle):
+    def __init__(self, size, shuffle, include_generator=True):
         self.size = size
         self.data = [{"id": i, "strcol": f"strcol_{i}", "listcol": [i, i + 1, i + 2]} for i in range(size)]
         self.shuffle = shuffle
+        self.include_generator = include_generator
 
     def __len__(self):
         return self.size
@@ -113,12 +114,16 @@ class DummyMapDataset(torch.utils.data.Dataset):
         return self.data[i]
 
     def state_dict(self):
-        return {
-            "g": torch.get_rng_state(),
-        }
+        if self.include_generator:
+            return {
+                "g": torch.get_rng_state(),
+            }
+        else:
+            return {}
 
     def load_state_dict(self, state_dict):
-        torch.set_rng_state(state_dict["g"])
+        if self.include_generator:
+            torch.set_rng_state(state_dict["g"])
 
 
 def identity(x):
@@ -893,7 +898,7 @@ class TestFastStateDictRequest(unittest.TestCase):
 
 
 class TestJsonSerDe(unittest.TestCase):
-    def _run_test(self, num_workers):
+    def _run_test_iterable(self, num_workers):
         interrupt = 4
         dataset = DummyIterableDataset([0, 100, 37], shuffle=False, include_generator=False)
         dl = StatefulDataLoader(
@@ -929,11 +934,56 @@ class TestJsonSerDe(unittest.TestCase):
 
         self.assertEqual(exp, batches)
 
+    def _run_test_map(self, num_workers):
+        interrupt = 4
+        dataset = DummyMapDataset(100, shuffle=False, include_generator=False)
+        sampler = DummySampler(100)
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            sampler=sampler,
+            num_workers=num_workers,
+            collate_fn=identity,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
+        )
+        list(dl)
+
+        exp = []
+        it = iter(dl)
+        for _ in range(interrupt):
+            next(it)
+
+        state_dict = dl.state_dict()
+        ser = json.dumps(state_dict)
+        for data in it:
+            exp.append(data)
+
+        # Restore new instance from state
+        batches = []
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            sampler=sampler,
+            num_workers=num_workers,
+            collate_fn=identity,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
+        )
+        deser = json.loads(ser)
+        dl.load_state_dict(deser)
+        for batch in iter(dl):
+            batches.append(batch)
+
+        self.assertEqual(exp, batches)
+
     def test_json_serde_single_process(self):
-        self._run_test(0)
+        self._run_test_iterable(0)
 
     def test_json_serde_multi_process(self):
-        self._run_test(3)
+        self._run_test_iterable(3)
+
+    def test_json_serde_single_process_map(self):
+        self._run_test_map(0)
+
+    def test_json_serde_multi_process_map(self):
+        self._run_test_map(3)
 
 
 if __name__ == "__main__":
