@@ -1308,7 +1308,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         last_yielded_worker_id: int,
         num_workers: int,
         main_snapshot: Dict[str, Any],
-        worker_snapshots: Dict[int, Any],
+        worker_snapshots: Dict[str, Any],
     ):
         self._snapshot = {
             self._SNAPSHOT_STEP: snapshot_step,
