@@ -862,6 +862,9 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             self._restore_main_state(next_iter_state[self._SNAPSHOT][self._MAIN_SNAPSHOT])
             self._num_yielded = next_iter_state[self._SNAPSHOT][self._SNAPSHOT_STEP]
 
+            # Back-fill the worker snapshots before starting, in case of failure before a full cycle
+            self._worker_snapshots = {i: state for i, state in enumerate(worker_states)}
+
             fast_forward = False
             if self._dataset_kind == _DatasetKind.Iterable:
                 for state in worker_states:
