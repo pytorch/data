@@ -841,5 +841,50 @@ class TestConcurrentDataLoaders(unittest.TestCase):
         self.assertEqual(data, exp)
 
 
+class TestFastStateDictRequest(unittest.TestCase):
+    def test_fast_state_dict_request(self) -> None:
+        num_workers = 4
+        interrupt = 11  # because of round robin, this should stop after worker 2
+        dataset = DummyIterableDataset([25, 25, 25, 25], shuffle=True)
+
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            batch_size=4,
+            collate_fn=identity,
+            persistent_workers=True,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+        )
+        it = iter(dl)
+        for _ in range(interrupt):
+            next(it)
+
+        state_dict = dl.state_dict()
+        for _ in range(2):
+            next(it)
+        exp = list(it)
+
+        dl.load_state_dict(state_dict)
+        # new iter after load_state_dict, ask for state dict before num_workers batches
+        # are yielded to ensure old worker states are stored properly
+        it = iter(dl)
+        for _ in range(2):
+            next(it)
+
+        state_dict2 = dl.state_dict()
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            batch_size=4,
+            collate_fn=identity,
+            persistent_workers=True,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+        )
+        dl.load_state_dict(state_dict2)
+        data = list(dl)
+
+        self.assertEqual(data, exp)
+
+
 if __name__ == "__main__":
     unittest.main()
