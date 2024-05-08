@@ -15,9 +15,7 @@ on:
 
 jobs:
   test:
-    if:
-      ${{ github.repository_owner == 'pytorch' && (github.event.action != 'labeled' ||
-      startsWith(github.event.label.name, 'ciflow')) }}
+    if: ${{ github.repository_owner == 'pytorch' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
