@@ -11,6 +11,7 @@ from typing import Iterator
 
 import torch
 import torch.utils.data
+from torch.testing._internal.common_device_type import instantiate_device_type_tests
 from torch.testing._internal.common_utils import IS_MACOS, TestCase
 from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
 
@@ -991,6 +992,18 @@ class TestJsonSerDe(TestCase):
     def test_json_serde_multi_process_map(self):
         self._run_test_map(3)
 
+
+instantiate_device_type_tests(TestStatefulDataLoaderIterable, globals())
+instantiate_device_type_tests(TestStatefulDataLoaderMap, globals())
+instantiate_device_type_tests(TestStatefulSampler, globals())
+instantiate_device_type_tests(TestStatefulDataLoaderGenerator, globals())
+instantiate_device_type_tests(TestStatefulDataLoaderGeneratorNoState, globals())
+instantiate_device_type_tests(TestSnapshotZero, globals())
+instantiate_device_type_tests(TestNumWorkersMismatch, globals())
+instantiate_device_type_tests(TestSnapshotEnd, globals())
+instantiate_device_type_tests(TestConcurrentDataLoaders, globals())
+instantiate_device_type_tests(TestFastStateDictRequest, globals())
+instantiate_device_type_tests(TestJsonSerDe, globals())
 
 if __name__ == "__main__":
     unittest.main()
