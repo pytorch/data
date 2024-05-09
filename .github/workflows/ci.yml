@@ -6,7 +6,7 @@ on:
       - release/*
     tags:
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types: [opened, synchronize, reopened]
     branches:
       - main
       # For PR created by ghstack
