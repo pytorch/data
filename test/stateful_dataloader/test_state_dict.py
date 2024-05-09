@@ -1094,3 +1094,9 @@ class TestJsonSerDe(TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    import psutil
+
+    current_process = psutil.Process()
+    children = current_process.children(recursive=True)
+    for child in children:
+        print(f"Child pid is {child.pid}")
