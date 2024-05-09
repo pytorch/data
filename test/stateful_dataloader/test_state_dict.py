@@ -225,7 +225,7 @@ class TestStatefulDataLoaderIterable(TestCase):
                 )
 
 
-class TestStatefulDataLoaderMap(TestStatefulDataLoaderIterable):
+class TestStatefulDataLoaderMap(TestCase):
     def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
         if num_workers == 0:
             return
@@ -277,8 +277,60 @@ class TestStatefulDataLoaderMap(TestStatefulDataLoaderIterable):
 
         self.assertEqual(batches, exp)
 
+    def test_no_mp(self):
+        for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
+            with self.subTest(batch_size=batch_size, interrupt=interrupt):
+                self._run_and_checkpoint(
+                    num_workers=0,
+                    batch_size=batch_size,
+                    pw=False,
+                    interrupt=interrupt,
+                )
 
-class TestStatefulSampler(TestStatefulDataLoaderIterable):
+    def test_mp_x(self):
+        for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
+            with self.subTest(batch_size=batch_size, interrupt=interrupt):
+                self._run_and_checkpoint(
+                    num_workers=3,
+                    batch_size=batch_size,
+                    pw=False,
+                    interrupt=interrupt,
+                )
+
+    def test_mp_pw(self):
+        for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
+            with self.subTest(batch_size=batch_size, interrupt=interrupt):
+                self._run_and_checkpoint(
+                    num_workers=3,
+                    batch_size=batch_size,
+                    pw=True,
+                    interrupt=interrupt,
+                )
+
+    def test_mp_every_n_steps(self):
+        batch_size = 7
+        for every_n_steps, interrupt in itertools.product([2, 5], [0, 1, 10]):
+            with self.subTest(every_n_steps=every_n_steps, batch_size=batch_size, interrupt=interrupt):
+                self._run_and_checkpoint(
+                    num_workers=3,
+                    batch_size=batch_size,
+                    pw=True,
+                    interrupt=interrupt,
+                )
+
+    def test_random_state(self):
+        for num_workers, interrupt in itertools.product([0, 3], [0, 1, 10]):
+            with self.subTest(num_workers=num_workers, interrupt=interrupt):
+                self._run_and_checkpoint(
+                    num_workers=num_workers,
+                    batch_size=7,
+                    pw=False,
+                    interrupt=interrupt,
+                    shuffle=True,
+                )
+
+
+class TestStatefulSampler(TestCase):
     def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
         dataset = DummyMapDataset(100, shuffle=shuffle)
         sampler = DummySampler(len(dataset))
@@ -323,6 +375,58 @@ class TestStatefulSampler(TestStatefulDataLoaderIterable):
             batches.append(batch)
 
         self.assertEqual(batches, exp)
+
+    def test_no_mp(self):
+        for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
+            with self.subTest(batch_size=batch_size, interrupt=interrupt):
+                self._run_and_checkpoint(
+                    num_workers=0,
+                    batch_size=batch_size,
+                    pw=False,
+                    interrupt=interrupt,
+                )
+
+    def test_mp_x(self):
+        for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
+            with self.subTest(batch_size=batch_size, interrupt=interrupt):
+                self._run_and_checkpoint(
+                    num_workers=3,
+                    batch_size=batch_size,
+                    pw=False,
+                    interrupt=interrupt,
+                )
+
+    def test_mp_pw(self):
+        for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
+            with self.subTest(batch_size=batch_size, interrupt=interrupt):
+                self._run_and_checkpoint(
+                    num_workers=3,
+                    batch_size=batch_size,
+                    pw=True,
+                    interrupt=interrupt,
+                )
+
+    def test_mp_every_n_steps(self):
+        batch_size = 7
+        for every_n_steps, interrupt in itertools.product([2, 5], [0, 1, 10]):
+            with self.subTest(every_n_steps=every_n_steps, batch_size=batch_size, interrupt=interrupt):
+                self._run_and_checkpoint(
+                    num_workers=3,
+                    batch_size=batch_size,
+                    pw=True,
+                    interrupt=interrupt,
+                )
+
+    def test_random_state(self):
+        for num_workers, interrupt in itertools.product([0, 3], [0, 1, 10]):
+            with self.subTest(num_workers=num_workers, interrupt=interrupt):
+                self._run_and_checkpoint(
+                    num_workers=num_workers,
+                    batch_size=7,
+                    pw=False,
+                    interrupt=interrupt,
+                    shuffle=True,
+                )
 
 
 # class GeneratorIterable(torch.utils.data.IterableDataset):
