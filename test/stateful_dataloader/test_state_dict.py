@@ -873,71 +873,71 @@ class TestStatefulDataLoaderIterable(TestCase):
 #             self.assertEqual(batches, exp)
 
 
-# class TestNumWorkersMismatch(TestCase):
-#     def test_num_workers_mismatch(self):
-#         for initial_num_workers, num_workers in ((0, 3), (3, 0)):
-#             if initial_num_workers == num_workers:
-#                 continue
-#             dataset = DummyMapDataset(100, shuffle=False)
-#             dl = StatefulDataLoader(
-#                 dataset=dataset,
-#                 num_workers=initial_num_workers,
-#                 collate_fn=identity,
-#                 multiprocessing_context=("forkserver" if IS_MACOS and initial_num_workers else None),
-#             )
-#             state = dl.state_dict()
-#             self.assertEqual(len(state), 0)
+class TestNumWorkersMismatch(TestCase):
+    def test_num_workers_mismatch(self):
+        for initial_num_workers, num_workers in ((0, 3), (3, 0)):
+            if initial_num_workers == num_workers:
+                continue
+            dataset = DummyMapDataset(100, shuffle=False)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=initial_num_workers,
+                collate_fn=identity,
+                multiprocessing_context=("forkserver" if IS_MACOS and initial_num_workers else None),
+            )
+            state = dl.state_dict()
+            self.assertEqual(len(state), 0)
 
-#             iter(dl)
-#             state = dl.state_dict()
-#             self.assertTrue(len(state) > 0)
+            iter(dl)
+            state = dl.state_dict()
+            self.assertTrue(len(state) > 0)
 
-#             dl = StatefulDataLoader(
-#                 dataset=dataset,
-#                 num_workers=num_workers,
-#                 collate_fn=identity,
-#                 multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
-#             )
-#             dl.load_state_dict(state)
-#             try:
-#                 iter(dl)
-#                 raise Exception("Expected AssertionError to be thrown")
-#             except AssertionError:
-#                 continue
-#             self.assertTrue(False, "Error should be of type AssertionError")
-
-
-# class TestTorchDataLazyImport(TestCase):
-#     def test_lazy_imports(self) -> None:
-#         import torchdata
-
-#         self.assertFalse("datapipes" in torchdata.__dict__)
-
-#         from torchdata import datapipes as dp, janitor  # noqa
-
-#         self.assertTrue("datapipes" in torchdata.__dict__)
-#         dp.iter.IterableWrapper([1, 2])
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            )
+            dl.load_state_dict(state)
+            try:
+                iter(dl)
+                raise Exception("Expected AssertionError to be thrown")
+            except AssertionError:
+                continue
+            self.assertTrue(False, "Error should be of type AssertionError")
 
 
-# class TestConcurrentDataLoaders(TestCase):
-#     def test_two_dataloaders(self) -> None:
-#         dataset = DummyMapDataset(100, shuffle=False)
-#         sdl = StatefulDataLoader(
-#             dataset=dataset,
-#             num_workers=2,
-#             collate_fn=identity,
-#             multiprocessing_context="forkserver" if IS_MACOS else None,
-#         )
-#         exp = list(sdl)
+class TestTorchDataLazyImport(TestCase):
+    def test_lazy_imports(self) -> None:
+        import torchdata
 
-#         dl = torch.utils.data.DataLoader(
-#             dataset=dataset,
-#             num_workers=2,
-#             collate_fn=identity,
-#             multiprocessing_context="forkserver" if IS_MACOS else None,
-#         )
-#         data = list(dl)
-#         self.assertEqual(data, exp)
+        self.assertFalse("datapipes" in torchdata.__dict__)
+
+        from torchdata import datapipes as dp, janitor  # noqa
+
+        self.assertTrue("datapipes" in torchdata.__dict__)
+        dp.iter.IterableWrapper([1, 2])
+
+
+class TestConcurrentDataLoaders(TestCase):
+    def test_two_dataloaders(self) -> None:
+        dataset = DummyMapDataset(100, shuffle=False)
+        sdl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=2,
+            collate_fn=identity,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+        )
+        exp = list(sdl)
+
+        dl = torch.utils.data.DataLoader(
+            dataset=dataset,
+            num_workers=2,
+            collate_fn=identity,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+        )
+        data = list(dl)
+        self.assertEqual(data, exp)
 
 
 # class TestFastStateDictRequest(TestCase):
