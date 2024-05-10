@@ -10,6 +10,7 @@ import unittest
 from typing import Iterator
 
 import torch
+import torch.multiprocessing
 import torch.utils.data
 from torch.testing._internal.common_device_type import instantiate_device_type_tests
 from torch.testing._internal.common_utils import IS_MACOS, TestCase
