@@ -133,6 +133,10 @@ def identity(x):
 
 
 class TestStatefulDataLoaderIterable(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import torch.multiprocessing
+
     # def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
     #     dataset = DummyIterableDataset([0, 100, 37], shuffle=shuffle)
     #     dl = StatefulDataLoader(
@@ -688,6 +692,10 @@ class GeneratorIterableNoState(torch.utils.data.IterableDataset):
 
 
 class TestSnapshotEnd(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import torch.multiprocessing
+
     def test_generator(self):
         num_workers = 3
         every_n_steps = 10
@@ -885,6 +893,10 @@ class TestSnapshotEnd(TestCase):
 
 
 class TestNumWorkersMismatch(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import torch.multiprocessing
+
     def test_num_workers_mismatch(self):
         for initial_num_workers, num_workers in ((0, 3), (3, 0)):
             if initial_num_workers == num_workers:
@@ -919,6 +931,10 @@ class TestNumWorkersMismatch(TestCase):
 
 
 class TestTorchDataLazyImport(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import torch.multiprocessing
+
     def test_lazy_imports(self) -> None:
         import torchdata
 
@@ -931,6 +947,10 @@ class TestTorchDataLazyImport(TestCase):
 
 
 class TestConcurrentDataLoaders(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import torch.multiprocessing
+
     def test_two_dataloaders(self) -> None:
         dataset = DummyMapDataset(100, shuffle=False)
         sdl = StatefulDataLoader(
@@ -952,6 +972,10 @@ class TestConcurrentDataLoaders(TestCase):
 
 
 class TestFastStateDictRequest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import torch.multiprocessing
+
     def _run_test(self, snapshot_every_n_steps, interrupt):
         num_workers = 4
         dataset = DummyIterableDataset([25, 25, 25, 25], shuffle=True)
@@ -1005,6 +1029,10 @@ class TestFastStateDictRequest(TestCase):
 
 
 class TestJsonSerDe(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import torch.multiprocessing
+
     def _run_test_iterable(self, num_workers):
         interrupt = 4
         dataset = DummyIterableDataset([0, 100, 37], shuffle=False, include_generator=False)
