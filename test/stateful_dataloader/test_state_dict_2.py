@@ -130,9 +130,54 @@ def identity(x):
     return x
 
 
-class TestStatefulDataLoaderIterable(unittest.TestCase):
+class GeneratorIterable(torch.utils.data.IterableDataset):
+    def __init__(self, sizes_for_all_workers):
+        self.sizes_for_all_workers = sizes_for_all_workers
+        self.i = 0
+        self.resume = None
+
+    def __iter__(self):
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info:
+            worker_id = worker_info.id
+        else:
+            worker_id = 0
+            self.sizes_for_all_workers = [sum(self.sizes_for_all_workers)]
+        self.i = 0
+        if self.resume is not None:
+            self.i = self.resume
+            self.resume = None
+        start = sum(self.sizes_for_all_workers[:worker_id])
+        skip = self.i
+        for i in range(start + skip, start + self.sizes_for_all_workers[worker_id]):
+            self.i += 1
+            yield i
+
+    def state_dict(self):
+        return {"i": self.i}
+
+    def load_state_dict(self, state):
+        self.resume = state["i"]
+
+
+class GeneratorIterableNoState(torch.utils.data.IterableDataset):
+    def __init__(self, sizes_for_all_workers):
+        self.sizes_for_all_workers = sizes_for_all_workers
+
+    def __iter__(self):
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info:
+            worker_id = worker_info.id
+        else:
+            worker_id = 0
+            self.sizes_for_all_workers = [sum(self.sizes_for_all_workers)]
+        start = sum(self.sizes_for_all_workers[:worker_id])
+        yield from range(start, start + self.sizes_for_all_workers[worker_id])
+
+
+class TestStatefulDataLoaderGenerator(unittest.TestCase):
     def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
-        dataset = DummyIterableDataset([0, 100, 37], shuffle=shuffle)
+        dataset = GeneratorIterable([0, 100, 37])
         dl = StatefulDataLoader(
             dataset=dataset,
             num_workers=num_workers,
@@ -141,22 +186,30 @@ class TestStatefulDataLoaderIterable(unittest.TestCase):
             persistent_workers=pw,
             multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
         )
-        list(dl)
+        exp = list(dl)
 
         if interrupt is None:
             interrupt = len(exp)
 
-        exp = []
+        dataset = GeneratorIterable([0, 100, 37])
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            collate_fn=identity,
+            snapshot_every_n_steps=every_n_steps,
+            persistent_workers=pw,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
+        )
+        batches = []
         it = iter(dl)
         for _ in range(interrupt):
-            next(it)
-
+            batches.append(next(it))
         state_dict = dl.state_dict()
-        for data in it:
-            exp.append(data)
+
+        self.assertEqual(batches, exp[:interrupt])
 
         # Restore new instance from state
-        batches = []
+        dataset = GeneratorIterable([0, 100, 37])
         dl = StatefulDataLoader(
             dataset=dataset,
             num_workers=num_workers,
@@ -166,10 +219,10 @@ class TestStatefulDataLoaderIterable(unittest.TestCase):
             multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
         )
         dl.load_state_dict(state_dict)
-        for batch in iter(dl):
+        for batch in dl:
             batches.append(batch)
 
-        self.assertEqual(exp, batches)
+        self.assertEqual(batches, exp)
 
     def test_no_mp(self):
         for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
@@ -224,202 +277,7 @@ class TestStatefulDataLoaderIterable(unittest.TestCase):
                 )
 
 
-class TestStatefulDataLoaderMap(TestStatefulDataLoaderIterable):
-    def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
-        if num_workers == 0:
-            return
-        dataset = DummyMapDataset(100, shuffle=shuffle)
-        generator = torch.Generator()
-        generator.manual_seed(13)
-        sampler = torch.utils.data.RandomSampler(dataset, generator=generator)
-        dl = StatefulDataLoader(
-            dataset=dataset,
-            num_workers=num_workers,
-            collate_fn=identity,
-            snapshot_every_n_steps=every_n_steps,
-            persistent_workers=pw,
-            batch_size=batch_size,
-            sampler=sampler,
-            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
-        )
-
-        if interrupt is None:
-            interrupt = len(dl)
-
-        it = iter(dl)
-        for _ in range(interrupt):
-            next(it)
-
-        state_dict = dl.state_dict()
-        exp = []
-        for batch in it:
-            exp.append(batch)
-
-        # Restore new instance from state
-        generator = torch.Generator()
-        generator.manual_seed(13)
-        sampler = torch.utils.data.RandomSampler(dataset, generator=generator)
-        dl = StatefulDataLoader(
-            dataset=dataset,
-            num_workers=num_workers,
-            collate_fn=identity,
-            snapshot_every_n_steps=every_n_steps,
-            persistent_workers=pw,
-            batch_size=batch_size,
-            sampler=sampler,
-            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
-        )
-        dl.load_state_dict(state_dict)
-        batches = []
-        for batch in dl:
-            batches.append(batch)
-
-        self.assertEqual(batches, exp)
-
-
-class TestStatefulSampler(TestStatefulDataLoaderIterable):
-    def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
-        dataset = DummyMapDataset(100, shuffle=shuffle)
-        sampler = DummySampler(len(dataset))
-        dl = StatefulDataLoader(
-            dataset=dataset,
-            num_workers=num_workers,
-            collate_fn=identity,
-            snapshot_every_n_steps=every_n_steps,
-            persistent_workers=pw,
-            batch_size=batch_size,
-            sampler=sampler,
-            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
-        )
-
-        if interrupt is None:
-            interrupt = len(dl)
-
-        it = iter(dl)
-        for _ in range(interrupt):
-            next(it)
-
-        state_dict = dl.state_dict()
-        exp = []
-        for batch in it:
-            exp.append(batch)
-
-        # Restore new instance from state
-        sampler = DummySampler(len(dataset))
-        dl = StatefulDataLoader(
-            dataset=dataset,
-            num_workers=num_workers,
-            collate_fn=identity,
-            snapshot_every_n_steps=every_n_steps,
-            persistent_workers=pw,
-            batch_size=batch_size,
-            sampler=sampler,
-            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
-        )
-        dl.load_state_dict(state_dict)
-        batches = []
-        for batch in dl:
-            batches.append(batch)
-
-        self.assertEqual(batches, exp)
-
-
-class GeneratorIterable(torch.utils.data.IterableDataset):
-    def __init__(self, sizes_for_all_workers):
-        self.sizes_for_all_workers = sizes_for_all_workers
-        self.i = 0
-        self.resume = None
-
-    def __iter__(self):
-        worker_info = torch.utils.data.get_worker_info()
-        if worker_info:
-            worker_id = worker_info.id
-        else:
-            worker_id = 0
-            self.sizes_for_all_workers = [sum(self.sizes_for_all_workers)]
-        self.i = 0
-        if self.resume is not None:
-            self.i = self.resume
-            self.resume = None
-        start = sum(self.sizes_for_all_workers[:worker_id])
-        skip = self.i
-        for i in range(start + skip, start + self.sizes_for_all_workers[worker_id]):
-            self.i += 1
-            yield i
-
-    def state_dict(self):
-        return {"i": self.i}
-
-    def load_state_dict(self, state):
-        self.resume = state["i"]
-
-
-class GeneratorIterableNoState(torch.utils.data.IterableDataset):
-    def __init__(self, sizes_for_all_workers):
-        self.sizes_for_all_workers = sizes_for_all_workers
-
-    def __iter__(self):
-        worker_info = torch.utils.data.get_worker_info()
-        if worker_info:
-            worker_id = worker_info.id
-        else:
-            worker_id = 0
-            self.sizes_for_all_workers = [sum(self.sizes_for_all_workers)]
-        start = sum(self.sizes_for_all_workers[:worker_id])
-        yield from range(start, start + self.sizes_for_all_workers[worker_id])
-
-
-class TestStatefulDataLoaderGenerator(TestStatefulDataLoaderIterable):
-    def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
-        dataset = GeneratorIterable([0, 100, 37])
-        dl = StatefulDataLoader(
-            dataset=dataset,
-            num_workers=num_workers,
-            collate_fn=identity,
-            snapshot_every_n_steps=every_n_steps,
-            persistent_workers=pw,
-            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
-        )
-        exp = list(dl)
-
-        if interrupt is None:
-            interrupt = len(exp)
-
-        dataset = GeneratorIterable([0, 100, 37])
-        dl = StatefulDataLoader(
-            dataset=dataset,
-            num_workers=num_workers,
-            collate_fn=identity,
-            snapshot_every_n_steps=every_n_steps,
-            persistent_workers=pw,
-            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
-        )
-        batches = []
-        it = iter(dl)
-        for _ in range(interrupt):
-            batches.append(next(it))
-        state_dict = dl.state_dict()
-
-        self.assertEqual(batches, exp[:interrupt])
-
-        # Restore new instance from state
-        dataset = GeneratorIterable([0, 100, 37])
-        dl = StatefulDataLoader(
-            dataset=dataset,
-            num_workers=num_workers,
-            collate_fn=identity,
-            snapshot_every_n_steps=every_n_steps,
-            persistent_workers=pw,
-            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
-        )
-        dl.load_state_dict(state_dict)
-        for batch in dl:
-            batches.append(batch)
-
-        self.assertEqual(batches, exp)
-
-
-class TestStatefulDataLoaderGeneratorNoState(TestStatefulDataLoaderIterable):
+class TestStatefulDataLoaderGeneratorNoState(unittest.TestCase):
     def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
         dataset = GeneratorIterableNoState([0, 100, 37])
         dl = StatefulDataLoader(
@@ -467,6 +325,58 @@ class TestStatefulDataLoaderGeneratorNoState(TestStatefulDataLoaderIterable):
             batches.append(batch)
 
         self.assertEqual(batches, exp)
+
+    def test_no_mp(self):
+        for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
+            with self.subTest(batch_size=batch_size, interrupt=interrupt):
+                self._run_and_checkpoint(
+                    num_workers=0,
+                    batch_size=batch_size,
+                    pw=False,
+                    interrupt=interrupt,
+                )
+
+    def test_mp_x(self):
+        for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
+            with self.subTest(batch_size=batch_size, interrupt=interrupt):
+                self._run_and_checkpoint(
+                    num_workers=3,
+                    batch_size=batch_size,
+                    pw=False,
+                    interrupt=interrupt,
+                )
+
+    def test_mp_pw(self):
+        for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
+            with self.subTest(batch_size=batch_size, interrupt=interrupt):
+                self._run_and_checkpoint(
+                    num_workers=3,
+                    batch_size=batch_size,
+                    pw=True,
+                    interrupt=interrupt,
+                )
+
+    def test_mp_every_n_steps(self):
+        batch_size = 7
+        for every_n_steps, interrupt in itertools.product([2, 5], [0, 1, 10]):
+            with self.subTest(every_n_steps=every_n_steps, batch_size=batch_size, interrupt=interrupt):
+                self._run_and_checkpoint(
+                    num_workers=3,
+                    batch_size=batch_size,
+                    pw=True,
+                    interrupt=interrupt,
+                )
+
+    def test_random_state(self):
+        for num_workers, interrupt in itertools.product([0, 3], [0, 1, 10]):
+            with self.subTest(num_workers=num_workers, interrupt=interrupt):
+                self._run_and_checkpoint(
+                    num_workers=num_workers,
+                    batch_size=7,
+                    pw=False,
+                    interrupt=interrupt,
+                    shuffle=True,
+                )
 
 
 class TestSnapshotZero(unittest.TestCase):
@@ -783,213 +693,6 @@ class TestSnapshotEnd(unittest.TestCase):
             batches = list(dl)
 
             self.assertEqual(batches, exp)
-
-
-class TestNumWorkersMismatch(unittest.TestCase):
-    def test_num_workers_mismatch(self):
-        for initial_num_workers, num_workers in ((0, 3), (3, 0)):
-            if initial_num_workers == num_workers:
-                continue
-            dataset = DummyMapDataset(100, shuffle=False)
-            dl = StatefulDataLoader(
-                dataset=dataset,
-                num_workers=initial_num_workers,
-                collate_fn=identity,
-                multiprocessing_context=("forkserver" if IS_MACOS and initial_num_workers else None),
-            )
-            state = dl.state_dict()
-            self.assertEqual(len(state), 0)
-
-            iter(dl)
-            state = dl.state_dict()
-            self.assertTrue(len(state) > 0)
-
-            dl = StatefulDataLoader(
-                dataset=dataset,
-                num_workers=num_workers,
-                collate_fn=identity,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
-            )
-            dl.load_state_dict(state)
-            try:
-                iter(dl)
-                raise Exception("Expected AssertionError to be thrown")
-            except AssertionError:
-                continue
-            self.assertTrue(False, "Error should be of type AssertionError")
-
-
-class TestTorchDataLazyImport(unittest.TestCase):
-    def test_lazy_imports(self) -> None:
-        import torchdata
-
-        self.assertFalse("datapipes" in torchdata.__dict__)
-
-        from torchdata import datapipes as dp, janitor  # noqa
-
-        self.assertTrue("datapipes" in torchdata.__dict__)
-        dp.iter.IterableWrapper([1, 2])
-
-
-class TestConcurrentDataLoaders(unittest.TestCase):
-    def test_two_dataloaders(self) -> None:
-        dataset = DummyMapDataset(100, shuffle=False)
-        sdl = StatefulDataLoader(
-            dataset=dataset,
-            num_workers=2,
-            collate_fn=identity,
-            multiprocessing_context="forkserver" if IS_MACOS else None,
-        )
-        exp = list(sdl)
-
-        dl = torch.utils.data.DataLoader(
-            dataset=dataset,
-            num_workers=2,
-            collate_fn=identity,
-            multiprocessing_context="forkserver" if IS_MACOS else None,
-        )
-        data = list(dl)
-        self.assertEqual(data, exp)
-
-
-class TestFastStateDictRequest(unittest.TestCase):
-    def _run_test(self, snapshot_every_n_steps, interrupt):
-        num_workers = 4
-        dataset = DummyIterableDataset([25, 25, 25, 25], shuffle=True)
-
-        dl = StatefulDataLoader(
-            dataset=dataset,
-            num_workers=num_workers,
-            batch_size=4,
-            collate_fn=identity,
-            persistent_workers=True,
-            multiprocessing_context="forkserver" if IS_MACOS else None,
-            snapshot_every_n_steps=snapshot_every_n_steps,
-        )
-        it = iter(dl)
-        for _ in range(interrupt):
-            next(it)
-
-        state_dict = dl.state_dict()
-        for _ in range(2):
-            next(it)
-        exp = list(it)
-
-        dl.load_state_dict(state_dict)
-        # new iter after load_state_dict, ask for state dict before num_workers batches
-        # are yielded to ensure old worker states are stored properly
-        it = iter(dl)
-        for _ in range(2):
-            next(it)
-
-        state_dict2 = dl.state_dict()
-        dl = StatefulDataLoader(
-            dataset=dataset,
-            num_workers=num_workers,
-            batch_size=4,
-            collate_fn=identity,
-            persistent_workers=True,
-            multiprocessing_context="forkserver" if IS_MACOS else None,
-        )
-        dl.load_state_dict(state_dict2)
-        data = list(dl)
-
-        self.assertEqual(data, exp)
-
-    def test_fast_state_dict_request(self) -> None:
-        self._run_test(0, 11)
-
-    def test_fast_state_dict_request_skip_steps(self) -> None:
-        self._run_test(17, 19)
-
-
-class TestJsonSerDe(unittest.TestCase):
-    def _run_test_iterable(self, num_workers):
-        interrupt = 4
-        dataset = DummyIterableDataset([0, 100, 37], shuffle=False, include_generator=False)
-        dl = StatefulDataLoader(
-            dataset=dataset,
-            num_workers=num_workers,
-            collate_fn=identity,
-            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
-        )
-        list(dl)
-
-        exp = []
-        it = iter(dl)
-        for _ in range(interrupt):
-            next(it)
-
-        state_dict = dl.state_dict()
-        ser = json.dumps(state_dict)
-        for data in it:
-            exp.append(data)
-
-        # Restore new instance from state
-        batches = []
-        dl = StatefulDataLoader(
-            dataset=dataset,
-            num_workers=num_workers,
-            collate_fn=identity,
-            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
-        )
-        deser = json.loads(ser)
-        dl.load_state_dict(deser)
-        for batch in iter(dl):
-            batches.append(batch)
-
-        self.assertEqual(exp, batches)
-
-    def _run_test_map(self, num_workers):
-        interrupt = 4
-        dataset = DummyMapDataset(100, shuffle=False, include_generator=False)
-        sampler = DummySampler(100)
-        dl = StatefulDataLoader(
-            dataset=dataset,
-            sampler=sampler,
-            num_workers=num_workers,
-            collate_fn=identity,
-            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
-        )
-        list(dl)
-
-        exp = []
-        it = iter(dl)
-        for _ in range(interrupt):
-            next(it)
-
-        state_dict = dl.state_dict()
-        ser = json.dumps(state_dict)
-        for data in it:
-            exp.append(data)
-
-        # Restore new instance from state
-        batches = []
-        dl = StatefulDataLoader(
-            dataset=dataset,
-            sampler=sampler,
-            num_workers=num_workers,
-            collate_fn=identity,
-            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
-        )
-        deser = json.loads(ser)
-        dl.load_state_dict(deser)
-        for batch in iter(dl):
-            batches.append(batch)
-
-        self.assertEqual(exp, batches)
-
-    def test_json_serde_single_process(self):
-        self._run_test_iterable(0)
-
-    def test_json_serde_multi_process(self):
-        self._run_test_iterable(3)
-
-    def test_json_serde_single_process_map(self):
-        self._run_test_map(0)
-
-    def test_json_serde_multi_process_map(self):
-        self._run_test_map(3)
 
 
 if __name__ == "__main__":

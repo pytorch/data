@@ -81,6 +81,15 @@ jobs:
           pip3 install -r requirements.txt
           make doctest
           cd ..
-      - name: Run StatefulDataLoader tests with pytest
+      - name: Run StatefulDataLoader tests with pytest 0
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run: pytest --durations=0 --no-header -v test/stateful_dataloader
+        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict_0.py
+      - name: Run StatefulDataLoader tests with pytest 1
+        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict_1.py
+      - name: Run StatefulDataLoader tests with pytest 2
+        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict_2.py
+      - name: Run StatefulDataLoader tests with pytest 3
+        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict_3.py
