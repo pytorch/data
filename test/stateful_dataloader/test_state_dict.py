@@ -132,92 +132,92 @@ def identity(x):
 
 
 class TestStatefulDataLoaderIterable(TestCase):
-    # def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
-    #     dataset = DummyIterableDataset([0, 100, 37], shuffle=shuffle)
-    #     dl = StatefulDataLoader(
-    #         dataset=dataset,
-    #         num_workers=num_workers,
-    #         collate_fn=identity,
-    #         snapshot_every_n_steps=every_n_steps,
-    #         persistent_workers=pw,
-    #         multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
-    #     )
-    #     list(dl)
+    def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
+        dataset = DummyIterableDataset([0, 100, 37], shuffle=shuffle)
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            collate_fn=identity,
+            snapshot_every_n_steps=every_n_steps,
+            persistent_workers=pw,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
+        )
+        list(dl)
 
-    #     if interrupt is None:
-    #         interrupt = len(exp)
+        if interrupt is None:
+            interrupt = len(exp)
 
-    #     exp = []
-    #     it = iter(dl)
-    #     for _ in range(interrupt):
-    #         next(it)
+        exp = []
+        it = iter(dl)
+        for _ in range(interrupt):
+            next(it)
 
-    #     state_dict = dl.state_dict()
-    #     for data in it:
-    #         exp.append(data)
+        state_dict = dl.state_dict()
+        for data in it:
+            exp.append(data)
 
-    #     # Restore new instance from state
-    #     batches = []
-    #     dl = StatefulDataLoader(
-    #         dataset=dataset,
-    #         num_workers=num_workers,
-    #         collate_fn=identity,
-    #         snapshot_every_n_steps=every_n_steps,
-    #         persistent_workers=pw,
-    #         multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
-    #     )
-    #     dl.load_state_dict(state_dict)
-    #     for batch in iter(dl):
-    #         batches.append(batch)
+        # Restore new instance from state
+        batches = []
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            collate_fn=identity,
+            snapshot_every_n_steps=every_n_steps,
+            persistent_workers=pw,
+            multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
+        )
+        dl.load_state_dict(state_dict)
+        for batch in iter(dl):
+            batches.append(batch)
 
-    #     self.assertEqual(exp, batches)
+        self.assertEqual(exp, batches)
 
-    # def test_no_mp(self):
-    #     for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
-    #         self._run_and_checkpoint(
-    #             num_workers=0,
-    #             batch_size=batch_size,
-    #             pw=False,
-    #             interrupt=interrupt,
-    #         )
+    def test_no_mp(self):
+        for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
+            self._run_and_checkpoint(
+                num_workers=0,
+                batch_size=batch_size,
+                pw=False,
+                interrupt=interrupt,
+            )
 
-    # def test_mp_x(self):
-    #     for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
-    #         self._run_and_checkpoint(
-    #             num_workers=3,
-    #             batch_size=batch_size,
-    #             pw=False,
-    #             interrupt=interrupt,
-    #         )
+    def test_mp_x(self):
+        for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
+            self._run_and_checkpoint(
+                num_workers=3,
+                batch_size=batch_size,
+                pw=False,
+                interrupt=interrupt,
+            )
 
-    # def test_mp_pw(self):
-    #     for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
-    #         self._run_and_checkpoint(
-    #             num_workers=3,
-    #             batch_size=batch_size,
-    #             pw=True,
-    #             interrupt=interrupt,
-    #         )
+    def test_mp_pw(self):
+        for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
+            self._run_and_checkpoint(
+                num_workers=3,
+                batch_size=batch_size,
+                pw=True,
+                interrupt=interrupt,
+            )
 
-    # def test_mp_every_n_steps(self):
-    #     batch_size = 7
-    #     for every_n_steps, interrupt in itertools.product([2, 5], [0, 1, 10]):
-    #         self._run_and_checkpoint(
-    #             num_workers=3,
-    #             batch_size=batch_size,
-    #             pw=True,
-    #             interrupt=interrupt,
-    #         )
+    def test_mp_every_n_steps(self):
+        batch_size = 7
+        for every_n_steps, interrupt in itertools.product([2, 5], [0, 1, 10]):
+            self._run_and_checkpoint(
+                num_workers=3,
+                batch_size=batch_size,
+                pw=True,
+                interrupt=interrupt,
+            )
 
-    # def test_random_state(self):
-    #     for num_workers, interrupt in itertools.product([0, 3], [0, 1, 10]):
-    #         self._run_and_checkpoint(
-    #             num_workers=num_workers,
-    #             batch_size=7,
-    #             pw=False,
-    #             interrupt=interrupt,
-    #             shuffle=True,
-    #         )
+    def test_random_state(self):
+        for num_workers, interrupt in itertools.product([0, 3], [0, 1, 10]):
+            self._run_and_checkpoint(
+                num_workers=num_workers,
+                batch_size=7,
+                pw=False,
+                interrupt=interrupt,
+                shuffle=True,
+            )
 
     # class TestStatefulDataLoaderMap(TestCase):
     def _run_and_checkpoint3(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
@@ -940,55 +940,55 @@ class TestConcurrentDataLoaders(TestCase):
         self.assertEqual(data, exp)
 
 
-# class TestFastStateDictRequest(TestCase):
-#     def _run_test(self, snapshot_every_n_steps, interrupt):
-#         num_workers = 4
-#         dataset = DummyIterableDataset([25, 25, 25, 25], shuffle=True)
+class TestFastStateDictRequest(TestCase):
+    def _run_test(self, snapshot_every_n_steps, interrupt):
+        num_workers = 4
+        dataset = DummyIterableDataset([25, 25, 25, 25], shuffle=True)
 
-#         dl = StatefulDataLoader(
-#             dataset=dataset,
-#             num_workers=num_workers,
-#             batch_size=4,
-#             collate_fn=identity,
-#             persistent_workers=True,
-#             multiprocessing_context="forkserver" if IS_MACOS else None,
-#             snapshot_every_n_steps=snapshot_every_n_steps,
-#         )
-#         it = iter(dl)
-#         for _ in range(interrupt):
-#             next(it)
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            batch_size=4,
+            collate_fn=identity,
+            persistent_workers=True,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+            snapshot_every_n_steps=snapshot_every_n_steps,
+        )
+        it = iter(dl)
+        for _ in range(interrupt):
+            next(it)
 
-#         state_dict = dl.state_dict()
-#         for _ in range(2):
-#             next(it)
-#         exp = list(it)
+        state_dict = dl.state_dict()
+        for _ in range(2):
+            next(it)
+        exp = list(it)
 
-#         dl.load_state_dict(state_dict)
-#         # new iter after load_state_dict, ask for state dict before num_workers batches
-#         # are yielded to ensure old worker states are stored properly
-#         it = iter(dl)
-#         for _ in range(2):
-#             next(it)
+        dl.load_state_dict(state_dict)
+        # new iter after load_state_dict, ask for state dict before num_workers batches
+        # are yielded to ensure old worker states are stored properly
+        it = iter(dl)
+        for _ in range(2):
+            next(it)
 
-#         state_dict2 = dl.state_dict()
-#         dl = StatefulDataLoader(
-#             dataset=dataset,
-#             num_workers=num_workers,
-#             batch_size=4,
-#             collate_fn=identity,
-#             persistent_workers=True,
-#             multiprocessing_context="forkserver" if IS_MACOS else None,
-#         )
-#         dl.load_state_dict(state_dict2)
-#         data = list(dl)
+        state_dict2 = dl.state_dict()
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            batch_size=4,
+            collate_fn=identity,
+            persistent_workers=True,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+        )
+        dl.load_state_dict(state_dict2)
+        data = list(dl)
 
-#         self.assertEqual(data, exp)
+        self.assertEqual(data, exp)
 
-#     def test_fast_state_dict_request(self) -> None:
-#         self._run_test(0, 11)
+    def test_fast_state_dict_request(self) -> None:
+        self._run_test(0, 11)
 
-#     def test_fast_state_dict_request_skip_steps(self) -> None:
-#         self._run_test(17, 19)
+    def test_fast_state_dict_request_skip_steps(self) -> None:
+        self._run_test(17, 19)
 
 
 class TestJsonSerDe(TestCase):
