@@ -10,11 +10,13 @@ import unittest
 from typing import Iterator
 
 import torch
-import torch.multiprocessing
 import torch.utils.data
 from torch.testing._internal.common_device_type import instantiate_device_type_tests
 from torch.testing._internal.common_utils import IS_MACOS, parametrize, TestCase
-from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
+
+
+class Stateful:
+    pass
 
 
 class DummyIterator(Iterator, Stateful):
@@ -133,9 +135,6 @@ def identity(x):
 
 
 class TestStatefulDataLoaderIterable(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        import torch.multiprocessing
 
     # def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
     #     dataset = DummyIterableDataset([0, 100, 37], shuffle=shuffle)
@@ -226,6 +225,8 @@ class TestStatefulDataLoaderIterable(TestCase):
 
     # class TestStatefulDataLoaderMap(TestCase):
     def _run_and_checkpoint3(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
+        from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
+
         if num_workers == 0:
             return
         dataset = DummyMapDataset(100, shuffle=shuffle)
@@ -325,6 +326,8 @@ class TestStatefulDataLoaderIterable(TestCase):
 
     # class TestStatefulSampler(TestCase):
     def _run_and_checkpoint2(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
+        from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
+
         dataset = DummyMapDataset(100, shuffle=shuffle)
         sampler = DummySampler(len(dataset))
         dl = StatefulDataLoader(
@@ -692,11 +695,9 @@ class GeneratorIterableNoState(torch.utils.data.IterableDataset):
 
 
 class TestSnapshotEnd(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        import torch.multiprocessing
-
     def test_generator(self):
+        from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
+
         num_workers = 3
         every_n_steps = 10
         for pw, bs in itertools.product([False, True], [None, 4]):
@@ -737,6 +738,8 @@ class TestSnapshotEnd(TestCase):
             self.assertEqual(batches, exp)
 
     def test_generator_no_state(self):
+        from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
+
         num_workers = 3
         every_n_steps = 10
         for pw, bs in itertools.product([False, True], [None, 4]):
@@ -777,6 +780,8 @@ class TestSnapshotEnd(TestCase):
             self.assertEqual(batches, exp)
 
     def test_iterable(self):
+        from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
+
         num_workers = 3
         every_n_steps = 10
         for pw, bs in itertools.product([False, True], [None, 4]):
@@ -816,6 +821,8 @@ class TestSnapshotEnd(TestCase):
             self.assertEqual(batches, exp)
 
     def test_map(self):
+        from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
+
         num_workers = 3
         every_n_steps = 10
         for pw, bs in itertools.product([False, True], [None, 4]):
@@ -855,6 +862,8 @@ class TestSnapshotEnd(TestCase):
             self.assertEqual(batches, exp)
 
     def test_map_shuffle(self):
+        from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
+
         num_workers = 3
         every_n_steps = 10
         for pw, bs in itertools.product([False, True], [None, 4]):
@@ -893,11 +902,9 @@ class TestSnapshotEnd(TestCase):
 
 
 class TestNumWorkersMismatch(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        import torch.multiprocessing
-
     def test_num_workers_mismatch(self):
+        from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
+
         for initial_num_workers, num_workers in ((0, 3), (3, 0)):
             if initial_num_workers == num_workers:
                 continue
@@ -931,10 +938,6 @@ class TestNumWorkersMismatch(TestCase):
 
 
 class TestTorchDataLazyImport(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        import torch.multiprocessing
-
     def test_lazy_imports(self) -> None:
         import torchdata
 
@@ -947,11 +950,9 @@ class TestTorchDataLazyImport(TestCase):
 
 
 class TestConcurrentDataLoaders(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        import torch.multiprocessing
-
     def test_two_dataloaders(self) -> None:
+        from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
+
         dataset = DummyMapDataset(100, shuffle=False)
         sdl = StatefulDataLoader(
             dataset=dataset,
@@ -972,11 +973,9 @@ class TestConcurrentDataLoaders(TestCase):
 
 
 class TestFastStateDictRequest(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        import torch.multiprocessing
-
     def _run_test(self, snapshot_every_n_steps, interrupt):
+        from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
+
         num_workers = 4
         dataset = DummyIterableDataset([25, 25, 25, 25], shuffle=True)
 
@@ -1029,11 +1028,9 @@ class TestFastStateDictRequest(TestCase):
 
 
 class TestJsonSerDe(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        import torch.multiprocessing
-
     def _run_test_iterable(self, num_workers):
+        from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
+
         interrupt = 4
         dataset = DummyIterableDataset([0, 100, 37], shuffle=False, include_generator=False)
         dl = StatefulDataLoader(
@@ -1070,6 +1067,8 @@ class TestJsonSerDe(TestCase):
         self.assertEqual(exp, batches)
 
     def _run_test_map(self, num_workers):
+        from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
+
         interrupt = 4
         dataset = DummyMapDataset(100, shuffle=False, include_generator=False)
         sampler = DummySampler(100)
