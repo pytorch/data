@@ -13,7 +13,7 @@ import torch
 import torch.multiprocessing
 import torch.utils.data
 from torch.testing._internal.common_device_type import instantiate_device_type_tests
-from torch.testing._internal.common_utils import IS_MACOS, TestCase
+from torch.testing._internal.common_utils import IS_MACOS, parametrize, TestCase
 from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
 
 
@@ -133,9 +133,6 @@ def identity(x):
 
 
 class TestStatefulDataLoaderIterable(TestCase):
-    def setUpClass(cls):
-        import torch.multiprocessing as mp
-
     # def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
     #     dataset = DummyIterableDataset([0, 100, 37], shuffle=shuffle)
     #     dl = StatefulDataLoader(
@@ -284,7 +281,7 @@ class TestStatefulDataLoaderIterable(TestCase):
                 interrupt=interrupt,
             )
 
-    def test_mp_x3(self):
+        # def test_mp_x3(self):
         for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
             self._run_and_checkpoint3(
                 num_workers=3,
@@ -293,7 +290,7 @@ class TestStatefulDataLoaderIterable(TestCase):
                 interrupt=interrupt,
             )
 
-    def test_mp_pw3(self):
+        # def test_mp_pw3(self):
         for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
             self._run_and_checkpoint3(
                 num_workers=3,
@@ -302,7 +299,7 @@ class TestStatefulDataLoaderIterable(TestCase):
                 interrupt=interrupt,
             )
 
-    def test_mp_every_n_steps3(self):
+        # def test_mp_every_n_steps3(self):
         batch_size = 7
         for every_n_steps, interrupt in itertools.product([2, 5], [0, 1, 10]):
             self._run_and_checkpoint3(
@@ -312,7 +309,7 @@ class TestStatefulDataLoaderIterable(TestCase):
                 interrupt=interrupt,
             )
 
-    def test_random_state3(self):
+        # def test_random_state3(self):
         for num_workers, interrupt in itertools.product([0, 3], [0, 1, 10]):
             self._run_and_checkpoint3(
                 num_workers=num_workers,
@@ -377,7 +374,7 @@ class TestStatefulDataLoaderIterable(TestCase):
                 interrupt=interrupt,
             )
 
-    def test_mp_x2(self):
+        # def test_mp_x2(self):
         for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
             self._run_and_checkpoint2(
                 num_workers=3,
@@ -386,7 +383,7 @@ class TestStatefulDataLoaderIterable(TestCase):
                 interrupt=interrupt,
             )
 
-    def test_mp_pw2(self):
+        # def test_mp_pw2(self):
         for batch_size, interrupt in itertools.product([None, 7], [0, 1, 10]):
             self._run_and_checkpoint2(
                 num_workers=3,
@@ -395,7 +392,7 @@ class TestStatefulDataLoaderIterable(TestCase):
                 interrupt=interrupt,
             )
 
-    def test_mp_every_n_steps2(self):
+        # def test_mp_every_n_steps2(self):
         batch_size = 7
         for every_n_steps, interrupt in itertools.product([2, 5], [0, 1, 10]):
             self._run_and_checkpoint2(
@@ -405,7 +402,7 @@ class TestStatefulDataLoaderIterable(TestCase):
                 interrupt=interrupt,
             )
 
-    def test_random_state2(self):
+        # def test_random_state2(self):
         for num_workers, interrupt in itertools.product([0, 3], [0, 1, 10]):
             self._run_and_checkpoint2(
                 num_workers=num_workers,
@@ -691,9 +688,6 @@ class GeneratorIterableNoState(torch.utils.data.IterableDataset):
 
 
 class TestSnapshotEnd(TestCase):
-    def setUpClass(cls):
-        import torch.multiprocessing as mp
-
     def test_generator(self):
         num_workers = 3
         every_n_steps = 10
@@ -891,9 +885,6 @@ class TestSnapshotEnd(TestCase):
 
 
 class TestNumWorkersMismatch(TestCase):
-    def setUpClass(cls):
-        import torch.multiprocessing as mp
-
     def test_num_workers_mismatch(self):
         for initial_num_workers, num_workers in ((0, 3), (3, 0)):
             if initial_num_workers == num_workers:
@@ -961,9 +952,6 @@ class TestConcurrentDataLoaders(TestCase):
 
 
 class TestFastStateDictRequest(TestCase):
-    def setUpClass(cls):
-        import torch.multiprocessing as mp
-
     def _run_test(self, snapshot_every_n_steps, interrupt):
         num_workers = 4
         dataset = DummyIterableDataset([25, 25, 25, 25], shuffle=True)
@@ -1012,14 +1000,11 @@ class TestFastStateDictRequest(TestCase):
     def test_fast_state_dict_request(self) -> None:
         self._run_test(0, 11)
 
-    def test_fast_state_dict_request_skip_steps(self) -> None:
+        # def test_fast_state_dict_request_skip_steps(self) -> None:
         self._run_test(17, 19)
 
 
 class TestJsonSerDe(TestCase):
-    def setUpClass(cls):
-        import torch.multiprocessing as mp
-
     def _run_test_iterable(self, num_workers):
         interrupt = 4
         dataset = DummyIterableDataset([0, 100, 37], shuffle=False, include_generator=False)
@@ -1098,13 +1083,13 @@ class TestJsonSerDe(TestCase):
     def test_json_serde_single_process(self):
         self._run_test_iterable(0)
 
-    def test_json_serde_multi_process(self):
+        # def test_json_serde_multi_process(self):
         self._run_test_iterable(3)
 
-    def test_json_serde_single_process_map(self):
+        # def test_json_serde_single_process_map(self):
         self._run_test_map(0)
 
-    def test_json_serde_multi_process_map(self):
+        # def test_json_serde_multi_process_map(self):
         self._run_test_map(3)
 
 
