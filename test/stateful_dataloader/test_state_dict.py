@@ -412,49 +412,49 @@ class TestStatefulDataLoaderIterable(TestCase):
             )
 
 
-# class GeneratorIterable(torch.utils.data.IterableDataset):
-#     def __init__(self, sizes_for_all_workers):
-#         self.sizes_for_all_workers = sizes_for_all_workers
-#         self.i = 0
-#         self.resume = None
+class GeneratorIterable(torch.utils.data.IterableDataset):
+    def __init__(self, sizes_for_all_workers):
+        self.sizes_for_all_workers = sizes_for_all_workers
+        self.i = 0
+        self.resume = None
 
-#     def __iter__(self):
-#         worker_info = torch.utils.data.get_worker_info()
-#         if worker_info:
-#             worker_id = worker_info.id
-#         else:
-#             worker_id = 0
-#             self.sizes_for_all_workers = [sum(self.sizes_for_all_workers)]
-#         self.i = 0
-#         if self.resume is not None:
-#             self.i = self.resume
-#             self.resume = None
-#         start = sum(self.sizes_for_all_workers[:worker_id])
-#         skip = self.i
-#         for i in range(start + skip, start + self.sizes_for_all_workers[worker_id]):
-#             self.i += 1
-#             yield i
+    def __iter__(self):
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info:
+            worker_id = worker_info.id
+        else:
+            worker_id = 0
+            self.sizes_for_all_workers = [sum(self.sizes_for_all_workers)]
+        self.i = 0
+        if self.resume is not None:
+            self.i = self.resume
+            self.resume = None
+        start = sum(self.sizes_for_all_workers[:worker_id])
+        skip = self.i
+        for i in range(start + skip, start + self.sizes_for_all_workers[worker_id]):
+            self.i += 1
+            yield i
 
-#     def state_dict(self):
-#         return {"i": self.i}
+    def state_dict(self):
+        return {"i": self.i}
 
-#     def load_state_dict(self, state):
-#         self.resume = state["i"]
+    def load_state_dict(self, state):
+        self.resume = state["i"]
 
 
-# class GeneratorIterableNoState(torch.utils.data.IterableDataset):
-#     def __init__(self, sizes_for_all_workers):
-#         self.sizes_for_all_workers = sizes_for_all_workers
+class GeneratorIterableNoState(torch.utils.data.IterableDataset):
+    def __init__(self, sizes_for_all_workers):
+        self.sizes_for_all_workers = sizes_for_all_workers
 
-#     def __iter__(self):
-#         worker_info = torch.utils.data.get_worker_info()
-#         if worker_info:
-#             worker_id = worker_info.id
-#         else:
-#             worker_id = 0
-#             self.sizes_for_all_workers = [sum(self.sizes_for_all_workers)]
-#         start = sum(self.sizes_for_all_workers[:worker_id])
-#         yield from range(start, start + self.sizes_for_all_workers[worker_id])
+    def __iter__(self):
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info:
+            worker_id = worker_info.id
+        else:
+            worker_id = 0
+            self.sizes_for_all_workers = [sum(self.sizes_for_all_workers)]
+        start = sum(self.sizes_for_all_workers[:worker_id])
+        yield from range(start, start + self.sizes_for_all_workers[worker_id])
 
 
 # class TestStatefulDataLoaderGenerator(TestStatefulDataLoaderIterable):
