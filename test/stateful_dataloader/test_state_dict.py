@@ -686,191 +686,191 @@ class TestStatefulDataLoaderIterable(TestCase):
 #             self.assertEqual(batches, exp)
 
 
-# class TestSnapshotEnd(TestCase):
-#     def test_generator(self):
-#         num_workers = 3
-#         every_n_steps = 10
-#         for pw, bs in itertools.product([False, True], [None, 4]):
-#             dataset = GeneratorIterable([0, 100, 37])
-#             dl = StatefulDataLoader(
-#                 dataset=dataset,
-#                 num_workers=num_workers,
-#                 collate_fn=identity,
-#                 snapshot_every_n_steps=every_n_steps,
-#                 persistent_workers=pw,
-#                 batch_size=bs,
-#                 multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
-#             )
-#             exp = list(dl)
-#             state_end = dl.state_dict()
+class TestSnapshotEnd(TestCase):
+    def test_generator(self):
+        num_workers = 3
+        every_n_steps = 10
+        for pw, bs in itertools.product([False, True], [None, 4]):
+            dataset = GeneratorIterable([0, 100, 37])
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            )
+            exp = list(dl)
+            state_end = dl.state_dict()
 
-#             batches = list(dl)  # simple restart
-#             self.assertEqual(batches, exp)
+            batches = list(dl)  # simple restart
+            self.assertEqual(batches, exp)
 
-#             dataset = GeneratorIterable([0, 100, 37])
-#             dl = StatefulDataLoader(
-#                 dataset=dataset,
-#                 num_workers=num_workers,
-#                 collate_fn=identity,
-#                 snapshot_every_n_steps=every_n_steps,
-#                 persistent_workers=pw,
-#                 batch_size=bs,
-#                 multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
-#             )
-#             it = iter(dl)
-#             for _ in range(2):
-#                 next(it)
-#             dl.load_state_dict(state_end)
-#             batches = list(dl)
+            dataset = GeneratorIterable([0, 100, 37])
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            )
+            it = iter(dl)
+            for _ in range(2):
+                next(it)
+            dl.load_state_dict(state_end)
+            batches = list(dl)
 
-#             self.assertEqual(batches, exp)
+            self.assertEqual(batches, exp)
 
-#     def test_generator_no_state(self):
-#         num_workers = 3
-#         every_n_steps = 10
-#         for pw, bs in itertools.product([False, True], [None, 4]):
-#             dataset = GeneratorIterableNoState([0, 100, 37])
-#             dl = StatefulDataLoader(
-#                 dataset=dataset,
-#                 num_workers=num_workers,
-#                 collate_fn=identity,
-#                 snapshot_every_n_steps=every_n_steps,
-#                 persistent_workers=pw,
-#                 batch_size=bs,
-#                 multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
-#             )
-#             exp = list(dl)
-#             state_end = dl.state_dict()
+    def test_generator_no_state(self):
+        num_workers = 3
+        every_n_steps = 10
+        for pw, bs in itertools.product([False, True], [None, 4]):
+            dataset = GeneratorIterableNoState([0, 100, 37])
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            )
+            exp = list(dl)
+            state_end = dl.state_dict()
 
-#             batches = list(dl)  # simple restart
-#             self.assertEqual(batches, exp)
+            batches = list(dl)  # simple restart
+            self.assertEqual(batches, exp)
 
-#             dataset = GeneratorIterableNoState([0, 100, 37])
-#             dl = StatefulDataLoader(
-#                 dataset=dataset,
-#                 num_workers=num_workers,
-#                 collate_fn=identity,
-#                 snapshot_every_n_steps=every_n_steps,
-#                 persistent_workers=pw,
-#                 batch_size=bs,
-#                 multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
-#             )
-#             it = iter(dl)
-#             for _ in range(2):
-#                 next(it)
-#             dl.load_state_dict(state_end)
-#             batches = list(dl)
+            dataset = GeneratorIterableNoState([0, 100, 37])
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            )
+            it = iter(dl)
+            for _ in range(2):
+                next(it)
+            dl.load_state_dict(state_end)
+            batches = list(dl)
 
-#             self.assertEqual(batches, exp)
+            self.assertEqual(batches, exp)
 
-#     def test_iterable(self):
-#         num_workers = 3
-#         every_n_steps = 10
-#         for pw, bs in itertools.product([False, True], [None, 4]):
-#             dataset = DummyIterableDataset([0, 100, 37], shuffle=True)
-#             g = torch.Generator()
-#             g.manual_seed(4)
-#             dl = StatefulDataLoader(
-#                 dataset=dataset,
-#                 num_workers=num_workers,
-#                 collate_fn=identity,
-#                 snapshot_every_n_steps=every_n_steps,
-#                 persistent_workers=pw,
-#                 batch_size=bs,
-#                 generator=g,
-#                 multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
-#             )
-#             list(dl)
-#             state_end = dl.state_dict()
-#             exp = list(dl)
+    def test_iterable(self):
+        num_workers = 3
+        every_n_steps = 10
+        for pw, bs in itertools.product([False, True], [None, 4]):
+            dataset = DummyIterableDataset([0, 100, 37], shuffle=True)
+            g = torch.Generator()
+            g.manual_seed(4)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+                generator=g,
+                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            )
+            list(dl)
+            state_end = dl.state_dict()
+            exp = list(dl)
 
-#             g.manual_seed(4)
-#             dl = StatefulDataLoader(
-#                 dataset=dataset,
-#                 num_workers=num_workers,
-#                 collate_fn=identity,
-#                 snapshot_every_n_steps=every_n_steps,
-#                 persistent_workers=pw,
-#                 batch_size=bs,
-#                 generator=g,
-#                 multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
-#             )
-#             dl.load_state_dict(state_end)
-#             batches = list(dl)
+            g.manual_seed(4)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+                generator=g,
+                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            )
+            dl.load_state_dict(state_end)
+            batches = list(dl)
 
-#             self.assertEqual(batches, exp)
+            self.assertEqual(batches, exp)
 
-#     def test_map(self):
-#         num_workers = 3
-#         every_n_steps = 10
-#         for pw, bs in itertools.product([False, True], [None, 4]):
-#             dataset = DummyMapDataset(100, shuffle=True)
-#             generator = torch.Generator()
-#             generator.manual_seed(15)
-#             dl = StatefulDataLoader(
-#                 dataset=dataset,
-#                 num_workers=num_workers,
-#                 collate_fn=identity,
-#                 snapshot_every_n_steps=every_n_steps,
-#                 persistent_workers=pw,
-#                 batch_size=bs,
-#                 generator=generator,
-#                 multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
-#             )
-#             list(dl)
-#             state_end = dl.state_dict()
-#             exp = list(dl)
+    def test_map(self):
+        num_workers = 3
+        every_n_steps = 10
+        for pw, bs in itertools.product([False, True], [None, 4]):
+            dataset = DummyMapDataset(100, shuffle=True)
+            generator = torch.Generator()
+            generator.manual_seed(15)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+                generator=generator,
+                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            )
+            list(dl)
+            state_end = dl.state_dict()
+            exp = list(dl)
 
-#             generator.manual_seed(15)
-#             dl = StatefulDataLoader(
-#                 dataset=dataset,
-#                 num_workers=num_workers,
-#                 collate_fn=identity,
-#                 snapshot_every_n_steps=every_n_steps,
-#                 persistent_workers=pw,
-#                 batch_size=bs,
-#                 generator=generator,
-#                 multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
-#             )
-#             dl.load_state_dict(state_end)
-#             batches = list(dl)
+            generator.manual_seed(15)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+                generator=generator,
+                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            )
+            dl.load_state_dict(state_end)
+            batches = list(dl)
 
-#             self.assertEqual(batches, exp)
+            self.assertEqual(batches, exp)
 
-#     def test_map_shuffle(self):
-#         num_workers = 3
-#         every_n_steps = 10
-#         for pw, bs in itertools.product([False, True], [None, 4]):
-#             dataset = DummyMapDataset(100, shuffle=False)
-#             dl = StatefulDataLoader(
-#                 dataset=dataset,
-#                 shuffle=True,  # Use default RandomSampler
-#                 num_workers=num_workers,
-#                 collate_fn=identity,
-#                 snapshot_every_n_steps=every_n_steps,
-#                 persistent_workers=pw,
-#                 batch_size=bs,
-#                 multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
-#             )
-#             list(dl)
-#             state_end = dl.state_dict()
-#             exp = list(dl)
+    def test_map_shuffle(self):
+        num_workers = 3
+        every_n_steps = 10
+        for pw, bs in itertools.product([False, True], [None, 4]):
+            dataset = DummyMapDataset(100, shuffle=False)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                shuffle=True,  # Use default RandomSampler
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            )
+            list(dl)
+            state_end = dl.state_dict()
+            exp = list(dl)
 
-#             dataset = DummyMapDataset(100, shuffle=False)
-#             dl = StatefulDataLoader(
-#                 dataset=dataset,
-#                 shuffle=True,  # Use default RandomSampler
-#                 num_workers=num_workers,
-#                 collate_fn=identity,
-#                 snapshot_every_n_steps=every_n_steps,
-#                 persistent_workers=pw,
-#                 batch_size=bs,
-#                 multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
-#             )
-#             dl.load_state_dict(state_end)
-#             batches = list(dl)
+            dataset = DummyMapDataset(100, shuffle=False)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                shuffle=True,  # Use default RandomSampler
+                num_workers=num_workers,
+                collate_fn=identity,
+                snapshot_every_n_steps=every_n_steps,
+                persistent_workers=pw,
+                batch_size=bs,
+                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            )
+            dl.load_state_dict(state_end)
+            batches = list(dl)
 
-#             self.assertEqual(batches, exp)
+            self.assertEqual(batches, exp)
 
 
 class TestNumWorkersMismatch(TestCase):
