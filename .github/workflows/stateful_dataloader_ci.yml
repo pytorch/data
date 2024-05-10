@@ -81,15 +81,18 @@ jobs:
           pip3 install -r requirements.txt
           make doctest
           cd ..
-      - name: Run StatefulDataLoader tests with pytest 0
+      - name: Run StatefulDataLoader tests with pytest - dataloader
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict_0.py
-      - name: Run StatefulDataLoader tests with pytest 1
+        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_dataloader.py
+      - name: Run StatefulDataLoader tests with pytest - state_dict 0
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict_1.py
-      - name: Run StatefulDataLoader tests with pytest 2
+        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict.py -k _shard0
+      - name: Run StatefulDataLoader tests with pytest - state_dict 1
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict_2.py
-      - name: Run StatefulDataLoader tests with pytest 3
+        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict.py -k _shard1
+      - name: Run StatefulDataLoader tests with pytest - state_dict 2
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict_3.py
+        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict.py -k _shard2
+      - name: Run StatefulDataLoader tests with pytest - state_dict 3
+        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict.py -k _shard3
