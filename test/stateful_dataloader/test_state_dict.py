@@ -872,7 +872,7 @@ class TestFastStateDictRequest_shard3(TestCase):
 
         dl.load_state_dict(state_dict)
         # new iter after load_state_dict, ask for state dict before num_workers batches
-        # are yielded to ensure old  worker states are stored properly
+        # are yielded to ensure old worker states are stored properly
         it = iter(dl)
         for _ in range(2):
             next(it)
