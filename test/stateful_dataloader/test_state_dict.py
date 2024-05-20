@@ -11,7 +11,7 @@ from typing import Iterator
 
 import torch
 import torch.utils.data
-from torch.testing._internal.common_utils import IS_MACOS
+from torch.testing._internal.common_utils import IS_MACOS, TestCase
 from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
 
 
@@ -130,7 +130,7 @@ def identity(x):
     return x
 
 
-class TestStatefulDataLoaderIterable(unittest.TestCase):
+class TestStatefulDataLoaderIterable_shard0(TestCase):
     def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
         dataset = DummyIterableDataset([0, 100, 37], shuffle=shuffle)
         dl = StatefulDataLoader(
@@ -141,17 +141,12 @@ class TestStatefulDataLoaderIterable(unittest.TestCase):
             persistent_workers=pw,
             multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
         )
-        list(dl)
-
-        if interrupt is None:
-            interrupt = len(exp)
-
-        exp = []
         it = iter(dl)
         for _ in range(interrupt):
             next(it)
 
         state_dict = dl.state_dict()
+        exp = []
         for data in it:
             exp.append(data)
 
@@ -224,7 +219,7 @@ class TestStatefulDataLoaderIterable(unittest.TestCase):
                 )
 
 
-class TestStatefulDataLoaderMap(TestStatefulDataLoaderIterable):
+class TestStatefulDataLoaderMap_shard1(TestStatefulDataLoaderIterable_shard0):
     def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
         if num_workers == 0:
             return
@@ -277,7 +272,7 @@ class TestStatefulDataLoaderMap(TestStatefulDataLoaderIterable):
         self.assertEqual(batches, exp)
 
 
-class TestStatefulSampler(TestStatefulDataLoaderIterable):
+class TestStatefulSampler_shard1(TestStatefulDataLoaderIterable_shard0):
     def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
         dataset = DummyMapDataset(100, shuffle=shuffle)
         sampler = DummySampler(len(dataset))
@@ -369,7 +364,7 @@ class GeneratorIterableNoState(torch.utils.data.IterableDataset):
         yield from range(start, start + self.sizes_for_all_workers[worker_id])
 
 
-class TestStatefulDataLoaderGenerator(TestStatefulDataLoaderIterable):
+class TestStatefulDataLoaderGenerator_shard2(TestStatefulDataLoaderIterable_shard0):
     def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
         dataset = GeneratorIterable([0, 100, 37])
         dl = StatefulDataLoader(
@@ -419,7 +414,7 @@ class TestStatefulDataLoaderGenerator(TestStatefulDataLoaderIterable):
         self.assertEqual(batches, exp)
 
 
-class TestStatefulDataLoaderGeneratorNoState(TestStatefulDataLoaderIterable):
+class TestStatefulDataLoaderGeneratorNoState_shard2(TestStatefulDataLoaderIterable_shard0):
     def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
         dataset = GeneratorIterableNoState([0, 100, 37])
         dl = StatefulDataLoader(
@@ -469,7 +464,7 @@ class TestStatefulDataLoaderGeneratorNoState(TestStatefulDataLoaderIterable):
         self.assertEqual(batches, exp)
 
 
-class TestSnapshotZero(unittest.TestCase):
+class TestSnapshotZero_shard2(TestCase):
     def test_generator(self):
         num_workers = 3
         every_n_steps = 10
@@ -598,7 +593,7 @@ class TestSnapshotZero(unittest.TestCase):
             self.assertEqual(batches, exp)
 
 
-class TestSnapshotEnd(unittest.TestCase):
+class TestSnapshotEnd_shard2(TestCase):
     def test_generator(self):
         num_workers = 3
         every_n_steps = 10
@@ -785,7 +780,7 @@ class TestSnapshotEnd(unittest.TestCase):
             self.assertEqual(batches, exp)
 
 
-class TestNumWorkersMismatch(unittest.TestCase):
+class TestNumWorkersMismatch_shard3(TestCase):
     def test_num_workers_mismatch(self):
         for initial_num_workers, num_workers in ((0, 3), (3, 0)):
             if initial_num_workers == num_workers:
@@ -819,7 +814,7 @@ class TestNumWorkersMismatch(unittest.TestCase):
             self.assertTrue(False, "Error should be of type AssertionError")
 
 
-class TestTorchDataLazyImport(unittest.TestCase):
+class TestTorchDataLazyImport_shard3(TestCase):
     def test_lazy_imports(self) -> None:
         import torchdata
 
@@ -831,7 +826,7 @@ class TestTorchDataLazyImport(unittest.TestCase):
         dp.iter.IterableWrapper([1, 2])
 
 
-class TestConcurrentDataLoaders(unittest.TestCase):
+class TestConcurrentDataLoaders_shard3(TestCase):
     def test_two_dataloaders(self) -> None:
         dataset = DummyMapDataset(100, shuffle=False)
         sdl = StatefulDataLoader(
@@ -852,7 +847,7 @@ class TestConcurrentDataLoaders(unittest.TestCase):
         self.assertEqual(data, exp)
 
 
-class TestFastStateDictRequest(unittest.TestCase):
+class TestFastStateDictRequest_shard3(TestCase):
     def _run_test(self, snapshot_every_n_steps, interrupt):
         num_workers = 4
         dataset = DummyIterableDataset([25, 25, 25, 25], shuffle=True)
@@ -903,7 +898,7 @@ class TestFastStateDictRequest(unittest.TestCase):
         self._run_test(17, 19)
 
 
-class TestJsonSerDe(unittest.TestCase):
+class TestJsonSerDe_shard3(TestCase):
     def _run_test_iterable(self, num_workers):
         interrupt = 4
         dataset = DummyIterableDataset([0, 100, 37], shuffle=False, include_generator=False)
