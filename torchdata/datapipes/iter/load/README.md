@@ -2,6 +2,9 @@
 
 ## S3 IO Datapipe Documentation
 
+**WARNING**: S3 IO Datapipes have been deprecated. Consider using
+[S3 Connector for PyTorch](https://github.com/awslabs/s3-connector-for-pytorch).
+
 ### Build from Source
 
 `ninja` is required to link PyThon implementation to C++ source code.

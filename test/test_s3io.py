@@ -15,6 +15,7 @@ skipIfSandcastle = unittest.skipIf(IS_SANDCASTLE, "Skip for internal testing")
 
 
 @skipIfSandcastle
+@unittest.skip("S3 IterDataPipes are deprecated")
 @patch("torchdata._torchdata")
 class TestS3FileListerIterDataPipe(expecttest.TestCase):
     def test_list_files(self, mock_torchdata):

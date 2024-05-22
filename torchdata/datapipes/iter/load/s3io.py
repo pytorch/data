@@ -17,7 +17,8 @@ from torchdata.datapipes.utils import StreamWrapper
 
 @functional_datapipe("list_files_by_s3")
 class S3FileListerIterDataPipe(IterDataPipe[str]):
-    r"""
+    r"""[DEPRECATED] Use https://github.com/awslabs/s3-connector-for-pytorch instead.
+
     Iterable DataPipe that lists Amazon S3 file URLs with the given prefixes (functional name: ``list_files_by_s3``).
     Acceptable prefixes include ``s3://bucket-name``, ``s3://bucket-name/``, ``s3://bucket-name/folder``.
 
@@ -104,7 +105,8 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
 
 @functional_datapipe("load_files_by_s3")
 class S3FileLoaderIterDataPipe(IterDataPipe[Tuple[str, StreamWrapper]]):
-    r"""
+    r"""[DEPRECATED] Use https://github.com/awslabs/s3-connector-for-pytorch instead.
+
     Iterable DataPipe that loads Amazon S3 files from the given S3 URLs (functional name: ``load_files_by_s3``).
     ``S3FileLoader`` iterates all given S3 URLs in ``BytesIO`` format with ``(url, BytesIO)`` tuples.
 
