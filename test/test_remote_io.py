@@ -300,6 +300,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
         self.assertEqual(res_abfs, res_az, f"{input} failed")
 
     @skipIfAWS
+    @unittest.skip("S3 IterDataPipes are deprecated")
     def test_disabled_s3_io_iterdatapipe(self):
         file_urls = ["s3://ai2-public-datasets"]
         with self.assertRaisesRegex(ModuleNotFoundError, "TorchData must be built with"):
@@ -308,6 +309,7 @@ class TestDataPipeRemoteIO(expecttest.TestCase):
             _ = S3FileLoader(IterableWrapper(file_urls))
 
     @skipIfNoAWS
+    @unittest.skip("S3 IterDataPipes are deprecated")
     @unittest.skipIf(IS_M1, "PyTorch M1 CI Machine doesn't allow accessing")
     def test_s3_io_iterdatapipe(self):
         # S3FileLister: different inputs
