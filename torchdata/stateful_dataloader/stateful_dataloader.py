@@ -42,6 +42,7 @@ from .sampler import BatchSampler, RandomSampler  # noqa
 from .stateful import Stateful
 
 from .worker import (
+    _AckStartup,
     _DATASET_ITER_STATE,
     _DATASET_STATE,
     _FETCHER_ENDED,
@@ -215,6 +216,7 @@ class StatefulDataLoader(DataLoader[T_co]):
         self.snapshot_every_n_steps = snapshot_every_n_steps
         self.next_iter_state: Optional[Dict[str, Any]] = None
         self.iter_calls = 0
+        self._initial_iter_for_state_dict = False
 
     def _get_iterator(self) -> "_StatefulBaseDataLoaderIter":
         it: _StatefulBaseDataLoaderIter
@@ -232,7 +234,13 @@ class StatefulDataLoader(DataLoader[T_co]):
         # However, in the case of a multiple workers iterator
         # the iterator is only created once in the lifetime of the
         # DataLoader object so that workers can be reused
-        if self.persistent_workers and self.num_workers > 0:
+        if (self.persistent_workers and self.num_workers > 0) or self._initial_iter_for_state_dict:
+            # @@@@ Andrewkh
+            # Cases to check:
+            #   * new dl, state_dict, iter
+            #   * new dl, state_dict, load_state_dict, iter
+            #   * new dl, load_state_dict, state_dict, iter
+            self._initial_iter_for_state_dict = False
             if self._iterator is None:
                 self._iterator = self._get_iterator()
             else:
@@ -247,9 +255,9 @@ class StatefulDataLoader(DataLoader[T_co]):
 
     def state_dict(self) -> Dict[str, Any]:
         if self._iterator is None:
-            return {}
-        else:
-            return self._iterator.state_dict()
+            iter(self)
+            self._initial_iter_for_state_dict = True
+        return self._iterator.state_dict()
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         self._iterator = None
@@ -858,6 +866,17 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._snapshot, self._worker_snapshots, self._main_snapshots = {}, {}, collections.deque()  # type: ignore[var-annotated]
 
         self._main_state_0 = self._get_main_state()
+        self._worker_snapshots_0 = {}
+        while len(self._worker_snapshots_0) < self._num_workers:
+            data = self._data_queue.get(timeout=_utils.MP_STATUS_CHECK_INTERVAL)
+            if isinstance(data, _AckStartup):
+                self._worker_snapshots_0[self._worker_key(data.worker_id)] = data.initial_state
+            elif isinstance(data, ExceptionWrapper):
+                data.reraise()
+            else:
+                raise ValueError(f"Invalid response from worker after startup: {data}")
+        if next_iter_state is None:
+            worker_states = self._worker_snapshots_0
         self._reset(loader, first_iter=True, prime_prefetch=next_iter_state is None)
 
         # Try to restore main state
@@ -912,7 +931,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             last_yielded_worker_id=self._num_workers - 1,
             num_workers=self._num_workers,
             main_snapshot=self._main_state_0,
-            worker_snapshots={},
+            worker_snapshots=self._worker_snapshots_0,
         )
 
     def _reset(self, loader, first_iter=False, prime_prefetch=True):

@@ -12,7 +12,8 @@ static methods.
 
 import queue
 import random
-from typing import Any, TypeVar, Union
+from dataclasses import dataclass
+from typing import Any, Dict, TypeVar, Union
 
 import torch
 
@@ -47,6 +48,14 @@ def try_to_deserialize(obj: T, state_dict: dict) -> T:
         obj.load_state_dict(state_dict)
         return obj  # type: ignore[return-value]
     return obj
+
+
+@dataclass(frozen=True)
+class _AckStartup:
+    """Dummy class used to ack startup and return state at time 0"""
+
+    worker_id: int
+    initial_state: Dict[str, Any]
 
 
 _WORKER_ID = "worker_id"
@@ -118,6 +127,13 @@ def _worker_loop(
 
             fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
 
+            # Send ack and initial state to the main process
+            data_queue.put(
+                _AckStartup(
+                    worker_id=worker_id, initial_state=_make_state_dict(worker_id, dataset_kind, fetcher, dataset)
+                )
+            )
+
             # Restore worker state if provided
             if worker_state:
                 # Always restore in this order:
@@ -145,6 +161,7 @@ def _worker_loop(
                 del worker_state
         except Exception:
             init_exception = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
+            data_queue.put(init_exception)
 
         # When using Iterable mode, some worker can exit earlier than others due
         # to the IterableDataset behaving differently for different workers.
@@ -192,41 +209,24 @@ def _worker_loop(
             idx, (index, snapshot) = r
             data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
             state_dict = None
-            if init_exception is not None:
-                data = init_exception
-                init_exception = None
-            else:
+            try:
                 try:
-                    try:
-                        data = fetcher.fetch(index)  # type: ignore[union-attr]
-                    except StopIteration:
-                        if not dataset_kind == _DatasetKind.Iterable:
-                            raise
-                        data = _IterableDatasetStopIteration(worker_id)
-                        # Set `iteration_end`
-                        #   (1) to save future `next(...)` calls, and
-                        #   (2) to avoid sending multiple `_IterableDatasetStopIteration`s.
-                        iteration_end = True
-                    if snapshot or iteration_end:
-                        if dataset_kind == _DatasetKind.Iterable:
-                            fetcher_state = {
-                                _DATASET_ITER_STATE: try_to_serialize(fetcher.dataset_iter),  # type: ignore[union-attr]
-                                _FETCHER_ENDED: fetcher.ended,  # type: ignore[union-attr]
-                            }
-                        else:
-                            fetcher_state = None
-                        # Pick up any user-defined dataset state, for both map/iterable style datasets
-                        dataset_state = try_to_serialize(dataset)
-                        state_dict = {
-                            _WORKER_ID: worker_id,
-                            _FETCHER_STATE: fetcher_state,
-                            _DATASET_STATE: dataset_state,
-                        }
-                except Exception:
-                    # It is important that we don't store exc_info in a variable.
-                    # `ExceptionWrapper` does the correct thing.
-                    # See NOTE [ Python Traceback Reference Cycle Problem ]
-                    data = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
+                    data = fetcher.fetch(index)  # type: ignore[union-attr]
+                except StopIteration:
+                    if not dataset_kind == _DatasetKind.Iterable:
+                        raise
+                    data = _IterableDatasetStopIteration(worker_id)
+                    # Set `iteration_end`
+                    #   (1) to save future `next(...)` calls, and
+                    #   (2) to avoid sending multiple `_IterableDatasetStopIteration`s.
+                    iteration_end = True
+                if snapshot or iteration_end:
+                    state_dict = _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
+            except Exception:
+                # It is important that we don't store exc_info in a variable.
+                # `ExceptionWrapper` does the correct thing.
+                # See NOTE [ Python Traceback Reference Cycle Problem ]
+                data = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
             data_queue.put((idx, (data, worker_id, state_dict)))
             del data, idx, index, r, state_dict  # save memory
     except KeyboardInterrupt:
@@ -235,3 +235,23 @@ def _worker_loop(
     if done_event.is_set():
         data_queue.cancel_join_thread()
         data_queue.close()
+
+
+def _make_state_dict(worker_id, dataset_kind, fetcher, dataset) -> Dict[str, Any]:
+    from torch.utils.data import _DatasetKind
+
+    if dataset_kind == _DatasetKind.Iterable:
+        fetcher_state = {
+            _DATASET_ITER_STATE: try_to_serialize(fetcher.dataset_iter),  # type: ignore[union-attr]
+            _FETCHER_ENDED: fetcher.ended,  # type: ignore[union-attr]
+        }
+    else:
+        fetcher_state = None
+    # Pick up any user-defined dataset state, for both map/iterable style datasets
+    dataset_state = try_to_serialize(dataset)
+
+    return {
+        _WORKER_ID: worker_id,
+        _FETCHER_STATE: fetcher_state,
+        _DATASET_STATE: dataset_state,
+    }

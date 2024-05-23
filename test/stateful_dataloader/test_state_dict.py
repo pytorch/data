@@ -793,7 +793,6 @@ class TestNumWorkersMismatch_shard3(TestCase):
                 multiprocessing_context=("forkserver" if IS_MACOS and initial_num_workers else None),
             )
             state = dl.state_dict()
-            self.assertEqual(len(state), 0)
 
             iter(dl)
             state = dl.state_dict()
@@ -985,6 +984,69 @@ class TestJsonSerDe_shard3(TestCase):
 
     def test_json_serde_multi_process_map(self):
         self._run_test_map(3)
+
+
+class TestInitialState_shard0(TestCase):
+    def test_initial_state(self):
+        num_workers = 4
+        dataset = DummyMapDataset(100, shuffle=False)
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            collate_fn=identity,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+        )
+        state = dl.state_dict()
+        self.assertEqual(len(state["_snapshot"]["_worker_snapshots"]), num_workers)
+
+        exp = list(dl)
+
+        it = iter(dl)
+        for _ in range(2):
+            next(it)
+
+        dl.load_state_dict(state)
+        data = list(dl)
+
+        self.assertEqual(data, exp)
+
+    def test_init_error(self):
+        msg = "Worker init error"
+
+        def worker_init_fn(worker_id):
+            raise ValueError(msg)
+
+        num_workers = 4
+        dataset = DummyMapDataset(100, shuffle=False)
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            collate_fn=identity,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+            worker_init_fn=worker_init_fn,
+        )
+        with self.assertRaisesRegex(ValueError, msg):
+            iter(dl)
+
+    def test_iteration_error(self):
+        class ErrorDataset(torch.utils.data.Dataset):
+            def __getitem__(self, index: int):
+                raise ValueError("Iteration error")
+
+            def __len__(self):
+                return 10
+
+        num_workers = 4
+        dataset = ErrorDataset()
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            collate_fn=identity,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+        )
+        it = iter(dl)
+        with self.assertRaisesRegex(ValueError, "Iteration error"):
+            next(it)
 
 
 if __name__ == "__main__":
