@@ -986,6 +986,14 @@ class TestJsonSerDe_shard3(TestCase):
         self._run_test_map(3)
 
 
+class ErrorDataset(torch.utils.data.Dataset):
+    def __getitem__(self, index: int):
+        raise ValueError("Iteration error")
+
+    def __len__(self):
+        return 10
+
+
 class TestInitialState_shard0(TestCase):
     def test_initial_state(self):
         for pw in [False, True]:
@@ -1097,13 +1105,6 @@ class TestInitialState_shard0(TestCase):
             iter(dl)
 
     def test_iteration_error(self):
-        class ErrorDataset(torch.utils.data.Dataset):
-            def __getitem__(self, index: int):
-                raise ValueError("Iteration error")
-
-            def __len__(self):
-                return 10
-
         num_workers = 4
         dataset = ErrorDataset()
         dl = StatefulDataLoader(
