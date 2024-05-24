@@ -234,13 +234,14 @@ class StatefulDataLoader(DataLoader[T_co]):
         # However, in the case of a multiple workers iterator
         # the iterator is only created once in the lifetime of the
         # DataLoader object so that workers can be reused
-        if (self.persistent_workers and self.num_workers > 0) or self._initial_iter_for_state_dict:
+        if self._initial_iter_for_state_dict:
+            self._initial_iter_for_state_dict = False
+        elif self.persistent_workers and self.num_workers > 0:
             # @@@@ Andrewkh
             # Cases to check:
             #   * new dl, state_dict, iter
             #   * new dl, state_dict, load_state_dict, iter
             #   * new dl, load_state_dict, state_dict, iter
-            self._initial_iter_for_state_dict = False
             if self._iterator is None:
                 self._iterator = self._get_iterator()
             else:
@@ -255,12 +256,14 @@ class StatefulDataLoader(DataLoader[T_co]):
 
     def state_dict(self) -> Dict[str, Any]:
         if self._iterator is None:
+            self._initial_iter_for_state_dict = False
             iter(self)
             self._initial_iter_for_state_dict = True
         return self._iterator.state_dict()
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         self._iterator = None
+        self._initial_iter_for_state_dict = False
         if state_dict == {}:
             return
         self.next_iter_state = state_dict
@@ -887,6 +890,14 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             # Back-fill the worker snapshots before starting, in case of failure before a full cycle
             self._worker_snapshots = worker_states
 
+            self._update_snapshot(
+                snapshot_step=next_iter_state[self._SNAPSHOT][self._SNAPSHOT_STEP],
+                last_yielded_worker_id=next_iter_state[self._SNAPSHOT][self._LAST_YIELDED_WORKER_ID],
+                num_workers=self._num_workers,
+                main_snapshot=next_iter_state[self._SNAPSHOT][self._MAIN_SNAPSHOT],
+                worker_snapshots=next_iter_state[self._SNAPSHOT][self._WORKER_SNAPSHOTS],
+            )
+
             fast_forward = False
             if self._dataset_kind == _DatasetKind.Iterable:
                 for state in worker_states.values():
@@ -923,7 +934,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             self._finished = next_iter_state[_ITERATOR_FINISHED]
 
     def _reset_state_vars(self):
-        self._worker_snapshots = {}
+        self._worker_snapshots = self._worker_snapshots_0
         self._main_snapshots = collections.deque()
         self._last_yielded_worker_id = self._num_workers - 1
         self._update_snapshot(

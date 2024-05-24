@@ -988,27 +988,95 @@ class TestJsonSerDe_shard3(TestCase):
 
 class TestInitialState_shard0(TestCase):
     def test_initial_state(self):
-        num_workers = 4
-        dataset = DummyMapDataset(100, shuffle=False)
-        dl = StatefulDataLoader(
-            dataset=dataset,
-            num_workers=num_workers,
-            collate_fn=identity,
-            multiprocessing_context="forkserver" if IS_MACOS else None,
-        )
-        state = dl.state_dict()
-        self.assertEqual(len(state["_snapshot"]["_worker_snapshots"]), num_workers)
+        for pw in [False, True]:
+            num_workers = 4
+            dataset = DummyMapDataset(100, shuffle=False)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                persistent_workers=pw,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS else None,
+            )
+            state = dl.state_dict()
+            self.assertEqual(len(state["_snapshot"]["_worker_snapshots"]), num_workers)
 
-        exp = list(dl)
+            exp = list(dl)
 
-        it = iter(dl)
-        for _ in range(2):
-            next(it)
+            it = iter(dl)
+            for _ in range(2):
+                next(it)
 
-        dl.load_state_dict(state)
-        data = list(dl)
+            dl.load_state_dict(state)
+            data = list(dl)
+            self.assertEqual(data, exp)
 
-        self.assertEqual(data, exp)
+            data2 = list(dl)
+            self.assertEqual(data2, exp)
+
+    def test_load_state_after_initial_state_dict(self):
+        for pw, interrupt in itertools.product([False, True], [2, 9]):
+            num_workers = 4
+            dataset = DummyMapDataset(100, shuffle=False)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                persistent_workers=pw,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS else None,
+            )
+
+            it = iter(dl)
+            for _ in range(interrupt):
+                next(it)
+            state = dl.state_dict()
+            exp = list(it)
+
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                persistent_workers=pw,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS else None,
+            )
+            state0 = dl.state_dict()
+            self.assertEqual(len(state0["_snapshot"]["_worker_snapshots"]), num_workers)
+            dl.load_state_dict(state)
+            data = list(dl)
+            self.assertEqual(data, exp)
+
+    def test_load_state_before_initial_state_dict(self):
+        for pw, interrupt in itertools.product([False, True], [2, 9]):
+            num_workers = 4
+            dataset = DummyMapDataset(100, shuffle=False)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                persistent_workers=pw,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS else None,
+            )
+
+            it = iter(dl)
+            for _ in range(interrupt):
+                next(it)
+            state = dl.state_dict()
+            exp = list(it)
+
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                persistent_workers=pw,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS else None,
+            )
+            dl.load_state_dict(state)
+            state0 = dl.state_dict()
+            print(state0)
+            print(state)
+            self.assertEqual(state0, state)
+            data = list(dl)
+            self.assertEqual(data, exp)
 
     def test_init_error(self):
         msg = "Worker init error"
