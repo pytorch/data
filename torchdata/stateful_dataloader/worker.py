@@ -213,10 +213,13 @@ def _worker_loop(
                                 _DATASET_ITER_STATE: try_to_serialize(fetcher.dataset_iter),  # type: ignore[union-attr]
                                 _FETCHER_ENDED: fetcher.ended,  # type: ignore[union-attr]
                             }
+                            # Pick up any user-defined dataset state if it is not the iterator as it is already captured in fetcher_state's dataset_iter_state
+                            dataset_state = try_to_serialize(dataset) if fetcher.dataset_iter is not dataset else None  # type: ignore[union-attr]
                         else:
                             fetcher_state = None
-                        # Pick up any user-defined dataset state, for both map/iterable style datasets
-                        dataset_state = try_to_serialize(dataset)
+                            # Pick up any user-defined dataset state
+                            dataset_state = try_to_serialize(dataset)
+
                         state_dict = {
                             _WORKER_ID: worker_id,
                             _FETCHER_STATE: fetcher_state,
