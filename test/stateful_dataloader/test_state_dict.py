@@ -1033,25 +1033,32 @@ class TestStatefulDataLoaderIterable2_shard3(TestStatefulDataLoaderIterable_shar
 class TestDatasetIteratorStateDuplication_shard3(TestCase):
     def test(self):
         dataset = DummyIteratorIterableDataset(list(range(100)), shuffle=True, include_generator=True)
-        num_workers = 2
-        dl = StatefulDataLoader(
-            dataset=dataset,
-            num_workers=num_workers,
-            collate_fn=identity,
-            multiprocessing_context="forkserver" if IS_MACOS else None,
-        )
-        it = iter(dl)
-        # Fetch at least one batch from each worker
-        for _ in range(num_workers):
-            next(it)
-        state_dict = dl.state_dict()
-
-        for i in range(num_workers):
-            # Ensure worker state is stored only once if the dataset is also the iterator
-            self.assertEqual(state_dict["_snapshot"]["_worker_snapshots"][f"worker_{i}"]["dataset_state"], None)
-            self.assertTrue(
-                state_dict["_snapshot"]["_worker_snapshots"][f"worker_{i}"]["fetcher_state"]["dataset_iter_state"]
+        for num_workers in (0, 2):
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS else None,
             )
+            it = iter(dl)
+            # Fetch at least one batch from each worker
+            for _ in range(num_workers + 1):
+                next(it)
+            state_dict = dl.state_dict()
+            print(state_dict)
+
+            if num_workers > 0:
+                for i in range(num_workers):
+                    # Ensure worker state is stored only once if the dataset is also the iterator
+                    self.assertEqual(state_dict["_snapshot"]["_worker_snapshots"][f"worker_{i}"]["dataset_state"], None)
+                    self.assertTrue(
+                        state_dict["_snapshot"]["_worker_snapshots"][f"worker_{i}"]["fetcher_state"][
+                            "dataset_iter_state"
+                        ]
+                    )
+            else:
+                self.assertEqual(state_dict["dataset_state"], None)
+                self.assertTrue(state_dict["fetcher_state"]["dataset_iter_state"])
 
 
 if __name__ == "__main__":
