@@ -994,6 +994,13 @@ class ErrorDataset(torch.utils.data.Dataset):
         return 10
 
 
+ERROR_MSG = "Worker init error"
+
+
+def error_worker_init_fn(worker_id):
+    raise ValueError(ERROR_MSG)
+
+
 class TestInitialState_shard0(TestCase):
     def test_initial_state(self):
         for pw in [False, True]:
@@ -1087,11 +1094,6 @@ class TestInitialState_shard0(TestCase):
             self.assertEqual(data, exp)
 
     def test_init_error(self):
-        msg = "Worker init error"
-
-        def worker_init_fn(worker_id):
-            raise ValueError(msg)
-
         num_workers = 4
         dataset = DummyMapDataset(100, shuffle=False)
         dl = StatefulDataLoader(
@@ -1099,9 +1101,9 @@ class TestInitialState_shard0(TestCase):
             num_workers=num_workers,
             collate_fn=identity,
             multiprocessing_context="forkserver" if IS_MACOS else None,
-            worker_init_fn=worker_init_fn,
+            worker_init_fn=error_worker_init_fn,
         )
-        with self.assertRaisesRegex(ValueError, msg):
+        with self.assertRaisesRegex(ValueError, ERROR_MSG):
             iter(dl)
 
     def test_iteration_error(self):
