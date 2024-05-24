@@ -868,6 +868,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._worker_pids_set = True
         self._snapshot, self._worker_snapshots, self._main_snapshots = {}, {}, collections.deque()  # type: ignore[var-annotated]
 
+        self._workers_status = [True for i in range(self._num_workers)]
         self._main_state_0 = self._get_main_state()
         self._worker_snapshots_0: Dict[str, Any] = {}
         while len(self._worker_snapshots_0) < self._num_workers:
