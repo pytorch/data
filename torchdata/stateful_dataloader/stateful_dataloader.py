@@ -868,7 +868,9 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._worker_snapshots_0: Dict[str, Any] = {}
         while len(self._worker_snapshots_0) < self._num_workers:
             data = self._get_data()
-            if isinstance(data, _AckStartup):
+            if not all(self._workers_status):
+                raise ValueError(f"A worker has failed during startup! {self._workers_status}")
+            elif isinstance(data, _AckStartup):
                 self._worker_snapshots_0[self._worker_key(data.worker_id)] = data.initial_state
             elif isinstance(data, ExceptionWrapper):
                 data.reraise()
