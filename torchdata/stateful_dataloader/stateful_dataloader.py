@@ -238,11 +238,6 @@ class StatefulDataLoader(DataLoader[T_co]):
             self._initial_iter_for_state_dict = False
             assert self._iterator is not None
         elif self.persistent_workers and self.num_workers > 0:
-            # @@@@ Andrewkh
-            # Cases to check:
-            #   * new dl, state_dict, iter
-            #   * new dl, state_dict, load_state_dict, iter
-            #   * new dl, load_state_dict, state_dict, iter
             if self._iterator is None:
                 self._iterator = self._get_iterator()
             else:
