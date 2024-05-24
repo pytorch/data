@@ -1038,7 +1038,7 @@ class TestDatasetIteratorStateDuplication_shard3(TestCase):
                 dataset=dataset,
                 num_workers=num_workers,
                 collate_fn=identity,
-                multiprocessing_context="forkserver" if IS_MACOS else None,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
             )
             it = iter(dl)
             # Fetch at least one batch from each worker
