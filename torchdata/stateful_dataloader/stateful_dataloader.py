@@ -880,6 +880,8 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             if not all(self._workers_status):
                 raise ValueError(f"A worker has failed during startup! {self._workers_status}")
             elif isinstance(data, _AckStartup):
+                if isinstance(data.initial_state, ExceptionWrapper):
+                    data.initial_state.reraise()
                 assert data.initial_state is not None, data
                 self._worker_snapshots_0[self._worker_key(data.worker_id)] = data.initial_state
             else:
