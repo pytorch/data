@@ -13,7 +13,7 @@ static methods.
 import queue
 import random
 from dataclasses import dataclass
-from typing import Any, Dict, TypeVar, Union
+from typing import Any, Dict, Optional, TypeVar, Union
 
 import torch
 
@@ -55,7 +55,7 @@ class _AckStartup:
     """Dummy class used to ack startup and return state at time 0"""
 
     worker_id: int
-    initial_state: Dict[str, Any]
+    initial_state: Optional[Union[Dict[str, Any], ExceptionWrapper]]
 
 
 _WORKER_ID = "worker_id"
