@@ -326,8 +326,14 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
                 _DATASET_ITER_STATE: try_to_serialize(self._dataset_fetcher.dataset_iter),
                 _FETCHER_ENDED: self._dataset_fetcher.ended,
             }
+            dataset_state = (
+                try_to_serialize(self._dataset_fetcher.dataset)
+                if self._dataset_fetcher.dataset_iter is not self._dataset_fetcher.dataset
+                else None
+            )
         else:
             fetcher_state = None
+            dataset_state = try_to_serialize(self._dataset_fetcher.dataset)
 
         state_dict = {
             _INDEX_SAMPLER_STATE: try_to_serialize(self._index_sampler),
@@ -337,7 +343,7 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
             _ITERABLEDATASET_LEN_CALLED: self._IterableDataset_len_called,
             _SHARED_SEED: self._shared_seed,
             _FETCHER_STATE: fetcher_state,
-            _DATASET_STATE: try_to_serialize(self._dataset_fetcher.dataset),
+            _DATASET_STATE: dataset_state,
             _ITERATOR_FINISHED: self._finished,
         }
         return state_dict

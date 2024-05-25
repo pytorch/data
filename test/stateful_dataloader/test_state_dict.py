@@ -79,6 +79,40 @@ class DummySampler(torch.utils.data.Sampler):
         return self.size
 
 
+class DummyIteratorIterableDataset(torch.utils.data.IterableDataset, Iterator, Stateful):
+    def __init__(self, samples, shuffle, include_generator):
+        self.samples = samples
+        self.shuffle = shuffle
+        self.include_generator = include_generator
+        self.size = len(self.samples)
+        self.i = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.i >= len(self.samples):
+            raise StopIteration
+        if self.shuffle:
+            i = torch.randint(self.size, (1,)).item()
+        else:
+            i = self.i
+        sample = self.samples[i]
+        self.i += 1
+        return sample
+
+    def state_dict(self):
+        sd = {"i": self.i}
+        if self.include_generator:
+            sd["g"] = torch.get_rng_state()
+        return sd
+
+    def load_state_dict(self, state_dict):
+        self.i = state_dict["i"]
+        if self.include_generator:
+            torch.set_rng_state(state_dict["g"])
+
+
 class DummyIterableDataset(torch.utils.data.IterableDataset):
     def __init__(self, sizes_for_all_workers, shuffle=False, include_generator=True):
         self.sizes_for_all_workers = sizes_for_all_workers
@@ -131,8 +165,11 @@ def identity(x):
 
 
 class TestStatefulDataLoaderIterable_shard0(TestCase):
+    def _get_dataset(self, shuffle):
+        return DummyIterableDataset([0, 100, 37], shuffle=shuffle)
+
     def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
-        dataset = DummyIterableDataset([0, 100, 37], shuffle=shuffle)
+        dataset = self._get_dataset(shuffle)
         dl = StatefulDataLoader(
             dataset=dataset,
             num_workers=num_workers,
@@ -985,6 +1022,43 @@ class TestJsonSerDe_shard3(TestCase):
 
     def test_json_serde_multi_process_map(self):
         self._run_test_map(3)
+
+
+class TestStatefulDataLoaderIterable2_shard3(TestStatefulDataLoaderIterable_shard0):
+    # Perform sanity test checks with the iterable dataset that is also an iterator
+    def _get_dataset(self, shuffle):
+        return DummyIteratorIterableDataset(list(range(100)), shuffle=shuffle, include_generator=True)
+
+
+class TestDatasetIteratorStateDuplication_shard3(TestCase):
+    def test(self):
+        dataset = DummyIteratorIterableDataset(list(range(100)), shuffle=True, include_generator=True)
+        for num_workers in (0, 2):
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
+            )
+            it = iter(dl)
+            # Fetch at least one batch from each worker
+            for _ in range(num_workers + 1):
+                next(it)
+            state_dict = dl.state_dict()
+            print(state_dict)
+
+            if num_workers > 0:
+                for i in range(num_workers):
+                    # Ensure worker state is stored only once if the dataset is also the iterator
+                    self.assertEqual(state_dict["_snapshot"]["_worker_snapshots"][f"worker_{i}"]["dataset_state"], None)
+                    self.assertTrue(
+                        state_dict["_snapshot"]["_worker_snapshots"][f"worker_{i}"]["fetcher_state"][
+                            "dataset_iter_state"
+                        ]
+                    )
+            else:
+                self.assertEqual(state_dict["dataset_state"], None)
+                self.assertTrue(state_dict["fetcher_state"]["dataset_iter_state"])
 
 
 if __name__ == "__main__":
