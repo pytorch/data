@@ -121,18 +121,14 @@ def _worker_loop(
         init_exception = None
 
         fetcher = None
+        initial_state = None
         try:
             if init_fn is not None:
                 init_fn(worker_id)
 
             fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
 
-            # Send ack and initial state to the main process
-            data_queue.put(
-                _AckStartup(
-                    worker_id=worker_id, initial_state=_make_state_dict(worker_id, dataset_kind, fetcher, dataset)
-                )
-            )
+            initial_state = _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
 
             # Restore worker state if provided
             if worker_state:
@@ -161,7 +157,6 @@ def _worker_loop(
                 del worker_state
         except Exception:
             init_exception = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
-            data_queue.put(init_exception)
 
         # When using Iterable mode, some worker can exit earlier than others due
         # to the IterableDataset behaving differently for different workers.
@@ -184,7 +179,12 @@ def _worker_loop(
                 r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
             except queue.Empty:
                 continue
-            if isinstance(r, _ResumeIteration):
+            if isinstance(r, _AckStartup):
+                # Send ack and initial state to the main process
+                data_queue.put(_AckStartup(worker_id=worker_id, initial_state=initial_state))
+                del initial_state
+                continue
+            elif isinstance(r, _ResumeIteration):
                 # Acknowledge the main process
                 data_queue.put((r, None))
                 iteration_end = False
@@ -209,24 +209,28 @@ def _worker_loop(
             idx, (index, snapshot) = r
             data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
             state_dict = None
-            try:
+            if init_exception is not None:
+                data = init_exception
+                init_exception = None
+            else:
                 try:
-                    data = fetcher.fetch(index)  # type: ignore[union-attr]
-                except StopIteration:
-                    if not dataset_kind == _DatasetKind.Iterable:
-                        raise
-                    data = _IterableDatasetStopIteration(worker_id)
-                    # Set `iteration_end`
-                    #   (1) to save future `next(...)` calls, and
-                    #   (2) to avoid sending multiple `_IterableDatasetStopIteration`s.
-                    iteration_end = True
-                if snapshot or iteration_end:
-                    state_dict = _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
-            except Exception:
-                # It is important that we don't store exc_info in a variable.
-                # `ExceptionWrapper` does the correct thing.
-                # See NOTE [ Python Traceback Reference Cycle Problem ]
-                data = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
+                    try:
+                        data = fetcher.fetch(index)  # type: ignore[union-attr]
+                    except StopIteration:
+                        if not dataset_kind == _DatasetKind.Iterable:
+                            raise
+                        data = _IterableDatasetStopIteration(worker_id)
+                        # Set `iteration_end`
+                        #   (1) to save future `next(...)` calls, and
+                        #   (2) to avoid sending multiple `_IterableDatasetStopIteration`s.
+                        iteration_end = True
+                    if snapshot or iteration_end:
+                        state_dict = _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
+                except Exception:
+                    # It is important that we don't store exc_info in a variable.
+                    # `ExceptionWrapper` does the correct thing.
+                    # See NOTE [ Python Traceback Reference Cycle Problem ]
+                    data = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
             data_queue.put((idx, (data, worker_id, state_dict)))
             del data, idx, index, r, state_dict  # save memory
     except KeyboardInterrupt:

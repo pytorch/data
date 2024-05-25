@@ -872,14 +872,16 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._workers_status = [True for i in range(self._num_workers)]
         self._main_state_0 = self._get_main_state()
         self._worker_snapshots_0: Dict[str, Any] = {}
+        # Request the initial state_dict
+        for i in range(self._num_workers):
+            self._index_queues[i].put(_AckStartup(i, None))  # type: ignore[arg-type]
         while len(self._worker_snapshots_0) < self._num_workers:
             data = self._get_data()
             if not all(self._workers_status):
                 raise ValueError(f"A worker has failed during startup! {self._workers_status}")
             elif isinstance(data, _AckStartup):
+                assert data.initial_state is not None, data
                 self._worker_snapshots_0[self._worker_key(data.worker_id)] = data.initial_state
-            elif isinstance(data, ExceptionWrapper):
-                data.reraise()
             else:
                 raise ValueError(f"Invalid response from worker after startup: {data}")
         if next_iter_state is None:
@@ -1154,12 +1156,14 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         # If `pin_memory=True`, we also need check if `pin_memory_thread` had
         # died at timeouts.
         if self._timeout > 0:
+            print("1")
             success, data = self._try_get_data(self._timeout)
             if success:
                 return data
             else:
                 raise RuntimeError(f"DataLoader timed out after {self._timeout} seconds")
         elif self._pin_memory:
+            print("2")
             while self._pin_memory_thread.is_alive():
                 success, data = self._try_get_data()
                 if success:
@@ -1170,6 +1174,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             # In this case, `self._data_queue` is a `queue.Queue`,. But we don't
             # need to call `.task_done()` because we don't use `.join()`.
         else:
+            print("3")
             while True:
                 success, data = self._try_get_data()
                 if success:
