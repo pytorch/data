@@ -1045,7 +1045,6 @@ class TestDatasetIteratorStateDuplication_shard3(TestCase):
             for _ in range(num_workers + 1):
                 next(it)
             state_dict = dl.state_dict()
-            print(state_dict)
 
             if num_workers > 0:
                 for i in range(num_workers):
