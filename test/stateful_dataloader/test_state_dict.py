@@ -1124,8 +1124,6 @@ class TestInitialState_shard0(TestCase):
             )
             dl.load_state_dict(state)
             state0 = dl.state_dict()
-            print(state0)
-            print(state)
             self.assertEqual(state0, state)
             data = list(dl)
             self.assertEqual(data, exp)
@@ -1156,6 +1154,7 @@ class TestInitialState_shard0(TestCase):
         with self.assertRaisesRegex(ValueError, "Iteration error"):
             next(it)
 
+
 class TestStatefulDataLoaderIterable2_shard3(TestStatefulDataLoaderIterable_shard0):
     # Perform sanity test checks with the iterable dataset that is also an iterator
     def _get_dataset(self, shuffle):
@@ -1177,7 +1176,6 @@ class TestDatasetIteratorStateDuplication_shard3(TestCase):
             for _ in range(num_workers + 1):
                 next(it)
             state_dict = dl.state_dict()
-            print(state_dict)
 
             if num_workers > 0:
                 for i in range(num_workers):
