@@ -167,8 +167,9 @@ def _worker_loop(
         from torch.utils.data import _DatasetKind
 
         init_exception = None
-
         fetcher = None
+        previous_state_dict = None
+
         try:
             if init_fn is not None:
                 init_fn(worker_id)
@@ -177,6 +178,7 @@ def _worker_loop(
 
             # Restore worker state if provided
             if worker_state:
+                previous_state_dict = worker_state
                 # Always restore in this order:
                 #  1. try to restore dataset state
                 #  2. generate dataset iterator
@@ -219,7 +221,6 @@ def _worker_loop(
 
         watchdog = ManagerWatchdog()
 
-        previous_state_dict = None
         while watchdog.is_alive():
             try:
                 r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
