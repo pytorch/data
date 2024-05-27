@@ -24,6 +24,7 @@ import itertools
 import logging
 import queue
 import threading
+from copy import deepcopy
 
 from typing import Any, Dict, Iterable, List, Optional, Union
 
@@ -956,6 +957,37 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             for _ in range(self._prefetch_factor * self._num_workers):
                 self._try_put_index()
 
+    def _update_worker_snapshot(self, worker_key, state_dict):
+        if state_dict is None:
+            return
+        if worker_key in self._worker_snapshots and self._worker_snapshots[worker_key] is not None:
+            # Update only if worker snapshot already exists for the worker
+            # Start with update of worker dataset state
+            ws_ds_state = self._worker_snapshots[worker_key][_DATASET_STATE]
+            sd_ds_state = state_dict[_DATASET_STATE]
+            if ws_ds_state and sd_ds_state:
+                ws_ds_state.update(sd_ds_state)
+            elif sd_ds_state:
+                ws_ds_state = sd_ds_state
+            if ws_ds_state:
+                ws_ds_state = {k: v for k, v in ws_ds_state.items() if v is not None}
+
+            # Next update dataset iterator state in fetcher state
+            ws_fs_state = self._worker_snapshots[worker_key][_FETCHER_STATE]
+            sd_fs_state = state_dict[_FETCHER_STATE]
+            if ws_fs_state and sd_fs_state:
+                ws_fs_state[_FETCHER_ENDED] = sd_fs_state[_FETCHER_ENDED]
+                ws_is_state = ws_fs_state[_DATASET_ITER_STATE]
+                sd_is_state = sd_fs_state[_DATASET_ITER_STATE]
+                if ws_is_state and sd_is_state:
+                    ws_is_state.update(sd_is_state)
+                elif sd_is_state:
+                    ws_is_state = sd_is_state
+                if ws_is_state:
+                    ws_is_state = {k: v for k, v in ws_is_state.items() if v is not None}
+        else:
+            self._worker_snapshots[worker_key] = state_dict
+
     def state_dict(self):
         steps_since_snapshot = self._num_yielded - self._snapshot[self._SNAPSHOT_STEP]
         state_dict = {
@@ -1178,7 +1210,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             if len(self._task_info[self._rcvd_idx]) == 2:
                 data, worker_id, state_dict = self._task_info.pop(self._rcvd_idx)[1]
                 if isinstance(data, _utils.worker._IterableDatasetStopIteration):
-                    self._worker_snapshots[self._worker_key(data.worker_id)] = state_dict
+                    self._update_worker_snapshot(self._worker_key(data.worker_id), state_dict)
                     self._rcvd_idx += 1
                     continue
                 else:
@@ -1206,7 +1238,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             else:
                 del self._task_info[idx]
                 if isinstance(data, _utils.worker._IterableDatasetStopIteration):
-                    self._worker_snapshots[self._worker_key(data.worker_id)] = state_dict
+                    self._update_worker_snapshot(self._worker_key(data.worker_id), state_dict)
                     self._rcvd_idx += 1
                     continue
                 else:
@@ -1291,7 +1323,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._last_yielded_worker_id = worker_id
         # Update latest worker state
         if state_dict is not None:
-            self._worker_snapshots[self._worker_key(state_dict[_WORKER_ID])] = state_dict
+            self._update_worker_snapshot(self._worker_key(state_dict[_WORKER_ID]), state_dict)
         if self._snapshot_interval and ((self._num_yielded + 1) % self._snapshot_interval == 0):
             self._take_snapshot()
         return data
@@ -1320,7 +1352,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             self._SNAPSHOT_STEP: snapshot_step,
             self._LAST_YIELDED_WORKER_ID: last_yielded_worker_id,
             self._MAIN_SNAPSHOT: main_snapshot,
-            self._WORKER_SNAPSHOTS: dict(worker_snapshots),  # shallow copy
+            self._WORKER_SNAPSHOTS: deepcopy(worker_snapshots),
         }
 
     def _mark_worker_as_unavailable(self, worker_id, shutdown=False):

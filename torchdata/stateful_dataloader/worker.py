@@ -12,7 +12,8 @@ static methods.
 
 import queue
 import random
-from typing import Any, TypeVar, Union
+from copy import deepcopy
+from typing import Any, Dict, Optional, TypeVar, Union
 
 import torch
 
@@ -32,6 +33,12 @@ from .stateful import Stateful
 
 T = TypeVar("T")
 
+_WORKER_ID = "worker_id"
+_FETCHER_STATE = "fetcher_state"
+_FETCHER_ENDED = "fetcher_ended"
+_DATASET_STATE = "dataset_state"
+_DATASET_ITER_STATE = "dataset_iter_state"
+
 
 def try_to_serialize(obj: Any) -> Union[dict, None]:
     if isinstance(obj, Stateful):
@@ -49,11 +56,61 @@ def try_to_deserialize(obj: T, state_dict: dict) -> T:
     return obj
 
 
-_WORKER_ID = "worker_id"
-_FETCHER_STATE = "fetcher_state"
-_FETCHER_ENDED = "fetcher_ended"
-_DATASET_STATE = "dataset_state"
-_DATASET_ITER_STATE = "dataset_iter_state"
+def generate_diff_dict(
+    prev_dict: Optional[Dict[str, Any]], next_dict: Optional[Dict[str, Any]]
+) -> Optional[Dict[str, Any]]:
+    if prev_dict is None:
+        return next_dict
+
+    if next_dict is None:
+        return dict.fromkeys(prev_dict.keys()) if prev_dict else None
+
+    diff_dict = {}
+    all_keys = set(prev_dict.keys()).union(next_dict.keys())
+    for key in all_keys:
+        if key not in prev_dict:
+            # New key seen, retain it
+            diff_dict[key] = next_dict[key]
+            continue
+
+        if key not in next_dict:
+            # Put in None to indicate this key has been removed
+            diff_dict[key] = None
+            continue
+
+        prev_value, next_value = prev_dict[key], next_dict[key]
+        try:
+            if isinstance(prev_value, torch.Tensor) and isinstance(next_value, torch.Tensor):
+                if torch.allclose(prev_value, next_value):
+                    continue
+            elif prev_value == next_value:
+                continue
+        except Exception:
+            # Fallback to retaining the key/value if there is any error during equality check
+            pass
+        diff_dict[key] = next_value
+    return diff_dict
+
+
+def generate_incremental_state_dict(prev_state_dict: Dict[str, Any], next_state_dict: Dict[str, Any]) -> Dict[str, Any]:
+    if prev_state_dict is None:
+        return next_state_dict
+
+    incremental_state_dict = {_WORKER_ID: next_state_dict[_WORKER_ID], _FETCHER_STATE: None}
+    incremental_state_dict[_DATASET_STATE] = generate_diff_dict(
+        prev_state_dict[_DATASET_STATE], next_state_dict[_DATASET_STATE]
+    )
+
+    if prev_state_dict[_FETCHER_STATE] is not None and next_state_dict[_FETCHER_STATE] is not None:
+        dataset_iter_state = generate_diff_dict(
+            prev_state_dict[_FETCHER_STATE][_DATASET_ITER_STATE], next_state_dict[_FETCHER_STATE][_DATASET_ITER_STATE]
+        )
+        fetcher_ended = next_state_dict[_FETCHER_STATE][_FETCHER_ENDED]
+        incremental_state_dict[_FETCHER_STATE] = {
+            _DATASET_ITER_STATE: dataset_iter_state,
+            _FETCHER_ENDED: fetcher_ended,
+        }
+    return incremental_state_dict
 
 
 def _worker_loop(
@@ -162,6 +219,7 @@ def _worker_loop(
 
         watchdog = ManagerWatchdog()
 
+        previous_state_dict = None
         while watchdog.is_alive():
             try:
                 r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
@@ -191,7 +249,7 @@ def _worker_loop(
                 continue
             idx, (index, snapshot) = r
             data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
-            state_dict = None
+            incremental_state_dict = None
             if init_exception is not None:
                 data = init_exception
                 init_exception = None
@@ -225,13 +283,19 @@ def _worker_loop(
                             _FETCHER_STATE: fetcher_state,
                             _DATASET_STATE: dataset_state,
                         }
+
+                        # Generate incremental diff from prev_state_dict and current_state_dict
+                        incremental_state_dict = generate_incremental_state_dict(previous_state_dict, state_dict)
+                        previous_state_dict = deepcopy(state_dict)
+                        del state_dict
                 except Exception:
                     # It is important that we don't store exc_info in a variable.
                     # `ExceptionWrapper` does the correct thing.
                     # See NOTE [ Python Traceback Reference Cycle Problem ]
                     data = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
-            data_queue.put((idx, (data, worker_id, state_dict)))
-            del data, idx, index, r, state_dict  # save memory
+
+            data_queue.put((idx, (data, worker_id, incremental_state_dict)))
+            del data, idx, index, r, incremental_state_dict  # save memory
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
         pass
