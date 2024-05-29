@@ -3,16 +3,17 @@
 [**What is TorchData**](#what-is-torchdata) [**Install guide**](#installation) |
 [**Stateful DataLoader**](#stateful-dataloader) | [**Contributing**](#contributing) | [**License**](#license)
 
-**:warning: June 2024 Status Update on DataPipes and DataLoader V2. We are re-focusing the torchdata repo to be an
-iterative enhancement of torch.utils.data.DataLoader. We do not plan on continuing development or maintaining the
-[`DataPipes`] and [`DataLoaderV2`] solutions, and they will be removed from the torchdata repo. This includes the
-`DataPipes` references in pytorch/pytorch. Existing users may want to pin to `torchdata==0.7.1`. Subsequent releases
-will not include datapipes or dataloader v2, and the datapipes references in pytorch core will also be removed at a
-later date. The old version of this README is [available here](https://github.com/pytorch/data/blob/v0.7.1/README.md).
-Please reach out if you suggestions or comments (please use [#1196](https://github.com/pytorch/data/issues/1196) for
-feedback).**
+\*\*:warning: June 2024 Status Update: Removing DataPipes and DataLoader V2
 
-## What is TorchData
+We are re-focusing the torchdata repo to be an iterative enhancement of torch.utils.data.DataLoader. We do not plan on
+continuing development or maintaining the [`DataPipes`] and [`DataLoaderV2`] solutions, and they will be removed from
+the torchdata repo. This includes the `DataPipes` references in pytorch/pytorch. Existing users may want to pin to
+`torchdata==0.7.1`. Subsequent releases will not include datapipes or dataloader v2, and the datapipes references in
+pytorch core will also be removed at a later date. The old version of this README is
+[available here](https://github.com/pytorch/data/blob/v0.7.1/README.md). Please reach out if you suggestions or comments
+(please use [#1196](https://github.com/pytorch/data/issues/1196) for feedback).\*\*
+
+## What is TorchData?
 
 The TorchData project is an iterative enhancement to the PyTorch torch.utils.data.DataLoader and
 torch.utils.data.Dataset/IterableDataset to make them scalable, performant dataloading solutions. We will be iterating
