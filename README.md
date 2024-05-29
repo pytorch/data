@@ -13,7 +13,7 @@ pytorch core will also be removed at a later date. The old version of this READM
 [available here](https://github.com/pytorch/data/blob/v0.7.1/README.md). Please reach out if you suggestions or comments
 (please use [#1196](https://github.com/pytorch/data/issues/1196) for feedback).**
 
-&nbsp;
+## &nbsp;
 
 ## What is TorchData?
 
