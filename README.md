@@ -19,20 +19,19 @@ pytorch core will also be removed at a later date. The old version of this READM
 
 The TorchData project is an iterative enhancement to the PyTorch torch.utils.data.DataLoader and
 torch.utils.data.Dataset/IterableDataset to make them scalable, performant dataloading solutions. We will be iterating
-on the enhancements under [the torchdata repo](https://github.com/pytorch/data/tree/main/torchdata/).
+on the enhancements under [the torchdata repo](torchdata).
 
-Our first change begins with adding checkpoint to torch.utils.data.DataLoader, [which can be found in
-[stateful_dataloader, a drop-in replacement for torch.utils.data.DataLoader,](https://github.com/pytorch/data/tree/main/torchdata/stateful_dataloader),
-by defining `load_state_dict` and `state_dict` methods that enable mid-epoch checkpointing, and an API for users to
-track custom iteration progress, and other custom states from the dataloader workers such as token buffers and/or RNG
-states.
+Our first change begins with adding checkpointing to torch.utils.data.DataLoader, which can be found in
+[stateful_dataloader, a drop-in replacement for torch.utils.data.DataLoader](torchdata/stateful_dataloader), by defining
+`load_state_dict` and `state_dict` methods that enable mid-epoch checkpointing, and an API for users to track custom
+iteration progress, and other custom states from the dataloader workers such as token buffers and/or RNG states.
 
 ## Stateful DataLoader
 
 `torchdata.stateful_dataloader.StatefulDataLoader` is a drop-in replacement for torch.utils.data.DataLoader which
-provides state_dict and load_state_dict functionality. See [the Stateful DataLoader main
-page(https://github.com/pytorch/data/tree/main/torchdata/stateful_dataloader) for more information and examples. Also
-check out the examples
+provides state_dict and load_state_dict functionality. See
+[the Stateful DataLoader main page](https://github.com/pytorch/data/tree/main/torchdata/stateful_dataloader) for more
+information and examples. Also check out the examples
 [in this Colab notebook](https://colab.research.google.com/drive/1tonoovEd7Tsi8EW8ZHXf0v3yHJGwZP8M?usp=sharing).
 
 ## Installation
