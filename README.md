@@ -30,8 +30,8 @@ iteration progress, and other custom states from the dataloader workers such as 
 
 `torchdata.stateful_dataloader.StatefulDataLoader` is a drop-in replacement for torch.utils.data.DataLoader which
 provides state_dict and load_state_dict functionality. See
-[the Stateful DataLoader main page](https://github.com/pytorch/data/tree/main/torchdata/stateful_dataloader) for more
-information and examples. Also check out the examples
+[the Stateful DataLoader main page](torchdata/stateful_dataloader) for more information and examples. Also check out the
+examples
 [in this Colab notebook](https://colab.research.google.com/drive/1tonoovEd7Tsi8EW8ZHXf0v3yHJGwZP8M?usp=sharing).
 
 ## Installation
@@ -87,7 +87,7 @@ pip install .
 ```
 
 In case building TorchData from source fails, install the nightly version of PyTorch following the linked guide on the
-[contributing page](https://github.com/pytorch/data/blob/main/CONTRIBUTING.md#install-pytorch-nightly).
+[contributing page](CONTRIBUTING.md#install-pytorch-nightly).
 
 ### From nightly
 
