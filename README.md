@@ -1,5 +1,8 @@
 # TorchData (see note below on current status)
 
+[**What is TorchData?**](#what-is-torchdata) | [**Stateful DataLoader**](#stateful-dataloader) |
+[**Install guide**](#installation) | [**Contributing**](#contributing) | [**License**](#license)
+
 **:warning: June 2024 Status Update: Removing DataPipes and DataLoader V2**
 
 **We are re-focusing the torchdata repo to be an iterative enhancement of torch.utils.data.DataLoader. We do not plan on
@@ -11,9 +14,6 @@ pytorch core will also be removed at a later date. The old version of this READM
 (please use [#1196](https://github.com/pytorch/data/issues/1196) for feedback).**
 
 ##
-
-[**What is TorchData**](#what-is-torchdata) [**Install guide**](#installation) |
-[**Stateful DataLoader**](#stateful-dataloader) | [**Contributing**](#contributing) | [**License**](#license)
 
 ## What is TorchData?
 
