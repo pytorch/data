@@ -160,6 +160,36 @@ class DummyMapDataset(torch.utils.data.Dataset):
             torch.set_rng_state(state_dict["g"])
 
 
+class DynamicStateIterableDataset(torch.utils.data.IterableDataset):
+    def __init__(self, samples):
+        self.samples = samples
+        self.size = len(self.samples)
+        self.i = 0
+        self.state = {}
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.i >= len(self.samples):
+            raise StopIteration
+
+        sample = self.samples[self.i]
+        self.i += 1
+        return sample
+
+    def state_dict(self):
+        state = {"i": self.i}
+        for a in range(self.i):
+            state[str(a)] = a
+            state[f"t{str(a)}"] = torch.tensor(a, dtype=torch.int8)
+        return state
+
+    def load_state_dict(self, state_dict):
+        self.i = state_dict["i"]
+        self.state = state_dict
+
+
 def identity(x):
     return x
 
@@ -481,6 +511,7 @@ class TestStatefulDataLoaderGeneratorNoState_shard2(TestStatefulDataLoaderIterab
         for _ in range(interrupt):
             batches.append(next(it))
         state_dict = dl.state_dict()
+        print("Got sd: ", state_dict)
 
         self.assertEqual(batches, exp[:interrupt])
 
@@ -1028,6 +1059,45 @@ class TestStatefulDataLoaderIterable2_shard3(TestStatefulDataLoaderIterable_shar
     # Perform sanity test checks with the iterable dataset that is also an iterator
     def _get_dataset(self, shuffle):
         return DummyIteratorIterableDataset(list(range(100)), shuffle=shuffle, include_generator=True)
+
+
+class TestDynamicStateIterableDataset(TestCase):
+    def test(self):
+        dataset = DynamicStateIterableDataset(list(range(100)))
+        for num_workers in [2]:
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
+            )
+            it = iter(dl)
+            # Fetch at least one batch from each worker
+            for _ in range((num_workers + 1) * 2):
+                next(it)
+            state_dict = dl.state_dict()
+            worker_state = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"][
+                "dataset_iter_state"
+            ]
+            self.assertEqual(len(worker_state), 7)
+
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS and num_workers else None,
+            )
+            dl.load_state_dict(state_dict)
+            it = iter(dl)
+            exp = []
+            for _ in range(2):
+                exp.extend(next(it))
+            state_dict = dl.state_dict()
+            self.assertEqual(exp, [3, 3])
+            worker_state = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"][
+                "dataset_iter_state"
+            ]
+            self.assertEqual(len(worker_state), 9)
 
 
 class TestDatasetIteratorStateDuplication_shard3(TestCase):
