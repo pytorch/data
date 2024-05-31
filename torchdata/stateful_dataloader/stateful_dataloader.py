@@ -1297,7 +1297,6 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             data.reraise()
         self._last_yielded_worker_id = worker_id
         # Update latest worker state
-        # print("Received state_dict : ", state_dict)
         if state_dict is not None:
             self._update_worker_snapshot(self._worker_key(state_dict[_WORKER_ID]), state_dict)
         if self._snapshot_interval and ((self._num_yielded + 1) % self._snapshot_interval == 0):

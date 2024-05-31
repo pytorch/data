@@ -512,8 +512,6 @@ class TestStatefulDataLoaderGeneratorNoState_shard2(TestStatefulDataLoaderIterab
         for _ in range(interrupt):
             batches.append(next(it))
         state_dict = dl.state_dict()
-        print("Got sd: ", state_dict)
-
         self.assertEqual(batches, exp[:interrupt])
 
         # Restore new instance from state

@@ -3,7 +3,7 @@
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import torch
 
@@ -14,7 +14,7 @@ _DATASET_STATE = "dataset_state"
 _DATASET_ITER_STATE = "dataset_iter_state"
 
 
-def _flatten(nested_data, key_lineage=()):
+def _flatten(nested_data: Any, key_lineage: Tuple = ()):
     if nested_data is None:
         return None
     data = {}
@@ -27,7 +27,7 @@ def _flatten(nested_data, key_lineage=()):
     return data
 
 
-def _unflatten(flat_data):
+def _unflatten(flat_data: Optional[Dict[Tuple, Any]]):
     if flat_data is None:
         return None
     nested_data = {}
