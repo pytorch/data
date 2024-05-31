@@ -14,59 +14,50 @@ _DATASET_STATE = "dataset_state"
 _DATASET_ITER_STATE = "dataset_iter_state"
 
 
-class Flattener:
-    @classmethod
-    def flatten(cls, nested_data: Optional[Dict[str, Any]], prefix: str = "", separator: str = "/"):
-        if nested_data is None:
-            return None
-        data = {}
-        if isinstance(nested_data, dict):
-            for key, value in nested_data.items():
-                flat = cls.flatten(
-                    value,
-                    prefix=f"{prefix}{separator}{key}" if len(prefix) > 0 else key,
-                    separator=separator,
-                )
-                data.update(flat)
-        else:
-            if len(prefix) > 0:
-                data[prefix] = nested_data
-            else:
-                data = nested_data
-        return data
-
-    @classmethod
-    def unflatten(cls, flat_data: Optional[Dict[str, Any]], separator: str = "/"):
-        if flat_data is None:
-            return None
-        nested_data = {}
-        for key, value in flat_data.items():
-            _keytoks = key.split(separator)
-            prefix = _keytoks[0]
-            suffix = separator.join(_keytoks[1:])
-            if len(_keytoks) == 1:
-                nested_data[prefix] = value
-                continue
-            if prefix not in nested_data:
-                nested_data[prefix] = {}
-            nested_data[prefix][suffix] = value
-        # now go through nested_data and combine them all
-        for k, v in nested_data.items():
-            if isinstance(v, dict):
-                nested_data[k] = cls.unflatten(v, separator=separator)
-        return nested_data
+def _flatten(nested_data, key_lineage=()):
+    if nested_data is None:
+        return None
+    data = {}
+    if isinstance(nested_data, dict):
+        for key, value in nested_data.items():
+            flat = _flatten(value, key_lineage + (key,))
+            data.update(flat)
+    else:
+        data[key_lineage] = nested_data
+    return data
 
 
-class DeletionTombStone:
+def _unflatten(flat_data):
+    if flat_data is None:
+        return None
+    nested_data = {}
+    for key, value in flat_data.items():
+        prefix = key[0]
+        if len(key) == 1:
+            nested_data[prefix] = value
+            continue
+
+        suffix = key[1:]
+        if prefix not in nested_data:
+            nested_data[prefix] = {}
+        nested_data[prefix][suffix] = value
+    # now go through nested_data and unflatten next depth dicts
+    for k, v in nested_data.items():
+        if isinstance(v, dict):
+            nested_data[k] = _unflatten(v)
+    return nested_data
+
+
+class _Tombstone:
     pass
 
 
-class IncrementalState:
+class _IncrementalState:
     def __init__(self, initial_state: Optional[Dict[str, Any]]):
-        self.flat_state = Flattener.flatten(initial_state)
+        self.flat_state = _flatten(initial_state)
 
     def generate_delta(self, new_state: Dict[str, Any]):
-        new_flat_state = Flattener.flatten(new_state)
+        new_flat_state = _flatten(new_state)
         delta_flat_state = {}
         all_keys = set()
         if self.flat_state:
@@ -81,13 +72,13 @@ class IncrementalState:
 
             if key not in new_flat_state:
                 # Key deletion, put in a tombstone
-                delta_flat_state[key] = DeletionTombStone()
+                delta_flat_state[key] = _Tombstone()
                 continue
 
             prev_value, new_value = self.flat_state[key], new_flat_state[key]
             try:
                 if isinstance(prev_value, torch.Tensor) and isinstance(new_value, torch.Tensor):
-                    if torch.allclose(prev_value, new_value):
+                    if torch.equal(prev_value, new_value):
                         continue
                 elif prev_value == new_value:
                     continue
@@ -104,17 +95,17 @@ class IncrementalState:
             if self.flat_state is None:
                 self.flat_state = {}
 
-            if isinstance(update, DeletionTombStone):
+            if isinstance(update, _Tombstone):
                 # Remove key if present in the state
                 self.flat_state.pop(key, None)
             else:
                 self.flat_state[key] = update
 
     def get_state(self) -> Optional[Dict[str, Any]]:
-        return Flattener.unflatten(self.flat_state)
+        return _unflatten(self.flat_state)
 
 
-class IncrementalWorkerState:
+class _IncrementalWorkerState:
     def __init__(self, initial_worker_state_dict: Optional[Dict[str, Any]]):
         self._worker_id = None
         self._fetcher_ended = None
@@ -128,8 +119,8 @@ class IncrementalWorkerState:
                 self._fetcher_ended = fetcher_state[_FETCHER_ENDED]
                 fetcher_iter_state = fetcher_state.get(_DATASET_ITER_STATE, None)
 
-        self._incr_dataset_state = IncrementalState(dataset_state)
-        self._incr_fetcher_iter_state = IncrementalState(fetcher_iter_state)
+        self._incr_dataset_state = _IncrementalState(dataset_state)
+        self._incr_fetcher_iter_state = _IncrementalState(fetcher_iter_state)
 
     def generate_delta(self, new_state_dict: Dict[str, Any]) -> Dict[str, Any]:
         assert _WORKER_ID in new_state_dict

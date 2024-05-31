@@ -32,8 +32,8 @@ from .incremental_state import (
     _DATASET_STATE,
     _FETCHER_ENDED,
     _FETCHER_STATE,
+    _IncrementalWorkerState,
     _WORKER_ID,
-    IncrementalWorkerState,
 )
 
 from .stateful import Stateful
@@ -111,7 +111,7 @@ def _worker_loop(
 
         from torch.utils.data import _DatasetKind
 
-        incremental_worker_state = IncrementalWorkerState(worker_state)
+        incremental_worker_state = _IncrementalWorkerState(worker_state)
         init_exception = None
         fetcher = None
 

@@ -43,8 +43,8 @@ from .incremental_state import (
     _DATASET_STATE,
     _FETCHER_ENDED,
     _FETCHER_STATE,
+    _IncrementalWorkerState,
     _WORKER_ID,
-    IncrementalWorkerState,
 )
 
 from .sampler import BatchSampler, RandomSampler  # noqa
@@ -872,7 +872,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             self._num_yielded = next_iter_state[self._SNAPSHOT][self._SNAPSHOT_STEP]
 
             # Back-fill the worker snapshots before starting, in case of failure before a full cycle
-            self._worker_snapshots = {key: IncrementalWorkerState(state) for key, state in worker_states.items()}
+            self._worker_snapshots = {key: _IncrementalWorkerState(state) for key, state in worker_states.items()}
 
             fast_forward = False
             if self._dataset_kind == _DatasetKind.Iterable:
@@ -959,12 +959,9 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
     def _update_worker_snapshot(self, worker_key, state_dict):
         if state_dict is None:
             return
-        if self._worker_snapshots.get(worker_key, None):
-            # Update only if worker snapshot already exists for the worker
-            # Start with update of worker dataset state
-            self._worker_snapshots[worker_key].apply_delta(state_dict)
-        else:
-            self._worker_snapshots[worker_key] = IncrementalWorkerState(state_dict)
+        if worker_key not in self._worker_snapshots:
+            self._worker_snapshots[worker_key] = _IncrementalWorkerState(None)
+        self._worker_snapshots[worker_key].apply_delta(state_dict)
 
     def state_dict(self):
         steps_since_snapshot = self._num_yielded - self._snapshot[self._SNAPSHOT_STEP]

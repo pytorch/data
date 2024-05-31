@@ -9,11 +9,12 @@ from .incremental_state import (
     _DATASET_STATE,
     _FETCHER_ENDED,
     _FETCHER_STATE,
+    _flatten,
+    _IncrementalState,
+    _IncrementalWorkerState,
+    _Tombstone,
+    _unflatten,
     _WORKER_ID,
-    DeletionTombStone,
-    Flattener,
-    IncrementalState,
-    IncrementalWorkerState,
 )
 from .stateful import Stateful
 from .stateful_dataloader import StatefulDataLoader
