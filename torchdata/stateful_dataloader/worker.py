@@ -27,6 +27,15 @@ from torch.utils.data._utils.worker import (
     WorkerInfo,
 )
 
+from .incremental_state import (
+    _DATASET_ITER_STATE,
+    _DATASET_STATE,
+    _FETCHER_ENDED,
+    _FETCHER_STATE,
+    _IncrementalWorkerState,
+    _WORKER_ID,
+)
+
 from .stateful import Stateful
 
 
@@ -47,13 +56,6 @@ def try_to_deserialize(obj: T, state_dict: dict) -> T:
         obj.load_state_dict(state_dict)
         return obj  # type: ignore[return-value]
     return obj
-
-
-_WORKER_ID = "worker_id"
-_FETCHER_STATE = "fetcher_state"
-_FETCHER_ENDED = "fetcher_ended"
-_DATASET_STATE = "dataset_state"
-_DATASET_ITER_STATE = "dataset_iter_state"
 
 
 def _worker_loop(
@@ -109,9 +111,10 @@ def _worker_loop(
 
         from torch.utils.data import _DatasetKind
 
+        incremental_worker_state = _IncrementalWorkerState(worker_state)
         init_exception = None
-
         fetcher = None
+
         try:
             if init_fn is not None:
                 init_fn(worker_id)
@@ -191,7 +194,7 @@ def _worker_loop(
                 continue
             idx, (index, snapshot) = r
             data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
-            state_dict = None
+            delta_state_dict = None
             if init_exception is not None:
                 data = init_exception
                 init_exception = None
@@ -225,13 +228,18 @@ def _worker_loop(
                             _FETCHER_STATE: fetcher_state,
                             _DATASET_STATE: dataset_state,
                         }
+
+                        # Generate incremental diff from prev_state_dict and current_state_dict
+                        delta_state_dict = incremental_worker_state.generate_delta(state_dict)
+                        del state_dict
                 except Exception:
                     # It is important that we don't store exc_info in a variable.
                     # `ExceptionWrapper` does the correct thing.
                     # See NOTE [ Python Traceback Reference Cycle Problem ]
                     data = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
-            data_queue.put((idx, (data, worker_id, state_dict)))
-            del data, idx, index, r, state_dict  # save memory
+
+            data_queue.put((idx, (data, worker_id, delta_state_dict)))
+            del data, idx, index, r, delta_state_dict  # save memory
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
         pass
