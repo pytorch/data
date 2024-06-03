@@ -120,7 +120,7 @@ def _worker_loop(
 
         from torch.utils.data import _DatasetKind
 
-        incremental_worker_state = _IncrementalWorkerState(worker_state)
+        incremental_worker_state: _IncrementalWorkerState
         init_exception = None
         fetcher = None
         initial_state = None
@@ -131,6 +131,7 @@ def _worker_loop(
             fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
 
             initial_state = _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
+            incremental_worker_state = _IncrementalWorkerState(worker_state or initial_state)
 
             # Restore worker state if provided
             if worker_state:
@@ -227,9 +228,8 @@ def _worker_loop(
                         #   (2) to avoid sending multiple `_IterableDatasetStopIteration`s.
                         iteration_end = True
                     if snapshot or iteration_end:
-                        state_dict = _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
-
                         # Generate incremental diff from prev_state_dict and current_state_dict
+                        state_dict = _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
                         delta_state_dict = incremental_worker_state.generate_delta(state_dict)
                         del state_dict
                 except Exception:

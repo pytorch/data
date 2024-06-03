@@ -866,15 +866,16 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         _utils.signal_handling._set_worker_pids(id(self), tuple(w.pid for w in self._workers))  # type: ignore[misc]
         _utils.signal_handling._set_SIGCHLD_handler()
         self._worker_pids_set = True
-        self._snapshot, self._worker_snapshots, self._main_snapshots = {}, {}, collections.deque()  # type: ignore[var-annotated]
+        self._snapshot, self._main_snapshots = {}, collections.deque()  # type: ignore[var-annotated]
+        self._worker_snapshots: Dict[str, _IncrementalWorkerState] = {}
 
         self._workers_status = [True for i in range(self._num_workers)]
         self._main_state_0 = self._get_main_state()
-        self._worker_snapshots_0: Dict[str, Any] = {}
+        self._worker_states_0: Dict[str, Any] = {}
         # Request the initial state_dict
         for i in range(self._num_workers):
             self._index_queues[i].put(_AckStartup(i, None))  # type: ignore[arg-type]
-        while len(self._worker_snapshots_0) < self._num_workers:
+        while len(self._worker_states_0) < self._num_workers:
             data = self._get_data()
             if not all(self._workers_status):
                 raise ValueError(f"A worker has failed during startup! {self._workers_status}")
@@ -882,11 +883,11 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                 if isinstance(data.initial_state, ExceptionWrapper):
                     data.initial_state.reraise()
                 assert data.initial_state is not None, data
-                self._worker_snapshots_0[self._worker_key(data.worker_id)] = data.initial_state
+                self._worker_states_0[self._worker_key(data.worker_id)] = data.initial_state
             else:
                 raise ValueError(f"Invalid response from worker after startup: {data}")
         if next_iter_state is None:
-            worker_states = self._worker_snapshots_0
+            worker_states = self._worker_states_0
         self._reset(loader, first_iter=True, prime_prefetch=next_iter_state is None)
 
         # Try to restore main state
@@ -902,7 +903,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                 last_yielded_worker_id=next_iter_state[self._SNAPSHOT][self._LAST_YIELDED_WORKER_ID],
                 num_workers=self._num_workers,
                 main_snapshot=next_iter_state[self._SNAPSHOT][self._MAIN_SNAPSHOT],
-                worker_snapshots=next_iter_state[self._SNAPSHOT][self._WORKER_SNAPSHOTS],
+                worker_snapshots=self._worker_snapshots,
             )
 
             fast_forward = False
@@ -941,7 +942,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             self._finished = next_iter_state[_ITERATOR_FINISHED]
 
     def _reset_state_vars(self):
-        self._worker_snapshots = self._worker_snapshots_0
+        self._worker_snapshots = {key: _IncrementalWorkerState(state) for key, state in self._worker_states_0.items()}
         self._main_snapshots = collections.deque()
         self._last_yielded_worker_id = self._num_workers - 1
         self._update_snapshot(
@@ -949,7 +950,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             last_yielded_worker_id=self._num_workers - 1,
             num_workers=self._num_workers,
             main_snapshot=self._main_state_0,
-            worker_snapshots=self._worker_snapshots_0,
+            worker_snapshots=self._worker_snapshots,
         )
 
     def _reset(self, loader, first_iter=False, prime_prefetch=True):
@@ -990,8 +991,6 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
     def _update_worker_snapshot(self, worker_key, state_dict):
         if state_dict is None:
             return
-        if worker_key not in self._worker_snapshots:
-            self._worker_snapshots[worker_key] = _IncrementalWorkerState(None)
         self._worker_snapshots[worker_key].apply_delta(state_dict)
 
     def state_dict(self):
@@ -1164,14 +1163,12 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         # If `pin_memory=True`, we also need check if `pin_memory_thread` had
         # died at timeouts.
         if self._timeout > 0:
-            print("1")
             success, data = self._try_get_data(self._timeout)
             if success:
                 return data
             else:
                 raise RuntimeError(f"DataLoader timed out after {self._timeout} seconds")
         elif self._pin_memory:
-            print("2")
             while self._pin_memory_thread.is_alive():
                 success, data = self._try_get_data()
                 if success:
@@ -1182,7 +1179,6 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             # In this case, `self._data_queue` is a `queue.Queue`,. But we don't
             # need to call `.task_done()` because we don't use `.join()`.
         else:
-            print("3")
             while True:
                 success, data = self._try_get_data()
                 if success:
@@ -1355,7 +1351,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         last_yielded_worker_id: int,
         num_workers: int,
         main_snapshot: Dict[str, Any],
-        worker_snapshots: Dict[str, Any],
+        worker_snapshots: Dict[str, _IncrementalWorkerState],
     ):
         self._snapshot = {
             self._SNAPSHOT_STEP: snapshot_step,

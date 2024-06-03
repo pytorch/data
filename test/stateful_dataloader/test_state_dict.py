@@ -39,15 +39,15 @@ class DummyIterator(Iterator, Stateful):
         return sample
 
     def state_dict(self):
-        sd = {"i": self.i}
+        sd = {"nest": {"i": self.i}}
         if self.include_generator:
-            sd["g"] = torch.get_rng_state()
+            sd["nest"]["g"] = torch.get_rng_state()
         return sd
 
     def load_state_dict(self, state_dict):
-        self.i = state_dict["i"]
+        self.i = state_dict["nest"]["i"]
         if self.include_generator:
-            torch.set_rng_state(state_dict["g"])
+            torch.set_rng_state(state_dict["nest"]["g"])
 
 
 class DummySamplerIterator(Iterator, Stateful):
@@ -1185,13 +1185,13 @@ class TestInitialState_shard0(TestCase):
             next(it)
 
 
-class TestStatefulDataLoaderIterable2_shard3(TestStatefulDataLoaderIterable_shard0):
+class TestStatefulDataLoaderIterable2_shard0(TestStatefulDataLoaderIterable_shard0):
     # Perform sanity test checks with the iterable dataset that is also an iterator
     def _get_dataset(self, shuffle):
         return DummyIteratorIterableDataset(list(range(100)), shuffle=shuffle, include_generator=True)
 
 
-class TestDynamicStateIterableDataset(TestCase):
+class TestDynamicStateIterableDataset_shard0(TestCase):
     def test(self):
         dataset = DynamicStateIterableDataset(list(range(100)))
         num_workers = 2
@@ -1238,7 +1238,7 @@ class TestDynamicStateIterableDataset(TestCase):
         self.assertEqual(len(worker_state), 9)
 
 
-class TestDatasetIteratorStateDuplication_shard3(TestCase):
+class TestDatasetIteratorStateDuplication_shard0(TestCase):
     def test(self):
         dataset = DummyIteratorIterableDataset(list(range(100)), shuffle=True, include_generator=True)
         for num_workers in (0, 2):
