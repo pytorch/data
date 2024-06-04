@@ -103,15 +103,15 @@ class DummyIteratorIterableDataset(torch.utils.data.IterableDataset, Iterator, S
         return sample
 
     def state_dict(self):
-        sd = {"i": self.i}
+        sd = {"nest": {"i": self.i}}
         if self.include_generator:
-            sd["g"] = torch.get_rng_state()
+            sd["nest"]["g"] = torch.get_rng_state()
         return sd
 
     def load_state_dict(self, state_dict):
-        self.i = state_dict["i"]
+        self.i = state_dict["nest"]["i"]
         if self.include_generator:
-            torch.set_rng_state(state_dict["g"])
+            torch.set_rng_state(state_dict["nest"]["g"])
 
 
 class DummyIterableDataset(torch.utils.data.IterableDataset):
@@ -1266,6 +1266,111 @@ class TestDatasetIteratorStateDuplication_shard0(TestCase):
             else:
                 self.assertEqual(state_dict["dataset_state"], None)
                 self.assertTrue(state_dict["fetcher_state"]["dataset_iter_state"])
+
+
+class PeriodicStateIterableDataset(torch.utils.data.IterableDataset):
+    def __init__(self):
+        self.state = {
+            0: 0,
+            1: 0,
+            2: 0,
+            3: 0,
+        }
+        self.step = 0
+        self.limit = 100
+
+    def __iter__(self):
+        for _ in range(self.step, self.limit):
+            self.step += 1
+            y = self.state[self.step % len(self.state)]
+            self.state[self.step % len(self.state)] = 1 - y
+
+            yield self.state[self.step % len(self.state)]
+
+    def state_dict(self):
+        return {
+            "state": self.state,
+            "step": self.step,
+        }
+
+    def load_state_dict(self, state):
+        self.state = state["state"]
+        self.step = state["step"]
+
+
+class TestFastStateDictRequestRoundRobin_shard3(TestCase):
+    def _run_test(self, snapshot_every_n_steps, interrupt):
+        num_workers = 4
+        dataset = PeriodicStateIterableDataset()
+
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            batch_size=1,
+            collate_fn=identity,
+            persistent_workers=True,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+            snapshot_every_n_steps=snapshot_every_n_steps,
+        )
+        it = iter(dl)
+        for _ in range(interrupt):
+            next(it)
+
+        state_dict = dl.state_dict()
+        for _ in range(2):
+            next(it)
+        exp_state_dict = dl.state_dict()
+        exp = list(it)
+
+        dl.load_state_dict(state_dict)
+        # new iter after load_state_dict, ask for state dict before num_workers batches
+        # are yielded to ensure old worker states are stored properly
+        it = iter(dl)
+        for _ in range(2):
+            next(it)
+
+        state_dict2 = dl.state_dict()
+
+        dataset = PeriodicStateIterableDataset()
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            batch_size=1,
+            collate_fn=identity,
+            persistent_workers=True,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+            snapshot_every_n_steps=snapshot_every_n_steps,
+        )
+        dl.load_state_dict(state_dict2)
+        data = list(dl)
+
+        self.assertEqual(data, exp)
+
+        dataset = PeriodicStateIterableDataset()
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            batch_size=1,
+            collate_fn=identity,
+            persistent_workers=True,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+            snapshot_every_n_steps=snapshot_every_n_steps,
+        )
+        dl.load_state_dict(state_dict)
+        it = iter(dl)
+        for _ in range(2):
+            next(it)
+
+        state_dict3 = dl.state_dict()
+        self.assertEqual(state_dict3, exp_state_dict)
+
+    def test_fast_state_dict_request(self) -> None:
+        # these test settings will trigger a failure if
+        # the worker/main incremental state_dicts are out of sync during initialization
+        self._run_test(1, 15)
+
+    def test_fast_state_dict_request_skip_steps(self) -> None:
+        self._run_test(17, 19)
 
 
 if __name__ == "__main__":

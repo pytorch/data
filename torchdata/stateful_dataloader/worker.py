@@ -131,6 +131,10 @@ def _worker_loop(
             fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
 
             initial_state = _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
+            # The main-process instantiates its IncrementalWorkerState with worker_state if present
+            # else initial_state. We can't always start with initial_state because of the case
+            # where we load a state_dict, call next for n < num_worker steps (ie do not receive updates)
+            # and then request another state_dict.
             incremental_worker_state = _IncrementalWorkerState(worker_state or initial_state)
 
             # Restore worker state if provided

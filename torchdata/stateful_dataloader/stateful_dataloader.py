@@ -47,7 +47,6 @@ from .incremental_state import (
     _WORKER_ID,
 )
 
-from .sampler import BatchSampler, RandomSampler  # noqa  # noqa
 from .stateful import Stateful
 
 from .worker import _AckStartup, _worker_loop, try_to_deserialize, try_to_serialize
@@ -215,6 +214,10 @@ class StatefulDataLoader(DataLoader[T_co]):
         self.snapshot_every_n_steps = snapshot_every_n_steps
         self.next_iter_state: Optional[Dict[str, Any]] = None
         self.iter_calls = 0
+        # When a state_dict is requested before __iter__ is called,
+        # we create the __iter__ so we can get a copy of the initial state from
+        # its workers. In those cases, we can avoid creating a new multiprocessing
+        # iterator on the next __iter__ call, and this flag is used for those cases.
         self._initial_iter_for_state_dict = False
 
     def _get_iterator(self) -> "_StatefulBaseDataLoaderIter":
