@@ -213,7 +213,6 @@ class StatefulDataLoader(DataLoader[T_co]):
         )
         self.snapshot_every_n_steps = snapshot_every_n_steps
         self.next_iter_state: Optional[Dict[str, Any]] = None
-        self.iter_calls = 0
         # When a state_dict is requested before __iter__ is called,
         # we create the __iter__ so we can get a copy of the initial state from
         # its workers. In those cases, we can avoid creating a new multiprocessing
@@ -242,14 +241,14 @@ class StatefulDataLoader(DataLoader[T_co]):
         elif self.persistent_workers and self.num_workers > 0:
             if self._iterator is None:
                 self._iterator = self._get_iterator()
+                if self._iterator._finished:
+                    self._iterator._reset(self)
             else:
                 self._iterator._reset(self)
         else:
             self._iterator = self._get_iterator()
-        # If we're loading a finished iterator, just request next one immediately
-        if self._iterator._finished:
-            return iter(self)
-        self.iter_calls += 1
+            if self._iterator._finished:
+                self._iterator = self._get_iterator()
         return self._iterator
 
     def state_dict(self) -> Dict[str, Any]:
