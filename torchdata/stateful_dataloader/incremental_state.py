@@ -95,7 +95,7 @@ class _IncrementalState:
         self.flat_state = new_flat_state
         return delta_flat_state
 
-    def apply_delta(self, flat_delta_state: Dict[str, Any]) -> None:
+    def apply_delta(self, flat_delta_state: Dict[Tuple, Any]) -> None:
         for key, update in flat_delta_state.items():
             if self.flat_state is None:
                 self.flat_state = {}
