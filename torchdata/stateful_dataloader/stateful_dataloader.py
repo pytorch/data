@@ -46,7 +46,7 @@ from .incremental_state import (
     _IncrementalWorkerState,
     _WORKER_ID,
 )
-
+from .sampler import BatchSampler, RandomSampler  # noqa
 from .stateful import Stateful
 
 from .worker import _AckStartup, _worker_loop, try_to_deserialize, try_to_serialize
