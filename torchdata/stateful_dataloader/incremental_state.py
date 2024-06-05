@@ -15,24 +15,27 @@ _DATASET_STATE = "dataset_state"
 _DATASET_ITER_STATE = "dataset_iter_state"
 
 
-def _flatten(nested_data: Any, key_lineage: Tuple = ()):
-    if nested_data is None:
-        return None
-    data = {}
-    if isinstance(nested_data, dict):
-        for key, value in nested_data.items():
+def _flatten(data: Any, key_lineage: Tuple = ()) -> Dict[Tuple, Any]:
+    # Always return a dict as the result
+    # If data is not a dict or if it is an empty dict, then return a dict with key as key_lineage and data as the value
+    # If data is a dict with entries, then iterate through it and flatten the keys
+    flat_data = {}
+    if isinstance(data, dict) and len(data) > 0:
+        for key, value in data.items():
             flat = _flatten(value, key_lineage + (key,))
-            data.update(flat)
+            flat_data.update(flat)
     else:
-        data[key_lineage] = nested_data
-    return data
+        flat_data[key_lineage] = data
+    return flat_data
 
 
-def _unflatten(flat_data: Optional[Dict[Tuple, Any]]):
-    if flat_data is None:
-        return None
+def _unflatten(flat_data: Dict[Tuple, Any]):
     nested_data = {}
     for key, value in flat_data.items():
+        # Consider case where key is empty tuple, this is the case where original data was not a dict
+        if len(key) == 0:
+            return value
+
         prefix = key[0]
         if len(key) == 1:
             nested_data[prefix] = value
@@ -42,7 +45,8 @@ def _unflatten(flat_data: Optional[Dict[Tuple, Any]]):
         if prefix not in nested_data:
             nested_data[prefix] = {}
         nested_data[prefix][suffix] = value
-    # now go through nested_data and unflatten next depth dicts
+
+    # now go through nested_data and unflatten next level of dicts
     for k, v in nested_data.items():
         if isinstance(v, dict):
             nested_data[k] = _unflatten(v)
@@ -91,7 +95,7 @@ class _IncrementalState:
         self.flat_state = new_flat_state
         return delta_flat_state
 
-    def apply_delta(self, flat_delta_state: Dict[str, Any]) -> None:
+    def apply_delta(self, flat_delta_state: Dict[Tuple, Any]) -> None:
         for key, update in flat_delta_state.items():
             if self.flat_state is None:
                 self.flat_state = {}
