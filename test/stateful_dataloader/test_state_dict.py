@@ -1099,7 +1099,7 @@ class TestInitialState_shard0(TestCase):
     def test_load_state_after_initial_state_dict(self):
         for pw, interrupt in itertools.product([False, True], [2, 9]):
             num_workers = 4
-            dataset = DummyMapDataset(100, shuffle=False)
+            dataset = DummyMapDataset(100, shuffle=True)
             dl = StatefulDataLoader(
                 dataset=dataset,
                 num_workers=num_workers,
@@ -1130,7 +1130,7 @@ class TestInitialState_shard0(TestCase):
     def test_load_state_before_initial_state_dict(self):
         for pw, interrupt in itertools.product([False, True], [2, 9]):
             num_workers = 4
-            dataset = DummyMapDataset(100, shuffle=False)
+            dataset = DummyMapDataset(100, shuffle=True)
             dl = StatefulDataLoader(
                 dataset=dataset,
                 num_workers=num_workers,
@@ -1160,7 +1160,7 @@ class TestInitialState_shard0(TestCase):
 
     def test_init_error(self):
         num_workers = 4
-        dataset = DummyMapDataset(100, shuffle=False)
+        dataset = DummyMapDataset(100, shuffle=True)
         dl = StatefulDataLoader(
             dataset=dataset,
             num_workers=num_workers,
@@ -1183,6 +1183,38 @@ class TestInitialState_shard0(TestCase):
         it = iter(dl)
         with self.assertRaisesRegex(ValueError, "Iteration error"):
             next(it)
+
+    def test_load_then_state(self):
+        for pw, interrupt in itertools.product([False, True], [2, 9]):
+            num_workers = 4
+            dataset = DummyMapDataset(100, shuffle=True)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                persistent_workers=pw,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS else None,
+            )
+
+            state0 = dl.state_dict()
+            exp = list(dl)
+
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                persistent_workers=pw,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS else None,
+            )
+            it = iter(dl)
+            for _ in range(3):
+                next(it)
+            dl.load_state_dict(state0)
+            state1 = dl.state_dict()
+            self.assertEqual(state1, state0)
+
+            batches = list(dl)
+            self.assertEqual(batches, exp)
 
 
 class TestStatefulDataLoaderIterable2_shard0(TestStatefulDataLoaderIterable_shard0):
