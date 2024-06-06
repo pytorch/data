@@ -388,10 +388,12 @@ class TestStatefulSampler_shard1(TestStatefulDataLoaderIterable_shard0):
 
 
 class GeneratorIterable(torch.utils.data.IterableDataset):
-    def __init__(self, sizes_for_all_workers):
+    def __init__(self, sizes_for_all_workers, increment_epoch=False):
         self.sizes_for_all_workers = sizes_for_all_workers
         self.i = 0
         self.resume = None
+        self.epoch = 0
+        self.increment_epoch = increment_epoch
 
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
@@ -408,13 +410,20 @@ class GeneratorIterable(torch.utils.data.IterableDataset):
         skip = self.i
         for i in range(start + skip, start + self.sizes_for_all_workers[worker_id]):
             self.i += 1
-            yield i
+            yield (i, self.epoch)
+
+        # To resume from next epoch properly, reset variables here so loading
+        # will begin from the correct position and epoch
+        self.i = 0
+        if self.increment_epoch:
+            self.epoch += 1
 
     def state_dict(self):
-        return {"i": self.i}
+        return {"i": self.i, "epoch": self.epoch}
 
     def load_state_dict(self, state):
         self.resume = state["i"]
+        self.epoch = state["epoch"]
 
 
 class GeneratorIterableNoState(torch.utils.data.IterableDataset):
@@ -430,6 +439,33 @@ class GeneratorIterableNoState(torch.utils.data.IterableDataset):
             self.sizes_for_all_workers = [sum(self.sizes_for_all_workers)]
         start = sum(self.sizes_for_all_workers[:worker_id])
         yield from range(start, start + self.sizes_for_all_workers[worker_id])
+
+
+class GeneratorSampler(torch.utils.data.Sampler):
+    def __init__(self, limit):
+        self.limit = limit
+        self.i = 0
+        self.resume = None
+        self.epoch = 0
+
+    def __iter__(self):
+        if self.resume is not None:
+            self.i = self.resume
+            self.resume = None
+        skip = self.i
+        for i in range(skip, self.limit):
+            self.i += 1
+            yield i
+
+        self.i = 0
+        self.epoch += 1
+
+    def state_dict(self):
+        return {"i": self.i, "epoch": self.epoch}
+
+    def load_state_dict(self, state):
+        self.resume = state["i"]
+        self.epoch = state["epoch"]
 
 
 class TestStatefulDataLoaderGenerator_shard2(TestStatefulDataLoaderIterable_shard0):
@@ -1403,6 +1439,47 @@ class TestFastStateDictRequestRoundRobin_shard3(TestCase):
 
     def test_fast_state_dict_request_skip_steps(self) -> None:
         self._run_test(17, 19)
+
+
+class TestMultiEpochState_shard0(TestCase):
+    def get_iterable_dl(self, pw, num_workers):
+        data_size = [25, 50, 100, 75]
+        if num_workers == 0:
+            data_size = [sum(data_size)]
+        dataset = GeneratorIterable(data_size, True)
+        return StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            persistent_workers=pw,
+            collate_fn=identity,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+        )
+
+    def _run(self, pw: bool, num_workers: int):
+        dl = self.get_iterable_dl(pw, num_workers)
+        exp0 = list(dl)
+        state1 = dl.state_dict()
+        exp1 = list(dl)
+        exp2 = list(dl)
+        self.assertEqual(exp0, [[(x[0][0], x[0][1] - 1)] for x in exp1])
+        self.assertEqual(exp0, [[(x[0][0], x[0][1] - 2)] for x in exp2])
+
+        dl = self.get_iterable_dl(pw, num_workers)
+        it = iter(dl)
+        for _ in range(2):
+            next(it)
+        dl.load_state_dict(state1)
+        it = iter(dl)
+        data1 = list(it)
+        data2 = list(dl)
+        self.assertEqual(data1, exp1)
+        self.assertEqual(data2, exp2)
+
+    def test_inline(self):
+        self._run(False, 0)
+
+    def test_pw(self):
+        self._run(True, 4)
 
 
 if __name__ == "__main__":

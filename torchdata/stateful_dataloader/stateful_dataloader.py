@@ -241,14 +241,16 @@ class StatefulDataLoader(DataLoader[T_co]):
         elif self.persistent_workers and self.num_workers > 0:
             if self._iterator is None:
                 self._iterator = self._get_iterator()
-                if self._iterator._finished:
-                    self._iterator._reset(self)
             else:
                 self._iterator._reset(self)
         else:
             self._iterator = self._get_iterator()
-            if self._iterator._finished:
+        if self._iterator._finished:
+            if self.persistent_workers:
+                self._iterator._reset(self)
+            else:
                 self._iterator = self._get_iterator()
+
         return self._iterator
 
     def state_dict(self) -> Dict[str, Any]:
