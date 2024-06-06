@@ -188,7 +188,7 @@ def _worker_loop(
                 continue
             if isinstance(r, _AckStartup):
                 # Send ack and initial state to the main process
-                data_queue.put(_AckStartup(worker_id=worker_id, initial_state=initial_state or init_exception))
+                data_queue.put((r, _AckStartup(worker_id=worker_id, initial_state=initial_state or init_exception)))
                 del initial_state
                 continue
             elif isinstance(r, _ResumeIteration):

@@ -12,7 +12,7 @@ from typing import Iterator
 
 import torch
 import torch.utils.data
-from torch.testing._internal.common_utils import IS_MACOS, TestCase
+from torch.testing._internal.common_utils import IS_MACOS, TEST_CUDA, TestCase
 from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
 
 
@@ -1115,6 +1115,7 @@ class TestInitialState_shard0(TestCase):
                 persistent_workers=pw,
                 collate_fn=identity,
                 multiprocessing_context="forkserver" if IS_MACOS else None,
+                pin_memory=TEST_CUDA,
             )
             state = dl.state_dict()
             self.assertEqual(len(state["_snapshot"]["_worker_snapshots"]), num_workers)
@@ -1142,6 +1143,7 @@ class TestInitialState_shard0(TestCase):
                 persistent_workers=pw,
                 collate_fn=identity,
                 multiprocessing_context="forkserver" if IS_MACOS else None,
+                pin_memory=TEST_CUDA,
             )
 
             it = iter(dl)
@@ -1156,6 +1158,7 @@ class TestInitialState_shard0(TestCase):
                 persistent_workers=pw,
                 collate_fn=identity,
                 multiprocessing_context="forkserver" if IS_MACOS else None,
+                pin_memory=TEST_CUDA,
             )
             state0 = dl.state_dict()
             self.assertEqual(len(state0["_snapshot"]["_worker_snapshots"]), num_workers)
@@ -1173,6 +1176,7 @@ class TestInitialState_shard0(TestCase):
                 persistent_workers=pw,
                 collate_fn=identity,
                 multiprocessing_context="forkserver" if IS_MACOS else None,
+                pin_memory=TEST_CUDA,
             )
 
             it = iter(dl)
@@ -1187,6 +1191,7 @@ class TestInitialState_shard0(TestCase):
                 persistent_workers=pw,
                 collate_fn=identity,
                 multiprocessing_context="forkserver" if IS_MACOS else None,
+                pin_memory=TEST_CUDA,
             )
             dl.load_state_dict(state)
             state0 = dl.state_dict()
@@ -1203,6 +1208,7 @@ class TestInitialState_shard0(TestCase):
             collate_fn=identity,
             multiprocessing_context="forkserver" if IS_MACOS else None,
             worker_init_fn=error_worker_init_fn,
+            pin_memory=TEST_CUDA,
         )
         with self.assertRaisesRegex(ValueError, ERROR_MSG):
             iter(dl)
@@ -1215,6 +1221,7 @@ class TestInitialState_shard0(TestCase):
             num_workers=num_workers,
             collate_fn=identity,
             multiprocessing_context="forkserver" if IS_MACOS else None,
+            pin_memory=TEST_CUDA,
         )
         it = iter(dl)
         with self.assertRaisesRegex(ValueError, "Iteration error"):
@@ -1230,6 +1237,7 @@ class TestInitialState_shard0(TestCase):
                 persistent_workers=pw,
                 collate_fn=identity,
                 multiprocessing_context="forkserver" if IS_MACOS else None,
+                pin_memory=TEST_CUDA,
             )
 
             state0 = dl.state_dict()
@@ -1241,6 +1249,7 @@ class TestInitialState_shard0(TestCase):
                 persistent_workers=pw,
                 collate_fn=identity,
                 multiprocessing_context="forkserver" if IS_MACOS else None,
+                pin_memory=TEST_CUDA,
             )
             it = iter(dl)
             for _ in range(3):

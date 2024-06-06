@@ -880,7 +880,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         for i in range(self._num_workers):
             self._index_queues[i].put(_AckStartup(i, None))  # type: ignore[arg-type]
         while len(self._worker_states_0) < self._num_workers:
-            data = self._get_data()
+            _, data = self._get_data()
             if not all(self._workers_status):
                 raise ValueError(f"A worker has failed during startup! {self._workers_status}")
             elif isinstance(data, _AckStartup):
