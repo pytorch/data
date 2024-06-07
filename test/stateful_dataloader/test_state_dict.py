@@ -1461,7 +1461,7 @@ class TestMultiEpochState_shard0(TestCase):
             num_workers=num_workers,
             persistent_workers=pw,
             collate_fn=identity,
-            multiprocessing_context="forkserver" if IS_MACOS else None,
+            multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
         )
 
     def _run(self, pw: bool, num_workers: int):
