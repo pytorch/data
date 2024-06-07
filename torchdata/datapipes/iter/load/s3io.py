@@ -43,6 +43,7 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
     Example:
 
     .. testsetup::
+
         from unittest import mock
         from torchdata.datapipes.iter import IterableWrapper, S3FileLister
 
