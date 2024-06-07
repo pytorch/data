@@ -43,31 +43,43 @@ class S3FileListerIterDataPipe(IterDataPipe[str]):
     Example:
 
     .. testsetup::
+        print("setup")
 
         from unittest import mock
         from torchdata.datapipes.iter import IterableWrapper, S3FileLister
+        print("import done")
 
         file_lister_patch = mock.patch.object(S3FileLister, "__iter__", return_value=iter([]))
         file_lister_patch.start()
+        print("patch done")
 
     .. testcode::
+        print("test code")
 
         from torchdata.datapipes.iter import IterableWrapper, S3FileLister
+        print("import done")
 
         s3_prefixes = IterableWrapper(['s3://bucket-name/folder/', ...])
+        print("iterablewrapper")
 
         dp_s3_urls = S3FileLister(s3_prefixes)
+        print("s3filelister done")
         for d in dp_s3_urls:
             pass
+        print("for loop done")
 
         # Functional API
         dp_s3_urls = s3_prefixes.list_files_by_s3(request_timeout_ms=100)
+        print("list files done")
         for d in dp_s3_urls:
             pass
+        print("s3 urls done")
 
     .. testcleanup::
+        print("cleanup start")
 
         file_lister_patch.stop()
+        print("cleanup end")
     """
 
     def __init__(
