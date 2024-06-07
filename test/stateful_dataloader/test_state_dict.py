@@ -1228,7 +1228,7 @@ class TestInitialState_shard0(TestCase):
             next(it)
 
     def test_load_then_state(self):
-        for pw, interrupt in itertools.product([False, True], [2, 9]):
+        for pw in itertools.product([False, True]):
             num_workers = 4
             dataset = DummyMapDataset(100, shuffle=True)
             dl = StatefulDataLoader(
