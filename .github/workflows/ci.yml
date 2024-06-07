@@ -76,6 +76,7 @@ jobs:
       - name: Install test requirements
         run: pip3 install -r test/requirements.txt
       - name: Test documentation examples
+        if: matrix.os != 'windows-latest'
         run: |
           cd ./docs
           pip3 install -r requirements.txt

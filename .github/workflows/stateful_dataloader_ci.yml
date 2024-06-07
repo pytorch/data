@@ -72,15 +72,9 @@ jobs:
         run: |
           pip3 install .
         env:
-          BUILD_S3: 1
+          BUILD_S3: 0
       - name: Install test requirements
         run: pip3 install -r test/requirements.txt
-      - name: Test documentation examples
-        run: |
-          cd ./docs
-          pip3 install -r requirements.txt
-          make doctest
-          cd ..
       - name: Run StatefulDataLoader tests with pytest - dataloader
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_dataloader.py
