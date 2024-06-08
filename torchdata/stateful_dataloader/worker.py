@@ -130,12 +130,9 @@ def _worker_loop(
 
             fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
 
-            initial_state = _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
-            # The main-process instantiates its IncrementalWorkerState with worker_state if present
-            # else initial_state. We can't always start with initial_state because of the case
-            # where we load a state_dict, call next for n < num_worker steps (ie do not receive updates)
-            # and then request another state_dict.
-            incremental_worker_state = _IncrementalWorkerState(worker_state or initial_state)
+            # See NOTE [ Incremental worker state ]
+            initial_state = worker_state or _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
+            incremental_worker_state = _IncrementalWorkerState(initial_state)
 
             # Restore worker state if provided
             if worker_state:
@@ -188,12 +185,10 @@ def _worker_loop(
                 continue
             if isinstance(r, _AckStartup):
                 # Send ack and initial state to the main process
-                data_queue.put((r, _AckStartup(worker_id=worker_id, initial_state=initial_state or init_exception)))
+                data_queue.put((r, _AckStartup(worker_id=worker_id, initial_state=init_exception or initial_state)))
                 del initial_state
                 continue
             elif isinstance(r, _ResumeIteration):
-                # Acknowledge the main process
-                data_queue.put((r, None))
                 iteration_end = False
 
                 if isinstance(dataset, IterDataPipe):
@@ -201,8 +196,18 @@ def _worker_loop(
                     shared_rng.manual_seed(r.seed)
                     dataset = apply_random_seed(dataset, shared_rng)
 
-                # Recreate the fetcher for worker-reuse policy
-                fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
+                try:
+                    # Recreate the fetcher for worker-reuse policy
+                    fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
+                    # see NOTE [ Incremental Worker State ]
+                    initial_state = _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
+                    incremental_worker_state = _IncrementalWorkerState(initial_state)
+                except Exception:
+                    init_exception = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
+
+                # Acknowledge the main process
+                data_queue.put((r, _AckStartup(worker_id=worker_id, initial_state=init_exception or initial_state)))
+                del initial_state
                 continue
             elif r is None:
                 # Received the final signal

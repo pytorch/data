@@ -412,7 +412,7 @@ class GeneratorIterable(torch.utils.data.IterableDataset):
             self.i += 1
             yield (i, self.epoch)
 
-        # To resume from next epoch properly, reset variables here so loading
+        # To save end-of-epoch state properly, reset variables here so loading
         # will begin from the correct position and epoch
         self.i = 0
         if self.increment_epoch:
