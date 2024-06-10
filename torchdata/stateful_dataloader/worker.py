@@ -133,6 +133,8 @@ def _worker_loop(
             # See NOTE [ Incremental worker state ]
             initial_state = worker_state or _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
             incremental_worker_state = _IncrementalWorkerState(initial_state)
+            if initial_state is worker_state:
+                initial_state = None
 
             # Restore worker state if provided
             if worker_state:

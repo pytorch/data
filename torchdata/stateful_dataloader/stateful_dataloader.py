@@ -886,6 +886,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         if next_iter_state is not None:
             self._restore_main_state(next_iter_state[self._SNAPSHOT][self._MAIN_SNAPSHOT])
             self._num_yielded = next_iter_state[self._SNAPSHOT][self._SNAPSHOT_STEP]
+            self._worker_snapshots = {key: _IncrementalWorkerState(state) for key, state in worker_states.items()}
 
             self._update_snapshot(
                 snapshot_step=next_iter_state[self._SNAPSHOT][self._SNAPSHOT_STEP],
@@ -975,7 +976,6 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                 elif isinstance(data, _AckStartup):
                     if isinstance(data.initial_state, ExceptionWrapper):
                         data.initial_state.reraise()
-                    assert data.initial_state is not None, data
                     worker_states[self._worker_key(data.worker_id)] = data.initial_state
                 else:
                     raise ValueError(f"Invalid response from worker after startup: {data}")
