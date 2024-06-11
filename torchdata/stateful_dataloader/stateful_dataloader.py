@@ -963,7 +963,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._workers_status = [True for i in range(self._num_workers)]
         # Reset the worker queue cycle so it resumes next epoch at worker 0
         self._worker_queue_idx_cycle = itertools.cycle(range(self._num_workers))
-        worker_states = {}
+        worker_states: Dict[str, Any] = {}
         if first_iter:
             # Request the initial state_dict
             for i in range(self._num_workers):
