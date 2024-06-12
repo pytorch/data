@@ -120,6 +120,7 @@ def _worker_loop(
 
         from torch.utils.data import _DatasetKind
 
+        # See NOTE [ Incremental worker state ]
         incremental_worker_state: _IncrementalWorkerState
         init_exception = None
         fetcher = None
@@ -128,25 +129,19 @@ def _worker_loop(
             if init_fn is not None:
                 init_fn(worker_id)
 
-            fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
-
-            # See NOTE [ Incremental worker state ]
-            initial_state = worker_state or _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
-            incremental_worker_state = _IncrementalWorkerState(initial_state)
-            if initial_state is worker_state:
-                initial_state = None
-
-            # Restore worker state if provided
-            if worker_state:
+            if worker_state is None:
+                fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
+                initial_state = _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
+                incremental_worker_state = _IncrementalWorkerState(initial_state)
+            else:
                 # Always restore in this order:
                 #  1. try to restore dataset state
                 #  2. generate dataset iterator
                 #  3. try to restore iterator state
+                incremental_worker_state = _IncrementalWorkerState(worker_state)
                 if worker_state[_DATASET_STATE] is not None:
                     dataset = try_to_deserialize(dataset, worker_state[_DATASET_STATE])
-                    fetcher.dataset = dataset
-                    if dataset_kind == _DatasetKind.Iterable:
-                        fetcher.dataset_iter = iter(fetcher.dataset)
+                fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
                 if worker_state[_FETCHER_STATE] is not None:
                     if dataset_kind == _DatasetKind.Iterable:
                         dataset_iter = try_to_deserialize(

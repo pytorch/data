@@ -1491,5 +1491,64 @@ class TestMultiEpochState_shard0(TestCase):
         self._run(True, 4)
 
 
+class CountIterCalls(torch.utils.data.IterableDataset):
+    def __init__(self, length):
+        self.length = length
+        self.iter_calls = 0
+
+    def __iter__(self):
+        self.iter_calls += 1
+        return iter(list(range(self.length)))
+
+    def state_dict(self):
+        return {"iter_calls": self.iter_calls}
+
+    def load_state_dict(self, state_dict):
+        pass
+
+
+class TestSingleIterCalled_shard0(TestCase):
+    def _get_iter_calls(self, state):
+        if "dataset_state" in state:
+            w_states = [state]
+        else:
+            w_states = list(state["_snapshot"]["_worker_snapshots"].values())
+
+        return [x["dataset_state"]["iter_calls"] for x in w_states]
+
+    def _run_test(self, num_workers):
+        dataset = CountIterCalls(100)
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+        )
+        iter(dl)
+        state = dl.state_dict()
+        if num_workers == 0:
+            self.assertEqual(dataset.iter_calls, 1)
+        else:
+            self.assertEqual(self._get_iter_calls(state), [1] * num_workers)
+        dl2 = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+        )
+        dl2.load_state_dict(state)
+        iter(dl2)
+        state2 = dl.state_dict()
+        if num_workers == 0:
+            self.assertEqual(dataset.iter_calls, 2)
+        else:
+            print(state2)
+            self.assertEqual(self._get_iter_calls(state2), [1] * num_workers)
+
+    def test_inline(self):
+        self._run_test(0)
+
+    def test_mp(self):
+        self._run_test(2)
+
+
 if __name__ == "__main__":
     unittest.main()

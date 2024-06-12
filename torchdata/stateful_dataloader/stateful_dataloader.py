@@ -316,11 +316,12 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
             # For BC, use default SHARDING_PRIORITIES
             torch.utils.data.graph_settings.apply_sharding(self._dataset, self._world_size, self._rank)
 
-        self._dataset_fetcher = _DatasetKind.create_fetcher(
-            self._dataset_kind, self._dataset, self._auto_collation, self._collate_fn, self._drop_last
-        )
-        if next_iter_state:
+        if next_iter_state is not None:
             self.load_state_dict(next_iter_state)
+        else:
+            self._dataset_fetcher = _DatasetKind.create_fetcher(
+                self._dataset_kind, self._dataset, self._auto_collation, self._collate_fn, self._drop_last
+            )
 
     def _next_data(self):
         index = self._next_index()  # may raise StopIteration
@@ -381,22 +382,14 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
         #  1. try to restore dataset state
         #  2. generate dataset iterator
         #  3. try to restore iterator state
-        if self._dataset_kind != _DatasetKind.Iterable:
-            # Map style just try to load dataset state
-            if state_dict[_DATASET_STATE] is not None:
-                self._dataset_fetcher.dataset = try_to_deserialize(
-                    self._dataset_fetcher.dataset, state_dict[_DATASET_STATE]
-                )
-        else:
-            # Iterable
-            if isinstance(self._dataset_fetcher.dataset, Stateful) or isinstance(
-                self._dataset_fetcher.dataset_iter, Stateful
-            ):
-                if state_dict[_DATASET_STATE] is not None:
-                    self._dataset_fetcher.dataset = try_to_deserialize(
-                        self._dataset_fetcher.dataset, state_dict[_DATASET_STATE]
-                    )
-                    self._dataset_fetcher.dataset_iter = iter(self._dataset_fetcher.dataset)
+        if state_dict[_DATASET_STATE] is not None and isinstance(self._dataset, Stateful):
+            self._dataset = try_to_deserialize(self._dataset, state_dict[_DATASET_STATE])
+        self._dataset_fetcher = _DatasetKind.create_fetcher(
+            self._dataset_kind, self._dataset, self._auto_collation, self._collate_fn, self._drop_last
+        )
+        if self._dataset_kind == _DatasetKind.Iterable:
+            # If either dataset or it's iter is stateflu, we don't fast-forward
+            if isinstance(self._dataset, Stateful) or isinstance(self._dataset_fetcher.dataset_iter, Stateful):
                 if state_dict[_FETCHER_STATE] is not None:
                     if state_dict[_FETCHER_STATE][_DATASET_ITER_STATE] is not None:
                         self._dataset_fetcher.dataset_iter = try_to_deserialize(
