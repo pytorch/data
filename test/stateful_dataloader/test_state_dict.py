@@ -1481,17 +1481,18 @@ class TestFastStateDictRequestRoundRobin_shard3(TestCase):
 class TestNonDictState_shard0(TestCase):
     def test(self):
         for state_type in StateType:
-            ds = TensorStateIterableDataset(5, state_type)
-            dl = StatefulDataLoader(
-                dataset=ds,
-                num_workers=2,
-                collate_fn=identity,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
-            )
-            it = iter(dl)
-            next(it)
-            sd = dl.state_dict()
-            self.assertTrue(sd)
+            for num_workers in [0, 2]:
+                ds = TensorStateIterableDataset(5, state_type)
+                dl = StatefulDataLoader(
+                    dataset=ds,
+                    num_workers=num_workers,
+                    collate_fn=identity,
+                    multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                )
+                it = iter(dl)
+                next(it)
+                sd = dl.state_dict()
+                self.assertTrue(sd)
 
 
 class TestMultiEpochState_shard0(TestCase):
