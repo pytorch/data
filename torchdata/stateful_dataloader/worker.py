@@ -12,7 +12,8 @@ static methods.
 
 import queue
 import random
-from typing import Any, TypeVar, Union
+from dataclasses import dataclass
+from typing import Any, Dict, Optional, TypeVar, Union
 
 import torch
 
@@ -56,6 +57,14 @@ def try_to_deserialize(obj: T, state_dict: dict) -> T:
         obj.load_state_dict(state_dict)
         return obj  # type: ignore[return-value]
     return obj
+
+
+@dataclass(frozen=True)
+class _AckStartup:
+    """Dummy class used to ack startup and return state at time 0"""
+
+    worker_id: int
+    initial_state: Optional[Union[Dict[str, Any], ExceptionWrapper]]
 
 
 def _worker_loop(
@@ -111,15 +120,21 @@ def _worker_loop(
 
         from torch.utils.data import _DatasetKind
 
-        incremental_worker_state = _IncrementalWorkerState(worker_state)
+        incremental_worker_state: _IncrementalWorkerState
         init_exception = None
         fetcher = None
-
+        initial_state = None
         try:
             if init_fn is not None:
                 init_fn(worker_id)
 
             fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
+
+            # See NOTE [ Incremental worker state ]
+            initial_state = worker_state or _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
+            incremental_worker_state = _IncrementalWorkerState(initial_state)
+            if initial_state is worker_state:
+                initial_state = None
 
             # Restore worker state if provided
             if worker_state:
@@ -170,9 +185,12 @@ def _worker_loop(
                 r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
             except queue.Empty:
                 continue
-            if isinstance(r, _ResumeIteration):
-                # Acknowledge the main process
-                data_queue.put((r, None))
+            if isinstance(r, _AckStartup):
+                # Send ack and initial state to the main process
+                data_queue.put((r, _AckStartup(worker_id=worker_id, initial_state=init_exception or initial_state)))
+                del initial_state
+                continue
+            elif isinstance(r, _ResumeIteration):
                 iteration_end = False
 
                 if isinstance(dataset, IterDataPipe):
@@ -180,8 +198,18 @@ def _worker_loop(
                     shared_rng.manual_seed(r.seed)
                     dataset = apply_random_seed(dataset, shared_rng)
 
-                # Recreate the fetcher for worker-reuse policy
-                fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
+                try:
+                    # Recreate the fetcher for worker-reuse policy
+                    fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
+                    # see NOTE [ Incremental Worker State ]
+                    initial_state = _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
+                    incremental_worker_state = _IncrementalWorkerState(initial_state)
+                except Exception:
+                    init_exception = ExceptionWrapper(where=f"in DataLoader worker process {worker_id}")
+
+                # Acknowledge the main process
+                data_queue.put((r, _AckStartup(worker_id=worker_id, initial_state=init_exception or initial_state)))
+                del initial_state
                 continue
             elif r is None:
                 # Received the final signal
@@ -211,25 +239,8 @@ def _worker_loop(
                         #   (2) to avoid sending multiple `_IterableDatasetStopIteration`s.
                         iteration_end = True
                     if snapshot or iteration_end:
-                        if dataset_kind == _DatasetKind.Iterable:
-                            fetcher_state = {
-                                _DATASET_ITER_STATE: try_to_serialize(fetcher.dataset_iter),  # type: ignore[union-attr]
-                                _FETCHER_ENDED: fetcher.ended,  # type: ignore[union-attr]
-                            }
-                            # Pick up any user-defined dataset state if it is not the iterator as it is already captured in fetcher_state's dataset_iter_state
-                            dataset_state = try_to_serialize(dataset) if fetcher.dataset_iter is not dataset else None  # type: ignore[union-attr]
-                        else:
-                            fetcher_state = None
-                            # Pick up any user-defined dataset state
-                            dataset_state = try_to_serialize(dataset)
-
-                        state_dict = {
-                            _WORKER_ID: worker_id,
-                            _FETCHER_STATE: fetcher_state,
-                            _DATASET_STATE: dataset_state,
-                        }
-
                         # Generate incremental diff from prev_state_dict and current_state_dict
+                        state_dict = _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
                         delta_state_dict = incremental_worker_state.generate_delta(state_dict)
                         del state_dict
                 except Exception:
@@ -246,3 +257,25 @@ def _worker_loop(
     if done_event.is_set():
         data_queue.cancel_join_thread()
         data_queue.close()
+
+
+def _make_state_dict(worker_id, dataset_kind, fetcher, dataset) -> Dict[str, Any]:
+    from torch.utils.data import _DatasetKind
+
+    if dataset_kind == _DatasetKind.Iterable:
+        fetcher_state = {
+            _DATASET_ITER_STATE: try_to_serialize(fetcher.dataset_iter),  # type: ignore[union-attr]
+            _FETCHER_ENDED: fetcher.ended,  # type: ignore[union-attr]
+        }
+        # Pick up any user-defined dataset state if it is not the iterator as it is already captured in fetcher_state's dataset_iter_state
+        dataset_state = try_to_serialize(dataset) if fetcher.dataset_iter is not dataset else None  # type: ignore[union-attr]
+    else:
+        fetcher_state = None
+        # Pick up any user-defined dataset state
+        dataset_state = try_to_serialize(dataset)
+
+    return {
+        _WORKER_ID: worker_id,
+        _FETCHER_STATE: fetcher_state,
+        _DATASET_STATE: dataset_state,
+    }

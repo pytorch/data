@@ -10,7 +10,7 @@ from typing import Dict
 import torch
 
 from torch.testing._internal.common_utils import TestCase
-from torchdata.stateful_dataloader import (
+from torchdata.stateful_dataloader.incremental_state import (
     _DATASET_ITER_STATE,
     _DATASET_STATE,
     _FETCHER_ENDED,
