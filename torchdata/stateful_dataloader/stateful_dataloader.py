@@ -388,7 +388,7 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
             self._dataset_kind, self._dataset, self._auto_collation, self._collate_fn, self._drop_last
         )
         if self._dataset_kind == _DatasetKind.Iterable:
-            # If either dataset or it's iter is stateflu, we don't fast-forward
+            # If either dataset or it's iter is stateful, we don't fast-forward
             if isinstance(self._dataset, Stateful) or isinstance(self._dataset_fetcher.dataset_iter, Stateful):
                 if state_dict[_FETCHER_STATE] is not None:
                     if state_dict[_FETCHER_STATE][_DATASET_ITER_STATE] is not None:
