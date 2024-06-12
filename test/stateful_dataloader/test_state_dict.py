@@ -8,6 +8,8 @@ import itertools
 import json
 import unittest
 from copy import deepcopy
+
+from enum import Enum
 from typing import Iterator
 
 import torch
@@ -424,6 +426,32 @@ class GeneratorIterable(torch.utils.data.IterableDataset):
     def load_state_dict(self, state):
         self.resume = state["i"]
         self.epoch = state["epoch"]
+
+
+class StateType(Enum):
+    INTEGER = (1,)
+    STRING = (2,)
+    TENSOR = (3,)
+
+
+class TensorStateIterableDataset(torch.utils.data.IterableDataset, Stateful):
+    def __init__(self, len, state_type):
+        self.len = len
+        self.state_type = state_type
+
+    def __iter__(self):
+        return iter(range(self.len))
+
+    def load_state_dict(self, state):
+        pass
+
+    def state_dict(self):
+        if self.state_type == StateType.INTEGER:
+            return self.len
+        if self.state_type == StateType.STRING:
+            return str(self.len)
+        if self.state_type == StateType.TENSOR:
+            return torch.rand(self.len)
 
 
 class GeneratorIterableNoState(torch.utils.data.IterableDataset):
@@ -1448,6 +1476,22 @@ class TestFastStateDictRequestRoundRobin_shard3(TestCase):
 
     def test_fast_state_dict_request_skip_steps(self) -> None:
         self._run_test(17, 19)
+
+
+class TestNonDictState_shard0(TestCase):
+    def test(self):
+        for state_type in StateType:
+            ds = TensorStateIterableDataset(5, state_type)
+            dl = StatefulDataLoader(
+                dataset=ds,
+                num_workers=2,
+                collate_fn=identity,
+                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            )
+            it = iter(dl)
+            next(it)
+            sd = dl.state_dict()
+            self.assertTrue(sd)
 
 
 class TestMultiEpochState_shard0(TestCase):
