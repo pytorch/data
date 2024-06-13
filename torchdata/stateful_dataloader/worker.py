@@ -65,6 +65,7 @@ class _AckStartup:
 
     worker_id: int
     initial_state: Optional[Union[Dict[str, Any], ExceptionWrapper]]
+    is_delta: bool = False
 
 
 def _worker_loop(
@@ -120,45 +121,46 @@ def _worker_loop(
 
         from torch.utils.data import _DatasetKind
 
+        # See NOTE [ Incremental worker state ]
         incremental_worker_state: _IncrementalWorkerState
         init_exception = None
         fetcher = None
         initial_state = None
+        is_delta = False
         try:
             if init_fn is not None:
                 init_fn(worker_id)
 
-            fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
-
-            # See NOTE [ Incremental worker state ]
-            initial_state = worker_state or _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
-            incremental_worker_state = _IncrementalWorkerState(initial_state)
-            if initial_state is worker_state:
-                initial_state = None
-
-            # Restore worker state if provided
-            if worker_state:
+            if worker_state is None:
+                fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
+                initial_state = _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
+                incremental_worker_state = _IncrementalWorkerState(initial_state)
+            else:
                 # Always restore in this order:
                 #  1. try to restore dataset state
                 #  2. generate dataset iterator
                 #  3. try to restore iterator state
+                incremental_worker_state = _IncrementalWorkerState(worker_state)
                 if worker_state[_DATASET_STATE] is not None:
                     dataset = try_to_deserialize(dataset, worker_state[_DATASET_STATE])
-                    fetcher.dataset = dataset
-                    if dataset_kind == _DatasetKind.Iterable:
-                        fetcher.dataset_iter = iter(fetcher.dataset)
+                fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
                 if worker_state[_FETCHER_STATE] is not None:
                     if dataset_kind == _DatasetKind.Iterable:
-                        dataset_iter = try_to_deserialize(
-                            fetcher.dataset_iter,
-                            worker_state[_FETCHER_STATE][_DATASET_ITER_STATE],
-                        )
-                        if dataset_iter is not None:
-                            fetcher.dataset_iter = dataset_iter
+                        if worker_state[_FETCHER_STATE][_DATASET_ITER_STATE] is not None:
+                            dataset_iter = try_to_deserialize(
+                                fetcher.dataset_iter,
+                                worker_state[_FETCHER_STATE][_DATASET_ITER_STATE],
+                            )
+                            if dataset_iter is not None:
+                                fetcher.dataset_iter = dataset_iter
                         # We always force fetcher to request at least one batch even if
                         # we know it will lead to immediate stop iteration
                         fetcher.ended = False
                 iteration_end = False
+                initial_state = incremental_worker_state.generate_delta(
+                    _make_state_dict(worker_id, dataset_kind, fetcher, dataset)
+                )
+                is_delta = True
 
                 del worker_state
         except Exception:
@@ -187,8 +189,16 @@ def _worker_loop(
                 continue
             if isinstance(r, _AckStartup):
                 # Send ack and initial state to the main process
-                data_queue.put((r, _AckStartup(worker_id=worker_id, initial_state=init_exception or initial_state)))
+                data_queue.put(
+                    (
+                        r,
+                        _AckStartup(
+                            worker_id=worker_id, initial_state=init_exception or initial_state, is_delta=is_delta
+                        ),
+                    )
+                )
                 del initial_state
+                del is_delta
                 continue
             elif isinstance(r, _ResumeIteration):
                 iteration_end = False
@@ -263,12 +273,14 @@ def _make_state_dict(worker_id, dataset_kind, fetcher, dataset) -> Dict[str, Any
     from torch.utils.data import _DatasetKind
 
     if dataset_kind == _DatasetKind.Iterable:
+        iter_state = None
+        if fetcher.dataset_iter is not fetcher.dataset:
+            iter_state = try_to_serialize(fetcher.dataset_iter)
         fetcher_state = {
-            _DATASET_ITER_STATE: try_to_serialize(fetcher.dataset_iter),  # type: ignore[union-attr]
-            _FETCHER_ENDED: fetcher.ended,  # type: ignore[union-attr]
+            _DATASET_ITER_STATE: iter_state,
+            _FETCHER_ENDED: fetcher.ended,
         }
-        # Pick up any user-defined dataset state if it is not the iterator as it is already captured in fetcher_state's dataset_iter_state
-        dataset_state = try_to_serialize(dataset) if fetcher.dataset_iter is not dataset else None  # type: ignore[union-attr]
+        dataset_state = try_to_serialize(fetcher.dataset)
     else:
         fetcher_state = None
         # Pick up any user-defined dataset state
