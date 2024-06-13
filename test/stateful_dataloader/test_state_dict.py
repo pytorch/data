@@ -1283,7 +1283,7 @@ class TestDynamicStateIterableDataset_shard0(TestCase):
         for _ in range((num_workers + 1) * 2):
             next(it)
         state_dict = dl.state_dict()
-        worker_state = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"]["dataset_iter_state"]
+        worker_state = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["dataset_state"]
         self.assertEqual(len(worker_state), 7)
         deep_copy_state_dict = deepcopy(state_dict)
 
@@ -1293,9 +1293,7 @@ class TestDynamicStateIterableDataset_shard0(TestCase):
         next_state_dict = dl.state_dict()
         self.assertEqual(state_dict, deep_copy_state_dict)
         self.assertFalse(state_dict == next_state_dict)
-        worker_state = next_state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"][
-            "dataset_iter_state"
-        ]
+        worker_state = next_state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["dataset_state"]
         self.assertEqual(len(worker_state), 11)
 
         dl = StatefulDataLoader(
@@ -1311,7 +1309,7 @@ class TestDynamicStateIterableDataset_shard0(TestCase):
             exp.extend(next(it))
         state_dict = dl.state_dict()
         self.assertEqual(exp, [3, 3])
-        worker_state = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"]["dataset_iter_state"]
+        worker_state = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["dataset_state"]
         self.assertEqual(len(worker_state), 9)
 
 
@@ -1508,9 +1506,6 @@ class CountIterCalls(torch.utils.data.IterableDataset):
         self.iter_calls = state_dict["iter_calls"]
 
 
-import copy
-
-
 class CountIterCallsIter(torch.utils.data.IterableDataset):
     def __init__(self, length):
         self.length = length
@@ -1529,7 +1524,7 @@ class CountIterCallsIter(torch.utils.data.IterableDataset):
             raise StopIteration
 
     def state_dict(self):
-        return {"iter_calls": self.iter_calls, "items": copy.deepcopy(self.items)}
+        return {"iter_calls": self.iter_calls, "items": deepcopy(self.items)}
 
     def load_state_dict(self, state_dict):
         self.iter_calls = state_dict["iter_calls"]
