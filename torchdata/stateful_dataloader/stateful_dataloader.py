@@ -957,10 +957,10 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                         data.initial_state.reraise()
 
                     if data.is_delta:
-                        self._worker_snapshots[self._worker_key(data.worker_id)].apply_delta(data.initial_state)
+                        self._worker_snapshots[self._worker_key(data.worker_id)].apply_delta(data.initial_state)  # type: ignore[arg-type]
                     else:
                         self._worker_snapshots[self._worker_key(data.worker_id)] = _IncrementalWorkerState(
-                            data.initial_state
+                            data.initial_state  # type: ignore[arg-type]
                         )
                     remaining -= 1
                 else:
@@ -980,7 +980,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                         data.initial_state.reraise()
                     assert data.initial_state is not None, data
                     self._worker_snapshots[self._worker_key(data.worker_id)] = _IncrementalWorkerState(
-                        data.initial_state
+                        data.initial_state  # type: ignore[arg-type]
                     )
                     resume_iteration_cnt -= 1
 
