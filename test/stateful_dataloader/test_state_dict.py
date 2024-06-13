@@ -8,6 +8,8 @@ import itertools
 import json
 import unittest
 from copy import deepcopy
+
+from enum import Enum
 from typing import Iterator
 
 import torch

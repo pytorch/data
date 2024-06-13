@@ -120,7 +120,8 @@ class _IncrementalWorkerState:
         if initial_worker_state_dict:
             self._worker_id = initial_worker_state_dict[_WORKER_ID]
             dataset_state = initial_worker_state_dict.get(_DATASET_STATE, None)
-            if fetcher_state := initial_worker_state_dict.get(_FETCHER_STATE, None):
+            fetcher_state = initial_worker_state_dict.get(_FETCHER_STATE, None)
+            if fetcher_state is not None:
                 self._fetcher_ended = fetcher_state[_FETCHER_ENDED]
                 fetcher_iter_state = fetcher_state.get(_DATASET_ITER_STATE, None)
 
@@ -132,14 +133,17 @@ class _IncrementalWorkerState:
         self._worker_id = new_state_dict[_WORKER_ID]
         incr_state_dict = {_WORKER_ID: self._worker_id, _FETCHER_STATE: None}
 
-        if ds_state := new_state_dict.get(_DATASET_STATE, None):
+        ds_state = new_state_dict.get(_DATASET_STATE, None)
+        if ds_state is not None:
             incr_state_dict[_DATASET_STATE] = self._incr_dataset_state.generate_delta(ds_state)
 
-        if fetcher_state := new_state_dict.get(_FETCHER_STATE, None):
+        fetcher_state = new_state_dict.get(_FETCHER_STATE, None)
+        if fetcher_state is not None:
             self._fetcher_ended = fetcher_state[_FETCHER_ENDED]
 
             delta_iter_state = None
-            if iter_state := fetcher_state.get(_DATASET_ITER_STATE, None):
+            iter_state = fetcher_state.get(_DATASET_ITER_STATE, None)
+            if iter_state is not None:
                 delta_iter_state = self._incr_fetcher_iter_state.generate_delta(iter_state)
 
             incr_state_dict[_FETCHER_STATE] = {
@@ -150,12 +154,15 @@ class _IncrementalWorkerState:
 
     def apply_delta(self, delta_state_dict: Dict[str, Any]) -> None:
         self._worker_id = delta_state_dict[_WORKER_ID]
-        if ds_state := delta_state_dict.get(_DATASET_STATE, None):
+        ds_state = delta_state_dict.get(_DATASET_STATE, None)
+        if ds_state is not None:
             self._incr_dataset_state.apply_delta(ds_state)
 
-        if fetcher_state := delta_state_dict.get(_FETCHER_STATE, None):
+        fetcher_state = delta_state_dict.get(_FETCHER_STATE, None)
+        if fetcher_state is not None:
             self._fetcher_ended = fetcher_state[_FETCHER_ENDED]
-            if iter_state := fetcher_state.get(_DATASET_ITER_STATE, None):
+            iter_state = fetcher_state.get(_DATASET_ITER_STATE, None)
+            if iter_state is not None:
                 self._incr_fetcher_iter_state.apply_delta(iter_state)
 
     def get_state(self) -> Dict[str, Any]:
