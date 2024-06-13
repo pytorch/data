@@ -10,7 +10,7 @@ from typing import Dict
 import torch
 
 from torch.testing._internal.common_utils import TestCase
-from torchdata.stateful_dataloader import (
+from torchdata.stateful_dataloader.incremental_state import (
     _DATASET_ITER_STATE,
     _DATASET_STATE,
     _FETCHER_ENDED,
@@ -43,8 +43,6 @@ class TestFlattener(TestCase):
         for kv, flat_key_count in test_dict_pairs:
             flat_dict = _flatten(kv)
             nest_dict = _unflatten(flat_dict)
-            print(flat_dict)
-            print(nest_dict)
             self.assertEqual(kv, nest_dict)
             if kv is None:
                 continue
@@ -71,6 +69,14 @@ class TestIncrementalState(TestCase):
         delta = incr_state.generate_delta("4")
         self.assertEqual(delta, {(): "4"})
         self.assertEqual(incr_state.get_state(), "4")
+
+    def test_tensor_state(self):
+        incr_state = _IncrementalState(torch.rand(5))
+        ns = torch.rand(5)
+        delta = incr_state.generate_delta(ns)
+        self.assertEqual(len(delta), 1)
+        self.assertTrue(torch.equal(delta[()], ns))
+        self.assertTrue(torch.equal(incr_state.get_state(), ns))
 
     def test_removal(self):
         incr_state = _IncrementalState({"a": 4})
@@ -125,6 +131,24 @@ class TestIncrementalWorkerState(TestCase):
         delta = worker_state.generate_delta(state)
         self.assertEqual(delta[_DATASET_STATE], {("abc",): "tuv"})
         self.assertEqual(delta[_FETCHER_STATE][_DATASET_ITER_STATE], {})
+        final_state = worker_state.get_state()
+        self.assertEqual(state, final_state)
+
+    def test_tensor_state(self):
+        worker_state = _IncrementalWorkerState(None)
+        state = {
+            _WORKER_ID: 0,
+            _DATASET_STATE: None,
+            _FETCHER_STATE: {
+                _DATASET_ITER_STATE: None,
+                _FETCHER_ENDED: False,
+            },
+        }
+        delta = worker_state.generate_delta(state)
+        ts = torch.rand(5)
+        state[_DATASET_STATE] = ts
+        delta = worker_state.generate_delta(state)
+        self.assertEqual(delta[_FETCHER_STATE][_DATASET_ITER_STATE], None)
         final_state = worker_state.get_state()
         self.assertEqual(state, final_state)
 

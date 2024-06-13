@@ -46,11 +46,10 @@ from .incremental_state import (
     _IncrementalWorkerState,
     _WORKER_ID,
 )
-
 from .sampler import BatchSampler, RandomSampler  # noqa
 from .stateful import Stateful
 
-from .worker import _worker_loop, try_to_deserialize, try_to_serialize
+from .worker import _AckStartup, _worker_loop, try_to_deserialize, try_to_serialize
 
 __all__ = [
     "StatefulDataLoader",
@@ -214,7 +213,11 @@ class StatefulDataLoader(DataLoader[T_co]):
         )
         self.snapshot_every_n_steps = snapshot_every_n_steps
         self.next_iter_state: Optional[Dict[str, Any]] = None
-        self.iter_calls = 0
+        # When a state_dict is requested before __iter__ is called,
+        # we create the __iter__ so we can get a copy of the initial state from
+        # its workers. In those cases, we can avoid creating a new multiprocessing
+        # iterator on the next __iter__ call, and this flag is used for those cases.
+        self._initial_iter_for_state_dict = False
 
     def _get_iterator(self) -> "_StatefulBaseDataLoaderIter":
         it: _StatefulBaseDataLoaderIter
@@ -232,27 +235,33 @@ class StatefulDataLoader(DataLoader[T_co]):
         # However, in the case of a multiple workers iterator
         # the iterator is only created once in the lifetime of the
         # DataLoader object so that workers can be reused
-        if self.persistent_workers and self.num_workers > 0:
+        if self._initial_iter_for_state_dict:
+            self._initial_iter_for_state_dict = False
+            assert self._iterator is not None
+        elif self.persistent_workers and self.num_workers > 0:
             if self._iterator is None:
                 self._iterator = self._get_iterator()
             else:
                 self._iterator._reset(self)
         else:
             self._iterator = self._get_iterator()
-        # If we're loading a finished iterator, just request next one immediately
         if self._iterator._finished:
-            return iter(self)
-        self.iter_calls += 1
+            if self.persistent_workers:
+                self._iterator._reset(self)
+            else:
+                self._iterator = self._get_iterator()
+
         return self._iterator
 
     def state_dict(self) -> Dict[str, Any]:
         if self._iterator is None:
-            return {}
-        else:
-            return self._iterator.state_dict()
+            self._iterator = self._get_iterator()
+            self._initial_iter_for_state_dict = True
+        return self._iterator.state_dict()
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         self._iterator = None
+        self._initial_iter_for_state_dict = False
         if state_dict == {}:
             return
         self.next_iter_state = state_dict
@@ -861,18 +870,31 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         _utils.signal_handling._set_worker_pids(id(self), tuple(w.pid for w in self._workers))  # type: ignore[misc]
         _utils.signal_handling._set_SIGCHLD_handler()
         self._worker_pids_set = True
-        self._snapshot, self._worker_snapshots, self._main_snapshots = {}, {}, collections.deque()  # type: ignore[var-annotated]
-
-        self._main_state_0 = self._get_main_state()
+        self._snapshot, self._main_snapshots = {}, collections.deque()  # type: ignore[var-annotated]
+        # NOTE [ Incremental Worker State ]
+        # We only send deltas between incremental worker state to the main process. We synchronize
+        # the initial states on worker startup, when it sends an _AckStartup signal back with the initial
+        # worker states, and if persistent_workers is True, then the worker sends back an initial
+        # state after acking the _ResumeIteration signal.
+        #
+        # We need to send initial worker state back to the main process to handle state_dict() requests
+        # before n >= num_workers steps are taken.
+        self._worker_snapshots: Dict[str, _IncrementalWorkerState] = {}
         self._reset(loader, first_iter=True, prime_prefetch=next_iter_state is None)
 
         # Try to restore main state
         if next_iter_state is not None:
             self._restore_main_state(next_iter_state[self._SNAPSHOT][self._MAIN_SNAPSHOT])
             self._num_yielded = next_iter_state[self._SNAPSHOT][self._SNAPSHOT_STEP]
-
-            # Back-fill the worker snapshots before starting, in case of failure before a full cycle
             self._worker_snapshots = {key: _IncrementalWorkerState(state) for key, state in worker_states.items()}
+
+            self._update_snapshot(
+                snapshot_step=next_iter_state[self._SNAPSHOT][self._SNAPSHOT_STEP],
+                last_yielded_worker_id=next_iter_state[self._SNAPSHOT][self._LAST_YIELDED_WORKER_ID],
+                num_workers=self._num_workers,
+                main_snapshot=next_iter_state[self._SNAPSHOT][self._MAIN_SNAPSHOT],
+                worker_snapshots=self._worker_snapshots,
+            )
 
             fast_forward = False
             if self._dataset_kind == _DatasetKind.Iterable:
@@ -909,16 +931,17 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                 next(self)
             self._finished = next_iter_state[_ITERATOR_FINISHED]
 
-    def _reset_state_vars(self):
-        self._worker_snapshots = {}
+    def _reset_state_vars(self, worker_states):
+        assert len(worker_states) == self._num_workers, (self._num_workers, worker_states)
+        self._worker_snapshots = {key: _IncrementalWorkerState(state) for key, state in worker_states.items()}
         self._main_snapshots = collections.deque()
         self._last_yielded_worker_id = self._num_workers - 1
         self._update_snapshot(
             snapshot_step=0,
             last_yielded_worker_id=self._num_workers - 1,
             num_workers=self._num_workers,
-            main_snapshot=self._main_state_0,
-            worker_snapshots={},
+            main_snapshot=self._get_main_state(),
+            worker_snapshots=self._worker_snapshots,
         )
 
     def _reset(self, loader, first_iter=False, prime_prefetch=True):
@@ -940,17 +963,40 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._workers_status = [True for i in range(self._num_workers)]
         # Reset the worker queue cycle so it resumes next epoch at worker 0
         self._worker_queue_idx_cycle = itertools.cycle(range(self._num_workers))
-        # We resume the prefetching in case it was enabled
-        if not first_iter:
+        worker_states: Dict[str, Any] = {}
+        if first_iter:
+            # Request the initial state_dict
+            for i in range(self._num_workers):
+                self._index_queues[i].put(_AckStartup(i, None))  # type: ignore[arg-type]
+
+            while len(worker_states) < self._num_workers:
+                _, data = self._get_data()
+                if not all(self._workers_status):
+                    raise ValueError(f"A worker has failed during startup! {self._workers_status}")
+                elif isinstance(data, _AckStartup):
+                    if isinstance(data.initial_state, ExceptionWrapper):
+                        data.initial_state.reraise()
+                    worker_states[self._worker_key(data.worker_id)] = data.initial_state
+                else:
+                    raise ValueError(f"Invalid response from worker after startup: {data}")
+        else:
+            # We resume the prefetching in case it was enabled
             for idx in range(self._num_workers):
                 self._index_queues[idx].put(_utils.worker._ResumeIteration(self._shared_seed))
             resume_iteration_cnt = self._num_workers
             while resume_iteration_cnt > 0:
-                return_idx, return_data = self._get_data()
+                return_idx, data = self._get_data()
+                if not all(self._workers_status):
+                    raise ValueError(f"A worker has failed during Resume! {self._workers_status}")
                 if isinstance(return_idx, _utils.worker._ResumeIteration):
-                    assert return_data is None
+                    assert isinstance(data, _AckStartup), (return_idx, data)
+                    if isinstance(data.initial_state, ExceptionWrapper):
+                        data.initial_state.reraise()
+                    assert data.initial_state is not None, data
+                    worker_states[self._worker_key(data.worker_id)] = data.initial_state
                     resume_iteration_cnt -= 1
-        self._reset_state_vars()
+
+        self._reset_state_vars(worker_states)
         if prime_prefetch:
             # prime the prefetch loop
             for _ in range(self._prefetch_factor * self._num_workers):
@@ -959,8 +1005,6 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
     def _update_worker_snapshot(self, worker_key, state_dict):
         if state_dict is None:
             return
-        if worker_key not in self._worker_snapshots:
-            self._worker_snapshots[worker_key] = _IncrementalWorkerState(None)
         self._worker_snapshots[worker_key].apply_delta(state_dict)
 
     def state_dict(self):
@@ -1321,7 +1365,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         last_yielded_worker_id: int,
         num_workers: int,
         main_snapshot: Dict[str, Any],
-        worker_snapshots: Dict[str, Any],
+        worker_snapshots: Dict[str, _IncrementalWorkerState],
     ):
         self._snapshot = {
             self._SNAPSHOT_STEP: snapshot_step,

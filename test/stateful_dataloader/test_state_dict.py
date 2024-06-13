@@ -8,11 +8,13 @@ import itertools
 import json
 import unittest
 from copy import deepcopy
+
+from enum import Enum
 from typing import Iterator
 
 import torch
 import torch.utils.data
-from torch.testing._internal.common_utils import IS_MACOS, TestCase
+from torch.testing._internal.common_utils import IS_MACOS, TEST_CUDA, TestCase
 from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
 
 
@@ -39,15 +41,15 @@ class DummyIterator(Iterator, Stateful):
         return sample
 
     def state_dict(self):
-        sd = {"i": self.i}
+        sd = {"nest": {"i": self.i}}
         if self.include_generator:
-            sd["g"] = torch.get_rng_state()
+            sd["nest"]["g"] = torch.get_rng_state()
         return sd
 
     def load_state_dict(self, state_dict):
-        self.i = state_dict["i"]
+        self.i = state_dict["nest"]["i"]
         if self.include_generator:
-            torch.set_rng_state(state_dict["g"])
+            torch.set_rng_state(state_dict["nest"]["g"])
 
 
 class DummySamplerIterator(Iterator, Stateful):
@@ -103,15 +105,15 @@ class DummyIteratorIterableDataset(torch.utils.data.IterableDataset, Iterator, S
         return sample
 
     def state_dict(self):
-        sd = {"i": self.i}
+        sd = {"nest": {"i": self.i}}
         if self.include_generator:
-            sd["g"] = torch.get_rng_state()
+            sd["nest"]["g"] = torch.get_rng_state()
         return sd
 
     def load_state_dict(self, state_dict):
-        self.i = state_dict["i"]
+        self.i = state_dict["nest"]["i"]
         if self.include_generator:
-            torch.set_rng_state(state_dict["g"])
+            torch.set_rng_state(state_dict["nest"]["g"])
 
 
 class DummyIterableDataset(torch.utils.data.IterableDataset):
@@ -388,10 +390,12 @@ class TestStatefulSampler_shard1(TestStatefulDataLoaderIterable_shard0):
 
 
 class GeneratorIterable(torch.utils.data.IterableDataset):
-    def __init__(self, sizes_for_all_workers):
+    def __init__(self, sizes_for_all_workers, increment_epoch=False):
         self.sizes_for_all_workers = sizes_for_all_workers
         self.i = 0
         self.resume = None
+        self.epoch = 0
+        self.increment_epoch = increment_epoch
 
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
@@ -408,13 +412,20 @@ class GeneratorIterable(torch.utils.data.IterableDataset):
         skip = self.i
         for i in range(start + skip, start + self.sizes_for_all_workers[worker_id]):
             self.i += 1
-            yield i
+            yield (i, self.epoch)
+
+        # To save end-of-epoch state properly, reset variables here so loading
+        # will begin from the correct position and epoch
+        self.i = 0
+        if self.increment_epoch:
+            self.epoch += 1
 
     def state_dict(self):
-        return {"i": self.i}
+        return {"i": self.i, "epoch": self.epoch}
 
     def load_state_dict(self, state):
         self.resume = state["i"]
+        self.epoch = state["epoch"]
 
 
 class GeneratorIterableNoState(torch.utils.data.IterableDataset):
@@ -430,6 +441,33 @@ class GeneratorIterableNoState(torch.utils.data.IterableDataset):
             self.sizes_for_all_workers = [sum(self.sizes_for_all_workers)]
         start = sum(self.sizes_for_all_workers[:worker_id])
         yield from range(start, start + self.sizes_for_all_workers[worker_id])
+
+
+class GeneratorSampler(torch.utils.data.Sampler):
+    def __init__(self, limit):
+        self.limit = limit
+        self.i = 0
+        self.resume = None
+        self.epoch = 0
+
+    def __iter__(self):
+        if self.resume is not None:
+            self.i = self.resume
+            self.resume = None
+        skip = self.i
+        for i in range(skip, self.limit):
+            self.i += 1
+            yield i
+
+        self.i = 0
+        self.epoch += 1
+
+    def state_dict(self):
+        return {"i": self.i, "epoch": self.epoch}
+
+    def load_state_dict(self, state):
+        self.resume = state["i"]
+        self.epoch = state["epoch"]
 
 
 class TestStatefulDataLoaderGenerator_shard2(TestStatefulDataLoaderIterable_shard0):
@@ -860,7 +898,6 @@ class TestNumWorkersMismatch_shard3(TestCase):
                 multiprocessing_context=("forkserver" if IS_MACOS and initial_num_workers else None),
             )
             state = dl.state_dict()
-            self.assertEqual(len(state), 0)
 
             iter(dl)
             state = dl.state_dict()
@@ -1054,13 +1091,186 @@ class TestJsonSerDe_shard3(TestCase):
         self._run_test_map(3)
 
 
-class TestStatefulDataLoaderIterable2_shard3(TestStatefulDataLoaderIterable_shard0):
+class ErrorDataset(torch.utils.data.Dataset):
+    def __getitem__(self, index: int):
+        raise ValueError("Iteration error")
+
+    def __len__(self):
+        return 10
+
+
+ERROR_MSG = "Worker init error"
+
+
+def error_worker_init_fn(worker_id):
+    raise ValueError(ERROR_MSG)
+
+
+class TestInitialState_shard0(TestCase):
+    def test_initial_state(self):
+        for pw in [False, True]:
+            num_workers = 4
+            dataset = DummyMapDataset(100, shuffle=False)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                persistent_workers=pw,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS else None,
+                pin_memory=TEST_CUDA,
+            )
+            state = dl.state_dict()
+            self.assertEqual(len(state["_snapshot"]["_worker_snapshots"]), num_workers)
+
+            exp = list(dl)
+
+            it = iter(dl)
+            for _ in range(2):
+                next(it)
+
+            dl.load_state_dict(state)
+            data = list(dl)
+            self.assertEqual(data, exp)
+
+            data2 = list(dl)
+            self.assertEqual(data2, exp)
+
+    def test_load_state_after_initial_state_dict(self):
+        for pw, interrupt in itertools.product([False, True], [2, 9]):
+            num_workers = 4
+            dataset = DummyMapDataset(100, shuffle=True)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                persistent_workers=pw,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS else None,
+                pin_memory=TEST_CUDA,
+            )
+
+            it = iter(dl)
+            for _ in range(interrupt):
+                next(it)
+            state = dl.state_dict()
+            exp = list(it)
+
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                persistent_workers=pw,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS else None,
+                pin_memory=TEST_CUDA,
+            )
+            state0 = dl.state_dict()
+            self.assertEqual(len(state0["_snapshot"]["_worker_snapshots"]), num_workers)
+            dl.load_state_dict(state)
+            data = list(dl)
+            self.assertEqual(data, exp)
+
+    def test_load_state_before_initial_state_dict(self):
+        for pw, interrupt in itertools.product([False, True], [2, 9]):
+            num_workers = 4
+            dataset = DummyMapDataset(100, shuffle=True)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                persistent_workers=pw,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS else None,
+                pin_memory=TEST_CUDA,
+            )
+
+            it = iter(dl)
+            for _ in range(interrupt):
+                next(it)
+            state = dl.state_dict()
+            exp = list(it)
+
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                persistent_workers=pw,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS else None,
+                pin_memory=TEST_CUDA,
+            )
+            dl.load_state_dict(state)
+            state0 = dl.state_dict()
+            self.assertEqual(state0, state)
+            data = list(dl)
+            self.assertEqual(data, exp)
+
+    def test_init_error(self):
+        num_workers = 4
+        dataset = DummyMapDataset(100, shuffle=True)
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            collate_fn=identity,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+            worker_init_fn=error_worker_init_fn,
+            pin_memory=TEST_CUDA,
+        )
+        with self.assertRaisesRegex(ValueError, ERROR_MSG):
+            iter(dl)
+
+    def test_iteration_error(self):
+        num_workers = 4
+        dataset = ErrorDataset()
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            collate_fn=identity,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+            pin_memory=TEST_CUDA,
+        )
+        it = iter(dl)
+        with self.assertRaisesRegex(ValueError, "Iteration error"):
+            next(it)
+
+    def test_load_then_state(self):
+        for pw in itertools.product([False, True]):
+            num_workers = 4
+            dataset = DummyMapDataset(100, shuffle=True)
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                persistent_workers=pw,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS else None,
+                pin_memory=TEST_CUDA,
+            )
+
+            state0 = dl.state_dict()
+            exp = list(dl)
+
+            dl = StatefulDataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                persistent_workers=pw,
+                collate_fn=identity,
+                multiprocessing_context="forkserver" if IS_MACOS else None,
+                pin_memory=TEST_CUDA,
+            )
+            it = iter(dl)
+            for _ in range(3):
+                next(it)
+            dl.load_state_dict(state0)
+            state1 = dl.state_dict()
+            self.assertEqual(state1, state0)
+
+            batches = list(dl)
+            self.assertEqual(batches, exp)
+
+
+class TestStatefulDataLoaderIterable2_shard0(TestStatefulDataLoaderIterable_shard0):
     # Perform sanity test checks with the iterable dataset that is also an iterator
     def _get_dataset(self, shuffle):
         return DummyIteratorIterableDataset(list(range(100)), shuffle=shuffle, include_generator=True)
 
 
-class TestDynamicStateIterableDataset(TestCase):
+class TestDynamicStateIterableDataset_shard0(TestCase):
     def test(self):
         dataset = DynamicStateIterableDataset(list(range(100)))
         num_workers = 2
@@ -1107,7 +1317,7 @@ class TestDynamicStateIterableDataset(TestCase):
         self.assertEqual(len(worker_state), 9)
 
 
-class TestDatasetIteratorStateDuplication_shard3(TestCase):
+class TestDatasetIteratorStateDuplication_shard0(TestCase):
     def test(self):
         dataset = DummyIteratorIterableDataset(list(range(100)), shuffle=True, include_generator=True)
         for num_workers in (0, 2):
@@ -1135,6 +1345,152 @@ class TestDatasetIteratorStateDuplication_shard3(TestCase):
             else:
                 self.assertEqual(state_dict["dataset_state"], None)
                 self.assertTrue(state_dict["fetcher_state"]["dataset_iter_state"])
+
+
+class PeriodicStateIterableDataset(torch.utils.data.IterableDataset):
+    def __init__(self):
+        self.state = {
+            0: 0,
+            1: 0,
+            2: 0,
+            3: 0,
+        }
+        self.step = 0
+        self.limit = 100
+
+    def __iter__(self):
+        for _ in range(self.step, self.limit):
+            self.step += 1
+            y = self.state[self.step % len(self.state)]
+            self.state[self.step % len(self.state)] = 1 - y
+
+            yield self.state[self.step % len(self.state)]
+
+    def state_dict(self):
+        return {
+            "state": self.state,
+            "step": self.step,
+        }
+
+    def load_state_dict(self, state):
+        self.state = state["state"]
+        self.step = state["step"]
+
+
+class TestFastStateDictRequestRoundRobin_shard3(TestCase):
+    def _run_test(self, snapshot_every_n_steps, interrupt):
+        num_workers = 4
+        dataset = PeriodicStateIterableDataset()
+
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            batch_size=1,
+            collate_fn=identity,
+            persistent_workers=True,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+            snapshot_every_n_steps=snapshot_every_n_steps,
+        )
+        it = iter(dl)
+        for _ in range(interrupt):
+            next(it)
+
+        state_dict = dl.state_dict()
+        for _ in range(2):
+            next(it)
+        exp_state_dict = dl.state_dict()
+        exp = list(it)
+
+        dl.load_state_dict(state_dict)
+        # new iter after load_state_dict, ask for state dict before num_workers batches
+        # are yielded to ensure old worker states are stored properly
+        it = iter(dl)
+        for _ in range(2):
+            next(it)
+
+        state_dict2 = dl.state_dict()
+
+        dataset = PeriodicStateIterableDataset()
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            batch_size=1,
+            collate_fn=identity,
+            persistent_workers=True,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+            snapshot_every_n_steps=snapshot_every_n_steps,
+        )
+        dl.load_state_dict(state_dict2)
+        data = list(dl)
+
+        self.assertEqual(data, exp)
+
+        dataset = PeriodicStateIterableDataset()
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            batch_size=1,
+            collate_fn=identity,
+            persistent_workers=True,
+            multiprocessing_context="forkserver" if IS_MACOS else None,
+            snapshot_every_n_steps=snapshot_every_n_steps,
+        )
+        dl.load_state_dict(state_dict)
+        it = iter(dl)
+        for _ in range(2):
+            next(it)
+
+        state_dict3 = dl.state_dict()
+        self.assertEqual(state_dict3, exp_state_dict)
+
+    def test_fast_state_dict_request(self) -> None:
+        # these test settings will trigger a failure if
+        # the worker/main incremental state_dicts are out of sync during initialization
+        self._run_test(1, 15)
+
+    def test_fast_state_dict_request_skip_steps(self) -> None:
+        self._run_test(17, 19)
+
+
+class TestMultiEpochState_shard0(TestCase):
+    def get_iterable_dl(self, pw, num_workers):
+        data_size = [25, 50, 100, 75]
+        if num_workers == 0:
+            data_size = [sum(data_size)]
+        dataset = GeneratorIterable(data_size, True)
+        return StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            persistent_workers=pw,
+            collate_fn=identity,
+            multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+        )
+
+    def _run(self, pw: bool, num_workers: int):
+        dl = self.get_iterable_dl(pw, num_workers)
+        exp0 = list(dl)
+        state1 = dl.state_dict()
+        exp1 = list(dl)
+        exp2 = list(dl)
+        self.assertEqual(exp0, [[(x[0][0], x[0][1] - 1)] for x in exp1])
+        self.assertEqual(exp0, [[(x[0][0], x[0][1] - 2)] for x in exp2])
+
+        dl = self.get_iterable_dl(pw, num_workers)
+        it = iter(dl)
+        for _ in range(2):
+            next(it)
+        dl.load_state_dict(state1)
+        it = iter(dl)
+        data1 = list(it)
+        data2 = list(dl)
+        self.assertEqual(data1, exp1)
+        self.assertEqual(data2, exp2)
+
+    def test_inline(self):
+        self._run(False, 0)
+
+    def test_pw(self):
+        self._run(True, 4)
 
 
 if __name__ == "__main__":
