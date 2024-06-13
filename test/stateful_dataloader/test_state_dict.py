@@ -1334,15 +1334,16 @@ class TestDatasetIteratorStateDuplication_shard0(TestCase):
             if num_workers > 0:
                 for i in range(num_workers):
                     # Ensure worker state is stored only once if the dataset is also the iterator
-                    self.assertEqual(state_dict["_snapshot"]["_worker_snapshots"][f"worker_{i}"]["dataset_state"], None)
-                    self.assertTrue(
+                    self.assertTrue(state_dict["_snapshot"]["_worker_snapshots"][f"worker_{i}"]["dataset_state"])
+                    self.assertEqual(
                         state_dict["_snapshot"]["_worker_snapshots"][f"worker_{i}"]["fetcher_state"][
                             "dataset_iter_state"
-                        ]
+                        ],
+                        None,
                     )
             else:
-                self.assertEqual(state_dict["dataset_state"], None)
-                self.assertTrue(state_dict["fetcher_state"]["dataset_iter_state"])
+                self.assertTrue(state_dict["dataset_state"])
+                self.assertEqual(state_dict["fetcher_state"]["dataset_iter_state"], None)
 
 
 class PeriodicStateIterableDataset(torch.utils.data.IterableDataset):
@@ -1504,7 +1505,35 @@ class CountIterCalls(torch.utils.data.IterableDataset):
         return {"iter_calls": self.iter_calls}
 
     def load_state_dict(self, state_dict):
-        pass
+        self.iter_calls = state_dict["iter_calls"]
+
+
+import copy
+
+
+class CountIterCallsIter(torch.utils.data.IterableDataset):
+    def __init__(self, length):
+        self.length = length
+        self.iter_calls = 0
+        self.items = []
+
+    def __iter__(self):
+        self.items = list(range(self.length))
+        self.iter_calls += 1
+        return self
+
+    def __next__(self):
+        if len(self.items) > 0:
+            self.items.popleft()
+        else:
+            raise StopIteration
+
+    def state_dict(self):
+        return {"iter_calls": self.iter_calls, "items": copy.deepcopy(self.items)}
+
+    def load_state_dict(self, state_dict):
+        self.iter_calls = state_dict["iter_calls"]
+        self.items = state_dict["items"]
 
 
 class TestSingleIterCalled_shard0(TestCase):
@@ -1516,8 +1545,7 @@ class TestSingleIterCalled_shard0(TestCase):
 
         return [x["dataset_state"]["iter_calls"] for x in w_states]
 
-    def _run_test(self, num_workers):
-        dataset = CountIterCalls(100)
+    def _run_test(self, num_workers, dataset):
         dl = StatefulDataLoader(
             dataset=dataset,
             num_workers=num_workers,
@@ -1525,10 +1553,7 @@ class TestSingleIterCalled_shard0(TestCase):
         )
         iter(dl)
         state = dl.state_dict()
-        if num_workers == 0:
-            self.assertEqual(dataset.iter_calls, 1)
-        else:
-            self.assertEqual(self._get_iter_calls(state), [1] * num_workers)
+        self.assertEqual(self._get_iter_calls(state), [1] * max(1, num_workers))
         dl2 = StatefulDataLoader(
             dataset=dataset,
             num_workers=num_workers,
@@ -1536,18 +1561,20 @@ class TestSingleIterCalled_shard0(TestCase):
         )
         dl2.load_state_dict(state)
         iter(dl2)
-        state2 = dl.state_dict()
-        if num_workers == 0:
-            self.assertEqual(dataset.iter_calls, 2)
-        else:
-            print(state2)
-            self.assertEqual(self._get_iter_calls(state2), [1] * num_workers)
+        state2 = dl2.state_dict()
+        self.assertEqual(self._get_iter_calls(state2), [2] * max(1, num_workers))
 
     def test_inline(self):
-        self._run_test(0)
+        self._run_test(0, CountIterCalls(100))
 
     def test_mp(self):
-        self._run_test(2)
+        self._run_test(2, CountIterCalls(100))
+
+    def test_inline_iter(self):
+        self._run_test(0, CountIterCallsIter(100))
+
+    def test_mp_iter(self):
+        self._run_test(2, CountIterCallsIter(100))
 
 
 if __name__ == "__main__":
