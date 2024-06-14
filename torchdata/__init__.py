@@ -32,3 +32,23 @@ def __getattr__(name):
                 return globals()[name]
             else:
                 raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+_warning_shown = False
+
+
+def deprecation_warning():
+    global _warning_shown
+    if not _warning_shown:
+        _warning_shown = True
+        import warnings
+
+        warnings.warn(
+            "\n################################################################################\n"
+            "WARNING!\n"
+            "The 'datapipes', 'dataloader2' modules are deprecated and will be removed in a\n"
+            "future torchdata release! Please see https://github.com/pytorch/data/issues/1196\n"
+            "to learn more and leave feedback.\n"
+            "################################################################################\n",
+            stacklevel=2,
+        )
