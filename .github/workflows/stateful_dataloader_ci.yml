@@ -90,3 +90,6 @@ jobs:
       - name: Run StatefulDataLoader tests with pytest - state_dict 3
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict.py -k _shard3
+      - name: Run StatefulDataLoader HuggingFace tests
+        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_hugging_face.py
