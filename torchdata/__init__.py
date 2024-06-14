@@ -34,7 +34,7 @@ def __getattr__(name):
                 raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-_DEPRECATED = _warning_shown = False
+_warning_shown = False
 
 
 def deprecation_warning():
