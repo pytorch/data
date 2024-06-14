@@ -34,8 +34,7 @@ def __getattr__(name):
                 raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-_DEPRECATED = ["janitor", "datapipes", "dataloader2"]
-_warning_shown = False
+_DEPRECATED = _warning_shown = False
 
 
 def deprecation_warning():
@@ -45,11 +44,11 @@ def deprecation_warning():
         import warnings
 
         warnings.warn(
-            f"\n############################################################################\n"
-            f"   WARNING!\n"
-            f"The {_DEPRECATED} modules are deprecated and will be removed in a future \n"
-            f"torchdata release! Please see https://github.com/pytorch/data/issues/1196 \n"
-            f"to learn more and leave feedback.\n"
-            f"############################################################################\n",
+            "\n################################################################################\n"
+            "WARNING!\n"
+            "The 'datapipes', 'dataloader2' modules are deprecated and will be removed in a\n"
+            "future torchdata release! Please see https://github.com/pytorch/data/issues/1196\n"
+            "to learn more and leave feedback.\n"
+            "################################################################################\n",
             stacklevel=2,
         )
