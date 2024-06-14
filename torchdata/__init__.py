@@ -20,24 +20,8 @@ __all__ = [
 assert __all__ == sorted(__all__)
 
 
-_DEPRECATED = ["janitor", "datapipes", "dataloader2"]
-_warning_shown = False
-
-
 # Lazy import all modules
 def __getattr__(name):
-    if name in _DEPRECATED and not _warning_shown:
-        global _warning_shown
-        _warning_shown = True
-
-        import warnings
-
-        warnings.warn(
-            f"The {_DEPRECATED} modules are deprecated and will be removed in a future "
-            f"torchdata release! Please see https://github.com/pytorch/data/issues/1196 "
-            f"to learn more and leave feedback.",
-            stacklevel=2,
-        )
     if name == "janitor":
         return importlib.import_module(".datapipes.utils." + name, __name__)
     else:
@@ -48,3 +32,24 @@ def __getattr__(name):
                 return globals()[name]
             else:
                 raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+_DEPRECATED = ["janitor", "datapipes", "dataloader2"]
+_warning_shown = False
+
+
+def deprecation_warning():
+    global _warning_shown
+    if not _warning_shown:
+        _warning_shown = True
+        import warnings
+
+        warnings.warn(
+            f"\n############################################################################\n"
+            f"   WARNING!\n"
+            f"The {_DEPRECATED} modules are deprecated and will be removed in a future \n"
+            f"torchdata release! Please see https://github.com/pytorch/data/issues/1196 \n"
+            f"to learn more and leave feedback.\n"
+            f"############################################################################\n",
+            stacklevel=2,
+        )
