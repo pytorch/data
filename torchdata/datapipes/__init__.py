@@ -11,3 +11,8 @@ from torchdata import _extension  # noqa: F401
 from . import iter, map, utils
 
 __all__ = ["DataChunk", "functional_datapipe", "iter", "map", "utils"]
+
+
+from torchdata import deprecation_warning
+
+deprecation_warning()

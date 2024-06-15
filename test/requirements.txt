@@ -11,7 +11,7 @@ portalocker >= 2.0.0
 # Protobuf 3.20.2 is also broken on MacOS Python 3.10
 # See: https://github.com/protocolbuffers/protobuf/issues/10571
 protobuf >= 3.9.2, < 3.20
-datasets
+datasets @ git+https://github.com/huggingface/datasets@main
 graphviz
 adlfs
 awscli>=1.27.66
