@@ -1295,7 +1295,9 @@ class TestDynamicStateIterableDataset_shard0(TestCase):
         next_state_dict = dl.state_dict()
         self.assertEqual(state_dict, deep_copy_state_dict)
         self.assertFalse(state_dict == next_state_dict)
-        worker_state = next_state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"]["dataset_iter_state"]
+        worker_state = next_state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"][
+            "dataset_iter_state"
+        ]
         self.assertEqual(len(worker_state), 11)
 
         dl = StatefulDataLoader(
@@ -1539,7 +1541,7 @@ class TestSingleIterCalled_shard0(TestCase):
             w_states = [state]
         else:
             w_states = list(state["_snapshot"]["_worker_snapshots"].values())
-        
+ 
         if w_states[0]["dataset_state"] is not None:
             return [x["dataset_state"]["iter_calls"] for x in w_states]
         return [x["fetcher_state"]["dataset_iter_state"]["iter_calls"] for x in w_states]
