@@ -1285,7 +1285,7 @@ class TestDynamicStateIterableDataset_shard0(TestCase):
         for _ in range((num_workers + 1) * 2):
             next(it)
         state_dict = dl.state_dict()
-        worker_state = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["dataset_state"]
+        worker_state = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"]["dataset_iter_state"]
         self.assertEqual(len(worker_state), 7)
         deep_copy_state_dict = deepcopy(state_dict)
 
@@ -1295,7 +1295,7 @@ class TestDynamicStateIterableDataset_shard0(TestCase):
         next_state_dict = dl.state_dict()
         self.assertEqual(state_dict, deep_copy_state_dict)
         self.assertFalse(state_dict == next_state_dict)
-        worker_state = next_state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["dataset_state"]
+        worker_state = next_state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"]["dataset_iter_state"]
         self.assertEqual(len(worker_state), 11)
 
         dl = StatefulDataLoader(
@@ -1311,7 +1311,7 @@ class TestDynamicStateIterableDataset_shard0(TestCase):
             exp.extend(next(it))
         state_dict = dl.state_dict()
         self.assertEqual(exp, [3, 3])
-        worker_state = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["dataset_state"]
+        worker_state = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"]["dataset_iter_state"]
         self.assertEqual(len(worker_state), 9)
 
 
@@ -1334,16 +1334,15 @@ class TestDatasetIteratorStateDuplication_shard0(TestCase):
             if num_workers > 0:
                 for i in range(num_workers):
                     # Ensure worker state is stored only once if the dataset is also the iterator
-                    self.assertTrue(state_dict["_snapshot"]["_worker_snapshots"][f"worker_{i}"]["dataset_state"])
-                    self.assertEqual(
+                    self.assertEqual(state_dict["_snapshot"]["_worker_snapshots"][f"worker_{i}"]["dataset_state"], None)
+                    self.assertTrue(
                         state_dict["_snapshot"]["_worker_snapshots"][f"worker_{i}"]["fetcher_state"][
                             "dataset_iter_state"
-                        ],
-                        None,
+                        ]
                     )
             else:
-                self.assertTrue(state_dict["dataset_state"])
-                self.assertEqual(state_dict["fetcher_state"]["dataset_iter_state"], None)
+                self.assertEqual(state_dict["dataset_state"], None)
+                self.assertTrue(state_dict["fetcher_state"]["dataset_iter_state"])
 
 
 class PeriodicStateIterableDataset(torch.utils.data.IterableDataset):
@@ -1529,7 +1528,8 @@ class CountIterCallsIter(torch.utils.data.IterableDataset):
         return {"iter_calls": self.iter_calls, "items": deepcopy(self.items)}
 
     def load_state_dict(self, state_dict):
-        self.iter_calls = state_dict["iter_calls"]
+        # sequence of calls for this : iter is called first and then load_state_dict is called and thus we don't want state to override calls to iter that has happened before load_state_dict was called
+        self.iter_calls += state_dict["iter_calls"]
         self.items = state_dict["items"]
 
 
@@ -1539,10 +1539,14 @@ class TestSingleIterCalled_shard0(TestCase):
             w_states = [state]
         else:
             w_states = list(state["_snapshot"]["_worker_snapshots"].values())
-
-        return [x["dataset_state"]["iter_calls"] for x in w_states]
+        
+        if w_states[0]["dataset_state"] is not None:
+            return [x["dataset_state"]["iter_calls"] for x in w_states]
+        return [x["fetcher_state"]["dataset_iter_state"]["iter_calls"] for x in w_states]
 
     def _run_test(self, num_workers, dataset):
+        # Need to make a copy here as iter calls is tracked and its count is stored in dataset state which persists across calls for single process runs.
+        dataset_copy = deepcopy(dataset) if num_workers == 0 else dataset
         dl = StatefulDataLoader(
             dataset=dataset,
             num_workers=num_workers,
@@ -1552,7 +1556,7 @@ class TestSingleIterCalled_shard0(TestCase):
         state = dl.state_dict()
         self.assertEqual(self._get_iter_calls(state), [1] * max(1, num_workers))
         dl2 = StatefulDataLoader(
-            dataset=dataset,
+            dataset=dataset_copy,
             num_workers=num_workers,
             multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
         )

@@ -332,14 +332,13 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
 
     def state_dict(self):
         if self._dataset_kind == _DatasetKind.Iterable:
-            iter_state = None
-            if self._dataset_fetcher.dataset_iter is not self._dataset_fetcher.dataset:
-                iter_state = try_to_serialize(self._dataset_fetcher.dataset_iter)
             fetcher_state = {
-                _DATASET_ITER_STATE: iter_state,
+                _DATASET_ITER_STATE: try_to_serialize(self._dataset_fetcher.dataset_iter),
                 _FETCHER_ENDED: self._dataset_fetcher.ended,
             }
-            dataset_state = try_to_serialize(self._dataset_fetcher.dataset)
+            dataset_state = None
+            if self._dataset_fetcher.dataset_iter is not self._dataset_fetcher.dataset:
+                dataset_state = try_to_serialize(self._dataset_fetcher.dataset)
         else:
             fetcher_state = None
             dataset_state = try_to_serialize(self._dataset_fetcher.dataset)
