@@ -1541,7 +1541,7 @@ class TestSingleIterCalled_shard0(TestCase):
             w_states = [state]
         else:
             w_states = list(state["_snapshot"]["_worker_snapshots"].values())
- 
+
         if w_states[0]["dataset_state"] is not None:
             return [x["dataset_state"]["iter_calls"] for x in w_states]
         return [x["fetcher_state"]["dataset_iter_state"]["iter_calls"] for x in w_states]
