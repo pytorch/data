@@ -1503,11 +1503,11 @@ class CountIterCalls(torch.utils.data.IterableDataset):
         return iter(list(range(self.length)))
 
     def state_dict(self):
+        # iter_calls in the state is purely to track number of items iter was invoked since dataset initialization
         return {"iter_calls": self.iter_calls}
 
     def load_state_dict(self, state_dict):
-        self.iter_calls = state_dict["iter_calls"]
-
+        pass
 
 class CountIterCallsIter(torch.utils.data.IterableDataset):
     def __init__(self, length):
@@ -1522,16 +1522,15 @@ class CountIterCallsIter(torch.utils.data.IterableDataset):
 
     def __next__(self):
         if len(self.items) > 0:
-            self.items.popleft()
+            return self.items.pop(0)
         else:
             raise StopIteration
 
     def state_dict(self):
+        # iter_calls in the state is purely to track number of items iter was invoked since dataset initialization
         return {"iter_calls": self.iter_calls, "items": deepcopy(self.items)}
 
     def load_state_dict(self, state_dict):
-        # sequence of calls for this : iter is called first and then load_state_dict is called and thus we don't want state to override calls to iter that has happened before load_state_dict was called
-        self.iter_calls += state_dict["iter_calls"]
         self.items = state_dict["items"]
 
 
@@ -1553,19 +1552,42 @@ class TestSingleIterCalled_shard0(TestCase):
             dataset=dataset,
             num_workers=num_workers,
             multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            persistent_workers=True if num_workers else False,
         )
+        it = iter(dl)
+        state = dl.state_dict()
+        # Ensure iter is called only once per worker
+        self.assertEqual(self._get_iter_calls(state), [1] * max(1, num_workers))
+
+        for _ in range(10):
+            next(it)
+        state = dl.state_dict()
+        # Ensure that iter has not been invoked again
+        self.assertEqual(self._get_iter_calls(state), [1] * max(1, num_workers))
+
+        # Call iter on dl to see if iter is called again
         iter(dl)
         state = dl.state_dict()
-        self.assertEqual(self._get_iter_calls(state), [1] * max(1, num_workers))
+        self.assertEqual(self._get_iter_calls(state), [2] * max(1, num_workers))
+        
         dl2 = StatefulDataLoader(
             dataset=dataset_copy,
             num_workers=num_workers,
             multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            persistent_workers=True if num_workers else False,
         )
         dl2.load_state_dict(state)
-        iter(dl2)
+        it = iter(dl2)
         state2 = dl2.state_dict()
-        self.assertEqual(self._get_iter_calls(state2), [2] * max(1, num_workers))
+        # Ensure that iter is called only once per worker even when dataloader resumes from a state
+        self.assertEqual(self._get_iter_calls(state2), [1] * max(1, num_workers))
+
+        for _ in range(10):
+            next(it)
+        state = dl2.state_dict()
+        # Ensure that iter has not been invoked again
+        self.assertEqual(self._get_iter_calls(state2), [1] * max(1, num_workers))
+
 
     def test_inline(self):
         self._run_test(0, CountIterCalls(100))
