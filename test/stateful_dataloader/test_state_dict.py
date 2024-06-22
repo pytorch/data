@@ -1507,7 +1507,7 @@ class CountIterCalls(torch.utils.data.IterableDataset):
 
     def load_state_dict(self, state_dict):
         self.iter_calls = state_dict["iter_calls"]
-        
+
 
 class CountIterCallsIter(torch.utils.data.IterableDataset):
     def __init__(self, length):
@@ -1570,7 +1570,7 @@ class TestSingleIterCalled_shard0(TestCase):
         iter(dl)
         state = dl.state_dict()
         self.assertEqual(self._get_iter_calls(state), [2] * max(1, num_workers))
-        
+
         dl2 = StatefulDataLoader(
             dataset=dataset_copy,
             num_workers=num_workers,
@@ -1589,7 +1589,6 @@ class TestSingleIterCalled_shard0(TestCase):
         # Ensure that iter has not been invoked again
         self.assertEqual(self._get_iter_calls(state2), [3] * max(1, num_workers))
 
-
     def test_inline(self):
         self._run_test(0, CountIterCalls(100))
 
@@ -1603,11 +1602,11 @@ class TestSingleIterCalled_shard0(TestCase):
         self._run_test(2, CountIterCallsIter(100))
 
 
-class IterationState():
+class IterationState:
     def __init__(self, start, end):
         self.curr = start
         self.end = end
-    
+
     def set_state(self, state):
         self.curr = state["curr"]
         self.end = state["end"]
@@ -1625,9 +1624,9 @@ class StatesInitializationDataset(torch.utils.data.IterableDataset):
         if torch.utils.data.get_worker_info() is not None:
             worker_id = torch.utils.data.get_worker_info().id
         num_workers = 1
-        if torch.utils.data.get_worker_info() is not None: 
+        if torch.utils.data.get_worker_info() is not None:
             num_workers = torch.utils.data.get_worker_info().num_workers
-        
+
         num_samples = (int)(self.length / num_workers)
         self.iter_state = IterationState(num_samples * worker_id, num_samples * (worker_id + 1))
         return self
@@ -1681,7 +1680,7 @@ class TestStateInitializationDataset(TestCase):
 
         for _ in range(30):
             data.extend(next(it))
-        
+
         # Order could be different for multiworker case as the data comes from different workers, so use set to check equality instead of list
         self.assertEqual(set(data), set(range(length)))
 
