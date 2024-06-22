@@ -1528,7 +1528,6 @@ class CountIterCallsIter(torch.utils.data.IterableDataset):
             raise StopIteration
 
     def state_dict(self):
-        # iter_calls in the state is purely to track number of items iter was invoked since dataset initialization
         return {"iter_calls": self.local_iter_calls + self.prev_state_iter_calls, "items": deepcopy(self.items)}
 
     def load_state_dict(self, state_dict):
@@ -1602,6 +1601,88 @@ class TestSingleIterCalled_shard0(TestCase):
 
     def test_mp_iter(self):
         self._run_test(2, CountIterCallsIter(100))
+
+
+class IterationState():
+    def __init__(self, start, end):
+        self.curr = start
+        self.end = end
+    
+    def set_state(self, state):
+        self.curr = state["curr"]
+        self.end = state["end"]
+
+    def get_state(self):
+        return {"curr": self.curr, "end": self.end}
+
+
+class StatesInitializationDataset(torch.utils.data.IterableDataset):
+    def __init__(self, length):
+        self.length = length
+
+    def __iter__(self):
+        worker_id = 0
+        if torch.utils.data.get_worker_info() is not None:
+            worker_id = torch.utils.data.get_worker_info().id
+        num_workers = 1
+        if torch.utils.data.get_worker_info() is not None: 
+            num_workers = torch.utils.data.get_worker_info().num_workers
+        
+        num_samples = (int)(self.length / num_workers)
+        self.iter_state = IterationState(num_samples * worker_id, num_samples * (worker_id + 1))
+        return self
+
+    def __next__(self):
+        if self.iter_state.curr >= self.iter_state.end:
+            raise StopIteration
+        value = self.iter_state.curr
+        self.iter_state.curr += 1
+        return value
+
+    def state_dict(self):
+        return {"state": self.iter_state.get_state()}
+
+    def load_state_dict(self, state_dict):
+        self.iter_state.set_state(state_dict["state"])
+
+
+class TestStateInitializationDataset(TestCase):
+    def _run_test(self, num_workers, dataset):
+        length = dataset.length
+        dl = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            collate_fn=identity,
+            multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+        )
+        it = iter(dl)
+        state = dl.state_dict()
+        data = []
+
+        for _ in range(length - 30):
+            data.extend(next(it))
+        state = dl.state_dict()
+
+        # Resume from state
+        dl2 = StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            collate_fn=identity,
+            multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+        )
+        dl2.load_state_dict(state)
+        it = iter(dl2)
+
+        for _ in range(30):
+            data.extend(next(it))
+        
+        self.assertEqual(set(data), set(range(length)))
+
+    def test_inline(self):
+        self._run_test(0, StatesInitializationDataset(100))
+
+    def test_mp(self):
+        self._run_test(2, StatesInitializationDataset(100))
 
 
 if __name__ == "__main__":
