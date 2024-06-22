@@ -1503,21 +1503,22 @@ class CountIterCalls(torch.utils.data.IterableDataset):
         return iter(list(range(self.length)))
 
     def state_dict(self):
-        # iter_calls in the state is purely to track number of items iter was invoked since dataset initialization
         return {"iter_calls": self.iter_calls}
 
     def load_state_dict(self, state_dict):
-        pass
+        self.iter_calls = state_dict["iter_calls"]
+        
 
 class CountIterCallsIter(torch.utils.data.IterableDataset):
     def __init__(self, length):
         self.length = length
-        self.iter_calls = 0
+        self.local_iter_calls = 0
+        self.prev_state_iter_calls = 0
         self.items = []
 
     def __iter__(self):
         self.items = list(range(self.length))
-        self.iter_calls += 1
+        self.local_iter_calls += 1
         return self
 
     def __next__(self):
@@ -1528,9 +1529,10 @@ class CountIterCallsIter(torch.utils.data.IterableDataset):
 
     def state_dict(self):
         # iter_calls in the state is purely to track number of items iter was invoked since dataset initialization
-        return {"iter_calls": self.iter_calls, "items": deepcopy(self.items)}
+        return {"iter_calls": self.local_iter_calls + self.prev_state_iter_calls, "items": deepcopy(self.items)}
 
     def load_state_dict(self, state_dict):
+        self.prev_state_iter_calls = state_dict["iter_calls"]
         self.items = state_dict["items"]
 
 
@@ -1580,13 +1582,13 @@ class TestSingleIterCalled_shard0(TestCase):
         it = iter(dl2)
         state2 = dl2.state_dict()
         # Ensure that iter is called only once per worker even when dataloader resumes from a state
-        self.assertEqual(self._get_iter_calls(state2), [1] * max(1, num_workers))
+        self.assertEqual(self._get_iter_calls(state2), [3] * max(1, num_workers))
 
         for _ in range(10):
             next(it)
         state = dl2.state_dict()
         # Ensure that iter has not been invoked again
-        self.assertEqual(self._get_iter_calls(state2), [1] * max(1, num_workers))
+        self.assertEqual(self._get_iter_calls(state2), [3] * max(1, num_workers))
 
 
     def test_inline(self):
