@@ -1649,6 +1649,12 @@ class StatesInitializationDataset(torch.utils.data.IterableDataset):
 class TestStateInitializationDataset(TestCase):
     def _run_test(self, num_workers, dataset):
         length = dataset.length
+
+        # Ensure test is run with compatible parameters as the test and dataset used in the test doesn't cover all the corner cases
+        if num_workers > 0:
+            self.assertTrue(length % num_workers == 0)
+        self.assertTrue(length > 30)
+
         dl = StatefulDataLoader(
             dataset=dataset,
             num_workers=num_workers,
@@ -1676,6 +1682,7 @@ class TestStateInitializationDataset(TestCase):
         for _ in range(30):
             data.extend(next(it))
         
+        # Order could be different for multiworker case as the data comes from different workers, so use set to check equality instead of list
         self.assertEqual(set(data), set(range(length)))
 
     def test_inline(self):
