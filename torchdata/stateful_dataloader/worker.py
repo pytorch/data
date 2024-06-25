@@ -273,14 +273,13 @@ def _make_state_dict(worker_id, dataset_kind, fetcher, dataset) -> Dict[str, Any
     from torch.utils.data import _DatasetKind
 
     if dataset_kind == _DatasetKind.Iterable:
-        iter_state = None
-        if fetcher.dataset_iter is not fetcher.dataset:
-            iter_state = try_to_serialize(fetcher.dataset_iter)
         fetcher_state = {
-            _DATASET_ITER_STATE: iter_state,
+            _DATASET_ITER_STATE: try_to_serialize(fetcher.dataset_iter),
             _FETCHER_ENDED: fetcher.ended,
         }
-        dataset_state = try_to_serialize(fetcher.dataset)
+        dataset_state = None
+        if fetcher.dataset_iter is not fetcher.dataset:
+            dataset_state = try_to_serialize(fetcher.dataset)
     else:
         fetcher_state = None
         # Pick up any user-defined dataset state
