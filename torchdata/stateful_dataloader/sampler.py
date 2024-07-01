@@ -58,10 +58,6 @@ class RandomSampler(torch.utils.data.sampler.RandomSampler):
         return _StatefulRandomSamplerIterator(self, super().__iter__())
 
 
-torch.utils.data.sampler.RandomSampler = RandomSampler  # type: ignore[misc]
-torch.utils.data.dataloader.RandomSampler = RandomSampler  # type: ignore[misc]
-
-
 class BatchSampler(torch.utils.data.sampler.BatchSampler, Stateful):
     _SAMPLES_YIELDED = "samples_yielded"
     _SAMPLER_STATE = "sampler_state"
@@ -129,7 +125,3 @@ class BatchSampler(torch.utils.data.sampler.BatchSampler, Stateful):
                     batch = [0] * self.batch_size
             if idx_in_batch > 0:
                 yield batch[:idx_in_batch]
-
-
-torch.utils.data.sampler.BatchSampler = BatchSampler  # type: ignore[misc]
-torch.utils.data.dataloader.BatchSampler = BatchSampler  # type: ignore[misc]
