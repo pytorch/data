@@ -202,25 +202,6 @@ class StatefulDataLoader(DataLoader[T_co]):
         pin_memory_device: str = "",
         snapshot_every_n_steps: Optional[int] = 1,
     ):
-
-        # super().__init__(
-        #     dataset=dataset,
-        #     batch_size=batch_size,
-        #     shuffle=shuffle,
-        #     sampler=sampler,
-        #     batch_sampler=batch_sampler,
-        #     num_workers=num_workers,
-        #     collate_fn=collate_fn,
-        #     pin_memory=pin_memory,
-        #     drop_last=drop_last,
-        #     timeout=timeout,
-        #     worker_init_fn=worker_init_fn,
-        #     multiprocessing_context=multiprocessing_context,
-        #     generator=generator,
-        #     prefetch_factor=prefetch_factor,
-        #     persistent_workers=persistent_workers,
-        #     pin_memory_device=pin_memory_device,
-        # )
         torch._C._log_api_usage_once("python.stateful_data_loader")
 
         if num_workers < 0:
