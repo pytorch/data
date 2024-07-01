@@ -362,6 +362,7 @@ class StatefulDataLoader(DataLoader[T_co]):
         self.collate_fn = collate_fn
         self.persistent_workers = persistent_workers
 
+        # set DataLoader's __initialized attribute.
         self._DataLoader__initialized = True
         self._IterableDataset_len_called = None  # See NOTE [ IterableDataset and __len__ ]
 
