@@ -25,7 +25,7 @@ import logging
 import queue
 import threading
 
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, TypeVar, Union
 
 import torch
 import torch.multiprocessing as multiprocessing
@@ -76,8 +76,9 @@ from torch.utils.data.dataloader import (
     default_collate,
     default_convert,
     get_worker_info,
-    T_co,
 )
+
+_T_co = TypeVar("_T_co", covariant=True)
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ _SHARED_SEED = "_shared_seed"
 _ITERATOR_FINISHED = "_iterator_finished"
 
 
-class StatefulDataLoader(DataLoader[T_co]):
+class StatefulDataLoader(DataLoader[_T_co]):
     r"""
     This is a drop in replacement for :class:`~torch.utils.data.DataLoader`
     that implements state_dict and load_state_dict methods, enabling mid-epoch
@@ -183,7 +184,7 @@ class StatefulDataLoader(DataLoader[T_co]):
 
     def __init__(
         self,
-        dataset: Dataset[T_co],
+        dataset: Dataset[_T_co],
         batch_size: Optional[int] = 1,
         shuffle: Optional[bool] = None,
         sampler: Union[Sampler, Iterable, None] = None,
