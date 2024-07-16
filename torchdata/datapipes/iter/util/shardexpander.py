@@ -64,7 +64,7 @@ class ShardExpanderIterDataPipe(IterDataPipe[str]):
         >>> expand_dp = source_dp.shard_expand()
         >>> list(expand_dp)
         ['ds-00.tar', 'ds-01.tar', 'ds-02.tar', 'ds-03.tar', 'ds-04.tar', 'ds-05.tar']
-        >>> source_dp = IterableWrapper(["imgs_{00..05}.tar", "labels_{00..05}.tar"])
+        >>> source_dp = IterableWrapper(["imgs_{00..02}.tar", "labels_{00..02}.tar"])
         >>> expand_dp = source_dp.shard_expand()
         >>> list(expand_dp)
         ['imgs_00.tar', 'imgs_01.tar', 'imgs_02.tar', 'labels_00.tar', 'labels_01.tar', 'labels_02.tar']
