@@ -5,7 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import distutils.command.clean
+import setuptools._distutils.command.clean
 import os
 import shutil
 import subprocess
@@ -116,10 +116,10 @@ requirements = _get_requirements()
 requirements.append(pytorch_package_dep)
 
 
-class clean(distutils.command.clean.clean):
+class clean(setuptools._distutils.command.clean):
     def run(self):
         # Run default behavior first
-        distutils.command.clean.clean.run(self)
+        setuptools._distutils.command.clean.run(self)
 
         # Remove torchdata extension
         def remove_extension(pattern):

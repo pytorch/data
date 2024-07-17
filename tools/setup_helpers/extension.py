@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import distutils.sysconfig
+import setuptools._distutils.sysconfig as sysconfig
 import os
 import platform
 import subprocess
@@ -90,7 +90,7 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_INSTALL_PREFIX={extdir}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
             f"-DCMAKE_RUNTIME_OUTPUT_DIRECTORY={extdir}",  # For Windows
-            f"-DPython_INCLUDE_DIR={distutils.sysconfig.get_python_inc()}",
+            f"-DPython_INCLUDE_DIR={sysconfig.get_python_inc()}",
             f"-DBUILD_S3:BOOL={'ON' if _BUILD_S3 else 'OFF'}",
             f"-DUSE_SYSTEM_AWS_SDK_CPP:BOOL={'ON' if _USE_SYSTEM_AWS_SDK_CPP else 'OFF'}",
             f"-DUSE_SYSTEM_PYBIND11:BOOL={'ON' if _USE_SYSTEM_PYBIND11 else 'OFF'}",
