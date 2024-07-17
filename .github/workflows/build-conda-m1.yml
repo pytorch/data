@@ -38,7 +38,7 @@ jobs:
       env-var-script: packaging/env-var-script.txt
       smoke-test-script: test/smoke_test/smoke_test.py
       runner-type: macos-m1-stable
-      trigger-event: dev
+      trigger-event: ${{ github.event_name }}
     secrets:
       CONDA_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_PYTORCHBOT_TOKEN }}
       CONDA_PYTORCHBOT_TOKEN_TEST: ${{ secrets.CONDA_TEST_PYTORCHBOT_TOKEN }}
