@@ -111,6 +111,7 @@ jobs:
           BUILD_S3: ${{ matrix.python-version != 'pure' }}
         run: |
           set -ex
+          set DISTUTILS_USE_SDK=1
           packaging/build_wheel.sh
       - name: Validate TorchData Wheel
         shell: bash -l {0}
