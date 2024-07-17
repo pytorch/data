@@ -261,7 +261,7 @@ jobs:
             conda install -yq conda-build
           fi
           packaging/build_conda.sh
-          conda index ./conda-bld
+          # conda index ./conda-bld
       - name: Upload Conda Package to Github
         if: always()
         uses: actions/upload-artifact@v3
