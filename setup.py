@@ -5,13 +5,14 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import setuptools._distutils.command.clean
 import os
 import shutil
 import subprocess
 import sys
 
 from pathlib import Path
+
+import setuptools._distutils.command.clean
 
 from setuptools import find_packages, setup
 
