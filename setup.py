@@ -116,10 +116,10 @@ requirements = _get_requirements()
 requirements.append(pytorch_package_dep)
 
 
-class clean(setuptools._distutils.command.clean):
+class clean(setuptools._distutils.command.clean.clean):
     def run(self):
         # Run default behavior first
-        setuptools._distutils.command.clean.run(self)
+        setuptools._distutils.command.clean.clean.run(self)
 
         # Remove torchdata extension
         def remove_extension(pattern):
