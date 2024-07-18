@@ -1,0 +1,20 @@
+name: Push Nightly Release
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: 00 11 * * *
+
+jobs:
+  build_test_upload:
+    if: |
+      github.repository == 'pytorch/data' && github.ref_name == 'main'
+    uses: ./.github/workflows/_build_test_upload.yml
+    with:
+      branch: "main"
+      pre_dev_release: true
+      pytorch_version: ""
+    secrets:
+      PYTORCH_BINARY_AWS_ACCESS_KEY_ID: ${{ secrets.PYTORCH_BINARY_AWS_ACCESS_KEY_ID }}
+      PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY: ${{ secrets.PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY }}
+      CONDA_NIGHTLY_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_NIGHTLY_PYTORCHBOT_TOKEN }}
