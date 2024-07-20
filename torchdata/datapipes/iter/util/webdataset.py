@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import re
-from typing import Any, Dict, Iterator, List, Union
+from typing import Any, Dict, Iterator, List, Union, Sized
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe
@@ -99,3 +99,8 @@ class WebDatasetIterDataPipe(IterDataPipe[Dict]):
             sample[suffix] = data
         if sample != {}:
             yield sample
+
+    def __len__(self):
+        if isinstance(self.source_datapipe, Sized):
+            return len(self.source_datapipe)
+        raise TypeError(f"{type(self).__name__} instance doesn't have valid length")
