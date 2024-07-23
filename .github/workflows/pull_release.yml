@@ -17,6 +17,4 @@ jobs:
       pytorch_version: ""
       do-upload: false
     secrets:
-      PYTORCH_BINARY_AWS_ACCESS_KEY_ID: ""
-      PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY: ""
       CONDA_TEST_PYTORCHBOT_TOKEN: ""
