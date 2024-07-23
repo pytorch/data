@@ -141,8 +141,7 @@ setup_pip_pytorch_version() {
     export PYTORCH_VERSION="$(pip show torch | grep ^Version: | sed 's/Version:  *//' | sed 's/+.\+//')"
   else
     pip_install "torch==$PYTORCH_VERSION$PYTORCH_VERSION_SUFFIX" \
-      -f https://download.pytorch.org/whl/ \
-      -f "https://download.pytorch.org/whl/${UPLOAD_CHANNEL}/"
+      -f "https://download.pytorch.org/whl/${UPLOAD_CHANNEL}/${WHEEL_DIR}"
   fi
 }
 
