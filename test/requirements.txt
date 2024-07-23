@@ -3,7 +3,7 @@ expecttest
 fsspec
 s3fs
 iopath == 0.1.9
-numpy
+numpy<2
 rarfile
 portalocker >= 2.0.0
 # Protobuf 4.0 is binary incompatible with what C++ TF uses.
