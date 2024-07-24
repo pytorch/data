@@ -22,6 +22,10 @@ on:
 # env:
 #   RELEASE_BRANCH: ""
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build_test_upload:
     if: github.repository == 'pytorch/data' && startsWith(github.ref_name, 'release/')
@@ -31,6 +35,4 @@ jobs:
       pre_dev_release: true
       pytorch_version: "2.4.0"
     secrets:
-      PYTORCH_BINARY_AWS_ACCESS_KEY_ID: ${{ secrets.PYTORCH_BINARY_AWS_ACCESS_KEY_ID }}
-      PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY: ${{ secrets.PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY }}
       CONDA_TEST_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_TEST_PYTORCHBOT_TOKEN }}
