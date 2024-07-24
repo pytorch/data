@@ -19,6 +19,6 @@ jobs:
       branch: "main"
       pre_dev_release: true
       pytorch_version: ""
-      do-upload: false
+      do-upload: true
     secrets:
       CONDA_TEST_PYTORCHBOT_TOKEN: ""
