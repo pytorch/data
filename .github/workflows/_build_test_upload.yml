@@ -17,10 +17,6 @@ on:
         default: true
         type: boolean
     secrets:
-      PYTORCH_BINARY_AWS_ACCESS_KEY_ID:
-        required: true
-      PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY:
-        required: true
       PYPI_TOKEN:
         required: false
       CONDA_PYTORCHBOT_TOKEN:
@@ -29,6 +25,10 @@ on:
         required: false
       CONDA_NIGHTLY_PYTORCHBOT_TOKEN:
         required: false
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   get_release_type:
@@ -158,6 +158,19 @@ jobs:
     outputs:
       upload: ${{ steps.trigger_upload.outputs.value }}
     steps:
+      - name: Configure aws credentials (pytorch account)
+        if: ${{ needs.get_release_type.outputs.type == 'nightly' }}
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::749337293305:role/gha_workflow_nightly_build_wheels
+          aws-region: us-east-1
+
+      - name: Configure aws credentials (pytorch account)
+        if: ${{ needs.get_release_type.outputs.type == 'test' }}
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::749337293305:role/gha_workflow_test_build_wheels
+          aws-region: us-east-1
       - name: Download Artifacts from Github
         continue-on-error: true
         uses: actions/download-artifact@v3
@@ -177,9 +190,6 @@ jobs:
         run: ls -lh torchdata*.whl
       - name: Upload Wheels to S3 Storage
         if: steps.trigger_upload.outputs.value == 'true'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.PYTORCH_BINARY_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.PYTORCH_BINARY_AWS_SECRET_ACCESS_KEY }}
         run: |
           if [[ ${{ inputs.branch }} == 'main' ]]; then
             S3_PATH=s3://pytorch/whl/nightly/
