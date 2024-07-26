@@ -31,6 +31,6 @@ if __name__ == "__main__":
     if options.s3:
         s3_test()
 
-    if torchdata.__version__.startswith("0.8.0"):
+    if not torchdata.__version__.startswith("0.8.0"):
         raise Exception(f"TorchData version is not 0.8.0, found {torchdata.__version__}")
     stateful_dataloader_test()
