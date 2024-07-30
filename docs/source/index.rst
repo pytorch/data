@@ -36,6 +36,7 @@ Features described in this documentation are classified by release status:
    :maxdepth: 2
    :caption: API Reference:
 
+   torchdata.stateful_dataloader.rst
    torchdata.datapipes.iter.rst
    torchdata.datapipes.map.rst
    torchdata.datapipes.utils.rst
