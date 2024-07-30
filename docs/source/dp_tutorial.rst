@@ -321,7 +321,7 @@ Accessing AWS S3 with ``fsspec`` DataPipes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This requires the installation of the libraries ``fsspec``
-(`documentation <https://filesystem-spec.readthedocs.io/en/latest/>`_) and ``s3fs``
+(`documentation <https://filesystem-spec.readthedocs.io/en/latest/>`__) and ``s3fs``
 (`s3fs GitHub repo <https://github.com/fsspec/s3fs>`_).
 
 You can list out the files within a S3 bucket directory by passing a path that starts
@@ -363,7 +363,7 @@ is also available for writing data to cloud.
 Accessing Google Cloud Storage (GCS) with ``fsspec`` DataPipes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 This requires the installation of the libraries ``fsspec``
-(`documentation <https://filesystem-spec.readthedocs.io/en/latest/>`_) and ``gcsfs``
+(`documentation <https://filesystem-spec.readthedocs.io/en/latest/>`__) and ``gcsfs``
 (`gcsfs GitHub repo <https://github.com/fsspec/gcsfs>`_).
 
 You can list out the files within a GCS bucket directory by specifying a path that starts
@@ -400,11 +400,11 @@ Accessing Azure Blob storage with ``fsspec`` DataPipes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This requires the installation of the libraries ``fsspec``
-(`documentation <https://filesystem-spec.readthedocs.io/en/latest/>`_) and ``adlfs``
+(`documentation <https://filesystem-spec.readthedocs.io/en/latest/>`__) and ``adlfs``
 (`adlfs GitHub repo <https://github.com/fsspec/adlfs>`_).
-You can access data in Azure Data Lake Storage Gen2 by providing URIs staring with ``abfs://``. 
+You can access data in Azure Data Lake Storage Gen2 by providing URIs staring with ``abfs://``.
 For example,
-`FSSpecFileLister <generated/torchdata.datapipes.iter.FSSpecFileLister.html>`_ (``.list_files_by_fsspec(...)``) 
+`FSSpecFileLister <generated/torchdata.datapipes.iter.FSSpecFileLister.html>`_ (``.list_files_by_fsspec(...)``)
 can be used to list files in a directory in a container:
 
 .. code:: python
@@ -430,11 +430,11 @@ directory ``curated/covid-19/ecdc_cases/latest``, belonging to account ``pandemi
             .open_files_by_fsspec(account_name='pandemicdatalake') \
             .parse_csv()
     print(list(dp)[:3])
-    # [['date_rep', 'day', ..., 'iso_country', 'daterep'], 
+    # [['date_rep', 'day', ..., 'iso_country', 'daterep'],
     # ['2020-12-14', '14', ..., 'AF', '2020-12-14'],
     # ['2020-12-13', '13', ..., 'AF', '2020-12-13']]
 
-If necessary, you can also access data in Azure Data Lake Storage Gen1 by using URIs staring with 
+If necessary, you can also access data in Azure Data Lake Storage Gen1 by using URIs staring with
 ``adl://`` and ``abfs://``, as described in `README of adlfs repo <https://github.com/fsspec/adlfs/blob/main/README.md>`_
 
 Accessing Azure ML Datastores with ``fsspec`` DataPipes
@@ -446,11 +446,11 @@ An Azure ML datastore is a *reference* to an existing storage account on Azure. 
 - Authentication is automatically handled - both *credential-based* access (service principal/SAS/key) and *identity-based* access (Azure Active Directory/managed identity) are supported. When using credential-based authentication, you do not need to expose secrets in your code.
 
 This requires the installation of the library ``azureml-fsspec``
-(`documentation <https://learn.microsoft.com/python/api/azureml-fsspec/?view=azure-ml-py>`_).
+(`documentation <https://learn.microsoft.com/python/api/azureml-fsspec/?view=azure-ml-py>`__).
 
-You can access data in an Azure ML datastore by providing URIs staring with ``azureml://``. 
+You can access data in an Azure ML datastore by providing URIs staring with ``azureml://``.
 For example,
-`FSSpecFileLister <generated/torchdata.datapipes.iter.FSSpecFileLister.html>`_ (``.list_files_by_fsspec(...)``) 
+`FSSpecFileLister <generated/torchdata.datapipes.iter.FSSpecFileLister.html>`_ (``.list_files_by_fsspec(...)``)
 can be used to list files in a directory in a container:
 
 .. code:: python
@@ -470,7 +470,7 @@ can be used to list files in a directory in a container:
 
     dp = IterableWrapper([uri]).list_files_by_fsspec()
     print(list(dp))
-    # ['azureml:///<sub_id>/resourcegroups/<rg_name>/workspaces/<ws_name>/datastores/<datastore>/paths/<folder>/file1.txt', 
+    # ['azureml:///<sub_id>/resourcegroups/<rg_name>/workspaces/<ws_name>/datastores/<datastore>/paths/<folder>/file1.txt',
     # 'azureml:///<sub_id>/resourcegroups/<rg_name>/workspaces/<ws_name>/datastores/<datastore>/paths/<folder>/file2.txt', ...]
 
 You can also open files using `FSSpecFileOpener <generated/torchdata.datapipes.iter.FSSpecFileOpener.html>`_
