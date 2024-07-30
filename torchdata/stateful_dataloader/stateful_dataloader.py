@@ -148,6 +148,8 @@ class StatefulDataLoader(DataLoader[_T_co]):
             maintain the workers `Dataset` instances alive. (default: ``False``)
         pin_memory_device (str, optional): the device to :attr:`pin_memory` to if ``pin_memory`` is
             ``True``.
+        snapshot_every_n_steps (int, optional): Defines how often the state is
+            transferred from the dataloader workers to the dataloader. By default, it is set to ``1``, i.e., state is transferred every step. If the state is large, this value can be increased (and ideally set to the frequency of training checkpointing) to reduce the overhead of transferring state every step.
 
 
     .. warning:: If the ``spawn`` start method is used, :attr:`worker_init_fn`
