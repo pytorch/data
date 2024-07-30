@@ -149,7 +149,7 @@ class PrototypeMultiProcessingReadingService(ReadingServiceInterface):
 
 class InProcessReadingService(ReadingServiceInterface):
     r"""
-    Default ReadingService to serve the ``DataPipe` graph in the main process,
+    Default ReadingService to serve the ``DataPipe`` graph in the main process,
     and apply graph settings like determinism control to the graph.
 
     Args:
