@@ -48,6 +48,7 @@ Features described in this documentation are classified by release status:
    :maxdepth: 2
    :caption: Tutorial and Examples:
 
+   stateful_dataloader_tutorial.rst
    dp_tutorial.rst
    dlv2_tutorial.rst
    examples.rst
