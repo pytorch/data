@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>DataLoader2 Tutorial &mdash; TorchData main documentation</title>
+  <title>Stateful DataLoader Tutorial &mdash; TorchData main documentation</title>
   
 
   
@@ -34,8 +34,8 @@
   <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Examples" href="examples.html" />
-    <link rel="prev" title="DataPipe Tutorial" href="dp_tutorial.html" />
+    <link rel="next" title="DataPipe Tutorial" href="dp_tutorial.html" />
+    <link rel="prev" title="replace_dp" href="generated/torchdata.dataloader2.graph.replace_dp.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -301,9 +301,9 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="stateful_dataloader_tutorial.html">Stateful DataLoader Tutorial</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Stateful DataLoader Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="dp_tutorial.html">DataPipe Tutorial</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">DataLoader2 Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dlv2_tutorial.html">DataLoader2 Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
@@ -355,13 +355,13 @@
       </li>
 
         
-      <li>DataLoader2 Tutorial</li>
+      <li>Stateful DataLoader Tutorial</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="_sources/dlv2_tutorial.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
+            <a href="_sources/stateful_dataloader_tutorial.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -391,64 +391,174 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="dataloader2-tutorial">
-<h1>DataLoader2 Tutorial<a class="headerlink" href="#dataloader2-tutorial" title="Permalink to this heading">¶</a></h1>
-<p>This is the tutorial for users to create a <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph and load data via <code class="docutils literal notranslate"><span class="pre">DataLoader2</span></code> with different backend systems (<code class="docutils literal notranslate"><span class="pre">ReadingService</span></code>). An usage example can be found in <a class="reference external" href="https://colab.research.google.com/drive/1eSvp-eUDYPj0Sd0X_Mv9s9VkE8RNDg1u">this colab notebook</a>.</p>
-<section id="datapipe">
-<h2>DataPipe<a class="headerlink" href="#datapipe" title="Permalink to this heading">¶</a></h2>
-<p>Please refer to <a class="reference external" href="dp_tutorial.html">DataPipe Tutorial</a> for more details. Here are the most important caveats necessary:
-to make sure the data pipeline has different order per epoch and data shards are mutually exclusive and collectively exhaustive:</p>
-<ul class="simple">
-<li><p>Place <code class="docutils literal notranslate"><span class="pre">sharding_filter</span></code> or <code class="docutils literal notranslate"><span class="pre">sharding_round_robin_dispatch</span></code> as early as possible in the pipeline to avoid repeating expensive operations in worker/distributed processes.</p></li>
-<li><p>Add a <code class="docutils literal notranslate"><span class="pre">shuffle</span></code> DataPipe before sharding to achieve inter-shard shuffling. <code class="docutils literal notranslate"><span class="pre">ReadingService</span></code> will handle synchronization of those <code class="docutils literal notranslate"><span class="pre">shuffle</span></code> operations to ensure the order of data are the same before sharding so that all shards are mutually exclusive and collectively exhaustive.</p></li>
-</ul>
-<p>Here is an example of a <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">datapipe</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([</span><span class="s2">&quot;./train1.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;./train2.csv&quot;</span><span class="p">])</span>
-<span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">open_files</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parse_csv</span><span class="p">()</span>
-<span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span><span class="o">.</span><span class="n">sharding_filter</span><span class="p">()</span>
-<span class="n">datapipe</span> <span class="o">=</span> <span class="n">datapipe</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span><span class="o">.</span><span class="n">batch</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
-</pre></div>
-</div>
-</section>
-<section id="multiprocessing">
-<h2>Multiprocessing<a class="headerlink" href="#multiprocessing" title="Permalink to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">MultiProcessingReadingService</span></code> handles multiprocessing sharding at the point of <code class="docutils literal notranslate"><span class="pre">sharding_filter</span></code> and synchronizes the seeds across worker processes.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rs</span> <span class="o">=</span> <span class="n">MultiProcessingReadingService</span><span class="p">(</span><span class="n">num_workers</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
-<span class="n">dl</span> <span class="o">=</span> <span class="n">DataLoader2</span><span class="p">(</span><span class="n">datapipe</span><span class="p">,</span> <span class="n">reading_service</span><span class="o">=</span><span class="n">rs</span><span class="p">)</span>
-<span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
-    <span class="n">dl</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">epoch</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dl</span><span class="p">:</span>
-        <span class="n">model</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
-<span class="n">dl</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
-</pre></div>
-</div>
-</section>
-<section id="distributed">
-<h2>Distributed<a class="headerlink" href="#distributed" title="Permalink to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">DistributedReadingService</span></code> handles distributed sharding at the point of <code class="docutils literal notranslate"><span class="pre">sharding_filter</span></code> and synchronizes the seeds across distributed processes. And, in order to balance the data shards across distributed nodes, a <code class="docutils literal notranslate"><span class="pre">fullsync</span></code> <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> will be attached to the <code class="docutils literal notranslate"><span class="pre">DataPipe</span></code> graph to align the number of batches across distributed ranks. This would prevent hanging issue caused by uneven shards in distributed training.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rs</span> <span class="o">=</span> <span class="n">DistributedReadingService</span><span class="p">()</span>
-<span class="n">dl</span> <span class="o">=</span> <span class="n">DataLoader2</span><span class="p">(</span><span class="n">datapipe</span><span class="p">,</span> <span class="n">reading_service</span><span class="o">=</span><span class="n">rs</span><span class="p">)</span>
-<span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
-    <span class="n">dl</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">epoch</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dl</span><span class="p">:</span>
-        <span class="n">model</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
-<span class="n">dl</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
-</pre></div>
-</div>
-</section>
-<section id="multiprocessing-distributed">
-<h2>Multiprocessing + Distributed<a class="headerlink" href="#multiprocessing-distributed" title="Permalink to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">SequentialReadingService</span></code> can be used to combine both <code class="docutils literal notranslate"><span class="pre">ReadingServices</span></code> together to achieve multiprocessing and distributed training at the same time.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mp_rs</span> <span class="o">=</span> <span class="n">MultiProcessingReadingService</span><span class="p">(</span><span class="n">num_workers</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
-<span class="n">dist_rs</span> <span class="o">=</span> <span class="n">DistributedReadingService</span><span class="p">()</span>
-<span class="n">rs</span> <span class="o">=</span> <span class="n">SequentialReadingService</span><span class="p">(</span><span class="n">dist_rs</span><span class="p">,</span> <span class="n">mp_rs</span><span class="p">)</span>
+  <section id="stateful-dataloader-tutorial">
+<h1>Stateful DataLoader Tutorial<a class="headerlink" href="#stateful-dataloader-tutorial" title="Permalink to this heading">¶</a></h1>
+<section id="saving-and-loading-state">
+<h2>Saving and loading state<a class="headerlink" href="#saving-and-loading-state" title="Permalink to this heading">¶</a></h2>
+<p>Stateful DataLoader adds the <code class="docutils literal notranslate"><span class="pre">load_state_dict</span></code>, <code class="docutils literal notranslate"><span class="pre">state_dict</span></code> methods to the <code class="docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code>. State fetch and set can be done as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torchdata.stateful_dataloader</span> <span class="kn">import</span> <span class="n">StatefulDataLoader</span>
 
-<span class="n">dl</span> <span class="o">=</span> <span class="n">DataLoader2</span><span class="p">(</span><span class="n">datapipe</span><span class="p">,</span> <span class="n">reading_service</span><span class="o">=</span><span class="n">rs</span><span class="p">)</span>
-<span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
-    <span class="n">dl</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">epoch</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dl</span><span class="p">:</span>
-        <span class="n">model</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
-<span class="n">dl</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+<span class="n">dataloader</span> <span class="o">=</span> <span class="n">StatefulDataLoader</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">num_workers</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">batch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dataloader</span><span class="p">):</span>
+    <span class="o">...</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">10</span><span class="p">:</span>
+        <span class="n">state_dict</span> <span class="o">=</span> <span class="n">dataloader</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()</span>
+        <span class="k">break</span>
+
+<span class="c1"># Training run resumes with the previous checkpoint</span>
+<span class="n">dataloader</span> <span class="o">=</span> <span class="n">StatefulDataLoader</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">num_workers</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="c1"># Resume state with DataLoader</span>
+<span class="n">dataloader</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">batch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dataloader</span><span class="p">):</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</section>
+<section id="saving-custom-state-with-map-style-datasets">
+<h2>Saving Custom State with Map-Style Datasets<a class="headerlink" href="#saving-custom-state-with-map-style-datasets" title="Permalink to this heading">¶</a></h2>
+<p>For efficient resuming of <a class="reference external" href="https://pytorch.org/docs/stable/data.html#map-style-datasets">Map-style datasets</a>, you can resume iteration by defining <code class="docutils literal notranslate"><span class="pre">state_dict</span></code> / <code class="docutils literal notranslate"><span class="pre">load_state_dict</span></code> methods in your sampler. If your dataset has worker-specific state (eg RNG transform state) you can add <code class="docutils literal notranslate"><span class="pre">state_dict</span></code> / <code class="docutils literal notranslate"><span class="pre">load_state_dict</span></code> methods to your dataset.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.utils.data</span>
+<span class="kn">from</span> <span class="nn">torchdata.stateful_dataloader</span> <span class="kn">import</span> <span class="n">StatefulDataLoader</span>
+
+<span class="c1"># If you are using the default RandomSampler and BatchSampler in torch.utils.data, they are patched when you import torchdata.stateful_dataloader so that defining, a custom sampler here is unnecessary</span>
+<span class="k">class</span> <span class="nc">MySampler</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Sampler</span><span class="p">[</span><span class="nb">int</span><span class="p">]):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">high</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">seed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">high</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">limit</span> <span class="o">=</span> <span class="n">seed</span><span class="p">,</span> <span class="n">high</span><span class="p">,</span> <span class="n">limit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">g</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">limit</span><span class="p">:</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">high</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">high</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,),</span> <span class="n">generator</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">yield</span> <span class="n">val</span>
+
+    <span class="k">def</span> <span class="nf">load_state_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">=</span> <span class="n">state_dict</span><span class="p">[</span><span class="s2">&quot;i&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="o">.</span><span class="n">set_state</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s2">&quot;rng&quot;</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">state_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;i&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;rng&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="o">.</span><span class="n">get_state</span><span class="p">()}</span>
+
+<span class="c1"># Optional: save dataset random transform state</span>
+<span class="k">class</span> <span class="nc">NoisyRange</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">high</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">mean</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">high</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">std</span> <span class="o">=</span> <span class="n">high</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">mean</span><span class="p">)]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">std</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">high</span>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">high</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">()</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">std</span><span class="p">)</span>
+        <span class="n">noise</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">idx</span> <span class="o">+</span> <span class="n">noise</span>
+
+    <span class="k">def</span> <span class="nf">load_state_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_dict</span><span class="p">):</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">set_rng_state</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s2">&quot;rng&quot;</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">state_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;rng&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">get_rng_state</span><span class="p">()}</span>
+
+<span class="c1"># Test both single/multiprocess dataloading</span>
+<span class="k">for</span> <span class="n">num_workers</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">num_workers</span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">dl</span> <span class="o">=</span> <span class="n">StatefulDataLoader</span><span class="p">(</span><span class="n">NoisyRange</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">sampler</span><span class="o">=</span><span class="n">MySampler</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+        <span class="n">batch_size</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">drop_last</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">num_workers</span><span class="o">=</span><span class="n">num_workers</span><span class="p">)</span>
+
+<span class="n">batches</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">batch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dl</span><span class="p">):</span>
+    <span class="n">batches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+    <span class="n">sd</span> <span class="o">=</span> <span class="n">dl</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()</span>
+
+<span class="n">dl</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">sd</span><span class="p">)</span>
+<span class="n">batches2</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">dl</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">batches</span><span class="p">[</span><span class="mi">3</span><span class="p">:])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">batches2</span><span class="p">)</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Output:</span>
+<span class="sd">num_workers=0</span>
+<span class="sd">[tensor([-0.4526,  3.7948], dtype=torch.float64), tensor([6.5494, 3.0470], dtype=torch.float64)]</span>
+<span class="sd">[tensor([-0.4526,  3.7948], dtype=torch.float64), tensor([6.5494, 3.0470], dtype=torch.float64)]</span>
+<span class="sd">num_workers=2</span>
+<span class="sd">[tensor([3.7412, 1.2438], dtype=torch.float64), tensor([4.4807, 4.0036], dtype=torch.float64)]</span>
+<span class="sd">[tensor([3.7412, 1.2438], dtype=torch.float64), tensor([4.4807, 4.0036], dtype=torch.float64)]</span>
+<span class="sd">&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="saving-custom-state-with-iterable-style-datasets">
+<h2>Saving Custom State with Iterable-Style Datasets<a class="headerlink" href="#saving-custom-state-with-iterable-style-datasets" title="Permalink to this heading">¶</a></h2>
+<p>Tracking iteration order with <a class="reference external" href="https://pytorch.org/docs/stable/data.html#iterable-style-datasets">Iterable-style datasets</a> requires state from each worker-level instance of the dataset to be captured. You can define <code class="docutils literal notranslate"><span class="pre">state_dict</span></code> / <code class="docutils literal notranslate"><span class="pre">load_state_dict</span></code> methods on your dataset which capture worker-level state. <code class="xref py py-class docutils literal notranslate"><span class="pre">StatefulDataLoader</span></code> will handle aggregation across workers and distribution back to the workers. Calling <code class="docutils literal notranslate"><span class="pre">load_state_dict</span></code> requires <code class="xref py py-class docutils literal notranslate"><span class="pre">StatefulDataLoader`</span></code> to have same <code class="docutils literal notranslate"><span class="pre">num_workers</span></code> as those of the provided <code class="docutils literal notranslate"><span class="pre">state_dict</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.utils.data</span>
+<span class="kn">from</span> <span class="nn">torchdata.stateful_dataloader</span> <span class="kn">import</span> <span class="n">StatefulDataLoader</span>
+
+
+<span class="k">class</span> <span class="nc">MyIterableDataset</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">IterableDataset</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">high</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">high</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">seed</span> <span class="o">=</span> <span class="n">high</span><span class="p">,</span> <span class="n">seed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">g</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">worker_info</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">get_worker_info</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">worker_info</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">worker_id</span> <span class="o">=</span> <span class="n">worker_info</span><span class="o">.</span><span class="n">id</span>
+        <span class="n">num_workers</span> <span class="o">=</span> <span class="n">worker_info</span><span class="o">.</span><span class="n">num_workers</span>
+        <span class="k">else</span><span class="p">:</span>
+        <span class="n">worker_id</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">num_workers</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randperm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">high</span><span class="p">,</span> <span class="n">generator</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="p">)</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="n">worker_id</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">high</span><span class="p">:</span><span class="n">num_workers</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">arr</span><span class="p">)):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">yield</span> <span class="n">arr</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">state_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;i&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">i</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">load_state_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_dict</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">=</span> <span class="n">state_dict</span><span class="p">[</span><span class="s2">&quot;i&quot;</span><span class="p">]</span>
+
+<span class="c1"># Test both single/multiprocess dataloading</span>
+<span class="k">for</span> <span class="n">num_workers</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]:</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">num_workers</span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">dl</span> <span class="o">=</span> <span class="n">StatefulDataLoader</span><span class="p">(</span>
+    <span class="n">MyIterableDataset</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">drop_last</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">num_workers</span><span class="o">=</span><span class="n">num_workers</span><span class="p">)</span>
+
+<span class="n">batches</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">batch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dl</span><span class="p">):</span>
+    <span class="n">batches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+    <span class="n">sd</span> <span class="o">=</span> <span class="n">dl</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()</span>
+
+<span class="n">dl</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">sd</span><span class="p">)</span>
+<span class="n">batches2</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">dl</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">batches</span><span class="p">[</span><span class="mi">3</span><span class="p">:])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">batches2</span><span class="p">)</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Output:</span>
+<span class="sd">num_workers=0</span>
+<span class="sd">[tensor([ 2, 10]), tensor([3, 1]), tensor([11,  6])]</span>
+<span class="sd">[tensor([ 2, 10]), tensor([3, 1]), tensor([11,  6])]</span>
+<span class="sd">num_workers=2</span>
+<span class="sd">[tensor([ 4, 10]), tensor([ 3, 11]), tensor([1, 6])]</span>
+<span class="sd">[tensor([ 4, 10]), tensor([ 3, 11]), tensor([1, 6])]</span>
+<span class="sd">&quot;&quot;&quot;</span>
 </pre></div>
 </div>
 </section>
@@ -462,10 +572,10 @@ to make sure the data pipeline has different order per epoch and data shards are
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="examples.html" class="btn btn-neutral float-right" title="Examples" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="dp_tutorial.html" class="btn btn-neutral float-right" title="DataPipe Tutorial" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="dp_tutorial.html" class="btn btn-neutral" title="DataPipe Tutorial" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="generated/torchdata.dataloader2.graph.replace_dp.html" class="btn btn-neutral" title="replace_dp" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -497,11 +607,10 @@ to make sure the data pipeline has different order per epoch and data shards are
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">DataLoader2 Tutorial</a><ul>
-<li><a class="reference internal" href="#datapipe">DataPipe</a></li>
-<li><a class="reference internal" href="#multiprocessing">Multiprocessing</a></li>
-<li><a class="reference internal" href="#distributed">Distributed</a></li>
-<li><a class="reference internal" href="#multiprocessing-distributed">Multiprocessing + Distributed</a></li>
+<li><a class="reference internal" href="#">Stateful DataLoader Tutorial</a><ul>
+<li><a class="reference internal" href="#saving-and-loading-state">Saving and loading state</a></li>
+<li><a class="reference internal" href="#saving-custom-state-with-map-style-datasets">Saving Custom State with Map-Style Datasets</a></li>
+<li><a class="reference internal" href="#saving-custom-state-with-iterable-style-datasets">Saving Custom State with Iterable-Style Datasets</a></li>
 </ul>
 </li>
 </ul>
