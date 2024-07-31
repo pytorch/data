@@ -92,13 +92,12 @@ _ITERATOR_FINISHED = "_iterator_finished"
 
 class StatefulDataLoader(DataLoader[_T_co]):
     r"""
-    This is a drop in replacement for :class:`~torch.utils.data.DataLoader`
+    This is a drop in replacement for ``torch.utils.data.DataLoader``
     that implements state_dict and load_state_dict methods, enabling mid-epoch
     checkpointing.
 
-    All arguments are identical to :class:`~torch.utils.data.DataLoader`, with
-    a new kwarg: `snapshot_every_n_steps: Optional[int] = `.
-    See :py:mod:`torch.utils.data` documentation page for more details.
+    All arguments are identical to ``torch.utils.data.DataLoader``, with
+    a new kwarg: ``snapshot_every_n_steps``.
 
     Args:
         dataset (Dataset): dataset from which to load the data.
@@ -148,11 +147,13 @@ class StatefulDataLoader(DataLoader[_T_co]):
             maintain the workers `Dataset` instances alive. (default: ``False``)
         pin_memory_device (str, optional): the device to :attr:`pin_memory` to if ``pin_memory`` is
             ``True``.
+        snapshot_every_n_steps (int, optional): Defines how often the state is
+            transferred from the dataloader workers to the dataloader. By default, it is set to ``1``, i.e., state is transferred every step. If the state is large, this value can be increased (and ideally set to the frequency of training checkpointing) to reduce the overhead of transferring state every step.
 
 
     .. warning:: If the ``spawn`` start method is used, :attr:`worker_init_fn`
                  cannot be an unpicklable object, e.g., a lambda function. See
-                 :ref:`multiprocessing-best-practices` on more details related
+                 `multiprocessing-best-practices <https://pytorch.org/docs/stable/notes/multiprocessing.html#multiprocessing-best-practices>`_ on more details related
                  to multiprocessing in PyTorch.
 
     .. warning:: ``len(dataloader)`` heuristic is based on the length of the sampler used.
@@ -169,12 +170,12 @@ class StatefulDataLoader(DataLoader[_T_co]):
                  dropped when :attr:`drop_last` is set. Unfortunately, PyTorch can not detect such
                  cases in general.
 
-                 See `Dataset Types`_ for more details on these two types of datasets and how
+                 See `Dataset Types <https://pytorch.org/docs/stable/data.html>`_ for more details on these two types of datasets and how
                  :class:`~torch.utils.data.IterableDataset` interacts with
-                 `Multi-process data loading`_.
+                 `Multi-process data loading <https://pytorch.org/docs/stable/data.html#multi-process-data-loading>`_.
 
-    .. warning:: See :ref:`reproducibility`, and :ref:`dataloader-workers-random-seed`, and
-                 :ref:`data-loading-randomness` notes for random seed related questions.
+    .. warning:: See `Reproducibility <https://pytorch.org/docs/stable/notes/randomness.html#reproducibility>`_, and `Dataloader-workers-random-seed <https://pytorch.org/docs/stable/notes/faq.html#dataloader-workers-random-seed>`_, and
+                 `Data-loading-randomness <https://pytorch.org/docs/stable/data.html#data-loading-randomness>`_ notes for random seed related questions.
 
     .. _multiprocessing context:
         https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
