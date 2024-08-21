@@ -1074,12 +1074,15 @@ def row_processor(row):
 def filter_len(row):
     return len(row) == 4
 
+
 class MockDataset(Dataset):
     def __init__(self, size):
         self.size = size
         self.data = torch.arange(size)  # Simple data that is easy to verify
+
     def __len__(self):
         return self.size
+
     def __getitem__(self, idx):
         return self.data[idx]
 
@@ -1957,9 +1960,9 @@ except RuntimeError as e:
                     ls[i].append(next(its[i]))
             self.assertEqual(ls[0], ls[1])
 
-
     def test_initialization_TestStatefulDistributedSampler(self):
         from torchdata.stateful_dataloader.sampler import StatefulDistributedSampler
+
         dataset = self.dataset
         sampler = StatefulDistributedSampler(dataset, num_replicas=10, rank=0, shuffle=False, seed=42, drop_last=False)
         self.assertEqual(sampler.dataset, dataset)
@@ -1971,31 +1974,37 @@ except RuntimeError as e:
 
     def test_state_dict(self):
         from torchdata.stateful_dataloader.sampler import StatefulDistributedSampler
+
         dataset = self.dataset
         sampler = StatefulDistributedSampler(dataset, num_replicas=10, rank=0)
         sampler.yielded = 5
         state_dict = sampler.state_dict()
-        self.assertEqual(state_dict['yielded'], 5)
+        self.assertEqual(state_dict["yielded"], 5)
 
     def test_load_state_dict(self):
         from torchdata.stateful_dataloader.sampler import StatefulDistributedSampler
+
         dataset = self.dataset
         sampler = StatefulDistributedSampler(dataset, num_replicas=10, rank=0)
-        sampler.load_state_dict({'yielded': 3})
+        sampler.load_state_dict({"yielded": 3})
         self.assertEqual(sampler.next_yielded, 3)
         with self.assertRaises(ValueError):
-            sampler.load_state_dict({'yielded': -1})
+            sampler.load_state_dict({"yielded": -1})
 
     def test_drop_last_effect(self):
         from torchdata.stateful_dataloader.sampler import StatefulDistributedSampler
+
         sampler_with_drop = StatefulDistributedSampler(self.dataset, num_replicas=3, rank=0, drop_last=True)
         sampler_without_drop = StatefulDistributedSampler(self.dataset, num_replicas=3, rank=0, drop_last=False)
         indices_with_drop = list(iter(sampler_with_drop))
         indices_without_drop = list(iter(sampler_without_drop))
-        self.assertTrue(len(indices_with_drop) <= len(indices_without_drop), "Drop last should result in fewer or equal indices")
+        self.assertTrue(
+            len(indices_with_drop) <= len(indices_without_drop), "Drop last should result in fewer or equal indices"
+        )
 
     def test_data_order_with_shuffle(self):
         from torchdata.stateful_dataloader.sampler import StatefulDistributedSampler
+
         sampler = StatefulDistributedSampler(self.mockdataset, num_replicas=1, rank=0, shuffle=True, seed=42)
         indices = list(iter(sampler))
         data_sampled = [self.mockdataset[i] for i in indices]
@@ -2003,14 +2012,15 @@ except RuntimeError as e:
 
     def test_data_order_without_shuffle(self):
         from torchdata.stateful_dataloader.sampler import StatefulDistributedSampler
+
         sampler = StatefulDistributedSampler(self.mockdataset, num_replicas=1, rank=0, shuffle=False)
         indices = list(iter(sampler))
         data_sampled = [self.mockdataset[i] for i in indices]
         self.assertEqual(data_sampled, list(range(100)), "Data should be in sequential order when shuffle is False")
-   
 
     def test_data_distribution_across_replicas(self):
         from torchdata.stateful_dataloader.sampler import StatefulDistributedSampler
+
         num_replicas = 5
         all_data = []
         for rank in range(num_replicas):
@@ -2018,11 +2028,13 @@ except RuntimeError as e:
             indices = list(iter(sampler))
             data_sampled = [int(self.mockdataset[i].numpy().astype(int)) for i in indices]
             all_data.extend(data_sampled)
-        self.assertEqual(sorted(all_data), list(range(100)), "All data points should be covered exactly once across all replicas")
-
+        self.assertEqual(
+            sorted(all_data), list(range(100)), "All data points should be covered exactly once across all replicas"
+        )
 
     def test_consistency_across_epochs(self):
         from torchdata.stateful_dataloader.sampler import StatefulDistributedSampler
+
         num_replicas = 3
         rank = 1
         sampler = StatefulDistributedSampler(self.dataset, num_replicas=num_replicas, rank=rank, shuffle=True, seed=42)
@@ -2035,11 +2047,13 @@ except RuntimeError as e:
 
     def test_no_data_loss_with_drop_last(self):
         from torchdata.stateful_dataloader.sampler import StatefulDistributedSampler
+
         sampler = StatefulDistributedSampler(self.dataset, num_replicas=3, rank=0, drop_last=True)
         indices = list(iter(sampler))
         expected_length = (len(self.dataset) // 3) * 3 // 3  # Calculate expected length considering drop_last
-        self.assertEqual(len(indices), expected_length, "Length of indices should match expected length with drop_last=True")
-
+        self.assertEqual(
+            len(indices), expected_length, "Length of indices should match expected length with drop_last=True"
+        )
 
     def _test_sampler(self, **kwargs):
         indices = range(2, 12)  # using a regular iterable
@@ -2674,7 +2688,7 @@ class TestStringDataLoader(TestCase):
     @unittest.skipIf(not TEST_CUDA, "CUDA unavailable")
     def test_shuffle_pin_memory(self):
         loader = DataLoader(self.dataset, batch_size=2, shuffle=True, num_workers=4, pin_memory=True)
-        for (s, n) in loader:
+        for s, n in loader:
             self.assertIsInstance(s[0], str)
             self.assertTrue(n.is_pinned())
 
