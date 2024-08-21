@@ -1995,7 +1995,7 @@ except RuntimeError as e:
 
     def test_next_yielded(self):
         from torchdata.stateful_dataloader.sampler import StatefulDistributedSampler
-    
+
         sampler = StatefulDistributedSampler(self.dataset, num_replicas=2, rank=0, shuffle=True, seed=42)
         iterator = iter(sampler)
         next(iterator)  # advance the iterator
@@ -2065,7 +2065,7 @@ except RuntimeError as e:
 
         sampler = StatefulDistributedSampler(self.dataset, num_replicas=3, rank=0, drop_last=True)
         indices = list(iter(sampler))
-        expected_length = (len(self.dataset) // 3) * 3 // 3 
+        expected_length = (len(self.dataset) // 3) * 3 // 3
         self.assertEqual(
             len(indices), expected_length, "Length of indices should match expected length with drop_last=True"
         )
