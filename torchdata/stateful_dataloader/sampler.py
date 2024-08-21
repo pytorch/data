@@ -7,8 +7,8 @@
 from typing import Any, Dict, Iterator, Optional, Sized
 
 import torch.utils.data.sampler
-from torch.utils.data.dataloader import _InfiniteConstantSampler
 from torch.utils.data import Dataset
+from torch.utils.data.dataloader import _InfiniteConstantSampler
 
 from .stateful import Stateful
 
@@ -129,7 +129,6 @@ class BatchSampler(torch.utils.data.sampler.BatchSampler, Stateful):
 
 
 class _StatefulDistributedSamplerIterator(Iterator[int], Stateful):
-
     def __init__(self, sampler):
         self.sampler = sampler
 
