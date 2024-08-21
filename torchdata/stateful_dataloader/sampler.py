@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import math
 from typing import Any, Dict, Iterator, Optional, Sized
 
 import torch.utils.data.sampler
@@ -40,6 +41,7 @@ class _StatefulRandomSamplerIterator(Iterator[int], Stateful):
         self.generator_state = state_dict[self._GENERATOR]
         self.sampler.generator.set_state(state_dict[self._GENERATOR])
         self.next_yielded = state_dict[self._YIELDED]
+        return None
 
     def state_dict(self) -> Dict[str, Any]:
         return {self._GENERATOR: self.generator_state, self._YIELDED: self.yielded}
