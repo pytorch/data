@@ -41,7 +41,6 @@ class _StatefulRandomSamplerIterator(Iterator[int], Stateful):
         self.generator_state = state_dict[self._GENERATOR]
         self.sampler.generator.set_state(state_dict[self._GENERATOR])
         self.next_yielded = state_dict[self._YIELDED]
-        return None
 
     def state_dict(self) -> Dict[str, Any]:
         return {self._GENERATOR: self.generator_state, self._YIELDED: self.yielded}
@@ -174,6 +173,12 @@ class _StatefulDistributedSamplerIterator(Iterator[int], Stateful):
         self.current_index += 1
         self.sampler.yielded += 1
         return val
+
+    def state_dict(self) -> Dict[str, Any]:
+        return self.sampler.state_dict()
+
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
+        self.sampler.load_state_dict(state_dict)
 
 
 class StatefulDistributedSampler(torch.utils.data.distributed.DistributedSampler):
