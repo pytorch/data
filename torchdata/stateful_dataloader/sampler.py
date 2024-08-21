@@ -8,7 +8,7 @@ from typing import Any, Dict, Iterator, Optional, Sized
 
 import torch.utils.data.sampler
 from torch.utils.data.dataloader import _InfiniteConstantSampler
-from torch.utils.data import Dataset, Sampler
+from torch.utils.data import Dataset
 
 from .stateful import Stateful
 
