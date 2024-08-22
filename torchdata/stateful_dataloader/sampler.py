@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import math
 from typing import Any, Dict, Iterator, Optional, Sized
 
 import torch.utils.data.sampler
@@ -129,58 +128,6 @@ class BatchSampler(torch.utils.data.sampler.BatchSampler, Stateful):
                 yield batch[:idx_in_batch]
 
 
-class _StatefulDistributedSamplerIterator(Iterator[int], Stateful):
-    def __init__(self, sampler):
-        self.sampler = sampler
-
-        if self.sampler.shuffle:
-            # deterministically shuffle based on epoch and seed
-            g = torch.Generator()
-            g.manual_seed(self.sampler.seed + self.sampler.epoch)
-            indices = torch.randperm(len(self.sampler.dataset), generator=g).tolist()  # type: ignore[arg-type]
-        else:
-            indices = list(range(len(self.sampler.dataset)))  # type: ignore[arg-type]
-
-        if not self.sampler.drop_last:
-            # add extra samples to make it evenly divisible
-            padding_size = self.sampler.total_size - len(indices)
-            if padding_size <= len(indices):
-                indices += indices[:padding_size]
-            else:
-                indices += (indices * math.ceil(padding_size / len(indices)))[:padding_size]
-        else:
-            # remove tail of data to make it evenly divisible.
-            indices = indices[: self.sampler.total_size]
-        assert len(indices) == self.sampler.total_size
-
-        # subsample
-        indices = indices[self.sampler.rank : self.sampler.total_size : self.sampler.num_replicas]
-        assert len(indices) == self.sampler.num_samples
-
-        self.parent_iterator = iter(indices)
-        self.indices = list(self.parent_iterator)
-        self.current_index = 0
-
-    def __next__(self) -> int:
-        if self.sampler.next_yielded is not None:
-            self.current_index = self.sampler.next_yielded
-            self.sampler.yielded = self.sampler.next_yielded
-            self.sampler.next_yielded = None
-        if self.current_index >= len(self.indices):
-            raise StopIteration
-
-        val = self.indices[self.current_index]
-        self.current_index += 1
-        self.sampler.yielded += 1
-        return val
-
-    def state_dict(self) -> Dict[str, Any]:
-        return self.sampler.state_dict()
-
-    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
-        self.sampler.load_state_dict(state_dict)
-
-
 class StatefulDistributedSampler(torch.utils.data.distributed.DistributedSampler):
     _YIELDED = "yielded"
 
@@ -193,14 +140,28 @@ class StatefulDistributedSampler(torch.utils.data.distributed.DistributedSampler
         seed: int = 0,
         drop_last: bool = False,
     ) -> None:
-
         super().__init__(dataset, num_replicas, rank, shuffle, seed, drop_last)
         self.yielded = 0
         self.next_yielded = None
+        self.indices = None
+        self.current_index = 0
 
     def __iter__(self):
+        self.indices = list(super().__iter__())
+        self.current_index = 0
+        return self
 
-        return _StatefulDistributedSamplerIterator(self)
+    def __next__(self) -> int:
+        if self.next_yielded is not None:
+            self.current_index = self.next_yielded
+            self.yielded = self.next_yielded
+            self.next_yielded = None
+        if self.current_index >= len(self.indices):
+            raise StopIteration
+        val = self.indices[self.current_index]
+        self.current_index += 1
+        self.yielded += 1
+        return val
 
     def state_dict(self) -> Dict[str, Any]:
         return {self._YIELDED: self.yielded}
@@ -208,5 +169,4 @@ class StatefulDistributedSampler(torch.utils.data.distributed.DistributedSampler
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         if state_dict[self._YIELDED] < 0:
             raise ValueError("Cannot load state_dict with negative yielded value")
-
         self.next_yielded = state_dict[self._YIELDED]
