@@ -143,7 +143,6 @@ class StatefulDistributedSampler(torch.utils.data.distributed.DistributedSampler
         super().__init__(dataset, num_replicas, rank, shuffle, seed, drop_last)
         self.yielded = 0
         self.next_yielded = None
-        self.indices = None
         self.current_index = 0
 
     def __iter__(self):
