@@ -61,7 +61,7 @@ from torch.utils.data._utils import MP_STATUS_CHECK_INTERVAL
 from torch.utils.data.datapipes.iter import IterableWrapper
 from torch.utils.data.dataset import random_split
 
-from torchdata.stateful_dataloader import Stateful, StatefulDataLoader, StatefulDataLoader as DataLoader
+from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
 from torchdata.stateful_dataloader.sampler import StatefulDistributedSampler
 
 
@@ -187,7 +187,7 @@ class TestDataLoader(TestCase):
         for data in new_dataloader:
             resumed_data.append(data.tolist())
         expected_data = []
-        full_dataloader = DataLoader(self.dataset, batch_size=10, sampler=sampler)
+        full_dataloader = StatefulDataLoader(self.dataset, batch_size=10, sampler=sampler)
         for data in full_dataloader:
             expected_data.append(data.tolist())
 
@@ -276,7 +276,7 @@ class TestDataLoader(TestCase):
         self.assertEqual(data_sampled, list(range(100)), "Data should not be shuffled")
 
         batch_size = 32
-        dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=batch_size, sampler=sampler)
+        dataloader = StatefulDataLoader(self.dataset, batch_size=batch_size, sampler=sampler)
         data_loaded = []
         for batch in dataloader:
             data_loaded.extend(batch)
