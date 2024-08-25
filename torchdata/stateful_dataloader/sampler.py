@@ -146,21 +146,14 @@ class StatefulDistributedSampler(torch.utils.data.distributed.DistributedSampler
         self.current_index = 0
 
     def __iter__(self):
-        self.indices = list(super().__iter__())
-        self.current_index = 0
-        return self
-
-    def __next__(self) -> int:
+        self.yielded = 0
         if self.next_yielded is not None:
-            self.current_index = self.next_yielded
             self.yielded = self.next_yielded
             self.next_yielded = None
-        if self.current_index >= len(self.indices):
-            raise StopIteration
-        val = self.indices[self.current_index]
-        self.current_index += 1
-        self.yielded += 1
-        return val
+        it = super().__iter__()
+        for idx in itertools.islice(it, self.yielded, None):
+            self.yielded += 1
+            yield idx
 
     def state_dict(self) -> Dict[str, Any]:
         return {self._YIELDED: self.yielded}
