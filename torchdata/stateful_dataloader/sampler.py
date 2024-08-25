@@ -144,7 +144,6 @@ class StatefulDistributedSampler(torch.utils.data.distributed.DistributedSampler
         super().__init__(dataset, num_replicas, rank, shuffle, seed, drop_last)
         self.yielded = 0
         self.next_yielded = None
-        self.current_index = 0
 
     def __iter__(self):
         self.yielded = 0
@@ -160,6 +159,8 @@ class StatefulDistributedSampler(torch.utils.data.distributed.DistributedSampler
         return {self._YIELDED: self.yielded}
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
+        if self._YIELDED not in state_dict:
+            raise ValueError("Invalid state_dict")
         if state_dict[self._YIELDED] < 0:
             raise ValueError("Cannot load state_dict with negative yielded value")
         self.next_yielded = state_dict[self._YIELDED]

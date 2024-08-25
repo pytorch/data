@@ -217,6 +217,7 @@ class TestDataLoader(TestCase):
         self.assertIsNone(sampler.next_yielded)
         sampler.load_state_dict({StatefulDistributedSampler._YIELDED: 5})
         self.assertEqual(sampler.next_yielded, 5)
+        iterator = iter(sampler)
         next(iterator)  # advance the iterator again
         self.assertEqual(sampler.yielded, 6)
 
