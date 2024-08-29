@@ -78,6 +78,9 @@ jobs:
       - name: Run StatefulDataLoader tests with pytest - dataloader
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_dataloader.py
+      - name: Run StatefulDataSampler tests with pytest - datasampler
+        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_sampler.py
       - name: Run StatefulDataLoader tests with pytest - state_dict 0
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
         run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict.py -k _shard0

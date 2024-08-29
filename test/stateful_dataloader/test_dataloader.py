@@ -2580,7 +2580,7 @@ class TestStringDataLoader(TestCase):
     @unittest.skipIf(not TEST_CUDA, "CUDA unavailable")
     def test_shuffle_pin_memory(self):
         loader = DataLoader(self.dataset, batch_size=2, shuffle=True, num_workers=4, pin_memory=True)
-        for (s, n) in loader:
+        for s, n in loader:
             self.assertIsInstance(s[0], str)
             self.assertTrue(n.is_pinned())
 

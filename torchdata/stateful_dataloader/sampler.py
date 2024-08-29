@@ -4,9 +4,11 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import itertools
 from typing import Any, Dict, Iterator, Optional, Sized
 
 import torch.utils.data.sampler
+from torch.utils.data import Dataset
 from torch.utils.data.dataloader import _InfiniteConstantSampler
 
 from .stateful import Stateful
@@ -125,3 +127,40 @@ class BatchSampler(torch.utils.data.sampler.BatchSampler, Stateful):
                     batch = [0] * self.batch_size
             if idx_in_batch > 0:
                 yield batch[:idx_in_batch]
+
+
+class StatefulDistributedSampler(torch.utils.data.distributed.DistributedSampler):
+    _YIELDED = "yielded"
+
+    def __init__(
+        self,
+        dataset: Dataset,
+        num_replicas: Optional[int] = None,
+        rank: Optional[int] = None,
+        shuffle: bool = True,
+        seed: int = 0,
+        drop_last: bool = False,
+    ) -> None:
+        super().__init__(dataset, num_replicas, rank, shuffle, seed, drop_last)
+        self.yielded = 0
+        self.next_yielded = None
+
+    def __iter__(self):
+        self.yielded = 0
+        if self.next_yielded is not None:
+            self.yielded = self.next_yielded
+            self.next_yielded = None
+        it = super().__iter__()
+        for idx in itertools.islice(it, self.yielded, None):
+            self.yielded += 1
+            yield idx
+
+    def state_dict(self) -> Dict[str, Any]:
+        return {self._YIELDED: self.yielded}
+
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
+        if self._YIELDED not in state_dict:
+            raise ValueError("Invalid state_dict")
+        if state_dict[self._YIELDED] < 0:
+            raise ValueError("Cannot load state_dict with negative yielded value")
+        self.next_yielded = state_dict[self._YIELDED]
