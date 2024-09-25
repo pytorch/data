@@ -55,7 +55,7 @@ else()
       list(APPEND AWSSDK_LIBRARIES ${aws_cpp_sdk_INSTALL}/lib/lib${lib}.a)
     endif()
     if(MSVC)
-      target_compile_options(${aws_cpp_sdk_INSTALL}/lib/${lib}.lib PRIVATE /W2 /WX)
+      target_compile_options(${aws_cpp_sdk_INSTALL}/lib/${lib}.lib PRIVATE /W3 /WX)
     endif()
   endforeach()
 
