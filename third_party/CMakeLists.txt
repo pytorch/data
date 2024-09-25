@@ -65,14 +65,13 @@ else()
     "-DBUILD_SHARED_LIBS=OFF"
     "-DBUILD_ONLY=transfer;s3"
     "-DENABLE_TESTING=OFF"
-    "-DAWS_SDK_WARNINGS_ARE_ERRORS=OFF"
     "-DCMAKE_BUILD_TYPE=Release"
     "-DCMAKE_INSTALL_PREFIX=${aws_cpp_sdk_INSTALL}"
     "-DCMAKE_INSTALL_LIBDIR=lib"
   )
 
   if(MSVC)
-    list(APPEND cmake_args "-DCMAKE_CXX_FLAGS=/EHsc")
+    list(APPEND cmake_args "-DAWS_SDK_WARNINGS_ARE_ERRORS=OFF")
   endif()
 
   include(ExternalProject)
