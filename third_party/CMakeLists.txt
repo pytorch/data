@@ -60,12 +60,26 @@ else()
     list(APPEND AWSSDK_LIBRARIES "${aws_cpp_sdk_INSTALL}/lib/libs2n.a")
   endif()
 
+  set(
+    cmake_args
+    "-DBUILD_SHARED_LIBS=OFF"
+    "-DBUILD_ONLY=transfer;s3"
+    "-DENABLE_TESTING=OFF"
+    "-DCMAKE_BUILD_TYPE=Release"
+    "-DCMAKE_INSTALL_PREFIX=${aws_cpp_sdk_INSTALL}"
+    "-DCMAKE_INSTALL_LIBDIR=lib"
+  )
+
+  if(MSVC)
+    list(APPEND cmake_args "-DCMAKE_CXX_FLAGS=/W3 /WX")
+  endif()
+
   include(ExternalProject)
   ExternalProject_Add(
     aws_sdk
     SOURCE_DIR ${aws_cpp_sdk_SOURCE_DIR}
     INSTALL_DIR ${aws_cpp_sdk_INSTALL}
-    CMAKE_ARGS "-DBUILD_SHARED_LIBS=OFF" "-DBUILD_ONLY=transfer;s3" "-DENABLE_TESTING=OFF" "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_INSTALL_PREFIX=${aws_cpp_sdk_INSTALL}" "-DCMAKE_INSTALL_LIBDIR=lib" "-DCMAKE_CXX_FLAGS=\W3 \WX"
+    CMAKE_ARGS ${cmake_args}
     BUILD_BYPRODUCTS ${AWSSDK_LIBRARIES}
     )
 endif()
