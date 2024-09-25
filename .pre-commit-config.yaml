@@ -23,7 +23,7 @@ repos:
     rev: v2.31.0
     hooks:
       - id: pyupgrade
-        args: [--py37-plus]
+        args: [--py39-plus]
 
   - repo: https://github.com/omnilib/ufmt
     rev: v1.3.2
