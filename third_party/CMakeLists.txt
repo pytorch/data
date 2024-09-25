@@ -71,7 +71,7 @@ else()
   )
 
   if(MSVC)
-    list(APPEND cmake_args "-DCMAKE_CXX_FLAGS=/W3 /WX /EHsc")
+    list(APPEND cmake_args "-DCMAKE_CXX_FLAGS=/EHsc")
     list(APPEND cmake_args "-DAWS_SDK_WARNINGS_ARE_ERRORS=OFF")
   endif()
 
