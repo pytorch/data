@@ -71,7 +71,7 @@ else()
   )
 
   if(MSVC)
-    list(APPEND cmake_args "-DCMAKE_CXX_FLAGS=/W1 /WX")
+    list(APPEND cmake_args "-DCMAKE_CXX_FLAGS=/W3 /WX /EHsc")
   endif()
 
   include(ExternalProject)
