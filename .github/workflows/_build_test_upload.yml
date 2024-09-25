@@ -63,7 +63,6 @@ jobs:
         os:
           - windows-latest
         python-version:
-          - 3.8
           - 3.9
           - "3.10"
           - "3.11"
@@ -224,7 +223,6 @@ jobs:
         os:
           - windows-latest
         python-version:
-          - 3.8
           - 3.9
           - "3.10"
           - "3.11"
@@ -366,10 +364,10 @@ jobs:
     needs: [get_release_type, wheel_upload, conda_upload]
     runs-on: ubuntu-latest
     steps:
-      - name: Setup Python 3.8
+      - name: Setup Python 3.9
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: 3.9
       - name: Checkout
         uses: actions/checkout@v3
         with:
