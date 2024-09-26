@@ -8,9 +8,9 @@
 **We are re-focusing the torchdata repo to be an iterative enhancement of torch.utils.data.DataLoader. We do not plan on
 continuing development or maintaining the [`DataPipes`] and [`DataLoaderV2`] solutions, and they will be removed from
 the torchdata repo. We'll also be revisiting the `DataPipes` references in pytorch/pytorch. In release
-`torchdata==0.8.0` (July 2024) they will be marked as deprecated, and in 0.9.0 (Oct 2024) they will be deleted. Existing
-users are advised to pin to `torchdata==0.8.0` or an older version until they are able to migrate away. Subsequent
-releases will not include DataPipes or DataLoaderV2. The old version of this README is
+`torchdata==0.8.0` (July 2024) they will be marked as deprecated, and sometime after 0.9.0 (Oct 2024) they will be
+deleted. Existing users are advised to pin to `torchdata==0.9.0` or an older version until they are able to migrate
+away. Subsequent releases will not include DataPipes or DataLoaderV2. The old version of this README is
 [available here](https://github.com/pytorch/data/blob/v0.7.1/README.md). Please reach out if you suggestions or comments
 (please use [#1196](https://github.com/pytorch/data/issues/1196) for feedback).**
 
@@ -44,6 +44,7 @@ The following is the corresponding `torchdata` versions and supported Python ver
 | `torch`              | `torchdata`        | `python`          |
 | -------------------- | ------------------ | ----------------- |
 | `master` / `nightly` | `main` / `nightly` | `>=3.9`, `<=3.12` |
+| `2.5.0`              | `0.9.0`            | `>=3.9`, `<=3.12` |
 | `2.4.0`              | `0.8.0`            | `>=3.8`, `<=3.12` |
 | `2.0.0`              | `0.6.0`            | `>=3.8`, `<=3.11` |
 | `1.13.1`             | `0.5.1`            | `>=3.7`, `<=3.10` |
