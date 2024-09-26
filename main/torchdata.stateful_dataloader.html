@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Flattener &mdash; TorchData main documentation</title>
+  <title>Stateful DataLoader &mdash; TorchData main documentation</title>
   
 
   
@@ -26,16 +26,16 @@
 
   
 
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
-  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/graphviz.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
-    <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="CSVDictParser" href="torchdata.datapipes.iter.CSVDictParser.html" />
-    <link rel="prev" title="Slicer" href="torchdata.datapipes.iter.Slicer.html" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Iterable-style DataPipes" href="torchdata.datapipes.iter.html" />
+    <link rel="prev" title="TorchData" href="index.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -46,16 +46,16 @@
   
 
   
-  <script src="../_static/js/modernizr.min.js"></script>
+  <script src="_static/js/modernizr.min.js"></script>
 
   <!-- Preload the theme fonts -->
 
-<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
 
 <!-- Preload the katex fonts -->
 
@@ -275,7 +275,7 @@
 
 
 <div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search Docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
@@ -292,19 +292,19 @@
             
               <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../torchdata.stateful_dataloader.html">Stateful DataLoader</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.map.html">Map-style DataPipes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../torchdata.datapipes.utils.html">Utility Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../dataloader2.html">DataLoader2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../reading_service.html">ReadingService</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Stateful DataLoader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.iter.html">Iterable-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.map.html">Map-style DataPipes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torchdata.datapipes.utils.html">Utility Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dataloader2.html">DataLoader2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reading_service.html">ReadingService</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../stateful_dataloader_tutorial.html">Stateful DataLoader Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../dp_tutorial.html">DataPipe Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../dlv2_tutorial.html">DataLoader2 Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stateful_dataloader_tutorial.html">Stateful DataLoader Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dp_tutorial.html">DataPipe Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dlv2_tutorial.html">DataLoader2 Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
 <ul>
@@ -347,7 +347,7 @@
   <ul class="pytorch-breadcrumbs">
     
       <li>
-        <a href="../index.html">
+        <a href="index.html">
           
             Docs
           
@@ -355,15 +355,13 @@
       </li>
 
         
-          <li><a href="../torchdata.datapipes.iter.html">Iterable-style DataPipes</a> &gt;</li>
-        
-      <li>Flattener</li>
+      <li>Stateful DataLoader</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/generated/torchdata.datapipes.iter.Flattener.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="_sources/torchdata.stateful_dataloader.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -404,41 +402,102 @@ users are advised to pin to <cite>torchdata==0.8.0</cite> or an older version un
 releases will not include DataPipes or DataLoaderV2.
 Please reach out if you suggestions or comments (please use <a class="reference external" href="https://github.com/pytorch/data/issues/1196">this issue</a> for feedback)</p>
 </div>
-<section id="flattener">
-<h1>Flattener<a class="headerlink" href="#flattener" title="Permalink to this heading">¶</a></h1>
+<section id="module-torchdata.stateful_dataloader">
+<span id="stateful-dataloader"></span><h1>Stateful DataLoader<a class="headerlink" href="#module-torchdata.stateful_dataloader" title="Permalink to this heading">¶</a></h1>
+<p>StatefulDataLoader is a drop-in replacement for <a class="reference external" href="https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader">torch.utils.data.DataLoader</a> which offers <code class="docutils literal notranslate"><span class="pre">state_dict</span></code> / <code class="docutils literal notranslate"><span class="pre">load_state_dict</span></code> methods for handling mid-epoch checkpointing which operate on the previous/next iterator requested from the dataloader (resp.).</p>
+<p>By default, the state includes the number of batches yielded and uses this to naively fast-forward the sampler (map-style) or the dataset (iterable-style). However if the sampler and/or dataset include <code class="docutils literal notranslate"><span class="pre">state_dict</span></code> / <code class="docutils literal notranslate"><span class="pre">load_state_dict</span></code> methods, then it will call them during its own <code class="docutils literal notranslate"><span class="pre">state_dict</span></code> / <code class="docutils literal notranslate"><span class="pre">load_state_dict</span></code> calls. Under the hood, <a class="reference internal" href="#torchdata.stateful_dataloader.StatefulDataLoader" title="torchdata.stateful_dataloader.StatefulDataLoader"><code class="xref py py-class docutils literal notranslate"><span class="pre">StatefulDataLoader</span></code></a> handles aggregation and distribution of state across multiprocess workers (but not across ranks).</p>
 <dl class="py class">
-<dt class="sig sig-object py" id="torchdata.datapipes.iter.Flattener">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.datapipes.iter.</span></span><span class="sig-name descname"><span class="pre">Flattener</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapipe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../torchdata.datapipes.iter.html#torchdata.datapipes.iter.IterDataPipe" title="torchdata.datapipes.iter.IterDataPipe"><span class="pre">IterDataPipe</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Hashable</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Hashable</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.datapipes.iter.Flattener" title="Permalink to this definition">¶</a></dt>
-<dd><p>returns a flattened copy of the input DataPipe at the per sample/element level based on provided indices (functional name: <code class="docutils literal notranslate"><span class="pre">flatten</span></code>).</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>no args will flatten each item in the datapipe 1 level</p>
-</div>
+<dt class="sig sig-object py" id="torchdata.stateful_dataloader.StatefulDataLoader">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.stateful_dataloader.</span></span><span class="sig-name descname"><span class="pre">StatefulDataLoader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dataset</span><span class="p"><span class="pre">[</span></span><span class="pre">_T_co</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shuffle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampler</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Sampler</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Iterable</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_sampler</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Sampler</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_workers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collate_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pin_memory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_last</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">worker_init_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multiprocessing_context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">generator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefetch_factor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">persistent_workers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pin_memory_device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">snapshot_every_n_steps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.stateful_dataloader.StatefulDataLoader" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a drop in replacement for <code class="docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code>
+that implements state_dict and load_state_dict methods, enabling mid-epoch
+checkpointing.</p>
+<p>All arguments are identical to <code class="docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code>, with
+a new kwarg: <code class="docutils literal notranslate"><span class="pre">snapshot_every_n_steps</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>datapipe</strong> – IterDataPipe with iterable elements</p></li>
-<li><p><strong>indices</strong> – <p>a single index/key for the item to flatten from an iterator item or a list of indices/keys to be flattened</p>
-<ul>
-<li><p>Integer(s) is/are used for list/tuple.</p></li>
-<li><p>Key(s) is/are used for dict.</p></li>
-</ul>
-</p></li>
+<li><p><strong>dataset</strong> (<em>Dataset</em>) – dataset from which to load the data.</p></li>
+<li><p><strong>batch_size</strong> (<em>int</em><em>, </em><em>optional</em>) – how many samples per batch to load
+(default: <code class="docutils literal notranslate"><span class="pre">1</span></code>).</p></li>
+<li><p><strong>shuffle</strong> (<em>bool</em><em>, </em><em>optional</em>) – set to <code class="docutils literal notranslate"><span class="pre">True</span></code> to have the data reshuffled
+at every epoch (default: <code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+<li><p><strong>sampler</strong> (<a class="reference internal" href="generated/torchdata.datapipes.iter.Sampler.html#torchdata.datapipes.iter.Sampler" title="torchdata.datapipes.iter.Sampler"><em>Sampler</em></a><em> or </em><em>Iterable</em><em>, </em><em>optional</em>) – defines the strategy to draw
+samples from the dataset. Can be any <code class="docutils literal notranslate"><span class="pre">Iterable</span></code> with <code class="docutils literal notranslate"><span class="pre">__len__</span></code>
+implemented. If specified, <code class="xref py py-attr docutils literal notranslate"><span class="pre">shuffle</span></code> must not be specified.</p></li>
+<li><p><strong>batch_sampler</strong> (<a class="reference internal" href="generated/torchdata.datapipes.iter.Sampler.html#torchdata.datapipes.iter.Sampler" title="torchdata.datapipes.iter.Sampler"><em>Sampler</em></a><em> or </em><em>Iterable</em><em>, </em><em>optional</em>) – like <code class="xref py py-attr docutils literal notranslate"><span class="pre">sampler</span></code>, but
+returns a batch of indices at a time. Mutually exclusive with
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">batch_size</span></code>, <code class="xref py py-attr docutils literal notranslate"><span class="pre">shuffle</span></code>, <code class="xref py py-attr docutils literal notranslate"><span class="pre">sampler</span></code>,
+and <code class="xref py py-attr docutils literal notranslate"><span class="pre">drop_last</span></code>.</p></li>
+<li><p><strong>num_workers</strong> (<em>int</em><em>, </em><em>optional</em>) – how many subprocesses to use for data
+loading. <code class="docutils literal notranslate"><span class="pre">0</span></code> means that the data will be loaded in the main process.
+(default: <code class="docutils literal notranslate"><span class="pre">0</span></code>)</p></li>
+<li><p><strong>collate_fn</strong> (<em>Callable</em><em>, </em><em>optional</em>) – merges a list of samples to form a
+mini-batch of Tensor(s).  Used when using batched loading from a
+map-style dataset.</p></li>
+<li><p><strong>pin_memory</strong> (<em>bool</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the data loader will copy Tensors
+into device/CUDA pinned memory before returning them.  If your data elements
+are a custom type, or your <code class="xref py py-attr docutils literal notranslate"><span class="pre">collate_fn</span></code> returns a batch that is a custom type,
+see the example below.</p></li>
+<li><p><strong>drop_last</strong> (<em>bool</em><em>, </em><em>optional</em>) – set to <code class="docutils literal notranslate"><span class="pre">True</span></code> to drop the last incomplete batch,
+if the dataset size is not divisible by the batch size. If <code class="docutils literal notranslate"><span class="pre">False</span></code> and
+the size of dataset is not divisible by the batch size, then the last batch
+will be smaller. (default: <code class="docutils literal notranslate"><span class="pre">False</span></code>)</p></li>
+<li><p><strong>timeout</strong> (<em>numeric</em><em>, </em><em>optional</em>) – if positive, the timeout value for collecting a batch
+from workers. Should always be non-negative. (default: <code class="docutils literal notranslate"><span class="pre">0</span></code>)</p></li>
+<li><p><strong>worker_init_fn</strong> (<em>Callable</em><em>, </em><em>optional</em>) – If not <code class="docutils literal notranslate"><span class="pre">None</span></code>, this will be called on each
+worker subprocess with the worker id (an int in <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">num_workers</span> <span class="pre">-</span> <span class="pre">1]</span></code>) as
+input, after seeding and before data loading. (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)</p></li>
+<li><p><strong>multiprocessing_context</strong> (<em>str</em><em> or </em><em>multiprocessing.context.BaseContext</em><em>, </em><em>optional</em>) – If
+<code class="docutils literal notranslate"><span class="pre">None</span></code>, the default <a class="reference external" href="https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods">multiprocessing context</a> of your operating system will
+be used. (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)</p></li>
+<li><p><strong>generator</strong> (<em>torch.Generator</em><em>, </em><em>optional</em>) – If not <code class="docutils literal notranslate"><span class="pre">None</span></code>, this RNG will be used
+by RandomSampler to generate random indexes and multiprocessing to generate
+<code class="docutils literal notranslate"><span class="pre">base_seed</span></code> for workers. (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)</p></li>
+<li><p><strong>prefetch_factor</strong> (<em>int</em><em>, </em><em>optional</em><em>, </em><em>keyword-only arg</em>) – Number of batches loaded
+in advance by each worker. <code class="docutils literal notranslate"><span class="pre">2</span></code> means there will be a total of
+2 * num_workers batches prefetched across all workers. (default value depends
+on the set value for num_workers. If value of num_workers=0 default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.
+Otherwise, if value of <code class="docutils literal notranslate"><span class="pre">num_workers</span> <span class="pre">&gt;</span> <span class="pre">0</span></code> default is <code class="docutils literal notranslate"><span class="pre">2</span></code>).</p></li>
+<li><p><strong>persistent_workers</strong> (<em>bool</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the data loader will not shut down
+the worker processes after a dataset has been consumed once. This allows to
+maintain the workers <cite>Dataset</cite> instances alive. (default: <code class="docutils literal notranslate"><span class="pre">False</span></code>)</p></li>
+<li><p><strong>pin_memory_device</strong> (<em>str</em><em>, </em><em>optional</em>) – the device to <code class="xref py py-attr docutils literal notranslate"><span class="pre">pin_memory</span></code> to if <code class="docutils literal notranslate"><span class="pre">pin_memory</span></code> is
+<code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>snapshot_every_n_steps</strong> (<em>int</em><em>, </em><em>optional</em>) – Defines how often the state is
+transferred from the dataloader workers to the dataloader. By default, it is set to <code class="docutils literal notranslate"><span class="pre">1</span></code>, i.e., state is transferred every step. If the state is large, this value can be increased (and ideally set to the frequency of training checkpointing) to reduce the overhead of transferring state every step.</p></li>
 </ul>
 </dd>
 </dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">torchdata.datapipes.iter</span> <span class="kn">import</span> <span class="n">IterableWrapper</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="mi">1001</span><span class="p">)),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="p">(</span><span class="mi">122</span><span class="p">,</span> <span class="mi">1002</span><span class="p">)),</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="p">(</span><span class="mi">133</span><span class="p">,</span> <span class="mi">1003</span><span class="p">)),</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="p">(</span><span class="mi">144</span><span class="p">,</span> <span class="mi">1004</span><span class="p">))])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">flatten_dp</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">flatten_dp</span><span class="p">)</span>
-<span class="go">[(0, 10, 100, 1000), (1, 11, 111, 1001), (2, 12, 122, 1002), (3, 13, 133, 1003), (4, 14, 144, 1004)]</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)),</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">)),</span> <span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">))])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">flatten_dp</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">flatten_dp</span><span class="p">)</span>
-<span class="go">[(0, 1, 2), (3, 4, 5), (6, 7, 8)]</span>
-</pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If the <code class="docutils literal notranslate"><span class="pre">spawn</span></code> start method is used, <code class="xref py py-attr docutils literal notranslate"><span class="pre">worker_init_fn</span></code>
+cannot be an unpicklable object, e.g., a lambda function. See
+<a class="reference external" href="https://pytorch.org/docs/stable/notes/multiprocessing.html#multiprocessing-best-practices">multiprocessing-best-practices</a> on more details related
+to multiprocessing in PyTorch.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p><code class="docutils literal notranslate"><span class="pre">len(dataloader)</span></code> heuristic is based on the length of the sampler used.
+When <code class="xref py py-attr docutils literal notranslate"><span class="pre">dataset</span></code> is an <code class="xref py py-class docutils literal notranslate"><span class="pre">IterableDataset</span></code>,
+it instead returns an estimate based on <code class="docutils literal notranslate"><span class="pre">len(dataset)</span> <span class="pre">/</span> <span class="pre">batch_size</span></code>, with proper
+rounding depending on <code class="xref py py-attr docutils literal notranslate"><span class="pre">drop_last</span></code>, regardless of multi-process loading
+configurations. This represents the best guess PyTorch can make because PyTorch
+trusts user <code class="xref py py-attr docutils literal notranslate"><span class="pre">dataset</span></code> code in correctly handling multi-process
+loading to avoid duplicate data.</p>
+<p>However, if sharding results in multiple workers having incomplete last batches,
+this estimate can still be inaccurate, because (1) an otherwise complete batch can
+be broken into multiple ones and (2) more than one batch worth of samples can be
+dropped when <code class="xref py py-attr docutils literal notranslate"><span class="pre">drop_last</span></code> is set. Unfortunately, PyTorch can not detect such
+cases in general.</p>
+<p>See <a class="reference external" href="https://pytorch.org/docs/stable/data.html">Dataset Types</a> for more details on these two types of datasets and how
+<code class="xref py py-class docutils literal notranslate"><span class="pre">IterableDataset</span></code> interacts with
+<a class="reference external" href="https://pytorch.org/docs/stable/data.html#multi-process-data-loading">Multi-process data loading</a>.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>See <a class="reference external" href="https://pytorch.org/docs/stable/notes/randomness.html#reproducibility">Reproducibility</a>, and <a class="reference external" href="https://pytorch.org/docs/stable/notes/faq.html#dataloader-workers-random-seed">Dataloader-workers-random-seed</a>, and
+<a class="reference external" href="https://pytorch.org/docs/stable/data.html#data-loading-randomness">Data-loading-randomness</a> notes for random seed related questions.</p>
 </div>
 </dd></dl>
 
@@ -452,10 +511,10 @@ Please reach out if you suggestions or comments (please use <a class="reference 
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="torchdata.datapipes.iter.CSVDictParser.html" class="btn btn-neutral float-right" title="CSVDictParser" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.datapipes.iter.html" class="btn btn-neutral float-right" title="Iterable-style DataPipes" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="torchdata.datapipes.iter.Slicer.html" class="btn btn-neutral" title="Slicer" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="index.html" class="btn btn-neutral" title="TorchData" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -487,7 +546,7 @@ Please reach out if you suggestions or comments (please use <a class="reference 
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">Flattener</a></li>
+<li><a class="reference internal" href="#">Stateful DataLoader</a></li>
 </ul>
 
             </div>
@@ -502,20 +561,20 @@ Please reach out if you suggestions or comments (please use <a class="reference 
   
 
      
-       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-         <script src="../_static/jquery.js"></script>
-         <script src="../_static/underscore.js"></script>
-         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
-         <script src="../_static/doctools.js"></script>
+       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+         <script src="_static/jquery.js"></script>
+         <script src="_static/underscore.js"></script>
+         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+         <script src="_static/doctools.js"></script>
      
 
   
 
-  <script type="text/javascript" src="../_static/js/vendor/popper.min.js"></script>
-  <script type="text/javascript" src="../_static/js/vendor/bootstrap.min.js"></script>
+  <script type="text/javascript" src="_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="_static/js/vendor/bootstrap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
+  <script type="text/javascript" src="_static/js/theme.js"></script>
 
   <script type="text/javascript">
       jQuery(function () {
@@ -620,7 +679,7 @@ Please reach out if you suggestions or comments (please use <a class="reference 
   <div class="cookie-banner-wrapper">
   <div class="container">
     <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
-    <img class="close-button" src="../_static/images/pytorch-x.svg">
+    <img class="close-button" src="_static/images/pytorch-x.svg">
   </div>
 </div>
 
@@ -753,7 +812,7 @@ Please reach out if you suggestions or comments (please use <a class="reference 
 
   <!-- End Mobile Menu -->
 
-  <script type="text/javascript" src="../_static/js/vendor/anchor.min.js"></script>
+  <script type="text/javascript" src="_static/js/vendor/anchor.min.js"></script>
 
   <script type="text/javascript">
     $(document).ready(function() {
