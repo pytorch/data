@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: 00 11 * * *
 
+permissions:
+  id-token: write
+  contents: write
+
 jobs:
   build_test_upload:
     if: |
