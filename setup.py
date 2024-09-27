@@ -15,7 +15,7 @@ from pathlib import Path
 
 from setuptools import find_packages, setup
 
-from tools.setup_helpers.extension import CMakeBuild, get_ext_modules
+from tools.setup_helpers.extension import get_ext_modules
 
 ROOT_DIR = Path(__file__).parent.resolve()
 
@@ -63,13 +63,23 @@ def _check_submodules():
             start = time.time()
             subprocess.check_call(["git", "submodule", "update", "--init", "--recursive"], cwd=ROOT_DIR)
             end = time.time()
-            print(f" --- Submodule initialization took {end - start:.2f} sec")
+            print(f" --- Submodule initialization took {end - start: .2f} sec")
         except Exception:
             print(" --- Submodule initalization failed")
             print("Please run:\n\tgit submodule update --init --recursive --jobs 0")
             sys.exit(1)
     for folder in folders:
-        check_for_files(folder, ["CMakeLists.txt", "Makefile", "setup.py", "LICENSE", "LICENSE.md", "LICENSE.txt"])
+        check_for_files(
+            folder,
+            [
+                "CMakeLists.txt",
+                "Makefile",
+                "setup.py",
+                "LICENSE",
+                "LICENSE.md",
+                "LICENSE.txt",
+            ],
+        )
 
 
 def _get_version():
@@ -178,19 +188,10 @@ if __name__ == "__main__":
             "Programming Language :: Python :: Implementation :: CPython",
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
-        package_data={
-            "torchdata": [
-                "datapipes/iter/*.pyi",
-                "datapipes/map/*.pyi",
-            ],
-        },
         # Package Info
-        packages=find_packages(exclude=["test*", "examples*", "tools*", "torchdata.csrc*", "build*"]),
+        packages=find_packages(exclude=["test*", "examples*", "tools*", "build*"]),
         zip_safe=False,
         # C++ Extension Modules
         ext_modules=get_ext_modules(),
-        cmdclass={
-            "build_ext": CMakeBuild,
-            "clean": clean,
-        },
+        cmdclass={"clean": clean},
     )
