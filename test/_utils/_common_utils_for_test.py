@@ -11,9 +11,6 @@ import sys
 import tempfile
 from typing import List, Tuple, TypeVar
 
-from torchdata.datapipes.iter import IterDataPipe
-
-
 T_co = TypeVar("T_co", covariant=True)
 
 
@@ -24,29 +21,8 @@ IS_MACOS = sys.platform == "darwin"
 IS_M1 = IS_MACOS and "arm" in platform.platform()
 
 
-class IDP_NoLen(IterDataPipe):
-    def __init__(self, input_dp) -> None:
-        super().__init__()
-        self.input_dp = input_dp
-
-    def __iter__(self):
-        yield from self.input_dp
-
-
 def get_name(path_and_stream):
     return os.path.basename(path_and_stream[0]), path_and_stream[1]
-
-
-# Given a DataPipe and integer n, iterate the DataPipe for n elements and store the elements into a list
-# Then, reset the DataPipe and return a tuple of two lists
-# 1. A list of elements yielded before the reset
-# 2. A list of all elements of the DataPipe after the reset
-def reset_after_n_next_calls(datapipe: IterDataPipe[T_co], n: int) -> Tuple[List[T_co], List[T_co]]:
-    it = iter(datapipe)
-    res_before_reset = []
-    for _ in range(n):
-        res_before_reset.append(next(it))
-    return res_before_reset, list(datapipe)
 
 
 def create_temp_dir(dir=None):

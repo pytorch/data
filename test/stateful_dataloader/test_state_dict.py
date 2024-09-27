@@ -918,18 +918,6 @@ class TestNumWorkersMismatch_shard3(TestCase):
             self.assertTrue(False, "Error should be of type AssertionError")
 
 
-class TestTorchDataLazyImport_shard3(TestCase):
-    def test_lazy_imports(self) -> None:
-        import torchdata
-
-        self.assertFalse("datapipes" in torchdata.__dict__)
-
-        from torchdata import datapipes as dp, janitor  # noqa
-
-        self.assertTrue("datapipes" in torchdata.__dict__)
-        dp.iter.IterableWrapper([1, 2])
-
-
 class TestConcurrentDataLoaders_shard3(TestCase):
     def test_two_dataloaders(self) -> None:
         dataset = DummyMapDataset(100, shuffle=False)
