@@ -10,9 +10,6 @@ requirements:
   build:
     - cmake
     - ninja
-    # TODO: Enable AWSSDK on windows
-    # - {{ compiler('c') }} # [win]
-    # - {{ compiler('cxx') }} # [win]
     - python
     - setuptools
     - cpuonly
@@ -30,12 +27,10 @@ build:
   string: py{{py}}
   script_env:
     - BUILD_VERSION
-    - BUILD_S3
 
 test:
   imports:
     - torchdata
-    - torchdata.datapipes
     - torchdata.stateful_dataloader
   source_files:
     - test
