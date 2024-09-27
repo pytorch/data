@@ -38,14 +38,13 @@ def compare_sets(set_a, set_b, ignore_set=None):
 
 
 def main():
-    datapipes_folder = os.path.join("torchdata", "datapipes")
     init_file = "__init__.py"
     docs_source_folder = os.path.join("docs", "source")
     exit_code = 0
 
-    for target, ignore_set in zip(["iter", "map", "utils"], [{"IterDataPipe", "Extractor"}, {"MapDataPipe"}, {}]):
-        init_path = os.path.join(datapipes_folder, target, init_file)
-        rst_path = os.path.join(docs_source_folder, "torchdata.datapipes." + target + ".rst")
+    for target, ignore_set in [("stateful_dataloader", {})]:
+        init_path = os.path.join("torchdata", target, init_file)
+        rst_path = os.path.join(docs_source_folder, "torchdata." + target + ".rst")
 
         init_set = collect_init_dps(init_path)
         rst_set = collect_rst_dps(rst_path)

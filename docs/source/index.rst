@@ -37,11 +37,6 @@ Features described in this documentation are classified by release status:
    :caption: API Reference:
 
    torchdata.stateful_dataloader.rst
-   torchdata.datapipes.iter.rst
-   torchdata.datapipes.map.rst
-   torchdata.datapipes.utils.rst
-   dataloader2.rst
-   reading_service.rst
 
 
 .. toctree::
@@ -49,9 +44,6 @@ Features described in this documentation are classified by release status:
    :caption: Tutorial and Examples:
 
    stateful_dataloader_tutorial.rst
-   dp_tutorial.rst
-   dlv2_tutorial.rst
-   examples.rst
 
 
 .. toctree::
@@ -59,8 +51,8 @@ Features described in this documentation are classified by release status:
    :caption: PyTorch Libraries
 
    PyTorch <https://pytorch.org/docs>
+   torchtune <https://pytorch.org/torchtune>
    torchaudio <https://pytorch.org/audio>
-   torchtext <https://pytorch.org/text>
    torchvision <https://pytorch.org/vision>
    TorchElastic <https://pytorch.org/elastic/>
    TorchServe <https://pytorch.org/serve>
