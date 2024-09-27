@@ -12,24 +12,18 @@ import torch.distributed as dist
 
 from torch.distributed.elastic.multiprocessing.errors import record
 from torch.utils.data import DataLoader
-from torchdata.dataloader2 import DataLoader2, DistributedReadingService
 from torchdata.datapipes.iter import IterableWrapper
 
 
-def _get_dataloader(data_length: int, dl2: bool, shuffle: bool, rs=None):
+def _get_dataloader(data_length: int, bool, shuffle: bool, rs=None):
     data_source = IterableWrapper(list(range(data_length)))
 
     dp = data_source.sharding_filter()
     if shuffle:
         dp = dp.shuffle()
 
-    if dl2:
-        if rs is None:
-            rs = DistributedReadingService()
-        dl = DataLoader2(dp, reading_service=rs)
-    else:
-        dp = dp.fullsync()
-        dl = DataLoader(dp)
+    dp = dp.fullsync()
+    dl = DataLoader(dp)
 
     return dl
 
@@ -76,10 +70,6 @@ def main(backend, dl2):
     assert len(results[0]) == len(results[2])
     assert results[0] != results[2]
 
-    # Properly shutdown the process group
-    if isinstance(dl, DataLoader2):
-        dl.shutdown()
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Elastic Training")
@@ -99,8 +89,6 @@ if __name__ == "__main__":
     elif args.mpi:
         backend = "mpi"
 
-    dl2 = True
-    if args.dl1:
-        dl2 = False
+    dl2 = False
 
     main(backend, dl2)
