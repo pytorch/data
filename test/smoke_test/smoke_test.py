@@ -15,6 +15,10 @@ def s3_test():
     from torchdata._torchdata import S3Handler
 
 
+def stateful_dataloader_test():
+    from torchdata.stateful_dataloader import StatefulDataLoader
+
+
 if __name__ == "__main__":
     r"""
     TorchData Smoke Test
@@ -25,3 +29,5 @@ if __name__ == "__main__":
     options = parser.parse_args()
     if options.s3:
         s3_test()
+
+    stateful_dataloader_test()
