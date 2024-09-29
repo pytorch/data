@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 
 class DataSource(ABC):
     @abstractmethod
-    def get_bundle():
+    def get_bundle(i):
         ...
     
     @abstractmethod    
@@ -18,5 +18,5 @@ class DataSource(ABC):
     def get_samples_per_bundle():
         raise NotImplementedError("get_samples_per_bundle is not implemented")
 
-    def prefetch():
+    def prefetch(i):
         raise NotImplementedError("prefetch is not implemented")
