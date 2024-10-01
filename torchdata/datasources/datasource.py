@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import List
 from abc import ABC, abstractmethod
 
 class DataSource(ABC):
@@ -15,7 +16,7 @@ class DataSource(ABC):
     def get_num_bundles():
         ...        
     
-    def get_samples_per_bundle():
+    def get_samples_per_bundle() -> List[int]:
         raise NotImplementedError("get_samples_per_bundle is not implemented")
 
     def prefetch(i):

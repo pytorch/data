@@ -18,10 +18,10 @@ class DataSourceReader():
         raise NotImplementedError("get_sampler is not implemented")
     
     def to_map_dataset(self):
-        raise NotImplementedError("to_map_dataset is not implemented")
+        raise DataSourceMapDataset(self.datasource, self.shuffle)
 
     def to_iterable_dataset(self):
-        raise NotImplementedError("to_iterable_Dataset is not implemented")
+        return DataSourceIterableDataset(self.datasource, self.shuffle)
 
 class DataSourceIterableDataset(IterableDataset):
     def __init__(self, datasource: DataSource, shuffle: bool):
@@ -47,16 +47,16 @@ class DataSourceIterableDataset(IterableDataset):
                 seed=torch.initial_seed().seed+epoch
             )
             # Shard the bundles across workers
-            bundle_list_per_rank = bundle_list[rank::world_size]
-            for bundle_id in bundle_list_per_rank[worker_id::num_workers_per_rank]:
+            for bundle_id in bundle_list[global_worker_rank::num_global_workers]:
                 bundle = self.datasource.get_bundle(bundle_id)
                 yield from bundle
             epoch += 1
 
-class DataSourceMapStyleDataset(Dataset):
+class DataSourceMapDataset(Dataset):
     def __init__(self, datasource: DataSource, shuffle: bool):
         self.shuffle = shuffle
         self.datasource = datasource
+        self.rows_per_bundle = self.datasource.get_samples_per_bundle()
     
     def __getitem__(self, idx):
         raise NotImplementedError("__getitem__ is not implemented")
