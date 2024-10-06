@@ -61,20 +61,21 @@ class WebDatasetIterDataPipe(IterDataPipe[Dict]):
         a DataPipe yielding a stream of dictionaries
 
     Examples:
-        >>> from torchdata.datapipes.iter import FileLister, FileOpener
-        >>>
-        >>> def decode(item):
-        >>>     key, value = item
-        >>>     if key.endswith(".txt"):
-        >>>         return key, value.read().decode("utf-8")
-        >>>     if key.endswith(".bin"):
-        >>>         return key, value.read().decode("utf-8")
-        >>>
-        >>> datapipe1 = FileLister("test/_fakedata", "wds*.tar")
-        >>> datapipe2 = FileOpener(datapipe1, mode="b")
-        >>> dataset = datapipe2.load_from_tar().map(decode).webdataset()
-        >>> for obj in dataset:
-        >>>     print(obj)
+
+    .. testcode::
+
+        def decode(item):
+            key, value = item
+            if key.endswith(".txt"):
+                return key, value.read().decode("utf-8")
+            if key.endswith(".bin"):
+                return key, value.read().decode("utf-8")
+
+        files_dp = FileLister(".", "*.tar").open_files(mode="b")
+        dataset = files_dp.load_from_tar().map(decode).webdataset()
+        for obj in dataset:
+            print(obj)
+
     """
 
     def __init__(self, source_datapipe: IterDataPipe[List[Union[Dict, List]]]) -> None:

@@ -92,17 +92,22 @@ When adding a new DataPipe, there are few things that need to be done to ensure 
    [test requirements](https://github.com/pytorch/data/issues/106) that we have.
    - One test that is commonly missed is the serialization test. Please add the new DataPipe to
      [`test_serialization.py`](https://github.com/pytorch/data/blob/main/test/test_serialization.py).
-   - If your test requires interacting with files in the file system (e.g. opening a `csv` or `tar` file, we prefer
-     those files to be generated during the test (see `test_local_io.py`). If the file is on a remote server, see
-     `test_remote_io.py`.
+   - If your test requires interacting with files in the file system (e.g. opening a `csv` or `tar` file), we prefer
+     those files to be generated during the test (see
+     [`test_local_io.py`](https://github.com/pytorch/data/blob/main/test/test_local_io.py)). If the file is on a remote
+     server, see [`test_remote_io.py`](https://github.com/pytorch/data/blob/main/test/test_remote_io.py).
 3. Documentation - ensure that the DataPipe has docstring, usage example, and that it is added to the right category of
-   the right RST file to be rendered.
-   - If your DataPipe has a functional form (i.e. `@functional_datapipe(...)`), include at the
+   the right RST file (in [`docs/source`](https://github.com/pytorch/data/tree/main/docs/source)) to be rendered.
+   - If your DataPipe has a functional form (i.e. `@functional_datapipe(...)`), include it at the
      [end of the first sentence](https://github.com/pytorch/data/blob/main/torchdata/datapipes/iter/util/combining.py#L25)
      of your docstring. This will make sure it correctly shows up in the
      [summary table](https://pytorch.org/data/main/torchdata.datapipes.iter.html#archive-datapipes) of our
      documentation.
-4. Import - import the DataPipe in the correct `__init__.py` file.
+   - For usage examples we support both standard doctest-style interactive Python sessions and code-output-style blocks.
+     See [sphinx doctest](https://www.sphinx-doc.org/en/master/usage/extensions/doctest.html) for more information. To
+     build the documentation and validate that your example works please refer to
+     [`docs`](https://github.com/pytorch/data/tree/main/docs).
+4. Import - import the DataPipe in the correct `__init__.py` file and add it to the `__all__` list.
 5. Interface - if the DataPipe has a functional form, make sure that is generated properly by `gen_pyi.py` into the
    relevant interface file.
    - You can re-generate the pyi files by re-running `pip install -e .`, then you can examine the new outputs.
