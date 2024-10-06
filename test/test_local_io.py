@@ -18,6 +18,7 @@ import time
 import unittest
 import warnings
 import zipfile
+import zlib
 from functools import partial
 
 from json.decoder import JSONDecodeError
@@ -51,6 +52,7 @@ from torchdata.datapipes.iter import (
     XzFileLoader,
     ZipArchiveLoader,
 )
+from torchdata.datapipes.iter.util.decompressor import _ZlibFile
 
 try:
     import iopath
@@ -557,6 +559,13 @@ class TestDataPipeLocalIO(expecttest.TestCase):
             with open(self.temp_files[0], "rb") as f:
                 k.write(f.read())
 
+    def _write_single_zlib_file(self):
+        import zlib
+
+        with open(f"{self.temp_dir.name}/temp.zlib", "wb") as k:
+            with open(self.temp_files[0], "rb") as f:
+                k.write(zlib.compress(f.read()))
+
     def test_decompressor_iterdatapipe(self):
         self._write_test_tar_files()
         self._write_test_tar_gz_files()
@@ -564,6 +573,7 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         self._write_test_zip_files()
         self._write_test_xz_files()
         self._write_test_bz2_files()
+        self._write_single_zlib_file()
 
         # Functional Test: work with .tar files
         tar_file_dp = FileLister(self.temp_dir.name, "*.tar")
@@ -606,6 +616,14 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         bz2_decompress_dp = Decompressor(bz2_load_dp, file_type="bz2")
         self._decompressor_bz2_test_helper(bz2_decompress_dp)
 
+        # Functional Test: work with .zlib files
+        zlib_file_dp = IterableWrapper([f"{self.temp_dir.name}/temp.zlib"])
+        zlib_load_dp = FileOpener(zlib_file_dp, mode="b")
+        zlib_decompress_dp = Decompressor(zlib_load_dp, file_type="zlib")
+        for _, zlib_stream in zlib_decompress_dp:
+            with open(self.temp_files[0], "rb") as f:
+                self.assertEqual(f.read(), zlib_stream.read())
+
         # Functional Test: work without file type as input for .tar files
         tar_decompress_dp = Decompressor(tar_load_dp, file_type=None)
         self._decompressor_tar_test_helper(self.temp_files, tar_decompress_dp)
@@ -621,6 +639,12 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # Functional Test: work without file type as input for .bz2 files
         bz2_decompress_dp = Decompressor(bz2_load_dp, file_type=None)
         self._decompressor_bz2_test_helper(bz2_decompress_dp)
+
+        # Functional Test: work without file type as input for .zlib files
+        zlib_decompress_dp = Decompressor(zlib_load_dp, file_type=None)
+        for _, zlib_stream in zlib_decompress_dp:
+            with open(self.temp_files[0], "rb") as f:
+                self.assertEqual(f.read(), zlib_stream.read())
 
         # Functional Test: Compression Type is works for both upper and lower case strings
         tar_decompress_dp = Decompressor(tar_load_dp, file_type="TAr")
@@ -639,6 +663,70 @@ class TestDataPipeLocalIO(expecttest.TestCase):
         # __len__ Test: doesn't have valid length
         with self.assertRaisesRegex(TypeError, "has no len"):
             len(tar_decompress_dp)
+
+    def test_zlibfile_readall(self):
+        uncompressed_data_test_cases = [b"", b"some data", 10_000 * b"some data"]
+        for uncompressed_data in uncompressed_data_test_cases:
+            compressed_file = _ZlibFile(io.BytesIO(zlib.compress(uncompressed_data)))
+            self.assertEqual(compressed_file.readall(), uncompressed_data)
+
+    def test_zlibfile_read(self):
+        uncompressed_data_test_cases = [b"", b"some data", 10_000 * b"some data"]
+        num_bytes_to_read_test_cases = [-1, 0, 1, 2, 64_000, 128_000]
+        for uncompressed_data in uncompressed_data_test_cases:
+            for num_bytes_to_read in num_bytes_to_read_test_cases:
+                compressed_file = _ZlibFile(io.BytesIO(zlib.compress(uncompressed_data)))
+                result = bytearray()
+                chunk = compressed_file.read(num_bytes_to_read)
+                while chunk:
+                    result.extend(chunk)
+                    chunk = compressed_file.read(num_bytes_to_read)
+                if num_bytes_to_read == 0:
+                    self.assertEqual(result, b"")
+                else:
+                    self.assertEqual(result, uncompressed_data)
+
+    def test_zlibfile_stream_ends_prematurely(self):
+        compressed_bytes = zlib.compress(b"some data")
+        # slice compressed bytes so that the stream ends prematurely
+        compressed_file = _ZlibFile(io.BytesIO(compressed_bytes[:-2]))
+        with self.assertRaises(EOFError):
+            compressed_file.read()
+
+    def test_zlibfile_iteration(self):
+        # Ensure there are at least io.DEFAULT_BUFFER_SIZE bytes so that multiple read calls are
+        # performed under-the-hood
+        uncompressed_bytes = b"1234\n56\n\n78\n" + b"9" * io.DEFAULT_BUFFER_SIZE
+        compressed_bytes = zlib.compress(uncompressed_bytes)
+
+        # Test _ZlibFile.__next__
+        compressed_file = _ZlibFile(io.BytesIO(compressed_bytes))
+        self.assertEqual(next(compressed_file), b"1234\n")
+        self.assertEqual(next(compressed_file), b"56\n")
+        self.assertEqual(next(compressed_file), b"\n")
+        self.assertEqual(next(compressed_file), b"78\n")
+        self.assertEqual(next(compressed_file), b"9" * io.DEFAULT_BUFFER_SIZE)
+        with self.assertRaises(StopIteration):
+            next(compressed_file)
+
+        # Test _ZlibFile iterator creation as performed in StreamWrapper
+        def create_iterator():
+            yield from _ZlibFile(io.BytesIO(compressed_bytes))
+
+        self.assertEqual(list(create_iterator()), [b"1234\n", b"56\n", b"\n", b"78\n", b"9" * io.DEFAULT_BUFFER_SIZE])
+
+        # Test that interleaving calls to `read` with calls to `next` works as expected
+        compressed_file = _ZlibFile(io.BytesIO(compressed_bytes))
+        compressed_file.read(2)
+        self.assertEqual(next(compressed_file), b"34\n")
+        self.assertEqual(compressed_file.read(5), b"56\n\n7")
+        self.assertEqual(next(compressed_file), b"8\n")
+        self.assertEqual(compressed_file.read(3), b"999")
+        self.assertEqual(next(compressed_file), b"9" * (io.DEFAULT_BUFFER_SIZE - 3))
+        with self.assertRaises(StopIteration):
+            next(compressed_file)
+        self.assertEqual(compressed_file.read(1), b"")
+        self.assertEqual(compressed_file.read(), b"")
 
     def _write_text_files(self):
         name_to_data = {"1.text": b"DATA", "2.text": b"DATA", "3.text": b"DATA"}
