@@ -1,0 +1,36 @@
+# pyre-unsafe
+import queue
+import threading
+from typing import Iterable
+
+from torch._utils import ExceptionWrapper
+
+
+def _populate_queue(
+    source: Iterable,
+    q: queue.Queue,
+    stop_event: threading.Event,
+    semaphore: threading.BoundedSemaphore,
+):
+    """Note that this is only intended to be used
+    by a single thread at once. Each instance creates its own iter for source so
+    if this is called with multiple threads, you may get duplicates if
+    source is not sharded properly.
+    """
+    src_iter = iter(source)
+    while not stop_event.is_set():
+        if not semaphore.acquire(blocking=True, timeout=5.0):
+            continue
+        try:
+            x = next(src_iter)  # FIXME: This may hang!
+        except StopIteration as e:
+            q.put(e)
+            stop_event.set()
+            break
+        except Exception:
+            x = ExceptionWrapper(where="in pin memory thread for device TODO: get device_id")
+            stop_event.set()
+        try:
+            q.put(x, block=False)  # Semaphore should prevent this from throwing
+        except queue.Full:
+            raise RuntimeError("Queue should not be full")
