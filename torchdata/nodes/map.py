@@ -2,41 +2,44 @@
 # import multiprocessing as mp
 import queue
 import threading
-from typing import Callable, Literal
+from typing import Callable, List, Literal, TypeVar, Union
 
 import torch
 
 from torch._utils import ExceptionWrapper
 from torch.utils.data.sampler import Iterator
 
-from torchdata.nodes import BaseNode
+from torchdata.nodes import BaseNode, T
 
 from ._apply_udf import _apply_udf
 
 from ._populate_queue import _populate_queue
 
 
-class Mapper[X, Y](BaseNode[Y]):
+X = TypeVar("X")
+
+
+class Mapper(BaseNode[T]):
     def __init__(
         self,
         source: BaseNode[X],
-        map_fn: Callable[[X], Y],
+        map_fn: Callable[[X], T],
     ):
         self.source = source
         self.map_fn = map_fn
 
-    def iterator(self) -> Iterator[Y]:
+    def iterator(self) -> Iterator[T]:
         for item in self.source:
             if isinstance(item, ExceptionWrapper):
                 item.reraise()
             yield self.map_fn(item)
 
 
-class ParallelMapper[X, Y](BaseNode[Y]):
+class ParallelMapper(BaseNode[T]):
     def __init__(
         self,
         source: BaseNode[X],
-        map_fn: Callable[[X], Y],
+        map_fn: Callable[[X], T],
         num_workers: int,
         in_order: bool = True,
         method: Literal["thread", "process"] = "thread",
@@ -47,8 +50,8 @@ class ParallelMapper[X, Y](BaseNode[Y]):
         self.num_workers = num_workers
         self.in_order = in_order
 
-        self.in_q = queue.Queue() if method == "thread" else mp.Queue()
-        self.out_q = queue.Queue() if method == "thread" else mp.Queue()
+        self.in_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp.Queue()
+        self.out_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp.Queue()
         self.sem = threading.BoundedSemaphore(value=2 * num_workers)
 
         self._started = False
@@ -58,7 +61,7 @@ class ParallelMapper[X, Y](BaseNode[Y]):
             target=_populate_queue, args=(self.source, self.in_q, self._stop, self.sem)
         )
 
-        self._map_threads = []
+        self._map_threads: List[Union[threading.Thread, mp.Process]] = []
         for worker_id in range(self.num_workers):
             args = (
                 worker_id,
@@ -81,7 +84,7 @@ class ParallelMapper[X, Y](BaseNode[Y]):
                 t.start()
             self._started = True
 
-    def iterator(self) -> Iterator[Y]:
+    def iterator(self) -> Iterator[T]:
         while True:
             if self._stop.is_set():
                 self._mp_stop.set()
@@ -92,16 +95,13 @@ class ParallelMapper[X, Y](BaseNode[Y]):
                 continue
             self.sem.release()
             if isinstance(item, StopIteration):
-                print("Got stop iteration")
                 break
-            print("ParallelMapper.iterator()", item)
             yield item
 
     def __del__(self):
         self._shutdown()
 
     def _shutdown(self):
-        print("Shutdown called")
         if self._started:
             self._stop.set()
             for _ in range(5):
@@ -115,4 +115,3 @@ class ParallelMapper[X, Y](BaseNode[Y]):
                         break
 
             self._started = False
-        print("Shutdown done")
