@@ -19,17 +19,15 @@ def _populate_queue(
     """
     src_iter = iter(source)
     while not stop_event.is_set():
-        if not semaphore.acquire(blocking=True, timeout=5.0):
+        if not semaphore.acquire(blocking=True, timeout=1.0):
             continue
         try:
             x = next(src_iter)  # FIXME: This may hang!
         except StopIteration as e:
             q.put(e)
-            stop_event.set()
             break
         except Exception:
-            x = ExceptionWrapper(where="in pin memory thread for device TODO: get device_id")
-            stop_event.set()
+            x = ExceptionWrapper(where="in _populate_queue")
         try:
             q.put(x, block=False)  # Semaphore should prevent this from throwing
         except queue.Full:

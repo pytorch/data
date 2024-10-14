@@ -44,7 +44,7 @@ def _pin_memory_loop(
             data = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
         except queue.Empty:
             return
-        if not done_event.is_set() and not isinstance(data, ExceptionWrapper):
+        if not done_event.is_set() and not isinstance(data, ExceptionWrapper) and not isinstance(data, StopIteration):
             try:
                 data = pin_memory(data, device)
             except Exception:
@@ -52,8 +52,6 @@ def _pin_memory_loop(
         while not done_event.is_set():
             try:
                 out_queue.put(data, timeout=MP_STATUS_CHECK_INTERVAL)
-                if isinstance(data, ExceptionWrapper) or isinstance(data, StopIteration):
-                    done_event.set()
                 break
             except queue.Full:
                 continue
@@ -127,17 +125,15 @@ class PinMemory(BaseNode[T]):
             self.read_thread.start()
             self.pin_memory_thread.start()
             self._started = True
-        exception = False
-        while not exception:
+        while True:
             try:
                 value = self.out_q.get(block=True, timeout=0.1)
                 self.sem.release()
                 if isinstance(value, StopIteration):
                     break
-                if isinstance(value, ExceptionWrapper):
-                    exception = True
-                    self._shutdown()
                 yield value
+                if isinstance(value, ExceptionWrapper):
+                    break
             except queue.Empty:
                 continue
         self._shutdown()

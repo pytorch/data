@@ -2,7 +2,6 @@ import testslide
 import torch
 from torchdata.nodes.batch import Batcher
 from torchdata.nodes.prefetch import Prefetcher
-from torchdata.nodes.root import Root
 
 from .utils import MockSource
 
@@ -12,8 +11,7 @@ class TestPrefetcher(testslide.TestCase):
         batch_size = 6
         src = MockSource(num_samples=20)
         node = Batcher(src, batch_size=batch_size, drop_last=True)
-        node = Prefetcher(node, prefetch_factor=2)
-        root = Root(node)
+        root = Prefetcher(node, prefetch_factor=2)
 
         # Test multi epoch shutdown and restart
         for _ in range(2):

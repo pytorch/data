@@ -5,7 +5,6 @@ from torchdata.nodes.batch import Batcher
 from torchdata.nodes.map import Mapper
 from torchdata.nodes.pin_memory import PinMemory
 from torchdata.nodes.prefetch import Prefetcher
-from torchdata.nodes.root import Root
 
 from .utils import Collate, MockSource
 
@@ -17,8 +16,7 @@ class TestPinMemory(testslide.TestCase):
         node = Batcher(src, batch_size=batch_size)
         node = Mapper(node, Collate())
         node = PinMemory(node)
-        node = Prefetcher(node, prefetch_factor=2)
-        root = Root(node)
+        root = Prefetcher(node, prefetch_factor=2)
 
         # 2 epochs
         for epoch in range(2):
@@ -41,8 +39,7 @@ class TestPinMemory(testslide.TestCase):
         node = Batcher(node, batch_size=batch_size)
         node = Mapper(node, Collate())
         node = PinMemory(node)
-        node = Prefetcher(node, prefetch_factor=2)
-        root = Root(node)
+        root = Prefetcher(node, prefetch_factor=2)
 
         with self.assertRaisesRegex(ValueError, "test exception"):
             list(root)

@@ -31,8 +31,9 @@ class Mapper(BaseNode[T]):
     def iterator(self) -> Iterator[T]:
         for item in self.source:
             if isinstance(item, ExceptionWrapper):
-                item.reraise()
-            yield self.map_fn(item)
+                yield item
+            else:
+                yield self.map_fn(item)
 
 
 class ParallelMapper(BaseNode[T]):
@@ -66,8 +67,6 @@ class ParallelMapper(BaseNode[T]):
                 worker_id,
                 self.in_q,
                 self.out_q,
-                # self.sem,
-                None,
                 self.in_order,
                 self.udf,
                 self._stop if method == "thread" else self._mp_stop,
@@ -86,16 +85,27 @@ class ParallelMapper(BaseNode[T]):
     def iterator(self) -> Iterator[T]:
         while True:
             if self._stop.is_set():
+                yield from self._flush_queues()
                 self._mp_stop.set()
                 break
             try:
-                item = self.out_q.get(block=True, timeout=5.0)
+                item = self.out_q.get(block=True, timeout=1.0)
+                self.sem.release()
             except queue.Empty:
                 continue
-            self.sem.release()
             if isinstance(item, StopIteration):
+                yield from self._flush_queues()
                 break
             yield item
+
+        self._stop.set()
+        self._mp_stop.set()
+
+    def _flush_queues(self):
+        while self.sem._value < 2 * self.num_workers:
+            x = self.out_q.get(block=True, timeout=5.0)
+            self.sem.release()
+            yield x
 
     def __del__(self):
         self._shutdown()
@@ -103,6 +113,7 @@ class ParallelMapper(BaseNode[T]):
     def _shutdown(self):
         if self._started:
             self._stop.set()
+            self._mp_stop.set()
             for _ in range(5):
                 self._read_thread.join(timeout=0.1)
                 if not self._read_thread.is_alive():
