@@ -5,17 +5,16 @@ from typing import Iterator, Optional
 
 from torch._utils import ExceptionWrapper
 
-from torch.utils.data import IterableDataset
-from torchdata.nodes import BaseNode
+from torchdata.nodes import BaseNode, T
 
 from ._populate_queue import _populate_queue
 
 
-class Prefetcher[T](BaseNode[T]):
-    def __init__(self, source: IterableDataset, prefetch_factor: int):
+class Prefetcher(BaseNode[T]):
+    def __init__(self, source: BaseNode[T], prefetch_factor: int):
         self.source = source
         self.prefetch_factor = prefetch_factor
-        self.q = queue.Queue(maxsize=prefetch_factor)
+        self.q: queue.Queue = queue.Queue(maxsize=prefetch_factor)
         self.sem = threading.BoundedSemaphore(value=prefetch_factor)
         self._stop_event = threading.Event()
         self.thread: Optional[threading.Thread] = None

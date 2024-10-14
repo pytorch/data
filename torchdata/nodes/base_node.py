@@ -1,9 +1,12 @@
-from typing import Iterator
+from typing import Generic, Iterator, TypeVar
 
 import torch.utils.data
 
 
-class BaseNode(torch.utils.data.IterableDataset):
+T = TypeVar("T")
+
+
+class BaseNode(torch.utils.data.IterableDataset, Generic[T]):
     def iterator(self) -> Iterator[T]:
         raise NotImplementedError()
 

@@ -2,7 +2,7 @@
 import queue
 import threading
 
-from typing import Iterator
+from typing import Iterator, Optional
 
 import torch
 from torch._utils import ExceptionWrapper
@@ -10,12 +10,18 @@ from torch._utils import ExceptionWrapper
 from torch.utils.data._utils import MP_STATUS_CHECK_INTERVAL
 
 from torch.utils.data._utils.pin_memory import pin_memory
-from torchdata.nodes import BaseNode
+from torchdata.nodes import BaseNode, T
 
 from ._populate_queue import _populate_queue
 
 
-def _pin_memory_loop(in_queue, out_queue, device_id, done_event, device):
+def _pin_memory_loop(
+    in_queue: queue.Queue,
+    out_queue: queue.Queue,
+    device_id: str,
+    done_event: threading.Event,
+    device: str,
+):
     # this is fork of from torch.utils.data._utils.pin_memory import _pin_memory_loop
     # to remove the index tuples
 
@@ -42,15 +48,11 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event, device):
             try:
                 data = pin_memory(data, device)
             except Exception:
-                data = ExceptionWrapper(
-                    where=f"in pin memory thread for device {device_id}"
-                )
+                data = ExceptionWrapper(where=f"in pin memory thread for device {device_id}")
         while not done_event.is_set():
             try:
                 out_queue.put(data, timeout=MP_STATUS_CHECK_INTERVAL)
-                if isinstance(data, ExceptionWrapper) or isinstance(
-                    data, StopIteration
-                ):
+                if isinstance(data, ExceptionWrapper) or isinstance(data, StopIteration):
                     done_event.set()
                 break
             except queue.Full:
@@ -64,7 +66,7 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event, device):
         do_one_step()
 
 
-class PinMemory[T](BaseNode[T]):
+class PinMemory(BaseNode[T]):
     def __init__(
         self,
         source: BaseNode[T],
@@ -72,8 +74,8 @@ class PinMemory[T](BaseNode[T]):
     ):
         self.source = source
 
-        self.in_q = queue.Queue()
-        self.out_q = queue.Queue()
+        self.in_q: queue.Queue = queue.Queue()
+        self.out_q: queue.Queue = queue.Queue()
         self.sem = threading.BoundedSemaphore(value=1)
 
         self._started = False
@@ -94,8 +96,8 @@ class PinMemory[T](BaseNode[T]):
         else:
             self.current_device = torch.cuda.current_device()  # choose cuda for default
 
-        self.read_thread = None
-        self.pin_memory_thread = None
+        self.read_thread: Optional[threading.Thread] = None
+        self.pin_memory_thread: Optional[threading.Thread] = None
 
     def iterator(self) -> Iterator[T]:
         if not self._started:

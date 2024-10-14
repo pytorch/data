@@ -1,4 +1,4 @@
-from .base_node import BaseNode
+from .base_node import BaseNode, T
 from .batch import Batcher
 from .map import Mapper, ParallelMapper
 from .pin_memory import PinMemory
@@ -12,4 +12,5 @@ __all__ = [
     "Prefetcher",
     "ParallelMapper",
     "PinMemory",
+    "T",
 ]
