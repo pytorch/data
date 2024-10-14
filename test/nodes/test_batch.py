@@ -1,7 +1,6 @@
 import testslide
 import torch
 from torchdata.nodes.batch import Batcher
-from torchdata.nodes.root import Root
 
 from .utils import MockSource
 
@@ -23,8 +22,7 @@ class TestBatcher(testslide.TestCase):
     def test_batcher_drop_last_false(self) -> None:
         batch_size = 6
         src = MockSource(num_samples=20)
-        node = Batcher(src, batch_size=batch_size, drop_last=False)
-        root = Root(node)
+        root = Batcher(src, batch_size=batch_size, drop_last=False)
 
         results = list(root)
         self.assertEqual(len(results), 4)
