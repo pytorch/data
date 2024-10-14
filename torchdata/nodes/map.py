@@ -2,12 +2,11 @@
 # import multiprocessing as mp
 import queue
 import threading
-from typing import Callable, List, Literal, TypeVar, Union
+from typing import Callable, Iterator, List, Literal, TypeVar, Union
 
 import torch.multiprocessing as mp
 
 from torch._utils import ExceptionWrapper
-from torch.utils.data.sampler import Iterator
 
 from torchdata.nodes import BaseNode, T
 
