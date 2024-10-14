@@ -4,7 +4,7 @@ import queue
 import threading
 from typing import Callable, List, Literal, TypeVar, Union
 
-import torch
+import torch.multiprocessing as mp
 
 from torch._utils import ExceptionWrapper
 from torch.utils.data.sampler import Iterator
@@ -44,7 +44,6 @@ class ParallelMapper(BaseNode[T]):
         in_order: bool = True,
         method: Literal["thread", "process"] = "thread",
     ):
-        mp = torch.multiprocessing
         self.source = source
         self.udf = map_fn
         self.num_workers = num_workers
