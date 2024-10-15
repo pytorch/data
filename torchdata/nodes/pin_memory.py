@@ -5,6 +5,7 @@ import threading
 from typing import Iterator, Optional
 
 import torch
+import torch.multiprocessing
 from torch._utils import ExceptionWrapper
 
 from torch.utils.data._utils import MP_STATUS_CHECK_INTERVAL
