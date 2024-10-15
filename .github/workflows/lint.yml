@@ -35,10 +35,10 @@ jobs:
       - name: Get PyTorch Channel
         shell: bash
         run: |
+          BASE="d3kup0pazkvub8.cloudfront.net"
           if [[ "${{ github.base_ref }}" == release/* ]] || [[ "${{ github.ref }}" == refs/heads/release/* ]] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            PT_CHANNEL="https://download.pytorch.org/whl/test/cpu/torch_test.html"
+            PT_CHANNEL="https://$BASE/whl/test/cpu"
           else
-            BASE="d3kup0pazkvub8.cloudfront.net"
             PT_CHANNEL="https://$BASE/whl/nightly/cpu"
           fi
           echo "value=$PT_CHANNEL" >> $GITHUB_OUTPUT

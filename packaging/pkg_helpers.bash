@@ -135,13 +135,14 @@ setup_pip_pytorch_version() {
   if [[ -z "$PYTORCH_VERSION" ]]; then
     # Install latest prerelease version of torch, per our nightlies, consistent
     # with the requested cuda version
-    pip_install --pre torch -f "https://download.pytorch.org/whl/nightly/${WHEEL_DIR}"
+    BASE="d3kup0pazkvub8.cloudfront.net"
+    pip_install --pre torch -f "https://$BASE/whl/nightly/${WHEEL_DIR}"
     # CUDA and CPU are ABI compatible on the CPU-only parts, so strip
     # in this case
     export PYTORCH_VERSION="$(pip show torch | grep ^Version: | sed 's/Version:  *//' | sed 's/+.\+//')"
   else
     pip_install "torch==$PYTORCH_VERSION$PYTORCH_VERSION_SUFFIX" \
-      --index-url "https://download.pytorch.org/whl/${UPLOAD_CHANNEL}/${WHEEL_DIR}"
+      --index-url "https://$BASE/whl/${UPLOAD_CHANNEL}/${WHEEL_DIR}"
   fi
 }
 
