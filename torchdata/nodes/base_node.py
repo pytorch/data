@@ -1,8 +1,6 @@
-import threading
 from typing import Generic, Iterator, TypeVar
 
 import torch.utils.data
-from torch._utils import ExceptionWrapper
 
 
 T = TypeVar("T")
@@ -18,9 +16,4 @@ class BaseNode(torch.utils.data.IterableDataset, Generic[T]):
         raise NotImplementedError()
 
     def __iter__(self) -> Iterator[T]:
-        # Do not override this method, override iterator() instead.
-        for x in self.iterator():
-            if isinstance(x, ExceptionWrapper) and threading.main_thread() is threading.current_thread():
-                # We re-raise exceptions as early as possible once we're in the main thread
-                x.reraise()
-            yield x
+        yield from self.iterator()

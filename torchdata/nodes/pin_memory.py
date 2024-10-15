@@ -125,17 +125,26 @@ class PinMemory(BaseNode[T]):
             self.read_thread.start()
             self.pin_memory_thread.start()
             self._started = True
+
+        exception: Optional[ExceptionWrapper] = None
         while True:
             try:
-                value = self.out_q.get(block=True, timeout=0.1)
-                self.sem.release()
-                if isinstance(value, StopIteration):
-                    break
-                yield value
-                if isinstance(value, ExceptionWrapper):
-                    break
+                item = self.out_q.get(block=True, timeout=0.1)
             except queue.Empty:
                 continue
+
+            self.sem.release()
+            if isinstance(item, StopIteration):
+                break
+            elif isinstance(item, ExceptionWrapper):
+                exception = item
+                break
+            yield item
+
+        self._populate_queue_stop_event.set()
+        self._pin_memory_stop_event.set()
+        if exception is not None:
+            exception.reraise()
         self._shutdown()
 
     def __del__(self):
