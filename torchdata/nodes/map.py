@@ -2,7 +2,7 @@
 # import multiprocessing as mp
 import queue
 import threading
-from typing import Callable, Iterator, List, Literal, TypeVar, Union
+from typing import Callable, Iterator, List, Literal, Optional, TypeVar, Union
 
 import torch.multiprocessing as mp
 
@@ -29,10 +29,7 @@ class Mapper(BaseNode[T]):
 
     def iterator(self) -> Iterator[T]:
         for item in self.source:
-            if isinstance(item, ExceptionWrapper):
-                yield item
-            else:
-                yield self.map_fn(item)
+            yield self.map_fn(item)
 
 
 class ParallelMapper(BaseNode[T]):
@@ -59,29 +56,32 @@ class ParallelMapper(BaseNode[T]):
         self._read_thread = threading.Thread(
             target=_populate_queue, args=(self.source, self.in_q, self._stop, self.sem)
         )
+        self._method = method
 
         self._map_threads: List[Union[threading.Thread, mp.Process]] = []
-        for worker_id in range(self.num_workers):
-            args = (
-                worker_id,
-                self.in_q,
-                self.out_q,
-                self.in_order,
-                self.udf,
-                self._stop if method == "thread" else self._mp_stop,
-            )
-            self._map_threads.append(
-                threading.Thread(target=_apply_udf, args=args)
-                if method == "thread"
-                else mp.Process(target=_apply_udf, args=args)
-            )
+
+    def iterator(self) -> Iterator[T]:
         if not self._started:
+            for worker_id in range(self.num_workers):
+                args = (
+                    worker_id,
+                    self.in_q,
+                    self.out_q,
+                    self.in_order,
+                    self.udf,
+                    self._stop if self._method == "thread" else self._mp_stop,
+                )
+                self._map_threads.append(
+                    threading.Thread(target=_apply_udf, args=args)
+                    if self._method == "thread"
+                    else mp.Process(target=_apply_udf, args=args)
+                )
             self._read_thread.start()
             for t in self._map_threads:
                 t.start()
             self._started = True
 
-    def iterator(self) -> Iterator[T]:
+        exception: Optional[ExceptionWrapper] = None
         while True:
             if self._stop.is_set():
                 yield from self._flush_queues()
@@ -95,10 +95,16 @@ class ParallelMapper(BaseNode[T]):
             if isinstance(item, StopIteration):
                 yield from self._flush_queues()
                 break
+            elif isinstance(item, ExceptionWrapper):
+                exception = item
+                break
             yield item
 
         self._stop.set()
         self._mp_stop.set()
+        if exception is not None:
+            exception.reraise()
+        self._shutdown()
 
     def _flush_queues(self):
         while self.sem._value < 2 * self.num_workers:

@@ -27,18 +27,23 @@ class Prefetcher(BaseNode[T]):
                 args=(self.source, self.q, self._stop_event, self.sem),
             )
             self.thread.start()
+
+        exception: Optional[ExceptionWrapper] = None
         while True:
             try:
-                value = self.q.get(block=True, timeout=0.1)
-                self.sem.release()
-                if isinstance(value, StopIteration):
-                    break
-                yield value
-                if isinstance(value, ExceptionWrapper):
-                    self._stop_event.set()
-                    break
+                item = self.q.get(block=True, timeout=0.1)
             except queue.Empty:
                 continue
+            self.sem.release()
+            if isinstance(item, StopIteration):
+                break
+            elif isinstance(item, ExceptionWrapper):
+                exception = item
+                break
+            yield item
+        self._stop_event.set()
+        if exception is not None:
+            exception.reraise()
         self._shutdown()
 
     def __del__(self):

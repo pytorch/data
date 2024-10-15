@@ -10,8 +10,6 @@ def _apply_udf(worker_id, in_q, out_q, in_order, udf, stop_event):
     while True:
         if stop_event.is_set() and in_q.empty():
             break
-        else:
-            print(worker_id, stop_event, in_q)
 
         try:  # TODO: implement in-order execution
             x = in_q.get(block=True, timeout=1.0)
