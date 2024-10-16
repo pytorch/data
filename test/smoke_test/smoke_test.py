@@ -8,7 +8,6 @@
 import argparse
 
 import torchdata
-import torchdata.dataloader2
 import torchdata.datapipes
 
 
