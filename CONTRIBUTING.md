@@ -43,7 +43,7 @@ For question related to the usage of this library, please post a question on the
 conda install pytorch -c pytorch-nightly
 # or with pip (see https://pytorch.org/get-started/locally/)
 # pip install numpy
-# pip install --pre torch --index-url https://d3kup0pazkvub8.cloudfront.net/whl/nightly/cpu
+# pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/cpu
 ```
 
 ### Install TorchData
