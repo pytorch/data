@@ -99,7 +99,7 @@ The nightly version of TorchData is also provided and updated daily from main br
 Using pip:
 
 ```bash
-pip install --pre torchdata --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+pip install --pre torchdata --index-url https://download.pytorch.org/whl/nightly/cpu
 ```
 
 Using conda:
