@@ -34,9 +34,9 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ github.base_ref }}" == release/* ]] || [[ "${{ github.ref }}" == refs/heads/release/* ]] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            PT_CHANNEL="https://download.pytorch.org/whl/test/cpu/torch_test.html"
+            PT_CHANNEL="https://download.pytorch.org/whl/test/cpu"
           else
-            PT_CHANNEL="https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html"
+            PT_CHANNEL="https://download.pytorch.org/whl/nightly/cpu"
           fi
           echo "value=$PT_CHANNEL" >> $GITHUB_OUTPUT
         id: pytorch_channel
@@ -66,7 +66,7 @@ jobs:
         run: |
           pip3 install -r requirements.txt
           pip3 install networkx
-          pip3 install --pre torch -f "${{ steps.pytorch_channel.outputs.value }}"
+          pip3 install --pre torch --index-url "${{ steps.pytorch_channel.outputs.value }}"
           pip3 install cmake ninja
           echo "/home/runner/.local/bin" >> $GITHUB_PATH
       - name: Build TorchData
