@@ -395,7 +395,7 @@ jobs:
           if [[ $PIP_CHANNEL == 'official' ]]; then
             pip3 install "$PYTORCH_VERSION" -f https://download.pytorch.org/whl/torch_stable.html
           else
-            pip3 install --pre "$PYTORCH_VERSION" -f "https://download.pytorch.org/whl/$PIP_CHANNEL"
+            pip3 install --pre "$PYTORCH_VERSION" --index-url "https://download.pytorch.org/whl/$PIP_CHANNEL/cpu"
           fi
 
           pip3 install -r requirements.txt
