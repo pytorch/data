@@ -1,0 +1,9 @@
+﻿.. role:: hidden
+    :class: hidden-section
+.. currentmodule:: torchdata.datapipes.utils
+
+
+pin_memory_fn
+=============
+
+.. autofunction:: pin_memory_fn

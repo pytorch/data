@@ -1,0 +1,9 @@
+﻿.. role:: hidden
+    :class: hidden-section
+.. currentmodule:: torchdata.datapipes.iter
+
+
+Sampler
+=======
+
+.. autoclass:: Sampler
