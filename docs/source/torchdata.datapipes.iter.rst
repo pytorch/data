@@ -31,7 +31,7 @@ We have different types of Iterable DataPipes:
 6. IO - interacting with the file systems or remote server (e.g. downloading, opening,
    saving files, and listing the files in directories).
 
-7. Mapping - apply the a given function to each element in the DataPipe.
+7. Mapping - apply a given function to each element in the DataPipe.
 
 8. Others - perform miscellaneous set of operations.
 
@@ -156,7 +156,7 @@ saving files, and listing the files in directories).
 Mapping DataPipes
 -------------------------
 
-These DataPipes apply the a given function to each element in the DataPipe.
+These DataPipes apply a given function to each element in the DataPipe.
 
 .. autosummary::
     :nosignatures:
