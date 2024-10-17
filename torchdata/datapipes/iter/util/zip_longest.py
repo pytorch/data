@@ -26,7 +26,7 @@ class ZipperLongestIterDataPipe(IterDataPipe):
         >>> dp1, dp2, dp3 = IterableWrapper(range(3)), IterableWrapper(range(10, 15)), IterableWrapper(range(20, 25))
         >>> list(dp1.zip_longest(dp2, dp3))
         [(0, 10, 20), (1, 11, 21), (2, 12, 22), (None, 13, 23), (None, 14, 24)]
-        >>> list(dp1.zip_longest(dp2, dp3, -1))
+        >>> list(dp1.zip_longest(dp2, dp3, fill_value=-1))
         [(0, 10, 20), (1, 11, 21), (2, 12, 22), (-1, 13, 23), (-1, 14, 24)]
     """
     datapipes: Tuple[IterDataPipe]

@@ -56,13 +56,21 @@ class RarArchiveLoaderIterDataPipe(IterDataPipe[Tuple[str, io.BufferedIOBase]]):
         length: Nominal length of the DataPipe
 
     Example:
-        >>> from torchdata.datapipes.iter import FileLister, FileOpener
-        >>> datapipe1 = FileLister(".", "*.rar")
-        >>> datapipe2 = FileOpener(datapipe1, mode="b")
-        >>> rar_loader_dp = datapipe2.load_from_rar()
-        >>> for _, stream in rar_loader_dp:
-        >>>     print(stream.read())
+
+    .. testcode::
+        :skipif: rarfile is None
+
+        datapipe1 = FileLister(".", "*.rar")
+        datapipe2 = FileOpener(datapipe1, mode="b")
+        rar_loader_dp = datapipe2.load_from_rar()
+        for _, stream in rar_loader_dp:
+            print(stream.read())
+
+    .. testoutput::
+        :skipif: io_doctest
+
         b'0123456789abcdef'
+
     """
 
     def __init__(self, datapipe: IterDataPipe[Tuple[str, io.BufferedIOBase]], *, length: int = -1):

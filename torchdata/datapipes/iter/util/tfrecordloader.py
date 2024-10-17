@@ -210,12 +210,14 @@ class TFRecordLoaderIterDataPipe(IterDataPipe[TFRecordExample]):
         or let Python's GC close them periodically.
 
     Example:
-        >>> from torchdata.datapipes.iter import FileLister, FileOpener
-        >>> datapipe1 = FileLister(".", "*.tfrecord")
-        >>> datapipe2 = FileOpener(datapipe1, mode="b")
-        >>> tfrecord_loader_dp = datapipe2.load_from_tfrecord()
-        >>> for example in tfrecord_loader_dp:
-        >>>     print(example)
+
+    .. testcode::
+
+        files_dp = FileLister(".", "*.tfrecord").open_files(mode="b")
+        tfrecord_loader_dp = files_dp.load_from_tfrecord()
+        for example in tfrecord_loader_dp:
+            print(example)
+
     """
 
     def __init__(

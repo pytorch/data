@@ -21,10 +21,16 @@ class MultiplexerLongestIterDataPipe(IterDataPipe):
         datapipes: Iterable DataPipes that will take turn to yield their elements, until they are all exhausted
 
     Example:
-        >>> from torchdata.datapipes.iter import IterableWrapper
-        >>> dp1, dp2, dp3 = IterableWrapper(range(5)), IterableWrapper(range(10, 15)), IterableWrapper(range(20, 25))
-        >>> list(dp1.mux_longest(dp2, dp3))
-        [0, 10, 20, 1, 11, 21, 2, 12, 22, 3, 13, 23, 4, 14, 24]
+
+    .. testcode::
+
+        dp1, dp2, dp3 = IterableWrapper(range(5)), IterableWrapper(range(10, 12)), IterableWrapper(range(20, 25))
+        print(list(dp1.mux_longest(dp2, dp3)))
+
+    .. testoutput::
+
+        [0, 10, 20, 1, 11, 21, 2, 22, 3, 23, 4, 24]
+
     """
 
     def __init__(self, *datapipes):
