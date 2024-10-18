@@ -1,4 +1,4 @@
-name: Run StatefulDataLoader Tests
+name: Run Nodes Tests
 on:
   push:
     branches:
