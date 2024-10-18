@@ -5,16 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 
-import argparse
-
-import torchdata
-import torchdata.datapipes
-
-
-def s3_test():
-    from torchdata._torchdata import S3Handler
-
-
 def stateful_dataloader_test():
     from torchdata.stateful_dataloader import StatefulDataLoader
 
@@ -23,11 +13,5 @@ if __name__ == "__main__":
     r"""
     TorchData Smoke Test
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--no-s3", dest="s3", action="store_false")
-
-    options = parser.parse_args()
-    if options.s3:
-        s3_test()
 
     stateful_dataloader_test()

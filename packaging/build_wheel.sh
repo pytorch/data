@@ -19,7 +19,6 @@ setup_env
 pip_install future wheel
 setup_pip_pytorch_version
 
-git submodule update --init --recursive
 pip_install -r requirements.txt
 python setup.py clean
 # TODO: Add windows support
