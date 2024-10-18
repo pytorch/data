@@ -43,9 +43,9 @@ class TestExceptionHandling(testslide.TestCase):
         with self.assertRaisesRegex(ValueError, "test exception"):
             print(list(node))
 
-    def test_exception_handling_mapper(self):
+    def test_exception_handling_mapper_multiprocess(self):
         self._test_exception_handling_multiprocess(False)
 
     @unittest.skipIf(not TEST_CUDA, "CUDA not found")
-    def test_exception_handling_mapper_cuda(self):
+    def test_exception_handling_mapper_multiprocess_cuda(self):
         self._test_exception_handling_multiprocess(True)
