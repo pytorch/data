@@ -1,5 +1,8 @@
 import testslide
+import unittest
 import torch
+
+from torch.testing._internal.common_utils import TEST_CUDA
 
 from torchdata.nodes.batch import Batcher
 from torchdata.nodes.map import Mapper
@@ -9,6 +12,7 @@ from torchdata.nodes.prefetch import Prefetcher
 from .utils import Collate, MockSource
 
 
+@unittest.skipIf(not TEST_CUDA, "CUDA unavailable")
 class TestPinMemory(testslide.TestCase):
     def test_pin_memory(self) -> None:
         batch_size = 6
