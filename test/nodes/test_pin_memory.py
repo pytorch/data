@@ -1,5 +1,6 @@
-import testslide
 import unittest
+
+import testslide
 import torch
 
 from torch.testing._internal.common_utils import TEST_CUDA
