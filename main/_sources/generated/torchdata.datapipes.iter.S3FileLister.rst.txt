@@ -1,9 +1,0 @@
-﻿.. role:: hidden
-    :class: hidden-section
-.. currentmodule:: torchdata.datapipes.iter
-
-
-S3FileLister
-============
-
-.. autoclass:: S3FileLister
