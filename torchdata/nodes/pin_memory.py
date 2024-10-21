@@ -50,14 +50,15 @@ def _pin_memory_loop(
         try:
             x = next(src_iter)
             x = pin_memory(x, device)
+            q.put(x, block=False)
         except StopIteration as e:
-            q.put(e)
+            x = e
+            q.put(x, block=False)
             break
         except Exception:
             x = ExceptionWrapper(where=f"in _pin_memory_loop for device {device_id}")
-
-        while not stop_event.is_set():
             q.put(x, block=False)
+            break
 
 
 class PinMemory(BaseNode[T]):
@@ -92,6 +93,7 @@ class PinMemory(BaseNode[T]):
 
     def iterator(self) -> Iterator[T]:
         if not self._started:
+            assert self._out_q.empty(), self._out_q
             self._stop_event.clear()
             self._thread = threading.Thread(
                 target=_pin_memory_loop,
@@ -124,6 +126,8 @@ class PinMemory(BaseNode[T]):
                     # We don't need to release for startup exceptions
                     self._sem.release()
                 break
+            else:
+                self._sem.release()
             yield item
 
         self._stop_event.set()
@@ -138,5 +142,5 @@ class PinMemory(BaseNode[T]):
         self._stop_event.set()
         if self._thread is not None:
             self._thread.join(timeout=0.1)
+            self._thread = None
         self._started = False
-        self._thread = None

@@ -17,16 +17,18 @@ class Prefetcher(BaseNode[T]):
         self.q: queue.Queue = queue.Queue(maxsize=prefetch_factor)
         self.sem = threading.BoundedSemaphore(value=prefetch_factor)
         self._stop_event = threading.Event()
-        self.thread: Optional[threading.Thread] = None
+        self._thread: Optional[threading.Thread] = None
+        self._started = False
 
     def iterator(self) -> Iterator[T]:
-        if self.thread is None:
+        if not self._started:
+            self._started = True
             self._stop_event.clear()
-            self.thread = threading.Thread(
+            self._thread = threading.Thread(
                 target=_populate_queue,
                 args=(self.source, self.q, self._stop_event, self.sem),
             )
-            self.thread.start()
+            self._thread.start()
 
         exception: Optional[ExceptionWrapper] = None
         while True:
@@ -50,7 +52,8 @@ class Prefetcher(BaseNode[T]):
         self._shutdown()
 
     def _shutdown(self):
-        if self.thread is not None:
-            self._stop_event.set()
-            self.thread.join(timeout=0.1)
-            self.thread = None
+        self._stop_event.set()
+        if self._thread is not None:
+            self._thread.join(timeout=0.1)
+            self._thread = None
+        self._started = False
