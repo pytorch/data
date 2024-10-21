@@ -17,7 +17,13 @@ def _populate_queue(
     if this is called with multiple threads, you may get duplicates if
     source is not sharded properly.
     """
-    src_iter = iter(source)
+    try:
+        src_iter = iter(source)
+    except Exception:
+        e = ExceptionWrapper(where="in _populate_queue startup for device")
+        q.put(e)
+        return
+
     while not stop_event.is_set():
         if not semaphore.acquire(blocking=True, timeout=1.0):
             continue
