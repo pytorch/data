@@ -3,7 +3,7 @@ import functools
 import queue
 import threading
 
-from typing import Iterator
+from typing import Iterator, Optional, Union
 
 import torch
 import torch.multiprocessing
@@ -16,12 +16,12 @@ from torchdata.nodes.map import _SingleThreadedMapper
 
 
 def _pin_memory_loop(
-    source: queue.Queue,
+    source: BaseNode,
     q: queue.Queue,
     semaphore: threading.BoundedSemaphore,
     stop_event: threading.Event,
-    device_id: str,
-    device: str,
+    device_id: Union[int, str],
+    device: Optional[str],
 ):
     # this is fork of from torch.utils.data._utils.pin_memory import _pin_memory_loop
     # to remove the index tuples
