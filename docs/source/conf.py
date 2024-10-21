@@ -67,12 +67,7 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = [
-    "generated/torchdata.datapipes.iter.Extractor.rst",
-    "generated/torchdata.datapipes.iter.TarArchiveReader.rst",
-    "generated/torchdata.datapipes.iter.XzFileReader.rst",
-    "generated/torchdata.datapipes.iter.ZipArchiveReader.rst",
-]
+exclude_patterns = []
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -102,25 +97,7 @@ html_css_files = [
     "css/custom.css",
 ]
 
-# TODO(598): use regex to replace all "T" and "T_co" related signature
-signature_replacements = {
-    "torch.utils.data.datapipes.datapipe.IterDataPipe": "IterDataPipe",
-    "abc.IterDataPipe": "IterDataPipe",
-    "torch.utils.data.datapipes.datapipe.MapDataPipe": "MapDataPipe",
-    "abc.MapDataPipe": "MapDataPipe",
-    "typing.Type[torch.utils.data.sampler.Sampler]": "torch.utils.data.sampler.Sampler",
-    "<class 'torch.utils.data.sampler.SequentialSampler'>": "SequentialSampler",
-    "torch.utils.data.datapipes.iter.combining.T_co": "T_co",
-    "torch.utils.data.datapipes.iter.combinatorics.T_co": "T_co",
-    "torch.utils.data.datapipes.map.grouping.T": "T",
-    "torch.utils.data.datapipes.map.combining.T_co": "T_co",
-    "torch.utils.data.datapipes.map.combinatorics.T_co": "T_co",
-    "torch.utils.data.datapipes.iter.grouping.T_co": "T_co",
-    "<class 'torch.utils.data.datapipes.datapipe.DataChunk'>": "List",
-    "typing.": "",
-    "Union[IterDataPipe, MapDataPipe]": "DataPipe",
-    "Dict[int, Tuple[DataPipe, DataPipeGraph]": "DataPipeGraph",
-}
+signature_replacements = {}
 
 
 def process_signature(app, what, name, obj, options, signature, return_annotation):
@@ -133,15 +110,6 @@ def process_signature(app, what, name, obj, options, signature, return_annotatio
 
 
 def setup(app):
-
-    # Overwrite class name to allow aliasing in documentation generation
-    import torchdata.datapipes.iter as iter
-    import torchdata.datapipes.map as map
-
-    for mod in (iter, map):
-        for name, obj in mod.__dict__.items():
-            if isinstance(obj, type):
-                obj.__name__ = name
 
     app.connect("autodoc-process-signature", process_signature)
 
@@ -156,8 +124,8 @@ rst_prolog = """.. attention::
    We are re-focusing the torchdata repo to be an iterative enhancement of torch.utils.data.DataLoader. We do not plan on
    continuing development or maintaining the [`DataPipes`] and [`DataLoaderV2`] solutions, and they will be removed from
    the torchdata repo. We'll also be revisiting the `DataPipes` references in pytorch/pytorch. In release
-   `torchdata==0.8.0` (July 2024) they will be marked as deprecated, and in 0.9.0 (Oct 2024) they will be deleted. Existing
-   users are advised to pin to `torchdata==0.8.0` or an older version until they are able to migrate away. Subsequent
+   `torchdata==0.8.0` (July 2024) they will be marked as deprecated, and in 0.10.0 (Late 2024) they will be deleted. Existing
+   users are advised to pin to `torchdata<=0.9.0` or an older version until they are able to migrate away. Subsequent
    releases will not include DataPipes or DataLoaderV2.
    Please reach out if you suggestions or comments (please use `this issue <https://github.com/pytorch/data/issues/1196>`_ for feedback)
 

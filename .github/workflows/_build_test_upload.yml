@@ -107,7 +107,7 @@ jobs:
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTORCH_VERSION: ${{ inputs.pytorch_version }}
-          BUILD_S3: ${{ matrix.python-version != 'pure' }}
+          BUILD_S3: 0
         run: |
           set -ex
           packaging/build_wheel.sh
