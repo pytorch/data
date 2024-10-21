@@ -3,14 +3,14 @@ import queue
 import threading
 from typing import Iterable
 
-from torch._utils import ExceptionWrapper
+from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
 
 
 def _populate_queue(
     source: Iterable,
     q: queue.Queue,
-    stop_event: threading.Event,
     semaphore: threading.BoundedSemaphore,
+    stop_event: threading.Event,
 ):
     """Note that this is only intended to be used
     by a single thread at once. Each instance creates its own iter for source so
@@ -20,7 +20,7 @@ def _populate_queue(
     try:
         src_iter = iter(source)
     except Exception:
-        e = ExceptionWrapper(where="in _populate_queue startup for device")
+        e = StartupExceptionWrapper(where="in _populate_queue startup for device")
         q.put(e)
         return
 

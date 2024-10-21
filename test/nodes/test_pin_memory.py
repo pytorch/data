@@ -10,7 +10,7 @@ from torchdata.nodes.map import Mapper
 from torchdata.nodes.pin_memory import PinMemory
 from torchdata.nodes.prefetch import Prefetcher
 
-from .utils import Collate, MockSource
+from .utils import Collate, IterInitError, MockSource
 
 
 @unittest.skipIf(not TEST_CUDA, "CUDA unavailable")
@@ -47,4 +47,12 @@ class TestPinMemory(testslide.TestCase):
         root = Prefetcher(node, prefetch_factor=2)
 
         with self.assertRaisesRegex(ValueError, "test exception"):
+            list(root)
+
+    def test_iter_init_error(self):
+        node = IterInitError()
+        node = PinMemory(node)
+        root = Prefetcher(node, prefetch_factor=2)
+
+        with self.assertRaisesRegex(ValueError, "Iter Init Error"):
             list(root)

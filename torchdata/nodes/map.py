@@ -1,14 +1,13 @@
 # pyre-unsafe
-# import multiprocessing as mp
 import queue
 import threading
 from typing import Callable, Iterator, List, Literal, Optional, TypeVar, Union
 
 import torch.multiprocessing as mp
 
-from torch._utils import ExceptionWrapper
-
 from torchdata.nodes import BaseNode, T
+
+from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
 
 from ._apply_udf import _apply_udf
 
@@ -54,7 +53,7 @@ class ParallelMapper(BaseNode[T]):
         self._stop = threading.Event()
         self._mp_stop = mp.Event()
         self._read_thread = threading.Thread(
-            target=_populate_queue, args=(self.source, self.in_q, self._stop, self.sem)
+            target=_populate_queue, args=(self.source, self.in_q, self.sem, self._stop)
         )
         self._method = method
 
@@ -130,3 +129,67 @@ class ParallelMapper(BaseNode[T]):
                         break
 
             self._started = False
+
+
+_WorkerType = Callable[[BaseNode, queue.Queue, threading.BoundedSemaphore, threading.Event], None]
+
+
+class _SingleThreadedMapper(Iterator[T]):
+    """Utility Iterator for performing mapping with a single thread.
+    Because only a single thread is used, we don't need an input queue to guard
+    against multiple threads reading from the same iterator. This is used for
+    Prefetcher and PinMemory.
+    """
+
+    def __init__(self, source: BaseNode[T], prefetch_factor: int, worker: _WorkerType):
+        self.source = source
+        self.prefetch_factor = prefetch_factor
+        self.worker = worker
+
+        self._q: queue.Queue = queue.Queue()
+        self._sem = threading.BoundedSemaphore(value=prefetch_factor)
+        self._stop_event = threading.Event()
+
+        self._thread = threading.Thread(
+            target=self.worker,
+            args=(self.source, self._q, self._sem, self._stop_event),
+        )
+        self._thread.start()
+        self._stopped = False
+
+    def __iter__(self) -> Iterator[T]:
+        return self
+
+    def __next__(self):
+        if self._stopped:
+            raise StopIteration()
+
+        while True:
+            try:
+                item = self._q.get(block=True, timeout=0.1)
+                break
+            except queue.Empty:
+                continue
+
+        if isinstance(item, StopIteration):
+            self._stopped = True
+            self._sem.release()
+            self._stop_event.set()
+            raise item
+        elif isinstance(item, ExceptionWrapper):
+            self._stopped = True
+            if not isinstance(item, StartupExceptionWrapper):
+                # We don't need to release for startup exceptions
+                self._sem.release()
+            self._stop_event.set()
+            item.reraise()
+        else:
+            self._sem.release()
+        return item
+
+    def __del__(self):
+        self._shutdown()
+
+    def _shutdown(self):
+        self._stop_event.set()
+        self._thread.join(timeout=0.1)

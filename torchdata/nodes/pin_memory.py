@@ -1,15 +1,18 @@
 # pyre-unsafe
+import functools
 import queue
 import threading
 
-from typing import Iterator, Optional
+from typing import Iterator
 
 import torch
 import torch.multiprocessing
-from torch._utils import ExceptionWrapper
 
 from torch.utils.data._utils.pin_memory import pin_memory
 from torchdata.nodes import BaseNode, T
+
+from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
+from torchdata.nodes.map import _SingleThreadedMapper
 
 
 def _pin_memory_loop(
@@ -40,7 +43,7 @@ def _pin_memory_loop(
 
         src_iter = iter(source)
     except Exception:
-        e = ExceptionWrapper(where=f"in _pin_memory_loop startup for device {device_id}")
+        e = StartupExceptionWrapper(where=f"in _pin_memory_loop startup for device {device_id}")
         q.put(e)
         return
 
@@ -68,13 +71,6 @@ class PinMemory(BaseNode[T]):
         pin_memory_device: str = "",
     ):
         self.source = source
-
-        self._out_q: queue.Queue = queue.Queue()
-        self._sem = threading.BoundedSemaphore(value=1)
-
-        self._started = False
-        self._stop_event = threading.Event()
-
         self._pin_memory = torch.cuda.is_available()
         if len(pin_memory_device) == 0:
             self._pin_memory_device = None
@@ -82,65 +78,20 @@ class PinMemory(BaseNode[T]):
             self._pin_memory_device = pin_memory_device
 
         if self._pin_memory_device == "xpu":
-            self.current_device = torch.xpu.current_device()  # type: ignore[attr-defined]
+            self._current_device = torch.xpu.current_device()  # type: ignore[attr-defined]
         elif self._pin_memory_device == torch._C._get_privateuse1_backend_name():
             custom_device_mod = getattr(torch, torch._C._get_privateuse1_backend_name())
-            self.current_device = custom_device_mod.current_device()
+            self._current_device = custom_device_mod.current_device()
         else:
-            self.current_device = torch.cuda.current_device()  # choose cuda for default
-
-        self._thread: Optional[threading.Thread] = None
+            self._current_device = torch.cuda.current_device()  # choose cuda for default
 
     def iterator(self) -> Iterator[T]:
-        if not self._started:
-            assert self._out_q.empty(), self._out_q
-            self._stop_event.clear()
-            self._thread = threading.Thread(
-                target=_pin_memory_loop,
-                args=(
-                    self.source,
-                    self._out_q,
-                    self._sem,
-                    self._stop_event,
-                    self.current_device,
-                    self._pin_memory_device,
-                ),
-            )
-
-            self._thread.start()
-            self._started = True
-
-        exception: Optional[ExceptionWrapper] = None
-        while True:
-            try:
-                item = self._out_q.get(block=True, timeout=0.1)
-            except queue.Empty:
-                continue
-
-            if isinstance(item, StopIteration):
-                self._sem.release()
-                break
-            elif isinstance(item, ExceptionWrapper):
-                exception = item
-                if "_pin_memory_loop startup" not in exception.where:
-                    # We don't need to release for startup exceptions
-                    self._sem.release()
-                break
-            else:
-                self._sem.release()
-            yield item
-
-        self._stop_event.set()
-        if exception is not None:
-            exception.reraise()
-        self._shutdown()
-
-    def __del__(self):
-        self._shutdown()
-
-    def _shutdown(self):
-        self._stop_event.set()
-        if self._thread is not None:
-            self._thread.join(timeout=0.1)
-            self._thread = None
-        self._started = False
+        return _SingleThreadedMapper(
+            source=self.source,
+            prefetch_factor=1,
+            worker=functools.partial(
+                _pin_memory_loop,
+                device_id=self._current_device,
+                device=self._pin_memory_device,
+            ),
+        )

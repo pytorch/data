@@ -23,3 +23,11 @@ class Collate:
         for k in x[0].keys():
             result[k] = [i[k] for i in x]
         return result
+
+
+class IterInitError(BaseNode[int]):
+    def __init__(self, msg: str = "Iter Init Error") -> None:
+        self.msg = msg
+
+    def iterator(self) -> Iterator[int]:
+        raise ValueError(self.msg)

@@ -15,5 +15,18 @@ class BaseNode(torch.utils.data.IterableDataset, Generic[T]):
         """
         raise NotImplementedError()
 
-    def __iter__(self) -> Iterator[T]:
-        yield from self.iterator()
+    def __iter__(self) -> "_EagerIter[T]":
+        return _EagerIter(self)
+
+
+class _EagerIter(Iterator[T]):
+    """
+    Basic iterator which will runs next-calls eagerly
+    """
+
+    def __init__(self, parent: BaseNode[T]):
+        self.parent = parent
+        self.it = self.parent.iterator()
+
+    def __next__(self):
+        return next(self.it)

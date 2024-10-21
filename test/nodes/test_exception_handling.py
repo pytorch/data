@@ -11,11 +11,11 @@ from .utils import MockSource, udf_raises
 
 
 class TestExceptionHandling(testslide.TestCase):
-    def _test_exception_handling_mapper(self, pin_memory):
+    def _test_exception_handling_mapper(self, pin_memory, method):
         batch_size = 6
         src = MockSource(num_samples=20)
         node = Batcher(src, batch_size=batch_size)
-        node = ParallelMapper(node, udf_raises, num_workers=2, method="thread")
+        node = ParallelMapper(node, udf_raises, num_workers=2, method=method)
         node = Mapper(node, udf_raises)
         if pin_memory:
             node = PinMemory(node)
@@ -25,27 +25,15 @@ class TestExceptionHandling(testslide.TestCase):
             print(list(node))
 
     def test_exception_handling_mapper(self):
-        self._test_exception_handling_mapper(False)
+        self._test_exception_handling_mapper(False, "thread")
 
     @unittest.skipIf(not TEST_CUDA, "CUDA unavailable")
     def test_exception_handling_mapper_cuda(self):
-        self._test_exception_handling_mapper(True)
-
-    def _test_exception_handling_multiprocess(self, pin_memory):
-        batch_size = 6
-        src = MockSource(num_samples=20)
-        node = Batcher(src, batch_size=batch_size)
-        node = ParallelMapper(node, udf_raises, num_workers=2, method="process")
-        if pin_memory:
-            node = PinMemory(node)
-        node = Prefetcher(node, prefetch_factor=2)
-
-        with self.assertRaisesRegex(ValueError, "test exception"):
-            print(list(node))
+        self._test_exception_handling_mapper(True, "thread")
 
     def test_exception_handling_mapper_multiprocess(self):
-        self._test_exception_handling_multiprocess(False)
+        self._test_exception_handling_mapper(False, "process")
 
     @unittest.skipIf(not TEST_CUDA, "CUDA not found")
     def test_exception_handling_mapper_multiprocess_cuda(self):
-        self._test_exception_handling_multiprocess(True)
+        self._test_exception_handling_mapper(True, "process")

@@ -3,7 +3,7 @@ import torch
 from torchdata.nodes.batch import Batcher
 from torchdata.nodes.prefetch import Prefetcher
 
-from .utils import MockSource
+from .utils import IterInitError, MockSource
 
 
 class TestPrefetcher(testslide.TestCase):
@@ -22,3 +22,10 @@ class TestPrefetcher(testslide.TestCase):
                     self.assertEqual(results[i][j]["step"], i * batch_size + j)
                     self.assertEqual(results[i][j]["test_tensor"], torch.tensor([i * batch_size + j]))
                     self.assertEqual(results[i][j]["test_str"], f"str_{i * batch_size + j}")
+
+    def test_iter_init_error(self):
+        node = IterInitError()
+        root = Prefetcher(node, prefetch_factor=2)
+
+        with self.assertRaisesRegex(ValueError, "Iter Init Error"):
+            list(root)
