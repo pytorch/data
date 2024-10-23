@@ -6,11 +6,11 @@ import torch
 from torchdata.nodes import BaseNode
 
 
-class MockSource(BaseNode[int]):
+class MockSource(BaseNode[dict]):
     def __init__(self, num_samples: int) -> None:
         self.num_samples = num_samples
 
-    def iterator(self) -> Iterator[int]:
+    def iterator(self) -> Iterator[dict]:
         for i in range(self.num_samples):
             yield {"step": i, "test_tensor": torch.tensor([i]), "test_str": f"str_{i}"}
 

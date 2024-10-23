@@ -1,7 +1,8 @@
 import unittest
+from typing import List
 
 import testslide
-from torch.testing._internal.common_utils import TEST_CUDA
+from torch.testing._internal.common_utils import IS_WINDOWS, TEST_CUDA
 from torchdata.nodes.batch import Batcher
 from torchdata.nodes.map import Mapper, ParallelMapper
 from torchdata.nodes.pin_memory import PinMemory
@@ -13,9 +14,16 @@ from .utils import MockSource, RandomSleepUdf, udf_raises
 class TestMap(testslide.TestCase):
     def _test_exception_handling_mapper(self, pin_memory, method):
         batch_size = 6
+        multiprocessing_context = None if IS_WINDOWS else "forkserver"
         src = MockSource(num_samples=20)
         node = Batcher(src, batch_size=batch_size)
-        node = ParallelMapper(node, udf_raises, num_workers=2, method=method)
+        node = ParallelMapper(
+            node,
+            udf_raises,
+            num_workers=2,
+            method=method,
+            multiprocessing_context=multiprocessing_context,
+        )
         node = Mapper(node, udf_raises)
         if pin_memory:
             node = PinMemory(node)
@@ -38,15 +46,23 @@ class TestMap(testslide.TestCase):
     def test_exception_handling_mapper_multiprocess_cuda(self):
         self._test_exception_handling_mapper(True, "process")
 
-    def _test_map(self, in_order: bool, method: str) -> None:
+    def _test_map(self, in_order, method) -> None:
         batch_size = 6
         n = 80
+        multiprocessing_context = None if IS_WINDOWS else "forkserver"
         src = MockSource(num_samples=n)
         node = Batcher(src, batch_size=batch_size, drop_last=False)
-        node = ParallelMapper(node, RandomSleepUdf(), num_workers=4, in_order=in_order, method=method)
+        node = ParallelMapper(
+            node,
+            RandomSleepUdf(),
+            num_workers=4,
+            in_order=in_order,
+            method=method,
+            multiprocessing_context=multiprocessing_context,
+        )
         node = Prefetcher(node, prefetch_factor=2)
 
-        results = [[], []]
+        results: List[List[dict]] = [[], []]
         for epoch in range(2):
             for batch in node:
                 print(f"{epoch=}, {batch=}")

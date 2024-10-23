@@ -4,6 +4,10 @@ from typing import Callable, Union
 
 import torch
 import torch.multiprocessing as mp
+from torch import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import multiprocessing as python_mp
 
 from torch._utils import ExceptionWrapper
 
@@ -13,7 +17,7 @@ def _apply_udf(
     in_q: Union[queue.Queue, mp.Queue],
     out_q: Union[queue.Queue, mp.Queue],
     udf: Callable,
-    stop_event: Union[threading.Event, mp.Event],
+    stop_event: Union[threading.Event, python_mp.synchronize.Event],
 ):
     """_apply_udf assumes in_q is emitting tuples of (x, idx) where x is the
     payload, idx is the index of the result, potentially used for maintaining

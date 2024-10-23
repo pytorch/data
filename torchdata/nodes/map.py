@@ -1,17 +1,28 @@
 # pyre-unsafe
 import queue
 import threading
-from typing import Any, Callable, Iterator, List, Literal, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, Iterator, List, Literal, Optional, Protocol, TypeVar, Union
 
 import torch.multiprocessing as mp
-
+from torch import TYPE_CHECKING
 from torchdata.nodes import BaseNode, T
-
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
 
 from ._apply_udf import _apply_udf
 
 from ._populate_queue import _populate_queue
+
+if TYPE_CHECKING:
+
+    class _MultiprocessContext(Protocol):
+        def Process(self, *args, **kwargs):
+            ...
+
+        def Event(self, *args, **kwargs):
+            ...
+
+        def Queue(self, *args, **kwargs):
+            ...
 
 
 X = TypeVar("X")
@@ -32,7 +43,7 @@ class Mapper(BaseNode[T]):
 
 
 def _sort_worker(in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_event: threading.Event):
-    buffer = {}
+    buffer: Dict[int, Any] = {}
     cur_idx = 0
     while not stop_event.is_set():
         try:
@@ -65,7 +76,7 @@ class _ParallelMapperIter(Iterator[T]):
         num_workers: int,
         in_order: bool,
         method: Literal["thread", "process"],
-        mp_context: Optional[Any],
+        mp_context: _MultiprocessContext,
     ):
         self.source = source
         self.map_fn = map_fn
@@ -102,7 +113,7 @@ class _ParallelMapperIter(Iterator[T]):
                 if self.method == "thread"
                 else mp_context.Process(target=_apply_udf, args=args)
             )
-        self._sort_q = queue.Queue()
+        self._sort_q: queue.Queue = queue.Queue()
         self._sort_thread = threading.Thread(target=_sort_worker, args=(self._intermed_q, self._sort_q, self._stop))
 
         self._out_q = self._intermed_q
@@ -122,14 +133,11 @@ class _ParallelMapperIter(Iterator[T]):
         while True:
             if self._stop.is_set():
                 raise StopIteration()
-            elif self._done:
-                if self._sem._value == self._max_tasks:
-                    self._stop.set()
-                    self._mp_stop.set()
-                    raise StopIteration()
-                else:
-                    # out_q hasn't been flushed
-                    print(f"{self._done=}, {self._stop.is_set()=} but {self._sem._value=} != {self._max_tasks=}")
+            elif self._done and self._sem._value == self._max_tasks:
+                # Don't stop if we still have items in the queue
+                self._stop.set()
+                self._mp_stop.set()
+                raise StopIteration()
             try:
                 item, idx = self._out_q.get(block=True, timeout=1.0)
             except queue.Empty:
@@ -180,7 +188,7 @@ class ParallelMapper(BaseNode[T]):
         self.in_order = in_order
         self.method = method
         self.multiprocessing_context = multiprocessing_context
-        self._mp_context = mp
+        self._mp_context: Any = mp
         if self.method == "process" and self.multiprocessing_context is not None:
             self._mp_context = mp.get_context(self.multiprocessing_context)
 
