@@ -216,6 +216,26 @@ class _SingleThreadedMapper(Iterator[T]):
     Because only a single thread is used, we don't need an input queue to guard
     against multiple threads reading from the same iterator. This is used for
     Prefetcher and PinMemory.
+
+    A thread is started on __init__ and stopped on __del__/_shutdown.
+    The thread runs _populate_queue, which acquires a BoundedSemaphore with initial value
+    of `prefetch_factor`.
+
+    When next() is called on this iterator, it will block until an item is available on _q.
+    Next will perform the following depending on what is pulled from the q:
+    - StopIteration: raise StopIteration. Any subsequent next() calls will also raise StopIteration
+    - ExceptionWrapper: call reraise() on the exception wraper
+    - any other item: return the item
+
+    A Bounded semaphore is used to limit concurrency and memory utilization.
+    If N items have been pulled from the source, and M items have been yielded by this iterator,
+    we maintain the invariant that semaphore.value + (N - M) == prefetch_factor (modulo
+    non-atomicness of operations).
+
+    _populate_queue calls semaphore.acquire. When we pull an item from the queue, we
+    call semaphore.release (unless it's a StartupExceptionWrapper, because _populate_queue
+    does not acquire sempahores in this case). All outstanding items are either being
+    processed in _populate_queue, in the _q, or about to be returned by an in-flight next() call.
     """
 
     def __init__(self, source: BaseNode[T], prefetch_factor: int, worker: _WorkerType):
