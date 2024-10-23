@@ -1,3 +1,5 @@
+import random
+import time
 from typing import Iterator
 
 import torch
@@ -15,6 +17,15 @@ class MockSource(BaseNode[int]):
 
 def udf_raises(item):
     raise ValueError("test exception")
+
+
+class RandomSleepUdf:
+    def __init__(self, sleep_max_sec: float = 0.01) -> None:
+        self.sleep_max_sec = sleep_max_sec
+
+    def __call__(self, x):
+        time.sleep(random.random() * self.sleep_max_sec)
+        return x
 
 
 class Collate:

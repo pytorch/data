@@ -1,28 +1,42 @@
 import queue
+import threading
+from typing import Callable, Union
 
 import torch
+import torch.multiprocessing as mp
 
 from torch._utils import ExceptionWrapper
 
 
-def _apply_udf(worker_id, in_q, out_q, in_order, udf, stop_event):
+def _apply_udf(
+    worker_id: int,
+    in_q: Union[queue.Queue, mp.Queue],
+    out_q: Union[queue.Queue, mp.Queue],
+    udf: Callable,
+    stop_event: Union[threading.Event, mp.Event],
+):
+    """_apply_udf assumes in_q is emitting tuples of (x, idx) where x is the
+    payload, idx is the index of the result, potentially used for maintaining
+    ordered outputs
+    """
     torch.set_num_threads(1)
     while True:
         if stop_event.is_set() and in_q.empty():
             break
 
-        try:  # TODO: implement in-order execution
-            x = in_q.get(block=True, timeout=1.0)
+        try:
+            x, idx = in_q.get(block=True, timeout=1.0)
         except queue.Empty:
             continue
+
         if isinstance(x, ExceptionWrapper):
-            out_q.put(x)
+            out_q.put((x, idx))
         elif isinstance(x, StopIteration):
-            out_q.put(x)
+            out_q.put((x, idx))
+        else:
+            try:
+                y = udf(x)
+            except Exception:
+                y = ExceptionWrapper(where="in _apply_udf")
 
-        try:
-            y = udf(x)
-        except Exception:
-            y = ExceptionWrapper(where="in _apply_udf")
-
-        out_q.put(y, block=False)
+            out_q.put((y, idx), block=False)

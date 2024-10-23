@@ -1,9 +1,23 @@
 # pyre-unsafe
 import queue
 import threading
+from dataclasses import dataclass
 from typing import Iterable
 
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
+
+
+@dataclass
+class _MonotonicIndex:
+    initial: int = 0
+
+    def __post_init__(self):
+        self._idx = self.initial
+
+    def get(self) -> int:
+        idx = self._idx
+        self._idx += 1
+        return idx
 
 
 def _populate_queue(
@@ -11,17 +25,28 @@ def _populate_queue(
     q: queue.Queue,
     semaphore: threading.BoundedSemaphore,
     stop_event: threading.Event,
+    add_index: bool = False,
 ):
     """Note that this is only intended to be used
     by a single thread at once. Each instance creates its own iter for source so
     if this is called with multiple threads, you may get duplicates if
     source is not sharded properly.
     """
+
+    # Include a monotonic index starting from 0 to each item in the queue
+    idx = _MonotonicIndex()
+
+    def _put(x, block: bool = True):
+        if add_index:
+            q.put((x, idx.get()), block=block)
+        else:
+            q.put(x, block=block)
+
     try:
         src_iter = iter(source)
     except Exception:
         e = StartupExceptionWrapper(where="in _populate_queue startup for device")
-        q.put(e)
+        _put(e)
         return
 
     while not stop_event.is_set():
@@ -30,11 +55,12 @@ def _populate_queue(
         try:
             x = next(src_iter)  # FIXME: This may hang!
         except StopIteration as e:
-            q.put(e)
+            print("***Putting Stop Iteration***")
+            _put(e)
             break
         except Exception:
             x = ExceptionWrapper(where="in _populate_queue")
         try:
-            q.put(x, block=False)  # Semaphore should prevent this from throwing
+            _put(x, block=False)  # Semaphore should prevent this from throwing
         except queue.Full:
             raise RuntimeError("Queue should not be full")

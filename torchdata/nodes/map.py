@@ -1,7 +1,7 @@
 # pyre-unsafe
 import queue
 import threading
-from typing import Callable, Iterator, List, Literal, Optional, TypeVar, Union
+from typing import Any, Callable, Iterator, List, Literal, Optional, TypeVar, Union
 
 import torch.multiprocessing as mp
 
@@ -31,6 +31,138 @@ class Mapper(BaseNode[T]):
             yield self.map_fn(item)
 
 
+def _sort_worker(in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_event: threading.Event):
+    buffer = {}
+    cur_idx = 0
+    while not stop_event.is_set():
+        try:
+            x, idx = in_q.get(block=True, timeout=0.1)
+        except queue.Empty:
+            continue
+        if idx == cur_idx:
+            out_q.put((x, cur_idx), block=False)
+            cur_idx += 1
+        else:
+            if idx in buffer:
+                # This is the easiest way to create an exception wrapper
+                try:
+                    raise ValueError(f"Duplicate index {idx=}, {buffer.keys()=}, {x=}")
+                except Exception:
+                    x = ExceptionWrapper(where="in _sort_worker")
+                out_q.put((x, idx), block=False)
+                break
+            buffer[idx] = x
+        while cur_idx in buffer:
+            out_q.put((buffer.pop(cur_idx), cur_idx), block=False)
+            cur_idx += 1
+
+
+class _ParallelMapperIter(Iterator[T]):
+    def __init__(
+        self,
+        source: BaseNode[X],
+        map_fn: Callable[[X], T],
+        num_workers: int,
+        in_order: bool,
+        method: Literal["thread", "process"],
+        mp_context: Optional[Any],
+    ):
+        self.source = source
+        self.map_fn = map_fn
+        self.num_workers = num_workers
+        self.in_order = in_order
+        self.method = method
+        self.mp_context = mp_context
+
+        self._in_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
+        self._intermed_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
+        self._max_tasks = 2 * self.num_workers
+        self._sem = threading.BoundedSemaphore(value=self._max_tasks)
+
+        self._done = False
+
+        self._stop = threading.Event()
+        self._mp_stop = mp_context.Event()
+
+        self._read_thread = threading.Thread(
+            target=_populate_queue,
+            args=(self.source, self._in_q, self._sem, self._stop, True),
+        )
+        self._map_threads: List[Union[threading.Thread, mp.Process]] = []
+        for worker_id in range(self.num_workers):
+            args = (
+                worker_id,
+                self._in_q,
+                self._intermed_q,
+                self.map_fn,
+                self._stop if self.method == "thread" else self._mp_stop,
+            )
+            self._map_threads.append(
+                threading.Thread(target=_apply_udf, args=args)
+                if self.method == "thread"
+                else mp_context.Process(target=_apply_udf, args=args)
+            )
+        self._sort_q = queue.Queue()
+        self._sort_thread = threading.Thread(target=_sort_worker, args=(self._intermed_q, self._sort_q, self._stop))
+
+        self._out_q = self._intermed_q
+        if self.in_order:
+            self._out_q = self._sort_q
+
+        self._read_thread.start()
+        for t in self._map_threads:
+            t.start()
+        if self.in_order:
+            self._sort_thread.start()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        while True:
+            if self._stop.is_set():
+                raise StopIteration()
+            elif self._done:
+                if self._sem._value == self._max_tasks:
+                    self._stop.set()
+                    self._mp_stop.set()
+                    raise StopIteration()
+                else:
+                    # out_q hasn't been flushed
+                    print(f"{self._done=}, {self._stop.is_set()=} but {self._sem._value=} != {self._max_tasks=}")
+            try:
+                item, idx = self._out_q.get(block=True, timeout=1.0)
+            except queue.Empty:
+                continue
+
+            if isinstance(item, StopIteration):
+                self._done = True
+                self._sem.release()
+                # Make sure queues are flushed before returning early
+                continue
+            elif isinstance(item, ExceptionWrapper):
+                if not isinstance(item, StartupExceptionWrapper):
+                    self._sem.release()
+                item.reraise()
+            else:
+                self._sem.release()
+                return item
+
+    def __del__(self):
+        self._shutdown()
+
+    def _shutdown(self):
+        self._stop.set()
+        self._mp_stop.set()
+        if self._read_thread.is_alive():
+            self._read_thread.join(timeout=0.5)
+        if self._sort_thread.is_alive():
+            self._sort_thread.join(timeout=0.5)
+        for t in self._map_threads:
+            if t.is_alive():
+                t.join(timeout=0.5)
+
+
 class ParallelMapper(BaseNode[T]):
     def __init__(
         self,
@@ -39,96 +171,28 @@ class ParallelMapper(BaseNode[T]):
         num_workers: int,
         in_order: bool = True,
         method: Literal["thread", "process"] = "thread",
+        multiprocessing_context: Optional[str] = "forkserver",
     ):
+        assert method in ["thread", "process"]
         self.source = source
-        self.udf = map_fn
+        self.map_fn = map_fn
         self.num_workers = num_workers
         self.in_order = in_order
-
-        self.in_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp.Queue()
-        self.out_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp.Queue()
-        self.sem = threading.BoundedSemaphore(value=2 * num_workers)
-
-        self._started = False
-        self._stop = threading.Event()
-        self._mp_stop = mp.Event()
-        self._read_thread = threading.Thread(
-            target=_populate_queue, args=(self.source, self.in_q, self.sem, self._stop)
-        )
-        self._method = method
-
-        self._map_threads: List[Union[threading.Thread, mp.Process]] = []
+        self.method = method
+        self.multiprocessing_context = multiprocessing_context
+        self._mp_context = mp
+        if self.method == "process" and self.multiprocessing_context is not None:
+            self._mp_context = mp.get_context(self.multiprocessing_context)
 
     def iterator(self) -> Iterator[T]:
-        if not self._started:
-            for worker_id in range(self.num_workers):
-                args = (
-                    worker_id,
-                    self.in_q,
-                    self.out_q,
-                    self.in_order,
-                    self.udf,
-                    self._stop if self._method == "thread" else self._mp_stop,
-                )
-                self._map_threads.append(
-                    threading.Thread(target=_apply_udf, args=args)
-                    if self._method == "thread"
-                    else mp.Process(target=_apply_udf, args=args)
-                )
-            self._read_thread.start()
-            for t in self._map_threads:
-                t.start()
-            self._started = True
-
-        exception: Optional[ExceptionWrapper] = None
-        while True:
-            if self._stop.is_set():
-                yield from self._flush_queues()
-                self._mp_stop.set()
-                break
-            try:
-                item = self.out_q.get(block=True, timeout=1.0)
-                self.sem.release()
-            except queue.Empty:
-                continue
-            if isinstance(item, StopIteration):
-                yield from self._flush_queues()
-                break
-            elif isinstance(item, ExceptionWrapper):
-                exception = item
-                break
-            yield item
-
-        self._stop.set()
-        self._mp_stop.set()
-        if exception is not None:
-            exception.reraise()
-        self._shutdown()
-
-    def _flush_queues(self):
-        while self.sem._value < 2 * self.num_workers:
-            x = self.out_q.get(block=True, timeout=5.0)
-            self.sem.release()
-            yield x
-
-    def __del__(self):
-        self._shutdown()
-
-    def _shutdown(self):
-        if self._started:
-            self._stop.set()
-            self._mp_stop.set()
-            for _ in range(5):
-                self._read_thread.join(timeout=0.1)
-                if not self._read_thread.is_alive():
-                    break
-            for t in self._map_threads:
-                for _ in range(5):
-                    t.join(timeout=0.1)
-                    if not t.is_alive():
-                        break
-
-            self._started = False
+        return _ParallelMapperIter(
+            source=self.source,
+            map_fn=self.map_fn,
+            num_workers=self.num_workers,
+            in_order=self.in_order,
+            method=self.method,
+            mp_context=self._mp_context,
+        )
 
 
 _WorkerType = Callable[[BaseNode, queue.Queue, threading.BoundedSemaphore, threading.Event], None]
