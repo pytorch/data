@@ -32,10 +32,21 @@ def _populate_queue(
     stop_event: threading.Event,
     add_index: bool = False,
 ):
-    """Note that this is only intended to be used
-    by a single thread at once. Each instance creates its own iter for source so
-    if this is called with multiple threads, you may get duplicates if
-    source is not sharded properly.
+    """_populate_queue calls `iter(source)` to get an iterator `it`, waits for semaphore.acquire,
+    and puts its outputs onto q. It never releases the sempahore. It continues to put items on the
+    q as long as it can acquire the sempahore, stop_event is not set, and StopIteration has not
+    been thrown by the `it`.
+
+    If add_index = True, this function will always put tuples of (x, idx) on the q where idx
+    starts from 0 and is monotonically increasing. x may be the output of next(it), StopIteration,
+    or an ExceptionWrapper.
+
+    If there is an exception raised during the call to `iter(source)`, this function does not
+    wait to acquire sempahore before putting StartupExceptionWrapper on q.
+
+    Note: this is only intended to be used by a single thread at once. Each instance
+    creates its own iter for source so if this is called with multiple threads, you may get
+    duplicates if source is not sharded properly.
     """
 
     # Include a monotonic index starting from 0 to each item in the queue
@@ -60,7 +71,6 @@ def _populate_queue(
         try:
             x = next(src_iter)  # FIXME: This may hang!
         except StopIteration as e:
-            print("***Putting Stop Iteration***")
             _put(e)
             break
         except Exception:

@@ -25,9 +25,11 @@ def _apply_udf(
     udf: Callable,
     stop_event: Union[threading.Event, python_mp.synchronize.Event],
 ):
-    """_apply_udf assumes in_q is emitting tuples of (x, idx) where x is the
+    """_apply_udf assumes in_q emits tuples of (x, idx) where x is the
     payload, idx is the index of the result, potentially used for maintaining
-    ordered outputs
+    ordered outputs. For every input it pulls, a tuple (y, idx) is put on the out_q
+    where the output of udf(x), an ExceptionWrapper, or StopIteration (if it pulled
+    StopIteration from in_q).
     """
     torch.set_num_threads(1)
     while True:
