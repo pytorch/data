@@ -12,6 +12,7 @@ import torch.multiprocessing as mp
 from torchdata.nodes import BaseNode, T
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
 
+from . import QUEUE_TIMEOUT
 from ._apply_udf import _apply_udf
 
 from ._populate_queue import _populate_queue
@@ -51,22 +52,22 @@ def _sort_worker(in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_ev
     cur_idx = 0
     while not stop_event.is_set():
         try:
-            x, idx = in_q.get(block=True, timeout=0.1)
+            item, idx = in_q.get(block=True, timeout=QUEUE_TIMEOUT)
         except queue.Empty:
             continue
         if idx == cur_idx:
-            out_q.put((x, cur_idx), block=False)
+            out_q.put((item, cur_idx), block=False)
             cur_idx += 1
         else:
             if idx in buffer:
                 # This is the easiest way to create an exception wrapper
                 try:
-                    raise ValueError(f"Duplicate index {idx=}, {buffer.keys()=}, {x=}")
+                    raise ValueError(f"Duplicate index {idx=}, {buffer.keys()=}, {item=}")
                 except Exception:
-                    x = ExceptionWrapper(where="in _sort_worker")
-                out_q.put((x, idx), block=False)
+                    item = ExceptionWrapper(where="in _sort_worker")
+                out_q.put((item, idx), block=False)
                 break
-            buffer[idx] = x
+            buffer[idx] = item
         while cur_idx in buffer:
             out_q.put((buffer.pop(cur_idx), cur_idx), block=False)
             cur_idx += 1
@@ -154,7 +155,7 @@ class _ParallelMapperIter(Iterator[T]):
                 self._mp_stop.set()
                 raise StopIteration()
             try:
-                item, idx = self._out_q.get(block=True, timeout=1.0)
+                item, idx = self._out_q.get(block=True, timeout=QUEUE_TIMEOUT)
             except queue.Empty:
                 continue
 
@@ -178,12 +179,12 @@ class _ParallelMapperIter(Iterator[T]):
         self._stop.set()
         self._mp_stop.set()
         if self._read_thread.is_alive():
-            self._read_thread.join(timeout=0.5)
+            self._read_thread.join(timeout=QUEUE_TIMEOUT)
         if self._sort_thread.is_alive():
-            self._sort_thread.join(timeout=0.5)
+            self._sort_thread.join(timeout=QUEUE_TIMEOUT)
         for t in self._map_threads:
             if t.is_alive():
-                t.join(timeout=0.5)
+                t.join(timeout=QUEUE_TIMEOUT)
 
 
 class ParallelMapper(BaseNode[T]):
@@ -293,7 +294,7 @@ class _SingleThreadedMapper(Iterator[T]):
 
         while True:
             try:
-                item = self._q.get(block=True, timeout=0.1)
+                item = self._q.get(block=True, timeout=QUEUE_TIMEOUT)
                 break
             except queue.Empty:
                 continue
@@ -319,4 +320,4 @@ class _SingleThreadedMapper(Iterator[T]):
 
     def _shutdown(self):
         self._stop_event.set()
-        self._thread.join(timeout=0.1)
+        self._thread.join(timeout=QUEUE_TIMEOUT)

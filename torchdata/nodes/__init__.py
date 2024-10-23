@@ -20,3 +20,6 @@ __all__ = [
     "PinMemory",
     "T",
 ]
+
+
+QUEUE_TIMEOUT = 0.1

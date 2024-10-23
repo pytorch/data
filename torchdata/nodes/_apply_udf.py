@@ -14,6 +14,8 @@ import torch.multiprocessing as mp
 
 from torch._utils import ExceptionWrapper
 
+from . import QUEUE_TIMEOUT
+
 
 def _apply_udf(
     worker_id: int,
@@ -34,17 +36,17 @@ def _apply_udf(
             break
 
         try:
-            x, idx = in_q.get(block=True, timeout=1.0)
+            item, idx = in_q.get(block=True, timeout=QUEUE_TIMEOUT)
         except queue.Empty:
             continue
 
-        if isinstance(x, ExceptionWrapper):
-            out_q.put((x, idx))
-        elif isinstance(x, StopIteration):
-            out_q.put((x, idx))
+        if isinstance(item, ExceptionWrapper):
+            out_q.put((item, idx))
+        elif isinstance(item, StopIteration):
+            out_q.put((item, idx))
         else:
             try:
-                y = udf(x)
+                y = udf(item)
             except Exception:
                 y = ExceptionWrapper(where="in _apply_udf")
 

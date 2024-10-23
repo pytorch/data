@@ -56,16 +56,16 @@ def _pin_memory_loop(
         if not semaphore.acquire(blocking=True, timeout=0.1):
             continue
         try:
-            x = next(src_iter)
-            x = pin_memory(x, device)
-            q.put(x, block=False)
+            item = next(src_iter)
+            item = pin_memory(item, device)
+            q.put(item, block=False)
         except StopIteration as e:
-            x = e
-            q.put(x, block=False)
+            item = e
+            q.put(item, block=False)
             break
         except Exception:
-            x = ExceptionWrapper(where=f"in _pin_memory_loop for device {device_id}")
-            q.put(x, block=False)
+            item = ExceptionWrapper(where=f"in _pin_memory_loop for device {device_id}")
+            q.put(item, block=False)
             break
 
 
@@ -88,7 +88,7 @@ class PinMemory(BaseNode[T]):
             custom_device_mod = getattr(torch, torch._C._get_privateuse1_backend_name())
             self._current_device = custom_device_mod.current_device()
         else:
-            self._current_device = torch.cuda.current_device()  # choose cuda for default
+            self._current_device = torch.cuda.current_device()
 
     def iterator(self) -> Iterator[T]:
         return _SingleThreadedMapper(
