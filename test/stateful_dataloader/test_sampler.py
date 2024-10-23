@@ -4,10 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-
 import math
 import unittest
-import warnings
 
 import torch
 
@@ -15,7 +13,7 @@ from torch.testing._internal.common_utils import TEST_WITH_ASAN, TEST_WITH_TSAN,
 
 from torch.utils.data import Dataset
 
-from torchdata.stateful_dataloader import Stateful, StatefulDataLoader
+from torchdata.stateful_dataloader import StatefulDataLoader
 from torchdata.stateful_dataloader.sampler import StatefulDistributedSampler
 
 
