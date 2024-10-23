@@ -12,10 +12,11 @@ import torch.multiprocessing as mp
 from torchdata.nodes import BaseNode, T
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
 
-from . import QUEUE_TIMEOUT
 from ._apply_udf import _apply_udf
 
 from ._populate_queue import _populate_queue
+
+from .constants import QUEUE_TIMEOUT
 
 
 # We define this protocol for type checking

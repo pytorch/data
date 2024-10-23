@@ -14,7 +14,7 @@ import torch.multiprocessing as mp
 
 from torch._utils import ExceptionWrapper
 
-from . import QUEUE_TIMEOUT
+from .constants import QUEUE_TIMEOUT
 
 
 def _apply_udf(

@@ -11,7 +11,7 @@ from typing import Iterable
 
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
 
-from . import QUEUE_TIMEOUT
+from .constants import QUEUE_TIMEOUT
 
 
 @dataclass
