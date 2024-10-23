@@ -9,7 +9,6 @@ import threading
 from typing import Any, Callable, Dict, Iterator, List, Literal, Optional, Protocol, TypeVar, Union
 
 import torch.multiprocessing as mp
-from torch import TYPE_CHECKING
 from torchdata.nodes import BaseNode, T
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
 
@@ -17,17 +16,17 @@ from ._apply_udf import _apply_udf
 
 from ._populate_queue import _populate_queue
 
-if TYPE_CHECKING:
 
-    class _MultiprocessContext(Protocol):
-        def Process(self, *args, **kwargs):
-            ...
+# We define this protocol for type checking
+class _MultiprocessContext(Protocol):
+    def Process(self, *args, **kwargs):
+        ...
 
-        def Event(self, *args, **kwargs):
-            ...
+    def Event(self, *args, **kwargs):
+        ...
 
-        def Queue(self, *args, **kwargs):
-            ...
+    def Queue(self, *args, **kwargs):
+        ...
 
 
 X = TypeVar("X")
@@ -74,6 +73,16 @@ def _sort_worker(in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_ev
 
 
 class _ParallelMapperIter(Iterator[T]):
+    """_ParallelMapperIter will start at least two threads, one running
+    _populate_queue, and one for _apply_udf. If in_order == True, a
+    third thread will be started to read from _apply_udf's result q
+    and block the output_q until the appropriate in_order element is available,
+    buffering outputs as needed.
+
+    A BoundedSemaphore with initial value max_concurrent will limit the number
+    of items in flight, and in all of the queues.
+    """
+
     def __init__(
         self,
         source: BaseNode[X],
@@ -82,6 +91,7 @@ class _ParallelMapperIter(Iterator[T]):
         in_order: bool,
         method: Literal["thread", "process"],
         mp_context: _MultiprocessContext,
+        max_concurrent: Optional[int],
     ):
         self.source = source
         self.map_fn = map_fn
@@ -92,7 +102,7 @@ class _ParallelMapperIter(Iterator[T]):
 
         self._in_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
         self._intermed_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
-        self._max_tasks = 2 * self.num_workers
+        self._max_tasks = 2 * self.num_workers if max_concurrent is None else max_concurrent
         self._sem = threading.BoundedSemaphore(value=self._max_tasks)
 
         self._done = False
@@ -177,6 +187,19 @@ class _ParallelMapperIter(Iterator[T]):
 
 
 class ParallelMapper(BaseNode[T]):
+    """ParallelMapper executes map_fn in parallel either in num_workers threads or
+    processes. For processes, multiprocessing_context can be spawn, forkserver, fork,
+    or None (chooses OS default). At most max_concurrent items will be either processed
+    or in the iterator's output queue, to limit CPU and Memory utilization. If None
+    (default) the value will be 2 * num_workers.
+
+    At most one iter() is created from source, and at most one thread will call
+    next() on it at once.
+
+    If in_order is true, the iterator will return items in the order from which they arrive
+    from source's iterator, potentially blocking even if other items are available.
+    """
+
     def __init__(
         self,
         source: BaseNode[X],
@@ -184,7 +207,8 @@ class ParallelMapper(BaseNode[T]):
         num_workers: int,
         in_order: bool = True,
         method: Literal["thread", "process"] = "thread",
-        multiprocessing_context: Optional[str] = "forkserver",
+        multiprocessing_context: Optional[str] = None,
+        max_concurrent: Optional[int] = None,
     ):
         assert method in ["thread", "process"]
         self.source = source
@@ -197,6 +221,11 @@ class ParallelMapper(BaseNode[T]):
         if self.method == "process" and self.multiprocessing_context is not None:
             self._mp_context = mp.get_context(self.multiprocessing_context)
 
+        if max_concurrent is not None:
+            if not isinstance(max_concurrent, int) and max_concurrent > num_workers:
+                raise ValueError(f"{max_concurrent=} should be >= {num_workers=}!")
+        self.max_concurrent = max_concurrent
+
     def iterator(self) -> Iterator[T]:
         return _ParallelMapperIter(
             source=self.source,
@@ -205,6 +234,7 @@ class ParallelMapper(BaseNode[T]):
             in_order=self.in_order,
             method=self.method,
             mp_context=self._mp_context,
+            max_concurrent=self.max_concurrent,
         )
 
 
