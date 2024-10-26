@@ -36,7 +36,7 @@ class TestMap(testslide.TestCase):
         node = Prefetcher(node, prefetch_factor=2)
 
         with self.assertRaisesRegex(ValueError, "test exception"):
-            print(list(node))
+            list(node)
 
     def test_exception_handling_mapper(self):
         self._test_exception_handling_mapper(False, "thread")
@@ -71,7 +71,6 @@ class TestMap(testslide.TestCase):
         results: List[List[dict]] = [[], []]
         for epoch in range(2):
             for batch in node:
-                print(f"{epoch=}, {batch=}")
                 results[epoch].extend(batch)
 
         for result in results:
