@@ -99,5 +99,7 @@ class TestToIterableDataset(testslide.TestCase):
         for epoch in range(2):
             result = list(iterable_ds)
             self.assertEqual(len(result), n)
-            for i, j in enumerate(result):
-                self.assertEqual(j, i)
+            for i, row in enumerate(result):
+                self.assertEqual(row["step"], i)
+                self.assertEqual(row["test_tensor"].item(), i)
+                self.assertEqual(row["test_str"], f"str_{i}")
