@@ -5,10 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 import testslide
-from torch.utils.data import RandomSampler
-from torchdata.nodes.adapters import IterableWrapper, MapStyleWrapper
+from torch.utils.data import IterableDataset, RandomSampler
+from torchdata.nodes.adapters import IterableWrapper, MapStyleWrapper, ToIterableDataset
 
-from .utils import DummyIterableDataset, DummyMapDataset
+from .utils import DummyIterableDataset, DummyMapDataset, MockSource
 
 
 class TestIterableWrapper(testslide.TestCase):
@@ -88,3 +88,16 @@ class TestMapStyle(testslide.TestCase):
                 self.assertEqual(row["step"], i)
                 self.assertEqual(row["test_tensor"].item(), i)
                 self.assertEqual(row["test_str"], f"str_{i}")
+
+
+class TestToIterableDataset(testslide.TestCase):
+    def test_to_iterable_dataset(self):
+        n = 20
+        node = MockSource(n)
+        iterable_ds = ToIterableDataset(node)
+        self.assertIsInstance(iterable_ds, IterableDataset)
+        for epoch in range(2):
+            result = list(iterable_ds)
+            self.assertEqual(len(result), n)
+            for i, j in enumerate(result):
+                self.assertEqual(j, i)

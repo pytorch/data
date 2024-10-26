@@ -4,15 +4,13 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Generic, Iterator, TypeVar
-
-import torch.utils.data
+from typing import Iterable, Iterator, TypeVar
 
 
-T = TypeVar("T")
+T = TypeVar("T", covariant=True)
 
 
-class BaseNode(torch.utils.data.IterableDataset, Generic[T]):
+class BaseNode(Iterable[T]):
     def iterator(self) -> Iterator[T]:
         """Override this method to implement the iterator.
         Iterators are expected to raise StopIteration to signal
