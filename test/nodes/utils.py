@@ -48,3 +48,23 @@ class IterInitError(BaseNode[int]):
 
     def iterator(self) -> Iterator[int]:
         raise ValueError(self.msg)
+
+
+class DummyIterableDataset(torch.utils.data.IterableDataset):
+    def __init__(self, num_samples: int) -> None:
+        self.num_samples = num_samples
+
+    def __iter__(self) -> Iterator[dict]:
+        for i in range(self.num_samples):
+            yield {"step": i, "test_tensor": torch.tensor([i]), "test_str": f"str_{i}"}
+
+
+class DummyMapDataset(torch.utils.data.Dataset):
+    def __init__(self, num_samples: int) -> None:
+        self.num_samples = num_samples
+
+    def __len__(self) -> int:
+        return self.num_samples
+
+    def __getitem__(self, i: int) -> dict:
+        return {"step": i, "test_tensor": torch.tensor([i]), "test_str": f"str_{i}"}
