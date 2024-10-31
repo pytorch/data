@@ -359,7 +359,7 @@ def get_args_parser(add_help=True):
         "--data-loader",
         default="V1",
         type=str,
-        help="'V1' or 'V2'. V2 is deprecated in release 1.0 onwards",
+        help="'V1' or 'V2'. Last stable release with DataloaderV2 is 0.9.0.",
     )
 
     return parser
