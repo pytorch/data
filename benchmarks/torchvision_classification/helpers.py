@@ -5,16 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 import itertools
-import os
 import random
-from functools import partial
 from pathlib import Path
 
 import torch
 import torch.distributed as dist
 import torchvision
 from PIL import Image
-from torchdata.datapipes.iter import FileLister, IterDataPipe
 
 
 # TODO: maybe infinite buffer can / is already natively supported by torchdata?
@@ -22,26 +19,6 @@ INFINITE_BUFFER_SIZE = 1_000_000_000
 
 IMAGENET_TRAIN_LEN = 1_281_167
 IMAGENET_TEST_LEN = 50_000
-
-
-class _LenSetter(IterDataPipe):
-    # TODO: Ideally, we woudn't need this extra class
-    def __init__(self, dp, root):
-        self.dp = dp
-
-        if "train" in str(root):
-            self.size = IMAGENET_TRAIN_LEN
-        elif "val" in str(root):
-            self.size = IMAGENET_TEST_LEN
-        else:
-            raise ValueError("oops?")
-
-    def __iter__(self):
-        yield from self.dp
-
-    def __len__(self):
-        # TODO The // world_size part shouldn't be needed. See https://github.com/pytorch/data/issues/533
-        return self.size // dist.get_world_size()
 
 
 def _decode(path, root, category_to_int):
@@ -58,22 +35,6 @@ def _apply_tranforms(img_and_label, transforms):
     return transforms(img), label
 
 
-def make_dp(root, transforms):
-
-    root = Path(root).expanduser().resolve()
-    categories = sorted(entry.name for entry in os.scandir(root) if entry.is_dir())
-    category_to_int = {category: i for (i, category) in enumerate(categories)}
-
-    dp = FileLister(str(root), recursive=True, masks=["*.JPEG"])
-
-    dp = dp.shuffle(buffer_size=INFINITE_BUFFER_SIZE).set_shuffle(False).sharding_filter()
-    dp = dp.map(partial(_decode, root=root, category_to_int=category_to_int))
-    dp = dp.map(partial(_apply_tranforms, transforms=transforms))
-
-    dp = _LenSetter(dp, root=root)
-    return dp
-
-
 class PreLoadedMapStyle:
     # All the data is pre-loaded and transformed in __init__, so the DataLoader should be crazy fast.
     # This is just to assess how fast a model could theoretically be trained if there was no data bottleneck at all.
@@ -87,27 +48,6 @@ class PreLoadedMapStyle:
 
     def __getitem__(self, idx):
         return self.samples[idx % len(self.samples)]
-
-
-class _PreLoadedDP(IterDataPipe):
-    # Same as above, but this is a DataPipe
-    def __init__(self, root, transforms, buffer_size=100):
-        dataset = torchvision.datasets.ImageFolder(root, transform=transforms)
-        self.size = len(dataset)
-        self.samples = [dataset[torch.randint(0, len(dataset), size=(1,)).item()] for i in range(buffer_size)]
-        # Note: the rng might be different across DDP workers so they'll all have different samples.
-        # But we don't care about accuracy here so whatever.
-
-    def __iter__(self):
-        for idx in range(self.size):
-            yield self.samples[idx % len(self.samples)]
-
-
-def make_pre_loaded_dp(root, transforms):
-    dp = _PreLoadedDP(root=root, transforms=transforms)
-    dp = dp.shuffle(buffer_size=INFINITE_BUFFER_SIZE).set_shuffle(False).sharding_filter()
-    dp = _LenSetter(dp, root=root)
-    return dp
 
 
 class MapStyleToIterable(torch.utils.data.IterableDataset):
