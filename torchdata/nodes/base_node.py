@@ -45,7 +45,7 @@ class BaseNode(Iterable[T]):
         """
         raise NotImplementedError()
 
-    def __iter__(self) -> Iterator[T]:
+    def __iter__(self) -> BaseNodeIterator[T]:
         if self._it is not None and self._it.started():
             # Only create a new iter if the last requested one did not start/finish
             self._it = None

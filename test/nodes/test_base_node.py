@@ -13,7 +13,7 @@ class TestBaseNode(testslide.TestCase):
     def test_started_finished(self) -> None:
         x = IterableWrapper(range(10))
         for _ in range(3):  # test multi-epoch
-            it: BaseNodeIterator = iter(x)
+            it = iter(x)
             self.assertIsInstance(it, BaseNodeIterator)
             self.assertFalse(it.started())
             self.assertFalse(it.finished())
