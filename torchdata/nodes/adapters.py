@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Generic, Iterable, Iterator, Mapping, Optional, Sized, TypeVar
+from typing import Any, Dict, Generic, Iterable, Iterator, Mapping, Optional, Sized, TypeVar
 
 from torch.utils.data import IterableDataset, Sampler, SequentialSampler
 
@@ -26,7 +26,7 @@ class IterableWrapper(BaseNode[T]):
     def __init__(self, iterable: Iterable[T]):
         self.iterable = iterable
 
-    def iterator(self) -> Iterator[T]:
+    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
         return iter(self.iterable)
 
 
