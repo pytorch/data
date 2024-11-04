@@ -7,8 +7,6 @@
 
 from typing import Any, Dict, Iterable, Iterator, Mapping, Optional, TypeVar
 
-from torch.utils.data import IterableDataset
-
 from torchdata.nodes.base_node import BaseNode, T
 
 from .map import Mapper
@@ -66,23 +64,9 @@ def MapStyleWrapper(map_dataset: Mapping[K, T], sampler: Iterable[K]) -> BaseNod
     """Thin Wrapper that converts any MapDataset in to a torchdata.node
     If you want parallelism, copy this and replace Mapper with ParallelMapper.
 
-    :param map_dataset: MapDataset to wrap.
-    :param sampler: IterableDataset to wrap.
+    :param map_dataset: Mapping to wrap.
+    :param sampler: Optional[Iterable].
     """
     sampler_node = IterableWrapper(sampler)
     mapper_node = Mapper(sampler_node, map_dataset.__getitem__)
     return mapper_node
-
-
-class ToIterableDataset(IterableDataset[T]):
-    def __init__(self, base_node: BaseNode[T]):
-        self.base_node = base_node
-
-    def __iter__(self) -> Iterator[T]:
-        return iter(self.base_node)
-
-    def state_dict(self) -> Dict[str, Any]:
-        return self.base_node.state_dict()
-
-    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
-        self.base_node.load_state_dict(state_dict)

@@ -9,16 +9,21 @@ import time
 from typing import Iterator
 
 import torch
-from torchdata.nodes import BaseNode
+from torchdata.nodes.adapters import IterableWrapper
+from torchdata.nodes.base_node import BaseNode
 
 
-class MockSource(BaseNode[dict]):
+class MockGenerator:
     def __init__(self, num_samples: int) -> None:
         self.num_samples = num_samples
 
-    def iterator(self) -> Iterator[dict]:
+    def __iter__(self):
         for i in range(self.num_samples):
             yield {"step": i, "test_tensor": torch.tensor([i]), "test_str": f"str_{i}"}
+
+
+def MockSource(num_samples: int) -> BaseNode[dict]:
+    return IterableWrapper(MockGenerator(num_samples))
 
 
 def udf_raises(item):
@@ -68,3 +73,21 @@ class DummyMapDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, i: int) -> dict:
         return {"step": i, "test_tensor": torch.tensor([i]), "test_str": f"str_{i}"}
+
+
+def run_test_save_load_state(test, x: BaseNode, midpoint: int):
+    it = iter(x)
+    results = []
+    for _ in range(midpoint):
+        results.append(next(it))
+    state_dict = x.state_dict()
+    for val in it:
+        results.append(val)
+
+    x.load_state_dict(state_dict)
+    results_after = list(x)
+
+    test.assertEqual(results_after, results[midpoint:])
+
+    full_results = list(x)
+    test.assertEqual(full_results, results)

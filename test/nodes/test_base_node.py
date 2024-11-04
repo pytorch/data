@@ -8,6 +8,8 @@ import testslide
 from torchdata.nodes.adapters import IterableWrapper
 from torchdata.nodes.base_node import BaseNodeIterator
 
+from .utils import run_test_save_load_state
+
 
 class TestBaseNode(testslide.TestCase):
     def test_started_finished(self) -> None:
@@ -26,19 +28,4 @@ class TestBaseNode(testslide.TestCase):
             self.assertTrue(it.finished())
 
     def test_save_load_state(self):
-        x = IterableWrapper(range(10))
-        it = iter(x)
-        results = []
-        for _ in range(5):
-            results.append(next(it))
-        state_dict = x.state_dict()
-        for val in it:
-            results.append(val)
-
-        x.load_state_dict(state_dict)
-        results_after = list(x)
-
-        self.assertEqual(results_after, results[5:])
-
-        full_results = list(x)
-        self.assertEqual(full_results, results)
+        run_test_save_load_state(self, IterableWrapper(range(10)), 5)

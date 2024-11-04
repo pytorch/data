@@ -9,7 +9,7 @@ import threading
 from typing import Any, Callable, Dict, Iterator, List, Literal, Optional, Protocol, TypeVar, Union
 
 import torch.multiprocessing as mp
-from torchdata.nodes import BaseNode, T
+from torchdata.nodes.base_node import BaseNode, T
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
 
 from ._apply_udf import _apply_udf
@@ -43,9 +43,14 @@ class Mapper(BaseNode[T]):
         self.source = source
         self.map_fn = map_fn
 
-    def iterator(self) -> Iterator[T]:
+    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
+        if initial_state is not None:
+            self.source.load_state_dict(initial_state["source"])
         for item in self.source:
             yield self.map_fn(item)
+
+    def get_state(self) -> Dict[str, Any]:
+        return {"source": self.source.state_dict()}
 
 
 def _sort_worker(in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_event: threading.Event):

@@ -4,11 +4,14 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import itertools
+
 import testslide
 import torch
+from parameterized import parameterized
 from torchdata.nodes.batch import Batcher
 
-from .utils import MockSource
+from .utils import MockSource, run_test_save_load_state
 
 
 class TestBatcher(testslide.TestCase):
@@ -38,3 +41,10 @@ class TestBatcher(testslide.TestCase):
                 self.assertEqual(results[i][j]["step"], i * batch_size + j)
                 self.assertEqual(results[i][j]["test_tensor"], torch.tensor([i * batch_size + j]))
                 self.assertEqual(results[i][j]["test_str"], f"str_{i * batch_size + j}")
+
+    @parameterized.expand(itertools.product([0, 1, 3], [True, False]))
+    def test_save_load_state_fast_forward(self, midpoint: int, drop_last: bool):
+        batch_size = 6
+        src = MockSource(num_samples=20)
+        node = Batcher(src, batch_size=batch_size, drop_last=drop_last)
+        run_test_save_load_state(self, node, midpoint)
