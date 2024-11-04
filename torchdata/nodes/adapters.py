@@ -25,9 +25,22 @@ class IterableWrapper(BaseNode[T]):
 
     def __init__(self, iterable: Iterable[T]):
         self.iterable = iterable
+        self._num_yielded = 0
 
     def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
-        return iter(self.iterable)
+        it = iter(self.iterable)
+        if initial_state is not None:
+            self._num_yielded = initial_state["_num_yielded"]
+            # Naively fast-forwarding
+            for _ in range(self._num_yielded):
+                next(it)
+
+        for item in it:
+            self._num_yielded += 1
+            yield item
+
+    def get_state(self) -> Dict[str, Any]:
+        return {"_num_yielded": self._num_yielded}
 
 
 class MapStyleWrapper(BaseNode[T], Generic[K, T]):
