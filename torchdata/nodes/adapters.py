@@ -5,11 +5,15 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Any, Dict, Generic, Iterable, Iterator, Mapping, Optional, Sized, TypeVar
+from typing import Any, Dict, Iterable, Iterator, Mapping, Optional, TypeVar
 
-from torch.utils.data import IterableDataset, Sampler, SequentialSampler
+from torch.utils.data import IterableDataset
 
 from torchdata.nodes.base_node import BaseNode, T
+
+from .map import Mapper
+
+from .types import Stateful
 
 K = TypeVar("K", covariant=True)
 
@@ -18,55 +22,56 @@ class IterableWrapper(BaseNode[T]):
     """Thin Wrapper that converts any Iterable (including
     torch.utils.data.IterableDataset) in to a BaseNode.
 
+    If iterable implements the Stateful Protocol, it will be saved and restored with its
+    state_dict/load_state_dict methods.
+
+    If the iterator resulting from iter(iterable) is Stateful it is IGNORED.
+
     :param iterable: Iterable to wrap. IterableWrapper calls iter() on it.
     """
 
-    iterable: Iterable[T]
+    NUM_YIELDED_KEY = "_num_yielded"
+    ITERABLE_KEY = "iterable"
 
     def __init__(self, iterable: Iterable[T]):
         self.iterable = iterable
         self._num_yielded = 0
 
     def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
-        it = iter(self.iterable)
         if initial_state is not None:
-            self._num_yielded = initial_state["_num_yielded"]
-            # Naively fast-forwarding
-            for _ in range(self._num_yielded):
-                next(it)
+            self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
+            if isinstance(self.iterable, Stateful):
+                self.iterable.load_state_dict(initial_state[self.ITERABLE_KEY])
+                it = iter(self.iterable)
+            else:
+                it = iter(self.iterable)
+                # Naively fast-forwarding
+                for _ in range(self._num_yielded):
+                    next(it)
+        else:
+            it = iter(self.iterable)
 
         for item in it:
             self._num_yielded += 1
             yield item
 
     def get_state(self) -> Dict[str, Any]:
-        return {"_num_yielded": self._num_yielded}
+        state_dict: Dict[str, Any] = {self.NUM_YIELDED_KEY: self._num_yielded}
+        if isinstance(self.iterable, Stateful):
+            state_dict[self.ITERABLE_KEY] = self.iterable.state_dict()
+        return state_dict
 
 
-class MapStyleWrapper(BaseNode[T], Generic[K, T]):
-    """Thin Wrapper that converts any Mapping[K, T] into a BaseNode[T].
-    If no sampler is provided, a SequentialSampler is used and requires dataset to be Sized.
+def MapStyleWrapper(map_dataset: Mapping[K, T], sampler: Iterable[K]) -> BaseNode[T]:
+    """Thin Wrapper that converts any MapDataset in to a torchdata.node
+    If you want parallelism, copy this and replace Mapper with ParallelMapper.
 
-    Note that if your map_style lookup is expensive, you might want
-    to use __to_be_named_dataloader_drop_in__ instead which can take advantage
-    of process- or thread-based parallelism.
+    :param map_dataset: MapDataset to wrap.
+    :param sampler: IterableDataset to wrap.
     """
-
-    dataset: Mapping[K, T]
-    sampler: Sampler[K]
-
-    def __init__(self, dataset: Mapping[K, T], sampler: Optional[Sampler[K]] = None):
-        self.dataset = dataset
-        if sampler is None:
-            if not isinstance(self.dataset, Sized):
-                raise ValueError("If dataset does not implement __len__, you must pass a sampler!")
-            self.sampler = SequentialSampler(self.dataset)  # type: ignore
-        else:
-            self.sampler = sampler
-
-    def iterator(self) -> Iterator[T]:
-        for key in self.sampler:
-            yield self.dataset[key]
+    sampler_node = IterableWrapper(sampler)
+    mapper_node = Mapper(sampler_node, map_dataset.__getitem__)
+    return mapper_node
 
 
 class ToIterableDataset(IterableDataset[T]):
@@ -75,3 +80,9 @@ class ToIterableDataset(IterableDataset[T]):
 
     def __iter__(self) -> Iterator[T]:
         return iter(self.base_node)
+
+    def state_dict(self) -> Dict[str, Any]:
+        return self.base_node.state_dict()
+
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
+        self.base_node.load_state_dict(state_dict)
