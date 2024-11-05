@@ -1,6 +1,20 @@
 import threading
 from collections import deque
+from dataclasses import dataclass
 from typing import Any, Optional, Protocol
+
+
+@dataclass
+class MonotonicIndex:
+    initial: int = 0
+
+    def __post_init__(self):
+        self._idx = self.initial
+
+    def get(self) -> int:
+        idx = self._idx
+        self._idx += 1
+        return idx
 
 
 class SnapshotStore(Protocol):

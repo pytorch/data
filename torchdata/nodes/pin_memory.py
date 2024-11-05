@@ -18,7 +18,7 @@ from torchdata.nodes import BaseNode, T
 
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
 from torchdata.nodes.map import _SingleThreadedMapper
-from torchdata.nodes.snapshot_store import SnapshotStore
+from torchdata.nodes.snapshot_store import MonotonicIndex, SnapshotStore
 
 
 def _pin_memory_loop(
@@ -36,6 +36,15 @@ def _pin_memory_loop(
 
     # This setting is thread local, and prevents the copy in pin_memory from
     # consuming all CPU cores.
+
+    idx = MonotonicIndex()
+
+    def _put(item, block: bool = True, snapshot: Optional[Dict[str, Any]] = None):
+        _idx = idx.get()
+        if snapshot:
+            snapshot_store.append(snapshot=snapshot, version=_idx)
+        q.put((item, _idx), block=block)
+
     try:
         torch.set_num_threads(1)
 
@@ -49,26 +58,34 @@ def _pin_memory_loop(
             custom_device_mod = getattr(torch, torch._C._get_privateuse1_backend_name())
             custom_device_mod.set_device(device_id)
 
+        assert (
+            isinstance(snapshot_frequency, int) and snapshot_frequency >= 0
+        ), f"snapshot_frequency must be non-negative integer! Got {snapshot_frequency}"
         src_iter = iter(source)
     except Exception:
         e = StartupExceptionWrapper(where=f"in _pin_memory_loop startup for device {device_id}")
-        q.put(e)
+        _put(e)
         return
 
+    yielded = 0
     while not stop_event.is_set():
         if not semaphore.acquire(blocking=True, timeout=0.1):
             continue
         try:
             item = next(src_iter)
             item = pin_memory(item, device)
-            q.put(item, block=False)
+            yielded += 1
+            snapshot = None
+            if snapshot_frequency > 0 and yielded % snapshot_frequency == 0:
+                snapshot = source.state_dict()
+            _put(item, block=False, snapshot=snapshot)
         except StopIteration as e:
             item = e
-            q.put(item, block=False)
+            _put(item, block=False)
             break
         except Exception:
             item = ExceptionWrapper(where=f"in _pin_memory_loop for device {device_id}")
-            q.put(item, block=False)
+            _put(item, block=False)
             break
 
 
@@ -77,8 +94,10 @@ class PinMemory(BaseNode[T]):
         self,
         source: BaseNode[T],
         pin_memory_device: str = "",
+        snapshot_frequency: int = 1,
     ):
         self.source = source
+        self.snapshot_frequency = snapshot_frequency
         self._pin_memory = torch.cuda.is_available()
         if len(pin_memory_device) == 0:
             self._pin_memory_device = None
@@ -93,10 +112,10 @@ class PinMemory(BaseNode[T]):
         else:
             self._current_device = torch.cuda.current_device()
 
-        self._it: Optional[_SingleThreadedMapper] = None
+        self._it: Optional[_SingleThreadedMapper[T]] = None
 
-    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
-        self._it = _SingleThreadedMapper(
+    def _get_iterator(self, initial_state: Optional[Dict[str, Any]]) -> _SingleThreadedMapper[T]:
+        return _SingleThreadedMapper(
             source=self.source,
             prefetch_factor=1,
             worker=functools.partial(
@@ -104,10 +123,20 @@ class PinMemory(BaseNode[T]):
                 device_id=self._current_device,
                 device=self._pin_memory_device,
             ),
+            snapshot_frequency=self.snapshot_frequency,
+            initial_state=initial_state,
         )
+
+    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
+        if self._iter_for_state_dict:
+            self._iter_for_state_dict = False
+        else:
+            self._it = self._get_iterator(initial_state)
+        assert self._it is not None
         return self._it
 
     def get_state(self) -> Dict[str, Any]:
-        assert self._it is not None, "get_state() should not be called before iterator()!"
+        if self._it is None:
+            self._it = self._get_iterator(None)
+            self._iter_for_state_dict = True
         return self._it.get_state()
-        return {self.SOURCE_KEY: self.source.state_dict()}

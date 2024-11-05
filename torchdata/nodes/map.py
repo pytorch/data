@@ -102,6 +102,8 @@ class _ParallelMapperIter(Iterator[T]):
         method: Literal["thread", "process"],
         mp_context: _MultiprocessContext,
         max_concurrent: Optional[int],
+        snapshot_frequency: int,
+        initial_state: Optional[Dict[str, Any]],
     ):
         self.source = source
         self.map_fn = map_fn
@@ -109,6 +111,7 @@ class _ParallelMapperIter(Iterator[T]):
         self.in_order = in_order
         self.method = method
         self.mp_context = mp_context
+        self.snapshot_frequency = snapshot_frequency
 
         self._in_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
         self._intermed_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
@@ -120,9 +123,26 @@ class _ParallelMapperIter(Iterator[T]):
         self._stop = threading.Event()
         self._mp_stop = mp_context.Event()
 
+        self._steps_since_snapshot = 0
+        fast_forward = 0
+        if initial_state is not None:
+            self._snapshot = initial_state["snapshot"]
+            fast_forward = initial_state["steps_since_snapshot"]
+            self.source.load_state_dict(self._snapshot)
+        else:
+            self._snapshot = self.source.state_dict()
+        self._snapshot_store = DequeSnapshotStore()
+
         self._read_thread = threading.Thread(
             target=_populate_queue,
-            args=(self.source, self._in_q, self._sem, self._stop, True),
+            args=(
+                self.source,
+                self._in_q,
+                self._snapshot_store,
+                self.snapshot_frequency,
+                self._sem,
+                self._stop,
+            ),
             daemon=True,
         )
         self._workers: List[Union[threading.Thread, mp.Process]] = []
@@ -156,6 +176,9 @@ class _ParallelMapperIter(Iterator[T]):
         if self.in_order:
             self._sort_thread.start()
 
+        for _ in range(fast_forward):
+            next(self)
+
     def __iter__(self) -> Iterator[T]:
         return self
 
@@ -170,6 +193,7 @@ class _ParallelMapperIter(Iterator[T]):
                 raise StopIteration()
             try:
                 item, idx = self._out_q.get(block=True, timeout=QUEUE_TIMEOUT)
+                self._steps_since_snapshot += 1
             except queue.Empty:
                 continue
 
@@ -184,7 +208,19 @@ class _ParallelMapperIter(Iterator[T]):
                 item.reraise()
             else:
                 self._sem.release()
+                self._maybe_update_snapshot(idx)
                 return item
+
+    def get_state(self) -> Dict[str, Any]:
+        return {
+            "snapshot": self._snapshot,
+            "steps_since_snapshot": self._steps_since_snapshot,
+        }
+
+    def _maybe_update_snapshot(self, idx: int):
+        if (snapshot := self._snapshot_store.pop_version(idx)) is not None:
+            self._snapshot = snapshot
+            self._steps_since_snapshot = 0
 
     def __del__(self):
         self._shutdown()
@@ -224,6 +260,7 @@ class ParallelMapper(BaseNode[T]):
         method: Literal["thread", "process"] = "thread",
         multiprocessing_context: Optional[str] = None,
         max_concurrent: Optional[int] = None,
+        snapshot_frequency: int = 1,
     ):
         assert method in ["thread", "process"]
         self.source = source
@@ -240,8 +277,10 @@ class ParallelMapper(BaseNode[T]):
             if not isinstance(max_concurrent, int) and max_concurrent > num_workers:
                 raise ValueError(f"{max_concurrent=} should be >= {num_workers=}!")
         self.max_concurrent = max_concurrent
+        self.snapshot_frequency = snapshot_frequency
+        self._it: Optional[_ParallelMapperIter[T]] = None
 
-    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
+    def _get_iterator(self, initial_state: Optional[Dict[str, Any]]) -> _ParallelMapperIter[T]:
         return _ParallelMapperIter(
             source=self.source,
             map_fn=self.map_fn,
@@ -250,10 +289,23 @@ class ParallelMapper(BaseNode[T]):
             method=self.method,
             mp_context=self._mp_context,
             max_concurrent=self.max_concurrent,
+            snapshot_frequency=self.snapshot_frequency,
+            initial_state=initial_state,
         )
 
+    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
+        if self._iter_for_state_dict:
+            self._iter_for_state_dict = False
+        else:
+            self._it = self._get_iterator(initial_state)
+        assert self._it is not None
+        return self._it
+
     def get_state(self) -> Dict[str, Any]:
-        return {"source": self.source.state_dict()}
+        if self._it is None:
+            self._it = self._get_iterator(None)
+            self._iter_for_state_dict = True
+        return self._it.get_state()
 
 
 _WorkerType = Callable[[BaseNode, queue.Queue, threading.BoundedSemaphore, threading.Event], None]

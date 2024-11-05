@@ -6,7 +6,6 @@
 
 import queue
 import threading
-from dataclasses import dataclass
 from typing import Any, Dict, Optional, Union
 
 import torch.multiprocessing as mp
@@ -14,22 +13,9 @@ import torch.multiprocessing as mp
 from torchdata.nodes.base_node import BaseNode
 
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
-from torchdata.nodes.snapshot_store import SnapshotStore
+from torchdata.nodes.snapshot_store import MonotonicIndex, SnapshotStore
 
 from .constants import QUEUE_TIMEOUT
-
-
-@dataclass
-class _MonotonicIndex:
-    initial: int = 0
-
-    def __post_init__(self):
-        self._idx = self.initial
-
-    def get(self) -> int:
-        idx = self._idx
-        self._idx += 1
-        return idx
 
 
 def _populate_queue(
@@ -58,7 +44,7 @@ def _populate_queue(
     """
 
     # Include a monotonic index starting from 0 to each item in the queue
-    idx = _MonotonicIndex()
+    idx = MonotonicIndex()
 
     def _put(item, block: bool = True, snapshot: Optional[Dict[str, Any]] = None):
         _idx = idx.get()

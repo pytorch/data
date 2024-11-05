@@ -79,6 +79,8 @@ class DummyMapDataset(torch.utils.data.Dataset):
 
 
 def run_test_save_load_state(test, x: BaseNode, midpoint: int):
+    # Test before iter call
+    initial_state_dict = x.state_dict()
     it = iter(x)
     results = []
     for _ in range(midpoint):
@@ -92,5 +94,9 @@ def run_test_save_load_state(test, x: BaseNode, midpoint: int):
 
     test.assertEqual(results_after, results[midpoint:])
 
+    full_results = list(x)
+    test.assertEqual(full_results, results)
+
+    x.load_state_dict(initial_state_dict)
     full_results = list(x)
     test.assertEqual(full_results, results)
