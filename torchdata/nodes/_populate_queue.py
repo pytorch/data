@@ -50,7 +50,7 @@ def _populate_queue(
         _idx = idx.get()
         if snapshot:
             snapshot_store.append(snapshot=snapshot, version=_idx)
-        q.put((item, _idx), block=block)
+        q.put((item, _idx), block=block, timeout=1.0 if block else None)
 
     try:
         assert (
@@ -78,6 +78,8 @@ def _populate_queue(
         except Exception:
             item = ExceptionWrapper(where="in _populate_queue")
         try:
-            _put(item, block=False, snapshot=snapshot)  # Semaphore should prevent this from throwing
+            _put(
+                item, block=False, snapshot=snapshot
+            )  # Semaphore should prevent this from throwing
         except queue.Full:
             raise RuntimeError("Queue should not be full")
