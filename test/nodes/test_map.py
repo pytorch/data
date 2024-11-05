@@ -20,7 +20,7 @@ from torchdata.nodes.prefetch import Prefetcher
 from .utils import MockSource, RandomSleepUdf, run_test_save_load_state, udf_raises
 
 
-class TestMap(testslide.TestCase):
+class TestMap(unittest.TestCase):
     def _test_exception_handling_mapper(self, pin_memory, method):
         batch_size = 6
         multiprocessing_context = None if IS_WINDOWS else "forkserver"
@@ -108,31 +108,33 @@ class TestMap(testslide.TestCase):
     def test_out_of_order_process(self):
         self._test_map(False, "process")
 
-    # @parameterized.expand(
-    #     itertools.product(
-    #         [0, 7, 14],
-    #         [True],  # TODO: define and fix in_order = False
-    #         [0, 1, 9],  # TODO: define and fix in_order = False
-    #     )
-    # )
-    # def test_save_load_state_thread(self, midpoint: int, in_order: bool, snapshot_frequency: int):
-    #     method = "thread"
-    #     batch_size = 6
-    #     n = 80
-    #     multiprocessing_context = None if IS_WINDOWS else "forkserver"
-    #     src = MockSource(num_samples=n)
-    #     node = Batcher(src, batch_size=batch_size, drop_last=False)
-    #     node = ParallelMapper(
-    #         node,
-    #         RandomSleepUdf(),
-    #         num_workers=4,
-    #         in_order=in_order,
-    #         method=method,
-    #         multiprocessing_context=multiprocessing_context,
-    #         snapshot_frequency=snapshot_frequency,
-    #     )
-    #     node = Prefetcher(node, prefetch_factor=2)
-    #     run_test_save_load_state(self, node, midpoint)
+    @parameterized.expand(
+        itertools.product(
+            [0, 7, 14],
+            [True],  # TODO: define and fix in_order = False
+            [0, 1, 9],  # TODO: define and fix in_order = False
+        )
+    )
+    def test_save_load_state_thread(
+        self, midpoint: int, in_order: bool, snapshot_frequency: int
+    ):
+        method = "thread"
+        batch_size = 6
+        n = 80
+        multiprocessing_context = None if IS_WINDOWS else "forkserver"
+        src = MockSource(num_samples=n)
+        node = Batcher(src, batch_size=batch_size, drop_last=False)
+        node = ParallelMapper(
+            node,
+            RandomSleepUdf(),
+            num_workers=4,
+            in_order=in_order,
+            method=method,
+            multiprocessing_context=multiprocessing_context,
+            snapshot_frequency=snapshot_frequency,
+        )
+        node = Prefetcher(node, prefetch_factor=2)
+        run_test_save_load_state(self, node, midpoint)
 
     # @parameterized.expand(
     #     itertools.product(
