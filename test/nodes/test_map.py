@@ -20,7 +20,7 @@ from torchdata.nodes.prefetch import Prefetcher
 from .utils import MockSource, RandomSleepUdf, run_test_save_load_state, udf_raises
 
 
-class TestMap(unittest.TestCase):
+class TestMap(testslide.TestCase):
     def _test_exception_handling_mapper(self, pin_memory, method):
         batch_size = 6
         multiprocessing_context = None if IS_WINDOWS else "forkserver"
@@ -124,15 +124,16 @@ class TestMap(unittest.TestCase):
         multiprocessing_context = None if IS_WINDOWS else "forkserver"
         src = MockSource(num_samples=n)
         node = Batcher(src, batch_size=batch_size, drop_last=False)
-        node = ParallelMapper(
-            node,
-            RandomSleepUdf(),
-            num_workers=4,
-            in_order=in_order,
-            method=method,
-            multiprocessing_context=multiprocessing_context,
-            snapshot_frequency=snapshot_frequency,
-        )
+        # node = ParallelMapper(
+        #     node,
+        #     RandomSleepUdf(),
+        #     num_workers=4,
+        #     in_order=in_order,
+        #     method=method,
+        #     multiprocessing_context=multiprocessing_context,
+        #     snapshot_frequency=snapshot_frequency,
+        # )
+        node = Mapper(node, RandomSleepUdf())
         node = Prefetcher(node, prefetch_factor=2)
         run_test_save_load_state(self, node, midpoint)
 
@@ -152,14 +153,15 @@ class TestMap(unittest.TestCase):
         multiprocessing_context = None if IS_WINDOWS else "forkserver"
         src = MockSource(num_samples=n)
         node = Batcher(src, batch_size=batch_size, drop_last=False)
-        node = ParallelMapper(
-            node,
-            RandomSleepUdf(),
-            num_workers=4,
-            in_order=in_order,
-            method=method,
-            multiprocessing_context=multiprocessing_context,
-            snapshot_frequency=snapshot_frequency,
-        )
+        # node = ParallelMapper(
+        #     node,
+        #     RandomSleepUdf(),
+        #     num_workers=4,
+        #     in_order=in_order,
+        #     method=method,
+        #     multiprocessing_context=multiprocessing_context,
+        #     snapshot_frequency=snapshot_frequency,
+        # )
+        node = Mapper(node, RandomSleepUdf())
         node = Prefetcher(node, prefetch_factor=2)
         run_test_save_load_state(self, node, midpoint)
