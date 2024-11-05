@@ -69,7 +69,7 @@ def _populate_queue(
     try:
         assert (
             isinstance(snapshot_frequency, int) and snapshot_frequency >= 0
-        ), f"snapshot_frequency {snapshot_frequency} must be non-negative integer!"
+        ), f"snapshot_frequency must be non-negative integer! Got {snapshot_frequency}"
         src_iter = iter(source)
     except Exception:
         e = StartupExceptionWrapper(where="in _populate_queue startup for device")
