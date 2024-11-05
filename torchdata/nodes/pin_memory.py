@@ -14,7 +14,7 @@ import torch
 import torch.multiprocessing
 
 from torch.utils.data._utils.pin_memory import pin_memory
-from torchdata.nodes import BaseNode, T
+from torchdata.nodes.base_node import BaseNode, T
 
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
 from torchdata.nodes.map import _SingleThreadedMapper
