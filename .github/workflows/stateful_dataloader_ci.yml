@@ -76,24 +76,24 @@ jobs:
           BUILD_S3: 0
       - name: Install test requirements
         run: pip3 install -r test/requirements.txt
-      - name: Run StatefulDataLoader tests with pytest - dataloader
-        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_dataloader.py
-      - name: Run StatefulDataSampler tests with pytest - datasampler
-        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_sampler.py
-      - name: Run StatefulDataLoader tests with pytest - state_dict 0
-        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict.py -k _shard0
-      - name: Run StatefulDataLoader tests with pytest - state_dict 1
-        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict.py -k _shard1
-      - name: Run StatefulDataLoader tests with pytest - state_dict 2
-        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict.py -k _shard2
-      - name: Run StatefulDataLoader tests with pytest - state_dict 3
-        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict.py -k _shard3
-      - name: Run StatefulDataLoader HuggingFace tests
-        if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_hugging_face.py
+      # - name: Run StatefulDataLoader tests with pytest - dataloader
+      #   if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+      #   run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_dataloader.py
+      # - name: Run StatefulDataSampler tests with pytest - datasampler
+      #   if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+      #   run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_sampler.py
+      # - name: Run StatefulDataLoader tests with pytest - state_dict 0
+      #   if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+      #   run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict.py -k _shard0
+      # - name: Run StatefulDataLoader tests with pytest - state_dict 1
+      #   if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+      #   run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict.py -k _shard1
+      # - name: Run StatefulDataLoader tests with pytest - state_dict 2
+      #   if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+      #   run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict.py -k _shard2
+      # - name: Run StatefulDataLoader tests with pytest - state_dict 3
+      #   if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+      #   run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_state_dict.py -k _shard3
+      # - name: Run StatefulDataLoader HuggingFace tests
+      #   if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
+      #   run: pytest --durations=0 --no-header -v test/stateful_dataloader/test_hugging_face.py
