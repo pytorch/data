@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, Iterator, List, Literal, Optional, Proto
 import torch.multiprocessing as mp
 from torchdata.nodes.base_node import BaseNode, T
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
-from torchdata.nodes.snapshot_store import DequeSnapshotStore
+from torchdata.nodes.snapshot_store import DequeSnapshotStore, SnapshotStore
 
 from ._apply_udf import _apply_udf
 
@@ -279,6 +279,7 @@ class ParallelMapper(BaseNode[T]):
         self.max_concurrent = max_concurrent
         self.snapshot_frequency = snapshot_frequency
         self._it: Optional[_ParallelMapperIter[T]] = None
+        self._iter_for_state_dict: bool = False
 
     def _get_iterator(self, initial_state: Optional[Dict[str, Any]]) -> _ParallelMapperIter[T]:
         return _ParallelMapperIter(
@@ -308,7 +309,17 @@ class ParallelMapper(BaseNode[T]):
         return self._it.get_state()
 
 
-_WorkerType = Callable[[BaseNode, queue.Queue, threading.BoundedSemaphore, threading.Event], None]
+_WorkerType = Callable[
+    [
+        BaseNode,
+        queue.Queue,
+        SnapshotStore,
+        int,
+        threading.BoundedSemaphore,
+        threading.Event,
+    ],
+    None,
+]
 
 
 class _SingleThreadedMapper(Iterator[T]):

@@ -113,6 +113,7 @@ class PinMemory(BaseNode[T]):
             self._current_device = torch.cuda.current_device()
 
         self._it: Optional[_SingleThreadedMapper[T]] = None
+        self._iter_for_state_dict: bool = False
 
     def _get_iterator(self, initial_state: Optional[Dict[str, Any]]) -> _SingleThreadedMapper[T]:
         return _SingleThreadedMapper(

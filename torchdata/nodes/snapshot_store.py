@@ -31,7 +31,7 @@ class DequeSnapshotStore(SnapshotStore):
     """A snapshot store that uses a deque to store snapshots"""
 
     def __init__(self, max_size: Optional[int] = None) -> None:
-        self._deque = deque(maxlen=max_size)
+        self._deque: deque = deque(maxlen=max_size)
         self._lock = threading.Lock()
         self._max_version: int = -1
 
