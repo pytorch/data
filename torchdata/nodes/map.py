@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict, Iterator, List, Literal, Optional, Proto
 import torch.multiprocessing as mp
 from torchdata.nodes.base_node import BaseNode, T
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
+from torchdata.nodes.snapshot_store import DequeSnapshotStore
 
 from ._apply_udf import _apply_udf
 
@@ -35,6 +36,8 @@ X = TypeVar("X")
 
 
 class Mapper(BaseNode[T]):
+    SOURCE_KEY = "source"
+
     def __init__(
         self,
         source: BaseNode[X],
@@ -45,12 +48,12 @@ class Mapper(BaseNode[T]):
 
     def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
         if initial_state is not None:
-            self.source.load_state_dict(initial_state["source"])
+            self.source.load_state_dict(initial_state[self.SOURCE_KEY])
         for item in self.source:
             yield self.map_fn(item)
 
     def get_state(self) -> Dict[str, Any]:
-        return {"source": self.source.state_dict()}
+        return {self.SOURCE_KEY: self.source.state_dict()}
 
 
 def _sort_worker(in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_event: threading.Event):
@@ -122,7 +125,7 @@ class _ParallelMapperIter(Iterator[T]):
             args=(self.source, self._in_q, self._sem, self._stop, True),
             daemon=True,
         )
-        self._map_threads: List[Union[threading.Thread, mp.Process]] = []
+        self._workers: List[Union[threading.Thread, mp.Process]] = []
         for worker_id in range(self.num_workers):
             args = (
                 worker_id,
@@ -131,7 +134,7 @@ class _ParallelMapperIter(Iterator[T]):
                 self.map_fn,
                 self._stop if self.method == "thread" else self._mp_stop,
             )
-            self._map_threads.append(
+            self._workers.append(
                 threading.Thread(target=_apply_udf, args=args)
                 if self.method == "thread"
                 else mp_context.Process(target=_apply_udf, args=args)
@@ -148,7 +151,7 @@ class _ParallelMapperIter(Iterator[T]):
             self._out_q = self._sort_q
 
         self._read_thread.start()
-        for t in self._map_threads:
+        for t in self._workers:
             t.start()
         if self.in_order:
             self._sort_thread.start()
@@ -193,7 +196,7 @@ class _ParallelMapperIter(Iterator[T]):
             self._read_thread.join(timeout=QUEUE_TIMEOUT)
         if self._sort_thread.is_alive():
             self._sort_thread.join(timeout=QUEUE_TIMEOUT)
-        for t in self._map_threads:
+        for t in self._workers:
             if t.is_alive():
                 t.join(timeout=QUEUE_TIMEOUT)
 
@@ -238,7 +241,7 @@ class ParallelMapper(BaseNode[T]):
                 raise ValueError(f"{max_concurrent=} should be >= {num_workers=}!")
         self.max_concurrent = max_concurrent
 
-    def iterator(self) -> Iterator[T]:
+    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
         return _ParallelMapperIter(
             source=self.source,
             map_fn=self.map_fn,
@@ -248,6 +251,9 @@ class ParallelMapper(BaseNode[T]):
             mp_context=self._mp_context,
             max_concurrent=self.max_concurrent,
         )
+
+    def get_state(self) -> Dict[str, Any]:
+        return {"source": self.source.state_dict()}
 
 
 _WorkerType = Callable[[BaseNode, queue.Queue, threading.BoundedSemaphore, threading.Event], None]
@@ -280,22 +286,48 @@ class _SingleThreadedMapper(Iterator[T]):
     processed in _populate_queue, in the _q, or about to be returned by an in-flight next() call.
     """
 
-    def __init__(self, source: BaseNode[T], prefetch_factor: int, worker: _WorkerType):
+    def __init__(
+        self,
+        source: BaseNode[T],
+        prefetch_factor: int,
+        worker: _WorkerType,
+        snapshot_frequency: int,
+        initial_state: Optional[Dict[str, Any]],
+    ):
         self.source = source
         self.prefetch_factor = prefetch_factor
         self.worker = worker
+        self.snapshot_frequency = snapshot_frequency
 
         self._q: queue.Queue = queue.Queue()
         self._sem = threading.BoundedSemaphore(value=prefetch_factor)
         self._stop_event = threading.Event()
 
+        self._steps_since_snapshot = 0
+        fast_forward = 0
+        if initial_state is not None:
+            self._snapshot = initial_state["snapshot"]
+            fast_forward = initial_state["steps_since_snapshot"]
+            self.source.load_state_dict(self._snapshot)
+        else:
+            self._snapshot = self.source.state_dict()
+        self._snapshot_store = DequeSnapshotStore()
         self._thread = threading.Thread(
             target=self.worker,
-            args=(self.source, self._q, self._sem, self._stop_event),
+            args=(
+                self.source,
+                self._q,
+                self._snapshot_store,
+                self.snapshot_frequency,
+                self._sem,
+                self._stop_event,
+            ),
             daemon=True,
         )
         self._thread.start()
         self._stopped = False
+        for _ in range(fast_forward):
+            next(self)
 
     def __iter__(self) -> Iterator[T]:
         return self
@@ -306,7 +338,8 @@ class _SingleThreadedMapper(Iterator[T]):
 
         while True:
             try:
-                item = self._q.get(block=True, timeout=QUEUE_TIMEOUT)
+                item, idx = self._q.get(block=True, timeout=QUEUE_TIMEOUT)
+                self._steps_since_snapshot += 1
                 break
             except queue.Empty:
                 continue
@@ -325,7 +358,20 @@ class _SingleThreadedMapper(Iterator[T]):
             item.reraise()
         else:
             self._sem.release()
+
+        self._maybe_update_snapshot(idx)
         return item
+
+    def get_state(self) -> Dict[str, Any]:
+        return {
+            "snapshot": self._snapshot,
+            "steps_since_snapshot": self._steps_since_snapshot,
+        }
+
+    def _maybe_update_snapshot(self, idx: int):
+        if (snapshot := self._snapshot_store.pop_version(idx)) is not None:
+            self._snapshot = snapshot
+            self._steps_since_snapshot = 0
 
     def __del__(self):
         self._shutdown()

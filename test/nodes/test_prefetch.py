@@ -4,12 +4,15 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import itertools
+
 import testslide
 import torch
+from parameterized import parameterized
 from torchdata.nodes.batch import Batcher
 from torchdata.nodes.prefetch import Prefetcher
 
-from .utils import IterInitError, MockSource
+from .utils import IterInitError, MockSource, run_test_save_load_state
 
 
 class TestPrefetcher(testslide.TestCase):
@@ -35,3 +38,12 @@ class TestPrefetcher(testslide.TestCase):
 
         with self.assertRaisesRegex(ValueError, "Iter Init Error"):
             list(root)
+
+    @parameterized.expand(itertools.product([0, 7, 34], [0, 1, 9]))
+    def test_save_load_state_stateful(self, midpoint: int, snapshot_frequency: int):
+        batch_size = 6
+        n = 200
+        src = MockSource(num_samples=n)
+        node = Batcher(src, batch_size=batch_size, drop_last=False)
+        node = Prefetcher(node, prefetch_factor=8, snapshot_frequency=snapshot_frequency)
+        run_test_save_load_state(self, node, midpoint)

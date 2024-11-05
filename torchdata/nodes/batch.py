@@ -10,7 +10,7 @@ from torchdata.nodes.base_node import BaseNode, T
 
 
 class Batcher(BaseNode[List[T]]):
-    SOURCE_KEY = "_source"
+    SOURCE_KEY = "source"
 
     def __init__(self, source: BaseNode[T], batch_size: int, drop_last: bool = True):
         self.source = source

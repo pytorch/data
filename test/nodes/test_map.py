@@ -4,17 +4,20 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import itertools
 import unittest
-from typing import List
+from typing import List, Literal
 
 import testslide
+
+from parameterized import parameterized
 from torch.testing._internal.common_utils import IS_WINDOWS, TEST_CUDA
 from torchdata.nodes.batch import Batcher
 from torchdata.nodes.map import Mapper, ParallelMapper
 from torchdata.nodes.pin_memory import PinMemory
 from torchdata.nodes.prefetch import Prefetcher
 
-from .utils import MockSource, RandomSleepUdf, udf_raises
+from .utils import MockSource, RandomSleepUdf, run_test_save_load_state, udf_raises
 
 
 class TestMap(testslide.TestCase):
@@ -104,3 +107,27 @@ class TestMap(testslide.TestCase):
 
     def test_out_of_order_process(self):
         self._test_map(False, "process")
+
+    @parameterized.expand(
+        itertools.product(
+            [0, 7, 80],
+            ["thread", "process"],
+            [True, False],
+        )
+    )
+    def test_save_load_state_stateful(self, midpoint: int, method: Literal["thread", "process"], in_order: bool):
+        batch_size = 6
+        n = 80
+        multiprocessing_context = None if IS_WINDOWS else "forkserver"
+        src = MockSource(num_samples=n)
+        node = Batcher(src, batch_size=batch_size, drop_last=False)
+        node = ParallelMapper(
+            node,
+            RandomSleepUdf(),
+            num_workers=4,
+            in_order=in_order,
+            method=method,
+            multiprocessing_context=multiprocessing_context,
+        )
+        node = Prefetcher(node, prefetch_factor=2)
+        run_test_save_load_state(self, node, midpoint)

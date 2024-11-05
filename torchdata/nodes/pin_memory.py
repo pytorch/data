@@ -8,7 +8,7 @@ import functools
 import queue
 import threading
 
-from typing import Iterator, Optional, Union
+from typing import Any, Dict, Iterator, Optional, Union
 
 import torch
 import torch.multiprocessing
@@ -18,11 +18,14 @@ from torchdata.nodes import BaseNode, T
 
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
 from torchdata.nodes.map import _SingleThreadedMapper
+from torchdata.nodes.snapshot_store import SnapshotStore
 
 
 def _pin_memory_loop(
     source: BaseNode,
     q: queue.Queue,
+    snapshot_store: SnapshotStore,
+    snapshot_frequency: int,
     semaphore: threading.BoundedSemaphore,
     stop_event: threading.Event,
     device_id: Union[int, str],
@@ -90,8 +93,10 @@ class PinMemory(BaseNode[T]):
         else:
             self._current_device = torch.cuda.current_device()
 
-    def iterator(self) -> Iterator[T]:
-        return _SingleThreadedMapper(
+        self._it: Optional[_SingleThreadedMapper] = None
+
+    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
+        self._it = _SingleThreadedMapper(
             source=self.source,
             prefetch_factor=1,
             worker=functools.partial(
@@ -100,3 +105,9 @@ class PinMemory(BaseNode[T]):
                 device=self._pin_memory_device,
             ),
         )
+        return self._it
+
+    def get_state(self) -> Dict[str, Any]:
+        assert self._it is not None, "get_state() should not be called before iterator()!"
+        return self._it.get_state()
+        return {self.SOURCE_KEY: self.source.state_dict()}

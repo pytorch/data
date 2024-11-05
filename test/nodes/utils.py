@@ -6,7 +6,7 @@
 
 import random
 import time
-from typing import Iterator
+from typing import Any, Dict, Iterator, Optional
 
 import torch
 from torchdata.nodes.adapters import IterableWrapper
@@ -51,8 +51,11 @@ class IterInitError(BaseNode[int]):
     def __init__(self, msg: str = "Iter Init Error") -> None:
         self.msg = msg
 
-    def iterator(self) -> Iterator[int]:
+    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[int]:
         raise ValueError(self.msg)
+
+    def get_state(self) -> Dict[str, Any]:
+        return {}
 
 
 class DummyIterableDataset(torch.utils.data.IterableDataset):

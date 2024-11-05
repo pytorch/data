@@ -25,8 +25,8 @@ class BaseNodeIterator(Iterator[T]):
 
 
 class BaseNode(Iterable[T]):
-    _it: Optional[BaseNodeIterator[T]] = None  # holds pointer to last iter() requested
-    _initial_state: Optional[Dict[str, Any]] = None
+    __it: Optional[BaseNodeIterator[T]] = None  # holds pointer to last iter() requested
+    __initial_state: Optional[Dict[str, Any]] = None
 
     def iterator(self, initial_state: Optional[dict]) -> Iterator[T]:
         """Override this method to implement the iterator.
@@ -46,24 +46,20 @@ class BaseNode(Iterable[T]):
         raise NotImplementedError()
 
     def __iter__(self) -> BaseNodeIterator[T]:
-        if self._it is not None and self._it.started():
+        if self.__it is not None and self.__it.started():
             # Only create a new iter if the last requested one did not start/finish
-            self._it = None
+            self.__it = None
 
-        if self._it is None:
-            self._it = _EagerIter(self, self._initial_state)
-            self._initial_state = None
-        return self._it
+        if self.__it is None:
+            self.__it = _EagerIter(self, self.__initial_state)
+            self.__initial_state = None
+        return self.__it
 
     def state_dict(self) -> Dict[str, Any]:
-        if self._it is None:
-            logger.info("state_dict() on BaseNode before __iter__ requested, instantiating iterator to make the call")
-            iter(self)
-        assert self._it is not None
-        return self._it.state_dict()
+        return self.get_state()
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
-        self._initial_state = state_dict
+        self.__initial_state = state_dict
 
 
 class _EagerIter(BaseNodeIterator[T]):
@@ -71,20 +67,14 @@ class _EagerIter(BaseNodeIterator[T]):
     Basic iterator which will runs next-calls eagerly
     """
 
-    STARTED_KEY = "started"
-    FINISHED_KEY = "finished"
-    BASE_NODE_KEY = "base_node"
-
     def __init__(self, base_node: BaseNode[T], initial_state: Optional[Dict[str, Any]]):
         self.base_node = base_node
+        self._started = False
+        self._finished = False
         if initial_state is not None:
-            self._it = self.base_node.iterator(initial_state[self.BASE_NODE_KEY])
-            self._started = initial_state[self.STARTED_KEY]
-            self._finished = initial_state[self.FINISHED_KEY]
+            self._it = self.base_node.iterator(initial_state)
         else:
             self._it = self.base_node.iterator(None)
-            self._started = False
-            self._finished = False
 
     def __next__(self) -> T:
         self._started = True
@@ -93,13 +83,6 @@ class _EagerIter(BaseNodeIterator[T]):
         except StopIteration:
             self._finished = True
             raise
-
-    def state_dict(self) -> Dict[str, Any]:
-        return {
-            self.BASE_NODE_KEY: self.base_node.get_state(),
-            self.STARTED_KEY: self._started,
-            self.FINISHED_KEY: self._finished,
-        }
 
     def started(self) -> bool:
         return self._started
