@@ -78,4 +78,4 @@ jobs:
         run: pip3 install -r test/requirements.txt
       - name: Run Node tests with pytest - dataloader
         if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ciflow/slow') }}
-        run: pytest --durations=0 --no-header -v test/nodes/
+        run: pytest --durations=0 --no-header -v test/nodes/ --full-trace
