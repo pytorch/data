@@ -115,9 +115,7 @@ class TestMap(testslide.TestCase):
             [0, 1, 9],  # TODO: define and fix in_order = False
         )
     )
-    def test_save_load_state_thread(
-        self, midpoint: int, in_order: bool, snapshot_frequency: int
-    ):
+    def test_save_load_state_thread(self, midpoint: int, in_order: bool, snapshot_frequency: int):
         method = "thread"
         batch_size = 6
         n = 80
@@ -143,9 +141,7 @@ class TestMap(testslide.TestCase):
             [0, 1, 9],  # TODO: define and fix in_order = False
         )
     )
-    def test_save_load_state_process(
-        self, midpoint: int, in_order: bool, snapshot_frequency: int
-    ):
+    def test_save_load_state_process(self, midpoint: int, in_order: bool, snapshot_frequency: int):
         method = "process"
         batch_size = 6
         n = 80

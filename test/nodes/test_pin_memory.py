@@ -39,12 +39,8 @@ class TestPinMemory(testslide.TestCase):
             for i in range(3):
                 for j in range(batch_size):
                     self.assertEqual(results[i]["step"][j], i * batch_size + j)
-                    self.assertEqual(
-                        results[i]["test_tensor"][j], torch.tensor([i * batch_size + j])
-                    )
-                    self.assertEqual(
-                        results[i]["test_str"][j], f"str_{i * batch_size + j}"
-                    )
+                    self.assertEqual(results[i]["test_tensor"][j], torch.tensor([i * batch_size + j]))
+                    self.assertEqual(results[i]["test_str"][j], f"str_{i * batch_size + j}")
 
     def test_exception_handling(self):
         class PinMemoryFails:

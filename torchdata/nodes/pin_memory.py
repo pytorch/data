@@ -63,9 +63,7 @@ def _pin_memory_loop(
         ), f"snapshot_frequency must be non-negative integer! Got {snapshot_frequency}"
         src_iter = iter(source)
     except Exception:
-        e = StartupExceptionWrapper(
-            where=f"in _pin_memory_loop startup for device {device_id}"
-        )
+        e = StartupExceptionWrapper(where=f"in _pin_memory_loop startup for device {device_id}")
         _put(e, block=False)
         return
 
@@ -117,9 +115,7 @@ class PinMemory(BaseNode[T]):
         self._it: Optional[_SingleThreadedMapper[T]] = None
         self._iter_for_state_dict: bool = False
 
-    def _get_iterator(
-        self, initial_state: Optional[Dict[str, Any]]
-    ) -> _SingleThreadedMapper[T]:
+    def _get_iterator(self, initial_state: Optional[Dict[str, Any]]) -> _SingleThreadedMapper[T]:
         return _SingleThreadedMapper(
             source=self.source,
             prefetch_factor=1,
