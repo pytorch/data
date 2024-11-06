@@ -64,22 +64,19 @@ def _populate_queue(
 
     yielded = 0
     while not stop_event.is_set():
-        snapshot = None
         if not semaphore.acquire(blocking=True, timeout=QUEUE_TIMEOUT):
             continue
         try:
             item = next(src_iter)  # FIXME: This may hang!
             yielded += 1
+            snapshot = None
             if snapshot_frequency > 0 and yielded % snapshot_frequency == 0:
                 snapshot = source.state_dict()
+            _put(item, block=False, snapshot=snapshot)
         except StopIteration as e:
             _put(e, block=False)
             break
         except Exception:
             item = ExceptionWrapper(where="in _populate_queue")
-        try:
-            _put(
-                item, block=False, snapshot=snapshot
-            )  # Semaphore should prevent this from throwing
-        except queue.Full:
-            raise RuntimeError("Queue should not be full")
+            _put(item, block=False)
+            break
