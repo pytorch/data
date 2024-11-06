@@ -6,7 +6,18 @@
 
 import queue
 import threading
-from typing import Any, Callable, Dict, Iterator, List, Literal, Optional, Protocol, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Literal,
+    Optional,
+    Protocol,
+    TypeVar,
+    Union,
+)
 
 import torch.multiprocessing as mp
 from torchdata.nodes.base_node import BaseNode, T
@@ -22,14 +33,11 @@ from .constants import QUEUE_TIMEOUT
 
 # We define this protocol for type checking
 class _MultiprocessContext(Protocol):
-    def Process(self, *args, **kwargs):
-        ...
+    def Process(self, *args, **kwargs): ...
 
-    def Event(self, *args, **kwargs):
-        ...
+    def Event(self, *args, **kwargs): ...
 
-    def Queue(self, *args, **kwargs):
-        ...
+    def Queue(self, *args, **kwargs): ...
 
 
 X = TypeVar("X")
@@ -56,7 +64,9 @@ class Mapper(BaseNode[T]):
         return {self.SOURCE_KEY: self.source.state_dict()}
 
 
-def _sort_worker(in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_event: threading.Event):
+def _sort_worker(
+    in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_event: threading.Event
+):
     buffer: Dict[int, Any] = {}
     cur_idx = 0
     while not stop_event.is_set():
@@ -71,7 +81,9 @@ def _sort_worker(in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_ev
             if idx in buffer:
                 # This is the easiest way to create an exception wrapper
                 try:
-                    raise ValueError(f"Duplicate index {idx=}, {buffer.keys()=}, {item=}")
+                    raise ValueError(
+                        f"Duplicate index {idx=}, {buffer.keys()=}, {item=}"
+                    )
                 except Exception:
                     item = ExceptionWrapper(where="in _sort_worker")
                 out_q.put((item, idx), block=False)
@@ -113,9 +125,15 @@ class _ParallelMapperIter(Iterator[T]):
         self.mp_context = mp_context
         self.snapshot_frequency = snapshot_frequency
 
-        self._in_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
-        self._intermed_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
-        self._max_tasks = 2 * self.num_workers if max_concurrent is None else max_concurrent
+        self._in_q: Union[queue.Queue, mp.Queue] = (
+            queue.Queue() if method == "thread" else mp_context.Queue()
+        )
+        self._intermed_q: Union[queue.Queue, mp.Queue] = (
+            queue.Queue() if method == "thread" else mp_context.Queue()
+        )
+        self._max_tasks = (
+            2 * self.num_workers if max_concurrent is None else max_concurrent
+        )
         self._sem = threading.BoundedSemaphore(value=self._max_tasks)
 
         self._done = False
@@ -281,7 +299,9 @@ class ParallelMapper(BaseNode[T]):
         self._it: Optional[_ParallelMapperIter[T]] = None
         self._iter_for_state_dict: bool = False
 
-    def _get_iterator(self, initial_state: Optional[Dict[str, Any]]) -> _ParallelMapperIter[T]:
+    def _get_iterator(
+        self, initial_state: Optional[Dict[str, Any]]
+    ) -> _ParallelMapperIter[T]:
         return _ParallelMapperIter(
             source=self.source,
             map_fn=self.map_fn,
@@ -400,6 +420,9 @@ class _SingleThreadedMapper(Iterator[T]):
             raise StopIteration()
 
         while True:
+            if self._stop_event.is_set():
+                self._stopped = True
+                raise StopIteration()
             try:
                 item, idx = self._q.get(block=True, timeout=QUEUE_TIMEOUT)
                 self._steps_since_snapshot += 1
