@@ -20,6 +20,7 @@ from torchdata.nodes.prefetch import Prefetcher
 from .utils import MockSource, RandomSleepUdf, run_test_save_load_state, udf_raises
 
 
+@unittest.skipIf(not TEST_CUDA, "CUDA unavailable")
 class TestMap(testslide.TestCase):
     def _test_exception_handling_mapper(self, pin_memory, method):
         batch_size = 6
