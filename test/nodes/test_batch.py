@@ -6,15 +6,15 @@
 
 import itertools
 
-import testslide
 import torch
 from parameterized import parameterized
+from torch.testing._internal.common_utils import TestCase
 from torchdata.nodes.batch import Batcher
 
 from .utils import MockSource, run_test_save_load_state
 
 
-class TestBatcher(testslide.TestCase):
+class TestBatcher(TestCase):
     def test_batcher(self) -> None:
         batch_size = 6
         src = MockSource(num_samples=20)

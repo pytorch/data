@@ -7,12 +7,11 @@
 import itertools
 import unittest
 
-import testslide
 import torch
 
 from parameterized import parameterized
 
-from torch.testing._internal.common_utils import TEST_CUDA
+from torch.testing._internal.common_utils import TEST_CUDA, TestCase
 
 from torchdata.nodes.batch import Batcher
 from torchdata.nodes.map import Mapper
@@ -23,7 +22,7 @@ from .utils import Collate, IterInitError, MockSource, run_test_save_load_state
 
 
 @unittest.skipIf(not TEST_CUDA, "CUDA unavailable")
-class TestPinMemory(testslide.TestCase):
+class TestPinMemory(TestCase):
     def test_pin_memory(self) -> None:
         batch_size = 6
         src = MockSource(num_samples=20)

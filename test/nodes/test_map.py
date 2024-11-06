@@ -5,14 +5,14 @@
 # LICENSE file in the root directory of this source tree.
 
 import itertools
-import unittest
-from typing import List, Literal
 
-import testslide
+import unittest
+from typing import List
 
 from parameterized import parameterized
-from torch.testing._internal.common_utils import IS_WINDOWS, TEST_CUDA
+from torch.testing._internal.common_utils import IS_WINDOWS, TEST_CUDA, TestCase
 from torchdata.nodes.batch import Batcher
+
 from torchdata.nodes.map import Mapper, ParallelMapper
 from torchdata.nodes.pin_memory import PinMemory
 from torchdata.nodes.prefetch import Prefetcher
@@ -20,7 +20,7 @@ from torchdata.nodes.prefetch import Prefetcher
 from .utils import MockSource, RandomSleepUdf, run_test_save_load_state, udf_raises
 
 
-class TestMap(testslide.TestCase):
+class TestMap(TestCase):
     def _test_exception_handling_mapper(self, pin_memory, method):
         batch_size = 6
         multiprocessing_context = None if IS_WINDOWS else "forkserver"

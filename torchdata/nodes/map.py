@@ -229,12 +229,12 @@ class _ParallelMapperIter(Iterator[T]):
         self._stop.set()
         self._mp_stop.set()
         if self._read_thread.is_alive():
-            self._read_thread.join(timeout=QUEUE_TIMEOUT)
+            self._read_thread.join(timeout=QUEUE_TIMEOUT * 5)
         if self._sort_thread.is_alive():
-            self._sort_thread.join(timeout=QUEUE_TIMEOUT)
+            self._sort_thread.join(timeout=QUEUE_TIMEOUT * 5)
         for t in self._workers:
             if t.is_alive():
-                t.join(timeout=QUEUE_TIMEOUT)
+                t.join(timeout=QUEUE_TIMEOUT * 5)
 
 
 class ParallelMapper(BaseNode[T]):
@@ -445,4 +445,4 @@ class _SingleThreadedMapper(Iterator[T]):
     def _shutdown(self):
         self._stop_event.set()
         if self._thread.is_alive():
-            self._thread.join(timeout=QUEUE_TIMEOUT)
+            self._thread.join(timeout=QUEUE_TIMEOUT * 5)

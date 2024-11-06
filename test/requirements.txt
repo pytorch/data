@@ -1,5 +1,4 @@
 pytest
-testslide
 expecttest
 fsspec
 numpy<2

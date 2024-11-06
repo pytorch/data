@@ -6,9 +6,8 @@
 
 from typing import Any, Dict, Iterator
 
-import testslide
-
 from parameterized import parameterized
+from torch.testing._internal.common_utils import TestCase
 
 from torch.utils.data import RandomSampler
 from torchdata.nodes.adapters import IterableWrapper, MapStyleWrapper
@@ -38,7 +37,7 @@ class _StatefulRange(Stateful):
         self._next_start = state_dict["_num_yielded"]
 
 
-class TestIterableWrapper(testslide.TestCase):
+class TestIterableWrapper(TestCase):
     def test_iterable(self):
         n = 20
         node = IterableWrapper(range(n))
@@ -80,7 +79,7 @@ class TestIterableWrapper(testslide.TestCase):
         run_test_save_load_state(self, IterableWrapper(_StatefulRange(10)), midpoint)
 
 
-class TestMapStyle(testslide.TestCase):
+class TestMapStyle(TestCase):
     def test_default_sampler(self):
         n = 20
         node = MapStyleWrapper(DummyMapDataset(n), sampler=range(n))

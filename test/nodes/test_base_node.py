@@ -4,14 +4,14 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import testslide
+from torch.testing._internal.common_utils import TestCase
 from torchdata.nodes.adapters import IterableWrapper
 from torchdata.nodes.base_node import BaseNodeIterator
 
 from .utils import run_test_save_load_state
 
 
-class TestBaseNode(testslide.TestCase):
+class TestBaseNode(TestCase):
     def test_started_finished(self) -> None:
         x = IterableWrapper(range(10))
         for _ in range(3):  # test multi-epoch

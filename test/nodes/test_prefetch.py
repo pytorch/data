@@ -6,16 +6,16 @@
 
 import itertools
 
-import testslide
 import torch
 from parameterized import parameterized
+from torch.testing._internal.common_utils import TestCase
 from torchdata.nodes.batch import Batcher
 from torchdata.nodes.prefetch import Prefetcher
 
 from .utils import IterInitError, MockSource, run_test_save_load_state
 
 
-class TestPrefetcher(testslide.TestCase):
+class TestPrefetcher(TestCase):
     def test_prefetcher(self) -> None:
         batch_size = 6
         src = MockSource(num_samples=20)
