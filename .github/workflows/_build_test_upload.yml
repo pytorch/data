@@ -67,6 +67,7 @@ jobs:
           - "3.10"
           - "3.11"
           - "3.12"
+          - "3.13"
           - pure
         exclude:
           - os: windows-latest
@@ -227,6 +228,7 @@ jobs:
           - "3.10"
           - "3.11"
           - "3.12"
+          - "3.13"
     steps:
       - name: Checkout Source Repository
         uses: actions/checkout@v3
