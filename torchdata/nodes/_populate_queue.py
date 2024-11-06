@@ -59,7 +59,7 @@ def _populate_queue(
         src_iter = iter(source)
     except Exception:
         e = StartupExceptionWrapper(where="in _populate_queue startup for device")
-        _put(e)
+        _put(e, block=False)
         return
 
     yielded = 0
@@ -73,7 +73,7 @@ def _populate_queue(
             if snapshot_frequency > 0 and yielded % snapshot_frequency == 0:
                 snapshot = source.state_dict()
         except StopIteration as e:
-            _put(e)
+            _put(e, block=False)
             break
         except Exception:
             item = ExceptionWrapper(where="in _populate_queue")
