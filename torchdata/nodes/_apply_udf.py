@@ -41,9 +41,9 @@ def _apply_udf(
             continue
 
         if isinstance(item, ExceptionWrapper):
-            out_q.put((item, idx))
+            out_q.put((item, idx), block=False)
         elif isinstance(item, StopIteration):
-            out_q.put((item, idx))
+            out_q.put((item, idx), block=False)
         else:
             try:
                 y = udf(item)
