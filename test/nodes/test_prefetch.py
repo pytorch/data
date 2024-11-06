@@ -43,11 +43,13 @@ class TestPrefetcher(testslide.TestCase):
         with self.assertRaisesRegex(ValueError, "Iter Init Error"):
             list(root)
 
-    # @parameterized.expand(itertools.product([0, 7, 34], [0, 1, 9]))
-    # def test_save_load_state_stateful(self, midpoint: int, snapshot_frequency: int):
-    #     batch_size = 6
-    #     n = 200
-    #     src = MockSource(num_samples=n)
-    #     node = Batcher(src, batch_size=batch_size, drop_last=False)
-    #     node = Prefetcher(node, prefetch_factor=8, snapshot_frequency=snapshot_frequency)
-    #     run_test_save_load_state(self, node, midpoint)
+    @parameterized.expand(itertools.product([0, 7, 34], [0, 1, 9]))
+    def test_save_load_state_stateful(self, midpoint: int, snapshot_frequency: int):
+        batch_size = 6
+        n = 200
+        src = MockSource(num_samples=n)
+        node = Batcher(src, batch_size=batch_size, drop_last=False)
+        node = Prefetcher(
+            node, prefetch_factor=8, snapshot_frequency=snapshot_frequency
+        )
+        run_test_save_load_state(self, node, midpoint)

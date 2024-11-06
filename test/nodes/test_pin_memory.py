@@ -70,14 +70,14 @@ class TestPinMemory(testslide.TestCase):
         with self.assertRaisesRegex(ValueError, "Iter Init Error"):
             list(root)
 
-    # @parameterized.expand(itertools.product([0, 7, 34], [0, 1, 9]))
-    # def test_save_load_state_stateful(self, midpoint: int, snapshot_frequency: int):
-    #     batch_size = 6
-    #     n = 200
-    #     node = MockSource(num_samples=n)
-    #     node = Batcher(node, batch_size=batch_size, drop_last=False)
-    #     node = Mapper(node, Collate())
-    #     node = PinMemory(node, snapshot_frequency=snapshot_frequency)
-    #     node = Prefetcher(node, prefetch_factor=8)
+    @parameterized.expand(itertools.product([0, 7, 34], [0, 1, 9]))
+    def test_save_load_state_stateful(self, midpoint: int, snapshot_frequency: int):
+        batch_size = 6
+        n = 200
+        node = MockSource(num_samples=n)
+        node = Batcher(node, batch_size=batch_size, drop_last=False)
+        node = Mapper(node, Collate())
+        node = PinMemory(node, snapshot_frequency=snapshot_frequency)
+        node = Prefetcher(node, prefetch_factor=8)
 
-    #     run_test_save_load_state(self, node, midpoint)
+        run_test_save_load_state(self, node, midpoint)

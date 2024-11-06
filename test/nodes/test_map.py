@@ -124,17 +124,16 @@ class TestMap(testslide.TestCase):
         multiprocessing_context = None if IS_WINDOWS else "forkserver"
         src = MockSource(num_samples=n)
         node = Batcher(src, batch_size=batch_size, drop_last=False)
-        # node = ParallelMapper(
-        #     node,
-        #     RandomSleepUdf(),
-        #     num_workers=4,
-        #     in_order=in_order,
-        #     method=method,
-        #     multiprocessing_context=multiprocessing_context,
-        #     snapshot_frequency=snapshot_frequency,
-        # )
-        node = Mapper(node, RandomSleepUdf())
-        # node = Prefetcher(node, prefetch_factor=2)
+        node = ParallelMapper(
+            node,
+            RandomSleepUdf(),
+            num_workers=4,
+            in_order=in_order,
+            method=method,
+            multiprocessing_context=multiprocessing_context,
+            snapshot_frequency=snapshot_frequency,
+        )
+        node = Prefetcher(node, prefetch_factor=2)
         run_test_save_load_state(self, node, midpoint)
 
     @parameterized.expand(
@@ -153,15 +152,14 @@ class TestMap(testslide.TestCase):
         multiprocessing_context = None if IS_WINDOWS else "forkserver"
         src = MockSource(num_samples=n)
         node = Batcher(src, batch_size=batch_size, drop_last=False)
-        # node = ParallelMapper(
-        #     node,
-        #     RandomSleepUdf(),
-        #     num_workers=4,
-        #     in_order=in_order,
-        #     method=method,
-        #     multiprocessing_context=multiprocessing_context,
-        #     snapshot_frequency=snapshot_frequency,
-        # )
-        node = Mapper(node, RandomSleepUdf())
-        # node = Prefetcher(node, prefetch_factor=2)
+        node = ParallelMapper(
+            node,
+            RandomSleepUdf(),
+            num_workers=4,
+            in_order=in_order,
+            method=method,
+            multiprocessing_context=multiprocessing_context,
+            snapshot_frequency=snapshot_frequency,
+        )
+        node = Prefetcher(node, prefetch_factor=2)
         run_test_save_load_state(self, node, midpoint)
