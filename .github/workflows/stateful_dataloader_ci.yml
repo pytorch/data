@@ -34,7 +34,7 @@ jobs:
           - os: macos-latest
             python-version: "3.13"
           - os: windows-latest
-            python-versino: "3.13"
+            python-version: "3.13"
     steps:
       - name: Get PyTorch Channel
         shell: bash
