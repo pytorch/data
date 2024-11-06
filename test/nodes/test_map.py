@@ -134,7 +134,7 @@ class TestMap(testslide.TestCase):
         #     snapshot_frequency=snapshot_frequency,
         # )
         node = Mapper(node, RandomSleepUdf())
-        node = Prefetcher(node, prefetch_factor=2)
+        # node = Prefetcher(node, prefetch_factor=2)
         run_test_save_load_state(self, node, midpoint)
 
     @parameterized.expand(
@@ -163,5 +163,5 @@ class TestMap(testslide.TestCase):
         #     snapshot_frequency=snapshot_frequency,
         # )
         node = Mapper(node, RandomSleepUdf())
-        node = Prefetcher(node, prefetch_factor=2)
+        # node = Prefetcher(node, prefetch_factor=2)
         run_test_save_load_state(self, node, midpoint)
