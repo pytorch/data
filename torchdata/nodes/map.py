@@ -173,9 +173,9 @@ class _ParallelMapperIter(Iterator[T]):
                 self._stop if self.method == "thread" else self._mp_stop,
             )
             self._workers.append(
-                threading.Thread(target=_apply_udf, args=args)
+                threading.Thread(target=_apply_udf, args=args, daemon=True)
                 if self.method == "thread"
-                else mp_context.Process(target=_apply_udf, args=args)
+                else mp_context.Process(target=_apply_udf, args=args, daemon=True)
             )
         self._sort_q: queue.Queue = queue.Queue()
         self._sort_thread = threading.Thread(
