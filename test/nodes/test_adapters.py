@@ -70,11 +70,11 @@ class TestIterableWrapper(TestCase):
                 self.assertEqual(row["test_tensor"].item(), i)
                 self.assertEqual(row["test_str"], f"str_{i}")
 
-    @parameterized.expand([0, 5, 10])
+    @parameterized.expand([0, 5])
     def test_save_load_state_fast_forward(self, midpoint: int):
         run_test_save_load_state(self, IterableWrapper(range(10)), midpoint)
 
-    @parameterized.expand([0, 5, 10])
+    @parameterized.expand([0, 5])
     def test_save_load_state_stateful(self, midpoint: int):
         run_test_save_load_state(self, IterableWrapper(_StatefulRange(10)), midpoint)
 

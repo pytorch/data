@@ -46,13 +46,17 @@ class BaseNode(Iterable[T]):
         raise NotImplementedError()
 
     def __iter__(self) -> BaseNodeIterator[T]:
-        if self.__it is not None and self.__it.started():
-            # Only create a new iter if the last requested one did not start/finish
-            self.__it = None
+        if self.__it is not None and not self.__it.started():
+            # Only create a new iter if the last requested one did not start
+            return self.__it
 
-        if self.__it is None:
+        if self.__initial_state is not None:
             self.__it = _EagerIter(self, self.__initial_state)
             self.__initial_state = None
+            if not self.__it.has_next():
+                self.__it = _EagerIter(self, self.__initial_state)
+        else:
+            self.__it = _EagerIter(self, self.__initial_state)
         return self.__it
 
     def state_dict(self) -> Dict[str, Any]:
@@ -76,13 +80,27 @@ class _EagerIter(BaseNodeIterator[T]):
         else:
             self._it = self.base_node.iterator(None)
 
+        self._next_val: Optional[T] = None
+
     def __next__(self) -> T:
         self._started = True
+        if self._next_val is not None:
+            val = self._next_val
+            self._next_val = None
+            return val
         try:
             return next(self._it)
         except StopIteration:
             self._finished = True
             raise
+
+    def has_next(self) -> bool:
+        if self._next_val is None:
+            try:
+                self._next_val = next(self._it)
+            except StopIteration:
+                pass
+        return self._next_val is not None
 
     def started(self) -> bool:
         return self._started

@@ -110,7 +110,7 @@ class TestMap(TestCase):
 
     @parameterized.expand(
         itertools.product(
-            [0, 7, 14],
+            [0, 7, 13],
             [True],  # TODO: define and fix in_order = False
             [0, 1, 9],  # TODO: define and fix in_order = False
         )
@@ -136,7 +136,7 @@ class TestMap(TestCase):
 
     @parameterized.expand(
         itertools.product(
-            [0, 7, 14],
+            [0, 7, 13],
             [True],  # TODO: define and fix in_order = False
             [0, 1, 9],  # TODO: define and fix in_order = False
         )

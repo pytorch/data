@@ -193,7 +193,6 @@ class _ParallelMapperIter(Iterator[T]):
                 raise StopIteration()
             try:
                 item, idx = self._out_q.get(block=True, timeout=QUEUE_TIMEOUT)
-                self._steps_since_snapshot += 1
             except queue.Empty:
                 continue
 
@@ -207,6 +206,7 @@ class _ParallelMapperIter(Iterator[T]):
                     self._sem.release()
                 item.reraise()
             else:
+                self._steps_since_snapshot += 1
                 self._sem.release()
                 self._maybe_update_snapshot(idx)
                 return item
@@ -405,7 +405,6 @@ class _SingleThreadedMapper(Iterator[T]):
                 raise StopIteration()
             try:
                 item, idx = self._q.get(block=True, timeout=QUEUE_TIMEOUT)
-                self._steps_since_snapshot += 1
                 break
             except queue.Empty:
                 continue
@@ -424,9 +423,9 @@ class _SingleThreadedMapper(Iterator[T]):
             item.reraise()
         else:
             self._sem.release()
-
-        self._maybe_update_snapshot(idx)
-        return item
+            self._steps_since_snapshot += 1
+            self._maybe_update_snapshot(idx)
+            return item
 
     def get_state(self) -> Dict[str, Any]:
         return {

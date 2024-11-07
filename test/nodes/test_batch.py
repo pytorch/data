@@ -42,7 +42,7 @@ class TestBatcher(TestCase):
                 self.assertEqual(results[i][j]["test_tensor"], torch.tensor([i * batch_size + j]))
                 self.assertEqual(results[i][j]["test_str"], f"str_{i * batch_size + j}")
 
-    @parameterized.expand(itertools.product([0, 1, 3], [True, False]))
+    @parameterized.expand(itertools.product([0, 2], [True, False]))
     def test_save_load_state_fast_forward(self, midpoint: int, drop_last: bool):
         batch_size = 6
         src = MockSource(num_samples=20)

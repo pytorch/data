@@ -39,7 +39,7 @@ class TestPrefetcher(TestCase):
         with self.assertRaisesRegex(ValueError, "Iter Init Error"):
             list(root)
 
-    @parameterized.expand(itertools.product([0, 7, 34], [0, 1, 9]))
+    @parameterized.expand(itertools.product([0, 7, 32], [0, 1, 9]))
     def test_save_load_state_stateful(self, midpoint: int, snapshot_frequency: int):
         batch_size = 6
         n = 200
