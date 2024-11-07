@@ -1,5 +1,4 @@
 pytest
-testslide
 expecttest
 fsspec
 numpy<2
@@ -8,3 +7,4 @@ graphviz
 adlfs
 awscli>=1.27.66
 psutil
+parameterized

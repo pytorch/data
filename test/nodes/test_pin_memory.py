@@ -4,23 +4,25 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import itertools
 import unittest
 
-import testslide
 import torch
 
-from torch.testing._internal.common_utils import TEST_CUDA
+from parameterized import parameterized
+
+from torch.testing._internal.common_utils import TEST_CUDA, TestCase
 
 from torchdata.nodes.batch import Batcher
 from torchdata.nodes.map import Mapper
 from torchdata.nodes.pin_memory import PinMemory
 from torchdata.nodes.prefetch import Prefetcher
 
-from .utils import Collate, IterInitError, MockSource
+from .utils import Collate, IterInitError, MockSource, run_test_save_load_state
 
 
 @unittest.skipIf(not TEST_CUDA, "CUDA unavailable")
-class TestPinMemory(testslide.TestCase):
+class TestPinMemory(TestCase):
     def test_pin_memory(self) -> None:
         batch_size = 6
         src = MockSource(num_samples=20)
@@ -62,3 +64,15 @@ class TestPinMemory(testslide.TestCase):
 
         with self.assertRaisesRegex(ValueError, "Iter Init Error"):
             list(root)
+
+    @parameterized.expand(itertools.product([0, 7, 33], [0, 1, 9]))
+    def test_save_load_state_stateful(self, midpoint: int, snapshot_frequency: int):
+        batch_size = 6
+        n = 200
+        node = MockSource(num_samples=n)
+        node = Batcher(node, batch_size=batch_size, drop_last=False)
+        node = Mapper(node, Collate())
+        node = PinMemory(node, snapshot_frequency=snapshot_frequency)
+        node = Prefetcher(node, prefetch_factor=8)
+
+        run_test_save_load_state(self, node, midpoint)
