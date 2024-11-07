@@ -205,11 +205,11 @@ class _ParallelMapperIter(Iterator[T]):
                 if not isinstance(item, StartupExceptionWrapper):
                     self._sem.release()
                 item.reraise()
-            else:
-                self._steps_since_snapshot += 1
-                self._sem.release()
-                self._maybe_update_snapshot(idx)
-                return item
+
+            self._steps_since_snapshot += 1
+            self._sem.release()
+            self._maybe_update_snapshot(idx)
+            return item
 
     def get_state(self) -> Dict[str, Any]:
         return {
@@ -388,7 +388,6 @@ class _SingleThreadedMapper(Iterator[T]):
             daemon=True,
         )
         self._thread.start()
-        self._stopped = False
         for _ in range(fast_forward):
             next(self)
 
@@ -396,36 +395,29 @@ class _SingleThreadedMapper(Iterator[T]):
         return self
 
     def __next__(self) -> T:
-        if self._stopped:
-            raise StopIteration()
-
         while True:
             if self._stop_event.is_set():
-                self._stopped = True
                 raise StopIteration()
             try:
                 item, idx = self._q.get(block=True, timeout=QUEUE_TIMEOUT)
-                break
             except queue.Empty:
                 continue
 
-        if isinstance(item, StopIteration):
-            self._stopped = True
-            self._sem.release()
-            self._stop_event.set()
-            raise item
-        elif isinstance(item, ExceptionWrapper):
-            self._stopped = True
-            if not isinstance(item, StartupExceptionWrapper):
-                # We don't need to release for startup exceptions
+            if isinstance(item, StopIteration):
                 self._sem.release()
-            self._stop_event.set()
-            item.reraise()
-        else:
-            self._sem.release()
-            self._steps_since_snapshot += 1
-            self._maybe_update_snapshot(idx)
-            return item
+                self._stop_event.set()
+                raise item
+            elif isinstance(item, ExceptionWrapper):
+                if not isinstance(item, StartupExceptionWrapper):
+                    # We don't need to release for startup exceptions
+                    self._sem.release()
+                self._stop_event.set()
+                item.reraise()
+            else:
+                self._sem.release()
+                self._steps_since_snapshot += 1
+                self._maybe_update_snapshot(idx)
+                return item
 
     def get_state(self) -> Dict[str, Any]:
         return {
