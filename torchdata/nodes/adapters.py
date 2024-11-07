@@ -62,14 +62,14 @@ class IterableWrapper(BaseNode[T]):
         return state_dict
 
 
-def MapStyleWrapper(map_dataset: Mapping[K, T], sampler: Iterable[K]) -> BaseNode[T]:
+def MapStyleWrapper(map_dataset: Mapping[K, T], sampler: Sampler[K]) -> BaseNode[T]:
     """Thin Wrapper that converts any MapDataset in to a torchdata.node
     If you want parallelism, copy this and replace Mapper with ParallelMapper.
 
     :param map_dataset: Mapping to wrap.
     :param sampler: Optional[Iterable].
     """
-    sampler_node = SamplerWrapper(sampler)
+    sampler_node: SamplerWrapper[K] = SamplerWrapper(sampler)
     mapper_node = Mapper(sampler_node, map_dataset.__getitem__)
     return mapper_node
 
