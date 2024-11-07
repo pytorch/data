@@ -35,6 +35,16 @@ description is clear and has sufficient instructions to be able to reproduce the
 For question related to the usage of this library, please post a question on the
 [PyTorch forum, under the "data" category](https://discuss.pytorch.org/c/data/37).
 
+## Pull Requests
+
+We actively welcome your pull requests.
+
+1. Fork the repo and create your branch from `main`.
+2. If you've added code that should be tested, add tests.
+3. If you've changed APIs, update the documentation and examples.
+4. Ensure the test suite passes.
+5. If you haven't already, complete the Contributor License Agreement ("CLA").
+
 ## Development installation
 
 ### Install PyTorch Nightly
@@ -46,66 +56,87 @@ conda install pytorch -c pytorch-nightly
 # pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/cpu
 ```
 
-### Install TorchData
+### Install TorchData and Test Requirements
 
 ```bash
 git clone https://github.com/pytorch/data.git
 cd data
 pip install -e .
-pip install flake8 typing mypy pytest expecttest
+pip install -r test/requirements.txt
 ```
-
-## Pull Requests
-
-We actively welcome your pull requests.
-
-1. Fork the repo and create your branch from `main`.
-2. If you've added code that should be tested, add tests.
-3. If you've changed APIs, update the documentation and examples.
-4. Ensure the test suite passes.
-5. If you haven't already, complete the Contributor License Agreement ("CLA").
 
 ### Code style
 
 `torchdata` enforces a fairly strict code format through [`pre-commit`](https://pre-commit.com). You can install it with
 
-```shell
-pip install pre-commit
-```
-
-or
-
-```shell
+```bash
 conda install -c conda-forge pre-commit
+# or pip install pre-commit
+cd data
+with-proxy conda install pre-commit
+pre-commit install --install-hooks
 ```
 
-To check and in most cases fix the code format, stage all your changes (`git add`) and run `pre-commit run`. To perform
-the checks automatically before every `git commit`, you can install them with `pre-commit install`.
+### Running mypy and unit-tests locally
 
-### Adding a new DataPipe
+Currently we don't run mypy as part of pre-commit hooks
 
-When adding a new DataPipe, there are few things that need to be done to ensure it is working and documented properly.
+```bash
+mypy --config-file=mypy.ini
+```
 
-1. Naming - please follow the naming convention as
-   [described here](https://pytorch.org/data/main/dp_tutorial.html#naming).
-2. Testing - please add unit tests to ensure that the DataPipe is functioning properly. Here are the
-   [test requirements](https://github.com/pytorch/data/issues/106) that we have.
-   - One test that is commonly missed is the serialization test. Please add the new DataPipe to
-     [`test_serialization.py`](https://github.com/pytorch/data/blob/main/test/test_serialization.py).
-   - If your test requires interacting with files in the file system (e.g. opening a `csv` or `tar` file, we prefer
-     those files to be generated during the test (see `test_local_io.py`). If the file is on a remote server, see
-     `test_remote_io.py`.
-3. Documentation - ensure that the DataPipe has docstring, usage example, and that it is added to the right category of
-   the right RST file to be rendered.
-   - If your DataPipe has a functional form (i.e. `@functional_datapipe(...)`), include at the
-     [end of the first sentence](https://github.com/pytorch/data/blob/main/torchdata/datapipes/iter/util/combining.py#L25)
-     of your docstring. This will make sure it correctly shows up in the
-     [summary table](https://pytorch.org/data/main/torchdata.datapipes.iter.html#archive-datapipes) of our
-     documentation.
-4. Import - import the DataPipe in the correct `__init__.py` file.
-5. Interface - if the DataPipe has a functional form, make sure that is generated properly by `gen_pyi.py` into the
-   relevant interface file.
-   - You can re-generate the pyi files by re-running `pip install -e .`, then you can examine the new outputs.
+```bash
+pytest --durations=0 --no-header -v test/nodes/
+```
+
+### Adding a new Node
+
+When adding a new Node, there are few things that need to be done to ensure it is working and documented properly.
+
+The following simplifying assumptions are made of node implementations:
+
+- state is managed solely by the BaseNode, not through any iterators returned from them.
+- state_dict() returns the state of the most recently requested iterator.
+- load_state_dict() will set the state for the next iterator.
+
+1. Functionality - Nodes must subclass BaseNode and implement the required methods.
+
+   - `.iterator(self, initial_state: Optional[Dict[str, Any]])` - return a new iterator/generator that is properly
+     initialized with the optional initial_state
+   - `.get_state(self) -> Dict[str, Any]` - return a dictionary representing the state of the most recently returned
+     iterator, or if not yet requested, the initial state.
+   - ensure you're calling `state_dict()/load_state_dict()` on ancestor BaseNodes. Here is a simple example of a pretty
+     useless node:
+
+   ```python
+   class MyNode(BaseNode[T]):
+     def __init__(self, parent: BaseNode[T]):
+       self.parent = parent
+       self.idx = 0  # not very useful state
+
+     def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]
+       if initial_state is not None:
+         self.parent.load_state_dict(initial_state["parent"])
+         self.idx = initial_state["idx"]
+
+       for item in self.parent:
+         self.idx += 1
+         yield item
+
+     def get_state(self) -> Dict[str, Any]:
+       return {
+         "parent": self.parent.state_dict(),  # note we call state_dict() and not get_state() here
+         "idx": self.idx,
+       }
+   ```
+
+2. Typing - Include type-hints for all public functions and methods
+3. Testing - please add unit tests to ensure that the Node is functioning properly.
+   - In addition to testing basic functionatity, state management must also be tested.
+   - For basic state testing, you may use `test.nodes.utils.run_test_save_load_state`. See `test/nodes/test_batch.py`
+     for an example.
+4. Documentation - ensure that the Node has a docstring, and a usage example.
+5. Import - import the Node in the correct `__init__.py` file.
 
 ## Contributor License Agreement ("CLA")
 
