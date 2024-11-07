@@ -177,3 +177,16 @@ class TestSamplerWrapper(TestCase):
         sampler = DistributedSampler(ds, rank=1, num_replicas=2)
         node = SamplerWrapper(sampler=sampler)
         run_test_save_load_state(self, node, midpoint)
+
+    @parameterized.expand([0, 7])
+    def test_save_load_state_with_updater(self, midpoint: int):
+        n = 20
+        ds = DummyMapDataset(n)
+        initial_epoch = 2
+
+        def epoch_updater(epoch):
+            return epoch + 5
+
+        sampler = DistributedSampler(ds, rank=1, num_replicas=2)
+        node = SamplerWrapper(sampler=sampler, initial_epoch=initial_epoch, epoch_updater=epoch_updater)
+        run_test_save_load_state(self, node, midpoint)

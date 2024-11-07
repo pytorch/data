@@ -66,8 +66,8 @@ def MapStyleWrapper(map_dataset: Mapping[K, T], sampler: Sampler[K]) -> BaseNode
     """Thin Wrapper that converts any MapDataset in to a torchdata.node
     If you want parallelism, copy this and replace Mapper with ParallelMapper.
 
-    :param map_dataset: Mapping to wrap.
-    :param sampler: Optional[Iterable].
+    :param map_dataset: Mapping[K, T] - Apply map_dataset.__getitem__ to the outputs of sampler.
+    :param sampler: Sampler[K]
     """
     sampler_node: SamplerWrapper[K] = SamplerWrapper(sampler)
     mapper_node = Mapper(sampler_node, map_dataset.__getitem__)
@@ -80,7 +80,9 @@ class SamplerWrapper(BaseNode[T]):
     IterableWrapper except it includes a hook to call set_epoch on the sampler,
     if it supports it.
 
-    :param sampler: Sampler to wrap.
+    :param sampler: Sampler - to wrap.
+    :param initial_epoch: int - initial epoch to set on the sampler
+    :param epoch_updater: Optional[Callable[[int], int]] = None - callback to update epoch at start of new iteration. It's called at the beginning of each iterator request, except the first one.
     """
 
     NUM_YIELDED_KEY = "_num_yielded"
@@ -92,11 +94,16 @@ class SamplerWrapper(BaseNode[T]):
     def _default_epoch_updater(cls, epoch: int) -> int:
         return epoch + 1
 
-    def __init__(self, sampler: Sampler[T], epoch_updater: Optional[Callable[[int], int]] = None):
+    def __init__(
+        self,
+        sampler: Sampler[T],
+        initial_epoch: int = 0,
+        epoch_updater: Optional[Callable[[int], int]] = None,
+    ):
         self.sampler = sampler
         self.epoch_updater = epoch_updater or self._default_epoch_updater
         self._num_yielded = 0
-        self._epoch = 0
+        self._epoch = initial_epoch
         self._started = False
 
     def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
