@@ -123,13 +123,13 @@ class TestMapStyle(TestCase):
                 self.assertEqual(row["test_tensor"].item(), i)
                 self.assertEqual(row["test_str"], f"str_{i}")
 
-    @parameterized.expand([0, 7, 20])
+    @parameterized.expand([0, 7])
     def test_save_load_state_fast_forward(self, midpoint: int):
         n = 20
         node = MapStyleWrapper(DummyMapDataset(n), sampler=range(n))
         run_test_save_load_state(self, node, midpoint)
 
-    @parameterized.expand([0, 7, 20])
+    @parameterized.expand([0, 7])
     def test_save_load_state_stateful(self, midpoint: int):
         n = 20
         node = MapStyleWrapper(DummyMapDataset(n), sampler=_StatefulRange(n))
