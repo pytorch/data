@@ -9,8 +9,9 @@ import threading
 from typing import Any, Callable, Dict, Iterator, List, Literal, Optional, Protocol, TypeVar, Union
 
 import torch.multiprocessing as mp
-from torchdata.nodes import BaseNode, T
+from torchdata.nodes.base_node import BaseNode, T
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
+from torchdata.nodes.snapshot_store import DequeSnapshotStore, SnapshotStore
 
 from ._apply_udf import _apply_udf
 
@@ -35,6 +36,8 @@ X = TypeVar("X")
 
 
 class Mapper(BaseNode[T]):
+    SOURCE_KEY = "source"
+
     def __init__(
         self,
         source: BaseNode[X],
@@ -43,9 +46,14 @@ class Mapper(BaseNode[T]):
         self.source = source
         self.map_fn = map_fn
 
-    def iterator(self) -> Iterator[T]:
+    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
+        if initial_state is not None:
+            self.source.load_state_dict(initial_state[self.SOURCE_KEY])
         for item in self.source:
             yield self.map_fn(item)
+
+    def get_state(self) -> Dict[str, Any]:
+        return {self.SOURCE_KEY: self.source.state_dict()}
 
 
 def _sort_worker(in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_event: threading.Event):
@@ -94,6 +102,8 @@ class _ParallelMapperIter(Iterator[T]):
         method: Literal["thread", "process"],
         mp_context: _MultiprocessContext,
         max_concurrent: Optional[int],
+        snapshot_frequency: int,
+        initial_state: Optional[Dict[str, Any]],
     ):
         self.source = source
         self.map_fn = map_fn
@@ -101,6 +111,7 @@ class _ParallelMapperIter(Iterator[T]):
         self.in_order = in_order
         self.method = method
         self.mp_context = mp_context
+        self.snapshot_frequency = snapshot_frequency
 
         self._in_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
         self._intermed_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
@@ -112,12 +123,29 @@ class _ParallelMapperIter(Iterator[T]):
         self._stop = threading.Event()
         self._mp_stop = mp_context.Event()
 
+        self._steps_since_snapshot = 0
+        fast_forward = 0
+        if initial_state is not None:
+            self._snapshot = initial_state["snapshot"]
+            fast_forward = initial_state["steps_since_snapshot"]
+            self.source.load_state_dict(self._snapshot)
+        else:
+            self._snapshot = self.source.state_dict()
+        self._snapshot_store = DequeSnapshotStore()
+
         self._read_thread = threading.Thread(
             target=_populate_queue,
-            args=(self.source, self._in_q, self._sem, self._stop, True),
+            args=(
+                self.source,
+                self._in_q,
+                self._snapshot_store,
+                self.snapshot_frequency,
+                self._sem,
+                self._stop,
+            ),
             daemon=True,
         )
-        self._map_threads: List[Union[threading.Thread, mp.Process]] = []
+        self._workers: List[Union[threading.Thread, mp.Process]] = []
         for worker_id in range(self.num_workers):
             args = (
                 worker_id,
@@ -126,10 +154,10 @@ class _ParallelMapperIter(Iterator[T]):
                 self.map_fn,
                 self._stop if self.method == "thread" else self._mp_stop,
             )
-            self._map_threads.append(
-                threading.Thread(target=_apply_udf, args=args)
+            self._workers.append(
+                threading.Thread(target=_apply_udf, args=args, daemon=True)
                 if self.method == "thread"
-                else mp_context.Process(target=_apply_udf, args=args)
+                else mp_context.Process(target=_apply_udf, args=args, daemon=True)
             )
         self._sort_q: queue.Queue = queue.Queue()
         self._sort_thread = threading.Thread(
@@ -143,10 +171,13 @@ class _ParallelMapperIter(Iterator[T]):
             self._out_q = self._sort_q
 
         self._read_thread.start()
-        for t in self._map_threads:
+        for t in self._workers:
             t.start()
         if self.in_order:
             self._sort_thread.start()
+
+        for _ in range(fast_forward):
+            next(self)
 
     def __iter__(self) -> Iterator[T]:
         return self
@@ -174,9 +205,22 @@ class _ParallelMapperIter(Iterator[T]):
                 if not isinstance(item, StartupExceptionWrapper):
                     self._sem.release()
                 item.reraise()
-            else:
-                self._sem.release()
-                return item
+
+            self._steps_since_snapshot += 1
+            self._sem.release()
+            self._maybe_update_snapshot(idx)
+            return item
+
+    def get_state(self) -> Dict[str, Any]:
+        return {
+            "snapshot": self._snapshot,
+            "steps_since_snapshot": self._steps_since_snapshot,
+        }
+
+    def _maybe_update_snapshot(self, idx: int):
+        if (snapshot := self._snapshot_store.pop_version(idx)) is not None:
+            self._snapshot = snapshot
+            self._steps_since_snapshot = 0
 
     def __del__(self):
         self._shutdown()
@@ -185,12 +229,12 @@ class _ParallelMapperIter(Iterator[T]):
         self._stop.set()
         self._mp_stop.set()
         if self._read_thread.is_alive():
-            self._read_thread.join(timeout=QUEUE_TIMEOUT)
+            self._read_thread.join(timeout=QUEUE_TIMEOUT * 5)
         if self._sort_thread.is_alive():
-            self._sort_thread.join(timeout=QUEUE_TIMEOUT)
-        for t in self._map_threads:
+            self._sort_thread.join(timeout=QUEUE_TIMEOUT * 5)
+        for t in self._workers:
             if t.is_alive():
-                t.join(timeout=QUEUE_TIMEOUT)
+                t.join(timeout=QUEUE_TIMEOUT * 5)
 
 
 class ParallelMapper(BaseNode[T]):
@@ -216,6 +260,7 @@ class ParallelMapper(BaseNode[T]):
         method: Literal["thread", "process"] = "thread",
         multiprocessing_context: Optional[str] = None,
         max_concurrent: Optional[int] = None,
+        snapshot_frequency: int = 1,
     ):
         assert method in ["thread", "process"]
         self.source = source
@@ -232,8 +277,11 @@ class ParallelMapper(BaseNode[T]):
             if not isinstance(max_concurrent, int) and max_concurrent > num_workers:
                 raise ValueError(f"{max_concurrent=} should be >= {num_workers=}!")
         self.max_concurrent = max_concurrent
+        self.snapshot_frequency = snapshot_frequency
+        self._it: Optional[_ParallelMapperIter[T]] = None
+        self._iter_for_state_dict: bool = False
 
-    def iterator(self) -> Iterator[T]:
+    def _get_iterator(self, initial_state: Optional[Dict[str, Any]]) -> _ParallelMapperIter[T]:
         return _ParallelMapperIter(
             source=self.source,
             map_fn=self.map_fn,
@@ -242,10 +290,36 @@ class ParallelMapper(BaseNode[T]):
             method=self.method,
             mp_context=self._mp_context,
             max_concurrent=self.max_concurrent,
+            snapshot_frequency=self.snapshot_frequency,
+            initial_state=initial_state,
         )
 
+    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
+        if self._iter_for_state_dict:
+            self._iter_for_state_dict = False
+        else:
+            self._it = self._get_iterator(initial_state)
+        assert self._it is not None
+        return self._it
 
-_WorkerType = Callable[[BaseNode, queue.Queue, threading.BoundedSemaphore, threading.Event], None]
+    def get_state(self) -> Dict[str, Any]:
+        if self._it is None:
+            self._it = self._get_iterator(None)
+            self._iter_for_state_dict = True
+        return self._it.get_state()
+
+
+_WorkerType = Callable[
+    [
+        BaseNode,
+        queue.Queue,
+        SnapshotStore,
+        int,
+        threading.BoundedSemaphore,
+        threading.Event,
+    ],
+    None,
+]
 
 
 class _SingleThreadedMapper(Iterator[T]):
@@ -275,52 +349,86 @@ class _SingleThreadedMapper(Iterator[T]):
     processed in _populate_queue, in the _q, or about to be returned by an in-flight next() call.
     """
 
-    def __init__(self, source: BaseNode[T], prefetch_factor: int, worker: _WorkerType):
+    def __init__(
+        self,
+        source: BaseNode[T],
+        prefetch_factor: int,
+        worker: _WorkerType,
+        snapshot_frequency: int,
+        initial_state: Optional[Dict[str, Any]],
+    ):
         self.source = source
         self.prefetch_factor = prefetch_factor
         self.worker = worker
+        self.snapshot_frequency = snapshot_frequency
 
         self._q: queue.Queue = queue.Queue()
         self._sem = threading.BoundedSemaphore(value=prefetch_factor)
         self._stop_event = threading.Event()
 
+        self._steps_since_snapshot = 0
+        fast_forward = 0
+        if initial_state is not None:
+            self._snapshot = initial_state["snapshot"]
+            fast_forward = initial_state["steps_since_snapshot"]
+            self.source.load_state_dict(self._snapshot)
+        else:
+            self._snapshot = self.source.state_dict()
+        self._snapshot_store = DequeSnapshotStore()
         self._thread = threading.Thread(
             target=self.worker,
-            args=(self.source, self._q, self._sem, self._stop_event),
+            args=(
+                self.source,
+                self._q,
+                self._snapshot_store,
+                self.snapshot_frequency,
+                self._sem,
+                self._stop_event,
+            ),
             daemon=True,
         )
         self._thread.start()
-        self._stopped = False
+        for _ in range(fast_forward):
+            next(self)
 
     def __iter__(self) -> Iterator[T]:
         return self
 
     def __next__(self) -> T:
-        if self._stopped:
-            raise StopIteration()
-
         while True:
+            if self._stop_event.is_set():
+                raise StopIteration()
             try:
-                item = self._q.get(block=True, timeout=QUEUE_TIMEOUT)
-                break
+                item, idx = self._q.get(block=True, timeout=QUEUE_TIMEOUT)
             except queue.Empty:
                 continue
 
-        if isinstance(item, StopIteration):
-            self._stopped = True
-            self._sem.release()
-            self._stop_event.set()
-            raise item
-        elif isinstance(item, ExceptionWrapper):
-            self._stopped = True
-            if not isinstance(item, StartupExceptionWrapper):
-                # We don't need to release for startup exceptions
+            if isinstance(item, StopIteration):
                 self._sem.release()
-            self._stop_event.set()
-            item.reraise()
-        else:
-            self._sem.release()
-        return item
+                self._stop_event.set()
+                raise item
+            elif isinstance(item, ExceptionWrapper):
+                if not isinstance(item, StartupExceptionWrapper):
+                    # We don't need to release for startup exceptions
+                    self._sem.release()
+                self._stop_event.set()
+                item.reraise()
+            else:
+                self._sem.release()
+                self._steps_since_snapshot += 1
+                self._maybe_update_snapshot(idx)
+                return item
+
+    def get_state(self) -> Dict[str, Any]:
+        return {
+            "snapshot": self._snapshot,
+            "steps_since_snapshot": self._steps_since_snapshot,
+        }
+
+    def _maybe_update_snapshot(self, idx: int):
+        if (snapshot := self._snapshot_store.pop_version(idx)) is not None:
+            self._snapshot = snapshot
+            self._steps_since_snapshot = 0
 
     def __del__(self):
         self._shutdown()
@@ -328,4 +436,4 @@ class _SingleThreadedMapper(Iterator[T]):
     def _shutdown(self):
         self._stop_event.set()
         if self._thread.is_alive():
-            self._thread.join(timeout=QUEUE_TIMEOUT)
+            self._thread.join(timeout=QUEUE_TIMEOUT * 5)

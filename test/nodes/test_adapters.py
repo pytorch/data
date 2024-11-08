@@ -4,14 +4,40 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import testslide
-from torch.utils.data import IterableDataset, RandomSampler
-from torchdata.nodes.adapters import IterableWrapper, MapStyleWrapper, ToIterableDataset
+from typing import Any, Dict, Iterator
 
-from .utils import DummyIterableDataset, DummyMapDataset, MockSource
+from parameterized import parameterized
+from torch.testing._internal.common_utils import TestCase
+
+from torch.utils.data import RandomSampler
+from torchdata.nodes.adapters import IterableWrapper, MapStyleWrapper
+
+from torchdata.nodes.types import Stateful
+
+from .utils import DummyIterableDataset, DummyMapDataset, run_test_save_load_state
 
 
-class TestIterableWrapper(testslide.TestCase):
+class _StatefulRange(Stateful):
+    def __init__(self, n: int) -> None:
+        self.n = n
+        self._num_yielded = 0
+        self._next_start = 0
+
+    def __iter__(self) -> Iterator[int]:
+        self._num_yielded = self._next_start  # Reset for next iter call
+        self._next_start = 0
+        for i in range(self._num_yielded, self.n):
+            self._num_yielded += 1
+            yield i
+
+    def state_dict(self) -> Dict[str, Any]:
+        return {"_num_yielded": self._num_yielded}
+
+    def load_state_dict(self, state_dict: Dict[str, Any]):
+        self._next_start = state_dict["_num_yielded"]
+
+
+class TestIterableWrapper(TestCase):
     def test_iterable(self):
         n = 20
         node = IterableWrapper(range(n))
@@ -44,11 +70,19 @@ class TestIterableWrapper(testslide.TestCase):
                 self.assertEqual(row["test_tensor"].item(), i)
                 self.assertEqual(row["test_str"], f"str_{i}")
 
+    @parameterized.expand([0, 5])
+    def test_save_load_state_fast_forward(self, midpoint: int):
+        run_test_save_load_state(self, IterableWrapper(range(10)), midpoint)
 
-class TestMapStyle(testslide.TestCase):
+    @parameterized.expand([0, 5])
+    def test_save_load_state_stateful(self, midpoint: int):
+        run_test_save_load_state(self, IterableWrapper(_StatefulRange(10)), midpoint)
+
+
+class TestMapStyle(TestCase):
     def test_default_sampler(self):
         n = 20
-        node = MapStyleWrapper(DummyMapDataset(n))
+        node = MapStyleWrapper(DummyMapDataset(n), sampler=range(n))
         for epoch in range(2):
             result = list(node)
             self.assertEqual(len(result), n)
@@ -89,17 +123,14 @@ class TestMapStyle(testslide.TestCase):
                 self.assertEqual(row["test_tensor"].item(), i)
                 self.assertEqual(row["test_str"], f"str_{i}")
 
-
-class TestToIterableDataset(testslide.TestCase):
-    def test_to_iterable_dataset(self):
+    @parameterized.expand([0, 7])
+    def test_save_load_state_fast_forward(self, midpoint: int):
         n = 20
-        node = MockSource(n)
-        iterable_ds = ToIterableDataset(node)
-        self.assertIsInstance(iterable_ds, IterableDataset)
-        for epoch in range(2):
-            result = list(iterable_ds)
-            self.assertEqual(len(result), n)
-            for i, row in enumerate(result):
-                self.assertEqual(row["step"], i)
-                self.assertEqual(row["test_tensor"].item(), i)
-                self.assertEqual(row["test_str"], f"str_{i}")
+        node = MapStyleWrapper(DummyMapDataset(n), sampler=range(n))
+        run_test_save_load_state(self, node, midpoint)
+
+    @parameterized.expand([0, 7])
+    def test_save_load_state_stateful(self, midpoint: int):
+        n = 20
+        node = MapStyleWrapper(DummyMapDataset(n), sampler=_StatefulRange(n))
+        run_test_save_load_state(self, node, midpoint)

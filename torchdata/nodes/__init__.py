@@ -10,14 +10,20 @@ from .batch import Batcher
 from .map import Mapper, ParallelMapper
 from .pin_memory import PinMemory
 from .prefetch import Prefetcher
+from .types import Stateful
 
 
 __all__ = [
     "BaseNode",
     "Batcher",
+    "IterableWrapper",
+    "MapStyleWrapper",
     "Mapper",
-    "Prefetcher",
     "ParallelMapper",
     "PinMemory",
+    "Prefetcher",
+    "Stateful",
     "T",
 ]
+
+assert sorted(__all__) == __all__
