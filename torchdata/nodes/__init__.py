@@ -8,6 +8,7 @@ from .adapters import IterableWrapper, MapStyleWrapper
 from .base_node import BaseNode, T
 from .batch import Batcher
 from .map import Mapper, ParallelMapper
+from .multi_dataset_weighted_sampler import MultiDatasetWeightedSampler
 from .pin_memory import PinMemory
 from .prefetch import Prefetcher
 from .types import Stateful
@@ -19,6 +20,7 @@ __all__ = [
     "IterableWrapper",
     "MapStyleWrapper",
     "Mapper",
+    "MultiDatasetWeightedSampler",
     "ParallelMapper",
     "PinMemory",
     "Prefetcher",
