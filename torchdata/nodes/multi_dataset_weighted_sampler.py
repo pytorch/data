@@ -52,11 +52,9 @@ class MultiDatasetWeightedSampler(BaseNode[T]):
             # TODO: handle the case where all datasets are exhausted | StopIteration
 
     def get_state(self) -> Dict[str, Any]:
+        # TODO: add more keys here
         return {
             self.DATASET_NODE_STATES_KEY: {
                 dataset_key: dataset_node.state_dict() for dataset_key, dataset_node in self.data_nodes.items()
             }
         }
-
-    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
-        raise NotImplementedError("Loading state dict is not implemented yet.")
