@@ -9,8 +9,8 @@ from typing import Any, Dict, Iterator
 from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
 
-from torch.utils.data import RandomSampler
-from torchdata.nodes.adapters import IterableWrapper, MapStyleWrapper
+from torch.utils.data import DistributedSampler, RandomSampler
+from torchdata.nodes.adapters import IterableWrapper, MapStyleWrapper, SamplerWrapper
 
 from torchdata.nodes.types import Stateful
 
@@ -133,4 +133,60 @@ class TestMapStyle(TestCase):
     def test_save_load_state_stateful(self, midpoint: int):
         n = 20
         node = MapStyleWrapper(DummyMapDataset(n), sampler=_StatefulRange(n))
+        run_test_save_load_state(self, node, midpoint)
+
+
+class TestSamplerWrapper(TestCase):
+    def test_sampler_wrapper(self):
+        n = 20
+        ds = DummyMapDataset(n)
+
+        node = SamplerWrapper(sampler=RandomSampler(ds))
+
+        results = []
+        for epoch in range(2):
+            result = list(node)
+            results.append(result)
+            self.assertEqual(node._epoch, epoch)
+            self.assertEqual(len(result), n)
+            self.assertEqual(set(result), set(range(n)))
+
+        self.assertNotEqual(results[0], results[1])
+
+    def test_distributed_sampler(self):
+        # Distributed sampler has set_epoch method
+        n = 40
+        ds = DummyMapDataset(n)
+
+        sampler = DistributedSampler(ds, rank=1, num_replicas=2)
+        exp = []
+        for epoch in range(4):
+            sampler.set_epoch(epoch)
+            exp.append(list(sampler))
+
+        node = SamplerWrapper(sampler=sampler)
+
+        for epoch in range(4):
+            result = list(node)
+            self.assertEqual(result, exp[epoch])
+
+    @parameterized.expand([0, 7])
+    def test_save_load_state(self, midpoint: int):
+        n = 20
+        ds = DummyMapDataset(n)
+        sampler = DistributedSampler(ds, rank=1, num_replicas=2)
+        node = SamplerWrapper(sampler=sampler)
+        run_test_save_load_state(self, node, midpoint)
+
+    @parameterized.expand([0, 7])
+    def test_save_load_state_with_updater(self, midpoint: int):
+        n = 20
+        ds = DummyMapDataset(n)
+        initial_epoch = 2
+
+        def epoch_updater(epoch):
+            return epoch + 5
+
+        sampler = DistributedSampler(ds, rank=1, num_replicas=2)
+        node = SamplerWrapper(sampler=sampler, initial_epoch=initial_epoch, epoch_updater=epoch_updater)
         run_test_save_load_state(self, node, midpoint)
