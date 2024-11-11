@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
 import random
 import time
 from typing import Any, Dict, Iterator, Optional
@@ -12,6 +11,7 @@ from typing import Any, Dict, Iterator, Optional
 import torch
 from torchdata.nodes.adapters import IterableWrapper
 from torchdata.nodes.base_node import BaseNode
+from torchdata.nodes.dataloader import DataLoader
 
 
 class MockGenerator:
@@ -79,9 +79,11 @@ class DummyMapDataset(torch.utils.data.Dataset):
         return {"step": i, "test_tensor": torch.tensor([i]), "test_str": f"str_{i}"}
 
 
-def run_test_save_load_state(test, x: BaseNode, midpoint: int):
+def run_test_save_load_state(test, node: BaseNode, midpoint: int):
     ##############################
     # Generate initial, midpoint, and end state_dict's
+    x = DataLoader(node)
+
     initial_state_dict = x.state_dict()
     it = iter(x)
     results = []
@@ -116,12 +118,14 @@ def run_test_save_load_state(test, x: BaseNode, midpoint: int):
 
     ##############################
     # Test restoring from end-of-epoch 0
-    x.load_state_dict(state_dict_0_end, restart_on_stop_iteration=False)
+    x = DataLoader(node, restart_on_stop_iteration=False)
+    x.load_state_dict(state_dict_0_end)
     results_after_dict_0_with_restart_false = list(x)
     test.assertEqual(results_after_dict_0_with_restart_false, [])
 
     ##############################
     # Test restoring from end of epoch 0 with restart_on_stop_iteration=True
-    x.load_state_dict(copy.deepcopy(state_dict_0_end), restart_on_stop_iteration=True)
+    x = DataLoader(node)
+    x.load_state_dict(state_dict_0_end)
     results_after_dict_0 = list(x)
     test.assertEqual(results_after_dict_0, results_1)
