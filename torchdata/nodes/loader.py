@@ -3,7 +3,7 @@ from typing import Any, Dict, Iterator, Optional
 from torchdata.nodes.base_node import BaseNode, T
 
 
-class DataLoader(BaseNode[T]):
+class Loader(BaseNode[T]):
     ROOT_KEY = "root"
 
     def __init__(self, root: BaseNode[T], restart_on_stop_iteration: bool = True):
