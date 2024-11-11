@@ -37,6 +37,7 @@ class IterableWrapper(BaseNode[T]):
 
     def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
         if initial_state is not None:
+            print("[IterableWrapper] Loading state from initial_state")
             self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
             if isinstance(self.iterable, Stateful):
                 self.iterable.load_state_dict(initial_state[self.ITERABLE_KEY])
@@ -45,6 +46,7 @@ class IterableWrapper(BaseNode[T]):
                 it = iter(self.iterable)
                 # Naively fast-forwarding
                 for _ in range(self._num_yielded):
+                    print("lets fast forward")
                     next(it)
         else:
             it = iter(self.iterable)
