@@ -56,7 +56,7 @@ class BaseNode(Iterable[T]):
             self.__initial_state = None
             if self.__restart_on_stop_iteration and not self.__it.has_next():
                 self.__it = _EagerIter(self, self.__initial_state)
-            self.__restart_on_stop_iteration = False
+            self.__restart_on_stop_iteration = False  # reset this for subsequent calls
         else:
             self.__it = _EagerIter(self, self.__initial_state)
         return self.__it
@@ -74,9 +74,10 @@ class BaseNode(Iterable[T]):
         state_dict will be passed directly to the .iterator(...) method of this node which will
         handle proper initialization.
 
-        [ state_dict end of iteration handling ]
+        NOTE [ state_dict end of iteration handling ]
         Special care must be taken when state_dict is requested after StopIteration.
         Consider the following common example of saving state_dict after one epoch.
+
         ```python
         node: BaseNode = ...
         for batch in node:
@@ -84,8 +85,10 @@ class BaseNode(Iterable[T]):
 
         state_dict = node.state_dict()
         ```
+
         Technically, since state_dict() was called before a new iterator was requested from `node`,
         you should expect the following behaviour:
+
         ```python
         node: BaseNode = ...
         node.load_state_dict(state_dict)  # Load state_dict from above
@@ -93,9 +96,15 @@ class BaseNode(Iterable[T]):
         ```
 
         You can avoid the above (default) behaviour by passing `restart_on_stop_iteration=True` when
-        calling `load_state_dict`.
+        calling `load_state_dict`, eg
 
-        Note: we can not make the True the default for restart_on_stop_iteration because it would
+        ```python
+        node: BaseNode = ...
+        node.load_state_dict(state_dict, restart_on_stop_iteration=True)
+        next(iter(node))  # Catches StopIteration, creates a new iterator, and returns next()
+        ```
+
+        Note: we can not make `True` the default for restart_on_stop_iteration because it would
         prevent StopIteration thrown in leaves from propogating up to the node where load_state_dict is called.
 
         :param state_dict: state_dict to load in next __iter__ requested
