@@ -7,7 +7,7 @@
 from .adapters import IterableWrapper, MapStyleWrapper
 from .base_node import BaseNode, T
 from .batch import Batcher
-from .dataloader import DataLoader
+from .loader import Loader
 from .map import Mapper, ParallelMapper
 from .pin_memory import PinMemory
 from .prefetch import Prefetcher

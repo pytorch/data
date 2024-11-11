@@ -11,7 +11,7 @@ from typing import Any, Dict, Iterator, Optional
 import torch
 from torchdata.nodes.adapters import IterableWrapper
 from torchdata.nodes.base_node import BaseNode
-from torchdata.nodes.dataloader import DataLoader
+from torchdata.nodes.loader import Loader
 
 
 class MockGenerator:
@@ -82,7 +82,7 @@ class DummyMapDataset(torch.utils.data.Dataset):
 def run_test_save_load_state(test, node: BaseNode, midpoint: int):
     ##############################
     # Generate initial, midpoint, and end state_dict's
-    x = DataLoader(node)
+    x = Loader(node)
 
     initial_state_dict = x.state_dict()
     it = iter(x)
@@ -118,14 +118,14 @@ def run_test_save_load_state(test, node: BaseNode, midpoint: int):
 
     ##############################
     # Test restoring from end-of-epoch 0
-    x = DataLoader(node, restart_on_stop_iteration=False)
+    x = Loader(node, restart_on_stop_iteration=False)
     x.load_state_dict(state_dict_0_end)
     results_after_dict_0_with_restart_false = list(x)
     test.assertEqual(results_after_dict_0_with_restart_false, [])
 
     ##############################
     # Test restoring from end of epoch 0 with restart_on_stop_iteration=True
-    x = DataLoader(node)
+    x = Loader(node)
     x.load_state_dict(state_dict_0_end)
     results_after_dict_0 = list(x)
     test.assertEqual(results_after_dict_0, results_1)
