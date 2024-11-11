@@ -61,7 +61,7 @@ class TestIterableWrapper(TestCase):
 
     def test_iterable_dataset(self):
         n = 20
-        node = IterableWrapper(DummyIterableDataset(n))
+        node = IterableWrapper(DummyIterableDataset(n, name="test"))
         for epoch in range(2):
             result = list(node)
             self.assertEqual(len(result), n)
