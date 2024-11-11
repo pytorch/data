@@ -45,7 +45,6 @@ class IterableWrapper(BaseNode[T]):
                 it = iter(self.iterable)
                 # Naively fast-forwarding
                 for _ in range(self._num_yielded):
-                    print("lets fast forward")
                     next(it)
         else:
             it = iter(self.iterable)

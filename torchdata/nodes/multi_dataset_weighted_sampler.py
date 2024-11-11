@@ -19,6 +19,7 @@ class MultiDatasetWeightedSampler(BaseNode[T]):
     GENERATOR_STATE_KEY = "g_state"
     NUM_RAND_LIST_SKIP_KEY = "_num_rand_list_skip"
     DATASETS_EXHAUSTED_KEY = "_datasets_exhausted"
+    INDEX_INTO_BATCH_OF_INDICES = "_idx_into_batch_of_indices"
 
     _ARBITRARY_LARGE_NUMBER = 1000
 
@@ -29,7 +30,8 @@ class MultiDatasetWeightedSampler(BaseNode[T]):
         stopping_criterion: str = "CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED",
     ) -> None:
         self.data_nodes = data_nodes
-        self.weights = weights
+        self.dataset_keys = list(data_nodes.keys())  # todo: sort keys and weights and datasets
+        self.weights = [weights[k] for k in self.dataset_keys]
         self.stopping_criterion = stopping_criterion
         self._num_yielded = 0
         self._num_rand_list_skip = 0
@@ -38,10 +40,25 @@ class MultiDatasetWeightedSampler(BaseNode[T]):
         # create a weighted sampler
         self.g = torch.Generator()
         self.g.manual_seed(0)  # TODO: incorporate seed from worker_info, epoch
+        self._g_snapshot = self.g.get_state()
+        self._idx_into_batch_of_indices = 0
+        self._batch_of_indices = []
+
+    def _get_batch_of_ds_indices(self) -> list[int]:
+        """Logic for getting a batch of dataset indices"""
+        self._g_snapshot = self.g.get_state()
+        self._index_into_batch_of_indices = 0
+        return torch.multinomial(
+            torch.tensor(list(self.weights)),
+            num_samples=self._ARBITRARY_LARGE_NUMBER,
+            replacement=True,
+            generator=self.g,
+        ).tolist()
 
     def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
         """Logic for iterating over multiple datasets with weights"""
 
+        fast_forward_counter = 0
         if initial_state is not None:  # TODO add more checks here
             # load state from initial_state
             dataset_node_state = initial_state[self.DATASET_NODE_STATES_KEY]
@@ -49,46 +66,24 @@ class MultiDatasetWeightedSampler(BaseNode[T]):
             self._num_rand_list_skip = initial_state[self.NUM_RAND_LIST_SKIP_KEY]
             self._datasets_exhausted = initial_state[self.DATASETS_EXHAUSTED_KEY]
             self.g.set_state(initial_state[self.GENERATOR_STATE_KEY])
-            # batch_of_indices = self._generate_indices(self.g)
 
-            # self._idx_into_batch_of_indices = initial_state["idx_into_batch_of_indices"]
-
+            fast_forward_counter = self._num_yielded
             # load state for each parent dataset node
             for dataset_key in self.data_nodes.keys():
                 self.data_nodes[dataset_key].load_state_dict(
-                    dataset_node_state[dataset_key],
+                    copy.deepcopy(dataset_node_state[dataset_key]),
                 )
 
         # create iterators for each dataset node
-        dataset_iterators = {
-            dataset_idx: iter(self.data_nodes[dataset_key])
-            for dataset_idx, dataset_key in enumerate(self.data_nodes.keys())
-        }
+        dataset_iterators = [iter(self.data_nodes[k]) for k in self.dataset_keys]
 
         while not all(self._datasets_exhausted):
 
-            # if self._idx_into_batch_of_indices >= len(batch_of_indices):
-            #     # self._g_state_snapshot = self.g.get_state()
-            #     batch_of_indices = self._generate_indices(self.g)
-            #     self._idx_into_batch_of_indices = 0
-
-            # dataset_idx = batch_of_indices[self._idx_into_batch_of_indices]
-            # self._idx_into_batch_of_indices += 1
-
-            # ...
-
-            # yield item
-
-            weighted_sampler = torch.multinomial(
-                torch.tensor(list(self.weights.values())),
-                num_samples=self._ARBITRARY_LARGE_NUMBER,
-                replacement=True,
-                generator=self.g,
-            ).tolist()
+            if self._idx_into_batch_of_indices >= len(self._batch_of_indices):
+                self._batch_of_indices = self._get_batch_of_ds_indices()
 
             # iterate over the weighted sampler
-            fast_forward_counter = self._num_yielded
-            for dataset_idx in weighted_sampler[fast_forward_counter:]:
+            for dataset_idx in self._batch_of_indices[fast_forward_counter:]:
                 # yield from the iterator for the dataset
                 try:
                     if all(self._datasets_exhausted):
@@ -99,8 +94,9 @@ class MultiDatasetWeightedSampler(BaseNode[T]):
                     self._datasets_exhausted[dataset_idx] = True
 
                     dataset_iterators[dataset_idx] = iter(
-                        self.data_nodes[list(self.data_nodes.keys())[dataset_idx]]
+                        self.data_nodes[self.dataset_keys[dataset_idx]]
                     )  # reset the iterator for the dataset
+
                     yield next(dataset_iterators[dataset_idx])
             fast_forward_counter = 0
 
@@ -108,7 +104,8 @@ class MultiDatasetWeightedSampler(BaseNode[T]):
         # TODO: add more keys here
         return {
             self.NUM_YIELDED_KEY: self._num_yielded,
-            self.GENERATOR_STATE_KEY: self.g.get_state(),
+            self.INDEX_INTO_BATCH_OF_INDICES: self._idx_into_batch_of_indices,
+            self.GENERATOR_STATE_KEY: self._g_snapshot,
             self.NUM_RAND_LIST_SKIP_KEY: self._num_rand_list_skip,
             self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
             self.DATASET_NODE_STATES_KEY: {

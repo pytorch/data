@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 import random
 import time
 from typing import Any, Dict, Iterator, Optional
@@ -85,7 +86,8 @@ class DummyMapDataset(torch.utils.data.Dataset):
 
 
 def run_test_save_load_state(test, x: BaseNode, midpoint: int):
-    # Test before iter call
+    ##############################
+    # Generate initial, midpoint, and end state_dict's
     initial_state_dict = x.state_dict()
     it = iter(x)
     results = []
@@ -100,27 +102,32 @@ def run_test_save_load_state(test, x: BaseNode, midpoint: int):
     # store epoch 1's results
     results_1 = list(x)
 
+    ##############################
+    # Test restoring from midpoint
     x.load_state_dict(state_dict)
     results_after = list(x)
-    print(results_after)
-    print(results[midpoint:])
-    print(results)
     test.assertEqual(results_after, results[midpoint:])
 
     # Test for second epoch after resume
     results_after_1 = list(x)
     test.assertEqual(results_after_1, results_1)
 
-    # Test initialize from beginning after resumeresults_after
+    ##############################
+    # Test initialize from beginning after resume
     x.load_state_dict(initial_state_dict)
     full_results = list(x)
     test.assertEqual(full_results, results)
     full_results_1 = list(x)
     test.assertEqual(full_results_1, results_1)
 
-    # Test restoring from end of epoch 0
-    x.load_state_dict(state_dict_0_end)
+    ##############################
+    # Test restoring from end-of-epoch 0
+    x.load_state_dict(state_dict_0_end, restart_on_stop_iteration=False)
+    results_after_dict_0_with_restart_false = list(x)
+    test.assertEqual(results_after_dict_0_with_restart_false, [])
+
+    ##############################
+    # Test restoring from end of epoch 0 with restart_on_stop_iteration=True
+    x.load_state_dict(copy.deepcopy(state_dict_0_end), restart_on_stop_iteration=True)
     results_after_dict_0 = list(x)
-    print(results_after_dict_0)
-    print(results_1)
     test.assertEqual(results_after_dict_0, results_1)
