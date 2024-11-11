@@ -88,38 +88,30 @@ def run_test_save_load_state(test, x: BaseNode, midpoint: int):
     # Test before iter call
     initial_state_dict = x.state_dict()
     it = iter(x)
-    # print("HOORAY")
     results = []
     for _ in range(midpoint):
         results.append(next(it))
     state_dict = x.state_dict()
-    print("state_dict", state_dict)
-    # assert state_dict != initial_state_dict
     for val in it:
         results.append(val)
-    # print("HOORAY2")
 
     state_dict_0_end = x.state_dict()
 
     # store epoch 1's results
     results_1 = list(x)
-    # print("HOORAY3")
+
     x.load_state_dict(state_dict)
-    # print("HOORAY4")
     results_after = list(x)
-    print("[1]", results_after)
-    print("[2]", results[midpoint:])
-    print("[3]", results)
-    # assert results == results_after
+    print(results_after)
+    print(results[midpoint:])
+    print(results)
     test.assertEqual(results_after, results[midpoint:])
 
     # Test for second epoch after resume
     results_after_1 = list(x)
-    # print("[4]", results_after_1)
-    # print("[5]", results_1)
     test.assertEqual(results_after_1, results_1)
 
-    # Test initialize from beginning after resume
+    # Test initialize from beginning after resumeresults_after
     x.load_state_dict(initial_state_dict)
     full_results = list(x)
     test.assertEqual(full_results, results)

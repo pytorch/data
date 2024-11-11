@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import logging
-from typing import Any, Dict, Iterable, Iterator, Optional, TypeVar, Union
+from typing import Any, Dict, Iterable, Iterator, Optional, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,6 @@ class BaseNode(Iterable[T]):
         raise NotImplementedError()
 
     def __iter__(self) -> BaseNodeIterator[T]:
-        # print("get a new iter")
         if self.__it is not None and not self.__it.started():
             # Only create a new iter if the last requested one did not start
             return self.__it
@@ -54,8 +53,6 @@ class BaseNode(Iterable[T]):
         if self.__initial_state is not None:
             self.__it = _EagerIter(self, self.__initial_state)
             self.__initial_state = None
-            if not self.__it.has_next():
-                self.__it = _EagerIter(self, self.__initial_state)
         else:
             self.__it = _EagerIter(self, self.__initial_state)
         return self.__it
@@ -65,9 +62,6 @@ class BaseNode(Iterable[T]):
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         self.__initial_state = state_dict
-
-    def _get_iterator(self) -> Union[BaseNodeIterator[T], None]:
-        return self.__it
 
 
 class _EagerIter(BaseNodeIterator[T]):
@@ -80,7 +74,6 @@ class _EagerIter(BaseNodeIterator[T]):
         self._started = False
         self._finished = False
         if initial_state is not None:
-            print("[initial_state]", initial_state)
             self._it = self.base_node.iterator(initial_state)
         else:
             self._it = self.base_node.iterator(None)
