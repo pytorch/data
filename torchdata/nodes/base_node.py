@@ -56,7 +56,7 @@ class BaseNode(Iterable[T]):
             self.__initial_state = None
             if self.__restart_on_stop_iteration and not self.__it.has_next():
                 self.__it = _EagerIter(self, self.__initial_state)
-            self.__restart_on_stop_iteration = False
+            self.__restart_on_stop_iteration = False  # reset this for subsequent calls
         else:
             self.__it = _EagerIter(self, self.__initial_state)
         return self.__it
@@ -85,6 +85,7 @@ class BaseNode(Iterable[T]):
 
         state_dict = node.state_dict()
         ```
+
         Technically, since state_dict() was called before a new iterator was requested from `node`,
         you should expect the following behaviour:
 
