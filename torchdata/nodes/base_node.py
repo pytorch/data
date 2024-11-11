@@ -56,7 +56,7 @@ class BaseNode(Iterable[T]):
             self.__initial_state = None
             if self.__restart_on_stop_iteration and not self.__it.has_next():
                 self.__it = _EagerIter(self, self.__initial_state)
-            self.__restart_on_stop_iteration = False  # reset this for subsequent calls
+            self.__restart_on_stop_iteration = False
         else:
             self.__it = _EagerIter(self, self.__initial_state)
         return self.__it
@@ -85,7 +85,6 @@ class BaseNode(Iterable[T]):
 
         state_dict = node.state_dict()
         ```
-
         Technically, since state_dict() was called before a new iterator was requested from `node`,
         you should expect the following behaviour:
 
@@ -106,6 +105,7 @@ class BaseNode(Iterable[T]):
 
         Note: we can not make `True` the default for restart_on_stop_iteration because it would
         prevent StopIteration thrown in leaves from propogating up to the node where load_state_dict is called.
+        Instead, wrap the root of your dag in `torchdata.nodes.Loader` which will set this flag for you.
 
         :param state_dict: state_dict to load in next __iter__ requested
         :param restart_on_stop_iteration: (default False) - whether to restart the iterator automatically
