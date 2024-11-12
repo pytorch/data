@@ -38,6 +38,7 @@ class IterableWrapper(BaseNode[T]):
         self._num_yielded = 0
 
     def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
+        self._num_yielded = 0
         if initial_state is not None:
             self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
             if isinstance(self.iterable, Stateful):
@@ -46,8 +47,14 @@ class IterableWrapper(BaseNode[T]):
             else:
                 it = iter(self.iterable)
                 # Naively fast-forwarding
-                for _ in range(self._num_yielded):
-                    next(it)
+                for i in range(self._num_yielded):
+                    try:
+                        next(it)
+                    except StopIteration:
+                        raise ValueError(
+                            f"Tried to fast-forward {self._num_yielded} items during init but "
+                            f"hit StopIteration after {i} items, this is likely a bug or malformed state_dict"
+                        )
         else:
             it = iter(self.iterable)
 
@@ -108,6 +115,7 @@ class SamplerWrapper(BaseNode[T]):
 
     def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
         it: Iterator[T]
+        self._num_yielded = 0
         if initial_state is not None:
             self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
             self._epoch = initial_state[self.EPOCH_KEY]
@@ -120,8 +128,14 @@ class SamplerWrapper(BaseNode[T]):
                 if hasattr(self.sampler, "set_epoch"):
                     self.sampler.set_epoch(self._epoch)
                 it = iter(self.sampler)
-                for _ in range(self._num_yielded):
-                    next(it)
+                for i in range(self._num_yielded):
+                    try:
+                        next(it)
+                    except StopIteration:
+                        raise ValueError(
+                            f"Tried to fast-forward {self._num_yielded} items during init but "
+                            f"hit StopIteration after {i} items, this is likely a bug or malformed state_dict"
+                        )
         else:
             if self._started:  # don't call first time
                 self._epoch = self.epoch_updater(self._epoch)

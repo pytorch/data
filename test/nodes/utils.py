@@ -96,7 +96,15 @@ def run_test_save_load_state(test, node: BaseNode, midpoint: int):
     state_dict_0_end = x.state_dict()
 
     # store epoch 1's results
-    results_1 = list(x)
+    it = iter(x)
+    results_1 = []
+    for _ in range(midpoint):
+        results_1.append(next(it))
+    state_dict_1 = x.state_dict()
+    for val in it:
+        results_1.append(val)
+
+    assert len(results_1) == len(results)
 
     ##############################
     # Test restoring from midpoint
@@ -107,6 +115,12 @@ def run_test_save_load_state(test, node: BaseNode, midpoint: int):
     # Test for second epoch after resume
     results_after_1 = list(x)
     test.assertEqual(results_after_1, results_1)
+
+    ##############################
+    # Test restoring from midpoint of epoch 1
+    x.load_state_dict(state_dict_1, restart_on_stop_iteration=True)
+    results_after_2 = list(x)
+    test.assertEqual(results_after_2, results_1[midpoint:])
 
     ##############################
     # Test initialize from beginning after resume
