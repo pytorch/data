@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import logging
-from typing import Any, Dict, Iterable, Iterator, Optional, TypeVar
+from typing import Any, Dict, Generator, Iterable, Iterator, Optional, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -13,10 +13,7 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T", covariant=True)
 
 
-class BaseNodeIterator(Iterator[T]):
-    def state_dict(self) -> Dict[str, Any]:
-        raise NotImplementedError()
-
+class _BaseNodeIterator(Iterator[T]):
     def started(self) -> bool:
         raise NotImplementedError()
 
@@ -25,7 +22,7 @@ class BaseNodeIterator(Iterator[T]):
 
 
 class BaseNode(Iterable[T]):
-    __it: Optional[BaseNodeIterator[T]] = None  # holds pointer to last iter() requested
+    __it: Optional[_BaseNodeIterator[T]] = None  # holds pointer to last iter() requested
     __initial_state: Optional[Dict[str, Any]] = None
     __restart_on_stop_iteration: bool = False
 
@@ -46,7 +43,7 @@ class BaseNode(Iterable[T]):
         """
         raise NotImplementedError()
 
-    def __iter__(self) -> BaseNodeIterator[T]:
+    def __iter__(self) -> _BaseNodeIterator[T]:
         if self.__it is not None and not self.__it.started():
             # Only create a new iter if the last requested one has already started
             return self.__it
@@ -116,7 +113,7 @@ class BaseNode(Iterable[T]):
         self.__restart_on_stop_iteration = restart_on_stop_iteration
 
 
-class _EagerIter(BaseNodeIterator[T]):
+class _EagerIter(_BaseNodeIterator[T]):
     """
     Basic iterator which will runs next-calls eagerly
     """
@@ -129,6 +126,12 @@ class _EagerIter(BaseNodeIterator[T]):
             self._it = self.base_node.iterator(initial_state)
         else:
             self._it = self.base_node.iterator(None)
+
+        if isinstance(self._it, Generator):
+            raise ValueError(
+                f"Generator classes are not supported, .iterator must "
+                f"return an explicit Iterator instance! {type(self.base_node)=}"
+            )
 
         self._next_val: Optional[T] = None
 

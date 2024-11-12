@@ -5,11 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from torch.testing._internal.common_utils import TestCase
-from torchdata.nodes.adapters import IterableWrapper
-from torchdata.nodes.base_node import BaseNodeIterator
 from torchdata.nodes.snapshot_store import DequeSnapshotStore
-
-from .utils import run_test_save_load_state
 
 
 class TestDequeSnapshotStore(TestCase):
