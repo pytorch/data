@@ -7,6 +7,7 @@
 from .adapters import IterableWrapper, MapStyleWrapper
 from .base_node import BaseNode, T
 from .batch import Batcher
+from .loader import Loader
 from .map import Mapper, ParallelMapper
 from .multi_dataset_weighted_sampler import MultiDatasetWeightedSampler
 from .pin_memory import PinMemory
@@ -17,6 +18,7 @@ from .types import Stateful
 __all__ = [
     "BaseNode",
     "Batcher",
+    "DataLoader",
     "IterableWrapper",
     "MapStyleWrapper",
     "Mapper",

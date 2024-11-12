@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
 import random
 import time
 from typing import Any, Dict, Iterator, Optional
@@ -12,6 +11,7 @@ from typing import Any, Dict, Iterator, Optional
 import torch
 from torchdata.nodes.adapters import IterableWrapper
 from torchdata.nodes.base_node import BaseNode
+from torchdata.nodes.loader import Loader
 
 
 class MockGenerator:
@@ -85,9 +85,11 @@ class DummyMapDataset(torch.utils.data.Dataset):
         return {"step": i, "test_tensor": torch.tensor([i]), "test_str": f"str_{i}"}
 
 
-def run_test_save_load_state(test, x: BaseNode, midpoint: int):
+def run_test_save_load_state(test, node: BaseNode, midpoint: int):
     ##############################
     # Generate initial, midpoint, and end state_dict's
+    x = Loader(node)
+
     initial_state_dict = x.state_dict()
     it = iter(x)
     results = []
@@ -100,7 +102,15 @@ def run_test_save_load_state(test, x: BaseNode, midpoint: int):
     state_dict_0_end = x.state_dict()
 
     # store epoch 1's results
-    results_1 = list(x)
+    it = iter(x)
+    results_1 = []
+    for _ in range(midpoint):
+        results_1.append(next(it))
+    state_dict_1 = x.state_dict()
+    for val in it:
+        results_1.append(val)
+
+    assert len(results_1) == len(results)
 
     ##############################
     # Test restoring from midpoint
@@ -113,6 +123,12 @@ def run_test_save_load_state(test, x: BaseNode, midpoint: int):
     test.assertEqual(results_after_1, results_1)
 
     ##############################
+    # Test restoring from midpoint of epoch 1
+    x.load_state_dict(state_dict_1, restart_on_stop_iteration=True)
+    results_after_2 = list(x)
+    test.assertEqual(results_after_2, results_1[midpoint:])
+
+    ##############################
     # Test initialize from beginning after resume
     x.load_state_dict(initial_state_dict)
     full_results = list(x)
@@ -122,12 +138,14 @@ def run_test_save_load_state(test, x: BaseNode, midpoint: int):
 
     ##############################
     # Test restoring from end-of-epoch 0
-    x.load_state_dict(state_dict_0_end, restart_on_stop_iteration=False)
+    x = Loader(node, restart_on_stop_iteration=False)
+    x.load_state_dict(state_dict_0_end)
     results_after_dict_0_with_restart_false = list(x)
     test.assertEqual(results_after_dict_0_with_restart_false, [])
 
     ##############################
     # Test restoring from end of epoch 0 with restart_on_stop_iteration=True
-    x.load_state_dict(copy.deepcopy(state_dict_0_end), restart_on_stop_iteration=True)
+    x = Loader(node)
+    x.load_state_dict(state_dict_0_end)
     results_after_dict_0 = list(x)
     test.assertEqual(results_after_dict_0, results_1)

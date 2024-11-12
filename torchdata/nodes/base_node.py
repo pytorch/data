@@ -106,6 +106,7 @@ class BaseNode(Iterable[T]):
 
         Note: we can not make `True` the default for restart_on_stop_iteration because it would
         prevent StopIteration thrown in leaves from propogating up to the node where load_state_dict is called.
+        Instead, wrap the root of your dag in `torchdata.nodes.Loader` which will set this flag for you.
 
         :param state_dict: state_dict to load in next __iter__ requested
         :param restart_on_stop_iteration: (default False) - whether to restart the iterator automatically

@@ -130,7 +130,7 @@ class _ParallelMapperIter(Iterator[T]):
             fast_forward = initial_state["steps_since_snapshot"]
             self.source.load_state_dict(self._snapshot)
         else:
-            self._snapshot = self.source.state_dict()
+            self._snapshot = None
         self._snapshot_store = DequeSnapshotStore()
 
         self._read_thread = threading.Thread(
@@ -176,8 +176,14 @@ class _ParallelMapperIter(Iterator[T]):
         if self.in_order:
             self._sort_thread.start()
 
-        for _ in range(fast_forward):
-            next(self)
+        for i in range(fast_forward):
+            try:
+                next(self)
+            except StopIteration:
+                raise ValueError(
+                    f"Tried to fast-forward {fast_forward} items during init but "
+                    f"hit StopIteration after {i} items, this is likely a bug or malformed state_dict"
+                )
 
     def __iter__(self) -> Iterator[T]:
         return self
@@ -304,8 +310,10 @@ class ParallelMapper(BaseNode[T]):
 
     def get_state(self) -> Dict[str, Any]:
         if self._it is None:
+            # iter(self)
             self._it = self._get_iterator(None)
             self._iter_for_state_dict = True
+        assert self._it is not None
         return self._it.get_state()
 
 
@@ -367,13 +375,13 @@ class _SingleThreadedMapper(Iterator[T]):
         self._stop_event = threading.Event()
 
         self._steps_since_snapshot = 0
-        fast_forward = 0
+        self._fast_forward = 0
         if initial_state is not None:
             self._snapshot = initial_state["snapshot"]
-            fast_forward = initial_state["steps_since_snapshot"]
+            self._fast_forward = initial_state["steps_since_snapshot"]
             self.source.load_state_dict(self._snapshot)
         else:
-            self._snapshot = self.source.state_dict()
+            self._snapshot = None
         self._snapshot_store = DequeSnapshotStore()
         self._thread = threading.Thread(
             target=self.worker,
@@ -388,8 +396,15 @@ class _SingleThreadedMapper(Iterator[T]):
             daemon=True,
         )
         self._thread.start()
-        for _ in range(fast_forward):
-            next(self)
+        for i in range(self._fast_forward):
+            try:
+                next(self)
+            except StopIteration:
+                raise ValueError(
+                    f"Tried to fast-forward {self._fast_forward} items during init but "
+                    f"hit StopIteration after {i} items, this is likely a bug or malformed state_dict"
+                )
+        self._fast_forward = 0
 
     def __iter__(self) -> Iterator[T]:
         return self
