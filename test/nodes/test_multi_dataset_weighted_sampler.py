@@ -16,7 +16,7 @@ class TestMultiDatasetWeightedSampler(TestCase):
     def setUp(self) -> None:
         super().setUp()
         self.datasets = {f"ds{i}": IterableWrapper(DummyIterableDataset(10, f"ds{i}")) for i in range(4)}
-        self.weights = {f"ds{i}": 0.1 * (i + 1) for i in range(10)}
+        self.weights = {f"ds{i}": 0.1 * (i + 1) for i in range(4)}
         self.weighted_sampler_node = MultiDatasetWeightedSampler(self.datasets, self.weights)
 
     def test_multi_dataset_weighted_sampler(self) -> None:

@@ -109,6 +109,7 @@ class BaseNode(Iterable[T]):
         :param restart_on_stop_iteration: (default False) - whether to restart the iterator automatically
             when the first next() call would throw StopIteration.
         """
+        self.__it = None
         self.__initial_state = state_dict
         self.__restart_on_stop_iteration = restart_on_stop_iteration
 

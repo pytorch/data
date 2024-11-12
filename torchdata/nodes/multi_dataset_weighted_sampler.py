@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import copy
-from typing import Any, Dict, Iterator, Mapping, Optional
+from typing import Any, Dict, Iterator, Optional
 
 import torch
 from torchdata.nodes.base_node import BaseNode, T
@@ -14,101 +14,135 @@ from torchdata.nodes.base_node import BaseNode, T
 class MultiDatasetWeightedSampler(BaseNode[T]):
     """A node that samples from multiple datasets with weights."""
 
-    DATASET_NODE_STATES_KEY = "dataset_node_states"
-    NUM_YIELDED_KEY = "_num_yielded"
-    GENERATOR_STATE_KEY = "g_state"
-    NUM_RAND_LIST_SKIP_KEY = "_num_rand_list_skip"
-    DATASETS_EXHAUSTED_KEY = "_datasets_exhausted"
-    INDEX_INTO_BATCH_OF_INDICES = "_idx_into_batch_of_indices"
-
     _ARBITRARY_LARGE_NUMBER = 1000
 
     def __init__(
         self,
-        data_nodes: Mapping[str, BaseNode[T]],
+        source_nodes: Dict[str, BaseNode[T]],
         weights: Dict[str, float],
         stopping_criterion: str = "CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED",
     ) -> None:
-        self.data_nodes = data_nodes
-        self.dataset_keys = list(data_nodes.keys())  # todo: sort keys and weights and datasets
-        self.weights = [weights[k] for k in self.dataset_keys]
+        self.source_nodes = source_nodes
+        self.weights = weights
         self.stopping_criterion = stopping_criterion
-        self._num_yielded = 0
-        self._num_rand_list_skip = 0
-        self._datasets_exhausted = [False] * len(self.weights)
-
-        # create a weighted sampler
-        self.g = torch.Generator()
-        self.g.manual_seed(0)  # TODO: incorporate seed from worker_info, epoch
-        self._g_snapshot = self.g.get_state()
-        self._idx_into_batch_of_indices = 0
-        self._batch_of_indices = []
-
-    def _get_batch_of_ds_indices(self) -> list[int]:
-        """Logic for getting a batch of dataset indices"""
-        self._g_snapshot = self.g.get_state()
-        self._index_into_batch_of_indices = 0
-        return torch.multinomial(
-            torch.tensor(list(self.weights)),
-            num_samples=self._ARBITRARY_LARGE_NUMBER,
-            replacement=True,
-            generator=self.g,
-        ).tolist()
 
     def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
-        """Logic for iterating over multiple datasets with weights"""
-
-        fast_forward_counter = 0
-        if initial_state is not None:  # TODO add more checks here
-            # load state from initial_state
-            dataset_node_state = initial_state[self.DATASET_NODE_STATES_KEY]
-            self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
-            self._num_rand_list_skip = initial_state[self.NUM_RAND_LIST_SKIP_KEY]
-            self._datasets_exhausted = initial_state[self.DATASETS_EXHAUSTED_KEY]
-            self.g.set_state(initial_state[self.GENERATOR_STATE_KEY])
-
-            fast_forward_counter = self._num_yielded
-            # load state for each parent dataset node
-            for dataset_key in self.data_nodes.keys():
-                self.data_nodes[dataset_key].load_state_dict(
-                    copy.deepcopy(dataset_node_state[dataset_key]),
-                )
-
-        # create iterators for each dataset node
-        dataset_iterators = [iter(self.data_nodes[k]) for k in self.dataset_keys]
-
-        while not all(self._datasets_exhausted):
-
-            if self._idx_into_batch_of_indices >= len(self._batch_of_indices):
-                self._batch_of_indices = self._get_batch_of_ds_indices()
-
-            # iterate over the weighted sampler
-            for dataset_idx in self._batch_of_indices[fast_forward_counter:]:
-                # yield from the iterator for the dataset
-                try:
-                    if all(self._datasets_exhausted):
-                        break
-                    self._num_yielded += 1
-                    yield next(dataset_iterators[dataset_idx])
-                except (StopIteration):  # TODO: handle the case where all datasets are exhausted | StopIteration
-                    self._datasets_exhausted[dataset_idx] = True
-
-                    dataset_iterators[dataset_idx] = iter(
-                        self.data_nodes[self.dataset_keys[dataset_idx]]
-                    )  # reset the iterator for the dataset
-
-                    yield next(dataset_iterators[dataset_idx])
-            fast_forward_counter = 0
+        self._it = self.Iter(self, initial_state)
+        return self._it
 
     def get_state(self) -> Dict[str, Any]:
-        # TODO: add more keys here
+        if self._it is None:
+            iter(self)
+        return self._it.get_state()
+
+    class Iter(Iterator[T]):
+        DATASET_NODE_STATES_KEY = "dataset_node_states"
+        GENERATOR_STATE_KEY = "g_state"
+        DATASETS_EXHAUSTED_KEY = "_datasets_exhausted"
+
+        def __init__(self, parent, initial_state: Optional[Dict[str, Any]]):
+            self._num_rand_list_skip = 0
+            self._datasets_exhausted = [False] * len(parent.weights)
+
+            g = torch.Generator()
+            g.manual_seed(0)
+            self._weighted_sampler = _WeightedSampler(
+                weights=parent.weights,
+                generator=g,
+            )
+            if initial_state is not None:
+                self._weighted_sampler = _WeightedSampler(
+                    weights=parent.weights,
+                    generator=g,
+                    initial_state=initial_state[self.GENERATOR_STATE_KEY],
+                )
+                self._datasets_exhausted = initial_state[self.DATASETS_EXHAUSTED_KEY]
+                for k in parent.source_nodes.keys():
+                    parent.source_nodes[k].load_state_dict(initial_state[self.DATASET_NODE_STATES_KEY][k])
+            else:
+                # Force a fresh iterator from all source nodes
+                for k in parent.source_nodes.keys():
+                    parent.source_nodes[k].load_state_dict(None)
+
+            self._source_nodes = parent.source_nodes
+            self._ds_iters = [iter(self._source_nodes[k]) for k in self._weighted_sampler.names]
+
+        def __iter__(self) -> Iterator[T]:
+            return self
+
+        def __next__(self) -> T:
+            if all(self._datasets_exhausted):
+                raise StopIteration()
+
+            idx, key = next(self._weighted_sampler)
+            try:
+                item = next(self._ds_iters[idx])
+            except StopIteration:
+                self._datasets_exhausted[idx] = True
+                if all(self._datasets_exhausted):
+                    raise StopIteration()
+                self._ds_iters[idx] = iter(self._source_nodes[key])
+                item = next(self._ds_iters[idx])
+
+            return item
+
+        def get_state(self) -> Dict[str, Any]:
+            return {
+                self.GENERATOR_STATE_KEY: self._weighted_sampler.get_state(),
+                self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
+                self.DATASET_NODE_STATES_KEY: {
+                    k: self._source_nodes[k].state_dict() for k in self._weighted_sampler.names
+                },
+            }
+
+
+class _WeightedSampler:
+    def __init__(
+        self,
+        weights: Dict[str, float],
+        generator,
+        batch_size: int = 1000,
+        initial_state: Optional[Dict[str, Any]] = None,
+    ):
+        self.names, self.weights = [], []
+        for name, weight in weights.items():
+            self.names.append(name)
+            self.weights.append(weight)
+        self.weights = torch.tensor(self.weights, dtype=torch.float64)
+
+        self.batch_size = batch_size
+        self._g = generator
+        self._g_snapshot = self._g.get_state()
+        if initial_state is not None:
+            self._g.set_state(initial_state["g_state"])
+            self._offset = initial_state["offset"]
+        else:
+            self._offset = 0
+
+        self._batch_of_indices = self._get_batch_of_indices()
+
+    def _get_batch_of_indices(self) -> list[int]:
+        self._g_snapshot = self._g.get_state()
+        return torch.multinomial(
+            self.weights,
+            num_samples=self.batch_size,
+            replacement=True,
+            generator=self._g,
+        ).tolist()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self._offset >= len(self._batch_of_indices):
+            self._batch_of_indices = self._get_batch_of_indices()
+            self._offset = 0
+        item = self._batch_of_indices[self._offset]
+        self._offset += 1
+        return item, self.names[item]
+
+    def get_state(self):
         return {
-            self.NUM_YIELDED_KEY: self._num_yielded,
-            self.INDEX_INTO_BATCH_OF_INDICES: self._idx_into_batch_of_indices,
-            self.GENERATOR_STATE_KEY: self._g_snapshot,
-            self.NUM_RAND_LIST_SKIP_KEY: self._num_rand_list_skip,
-            self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
-            self.DATASET_NODE_STATES_KEY: {
-                dataset_key: self.data_nodes[dataset_key].state_dict() for dataset_key in self.data_nodes.keys()
-            },
+            "g_state": self._g_snapshot,
+            "offset": self._offset,
         }

@@ -107,10 +107,8 @@ def run_test_save_load_state(test, node: BaseNode, midpoint: int):
     for i in range(midpoint):
         results_1.append(next(it))
     state_dict_1 = x.state_dict()
-    print("1", state_dict_0_end)
     for val in it:
         results_1.append(val)
-    print("2", results_1)
 
     # for random sequences, there are no guarantees that the results will be the same length
     # test.assertEqual(len(results_1), len(results))
@@ -122,14 +120,11 @@ def run_test_save_load_state(test, node: BaseNode, midpoint: int):
     test.assertEqual(results_after, results[midpoint:])
 
     # Test for second epoch after resume
-    print(f"{x.state_dict()=}")
     results_after_1 = list(x)
-    print(state_dict_1, midpoint, results_after_1, results_1)
     test.assertEqual(results_after_1, results_1)
 
     ##############################
     # Test restoring from midpoint of epoch 1
-    print(state_dict_1, midpoint)
     x.load_state_dict(state_dict_1)
     results_after_2 = list(x)
     test.assertEqual(results_after_2, results_1[midpoint:])
@@ -151,7 +146,6 @@ def run_test_save_load_state(test, node: BaseNode, midpoint: int):
 
     ##############################
     # Test restoring from end of epoch 0 with restart_on_stop_iteration=True
-    print(state_dict_0_end)
     x = Loader(node)
     x.load_state_dict(state_dict_0_end)
     results_after_dict_0 = list(x)
