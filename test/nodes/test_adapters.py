@@ -145,9 +145,10 @@ class TestSamplerWrapper(TestCase):
 
         results = []
         for epoch in range(2):
+            self.assertEqual(node._next_epoch, epoch)
             result = list(node)
             results.append(result)
-            self.assertEqual(node._epoch, epoch)
+            self.assertEqual(node._next_epoch, epoch + 1)
             self.assertEqual(len(result), n)
             self.assertEqual(set(result), set(range(n)))
 
