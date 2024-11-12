@@ -48,7 +48,7 @@ class Mapper(BaseNode[T]):
         self.map_fn = map_fn
         self._it = None
 
-    def reset(self, initial_state: Optional[Dict[str, Any]] = None) -> Iterator[T]:
+    def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
         if initial_state is not None:
             self.source.reset(initial_state[self.SOURCE_KEY])
@@ -56,7 +56,6 @@ class Mapper(BaseNode[T]):
             self.source.reset()
 
         self._it = iter(self.source)
-        return self._it
 
     def next(self):
         return self.map_fn(next(self._it))
@@ -140,6 +139,7 @@ class _ParallelMapperIter(Iterator[T]):
             self.source.reset(self._snapshot)
         else:
             self._snapshot = None
+            self.source.reset()
         self._snapshot_store = DequeSnapshotStore()
 
         self._read_thread = threading.Thread(
@@ -277,6 +277,7 @@ class ParallelMapper(BaseNode[T]):
         max_concurrent: Optional[int] = None,
         snapshot_frequency: int = 1,
     ):
+        super().__init__()
         assert method in ["thread", "process"]
         self.source = source
         self.map_fn = map_fn
@@ -294,10 +295,10 @@ class ParallelMapper(BaseNode[T]):
         self.max_concurrent = max_concurrent
         self.snapshot_frequency = snapshot_frequency
         self._it: Optional[_ParallelMapperIter[T]] = None
-        self._iter_for_state_dict: bool = False
 
-    def _get_iterator(self, initial_state: Optional[Dict[str, Any]]) -> _ParallelMapperIter[T]:
-        return _ParallelMapperIter(
+    def reset(self, initial_state: Optional[Dict[str, Any]] = None):
+        super().reset(initial_state)
+        self._it = _ParallelMapperIter(
             source=self.source,
             map_fn=self.map_fn,
             num_workers=self.num_workers,
@@ -309,20 +310,10 @@ class ParallelMapper(BaseNode[T]):
             initial_state=initial_state,
         )
 
-    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
-        if self._iter_for_state_dict:
-            self._iter_for_state_dict = False
-        else:
-            self._it = self._get_iterator(initial_state)
-        assert self._it is not None
-        return self._it
+    def next(self):
+        return next(self._it)
 
     def get_state(self) -> Dict[str, Any]:
-        if self._it is None:
-            # iter(self)
-            self._it = self._get_iterator(None)
-            self._iter_for_state_dict = True
-        assert self._it is not None
         return self._it.get_state()
 
 

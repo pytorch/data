@@ -24,6 +24,9 @@ class Prefetcher(BaseNode[T]):
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
+        if self._it is not None:
+            self._it._shutdown()
+            del self._it
         self._it = _SingleThreadedMapper(
             source=self.source,
             prefetch_factor=self.prefetch_factor,

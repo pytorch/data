@@ -59,12 +59,11 @@ class BaseNode(Iterator[T]):
             self.__initialized
         except AttributeError:
             raise NotImplementedError(f"self.__initialized not found, did you call super().__init__()? {type(self)=}")
-
         if not self.__initialized:
             self.reset(None)
             if not self.__initialized:
                 raise NotImplementedError(
-                    f"Failed to initialize after .reset(), did you call super().reset()? {type(self)=}"
+                    f"Failed to initialize after .reset(), did you call super().reset() in your .reset() method? {type(self)=}"
                 )
         return self.next()
 
@@ -77,7 +76,9 @@ class BaseNode(Iterator[T]):
         if not self.__initialized:
             self.reset(None)
             if not self.__initialized:
-                raise ValueError(f"Failed to initialize after .reset(), did you call super().reset()? {type(self)=}")
+                raise NotImplementedError(
+                    f"Failed to initialize after .reset(), did you call super().reset() in your .reset() method? {type(self)=}"
+                )
         return self.get_state()
 
     # def __iter__(self) -> _BaseNodeIterator[T]:
