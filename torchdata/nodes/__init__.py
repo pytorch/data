@@ -18,8 +18,8 @@ from .types import Stateful
 __all__ = [
     "BaseNode",
     "Batcher",
-    "DataLoader",
     "IterableWrapper",
+    "Loader",
     "MapStyleWrapper",
     "Mapper",
     "MultiDatasetWeightedSampler",
