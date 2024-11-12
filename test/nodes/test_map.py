@@ -73,6 +73,7 @@ class TestMap(TestCase):
 
         results: List[List[dict]] = [[], []]
         for epoch in range(2):
+            node.reset()
             for batch in node:
                 results[epoch].extend(batch)
 
