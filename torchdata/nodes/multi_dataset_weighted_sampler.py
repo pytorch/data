@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import copy
-from typing import Any, Dict, Iterator, Optional
+from typing import Any, Dict, Optional
 
 import torch
 from torchdata.nodes.base_node import BaseNode, T
@@ -14,7 +14,9 @@ from torchdata.nodes.base_node import BaseNode, T
 class MultiDatasetWeightedSampler(BaseNode[T]):
     """A node that samples from multiple datasets with weights."""
 
-    _ARBITRARY_LARGE_NUMBER = 1000
+    DATASET_NODE_STATES_KEY = "dataset_node_states"
+    GENERATOR_STATE_KEY = "g_state"
+    DATASETS_EXHAUSTED_KEY = "_datasets_exhausted"
 
     def __init__(
         self,
@@ -22,78 +24,60 @@ class MultiDatasetWeightedSampler(BaseNode[T]):
         weights: Dict[str, float],
         stopping_criterion: str = "CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED",
     ) -> None:
+        super().__init__()
         self.source_nodes = source_nodes
         self.weights = weights
         self.stopping_criterion = stopping_criterion
 
-    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
-        self._it = self.Iter(self, initial_state)
-        return self._it
+    def reset(self, initial_state: Optional[Dict[str, Any]] = None):
+        super().reset(initial_state)
 
-    def get_state(self) -> Dict[str, Any]:
-        if self._it is None:
-            iter(self)
-        return self._it.get_state()
-
-    class Iter(Iterator[T]):
-        DATASET_NODE_STATES_KEY = "dataset_node_states"
-        GENERATOR_STATE_KEY = "g_state"
-        DATASETS_EXHAUSTED_KEY = "_datasets_exhausted"
-
-        def __init__(self, parent, initial_state: Optional[Dict[str, Any]]):
-            self._num_rand_list_skip = 0
-            self._datasets_exhausted = [False] * len(parent.weights)
-
-            g = torch.Generator()
-            g.manual_seed(0)
+        g = torch.Generator()
+        g.manual_seed(0)
+        if initial_state is not None:
             self._weighted_sampler = _WeightedSampler(
-                weights=parent.weights,
+                weights=self.weights,
+                generator=g,
+                initial_state=initial_state[self.GENERATOR_STATE_KEY],
+            )
+            self._datasets_exhausted = initial_state[self.DATASETS_EXHAUSTED_KEY]
+            for k in self.source_nodes.keys():
+                self.source_nodes[k].reset(initial_state[self.DATASET_NODE_STATES_KEY][k])
+        else:
+            # Force a fresh iterator from all source nodes
+            self._weighted_sampler = _WeightedSampler(
+                weights=self.weights,
                 generator=g,
             )
-            if initial_state is not None:
-                self._weighted_sampler = _WeightedSampler(
-                    weights=parent.weights,
-                    generator=g,
-                    initial_state=initial_state[self.GENERATOR_STATE_KEY],
-                )
-                self._datasets_exhausted = initial_state[self.DATASETS_EXHAUSTED_KEY]
-                for k in parent.source_nodes.keys():
-                    parent.source_nodes[k].load_state_dict(initial_state[self.DATASET_NODE_STATES_KEY][k])
-            else:
-                # Force a fresh iterator from all source nodes
-                for k in parent.source_nodes.keys():
-                    parent.source_nodes[k].load_state_dict(None)
+            self._datasets_exhausted = [False] * len(self.weights)
+            for k in self.source_nodes.keys():
+                self.source_nodes[k].reset()
 
-            self._source_nodes = parent.source_nodes
-            self._ds_iters = [iter(self._source_nodes[k]) for k in self._weighted_sampler.names]
+        self._ds_iters = [iter(self.source_nodes[k]) for k in self._weighted_sampler.names]
 
-        def __iter__(self) -> Iterator[T]:
-            return self
+    def next(self) -> T:
+        if all(self._datasets_exhausted):
+            raise StopIteration()
 
-        def __next__(self) -> T:
+        idx, key = next(self._weighted_sampler)
+        try:
+            item = next(self._ds_iters[idx])
+        except StopIteration:
+            self._datasets_exhausted[idx] = True
             if all(self._datasets_exhausted):
                 raise StopIteration()
+            self._ds_iters[idx].reset()
+            self._ds_iters[idx] = iter(self.source_nodes[key])
+            item = next(self._ds_iters[idx])
 
-            idx, key = next(self._weighted_sampler)
-            try:
-                item = next(self._ds_iters[idx])
-            except StopIteration:
-                self._datasets_exhausted[idx] = True
-                if all(self._datasets_exhausted):
-                    raise StopIteration()
-                self._ds_iters[idx] = iter(self._source_nodes[key])
-                item = next(self._ds_iters[idx])
+        return item
 
-            return item
-
-        def get_state(self) -> Dict[str, Any]:
-            return {
-                self.GENERATOR_STATE_KEY: self._weighted_sampler.get_state(),
-                self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
-                self.DATASET_NODE_STATES_KEY: {
-                    k: self._source_nodes[k].state_dict() for k in self._weighted_sampler.names
-                },
-            }
+    def get_state(self) -> Dict[str, Any]:
+        return {
+            self.GENERATOR_STATE_KEY: self._weighted_sampler.state_dict(),
+            self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
+            self.DATASET_NODE_STATES_KEY: {k: self.source_nodes[k].state_dict() for k in self._weighted_sampler.names},
+        }
 
 
 class _WeightedSampler:
@@ -141,7 +125,7 @@ class _WeightedSampler:
         self._offset += 1
         return item, self.names[item]
 
-    def get_state(self):
+    def state_dict(self):
         return {
             "g_state": self._g_snapshot,
             "offset": self._offset,

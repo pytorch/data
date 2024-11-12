@@ -36,42 +36,33 @@ X = TypeVar("X")
 
 
 class Mapper(BaseNode[T]):
+    SOURCE_KEY = "source"
+
     def __init__(
         self,
         source: BaseNode[X],
         map_fn: Callable[[X], T],
     ):
+        super().__init__()
         self.source = source
         self.map_fn = map_fn
         self._it = None
 
-    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
-        self._it = self.Iter(self, initial_state)
+    def reset(self, initial_state: Optional[Dict[str, Any]] = None) -> Iterator[T]:
+        super().reset(initial_state)
+        if initial_state is not None:
+            self.source.reset(initial_state[self.SOURCE_KEY])
+        else:
+            self.source.reset()
+
+        self._it = iter(self.source)
         return self._it
 
+    def next(self):
+        return self.map_fn(next(self._it))
+
     def get_state(self) -> Dict[str, Any]:
-        if self._it is None:
-            iter(self)
-        return self._it.get_state()
-
-    class Iter(Iterator[T]):
-        SOURCE_KEY = "source"
-
-        def __init__(self, parent, initial_state: Optional[Dict[str, Any]]):
-            self.source = parent.source
-            if initial_state is not None:
-                self.source.load_state_dict(initial_state[self.SOURCE_KEY])
-            self._it = iter(self.source)
-            self.map_fn = parent.map_fn
-
-        def __iter__(self):
-            return self
-
-        def __next__(self):
-            return self.map_fn(next(self._it))
-
-        def get_state(self) -> Dict[str, Any]:
-            return {self.SOURCE_KEY: self.source.state_dict()}
+        return {self.SOURCE_KEY: self.source.state_dict()}
 
 
 def _sort_worker(in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_event: threading.Event):
@@ -146,7 +137,7 @@ class _ParallelMapperIter(Iterator[T]):
         if initial_state is not None:
             self._snapshot = initial_state["snapshot"]
             fast_forward = initial_state["steps_since_snapshot"]
-            self.source.load_state_dict(self._snapshot)
+            self.source.reset(self._snapshot)
         else:
             self._snapshot = None
         self._snapshot_store = DequeSnapshotStore()
@@ -397,9 +388,10 @@ class _SingleThreadedMapper(Iterator[T]):
         if initial_state is not None:
             self._snapshot = initial_state["snapshot"]
             self._fast_forward = initial_state["steps_since_snapshot"]
-            self.source.load_state_dict(self._snapshot)
+            self.source.reset(self._snapshot)
         else:
             self._snapshot = None
+            self.source.reset()
         self._snapshot_store = DequeSnapshotStore()
         self._thread = threading.Thread(
             target=self.worker,

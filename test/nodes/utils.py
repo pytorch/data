@@ -50,10 +50,15 @@ class Collate:
 
 class IterInitError(BaseNode[int]):
     def __init__(self, msg: str = "Iter Init Error") -> None:
+        super().__init__()
         self.msg = msg
 
-    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[int]:
+    def reset(self, initial_state: Optional[Dict[str, Any]] = None):
+        super().reset(initial_state)
         raise ValueError(self.msg)
+
+    def next(self):
+        raise ValueError("next() should not be called")
 
     def get_state(self) -> Dict[str, Any]:
         return {}
