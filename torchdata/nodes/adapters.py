@@ -123,7 +123,6 @@ class SamplerWrapper(BaseNode[T]):
             self._started = False
             self._it = None
             if initial_state is not None:
-                print("Loading initial_state", initial_state)
                 self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
                 self._epoch = initial_state[self.EPOCH_KEY]
 
@@ -143,7 +142,6 @@ class SamplerWrapper(BaseNode[T]):
                                 f"hit StopIteration after {i} items, this is likely a bug or malformed state_dict"
                             )
             else:
-                print("No initial_state", self._epoch)
                 if hasattr(parent.sampler, "set_epoch"):
                     parent.sampler.set_epoch(self._epoch)
                 self._it = iter(parent.sampler)
