@@ -27,6 +27,7 @@ class BaseNodeIterator(Iterator[T]):
 class BaseNode(Iterable[T]):
     __it: Optional[BaseNodeIterator[T]] = None  # holds pointer to last iter() requested
     __initial_state: Optional[Dict[str, Any]] = None
+    __restart_on_stop_iteration: bool = False
 
     def iterator(self, initial_state: Optional[dict]) -> Iterator[T]:
         """Override this method to implement the iterator.
@@ -47,14 +48,15 @@ class BaseNode(Iterable[T]):
 
     def __iter__(self) -> BaseNodeIterator[T]:
         if self.__it is not None and not self.__it.started():
-            # Only create a new iter if the last requested one did not start
+            # Only create a new iter if the last requested one has already started
             return self.__it
 
         if self.__initial_state is not None:
             self.__it = _EagerIter(self, self.__initial_state)
             self.__initial_state = None
-            if not self.__it.has_next():
+            if self.__restart_on_stop_iteration and not self.__it.has_next():
                 self.__it = _EagerIter(self, self.__initial_state)
+            self.__restart_on_stop_iteration = False  # reset this for subsequent calls
         else:
             self.__it = _EagerIter(self, self.__initial_state)
         return self.__it
@@ -62,8 +64,55 @@ class BaseNode(Iterable[T]):
     def state_dict(self) -> Dict[str, Any]:
         return self.get_state()
 
-    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
+    def load_state_dict(
+        self,
+        state_dict: Dict[str, Any],
+        restart_on_stop_iteration: bool = False,
+    ) -> None:
+        """
+        When iter() is next requested from this node, it will be instantiated with state_dict.
+        state_dict will be passed directly to the .iterator(...) method of this node which will
+        handle proper initialization.
+
+        NOTE [ state_dict end of iteration handling ]
+        Special care must be taken when state_dict is requested after StopIteration.
+        Consider the following common example of saving state_dict after one epoch.
+
+        ```python
+        node: BaseNode = ...
+        for batch in node:
+            # do something
+
+        state_dict = node.state_dict()
+        ```
+
+        Technically, since state_dict() was called before a new iterator was requested from `node`,
+        you should expect the following behaviour:
+
+        ```python
+        node: BaseNode = ...
+        node.load_state_dict(state_dict)  # Load state_dict from above
+        next(iter(node))  # Throws StopIteration immediately
+        ```
+
+        You can avoid the above (default) behaviour by passing `restart_on_stop_iteration=True` when
+        calling `load_state_dict`, eg
+
+        ```python
+        node: BaseNode = ...
+        node.load_state_dict(state_dict, restart_on_stop_iteration=True)
+        next(iter(node))  # Catches StopIteration, creates a new iterator, and returns next()
+        ```
+
+        Note: we can not make `True` the default for restart_on_stop_iteration because it would
+        prevent StopIteration thrown in leaves from propogating up to the node where load_state_dict is called.
+
+        :param state_dict: state_dict to load in next __iter__ requested
+        :param restart_on_stop_iteration: (default False) - whether to restart the iterator automatically
+            when the first next() call would throw StopIteration.
+        """
         self.__initial_state = state_dict
+        self.__restart_on_stop_iteration = restart_on_stop_iteration
 
 
 class _EagerIter(BaseNodeIterator[T]):
