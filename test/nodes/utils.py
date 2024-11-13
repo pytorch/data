@@ -109,14 +109,11 @@ def run_test_save_load_state(test, node: BaseNode, midpoint: int):
     # store epoch 1's results
     it = iter(x)
     results_1 = []
-    for i in range(midpoint):
+    for _ in range(midpoint):
         results_1.append(next(it))
     state_dict_1 = x.state_dict()
     for val in it:
         results_1.append(val)
-
-    # for random sequences, there are no guarantees that the results will be the same length
-    # test.assertEqual(len(results_1), len(results))
 
     ##############################
     # Test restoring from midpoint
