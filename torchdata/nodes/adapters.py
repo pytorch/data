@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Any, Callable, Dict, Iterable, Mapping, Optional, TypeVar
+from typing import Any, Callable, Dict, Iterable, Iterator, Mapping, Optional, TypeVar
 
 from torch.utils.data import Sampler
 
@@ -125,7 +125,6 @@ class SamplerWrapper(BaseNode[T]):
                 self._it = iter(self.sampler)  # type: ignore [assignment]
             else:
                 if hasattr(self.sampler, "set_epoch"):
-                    print("Setting epoch", self.epoch)
                     self.sampler.set_epoch(self.epoch)
                 self._it = iter(self.sampler)
                 for i in range(self._num_yielded):

@@ -46,7 +46,6 @@ class Mapper(BaseNode[T]):
         super().__init__()
         self.source = source
         self.map_fn = map_fn
-        self._it = None
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
