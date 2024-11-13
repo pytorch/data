@@ -6,8 +6,8 @@
 
 from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
-from torchdata.nodes import MultiDatasetWeightedSampler
 from torchdata.nodes.adapters import IterableWrapper
+from torchdata.nodes.samplers.multi_dataset_weighted_sampler import MultiDatasetWeightedSampler
 
 from .utils import DummyIterableDataset, run_test_save_load_state
 
