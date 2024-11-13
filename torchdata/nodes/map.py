@@ -46,7 +46,6 @@ class Mapper(BaseNode[T]):
         super().__init__()
         self.source = source
         self.map_fn = map_fn
-        self._it = None
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
@@ -55,10 +54,8 @@ class Mapper(BaseNode[T]):
         else:
             self.source.reset()
 
-        self._it = iter(self.source)
-
     def next(self):
-        return self.map_fn(next(self._it))
+        return self.map_fn(next(self.source))
 
     def get_state(self) -> Dict[str, Any]:
         return {self.SOURCE_KEY: self.source.state_dict()}
@@ -314,10 +311,10 @@ class ParallelMapper(BaseNode[T]):
         )
 
     def next(self):
-        return next(self._it)
+        return next(self._it)  # type: ignore[arg-type, union-attr]
 
     def get_state(self) -> Dict[str, Any]:
-        return self._it.get_state()
+        return self._it.get_state()  # type: ignore[union-attr]
 
 
 _WorkerType = Callable[

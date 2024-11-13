@@ -8,8 +8,8 @@ class Loader(Generic[T]):
         super().__init__()
         self.root = root
         self.restart_on_stop_iteration = restart_on_stop_iteration
-        self._next_iter_state_dict = None
-        self._it = None
+        self._next_iter_state_dict: Optional[Dict[str, Any]] = None
+        self._it: Optional[LoaderIterator[T]] = None
 
     def __iter__(self):
         if self._it is None:
@@ -31,7 +31,7 @@ class Loader(Generic[T]):
     def state_dict(self) -> Dict[str, Any]:
         if self._it is None:
             iter(self)
-        return self._it.state_dict()
+        return self._it.state_dict()  # type:ignore[union-attr]
 
 
 class LoaderIterator(BaseNode[T]):
@@ -56,7 +56,6 @@ class LoaderIterator(BaseNode[T]):
         else:
             self.root.reset(None)
             self._num_yielded = 0
-        self._root_iter = iter(self.root)
         self._cached_item = None
 
     def has_next(self) -> bool:
@@ -73,7 +72,7 @@ class LoaderIterator(BaseNode[T]):
             self._cached_item = None
             return item
         else:
-            item = next(self._root_iter)
+            item = next(self.root)
             return item
 
     def get_state(self) -> Dict[str, Any]:

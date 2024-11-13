@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Any, Callable, Dict, Iterable, Mapping, Optional, TypeVar
+from typing import Any, Callable, Dict, Iterable, Iterator, Mapping, Optional, TypeVar
 
 from torch.utils.data import Sampler
 
@@ -36,6 +36,7 @@ class IterableWrapper(BaseNode[T]):
     def __init__(self, iterable: Iterable[T]):
         super().__init__()
         self.iterable = iterable
+        self._it: Optional[Iterator[T]] = None
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         self._num_yielded = 0
@@ -61,7 +62,7 @@ class IterableWrapper(BaseNode[T]):
             self._it = iter(self.iterable)
 
     def next(self) -> T:
-        item = next(self._it)
+        item = next(self._it)  # type: ignore [arg-type, union-attr]
         self._num_yielded += 1
         return item
 
@@ -112,7 +113,7 @@ class SamplerWrapper(BaseNode[T]):
         self._num_yielded = 0
         self._started = False
         self.epoch_updater = epoch_updater or self._default_epoch_updater
-        self._it = None
+        self._it: Optional[Iterator[T]] = None
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
@@ -121,7 +122,7 @@ class SamplerWrapper(BaseNode[T]):
             self.epoch = initial_state[self.EPOCH_KEY]
             if isinstance(self.sampler, Stateful):
                 self.sampler.load_state_dict(initial_state[self.SAMPLER_KEY])
-                self._it = iter(self.sampler)
+                self._it = iter(self.sampler)  # type: ignore [assignment]
             else:
                 if hasattr(self.sampler, "set_epoch"):
                     print("Setting epoch", self.epoch)
@@ -129,7 +130,7 @@ class SamplerWrapper(BaseNode[T]):
                 self._it = iter(self.sampler)
                 for i in range(self._num_yielded):
                     try:
-                        next(self._it)
+                        next(self._it)  # type: ignore [arg-type]
                     except StopIteration:
                         raise ValueError(
                             f"Tried to fast-forward {self._num_yielded} items during init but "
@@ -147,7 +148,7 @@ class SamplerWrapper(BaseNode[T]):
 
     def next(self) -> T:
         self._started = True
-        item = next(self._it)
+        item = next(self._it)  # type: ignore [arg-type, union-attr]
         self._num_yielded += 1
         return item
 
