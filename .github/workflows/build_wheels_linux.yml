@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   generate-matrix:
-    uses: pytorch/test-infra/.github/workflows/generate_binary_build_matrix.yml@28fd517
+    uses: atalman/test-infra/.github/workflows/generate_binary_build_matrix.yml@28fd517
     with:
       package-type: wheel
       os: linux
