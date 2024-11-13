@@ -42,6 +42,7 @@ class TestIterableWrapper(TestCase):
         n = 20
         node = IterableWrapper(range(n))
         for epoch in range(2):
+            node.reset()
             result = list(node)
             self.assertEqual(len(result), n)
             for i, j in enumerate(result):
@@ -61,8 +62,9 @@ class TestIterableWrapper(TestCase):
 
     def test_iterable_dataset(self):
         n = 20
-        node = IterableWrapper(DummyIterableDataset(n))
+        node = IterableWrapper(DummyIterableDataset(n, name="test"))
         for epoch in range(2):
+            node.reset()
             result = list(node)
             self.assertEqual(len(result), n)
             for i, row in enumerate(result):
@@ -84,6 +86,7 @@ class TestMapStyle(TestCase):
         n = 20
         node = MapStyleWrapper(DummyMapDataset(n), sampler=range(n))
         for epoch in range(2):
+            node.reset()
             result = list(node)
             self.assertEqual(len(result), n)
             for i, row in enumerate(result):
@@ -97,6 +100,7 @@ class TestMapStyle(TestCase):
         node = MapStyleWrapper(ds, sampler=RandomSampler(ds))
         results = []
         for epoch in range(2):
+            node.reset()
             result = list(node)
             results.append(result)
             self.assertEqual(len(result), n)
@@ -116,6 +120,7 @@ class TestMapStyle(TestCase):
         sampler = list(d.keys())
         node = MapStyleWrapper(d, sampler=sampler)
         for epoch in range(2):
+            node.reset()
             result = list(node)
             self.assertEqual(len(result), n)
             for i, row in enumerate(result):
@@ -145,9 +150,10 @@ class TestSamplerWrapper(TestCase):
 
         results = []
         for epoch in range(2):
+            node.reset()
+            self.assertEqual(node.epoch, epoch)
             result = list(node)
             results.append(result)
-            self.assertEqual(node._epoch, epoch)
             self.assertEqual(len(result), n)
             self.assertEqual(set(result), set(range(n)))
 
@@ -167,6 +173,7 @@ class TestSamplerWrapper(TestCase):
         node = SamplerWrapper(sampler=sampler)
 
         for epoch in range(4):
+            node.reset()
             result = list(node)
             self.assertEqual(result, exp[epoch])
 

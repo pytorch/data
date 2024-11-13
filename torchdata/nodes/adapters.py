@@ -34,33 +34,37 @@ class IterableWrapper(BaseNode[T]):
     ITERABLE_KEY = "iterable"
 
     def __init__(self, iterable: Iterable[T]):
+        super().__init__()
         self.iterable = iterable
-        self._num_yielded = 0
+        self._it: Optional[Iterator[T]] = None
 
-    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
+    def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         self._num_yielded = 0
+        self._it = None
+        super().reset(initial_state)
         if initial_state is not None:
             self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
             if isinstance(self.iterable, Stateful):
                 self.iterable.load_state_dict(initial_state[self.ITERABLE_KEY])
-                it = iter(self.iterable)
+                self._it = iter(self.iterable)
             else:
-                it = iter(self.iterable)
+                self._it = iter(self.iterable)
                 # Naively fast-forwarding
                 for i in range(self._num_yielded):
                     try:
-                        next(it)
+                        next(self._it)
                     except StopIteration:
                         raise ValueError(
                             f"Tried to fast-forward {self._num_yielded} items during init but "
                             f"hit StopIteration after {i} items, this is likely a bug or malformed state_dict"
                         )
         else:
-            it = iter(self.iterable)
+            self._it = iter(self.iterable)
 
-        for item in it:
-            self._num_yielded += 1
-            yield item
+    def next(self) -> T:
+        item = next(self._it)  # type: ignore [arg-type, union-attr]
+        self._num_yielded += 1
+        return item
 
     def get_state(self) -> Dict[str, Any]:
         state_dict: Dict[str, Any] = {self.NUM_YIELDED_KEY: self._num_yielded}
@@ -92,14 +96,10 @@ class SamplerWrapper(BaseNode[T]):
     :param epoch_updater: Optional[Callable[[int], int]] = None - callback to update epoch at start of new iteration. It's called at the beginning of each iterator request, except the first one.
     """
 
+    NEXT_EPOCH_KEY = "_next_epoch"
     NUM_YIELDED_KEY = "_num_yielded"
-    SAMPLER_KEY = "sampler"
     EPOCH_KEY = "_epoch"
-    STARTED_KEY = "_started"
-
-    @classmethod
-    def _default_epoch_updater(cls, epoch: int) -> int:
-        return epoch + 1
+    SAMPLER_KEY = "_sampler"
 
     def __init__(
         self,
@@ -107,53 +107,60 @@ class SamplerWrapper(BaseNode[T]):
         initial_epoch: int = 0,
         epoch_updater: Optional[Callable[[int], int]] = None,
     ):
+        super().__init__()
         self.sampler = sampler
-        self.epoch_updater = epoch_updater or self._default_epoch_updater
+        self.epoch = initial_epoch
         self._num_yielded = 0
-        self._epoch = initial_epoch
         self._started = False
+        self.epoch_updater = epoch_updater or self._default_epoch_updater
+        self._it: Optional[Iterator[T]] = None
 
-    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
-        it: Iterator[T]
-        self._num_yielded = 0
+    def reset(self, initial_state: Optional[Dict[str, Any]] = None):
+        super().reset(initial_state)
         if initial_state is not None:
             self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
-            self._epoch = initial_state[self.EPOCH_KEY]
-            self._started = initial_state[self.STARTED_KEY]
-
+            self.epoch = initial_state[self.EPOCH_KEY]
             if isinstance(self.sampler, Stateful):
                 self.sampler.load_state_dict(initial_state[self.SAMPLER_KEY])
-                it = iter(self.sampler)
+                self._it = iter(self.sampler)  # type: ignore [assignment]
             else:
                 if hasattr(self.sampler, "set_epoch"):
-                    self.sampler.set_epoch(self._epoch)
-                it = iter(self.sampler)
+                    print("Setting epoch", self.epoch)
+                    self.sampler.set_epoch(self.epoch)
+                self._it = iter(self.sampler)
                 for i in range(self._num_yielded):
                     try:
-                        next(it)
+                        next(self._it)  # type: ignore [arg-type]
                     except StopIteration:
                         raise ValueError(
                             f"Tried to fast-forward {self._num_yielded} items during init but "
                             f"hit StopIteration after {i} items, this is likely a bug or malformed state_dict"
                         )
         else:
-            if self._started:  # don't call first time
-                self._epoch = self.epoch_updater(self._epoch)
+            self._num_yielded = 0
+            if self._started:
+                # Don't update epoch unless iterator has started
+                self.epoch = self.epoch_updater(self.epoch)
             if hasattr(self.sampler, "set_epoch"):
-                self.sampler.set_epoch(self._epoch)
-            it = iter(self.sampler)
+                self.sampler.set_epoch(self.epoch)
+            self._it = iter(self.sampler)
+        self._started = False
 
+    def next(self) -> T:
         self._started = True
-        for item in it:
-            self._num_yielded += 1
-            yield item
+        item = next(self._it)  # type: ignore [arg-type, union-attr]
+        self._num_yielded += 1
+        return item
 
     def get_state(self) -> Dict[str, Any]:
         state_dict: Dict[str, Any] = {
             self.NUM_YIELDED_KEY: self._num_yielded,
-            self.EPOCH_KEY: self._epoch,
-            self.STARTED_KEY: self._started,
+            self.EPOCH_KEY: self.epoch,
         }
         if isinstance(self.sampler, Stateful):
             state_dict[self.SAMPLER_KEY] = self.sampler.state_dict()
         return state_dict
+
+    @classmethod
+    def _default_epoch_updater(cls, epoch: int) -> int:
+        return epoch + 1

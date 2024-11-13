@@ -33,6 +33,7 @@ class TestPinMemory(TestCase):
 
         # 2 epochs
         for epoch in range(2):
+            root.reset()
             results = list(root)
             self.assertEqual(len(results), 3, epoch)
             for i in range(3):

@@ -50,22 +50,33 @@ class Collate:
 
 class IterInitError(BaseNode[int]):
     def __init__(self, msg: str = "Iter Init Error") -> None:
+        super().__init__()
         self.msg = msg
 
-    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[int]:
+    def reset(self, initial_state: Optional[Dict[str, Any]] = None):
+        super().reset(initial_state)
         raise ValueError(self.msg)
+
+    def next(self):
+        raise ValueError("next() should not be called")
 
     def get_state(self) -> Dict[str, Any]:
         return {}
 
 
 class DummyIterableDataset(torch.utils.data.IterableDataset):
-    def __init__(self, num_samples: int) -> None:
+    def __init__(self, num_samples: int, name: str) -> None:
         self.num_samples = num_samples
+        self.name = name
 
     def __iter__(self) -> Iterator[dict]:
         for i in range(self.num_samples):
-            yield {"step": i, "test_tensor": torch.tensor([i]), "test_str": f"str_{i}"}
+            yield {
+                "name": self.name,
+                "step": i,
+                "test_tensor": torch.tensor([i]),
+                "test_str": f"str_{i}",
+            }
 
 
 class DummyMapDataset(torch.utils.data.Dataset):
@@ -104,8 +115,6 @@ def run_test_save_load_state(test, node: BaseNode, midpoint: int):
     for val in it:
         results_1.append(val)
 
-    assert len(results_1) == len(results)
-
     ##############################
     # Test restoring from midpoint
     x.load_state_dict(state_dict)
@@ -118,7 +127,7 @@ def run_test_save_load_state(test, node: BaseNode, midpoint: int):
 
     ##############################
     # Test restoring from midpoint of epoch 1
-    x.load_state_dict(state_dict_1, restart_on_stop_iteration=True)
+    x.load_state_dict(state_dict_1)
     results_after_2 = list(x)
     test.assertEqual(results_after_2, results_1[midpoint:])
 

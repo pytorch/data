@@ -8,7 +8,7 @@ import functools
 import queue
 import threading
 
-from typing import Any, Dict, Iterator, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 import torch
 import torch.multiprocessing
@@ -96,6 +96,7 @@ class PinMemory(BaseNode[T]):
         pin_memory_device: str = "",
         snapshot_frequency: int = 1,
     ):
+        super().__init__()
         self.source = source
         self.snapshot_frequency = snapshot_frequency
         self._pin_memory = torch.cuda.is_available()
@@ -113,10 +114,13 @@ class PinMemory(BaseNode[T]):
             self._current_device = torch.cuda.current_device()
 
         self._it: Optional[_SingleThreadedMapper[T]] = None
-        self._iter_for_state_dict: bool = False
 
-    def _get_iterator(self, initial_state: Optional[Dict[str, Any]]) -> _SingleThreadedMapper[T]:
-        return _SingleThreadedMapper(
+    def reset(self, initial_state: Optional[Dict[str, Any]] = None):
+        super().reset(initial_state)
+        if self._it is not None:
+            self._it._shutdown()
+            del self._it
+        self._it = _SingleThreadedMapper(
             source=self.source,
             prefetch_factor=1,
             worker=functools.partial(
@@ -128,16 +132,8 @@ class PinMemory(BaseNode[T]):
             initial_state=initial_state,
         )
 
-    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[T]:
-        if self._iter_for_state_dict:
-            self._iter_for_state_dict = False
-        else:
-            self._it = self._get_iterator(initial_state)
-        assert self._it is not None
-        return self._it
+    def next(self):
+        return next(self._it)  # type: ignore[arg-type, union-attr]
 
     def get_state(self) -> Dict[str, Any]:
-        if self._it is None:
-            self._it = self._get_iterator(None)
-            self._iter_for_state_dict = True
-        return self._it.get_state()
+        return self._it.get_state()  # type: ignore[union-attr]

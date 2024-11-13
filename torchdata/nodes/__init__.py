@@ -19,6 +19,7 @@ __all__ = [
     "Batcher",
     "DataLoader",
     "IterableWrapper",
+    "Loader",
     "MapStyleWrapper",
     "Mapper",
     "ParallelMapper",
