@@ -24,13 +24,12 @@ class Batcher(BaseNode[List[T]]):
             self.source.reset(initial_state[self.SOURCE_KEY])
         else:
             self.source.reset()
-        self._it = iter(self.source)
 
     def next(self) -> List[T]:
-        batch = []
+        batch: List[T] = []
         while len(batch) < self.batch_size:
             try:
-                item = next(self._it)
+                item = next(self.source)
             except StopIteration:
                 break
             batch.append(item)

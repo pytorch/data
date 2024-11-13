@@ -36,7 +36,7 @@ class Prefetcher(BaseNode[T]):
         )
 
     def next(self):
-        return next(self._it)
+        return next(self._it)  # type: ignore[arg-type]
 
     def get_state(self) -> Dict[str, Any]:
-        return self._it.get_state()
+        return self._it.get_state()  # type: ignore[union-attr]
