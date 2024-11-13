@@ -23,7 +23,7 @@ from .utils import MockSource, RandomSleepUdf, run_test_save_load_state, udf_rai
 class TestMap(TestCase):
     def _test_exception_handling_mapper(self, pin_memory, method):
         batch_size = 6
-        multiprocessing_context = None if IS_WINDOWS else "fork"
+        multiprocessing_context = None if IS_WINDOWS else "forkserver"
         src = MockSource(num_samples=20)
         node = Batcher(src, batch_size=batch_size)
         node = ParallelMapper(
@@ -58,7 +58,7 @@ class TestMap(TestCase):
     def _test_map(self, in_order, method) -> None:
         batch_size = 6
         n = 80
-        multiprocessing_context = None if IS_WINDOWS else "fork"
+        multiprocessing_context = None if IS_WINDOWS else "forkserver"
         src = MockSource(num_samples=n)
         node = Batcher(src, batch_size=batch_size, drop_last=False)
         node = ParallelMapper(
@@ -144,7 +144,7 @@ class TestMap(TestCase):
         method = "process"
         batch_size = 6
         n = 80
-        multiprocessing_context = None if IS_WINDOWS else "fork"
+        multiprocessing_context = None if IS_WINDOWS else "forkserver"
         src = MockSource(num_samples=n)
         node = Batcher(src, batch_size=batch_size, drop_last=False)
         node = ParallelMapper(
