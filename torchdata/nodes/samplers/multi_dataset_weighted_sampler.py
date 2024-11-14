@@ -48,6 +48,12 @@ class MultiDatasetWeightedSampler(BaseNode[T]):
                 "For multi-dataset weighted sampling, keys of source_nodes and weights must be the same",
             )
 
+        # Check if weights are 1d sequence
+        if any(not isinstance(weight, float) for weight in self.weights.values()):
+            raise ValueError(
+                "For multi-dataset weighted sampling, weights must be a 1d sequence",
+            )
+
         # Check if weights are non-negative
         if any(weight < 0 for weight in self.weights.values()):
             raise ValueError(
