@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, List, Optional
 
 from torchdata.nodes.base_node import BaseNode, T
 
@@ -13,23 +13,35 @@ class Batcher(BaseNode[List[T]]):
     SOURCE_KEY = "source"
 
     def __init__(self, source: BaseNode[T], batch_size: int, drop_last: bool = True):
+        super().__init__()
         self.source = source
         self.batch_size = batch_size
         self.drop_last = drop_last
 
-    def iterator(self, initial_state: Optional[Dict[str, Any]]) -> Iterator[List[T]]:
+    def reset(self, initial_state: Optional[Dict[str, Any]] = None):
+        super().reset(initial_state)
         if initial_state is not None:
-            self.source.load_state_dict(initial_state[self.SOURCE_KEY])
+            self.source.reset(initial_state[self.SOURCE_KEY])
+        else:
+            self.source.reset()
 
-        batch = []
-        for item in self.source:
+    def next(self) -> List[T]:
+        batch: List[T] = []
+        while len(batch) < self.batch_size:
+            try:
+                item = next(self.source)
+            except StopIteration:
+                break
             batch.append(item)
             if len(batch) == self.batch_size:
-                yield batch
-                batch = []
+                return batch
 
-        if len(batch) and not self.drop_last:
-            yield batch
+        if len(batch) == self.batch_size:
+            return batch
+        elif len(batch) and not self.drop_last:
+            return batch
+        else:
+            raise StopIteration()
 
     def get_state(self) -> Dict[str, Any]:
         return {self.SOURCE_KEY: self.source.state_dict()}

@@ -24,6 +24,7 @@ class TestPrefetcher(TestCase):
 
         # Test multi epoch shutdown and restart
         for _ in range(2):
+            root.reset()
             results = list(root)
             self.assertEqual(len(results), 3)
             for i in range(3):

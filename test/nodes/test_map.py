@@ -73,6 +73,7 @@ class TestMap(TestCase):
 
         results: List[List[dict]] = [[], []]
         for epoch in range(2):
+            node.reset()
             for batch in node:
                 results[epoch].extend(batch)
 
@@ -119,7 +120,6 @@ class TestMap(TestCase):
         method = "thread"
         batch_size = 6
         n = 80
-        multiprocessing_context = None if IS_WINDOWS else "forkserver"
         src = MockSource(num_samples=n)
         node = Batcher(src, batch_size=batch_size, drop_last=False)
         node = ParallelMapper(
@@ -128,7 +128,6 @@ class TestMap(TestCase):
             num_workers=4,
             in_order=in_order,
             method=method,
-            multiprocessing_context=multiprocessing_context,
             snapshot_frequency=snapshot_frequency,
         )
         node = Prefetcher(node, prefetch_factor=2)
