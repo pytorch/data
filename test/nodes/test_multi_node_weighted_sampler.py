@@ -8,13 +8,13 @@ from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
 from torchdata.nodes.adapters import IterableWrapper
 
-from torchdata.nodes.samplers.multi_dataset_weighted_sampler import MultiDatasetWeightedSampler
+from torchdata.nodes.samplers.multi_node_weighted_sampler import MultiNodeWeightedSampler
 from torchdata.nodes.samplers.utils import StopCriteria
 
 from .utils import DummyIterableDataset, run_test_save_load_state
 
 
-class TestMultiDatasetWeightedSampler(TestCase):
+class TestMultiNodeWeightedSampler(TestCase):
     def setUp(self) -> None:
         super().setUp()
         self._num_samples = 2
@@ -26,11 +26,7 @@ class TestMultiDatasetWeightedSampler(TestCase):
             for i in range(self._num_datasets)
         }
         self.weights = {f"ds{i}": self._weights_fn(i) for i in range(self._num_datasets)}
-        self.weighted_sampler_node = MultiDatasetWeightedSampler(self.datasets, self.weights)
-
-    def test_multi_dataset_weighted_sampler(self) -> None:
-        # TODO: add test for Multi dataset weighted sampler functionality
-        pass
+        self.weighted_sampler_node = MultiNodeWeightedSampler(self.datasets, self.weights)
 
     def test_multi_dataset_weighted_sampler_weight_sampler_keys_mismatch(self) -> None:
         """
@@ -40,7 +36,7 @@ class TestMultiDatasetWeightedSampler(TestCase):
             ValueError,
             "keys of source_nodes and weights must be the same",
         ):
-            MultiDatasetWeightedSampler(
+            MultiNodeWeightedSampler(
                 self.datasets,
                 {f"dummy{i}": self._weights_fn(i) for i in range(self._num_datasets)},
             )
@@ -51,17 +47,41 @@ class TestMultiDatasetWeightedSampler(TestCase):
         """
         Validation should fail if the shape of the weights tensor is invalid
         """
-        with self.assertRaisesRegex(ValueError, "weights must be a 1d sequence"):
-            MultiDatasetWeightedSampler(
+        with self.assertRaisesRegex(ValueError, " weights must be a 1d sequence, non-negative, and non-zero"):
+            MultiNodeWeightedSampler(
                 self.datasets,
                 weights={f"ds{i}": [[1.0]] for i in range(self._num_datasets)},
             )
 
+    def test_multi_dataset_weighted_batch_sampler_negative_weights(
+        self,
+    ) -> None:
+        """
+        Validation should fail if the value of the weights tensor is invalid
+        """
+        with self.assertRaisesRegex(ValueError, " weights must be a 1d sequence, non-negative, and non-zero"):
+            MultiNodeWeightedSampler(
+                self.datasets,
+                weights={f"ds{i}": -1 for i in range(self._num_datasets)},
+            )
+
+    def test_multi_dataset_weighted_batch_sampler_zero_weights(
+        self,
+    ) -> None:
+        """
+        Validation should fail if the value of the weights tensor is invalid
+        """
+        with self.assertRaisesRegex(ValueError, " weights must be a 1d sequence, non-negative, and non-zero"):
+            MultiNodeWeightedSampler(
+                self.datasets,
+                weights={f"ds{i}": 10 * i for i in range(self._num_datasets)},
+            )
+
     def test_multi_dataset_weighted_sampler_first_exhausted(self) -> None:
-        mixer = MultiDatasetWeightedSampler(
+        mixer = MultiNodeWeightedSampler(
             self.datasets,
             self.weights,
-            stopping_criterion=StopCriteria.FIRST_DATASET_EXHAUSTED,
+            stop_criteria=StopCriteria.FIRST_DATASET_EXHAUSTED,
         )
         results = list(mixer)
         datasets_in_results = {result["name"] for result in results}
@@ -70,10 +90,10 @@ class TestMultiDatasetWeightedSampler(TestCase):
         self.assertEqual("ds0" in datasets_in_results, False)  # ds0 has minimum weight
 
     def test_multi_dataset_weighted_sampler_all_dataset_exhausted(self) -> None:
-        mixer = MultiDatasetWeightedSampler(
+        mixer = MultiNodeWeightedSampler(
             self.datasets,
             self.weights,
-            stopping_criterion=StopCriteria.ALL_DATASETS_EXHAUSTED,
+            stop_criteria=StopCriteria.ALL_DATASETS_EXHAUSTED,
         )
         results = list(mixer)
         datasets_in_results = [result["name"] for result in results]
