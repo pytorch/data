@@ -13,7 +13,7 @@ from torchdata.nodes.adapters import IterableWrapper
 from torchdata.nodes.prefetch import Prefetcher
 
 from torchdata.nodes.samplers.multi_node_weighted_sampler import MultiNodeWeightedSampler
-from torchdata.nodes.samplers.utils import StopCriteria
+from torchdata.nodes.samplers.stop_criteria import StopCriteria
 
 from .utils import DummyIterableDataset, run_test_save_load_state
 

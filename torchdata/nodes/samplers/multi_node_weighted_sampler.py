@@ -9,13 +9,44 @@ from typing import Any, Dict, Mapping, Optional
 
 import torch
 from torchdata.nodes.base_node import BaseNode, T
-from torchdata.nodes.samplers.utils import StopCriteria
+from torchdata.nodes.samplers.stop_criteria import StopCriteria
 
 from .utils import _get_rank_seed, get_rank_and_world_size
 
 
 class MultiNodeWeightedSampler(BaseNode[T]):
-    """A node that samples from multiple datasets with weights."""
+    """A node that samples from multiple datasets with weights.
+
+    This node expects to take in a dictionary of source nodes, and a dictionary of weights.
+    The keys of the source nodes and weights must be the same. The weights are used to sample
+    from the source nodes. We use torch.multinomial to sample from the source nodes, please
+    refer to https://pytorch.org/docs/stable/generated/torch.multinomial.html on how to use
+    weights for sampling. `seed` is used to initialize the random number generator.
+
+    The node implements the state using the following keys:
+    - NUM_YIELDED_KEY: The number of items yielded.
+    - WEIGHTED_SAMPLER_STATE_KEY: The state of the weighted sampler.
+    - DATASETS_EXHAUSTED_KEY: A dictionary of booleans indicating whether each source node is exhausted.
+    - DATASET_NODE_STATES_KEY: A dictionary of states for each source node.
+
+    We support multiple stopping criteria:
+    - CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED: Cycle through the source nodes until all datasets
+        are exhausted. This is the default behavior.
+    - FIRST_DATASET_EXHAUSTED: Stop when the first dataset is exhausted.
+    - ALL_DATASETS_EXHAUSTED: Stop when all datasets are exhausted.
+
+    On complete exhaustion of the source nodes, the node will raise StopIteration.
+
+    Parameters:
+        source_nodes (Mapping[str, BaseNode[T]]): A dictionary of source nodes.
+        weights (Dict[str, float]): A dictionary of weights for each source node.
+        stop_criteria (str): The stopping criteria. Default is CYCLE_UNTIL_ALL_DATASETS_EXHAUST
+        rank (int): The rank of the current process. Default is None, in which case the rank
+            will be obtained from the distributed environment.
+        world_size (int): The world size of the distributed environment. Default is None, in
+            which case the world size will be obtained from the distributed environment.
+        seed (int): The seed for the random number generator. Default is 0.
+    """
 
     DATASET_NODE_STATES_KEY = "dataset_node_states"
     NUM_YIELDED_KEY = "num_yielded"
@@ -44,8 +75,6 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         else:
             self.rank = rank
             self.world_size = world_size
-
-        self.epoch = 0
 
         self._validate()
 
@@ -126,7 +155,6 @@ class MultiNodeWeightedSampler(BaseNode[T]):
                 if self._datasets_exhausted[key] and self.stop_criteria == StopCriteria.ALL_DATASETS_EXHAUSTED:
                     # Before fetching a new item check if key corresponds to an already
                     # exhaused dataset and StopCriteria is ALL_DATASETS_EXHAUSTED, move to next key
-                    # return next(self)  # omit recursive call
                     continue
                 item = next(self.source_nodes[key])
             except StopIteration:
@@ -138,11 +166,10 @@ class MultiNodeWeightedSampler(BaseNode[T]):
 
                 # If StopCriteria is ALL_DATASETS_EXHAUSTED, move to next key
                 if self.stop_criteria == StopCriteria.ALL_DATASETS_EXHAUSTED:
-                    # return next(self)  # omit recursive call
-                    # key = next(self._weighted_sampler)
                     continue
 
-                # Reset the iterator and try again
+                # If StopCriteria is CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
+                # reset the iterator and try again
                 self.source_nodes[key].reset()
                 item = next(self.source_nodes[key])
             break
