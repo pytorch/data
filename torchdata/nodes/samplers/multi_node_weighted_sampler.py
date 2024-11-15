@@ -11,6 +11,8 @@ import torch
 from torchdata.nodes.base_node import BaseNode, T
 from torchdata.nodes.samplers.utils import StopCriteria
 
+from .utils import _get_worker_seed
+
 
 class MultiNodeWeightedSampler(BaseNode[T]):
     """A node that samples from multiple datasets with weights."""
@@ -25,6 +27,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         source_nodes: Mapping[str, BaseNode[T]],
         weights: Dict[str, float],
         stop_criteria: str = StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
+        seed: int = 0,
     ) -> None:
         super().__init__()
         self.source_nodes = source_nodes
@@ -32,6 +35,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         self.stop_criteria = stop_criteria
         self.dataset_names = list(self.source_nodes.keys())
         self._num_yielded = 0
+        self.seed = seed
         self._validate()
 
     def _validate(self) -> None:
@@ -59,14 +63,15 @@ class MultiNodeWeightedSampler(BaseNode[T]):
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
 
-        g = torch.Generator()
+        # g = torch.Generator()
+        # g_worker = torch.Generator()
 
-        # seed = get_worker_info().seed if get_worker_info() else 0
-        g.manual_seed(0)  # TODO: incorporate seed from worker_info, epoch
+        # seed = _get_worker_seed(self.seed, g_worker)
+        # g.manual_seed(seed)  # TODO: incorporate seed from worker_info, epoch
         if initial_state is not None:
             self._weighted_sampler = _WeightedSampler(
                 weights=self.weights,
-                generator=g,
+                seed=self.seed,
                 initial_state=initial_state[self.WEIGHTED_SAMPLER_STATE_KEY],
             )
             self._datasets_exhausted = initial_state[self.DATASETS_EXHAUSTED_KEY]
@@ -76,7 +81,8 @@ class MultiNodeWeightedSampler(BaseNode[T]):
             # Force a fresh iterator from all source nodes
             self._weighted_sampler = _WeightedSampler(
                 weights=self.weights,
-                generator=g,
+                seed=self.seed,
+                # generator=g,
             )
             self._datasets_exhausted = {key: False for key in self.weights.keys()}
             for k in self.dataset_names:
@@ -139,7 +145,8 @@ class _WeightedSampler:
     def __init__(
         self,
         weights: Dict[str, float],
-        generator,
+        # generator,
+        seed: int,
         randon_tensor_batch_size: int = 1000,
         initial_state: Optional[Dict[str, Any]] = None,
     ):
@@ -150,10 +157,18 @@ class _WeightedSampler:
         self.weights = torch.tensor(self.weights, dtype=torch.float64)
 
         self.randon_tensor_batch_size = randon_tensor_batch_size
-        self._g = generator
+
+        self._g = torch.Generator()
+        self._g_worker = torch.Generator()
+
+        seed = _get_worker_seed(seed, self._g_worker)
+        self._g.manual_seed(seed)
+
         self._g_snapshot = self._g.get_state()
+        self._g_worker_snapshot = self._g_worker.get_state()
         if initial_state is not None:
             self._g.set_state(initial_state["g_state"])
+            self._g_worker.set_state(initial_state["g_worker_state"])
             self._offset = initial_state["offset"]
         else:
             self._offset = 0
@@ -162,6 +177,7 @@ class _WeightedSampler:
 
     def _get_batch_of_indices(self) -> list[int]:
         self._g_snapshot = self._g.get_state()
+        self._g_worker_snapshot = self._g_worker.get_state()
         return torch.multinomial(
             self.weights,
             num_samples=self.randon_tensor_batch_size,
@@ -183,5 +199,6 @@ class _WeightedSampler:
     def state_dict(self):
         return {
             "g_state": self._g_snapshot,
+            "g_worker_state": self._g_worker_snapshot,
             "offset": self._offset,
         }

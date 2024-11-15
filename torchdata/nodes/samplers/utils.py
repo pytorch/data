@@ -4,6 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import torch
+
 
 class StopCriteria:
     """
@@ -22,3 +24,12 @@ class StopCriteria:
     CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED = "CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED"
     ALL_DATASETS_EXHAUSTED = "ALL_DATASETS_EXHAUSTED"
     FIRST_DATASET_EXHAUSTED = "FIRST_DATASET_EXHAUSTED"
+
+
+def _get_worker_seed(seed: int, g_worker: torch.Generator) -> int:
+    worker_info = torch.utils.data.get_worker_info()
+    worker_id = worker_info.id if worker_info is not None else 0
+    num_workers = worker_info.num_workers if worker_info is not None else 1
+    # g_worker = torch.Generator()
+    g_worker.manual_seed(seed * num_workers + worker_id)
+    return int(torch.randint(0, 2 ** 32 - 1, size=(1,), generator=g_worker).item())
