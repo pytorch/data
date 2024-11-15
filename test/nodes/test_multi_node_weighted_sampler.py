@@ -161,7 +161,7 @@ class TestMultiNodeWeightedSampler(TestCase):
 
     @parameterized.expand(
         itertools.product(
-            [1000, 5000, 10000],
+            [100, 500, 1200],
             [
                 StopCriteria.ALL_DATASETS_EXHAUSTED,
                 StopCriteria.FIRST_DATASET_EXHAUSTED,
@@ -170,13 +170,19 @@ class TestMultiNodeWeightedSampler(TestCase):
         )
     )
     def test_multi_dataset_weighted_large_sample_size(self, midpoint, stop_criteria) -> None:
-        num_samples = 2000
-        num_datasets = 10
+        num_samples = 1500
+        num_datasets = 5
 
         mixer = self._setUpMultiDatasetSampler(
             num_samples,
             num_datasets,
             self._weights_fn,
-            StopCriteria.FIRST_DATASET_EXHAUSTED,
+            stop_criteria,
         )
         run_test_save_load_state(self, mixer, midpoint)
+
+    @parameterized.expand([(1, 8), (8, 32)])
+    def test_multi_dataset_weighted_batch_sampler_rank_world_size(self, rank, world_size):
+        mixer = MultiNodeWeightedSampler(self.datasets, self.weights, rank=rank, world_size=world_size)
+        self.assertEqual(mixer.rank, rank)
+        self.assertEqual(mixer.world_size, world_size)

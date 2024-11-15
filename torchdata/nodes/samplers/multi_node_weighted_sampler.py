@@ -11,7 +11,7 @@ import torch
 from torchdata.nodes.base_node import BaseNode, T
 from torchdata.nodes.samplers.utils import StopCriteria
 
-from .utils import _get_worker_seed
+from .utils import _get_rank_seed, get_rank_and_world_size
 
 
 class MultiNodeWeightedSampler(BaseNode[T]):
@@ -27,6 +27,8 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         source_nodes: Mapping[str, BaseNode[T]],
         weights: Dict[str, float],
         stop_criteria: str = StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
+        rank: int | None = None,
+        world_size: int | None = None,
         seed: int = 0,
     ) -> None:
         super().__init__()
@@ -36,6 +38,15 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         self.dataset_names = list(self.source_nodes.keys())
         self._num_yielded = 0
         self.seed = seed
+
+        if rank is None or world_size is None:
+            self.rank, self.world_size = get_rank_and_world_size()
+        else:
+            self.rank = rank
+            self.world_size = world_size
+
+        self.epoch = 0
+
         self._validate()
 
     def _validate(self) -> None:
@@ -45,33 +56,31 @@ class MultiNodeWeightedSampler(BaseNode[T]):
             StopCriteria.FIRST_DATASET_EXHAUSTED,
         ]:
             raise ValueError(
-                "Invalid {stop_criteria=}. stop_criteria must be one of: CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED, FIRST_DATASET_EXHAUSTED, ALL_DATASETS_EXHAUSTED"
+                f"Invalid {self.stop_criteria=}. stop_criteria must be one of: CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED, FIRST_DATASET_EXHAUSTED, ALL_DATASETS_EXHAUSTED"
             )
 
         # Check if keys of source_nodes and weights are the same
         if set(self.dataset_names) != set(self.weights.keys()):
             raise ValueError(
-                "Invalid {weights=}. For multi-dataset weighted sampling, keys of source_nodes and weights must be the same",
+                f"Invalid {self.weights=}. For multi-dataset weighted sampling, keys of source_nodes and weights must be the same",
             )
 
         for weight in self.weights.values():
             if not isinstance(weight, float) or weight <= 0:
                 raise ValueError(
-                    "Invalid {weights=}. For multi-dataset weighted sampling, weights must be a 1d sequence, non-negative, and non-zero"
+                    f"Invalid {self.weights=}. For multi-dataset weighted sampling, weights must be a 1d sequence, non-negative, and non-zero"
                 )
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
 
-        # g = torch.Generator()
-        # g_worker = torch.Generator()
-
-        # seed = _get_worker_seed(self.seed, g_worker)
-        # g.manual_seed(seed)  # TODO: incorporate seed from worker_info, epoch
         if initial_state is not None:
+            self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
             self._weighted_sampler = _WeightedSampler(
                 weights=self.weights,
                 seed=self.seed,
+                rank=self.rank,
+                world_size=self.world_size,
                 initial_state=initial_state[self.WEIGHTED_SAMPLER_STATE_KEY],
             )
             self._datasets_exhausted = initial_state[self.DATASETS_EXHAUSTED_KEY]
@@ -79,10 +88,12 @@ class MultiNodeWeightedSampler(BaseNode[T]):
                 self.source_nodes[k].reset(initial_state[self.DATASET_NODE_STATES_KEY][k])
         else:
             # Force a fresh iterator from all source nodes
+            self._num_yielded = 0
             self._weighted_sampler = _WeightedSampler(
                 weights=self.weights,
                 seed=self.seed,
-                # generator=g,
+                rank=self.rank,
+                world_size=self.world_size,
             )
             self._datasets_exhausted = {key: False for key in self.weights.keys()}
             for k in self.dataset_names:
@@ -145,8 +156,9 @@ class _WeightedSampler:
     def __init__(
         self,
         weights: Dict[str, float],
-        # generator,
         seed: int,
+        rank: int,
+        world_size: int,
         randon_tensor_batch_size: int = 1000,
         initial_state: Optional[Dict[str, Any]] = None,
     ):
@@ -159,16 +171,16 @@ class _WeightedSampler:
         self.randon_tensor_batch_size = randon_tensor_batch_size
 
         self._g = torch.Generator()
-        self._g_worker = torch.Generator()
+        self._g_rank = torch.Generator()
 
-        seed = _get_worker_seed(seed, self._g_worker)
+        seed = _get_rank_seed(seed, self._g_rank, rank, world_size)
         self._g.manual_seed(seed)
 
         self._g_snapshot = self._g.get_state()
-        self._g_worker_snapshot = self._g_worker.get_state()
+        self._g_rank_snapshot = self._g_rank.get_state()
         if initial_state is not None:
             self._g.set_state(initial_state["g_state"])
-            self._g_worker.set_state(initial_state["g_worker_state"])
+            self._g_rank.set_state(initial_state["g_rank_state"])
             self._offset = initial_state["offset"]
         else:
             self._offset = 0
@@ -177,7 +189,7 @@ class _WeightedSampler:
 
     def _get_batch_of_indices(self) -> list[int]:
         self._g_snapshot = self._g.get_state()
-        self._g_worker_snapshot = self._g_worker.get_state()
+        self._g_rank_snapshot = self._g_rank.get_state()
         return torch.multinomial(
             self.weights,
             num_samples=self.randon_tensor_batch_size,
@@ -199,6 +211,6 @@ class _WeightedSampler:
     def state_dict(self):
         return {
             "g_state": self._g_snapshot,
-            "g_worker_state": self._g_worker_snapshot,
+            "g_rank_state": self._g_rank_snapshot,
             "offset": self._offset,
         }

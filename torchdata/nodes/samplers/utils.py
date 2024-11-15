@@ -4,7 +4,10 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
+
 import torch
+import torch.distributed as dist
 
 
 class StopCriteria:
@@ -26,10 +29,31 @@ class StopCriteria:
     FIRST_DATASET_EXHAUSTED = "FIRST_DATASET_EXHAUSTED"
 
 
-def _get_worker_seed(seed: int, g_worker: torch.Generator) -> int:
-    worker_info = torch.utils.data.get_worker_info()
-    worker_id = worker_info.id if worker_info is not None else 0
-    num_workers = worker_info.num_workers if worker_info is not None else 1
-    # g_worker = torch.Generator()
-    g_worker.manual_seed(seed * num_workers + worker_id)
-    return int(torch.randint(0, 2 ** 32 - 1, size=(1,), generator=g_worker).item())
+def _get_rank_seed(seed: int, generator_rank: torch.Generator, rank: int, world_size: int) -> int:
+    generator_rank.manual_seed(seed * world_size + rank)
+    return int(torch.randint(0, 2 ** 32 - 1, size=(1,), generator=generator_rank).item())
+
+
+def get_rank_and_world_size() -> tuple[int, int]:
+    """
+    Returns the rank and world size of the current process.
+    If distributed is initialized, returns the rank and world size from the distributed environment.
+    If distributed is not initialized, returns the rank and world size from the environment variables.
+    If neither distributed nor environment variables are set, returns a rank of 0 and a world size of 1.
+    """
+    if dist.is_available() and dist.is_initialized():
+        rank, world_size = dist.get_rank(), dist.get_world_size()
+    else:
+        rank = os.environ.get("RANK", "0")
+        world_size = os.environ.get("WORLD_SIZE", "1")
+        try:
+            rank = int(rank)
+            world_size = int(world_size)
+        except ValueError:
+            rank = 0
+            world_size = 1
+
+    if rank >= world_size or rank < 0:
+        raise ValueError(f"Invalid rank {rank}, rank should be in the interval [0, {world_size - 1}]")
+
+    return rank, world_size
