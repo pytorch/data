@@ -31,7 +31,7 @@ class TestMultiNodeWeightedSampler(TestCase):
         }
         self.weights = {f"ds{i}": self._weights_fn(i) for i in range(self._num_datasets)}
 
-    def _setUpMultiDatasetSampler(
+    def _setUpMultiNodeWeightedSampler(
         self, num_samples, num_datasets, weights_fn, stop_criteria
     ) -> MultiNodeWeightedSampler:
 
@@ -39,7 +39,7 @@ class TestMultiNodeWeightedSampler(TestCase):
         weights = {f"ds{i}": weights_fn(i) for i in range(num_datasets)}
         return MultiNodeWeightedSampler(datasets, weights, stop_criteria)
 
-    def test_multi_dataset_weighted_sampler_weight_sampler_keys_mismatch(self) -> None:
+    def test_multi_node_weighted_sampler_weight_sampler_keys_mismatch(self) -> None:
         """
         Validation should fail if the keys of source_nodes and weights are not the same
         """
@@ -52,7 +52,7 @@ class TestMultiNodeWeightedSampler(TestCase):
                 {f"dummy{i}": self._weights_fn(i) for i in range(self._num_datasets)},
             )
 
-    def test_multi_dataset_weighted_batch_sampler_invalid_weights_tensor_shape(
+    def test_multi_node_weighted_batch_sampler_invalid_weights_tensor_shape(
         self,
     ) -> None:
         """
@@ -64,7 +64,7 @@ class TestMultiNodeWeightedSampler(TestCase):
                 weights={f"ds{i}": [[1.0]] for i in range(self._num_datasets)},
             )
 
-    def test_multi_dataset_weighted_batch_sampler_negative_weights(
+    def test_multi_node_weighted_batch_sampler_negative_weights(
         self,
     ) -> None:
         """
@@ -76,7 +76,7 @@ class TestMultiNodeWeightedSampler(TestCase):
                 weights={f"ds{i}": -1 for i in range(self._num_datasets)},
             )
 
-    def test_multi_dataset_weighted_batch_sampler_zero_weights(
+    def test_multi_node_weighted_batch_sampler_zero_weights(
         self,
     ) -> None:
         """
@@ -88,7 +88,7 @@ class TestMultiNodeWeightedSampler(TestCase):
                 weights={f"ds{i}": 10 * i for i in range(self._num_datasets)},
             )
 
-    def test_multi_dataset_weighted_sampler_first_exhausted(self) -> None:
+    def test_multi_node_weighted_sampler_first_exhausted(self) -> None:
         mixer = MultiNodeWeightedSampler(
             self.datasets,
             self.weights,
@@ -108,7 +108,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             self.assertEqual(dataset_counts_in_results.count(self._num_samples), 1)
             mixer.reset()
 
-    def test_multi_dataset_weighted_sampler_all_dataset_exhausted(self) -> None:
+    def test_multi_node_weighted_sampler_all_dataset_exhausted(self) -> None:
         mixer = MultiNodeWeightedSampler(
             self.datasets,
             self.weights,
@@ -131,7 +131,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             self.assertEqual(sorted(set(datasets_in_results)), ["ds0", "ds1", "ds2", "ds3"])
             mixer.reset()
 
-    def test_multi_dataset_weighted_sampler_cycle_until_all_exhausted(self) -> None:
+    def test_multi_node_weighted_sampler_cycle_until_all_exhausted(self) -> None:
         mixer = MultiNodeWeightedSampler(
             self.datasets,
             self.weights,
@@ -170,11 +170,11 @@ class TestMultiNodeWeightedSampler(TestCase):
             ],
         )
     )
-    def test_multi_dataset_weighted_large_sample_size(self, midpoint, stop_criteria) -> None:
+    def test_multi_node_weighted_large_sample_size(self, midpoint, stop_criteria) -> None:
         num_samples = 1500
         num_datasets = 5
 
-        mixer = self._setUpMultiDatasetSampler(
+        mixer = self._setUpMultiNodeWeightedSampler(
             num_samples,
             num_datasets,
             self._weights_fn,
@@ -183,12 +183,12 @@ class TestMultiNodeWeightedSampler(TestCase):
         run_test_save_load_state(self, mixer, midpoint)
 
     @parameterized.expand([(1, 8), (8, 32)])
-    def test_multi_dataset_weighted_batch_sampler_set_rank_world_size(self, rank, world_size):
+    def test_multi_node_weighted_batch_sampler_set_rank_world_size(self, rank, world_size):
         mixer = MultiNodeWeightedSampler(self.datasets, self.weights, rank=rank, world_size=world_size)
         self.assertEqual(mixer.rank, rank)
         self.assertEqual(mixer.world_size, world_size)
 
-    def test_multi_dataset_weighted_batch_sampler_results_for_ranks(self):
+    def test_multi_node_weighted_batch_sampler_results_for_ranks(self):
         world_size = 8
         global_results = []
         for rank in range(world_size):
