@@ -16,7 +16,7 @@ handles aggregation and distribution of state across multiprocess workers (but n
 
 ## Installation
 
-`torchdata.stateful_dataloader` is currently available on the `torchdata` Nightly build.
+`torchdata.stateful_dataloader` is currently available in `torchdata>=0.8.0`.
 
 Using pip:
 
