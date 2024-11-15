@@ -21,7 +21,7 @@ handles aggregation and distribution of state across multiprocess workers (but n
 Using pip:
 
 ```bash
-pip install --pre torchdata --index-url https://download.pytorch.org/whl/nightly/cpu
+pip install torchdata>=0.8.0
 ```
 
 Using conda:
