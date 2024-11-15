@@ -278,7 +278,7 @@ jobs:
           path: conda-bld/*/torchdata-*.tar.bz2
 
   conda_upload:
-    if: always() && inputs.branch != '' && needs.get_release_type.outputs.type != 'nightly' && inputs.do-upload == true
+    if: always() && inputs.branch != '' && inputs.do-upload == true
     needs: [get_release_type, conda_build_test]
     runs-on: ubuntu-latest
     container: continuumio/miniconda3
@@ -303,6 +303,28 @@ jobs:
       - name: Display All TorchData Conda Package
         if: steps.trigger_upload.outputs.value == 'true'
         run: ls -lh ./*/torchdata-*.tar.bz2
+      - name: Remove existing Conda packages
+        if: needs.get_release_type.outputs.type == 'nightly'
+        shell: bash -l {0}
+        env:
+          CONDA_NIGHTLY_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_NIGHTLY_PYTORCHBOT_TOKEN }}
+        run: |
+          conda create -y --name conda_upload_env
+          conda activate conda_upload_env
+          conda install -yq anaconda-client
+          conda install -c conda-forge -yq jq
+          # Find existing Conda packages on pytorch nightly
+          for val in $(conda search --json torchdata --channel=pytorch-nightly | jq -r '.[][] | .version, .build'); do
+            if [[ -z $version ]]; then
+              version=$val
+            else
+              build=$val
+              # Remove existing package
+              anaconda -t "${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}" remove -f "pytorch-nightly/torchdata/$version/*/$build.tar.bz2"
+              version=""
+              build=""
+            fi
+          done
       - name: Upload Packages to Conda
         if: steps.trigger_upload.outputs.value == 'true'
         shell: bash -l {0}
