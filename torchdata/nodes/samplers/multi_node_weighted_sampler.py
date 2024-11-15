@@ -27,8 +27,8 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         source_nodes: Mapping[str, BaseNode[T]],
         weights: Dict[str, float],
         stop_criteria: str = StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
-        rank: int | None = None,
-        world_size: int | None = None,
+        rank: Optional[int] = None,
+        world_size: Optional[int] = None,
         seed: int = 0,
     ) -> None:
         super().__init__()
@@ -59,8 +59,8 @@ class MultiNodeWeightedSampler(BaseNode[T]):
                 f"Invalid {self.stop_criteria=}. stop_criteria must be one of: CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED, FIRST_DATASET_EXHAUSTED, ALL_DATASETS_EXHAUSTED"
             )
 
-        # Check if keys of source_nodes and weights are the same
-        if set(self.dataset_names) != set(self.weights.keys()):
+        # Validate if keys of source_nodes and weights are the same
+        if set(self.dataset_names) != set(self.weights.keys()) or len(self.dataset_names) != len(self.weights):
             raise ValueError(
                 f"Invalid {self.weights=}. For multi-dataset weighted sampling, keys of source_nodes and weights must be the same",
             )
@@ -68,7 +68,10 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         for weight in self.weights.values():
             if not isinstance(weight, float) or weight <= 0:
                 raise ValueError(
-                    f"Invalid {self.weights=}. For multi-dataset weighted sampling, weights must be a 1d sequence, non-negative, and non-zero"
+                    f"""Invalid {self.weights=}. For multi-dataset weighted sampling, weights must be a 1d sequence, non-negative, and non-zero.
+                    Weights are used to sample from source nodes. Zero weight means the source node will never be sampled from, and can cause
+                    unexpected behavior depending on the stop criteris. Weights are used as inputs to torch.multinomial, please refer to
+                    https://pytorch.org/docs/stable/generated/torch.multinomial.html on how to use weights for sampling."""
                 )
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
@@ -99,9 +102,10 @@ class MultiNodeWeightedSampler(BaseNode[T]):
             for k in self.dataset_names:
                 self.source_nodes[k].reset()
 
-    def next(self) -> T:
+    def _check_for_stop_iteration(self) -> None:
         if all(self._datasets_exhausted.values()):
-            # Raise StopIteration if all datasets are exhausted
+            # Raise StopIteration if all datasets are exhausted,
+            # this covers for both ALL_DATASETS_EXHAUSTED and CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED
             raise StopIteration()
 
         # Raise StopIteration is StopCriteria is FIRST_DATASET_EXHAUSTED and
@@ -110,36 +114,40 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         if self.stop_criteria == StopCriteria.FIRST_DATASET_EXHAUSTED and any(self._datasets_exhausted.values()):
             raise StopIteration()
 
-        key = next(self._weighted_sampler)
-        try:
-            if self._datasets_exhausted[key] and self.stop_criteria == StopCriteria.ALL_DATASETS_EXHAUSTED:
-                # Before fetching a new item check if key corresponds to an already
-                # exhaused dataset and StopCriteria is ALL_DATASETS_EXHAUSTED, move to next idx
-                return self.next()
-            item = next(self.source_nodes[key])
-        except StopIteration:
-            # Mark the dataset as exhausted
-            self._datasets_exhausted[key] = True
+        return
 
-            # Based on the stopping criterion, we may or may not raise StopIteration
-            if self.stop_criteria == StopCriteria.FIRST_DATASET_EXHAUSTED or (
-                self.stop_criteria
-                in (
-                    StopCriteria.ALL_DATASETS_EXHAUSTED,
-                    StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
-                )
-                and all(self._datasets_exhausted.values())
-            ):
-                raise StopIteration()
+    def next(self) -> T:
+        while True:
+            self._check_for_stop_iteration()
 
-            # If StopCriteria is ALL_DATASETS_EXHAUSTED, move to next idx
-            if self.stop_criteria == StopCriteria.ALL_DATASETS_EXHAUSTED:
-                return self.next()
+            # Fetch the next item's key from the weighted sampler
+            key = next(self._weighted_sampler)
+            try:
+                if self._datasets_exhausted[key] and self.stop_criteria == StopCriteria.ALL_DATASETS_EXHAUSTED:
+                    # Before fetching a new item check if key corresponds to an already
+                    # exhaused dataset and StopCriteria is ALL_DATASETS_EXHAUSTED, move to next key
+                    # return next(self)  # omit recursive call
+                    continue
+                item = next(self.source_nodes[key])
+            except StopIteration:
+                # Mark the dataset as exhausted
+                self._datasets_exhausted[key] = True
 
-            # Reset the iterator and try again
-            self.source_nodes[key].reset()
-            item = next(self.source_nodes[key])
+                # Based on updated _check_for_stop_iteration, check if we should raise StopIteration
+                self._check_for_stop_iteration()
 
+                # If StopCriteria is ALL_DATASETS_EXHAUSTED, move to next key
+                if self.stop_criteria == StopCriteria.ALL_DATASETS_EXHAUSTED:
+                    # return next(self)  # omit recursive call
+                    # key = next(self._weighted_sampler)
+                    continue
+
+                # Reset the iterator and try again
+                self.source_nodes[key].reset()
+                item = next(self.source_nodes[key])
+            break
+
+        # If we did't throw StopIteration, increment the number of items yielded and return the item
         self._num_yielded += 1
         return item
 
