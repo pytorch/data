@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import itertools
+from enum import unique
 
 from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
@@ -182,7 +183,21 @@ class TestMultiNodeWeightedSampler(TestCase):
         run_test_save_load_state(self, mixer, midpoint)
 
     @parameterized.expand([(1, 8), (8, 32)])
-    def test_multi_dataset_weighted_batch_sampler_rank_world_size(self, rank, world_size):
+    def test_multi_dataset_weighted_batch_sampler_set_rank_world_size(self, rank, world_size):
         mixer = MultiNodeWeightedSampler(self.datasets, self.weights, rank=rank, world_size=world_size)
         self.assertEqual(mixer.rank, rank)
         self.assertEqual(mixer.world_size, world_size)
+
+    def test_multi_dataset_weighted_batch_sampler_results_for_ranks(self):
+        world_size = 8
+        global_results = []
+        for rank in range(world_size):
+            mixer = MultiNodeWeightedSampler(self.datasets, self.weights, rank=rank, world_size=world_size)
+            results = list(mixer)
+            global_results.append(results)
+
+        unique_results = []
+        for results in global_results:
+            if results not in unique_results:
+                unique_results.append(results)
+        self.assertEqual(unique_results, global_results)
