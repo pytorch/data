@@ -4,6 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import itertools
+
 from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
 from torchdata.nodes.adapters import IterableWrapper
@@ -17,16 +19,24 @@ from .utils import DummyIterableDataset, run_test_save_load_state
 class TestMultiNodeWeightedSampler(TestCase):
     def setUp(self) -> None:
         super().setUp()
-        self._num_samples = 2
+        self._num_samples = 10
         self._num_datasets = 4
         self._weights_fn = lambda i: 0.1 * (i + 1)
+        self._num_epochs = 3
 
         self.datasets = {
             f"ds{i}": IterableWrapper(DummyIterableDataset(self._num_samples, f"ds{i}"))
             for i in range(self._num_datasets)
         }
         self.weights = {f"ds{i}": self._weights_fn(i) for i in range(self._num_datasets)}
-        self.weighted_sampler_node = MultiNodeWeightedSampler(self.datasets, self.weights)
+
+    def _setUpMultiDatasetSampler(
+        self, num_samples, num_datasets, weights_fn, stop_criteria
+    ) -> MultiNodeWeightedSampler:
+
+        datasets = {f"ds{i}": IterableWrapper(DummyIterableDataset(num_samples, f"ds{i}")) for i in range(num_datasets)}
+        weights = {f"ds{i}": weights_fn(i) for i in range(num_datasets)}
+        return MultiNodeWeightedSampler(datasets, weights, stop_criteria)
 
     def test_multi_dataset_weighted_sampler_weight_sampler_keys_mismatch(self) -> None:
         """
@@ -83,11 +93,19 @@ class TestMultiNodeWeightedSampler(TestCase):
             self.weights,
             stop_criteria=StopCriteria.FIRST_DATASET_EXHAUSTED,
         )
-        results = list(mixer)
-        datasets_in_results = {result["name"] for result in results}
 
-        self.assertEqual("ds3" in datasets_in_results, True)  # ds3 has maximum weight
-        self.assertEqual("ds0" in datasets_in_results, False)  # ds0 has minimum weight
+        for _ in range(self._num_epochs):
+            results = list(mixer)
+
+            datasets_in_results = [result["name"] for result in results]
+            dataset_counts_in_results = [datasets_in_results.count(f"ds{i}") for i in range(self._num_datasets)]
+
+            # Check max item count for dataset is exactly _num_samples
+            self.assertEqual(max(dataset_counts_in_results), self._num_samples)
+
+            # Check only one dataset has been exhausted
+            self.assertEqual(dataset_counts_in_results.count(self._num_samples), 1)
+            mixer.reset()
 
     def test_multi_dataset_weighted_sampler_all_dataset_exhausted(self) -> None:
         mixer = MultiNodeWeightedSampler(
@@ -95,25 +113,70 @@ class TestMultiNodeWeightedSampler(TestCase):
             self.weights,
             stop_criteria=StopCriteria.ALL_DATASETS_EXHAUSTED,
         )
-        results = list(mixer)
-        datasets_in_results = [result["name"] for result in results]
 
-        # check each dataset appears exactly _num_samples times,
-        # each dataset has _num_samples samples
-        self.assertEqual(
-            [datasets_in_results.count(f"ds{i}") for i in range(self._num_datasets)],
-            [self._num_samples] * self._num_datasets,
-        )
+        for _ in range(self._num_epochs):
+            results = list(mixer)
+            datasets_in_results = [result["name"] for result in results]
+            dataset_counts_in_results = [datasets_in_results.count(f"ds{i}") for i in range(self._num_datasets)]
 
-        # check that all datasets are exhausted
-        self.assertEqual(sorted(set(datasets_in_results)), ["ds0", "ds1", "ds2", "ds3"])
+            # check each dataset appears exactly _num_samples times,
+            # each dataset has _num_samples samples
+            self.assertEqual(
+                dataset_counts_in_results,
+                [self._num_samples] * self._num_datasets,
+            )
+
+            # check that all datasets are exhausted
+            self.assertEqual(sorted(set(datasets_in_results)), ["ds0", "ds1", "ds2", "ds3"])
+            mixer.reset()
 
     def test_multi_dataset_weighted_sampler_cycle_until_all_exhausted(self) -> None:
-        mixer = self.weighted_sampler_node
-        results = list(mixer)
-        datasets_in_results = {result["name"] for result in results}
-        self.assertEqual(sorted(datasets_in_results), ["ds0", "ds1", "ds2", "ds3"])
+        mixer = MultiNodeWeightedSampler(
+            self.datasets,
+            self.weights,
+            stop_criteria=StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
+        )
 
-    @parameterized.expand([2, 5, 7])
-    def test_save_load_state_stateful(self, midpoint: int):
-        run_test_save_load_state(self, self.weighted_sampler_node, midpoint)
+        for _ in range(self._num_epochs):
+            results = list(mixer)
+            datasets_in_results = {result["name"] for result in results}
+
+            # check that all datasets are exhausted
+            self.assertEqual(sorted(datasets_in_results), ["ds0", "ds1", "ds2", "ds3"])
+            mixer.reset()
+
+    @parameterized.expand(
+        itertools.product(
+            [1, 4, 7],
+            [
+                StopCriteria.ALL_DATASETS_EXHAUSTED,
+                StopCriteria.FIRST_DATASET_EXHAUSTED,
+                StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
+            ],
+        )
+    )
+    def test_save_load_state_stateful(self, midpoint: int, stop_criteria: str):
+        mixer = MultiNodeWeightedSampler(self.datasets, self.weights, stop_criteria)
+        run_test_save_load_state(self, mixer, midpoint)
+
+    @parameterized.expand(
+        itertools.product(
+            [1000, 5000, 10000],
+            [
+                StopCriteria.ALL_DATASETS_EXHAUSTED,
+                StopCriteria.FIRST_DATASET_EXHAUSTED,
+                StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
+            ],
+        )
+    )
+    def test_multi_dataset_weighted_large_sample_size(self, midpoint, stop_criteria) -> None:
+        num_samples = 2000
+        num_datasets = 10
+
+        mixer = self._setUpMultiDatasetSampler(
+            num_samples,
+            num_datasets,
+            self._weights_fn,
+            StopCriteria.FIRST_DATASET_EXHAUSTED,
+        )
+        run_test_save_load_state(self, mixer, midpoint)
