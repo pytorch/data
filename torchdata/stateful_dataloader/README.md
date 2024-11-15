@@ -16,12 +16,12 @@ handles aggregation and distribution of state across multiprocess workers (but n
 
 ## Installation
 
-`torchdata.stateful_dataloader` is currently available on the `torchdata` Nightly build.
+`torchdata.stateful_dataloader` is currently available in `torchdata>=0.8.0`.
 
 Using pip:
 
 ```bash
-pip install --pre torchdata --index-url https://download.pytorch.org/whl/nightly/cpu
+pip install torchdata>=0.8.0
 ```
 
 Using conda:
