@@ -25,11 +25,11 @@ def get_rank_and_world_size() -> tuple[int, int]:
     if dist.is_available() and dist.is_initialized():
         rank, world_size = dist.get_rank(), dist.get_world_size()
     else:
-        rank = os.environ.get("RANK", "0")
-        world_size = os.environ.get("WORLD_SIZE", "1")
+        _rank = os.environ.get("RANK", "0")
+        _world_size = os.environ.get("WORLD_SIZE", "1")
         try:
-            rank = int(rank)
-            world_size = int(world_size)
+            rank = int(_rank)
+            world_size = int(_world_size)
         except ValueError:
             rank = 0
             world_size = 1

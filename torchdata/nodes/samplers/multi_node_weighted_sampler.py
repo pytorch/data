@@ -197,11 +197,13 @@ class _WeightedSampler:
         randon_tensor_batch_size: int = 1000,
         initial_state: Optional[Dict[str, Any]] = None,
     ):
-        self.names, self.weights = [], []
+        _names, _weights = [], []
         for name, weight in weights.items():
-            self.names.append(name)
-            self.weights.append(weight)
-        self.weights = torch.tensor(self.weights, dtype=torch.float64)
+            _names.append(name)
+            _weights.append(weight)
+
+        self.names = _names
+        self.weights = torch.tensor(_weights, dtype=torch.float64)
 
         self.randon_tensor_batch_size = randon_tensor_batch_size
 
