@@ -340,7 +340,6 @@ jobs:
             done
           done
 
-
       - name: Upload Packages to Conda
         if: steps.trigger_upload.outputs.value == 'true' && needs.get_release_type.outputs.type != 'nightly'
         shell: bash -l {0}
