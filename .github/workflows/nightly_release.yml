@@ -18,3 +18,5 @@ jobs:
       branch: "main"
       pre_dev_release: true
       pytorch_version: ""
+    secrets:
+      CONDA_NIGHTLY_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_NIGHTLY_PYTORCHBOT_TOKEN }}
