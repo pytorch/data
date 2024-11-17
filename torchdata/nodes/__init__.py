@@ -11,17 +11,18 @@ from .loader import Loader
 from .map import Mapper, ParallelMapper
 from .pin_memory import PinMemory
 from .prefetch import Prefetcher
+from .samplers.multi_node_weighted_sampler import MultiNodeWeightedSampler
 from .types import Stateful
 
 
 __all__ = [
     "BaseNode",
     "Batcher",
-    "DataLoader",
     "IterableWrapper",
     "Loader",
     "MapStyleWrapper",
     "Mapper",
+    "MultiNodeWeightedSampler",
     "ParallelMapper",
     "PinMemory",
     "Prefetcher",

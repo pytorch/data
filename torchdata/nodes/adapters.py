@@ -125,7 +125,6 @@ class SamplerWrapper(BaseNode[T]):
                 self._it = iter(self.sampler)  # type: ignore [assignment]
             else:
                 if hasattr(self.sampler, "set_epoch"):
-                    print("Setting epoch", self.epoch)
                     self.sampler.set_epoch(self.epoch)
                 self._it = iter(self.sampler)
                 for i in range(self._num_yielded):
