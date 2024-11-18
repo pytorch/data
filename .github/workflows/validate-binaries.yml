@@ -47,7 +47,7 @@ jobs:
   validate-binaries:
     uses: pytorch/test-infra/.github/workflows/validate-domain-library.yml@main
     with:
-      package_type: "conda,wheel"
+      package_type: "wheel"
       os: ${{ inputs.os }}
       channel: ${{ inputs.channel }}
       repository: "pytorch/data"

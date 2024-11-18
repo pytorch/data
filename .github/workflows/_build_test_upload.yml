@@ -19,10 +19,6 @@ on:
     secrets:
       PYPI_TOKEN:
         required: false
-      CONDA_PYTORCHBOT_TOKEN:
-        required: false
-      CONDA_TEST_PYTORCHBOT_TOKEN:
-        required: false
 
 permissions:
   id-token: write
@@ -212,68 +208,6 @@ jobs:
             --password "$PYPI_TOKEN" \
             torchdata*.whl
 
-  conda_delete:
-    if: always() && inputs.branch != '' && inputs.do-upload == true
-    needs: [get_release_type]
-    runs-on: ubuntu-latest
-    container: continuumio/miniconda3
-    environment: pytorchbot-env
-    outputs:
-      upload: ${{ steps.trigger_upload.outputs.value }}
-    steps:
-      - name: Download Artifacts from Github
-        continue-on-error: true
-        uses: actions/download-artifact@v3
-        with:
-          name: torchdata-artifact
-      - name: Determine if Conda Uploading is needed
-        run: |
-          upload=false
-          for pkg in ./*/torchdata-*.tar.bz2; do
-            upload=true
-            break
-          done
-          echo "value=$upload" >> $GITHUB_OUTPUT
-        id: trigger_upload
-      - name: Display All TorchData Conda Package
-        if: steps.trigger_upload.outputs.value == 'true'
-        run: ls -lh ./*/torchdata-*.tar.bz2
-      - name: Remove existing Conda packages
-        if: needs.get_release_type.outputs.type == 'nightly'
-        shell: bash -l {0}
-        env:
-          CONDA_NIGHTLY_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_NIGHTLY_PYTORCHBOT_TOKEN }}
-        run: |
-
-          CONDA_CHANNEL=pytorch-${{ needs.get_release_type.outputs.type }}
-          CONDA_TOKEN=${CONDA_NIGHTLY_PYTORCHBOT_TOKEN}
-
-          conda create -y --name conda_upload_env
-          conda activate conda_upload_env
-          conda install -yq anaconda-client
-          conda install -c conda-forge -yq jq
-
-          for subdir in $(find . -type f -name '*torchdata*.tar.bz2' | sed -r 's|/[^/]+$||' | uniq | cut -f2 -d/) ; do
-            version=""
-            # Find existing conda packages on pytorch nightly
-            for val in $(conda search --json torchdata --channel=$CONDA_CHANNEL --subdir=$subdir | jq -r '.[][] | .version, .build'); do
-              if [[ -z $version ]]; then
-                version=$val
-              else
-                build=$val
-                # Check if a new conda package built based on the same Python version and platform exists
-                for new_package in ./$subdir/torchdata-*-$build.tar.bz2; do
-                  if [[ -f "$new_package" ]]; then
-                    echo "Removing $CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
-                    anaconda -t "${CONDA_TOKEN}" remove -f "$CONDA_CHANNEL/torchdata/$version/$subdir/torchdata-$version-$build.tar.bz2"
-                    break
-                  fi
-                done
-                version=""
-                build=""
-              fi
-            done
-          done
 
   build_docs:
     if: |
