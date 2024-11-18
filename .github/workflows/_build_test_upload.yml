@@ -212,74 +212,9 @@ jobs:
             --password "$PYPI_TOKEN" \
             torchdata*.whl
 
-  conda_build_test:
-    needs: get_release_type
-    runs-on: ${{ matrix.os }}
-    container: ${{ startsWith( matrix.os, 'ubuntu' ) && 'pytorch/manylinux-cpu' || null }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - windows-latest
-        python-version:
-          - 3.9
-          - "3.10"
-          - "3.11"
-          - "3.12"
-          - "3.13"
-    steps:
-      - name: Checkout Source Repository
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ inputs.branch }}
-          submodules: recursive
-      - name: Determine if build AWSSDK
-        shell: bash -l {0}
-        run: |
-          BUILD_S3=0
-          echo "value=$BUILD_S3" >> $GITHUB_OUTPUT
-        id: build_s3
-      - name: Add temp runner environment variables
-        shell: bash -l {0}
-        run: |
-          echo "MINICONDA_INSTALL_PATH=${RUNNER_TEMP}/miniconda" >> "${GITHUB_ENV}"
-          echo "CONDA_ENV_PATH=${RUNNER_TEMP}/conda_build_env" >> "${GITHUB_ENV}"
-      - name: Create Conda Env on Windows
-        if: ${{ startsWith( matrix.os, 'windows' ) }}
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-          activate-environment: ${{ env.CONDA_ENV_PATH }}
-      - name: Build TorchData for Conda
-        shell: bash -l {0}
-        env:
-          PYTHON_VERSION: ${{ matrix.python-version }}
-          PYTORCH_VERSION: ${{ inputs.pytorch_version }}
-          BUILD_S3: ${{ steps.build_s3.outputs.value }}
-        run: |
-          set -ex
-          if ${{ ! startsWith( matrix.os, 'windows' ) }}; then
-            source "${MINICONDA_INSTALL_PATH}/etc/profile.d/conda.sh"
-          fi
-          conda activate "${CONDA_ENV_PATH}"
-          if [[ "${PYTHON_VERSION}" = "3.11" ]]; then
-            conda install -yq conda-build -c malfet -c conda-forge
-            export CONDA_CHANNEL_FLAGS="${CONDA_CHANNEL_FLAGS} -c malfet"
-          else
-            conda install -yq conda-build
-          fi
-          packaging/build_conda.sh
-          # conda index ./conda-bld
-      - name: Upload Conda Package to Github
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: torchdata-artifact
-          path: conda-bld/*/torchdata-*.tar.bz2
-
-  conda_upload:
+  conda_delete:
     if: always() && inputs.branch != '' && inputs.do-upload == true
-    needs: [get_release_type, conda_build_test]
+    needs: [get_release_type]
     runs-on: ubuntu-latest
     container: continuumio/miniconda3
     environment: pytorchbot-env
@@ -340,36 +275,11 @@ jobs:
             done
           done
 
-      - name: Upload Packages to Conda
-        if: steps.trigger_upload.outputs.value == 'true' && needs.get_release_type.outputs.type != 'nightly'
-        shell: bash -l {0}
-        env:
-          CONDA_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_PYTORCHBOT_TOKEN }}
-          CONDA_TEST_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_TEST_PYTORCHBOT_TOKEN }}
-        run: |
-          conda create -y --name conda_upload_env
-          conda activate conda_upload_env
-
-          conda install -yq anaconda-client
-          conda install -c conda-forge -yq jq
-
-          if [[ ${{ needs.get_release_type.outputs.type }} == 'official' ]]; then
-            CONDA_CHANNEL=pytorch
-            CONDA_TOKEN=${CONDA_PYTORCHBOT_TOKEN}
-          elif [[ ${{ needs.get_release_type.outputs.type }} == 'test' ]]; then
-            CONDA_CHANNEL=pytorch-${{ needs.get_release_type.outputs.type }}
-            CONDA_TOKEN=${CONDA_TEST_PYTORCHBOT_TOKEN}
-          fi
-
-          if [[ ${{ needs.get_release_type.outputs.type }} != 'nightly' ]]; then
-            anaconda -t "${CONDA_TOKEN}" upload ./*/torchdata-*.tar.bz2 -u "$CONDA_CHANNEL" --label main --no-progress --force
-          fi
-
   build_docs:
     if: |
       always() && inputs.branch != '' &&
-      ( needs.wheel_upload.outputs.upload == 'true' || needs.conda_upload.outputs.upload == 'true' )
-    needs: [get_release_type, wheel_upload, conda_upload]
+      ( needs.wheel_upload.outputs.upload == 'true')
+    needs: [get_release_type, wheel_upload]
     runs-on: ubuntu-latest
     steps:
       - name: Setup Python 3.9
