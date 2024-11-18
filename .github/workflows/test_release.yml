@@ -34,5 +34,3 @@ jobs:
       branch: "release/0.9"
       pre_dev_release: true
       pytorch_version: "2.5.0"
-    secrets:
-      CONDA_TEST_PYTORCHBOT_TOKEN: ${{ secrets.CONDA_TEST_PYTORCHBOT_TOKEN }}
