@@ -208,7 +208,6 @@ jobs:
             --password "$PYPI_TOKEN" \
             torchdata*.whl
 
-
   build_docs:
     if: |
       always() && inputs.branch != '' &&
