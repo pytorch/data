@@ -10,8 +10,8 @@ import torch
 import torch.distributed as dist
 
 
-def _get_rank_seed(seed: int, generator_rank: torch.Generator, rank: int, world_size: int) -> int:
-    generator_rank.manual_seed(seed * world_size + rank)
+def _get_rank_seed(seed: int, generator_rank: torch.Generator, rank: int, world_size: int, epoch: int) -> int:
+    generator_rank.manual_seed(seed * world_size + rank + epoch)
     return int(torch.randint(0, 2 ** 32 - 1, size=(1,), generator=generator_rank).item())
 
 

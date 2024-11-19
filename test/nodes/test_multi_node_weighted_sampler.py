@@ -210,3 +210,22 @@ class TestMultiNodeWeightedSampler(TestCase):
             if results not in unique_results:
                 unique_results.append(results)
         self.assertEqual(unique_results, global_results)
+
+    def test_multi_node_weighted_batch_sampler_results_for_multiple_epochs(self):
+        mixer = MultiNodeWeightedSampler(
+            self.datasets,
+            self.weights,
+        )
+
+        overall_results = []
+        for _ in range(1):
+            results = list(mixer)
+            overall_results.append(results)
+            mixer.reset()
+
+        unique_results = []
+        for results in overall_results:
+            if results not in unique_results:
+                unique_results.append(results)
+
+        self.assertEqual(unique_results, overall_results)
