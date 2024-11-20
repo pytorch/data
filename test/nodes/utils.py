@@ -128,9 +128,7 @@ def run_test_save_load_state(test, node: BaseNode, midpoint: int):
     x = Loader(node)
 
     initial_state_dict = x.state_dict()
-    print("initial_state_dict 0", initial_state_dict)
     it = iter(x)
-    print("initial_state_dict 1", x.state_dict())
     results = []
     for _ in range(midpoint):
         results.append(next(it))

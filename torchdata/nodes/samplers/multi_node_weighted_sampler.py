@@ -71,7 +71,8 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         self.dataset_names = list(self.source_nodes.keys())
         self._num_yielded = 0
         self.seed = seed
-        self.epoch = -1  # Initialize to -1 because we increment it before resetting the source nodes
+        self.epoch = 0
+        self._initial_state = None
 
         if rank is None or world_size is None:
             self.rank, self.world_size = get_rank_and_world_size()
@@ -110,6 +111,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         super().reset(initial_state)
 
         if initial_state is not None:
+            self._initial_state = initial_state
             self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
             self.epoch = initial_state[self.EPOCH_KEY]
             self._weighted_sampler = _WeightedSampler(
@@ -124,10 +126,6 @@ class MultiNodeWeightedSampler(BaseNode[T]):
             for k in self.dataset_names:
                 self.source_nodes[k].reset(initial_state[self.DATASET_NODE_STATES_KEY][k])
         else:
-            # Increment the epoch before resetting the source nodes
-            self.epoch += 1
-            print(f"Epoch: {self.epoch}")
-
             # Force a fresh iterator from all source nodes
             self._num_yielded = 0
             self._weighted_sampler = _WeightedSampler(
@@ -143,6 +141,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
 
     def set_epoch(self, epoch: int) -> None:
         self.epoch = epoch
+        self.reset(self._initial_state)
 
     def _check_for_stop_iteration(self) -> None:
         if all(self._datasets_exhausted.values()):

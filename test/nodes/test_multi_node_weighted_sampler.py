@@ -9,7 +9,7 @@ from enum import unique
 
 from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
-from torchdata.nodes.adapters import IterableWrapper
+from torchdata.nodes.adapters import IterableWrapper, SamplerWrapper
 from torchdata.nodes.prefetch import Prefetcher
 
 from torchdata.nodes.samplers.multi_node_weighted_sampler import MultiNodeWeightedSampler
@@ -165,7 +165,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             ],
         )
     )
-    def test_save_load_state_stateful(self, midpoint: int, stop_criteria: str):
+    def test_save_load_state_mixer(self, midpoint: int, stop_criteria: str):
         mixer = MultiNodeWeightedSampler(self.datasets, self.weights, stop_criteria)
         run_test_save_load_state(self, mixer, midpoint)
 
@@ -218,10 +218,12 @@ class TestMultiNodeWeightedSampler(TestCase):
         )
 
         overall_results = []
-        for _ in range(1):
+        for i in range(self._num_epochs):
+            mixer.set_epoch(i)
+            self.assertEqual(mixer.epoch, i)
             results = list(mixer)
             overall_results.append(results)
-            mixer.reset()
+            mixer.reset()  # redundant, mixer.set_epoch() resets the sampler
 
         unique_results = []
         for results in overall_results:
@@ -229,3 +231,41 @@ class TestMultiNodeWeightedSampler(TestCase):
                 unique_results.append(results)
 
         self.assertEqual(unique_results, overall_results)
+
+    def test_multi_node_weighted_batch_sampler_results_for_multiple_epochs_with_wrapper(
+        self,
+    ):
+        mixer = MultiNodeWeightedSampler(
+            self.datasets,
+            self.weights,
+        )
+        node = SamplerWrapper(mixer, initial_epoch=0)
+
+        overall_results = []
+        for i in range(self._num_epochs):
+            self.assertEqual(mixer.epoch, i)
+            results = list(node)
+            overall_results.append(results)
+            node.reset()
+
+        unique_results = []
+        for results in overall_results:
+            if results not in unique_results:
+                unique_results.append(results)
+
+        self.assertEqual(unique_results, overall_results)
+
+    @parameterized.expand(
+        itertools.product(
+            [1, 4, 7],
+            [
+                StopCriteria.ALL_DATASETS_EXHAUSTED,
+                StopCriteria.FIRST_DATASET_EXHAUSTED,
+                StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
+            ],
+        )
+    )
+    def test_save_load_state_mixer_over_multiple_epochs(self, midpoint: int, stop_criteria: str):
+        mixer = MultiNodeWeightedSampler(self.datasets, self.weights, stop_criteria)
+        node = SamplerWrapper(mixer, initial_epoch=0)
+        run_test_save_load_state(self, node, midpoint)
