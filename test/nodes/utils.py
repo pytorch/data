@@ -118,10 +118,6 @@ class StatefulRange(Stateful):
         self._next_start = state_dict["_num_yielded"]
 
 
-def _convert_to_set_of_str(x):
-    return sorted(str(i) for i in x)
-
-
 def run_test_save_load_state(test, node: BaseNode, midpoint: int):
     ##############################
     # Generate initial, midpoint, and end state_dict's
