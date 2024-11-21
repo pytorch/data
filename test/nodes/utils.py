@@ -180,30 +180,3 @@ def run_test_save_load_state(test, node: BaseNode, midpoint: int):
     x.load_state_dict(state_dict_0_end)
     results_after_dict_0 = list(x)
     test.assertEqual(results_after_dict_0, results_1)
-
-
-def test_loader_correct_state_dict_at_midpoint(test, node: BaseNode, count: int):
-    x = Loader(node)
-    results = list(x)
-
-    # Create an iterator at end of iteration
-    it = iter(x)
-
-    results_copy = []
-    for _ in range(count // 2):
-        results_copy.append(next(it))
-    state_dict_0 = x.state_dict()
-
-    x.load_state_dict(state_dict_0)
-
-    # Create an iterator in the middle of iteration
-    it = iter(x)
-
-    test.assertEqual(x.state_dict(), state_dict_0)
-
-    for i in range(count // 2):
-        results_copy.append(next(it))
-
-    test.assertEqual(len(results), count)
-    test.assertEqual(len(results_copy), count)
-    test.assertEqual(results[count // 2 :], results_copy[count // 2 :])

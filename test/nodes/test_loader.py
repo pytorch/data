@@ -6,8 +6,37 @@
 
 from torch.testing._internal.common_utils import TestCase
 from torchdata.nodes.adapters import IterableWrapper
+from torchdata.nodes.base_node import BaseNode
+from torchdata.nodes.loader import Loader
 
-from .utils import DummyIterableDataset, StatefulRange, test_loader_correct_state_dict_at_midpoint
+from .utils import DummyIterableDataset, StatefulRange
+
+
+def test_loader_correct_state_dict_at_midpoint(test, node: BaseNode, count: int):
+    x = Loader(node)
+    results = list(x)
+
+    # Create an iterator at end of iteration
+    it = iter(x)
+
+    results_copy = []
+    for _ in range(count // 2):
+        results_copy.append(next(it))
+    state_dict_0 = x.state_dict()
+
+    x.load_state_dict(state_dict_0)
+
+    # Create an iterator in the middle of iteration
+    it = iter(x)
+
+    test.assertEqual(x.state_dict(), state_dict_0)
+
+    for i in range(count // 2):
+        results_copy.append(next(it))
+
+    test.assertEqual(len(results), count)
+    test.assertEqual(len(results_copy), count)
+    test.assertEqual(results[count // 2 :], results_copy[count // 2 :])
 
 
 class TestLoader(TestCase):
