@@ -13,6 +13,8 @@ from torchdata.nodes.adapters import IterableWrapper
 from torchdata.nodes.base_node import BaseNode
 from torchdata.nodes.loader import Loader
 
+from torchdata.nodes.types import Stateful
+
 
 class MockGenerator:
     def __init__(self, num_samples: int) -> None:
@@ -65,7 +67,7 @@ class IterInitError(BaseNode[int]):
 
 
 class DummyIterableDataset(torch.utils.data.IterableDataset):
-    def __init__(self, num_samples: int, name: str) -> None:
+    def __init__(self, num_samples: int, name: str = "test") -> None:
         self.num_samples = num_samples
         self.name = name
 
@@ -80,14 +82,40 @@ class DummyIterableDataset(torch.utils.data.IterableDataset):
 
 
 class DummyMapDataset(torch.utils.data.Dataset):
-    def __init__(self, num_samples: int) -> None:
+    def __init__(self, num_samples: int, name: str = "test") -> None:
         self.num_samples = num_samples
+        self.name = name
 
     def __len__(self) -> int:
         return self.num_samples
 
     def __getitem__(self, i: int) -> dict:
-        return {"step": i, "test_tensor": torch.tensor([i]), "test_str": f"str_{i}"}
+        return {
+            "name": self.name,
+            "step": i,
+            "test_tensor": torch.tensor([i]),
+            "test_str": f"str_{i}",
+        }
+
+
+class StatefulRange(Stateful):
+    def __init__(self, n: int) -> None:
+        self.n = n
+        self._num_yielded = 0
+        self._next_start = 0
+
+    def __iter__(self) -> Iterator[int]:
+        self._num_yielded = self._next_start  # Reset for next iter call
+        self._next_start = 0
+        for i in range(self._num_yielded, self.n):
+            self._num_yielded += 1
+            yield i
+
+    def state_dict(self) -> Dict[str, Any]:
+        return {"_num_yielded": self._num_yielded}
+
+    def load_state_dict(self, state_dict: Dict[str, Any]):
+        self._next_start = state_dict["_num_yielded"]
 
 
 def run_test_save_load_state(test, node: BaseNode, midpoint: int):
@@ -152,3 +180,30 @@ def run_test_save_load_state(test, node: BaseNode, midpoint: int):
     x.load_state_dict(state_dict_0_end)
     results_after_dict_0 = list(x)
     test.assertEqual(results_after_dict_0, results_1)
+
+
+def test_loader_correct_state_dict_at_midpoint(test, node: BaseNode, count: int):
+    x = Loader(node)
+    results = list(x)
+
+    # Create an iterator at end of iteration
+    it = iter(x)
+
+    results_copy = []
+    for _ in range(count // 2):
+        results_copy.append(next(it))
+    state_dict_0 = x.state_dict()
+
+    x.load_state_dict(state_dict_0)
+
+    # Create an iterator in the middle of iteration
+    it = iter(x)
+
+    test.assertEqual(x.state_dict(), state_dict_0)
+
+    for i in range(count // 2):
+        results_copy.append(next(it))
+
+    test.assertEqual(len(results), count)
+    test.assertEqual(len(results_copy), count)
+    test.assertEqual(results[count // 2 :], results_copy[count // 2 :])
