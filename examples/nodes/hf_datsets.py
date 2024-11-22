@@ -3,9 +3,7 @@ from datasets import Dataset  # make sure that you have huggingface datasets ins
 data = [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]]
 
 from torchdata.nodes.adapters import IterableWrapper
-from torchdata.nodes.base_node import BaseNode
 from torchdata.nodes.batch import Batcher
-from torchdata.nodes.loader import Loader
 from torchdata.nodes.map import Mapper, ParallelMapper
 from torchdata.nodes.prefetch import Prefetcher
 
