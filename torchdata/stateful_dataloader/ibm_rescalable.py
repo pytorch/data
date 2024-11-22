@@ -554,6 +554,13 @@ def save_distributed_state_dict(
     path: str,
     device_mesh=None,
 ):
+    """
+    Retrieves dataloader state dict, and separates worker states from loader state.
+    Loader state is not rescalable, and is saved using normal torch.save.
+    It is discarded when rescaling.
+    Rescalable worker states are compiled into a dtensor across ranks, and saved 
+    using pytorch distributed checkpointing.
+    """
     rank = loader.dataset.rank
     state = deepcopy(loader.state_dict())
     dstate = __pop_dstate(state, device_mesh, [dtensor.placement_types.Shard(0)])
@@ -572,6 +579,13 @@ def load_distributed_state_dict(
     path: str,
     device_mesh=None,
 ):
+    """
+    Retrieves dataloader state dict, and separates worker states from loader state.
+    If not rescaling, load saved dataloader state.
+    Rescalable worker states are retrieved using pytorch distributed checkpointing.
+    States are distributed over workers, and ScalableShardDataset will handle
+    partitioning and re-assignment of available states into logical ranks.
+    """
     base = loader.state_dict()
     nworkers = base["_snapshot"]["_main_snapshot"]["_num_workers"]
     rank = loader.dataset.rank
