@@ -45,10 +45,10 @@ mesh = dist.device_mesh.init_device_mesh("cpu", [world_size])
 placement = [dist.tensor.placement_types.Shard(0)]
 
 # Build dataloader
-data = DummyDataset("not_a_real_datapath", rank, world_size, delimiter_token=-1, seed=args.seed)
+data = DummyDataset(None, rank, world_size, delimiter_token=-1, seed=args.seed)
 # Pretend that we're sampling over multiple sub-datasets
 data = SamplingDataset(
-    "not_a_real_datapath",
+    None,
     data,
     delimiter_token=-1,
     datasets=["sub_dataset", "second_subdataset", "small_subdataset"],
