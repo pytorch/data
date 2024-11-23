@@ -388,7 +388,7 @@ class DummyDataset(_StatefulDataset):
     def state_dict(self):
         # Write generator state manually
         self.g_state = self.generator.get_state().tolist()
-        return super().state_dict()()
+        return super().state_dict()
 
     def load_state_dict(self, state_dict):
         super().load_state_dict(state_dict)
