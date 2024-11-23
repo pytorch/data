@@ -64,7 +64,7 @@ data = PreprocessDataset(data, torch.tensor)
 data = StatefulDataLoader(data, batch_size=args.b_size, num_workers=args.num_workers)
 
 # If checkpoint does not exist, create it
-if not os.path.exists(args.ckpt_path) or len(os.listdir(cfg.ckpt_save_path)) == 0:
+if not os.path.exists(args.ckpt_path) or len(os.listdir(args.ckpt_path)) == 0:
     os.makedirs(args.ckpt_path, exist_ok=True)
     # Iterate, assemble values to exclude
     if rank == 0:
