@@ -5,7 +5,7 @@ from copy import deepcopy
 from typing import Any, Callable, List
 
 import torch
-import torch.distributed as dist
+from torch.distributed import checkpoint
 import torch.distributed.tensor as dtensor
 import torch.utils.data as data
 
@@ -569,8 +569,8 @@ def save_distributed_state_dict(
     state = deepcopy(loader.state_dict())
     dstate = __pop_dstate(state, device_mesh, [dtensor.placement_types.Shard(0)])
     # Write distributed state dict
-    writer = dist.checkpoint.FileSystemWriter(path)
-    dist.checkpoint.save(
+    writer = checkpoint.FileSystemWriter(path)
+    checkpoint.save(
         dstate,
         writer,
     )
@@ -606,8 +606,8 @@ def load_distributed_state_dict(
         # On mismatch, discard saved non-reshardable loader state and start fresh
         state = base
     # Read distributed state dict
-    reader = dist.checkpoint.FileSystemReader(path)
-    dist.checkpoint.load_state_dict(
+    reader = checkpoint.FileSystemReader(path)
+    checkpoint.load_state_dict(
         dstate,
         reader,
     )
