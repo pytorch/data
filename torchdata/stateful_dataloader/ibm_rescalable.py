@@ -369,10 +369,14 @@ class DummyDataset(_StatefulDataset):
         self.seqlen = seqlen
         self.delimiter = delimiter_token
         # Ensure different seeds across ranks and datasets, for demo purposes
-        seed = seed + self.rank + len(datapath) * 100
-        self.generator = torch.Generator().manual_seed(seed)
+        self.seed = seed
+        self.generator = None
         self.g_state = None
         self.state_params = ["g_state"]
+
+    def setup(self):
+        super().setup()
+        self.generator = torch.Generator().manual_seed(self.seed + self.rank + len(self.datapath) * 100)
 
     def __iter__(self):
         while True:

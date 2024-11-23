@@ -48,7 +48,7 @@ placement = [dist.tensor.placement_types.Shard(0)]
 data = DummyDataset(None, rank, world_size, delimiter_token=-1, seed=args.seed)
 # Pretend that we're sampling over multiple sub-datasets
 data = SamplingDataset(
-    None,
+    "",
     data,
     delimiter_token=-1,
     datasets=["sub_dataset", "second_subdataset", "small_subdataset"],
