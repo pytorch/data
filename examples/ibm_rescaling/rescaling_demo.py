@@ -47,11 +47,13 @@ placement = [dist.tensor.placement_types.Shard(0)]
 # Build dataloader
 data = DummyDataset(None, rank, world_size, delimiter_token=-1, seed=args.seed)
 # Pretend that we're sampling over multiple sub-datasets
+subdatas = ["sub_dataset", "second_subdataset", "small_subdataset"]
+[os.makedirs(os.path.join(args.ckpt_path, "data", subdata), exist_ok=True) for subdata in subdatas]
 data = SamplingDataset(
-    "",
+    os.path.join(args.ckpt_path, "data"),
     data,
     delimiter_token=-1,
-    datasets=["sub_dataset", "second_subdataset", "small_subdataset"],
+    datasets=subdatas,
     weights=[12, 17, 5],
 )
 # Apply rescalability layer
