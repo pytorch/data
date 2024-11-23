@@ -366,7 +366,8 @@ class DummyDataset(_StatefulDataset):
 
     def setup(self):
         super().setup()
-        self.generator = torch.Generator().manual_seed(self.seed + self.rank + len(self.datapath) * 100)
+        if self.generator is None:
+            self.generator = torch.Generator().manual_seed(self.seed + self.rank + len(self.datapath) * 100)
 
     def __iter__(self):
         self.setup()
