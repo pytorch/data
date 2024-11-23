@@ -379,6 +379,7 @@ class DummyDataset(_StatefulDataset):
         self.generator = torch.Generator().manual_seed(self.seed + self.rank + len(self.datapath) * 100)
 
     def __iter__(self):
+        self.setup()
         while True:
             out = torch.rand(self.seqlen, generator=self.generator)
             out = out.mul(self.vocab).int().tolist()
@@ -386,6 +387,7 @@ class DummyDataset(_StatefulDataset):
             yield out
 
     def state_dict(self):
+        self.setup()
         # Write generator state manually
         self.g_state = self.generator.get_state().tolist()
         return super().state_dict()
