@@ -375,8 +375,6 @@ class DummyDataset(_StatefulDataset):
             out = torch.rand(self.seqlen, generator=self.generator)
             out = out.mul(self.vocab).int().tolist()
             out[-1] = self.delimiter
-            if self.rank==0:
-                print(out)
             yield out
 
     def state_dict(self):

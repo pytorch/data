@@ -49,15 +49,15 @@ subdatas = ["sub_dataset", "second_subdataset", "small_subdataset"]
 # Build dataloader
 data = DummyDataset(os.path.join(args.ckpt_path, "data"), rank, world_size, delimiter_token=-1, seed=args.seed)
 # Pretend that we're sampling over multiple sub-datasets
-# data = SamplingDataset(
-#     os.path.join(args.ckpt_path, "data"),
-#     data,
-#     delimiter_token=-1,
-#     datasets=subdatas,
-#     weights=[12, 17, 5],
-# )
+data = SamplingDataset(
+    os.path.join(args.ckpt_path, "data"),
+    data,
+    delimiter_token=-1,
+    datasets=subdatas,
+    weights=[12, 17, 5],
+)
 # Apply rescalability layer
-# data = ScalableShardDataset(data, n_logical_shards=args.logical_shards)
+data = ScalableShardDataset(data, n_logical_shards=args.logical_shards)
 # Statelessly convert all outputs to tensors
 data = PreprocessDataset(data, torch.tensor)
 # Wrap in StatefulDataLoader
