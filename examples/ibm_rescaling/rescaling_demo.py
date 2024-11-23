@@ -130,7 +130,6 @@ else:
     if rank == 0:
         avoid = torch.load(os.path.join(args.ckpt_path, "avoid.pth"))
         include = torch.load(os.path.join(args.ckpt_path, "include.pth"))
-        torch.save(vals, os.path.join(args.ckpt_path, "vals.pth"))
 
         def _in(v, m):
             # Returns whether vector v is a row of matrix m (both tensors)
