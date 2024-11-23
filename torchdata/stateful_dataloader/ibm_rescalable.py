@@ -392,9 +392,8 @@ class DummyDataset(_StatefulDataset):
 
     def load_state_dict(self, state_dict):
         super().load_state_dict(state_dict)
-        # Manually set generator state if it exists
-        if self.g_state is not None:
-            self.generator.set_state(torch.tensor(self.g_state, dtype=torch.uint8))
+        # Manually set generator state
+        self.generator.set_state(torch.tensor(self.g_state, dtype=torch.uint8))
 
 
 class ScalableShardDataset(_WrapperDataset):
