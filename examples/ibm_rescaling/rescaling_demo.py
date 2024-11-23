@@ -64,8 +64,9 @@ data = PreprocessDataset(data, torch.tensor)
 data = StatefulDataLoader(data, batch_size=args.b_size, num_workers=args.num_workers)
 
 # If checkpoint does not exist, create it
-if not os.path.exists(args.ckpt_path) or len(os.listdir(args.ckpt_path)) == 0:
-    os.makedirs(args.ckpt_path, exist_ok=True)
+ckpt_path = os.path.join(args.ckpt_path, "loader_dcp_state")
+if not os.path.exists(ckpt_path) or len(os.listdir(ckpt_path)) == 0:
+    os.makedirs(ckpt_path, exist_ok=True)
     # Iterate, assemble values to exclude
     if rank == 0:
         print("No existing checkpoint. Processing 100 steps.")
@@ -75,7 +76,7 @@ if not os.path.exists(args.ckpt_path) or len(os.listdir(args.ckpt_path)) == 0:
         if i == 100:
             if rank == 0:
                 print("Iteration complete!")
-            save_distributed_state_dict(data, os.path.join(args.ckpt_path, "loader_dcp_state"), mesh)
+            save_distributed_state_dict(data, ckpt_path, mesh)
             break
         avoid.append(inp)
     avoid = torch.cat(avoid)
@@ -87,7 +88,7 @@ if not os.path.exists(args.ckpt_path) or len(os.listdir(args.ckpt_path)) == 0:
     ).full_tensor()
 
     # Continue, assemble values to include
-    load_distributed_state_dict(data, os.path.join(args.ckpt_path, "loader_dcp_state"), mesh)
+    load_distributed_state_dict(data, ckpt_path, mesh)
     if rank == 0:
         print("DCP state loaded!")
 
@@ -114,7 +115,7 @@ if not os.path.exists(args.ckpt_path) or len(os.listdir(args.ckpt_path)) == 0:
 else:
     if rank == 0:
         print("Checkpoint detected!")
-    load_distributed_state_dict(data, os.path.join(args.ckpt_path, "loader_dcp_state"), mesh)
+    load_distributed_state_dict(data, ckpt_path, mesh)
 
     vals = []
     for i, inp in enumerate(data):
