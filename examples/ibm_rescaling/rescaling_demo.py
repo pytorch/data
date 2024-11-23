@@ -57,7 +57,7 @@ subdatas = ["sub_dataset", "second_subdataset", "small_subdataset"]
 #     weights=[12, 17, 5],
 # )
 # Apply rescalability layer
-data = ScalableShardDataset(data, n_logical_shards=args.logical_shards)
+# data = ScalableShardDataset(data, n_logical_shards=args.logical_shards)
 # Statelessly convert all outputs to tensors
 data = PreprocessDataset(data, torch.tensor)
 # Wrap in StatefulDataLoader
