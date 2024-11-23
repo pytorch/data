@@ -45,7 +45,7 @@ mesh = dist.device_mesh.init_device_mesh("cpu", [world_size])
 placement = [dist.tensor.placement_types.Shard(0)]
 
 # Build dataloader
-data = DummyDataset("data", rank, world_size, delimiter_token=-1, seed=args.seed)
+data = DummyDataset(os.path.join(args.ckpt_path, "data"), rank, world_size, delimiter_token=-1, seed=args.seed)
 # Pretend that we're sampling over multiple sub-datasets
 subdatas = ["sub_dataset", "second_subdataset", "small_subdataset"]
 [os.makedirs(os.path.join(args.ckpt_path, "data", subdata), exist_ok=True) for subdata in subdatas]
