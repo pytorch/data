@@ -48,16 +48,6 @@ def _shard_partition(itemlist: List[Any], rank: int, worldsize: int) -> List[Any
     return itemlist[(rank * len(itemlist)) // worldsize : ((rank + 1) * len(itemlist)) // worldsize]
 
 
-def _shard_inclusive(itemlist: List[Any], rank: int, worldsize: int) -> List[Any]:
-    """
-    In cases where len(itemlist) % worldsize != 0, allow for fractional ownership of items,
-    and return the span including all owned items, fractional or otherwise.
-    """
-    start = math.floor(len(itemlist) * rank / worldsize)
-    end = math.ceil(len(itemlist) * (rank + 1) / worldsize)
-    return itemlist[start:end]
-
-
 class _StatefulDataset(data.IterableDataset):
     """
     Stub for stateful datasets, extends data.IterableDataset with state_dict methods.
@@ -384,6 +374,8 @@ class DummyDataset(_StatefulDataset):
             out = torch.rand(self.seqlen, generator=self.generator)
             out = out.mul(self.vocab).int().tolist()
             out[-1] = self.delimiter
+            if self.rank==0:
+                print(out)
             yield out
 
     def state_dict(self):
