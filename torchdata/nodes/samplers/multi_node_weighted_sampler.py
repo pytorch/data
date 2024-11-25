@@ -110,38 +110,35 @@ class MultiNodeWeightedSampler(BaseNode[T]):
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
 
+        self._initial_state = initial_state
         if initial_state is not None:
-            self._initial_state = initial_state
             self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
             self.epoch = initial_state[self.EPOCH_KEY]
-            self._weighted_sampler = _WeightedSampler(
-                weights=self.weights,
-                seed=self.seed,
-                rank=self.rank,
-                world_size=self.world_size,
-                epoch=self.epoch,
-                initial_state=initial_state[self.WEIGHTED_SAMPLER_STATE_KEY],
-            )
+            self._weighted_sampler = self._get_new_weighted_sampler(initial_state)
             self._datasets_exhausted = initial_state[self.DATASETS_EXHAUSTED_KEY]
             for k in self.dataset_names:
                 self.source_nodes[k].reset(initial_state[self.DATASET_NODE_STATES_KEY][k])
         else:
             # Force a fresh iterator from all source nodes
             self._num_yielded = 0
-            self._weighted_sampler = _WeightedSampler(
-                weights=self.weights,
-                seed=self.seed,
-                rank=self.rank,
-                world_size=self.world_size,
-                epoch=self.epoch,
-            )
+            self._weighted_sampler = self._get_new_weighted_sampler()
             self._datasets_exhausted = {key: False for key in self.weights.keys()}
             for k in self.dataset_names:
                 self.source_nodes[k].reset()
 
     def set_epoch(self, epoch: int) -> None:
         self.epoch = epoch
-        self.reset(self._initial_state)
+        self._weighted_sampler = self._get_new_weighted_sampler(self._initial_state)
+
+    def _get_new_weighted_sampler(self, initial_state=None):
+        return _WeightedSampler(
+            weights=self.weights,
+            seed=self.seed,
+            rank=self.rank,
+            world_size=self.world_size,
+            epoch=self.epoch,
+            initial_state=(initial_state[self.WEIGHTED_SAMPLER_STATE_KEY] if initial_state is not None else None),
+        )
 
     def _check_for_stop_iteration(self) -> None:
         if all(self._datasets_exhausted.values()):

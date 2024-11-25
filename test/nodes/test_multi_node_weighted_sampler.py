@@ -10,6 +10,8 @@ from enum import unique
 from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
 from torchdata.nodes.adapters import IterableWrapper, SamplerWrapper
+
+from torchdata.nodes.epoch_updater import EpochUpdater
 from torchdata.nodes.prefetch import Prefetcher
 
 from torchdata.nodes.samplers.multi_node_weighted_sampler import MultiNodeWeightedSampler
@@ -223,7 +225,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             self.assertEqual(mixer.epoch, i)
             results = list(mixer)
             overall_results.append(results)
-            mixer.reset()  # redundant, mixer.set_epoch() resets the sampler
+            mixer.reset()
 
         unique_results = []
         for results in overall_results:
@@ -239,11 +241,12 @@ class TestMultiNodeWeightedSampler(TestCase):
             self.datasets,
             self.weights,
         )
-        node = SamplerWrapper(mixer, initial_epoch=0)
+        node = EpochUpdater(mixer, initial_epoch=0)
+        self.assertEqual(node.epoch, 0)
 
         overall_results = []
         for i in range(self._num_epochs):
-            self.assertEqual(mixer.epoch, i)
+            self.assertEqual(node.epoch, i)
             results = list(node)
             overall_results.append(results)
             node.reset()
@@ -267,5 +270,5 @@ class TestMultiNodeWeightedSampler(TestCase):
     )
     def test_save_load_state_mixer_over_multiple_epochs(self, midpoint: int, stop_criteria: str):
         mixer = MultiNodeWeightedSampler(self.datasets, self.weights, stop_criteria)
-        node = SamplerWrapper(mixer, initial_epoch=0)
+        node = EpochUpdater(mixer, initial_epoch=0)
         run_test_save_load_state(self, node, midpoint)
