@@ -12,6 +12,7 @@ from .map import Mapper, ParallelMapper
 from .pin_memory import PinMemory
 from .prefetch import Prefetcher
 from .samplers.multi_node_weighted_sampler import MultiNodeWeightedSampler
+from .samplers.stop_criteria import StopCriteria
 from .types import Stateful
 
 
@@ -28,6 +29,7 @@ __all__ = [
     "Prefetcher",
     "SamplerWrapper",
     "Stateful",
+    "StopCriteria",
     "T",
 ]
 
