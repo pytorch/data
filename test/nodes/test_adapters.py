@@ -12,29 +12,7 @@ from torch.testing._internal.common_utils import TestCase
 from torch.utils.data import DistributedSampler, RandomSampler
 from torchdata.nodes.adapters import IterableWrapper, MapStyleWrapper, SamplerWrapper
 
-from torchdata.nodes.types import Stateful
-
-from .utils import DummyIterableDataset, DummyMapDataset, run_test_save_load_state
-
-
-class _StatefulRange(Stateful):
-    def __init__(self, n: int) -> None:
-        self.n = n
-        self._num_yielded = 0
-        self._next_start = 0
-
-    def __iter__(self) -> Iterator[int]:
-        self._num_yielded = self._next_start  # Reset for next iter call
-        self._next_start = 0
-        for i in range(self._num_yielded, self.n):
-            self._num_yielded += 1
-            yield i
-
-    def state_dict(self) -> Dict[str, Any]:
-        return {"_num_yielded": self._num_yielded}
-
-    def load_state_dict(self, state_dict: Dict[str, Any]):
-        self._next_start = state_dict["_num_yielded"]
+from .utils import DummyIterableDataset, DummyMapDataset, run_test_save_load_state, StatefulRange
 
 
 class TestIterableWrapper(TestCase):
@@ -78,7 +56,7 @@ class TestIterableWrapper(TestCase):
 
     @parameterized.expand([0, 5])
     def test_save_load_state_stateful(self, midpoint: int):
-        run_test_save_load_state(self, IterableWrapper(_StatefulRange(10)), midpoint)
+        run_test_save_load_state(self, IterableWrapper(StatefulRange(10)), midpoint)
 
 
 class TestMapStyle(TestCase):
@@ -137,7 +115,7 @@ class TestMapStyle(TestCase):
     @parameterized.expand([0, 7])
     def test_save_load_state_stateful(self, midpoint: int):
         n = 20
-        node = MapStyleWrapper(DummyMapDataset(n), sampler=_StatefulRange(n))
+        node = MapStyleWrapper(DummyMapDataset(n), sampler=StatefulRange(n))
         run_test_save_load_state(self, node, midpoint)
 
 
