@@ -56,10 +56,10 @@ def _populate_queue(
         assert (
             isinstance(snapshot_frequency, int) and snapshot_frequency >= 0
         ), f"snapshot_frequency must be non-negative integer! Got {snapshot_frequency}"
-        src_iter = iter(source)
+        snapshot_store.append(snapshot=source.state_dict(), version=-1)
     except Exception:
         e = StartupExceptionWrapper(where="in _populate_queue startup for device")
-        _put(e, block=False)
+        _put(e, block=False, snapshot=e)
         return
 
     yielded = 0
@@ -67,7 +67,7 @@ def _populate_queue(
         if not semaphore.acquire(blocking=True, timeout=QUEUE_TIMEOUT):
             continue
         try:
-            item = next(src_iter)  # FIXME: This may hang!
+            item = next(source)  # FIXME: This may hang!
             yielded += 1
             snapshot = None
             if snapshot_frequency > 0 and yielded % snapshot_frequency == 0:

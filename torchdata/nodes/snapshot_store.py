@@ -31,7 +31,7 @@ class DequeSnapshotStore(SnapshotStore):
 
     def __init__(self, max_size: Optional[int] = None) -> None:
         self._deque: deque = deque(maxlen=max_size)
-        self._max_version: int = -1
+        self._max_version: int = -1000
 
     def append(self, snapshot: Any, version: int) -> None:
         if version <= self._max_version:
