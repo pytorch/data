@@ -7,7 +7,6 @@
 from .adapters import IterableWrapper, MapStyleWrapper, SamplerWrapper
 from .base_node import BaseNode, T
 from .batch import Batcher
-from .epoch_updater import EpochUpdater
 from .loader import Loader
 from .map import Mapper, ParallelMapper
 from .pin_memory import PinMemory
@@ -20,7 +19,6 @@ from .types import Stateful
 __all__ = [
     "BaseNode",
     "Batcher",
-    "EpochUpdater",
     "IterableWrapper",
     "Loader",
     "MapStyleWrapper",
