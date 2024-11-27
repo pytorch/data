@@ -15,8 +15,8 @@ def _get_rank_seed(seed: int, generator_rank: torch.Generator, rank: int, world_
     return int(torch.randint(0, 2 ** 32 - 1, size=(1,), generator=generator_rank).item())
 
 
-def _get_epoch_seed(generator_epoch: torch.Generator) -> int:
-    return int(torch.randint(0, 2 ** 32 - 1, size=(1,), generator=generator_epoch).item())
+def _update_epoch_seed(epoch_seed: int) -> int:
+    return epoch_seed + 1
 
 
 def get_rank_and_world_size() -> tuple[int, int]:

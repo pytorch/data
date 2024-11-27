@@ -211,6 +211,7 @@ class TestMultiNodeWeightedSampler(TestCase):
         self.assertEqual(unique_results, global_results)
 
     def test_multi_node_weighted_batch_sampler_results_for_multiple_epochs(self):
+        # Check the mixer node
         mixer = MultiNodeWeightedSampler(
             self.datasets,
             self.weights,
@@ -221,6 +222,27 @@ class TestMultiNodeWeightedSampler(TestCase):
             results = list(mixer)
             overall_results.append(results)
             mixer.reset()
+
+        unique_results = []
+        for results in overall_results:
+            if results not in unique_results:
+                unique_results.append(results)
+
+        self.assertEqual(unique_results, overall_results)
+
+        # Check mixer along with Prefetcher node
+        node = self._setup_multi_node_weighted_sampler(
+            self._num_samples,
+            self._num_datasets,
+            self._weights_fn,
+            stop_criteria=StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
+        )
+
+        overall_results = []
+        for i in range(self._num_epochs):
+            results = list(node)
+            overall_results.append(results)
+            node.reset()
 
         unique_results = []
         for results in overall_results:
