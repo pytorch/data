@@ -118,7 +118,7 @@ class StatefulRange(Stateful):
         self._next_start = state_dict["_num_yielded"]
 
 
-class StatefulRangeNode(BaseNode[Tuple[int, int]]):
+class StatefulRangeNode(BaseNode[Dict[str, int]]):
     def __init__(self, n: int) -> None:
         super().__init__()
         self.n = n
@@ -134,10 +134,10 @@ class StatefulRangeNode(BaseNode[Tuple[int, int]]):
             self.i = 0
             self.num_resets += 1
 
-    def next(self) -> Iterator[Tuple[int, int]]:
+    def next(self) -> Iterator[Dict[str, int]]:
         if self.i == self.n:
             raise StopIteration()
-        ret = self.i, self.num_resets
+        ret = {"i": self.i, "resets": self.num_resets}
         self.i += 1
         return ret
 

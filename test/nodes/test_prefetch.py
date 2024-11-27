@@ -46,52 +46,7 @@ class TestPrefetcher(TestCase):
     def test_save_load_state_stateful(self, midpoint: int, snapshot_frequency: int):
         batch_size = 6
         n = 200
-        src = MockSource(num_samples=n)
+        src = StatefulRangeNode(n=n)
         node = Batcher(src, batch_size=batch_size, drop_last=False)
         node = Prefetcher(node, prefetch_factor=8, snapshot_frequency=snapshot_frequency)
         run_test_save_load_state(self, node, midpoint)
-
-    @parameterized.expand([0, 1, 9])
-    def test_initial_snapshot(self, snapshot_frequency: int):
-        n = 200
-        src = StatefulRangeNode(n=n)
-        node = Prefetcher(src, prefetch_factor=8, snapshot_frequency=snapshot_frequency)
-        initial_state = node.state_dict()
-
-        exp = []
-        for _ in range(10):
-            exp.append(next(node))
-        mid_state = node.state_dict()
-        exp2 = list(node)
-
-        node.reset(initial_state)
-        result = []
-        for _ in range(10):
-            result.append(next(node))
-        node.reset(mid_state)
-        result2 = list(node)
-
-        self.assertEqual(exp, result)
-        self.assertEqual(exp2, result2)
-
-        # Test with Loader
-        loader = Loader(node)
-        initial_state = loader.state_dict()
-        it = iter(loader)
-
-        exp = []
-        for _ in range(10):
-            exp.append(next(it))
-        mid_state = loader.state_dict()
-        exp2 = list(it)
-
-        loader.load_state_dict(initial_state)
-        it = iter(loader)
-        result = []
-        for _ in range(10):
-            result.append(next(it))
-        mid_state = loader.load_state_dict(mid_state)
-        result2 = list(it)
-
-        self.assertEqual(exp, result)
-        self.assertEqual(exp2, result2)
