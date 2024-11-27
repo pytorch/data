@@ -201,6 +201,22 @@ class MultiNodeWeightedSampler(BaseNode[T]):
 
 
 class _WeightedSampler:
+    """A weighted sampler that samples from a list of weights.
+
+    The class implements the state using the following keys:
+    - g_state: The state of the random number generator.
+    - g_rank_state: The state of the random number generator for the rank.
+    - offset: The offset of the batch of indices.
+
+    Parameters:
+        weights (Dict[str, float]): A dictionary of weights for each source node.
+        seed (int): The seed for the random number generator.
+        rank (int): The rank of the current process.
+        world_size (int): The world size of the distributed environment.
+        randon_tensor_batch_size (int): The batch size for the random tensor. Default is 1000.
+        initial_state (Optional[Dict[str, Any]]): The initial state of the sampler. Default is None.
+    """
+
     def __init__(
         self,
         weights: Dict[str, float],
