@@ -46,7 +46,11 @@ def _populate_queue(
     # Include a monotonic index starting from 0 to each item in the queue
     idx = MonotonicIndex()
 
-    def _put(item, block: bool = True, snapshot: Optional[Dict[str, Any]] = None):
+    def _put(
+        item,
+        block: bool = True,
+        snapshot: Optional[Union[Dict[str, Any], StartupExceptionWrapper]] = None,
+    ):
         _idx = idx.get()
         if snapshot:
             snapshot_store.append(snapshot=snapshot, version=_idx)

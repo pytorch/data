@@ -6,7 +6,7 @@
 
 import random
 import time
-from typing import Any, Dict, Iterator, Optional, Tuple
+from typing import Any, Dict, Iterator, Optional
 
 import torch
 from torchdata.nodes.adapters import IterableWrapper
