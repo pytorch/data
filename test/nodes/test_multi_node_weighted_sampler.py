@@ -37,12 +37,11 @@ class TestMultiNodeWeightedSampler(TestCase):
         except ImportError:
             self.fail("MultiNodeWeightedSampler or StopCriteria failed to import")
 
-    def _setup_multi_node_wighted_sampler(self, num_samples, num_datasets, weights_fn, stop_criteria):
+    def _setup_multi_node_wighted_sampler(self, num_samples, num_datasets, weights_fn, stop_criteria) -> Prefetcher:
 
         datasets = {f"ds{i}": IterableWrapper(DummyIterableDataset(num_samples, f"ds{i}")) for i in range(num_datasets)}
         weights = {f"ds{i}": weights_fn(i) for i in range(num_datasets)}
         node = MultiNodeWeightedSampler(datasets, weights, stop_criteria)
-        # node = Batcher(node, batch_size=1, drop_last=True)
         return Prefetcher(node, prefetch_factor=3)
 
     def test_multi_node_weighted_sampler_weight_sampler_keys_mismatch(self) -> None:
