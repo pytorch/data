@@ -11,8 +11,11 @@ import torch.distributed as dist
 
 
 def _get_rank_seed(seed: int, generator_rank: torch.Generator, rank: int, world_size: int, epoch: int) -> int:
-    generator_rank.manual_seed(seed * world_size + rank + epoch)
-    return int(torch.randint(0, 2 ** 32 - 1, size=(1,), generator=generator_rank).item())
+    generator_rank.manual_seed(seed * world_size + rank)
+    _random_seed: int = 0
+    for _ in range(epoch):
+        _random_seed = int(torch.randint(0, 2 ** 32 - 1, size=(1,), generator=generator_rank).item())
+    return _random_seed
 
 
 def _update_epoch_seed(epoch_seed: int) -> int:
