@@ -32,6 +32,12 @@ class TestMultiNodeWeightedSampler(TestCase):
         }
         self.weights = {f"ds{i}": self._weights_fn(i) for i in range(self._num_datasets)}
 
+    def test_torchdata_nodes_imports(self) -> None:
+        try:
+            from torchdata.nodes import MultiNodeWeightedSampler, StopCriteria  # noqa
+        except ImportError:
+            self.fail("MultiNodeWeightedSampler or StopCriteria failed to import")
+
     def _setup_multi_node_wighted_sampler(self, num_samples, num_datasets, weights_fn, stop_criteria) -> Prefetcher:
 
         datasets = {f"ds{i}": IterableWrapper(DummyIterableDataset(num_samples, f"ds{i}")) for i in range(num_datasets)}
