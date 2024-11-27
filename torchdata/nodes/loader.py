@@ -10,10 +10,23 @@ class Loader(Generic[T]):
         self.restart_on_stop_iteration = restart_on_stop_iteration
         self._next_iter_state_dict: Optional[Dict[str, Any]] = None
         self._it: Optional[LoaderIterator[T]] = None
+        # Tracks whether an iterator was created solely for getting a state_dict, in which case
+        # we don't want to reset the iterator. Consider these two cases, which should behave the same
+        # it = iter(loader)
+        # sd = loader.state_dict()  # No extra __iter__ call as _it already exists
+        # for _ in it: ...
+        # --------
+        # sd = loader.state_dict()  # Calls __iter__ since _it is None
+        # it = iter(loader)  # We don't want to reset the iterator here again
+        # for _ in it: ...
+        self._iter_for_state_dict: bool = False
 
     def __iter__(self):
         if self._it is None:
             self._it = LoaderIterator(self)
+        elif self._iter_for_state_dict:
+            self._iter_for_state_dict = False
+            return self._it  # This was already pre-called to get a state dict
 
         if self._next_iter_state_dict is not None:
             self._it.reset(initial_state=self._next_iter_state_dict)
@@ -31,6 +44,7 @@ class Loader(Generic[T]):
     def state_dict(self) -> Dict[str, Any]:
         if self._it is None:
             iter(self)
+            self._iter_for_state_dict = True
         return self._it.state_dict()  # type:ignore[union-attr]
 
 

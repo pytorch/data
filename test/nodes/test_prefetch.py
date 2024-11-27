@@ -9,10 +9,12 @@ import itertools
 import torch
 from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
+from torchdata.nodes.adapters import IterableWrapper
 from torchdata.nodes.batch import Batcher
+from torchdata.nodes.loader import Loader
 from torchdata.nodes.prefetch import Prefetcher
 
-from .utils import IterInitError, MockSource, run_test_save_load_state
+from .utils import IterInitError, MockSource, run_test_save_load_state, StatefulRangeNode
 
 
 class TestPrefetcher(TestCase):
@@ -48,3 +50,48 @@ class TestPrefetcher(TestCase):
         node = Batcher(src, batch_size=batch_size, drop_last=False)
         node = Prefetcher(node, prefetch_factor=8, snapshot_frequency=snapshot_frequency)
         run_test_save_load_state(self, node, midpoint)
+
+    @parameterized.expand([0, 1, 9])
+    def test_initial_snapshot(self, snapshot_frequency: int):
+        n = 200
+        src = StatefulRangeNode(n=n)
+        node = Prefetcher(src, prefetch_factor=8, snapshot_frequency=snapshot_frequency)
+        initial_state = node.state_dict()
+
+        exp = []
+        for _ in range(10):
+            exp.append(next(node))
+        mid_state = node.state_dict()
+        exp2 = list(node)
+
+        node.reset(initial_state)
+        result = []
+        for _ in range(10):
+            result.append(next(node))
+        node.reset(mid_state)
+        result2 = list(node)
+
+        self.assertEqual(exp, result)
+        self.assertEqual(exp2, result2)
+
+        # Test with Loader
+        loader = Loader(node)
+        initial_state = loader.state_dict()
+        it = iter(loader)
+
+        exp = []
+        for _ in range(10):
+            exp.append(next(it))
+        mid_state = loader.state_dict()
+        exp2 = list(it)
+
+        loader.load_state_dict(initial_state)
+        it = iter(loader)
+        result = []
+        for _ in range(10):
+            result.append(next(it))
+        mid_state = loader.load_state_dict(mid_state)
+        result2 = list(it)
+
+        self.assertEqual(exp, result)
+        self.assertEqual(exp2, result2)
