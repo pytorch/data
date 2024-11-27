@@ -9,8 +9,8 @@ import itertools
 from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
 from torchdata.nodes.adapters import IterableWrapper
-
 from torchdata.nodes.prefetch import Prefetcher
+
 from torchdata.nodes.samplers.multi_node_weighted_sampler import MultiNodeWeightedSampler
 from torchdata.nodes.samplers.stop_criteria import StopCriteria
 
@@ -37,7 +37,7 @@ class TestMultiNodeWeightedSampler(TestCase):
         except ImportError:
             self.fail("MultiNodeWeightedSampler or StopCriteria failed to import")
 
-    def _setup_multi_node_wighted_sampler(self, num_samples, num_datasets, weights_fn, stop_criteria) -> Prefetcher:
+    def _setup_multi_node_weighted_sampler(self, num_samples, num_datasets, weights_fn, stop_criteria) -> Prefetcher:
 
         datasets = {f"ds{i}": IterableWrapper(DummyIterableDataset(num_samples, f"ds{i}")) for i in range(num_datasets)}
         weights = {f"ds{i}": weights_fn(i) for i in range(num_datasets)}
@@ -94,7 +94,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             )
 
     def test_multi_node_weighted_sampler_first_exhausted(self) -> None:
-        mixer = self._setup_multi_node_wighted_sampler(
+        mixer = self._setup_multi_node_weighted_sampler(
             self._num_samples,
             self._num_datasets,
             self._weights_fn,
@@ -115,7 +115,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             mixer.reset()
 
     def test_multi_node_weighted_sampler_all_dataset_exhausted(self) -> None:
-        mixer = self._setup_multi_node_wighted_sampler(
+        mixer = self._setup_multi_node_weighted_sampler(
             self._num_samples,
             self._num_datasets,
             self._weights_fn,
@@ -139,7 +139,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             mixer.reset()
 
     def test_multi_node_weighted_sampler_cycle_until_all_exhausted(self) -> None:
-        mixer = self._setup_multi_node_wighted_sampler(
+        mixer = self._setup_multi_node_weighted_sampler(
             self._num_samples,
             self._num_datasets,
             self._weights_fn,
@@ -182,7 +182,7 @@ class TestMultiNodeWeightedSampler(TestCase):
         num_samples = 1500
         num_datasets = 5
 
-        mixer = self._setup_multi_node_wighted_sampler(
+        mixer = self._setup_multi_node_weighted_sampler(
             num_samples,
             num_datasets,
             self._weights_fn,
@@ -254,10 +254,10 @@ class TestMultiNodeWeightedSampler(TestCase):
         )
     )
     def test_save_load_state_mixer_over_multiple_epochs_with_prefetcher(self, midpoint: int, stop_criteria: str):
-        node = self._setup_multi_node_wighted_sampler(
+        node = self._setup_multi_node_weighted_sampler(
             self._num_samples,
             self._num_datasets,
             self._weights_fn,
-            stop_criteria=StopCriteria.FIRST_DATASET_EXHAUSTED,
+            stop_criteria=stop_criteria,
         )
         run_test_save_load_state(self, node, midpoint)

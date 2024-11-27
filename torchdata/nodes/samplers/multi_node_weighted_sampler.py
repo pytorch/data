@@ -26,6 +26,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
     The node implements the state using the following keys:
     - DATASET_NODE_STATES_KEY: A dictionary of states for each source node.
     - DATASETS_EXHAUSTED_KEY: A dictionary of booleans indicating whether each source node is exhausted.
+    - EPOCH_GENERATOR_KEY: The state of the epoch generator.
     - NUM_YIELDED_KEY: The number of items yielded.
     - WEIGHTED_SAMPLER_STATE_KEY: The state of the weighted sampler.
 
@@ -201,16 +202,12 @@ class MultiNodeWeightedSampler(BaseNode[T]):
 
     def get_state(self) -> Dict[str, Any]:
         return {
-            self.NUM_YIELDED_KEY: self._num_yielded,
-            self.EPOCH_GENERATOR_KEY: self._g_epoch.get_state(),
-            self.WEIGHTED_SAMPLER_STATE_KEY: self._weighted_sampler.state_dict(),
             self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
             self.DATASET_NODE_STATES_KEY: {k: self.source_nodes[k].state_dict() for k in self.dataset_names},
+            self.EPOCH_GENERATOR_KEY: self._g_epoch.get_state(),
+            self.NUM_YIELDED_KEY: self._num_yielded,
+            self.WEIGHTED_SAMPLER_STATE_KEY: self._weighted_sampler.state_dict(),
         }
-
-    @classmethod
-    def _default_epoch_updater_fn(cls, epoch: int) -> int:
-        return epoch + 1
 
 
 class _WeightedSampler:
