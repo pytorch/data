@@ -192,6 +192,12 @@ class _ParallelMapperIter(Iterator[T]):
         if self.in_order:
             self._sort_thread.start()
 
+        # Try and get initial snapshot
+        while self._snapshot is None:
+            self._maybe_update_snapshot(-1)
+        if isinstance(self._snapshot, ExceptionWrapper):
+            self._snapshot.reraise()
+
         for i in range(fast_forward):
             try:
                 next(self)
@@ -417,6 +423,13 @@ class _SingleThreadedMapper(Iterator[T]):
             daemon=True,
         )
         self._thread.start()
+
+        # Try and get initial snapshot
+        while self._snapshot is None:
+            self._maybe_update_snapshot(-1)
+        if isinstance(self._snapshot, ExceptionWrapper):
+            self._snapshot.reraise()
+
         for i in range(self._fast_forward):
             try:
                 next(self)

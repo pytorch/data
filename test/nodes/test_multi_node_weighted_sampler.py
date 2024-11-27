@@ -10,6 +10,7 @@ from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
 from torchdata.nodes.adapters import IterableWrapper
 
+from torchdata.nodes.prefetch import Prefetcher
 from torchdata.nodes.samplers.multi_node_weighted_sampler import MultiNodeWeightedSampler
 from torchdata.nodes.samplers.stop_criteria import StopCriteria
 
@@ -40,7 +41,9 @@ class TestMultiNodeWeightedSampler(TestCase):
 
         datasets = {f"ds{i}": IterableWrapper(DummyIterableDataset(num_samples, f"ds{i}")) for i in range(num_datasets)}
         weights = {f"ds{i}": weights_fn(i) for i in range(num_datasets)}
-        return MultiNodeWeightedSampler(datasets, weights, stop_criteria)
+        node = MultiNodeWeightedSampler(datasets, weights, stop_criteria)
+        # node = Batcher(node, batch_size=1, drop_last=True)
+        return Prefetcher(node, prefetch_factor=3)
 
     def test_multi_node_weighted_sampler_weight_sampler_keys_mismatch(self) -> None:
         """
@@ -216,7 +219,6 @@ class TestMultiNodeWeightedSampler(TestCase):
 
         overall_results = []
         for i in range(self._num_epochs):
-            # self.assertEqual(mixer.epoch, i)
             results = list(mixer)
             overall_results.append(results)
             mixer.reset()
@@ -227,34 +229,6 @@ class TestMultiNodeWeightedSampler(TestCase):
                 unique_results.append(results)
 
         self.assertEqual(unique_results, overall_results)
-
-    def test_multi_node_weighted_batch_sampler_results_for_differet_epoch_updater_fn(
-        self,
-    ):
-        def epoch_updater_fn(epoch: int) -> int:
-            return epoch + 2
-
-        mixer = MultiNodeWeightedSampler(
-            self.datasets,
-            self.weights,
-            epoch_updater_fn=epoch_updater_fn,
-        )
-
-        desired_epochs = []
-        initial_epoch, current_epoch = 0, 0
-        for i in range(self._num_epochs):
-            if i == 0:
-                current_epoch = initial_epoch
-            else:
-                current_epoch = epoch_updater_fn(current_epoch)
-            desired_epochs.append(current_epoch)
-
-        overall_results = []
-        for i in range(self._num_epochs):
-            self.assertEqual(mixer.epoch, desired_epochs[i])
-            results = list(mixer)
-            overall_results.append(results)
-            mixer.reset()
 
     @parameterized.expand(
         itertools.product(
@@ -267,5 +241,24 @@ class TestMultiNodeWeightedSampler(TestCase):
         )
     )
     def test_save_load_state_mixer_over_multiple_epochs(self, midpoint: int, stop_criteria: str):
-        mixer = MultiNodeWeightedSampler(self.datasets, self.weights, stop_criteria)
-        run_test_save_load_state(self, mixer, midpoint)
+        node = MultiNodeWeightedSampler(self.datasets, self.weights, stop_criteria)
+        run_test_save_load_state(self, node, midpoint)
+
+    @parameterized.expand(
+        itertools.product(
+            [1, 4, 7],
+            [
+                StopCriteria.ALL_DATASETS_EXHAUSTED,
+                StopCriteria.FIRST_DATASET_EXHAUSTED,
+                StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
+            ],
+        )
+    )
+    def test_save_load_state_mixer_over_multiple_epochs_with_prefetcher(self, midpoint: int, stop_criteria: str):
+        node = self._setup_multi_node_wighted_sampler(
+            self._num_samples,
+            self._num_datasets,
+            self._weights_fn,
+            stop_criteria=StopCriteria.FIRST_DATASET_EXHAUSTED,
+        )
+        run_test_save_load_state(self, node, midpoint)

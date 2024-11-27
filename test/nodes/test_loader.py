@@ -19,7 +19,6 @@ class TestLoader(TestCase):
 
         # Create an iterator at end of iteration
         it = iter(x)
-
         results_copy = []
         for _ in range(length // 2):
             results_copy.append(next(it))

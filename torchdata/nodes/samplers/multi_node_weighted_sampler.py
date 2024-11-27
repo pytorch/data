@@ -5,13 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 import copy
-from typing import Any, Callable, Dict, Mapping, Optional
+from typing import Any, Dict, Mapping, Optional
 
 import torch
 from torchdata.nodes.base_node import BaseNode, T
 from torchdata.nodes.samplers.stop_criteria import StopCriteria
 
-from .utils import _get_rank_seed, get_rank_and_world_size
+from .utils import _get_epoch_seed, _get_rank_seed, get_rank_and_world_size
 
 
 class MultiNodeWeightedSampler(BaseNode[T]):
@@ -26,7 +26,6 @@ class MultiNodeWeightedSampler(BaseNode[T]):
     The node implements the state using the following keys:
     - DATASET_NODE_STATES_KEY: A dictionary of states for each source node.
     - DATASETS_EXHAUSTED_KEY: A dictionary of booleans indicating whether each source node is exhausted.
-    - EPOCH_KEY: The current epoch.
     - NUM_YIELDED_KEY: The number of items yielded.
     - WEIGHTED_SAMPLER_STATE_KEY: The state of the weighted sampler.
 
@@ -47,13 +46,11 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         world_size (int): The world size of the distributed environment. Default is None, in
             which case the world size will be obtained from the distributed environment.
         seed (int): The seed for the random number generator. Default is 0.
-        epoch (int): The current epoch used to seed the random sampler. Default is 0.
-        epoch_updater_fn (Optional[Callable[[int], int]]): A function to update the epoch
     """
 
     DATASET_NODE_STATES_KEY = "dataset_node_states"
     DATASETS_EXHAUSTED_KEY = "datasets_exhausted"
-    EPOCH_KEY = "epoch"
+    EPOCH_GENERATOR_KEY = "epoch_generator"
     NUM_YIELDED_KEY = "num_yielded"
     WEIGHTED_SAMPLER_STATE_KEY = "weighted_sampler_state"
 
@@ -65,28 +62,35 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         rank: Optional[int] = None,
         world_size: Optional[int] = None,
         seed: int = 0,
-        epoch: int = 0,
-        epoch_updater_fn: Optional[Callable[[int], int]] = None,
     ) -> None:
         super().__init__()
+
+        # Initialize basic attributes
         self.source_nodes = source_nodes
         self.weights = weights
         self.stop_criteria = stop_criteria
         self.dataset_names = list(self.source_nodes.keys())
         self._num_yielded = 0
-        self.seed = seed
-        self.epoch = epoch
-        self._initial_state = None
         self._started = False
-        self.epoch_updater_fn = epoch_updater_fn or self._default_epoch_updater_fn
 
+        # Setup epoch generator for multi-epoch seeds
+        self.seed = seed
+        self._g_epoch = torch.Generator()
+        self._g_epoch.manual_seed(self.seed)
+        self._epoch_random_seed = 0
+
+        # Setup rank and world size
         if rank is None or world_size is None:
             self.rank, self.world_size = get_rank_and_world_size()
         else:
             self.rank = rank
             self.world_size = world_size
 
+        # Validate input
         self._validate()
+
+        # Setup weighted sampler
+        self._weighted_sampler = self._get_new_weighted_sampler()
 
     def _validate(self) -> None:
         if self.stop_criteria not in [
@@ -115,11 +119,10 @@ class MultiNodeWeightedSampler(BaseNode[T]):
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
-
-        self._initial_state = initial_state
         if initial_state is not None:
             self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
-            self.epoch = initial_state[self.EPOCH_KEY]
+            self._g_epoch.set_state(initial_state[self.EPOCH_GENERATOR_KEY])
+            self._g_epoch_snapshot = self._g_epoch.get_state()
             self._weighted_sampler = self._get_new_weighted_sampler(initial_state)
             self._datasets_exhausted = initial_state[self.DATASETS_EXHAUSTED_KEY]
             for k in self.dataset_names:
@@ -127,18 +130,16 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         else:
             # Force a fresh iterator from all source nodes
             self._num_yielded = 0
+
             if self._started:
-                # Don't update epoch unless iterator has started
-                self.epoch = self.epoch_updater_fn(self.epoch)
-            self._weighted_sampler = self._get_new_weighted_sampler()
+                self._g_epoch_snapshot = self._g_epoch.get_state()
+                self._epoch_random_seed = _get_epoch_seed(self._g_epoch)
+                self._weighted_sampler = self._get_new_weighted_sampler()
+
             self._datasets_exhausted = {key: False for key in self.weights.keys()}
             for k in self.dataset_names:
                 self.source_nodes[k].reset()
         self._started = False
-
-    def set_epoch(self, epoch: int) -> None:
-        self.epoch = epoch
-        self._weighted_sampler = self._get_new_weighted_sampler(self._initial_state)
 
     def _get_new_weighted_sampler(self, initial_state=None):
         return _WeightedSampler(
@@ -146,7 +147,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
             seed=self.seed,
             rank=self.rank,
             world_size=self.world_size,
-            epoch=self.epoch,
+            epoch_random_seed=self._epoch_random_seed,
             initial_state=(initial_state[self.WEIGHTED_SAMPLER_STATE_KEY] if initial_state is not None else None),
         )
 
@@ -201,7 +202,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
     def get_state(self) -> Dict[str, Any]:
         return {
             self.NUM_YIELDED_KEY: self._num_yielded,
-            self.EPOCH_KEY: self.epoch,
+            self.EPOCH_GENERATOR_KEY: self._g_epoch.get_state(),
             self.WEIGHTED_SAMPLER_STATE_KEY: self._weighted_sampler.state_dict(),
             self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
             self.DATASET_NODE_STATES_KEY: {k: self.source_nodes[k].state_dict() for k in self.dataset_names},
@@ -219,7 +220,7 @@ class _WeightedSampler:
         seed: int,
         rank: int,
         world_size: int,
-        epoch: int,
+        epoch_random_seed: int,
         randon_tensor_batch_size: int = 1000,
         initial_state: Optional[Dict[str, Any]] = None,
     ):
@@ -236,16 +237,13 @@ class _WeightedSampler:
         self._g = torch.Generator()
         self._g_rank = torch.Generator()
 
-        self.epoch = epoch
-        seed = _get_rank_seed(seed, self._g_rank, rank, world_size, self.epoch)
+        self.epoch_random_seed = epoch_random_seed
+        seed = _get_rank_seed(seed, self._g_rank, rank, world_size, self.epoch_random_seed)
         self._g.manual_seed(seed)
 
         self._g_snapshot = self._g.get_state()
-        self._g_rank_snapshot = self._g_rank.get_state()
         if initial_state is not None:
-            self.epoch = initial_state["epoch"]
             self._g.set_state(initial_state["g_state"])
-            self._g_rank.set_state(initial_state["g_rank_state"])
             self._offset = initial_state["offset"]
         else:
             self._offset = 0
@@ -254,7 +252,6 @@ class _WeightedSampler:
 
     def _get_batch_of_indices(self) -> list[int]:
         self._g_snapshot = self._g.get_state()
-        self._g_rank_snapshot = self._g_rank.get_state()
         return torch.multinomial(
             self.weights,
             num_samples=self.randon_tensor_batch_size,
@@ -275,8 +272,6 @@ class _WeightedSampler:
 
     def state_dict(self):
         return {
-            "epoch": self.epoch,
             "g_state": self._g_snapshot,
-            "g_rank_state": self._g_rank_snapshot,
             "offset": self._offset,
         }
