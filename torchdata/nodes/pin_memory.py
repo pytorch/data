@@ -65,10 +65,10 @@ def _pin_memory_loop(
         assert (
             isinstance(snapshot_frequency, int) and snapshot_frequency >= 0
         ), f"snapshot_frequency must be non-negative integer! Got {snapshot_frequency}"
-        snapshot_store.append(snapshot=source.state_dict(), version=-1)
+        snapshot_store.append_initial_snapshot(snapshot=source.state_dict())
     except Exception:
         e = StartupExceptionWrapper(where=f"in _pin_memory_loop startup for device {device_id}")
-        _put(e, block=False, snapshot=e)
+        snapshot_store.append_initial_snapshot(snapshot=e)
         return
 
     yielded = 0
