@@ -67,3 +67,41 @@ print(list(loader))
 print(list(loader))
 # [0, 4, 1, 64, 49, 25, 9, 16, 81, 36]
 ```
+
+## What's the point of `torchdata.nodes`?
+
+We get it, `torch.utils.data` just works for many many use cases. However it definitely has a bunch of rough spots:
+
+### Multiprocessing sucks
+
+- You need to duplicate memory stored in your Dataset (because of Python copy-on-read)
+- IPC is slow over multiprocess queues and can introduce slow startup times
+- You're forced to perform batching on the workers instead of main-process to reduce IPC overhead, increasing peak
+  memory.
+- With GIL-releasing functions and Free-Threaded Python, multi-threading may not be GIL-bound like it used to be.
+
+`torchdata.nodes` enables both multi-threading and multi-processing so you can choose what works best for your
+particular set up. Parallelism is primarily configured in Mapper operators giving you flexibility in the what, when, and
+how to parallelize.
+
+### Map-style and random-access doesn't scale
+
+Current map dataset approach is great for datasets that fit in memory, but true random-access is not going to be very
+performant once your dataset grows beyond memory limitations unless you jump through some hoops with a special sampler.
+
+`torchdata.nodes` follows a streaming data model, where operators are Iterators that can be combined together to define
+a dataloading and pre-proc pipeline. Samplers are still supported (see example above) and can be combined with a Mapper
+to produce an Iterator
+
+### Multi-Datasets do not fit well with the current implementation in `torch.utils.data`
+
+The current Sampler (one per dataloader) concepts start to break down when you start trying to combine multiple
+datasets. (For single datasets, they're a great abstraction and will continue to be supported!)
+
+- For multi-datasets, consider this scenario: `len(dsA): 10` `len(dsB): 20`. Now we want to do round-robin (or sample
+  uniformly) between these two datasets to feed to our trainer. With just a single sampler, how can you implement that
+  strategy? Maybe a sampler that emits tuples? What if you want to swap with RandomSampler, or DistributedSampler? How
+  will `sampler.set_epoch` work?
+
+`torchdata.nodes` helps to address and scale multi-dataset dataloading by only dealing with Iterators, thereby forcing
+samplers and datasets together, focusing on composing smaller primitives nodes into a more complex dataloading pipeline.
