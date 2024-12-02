@@ -18,7 +18,7 @@ from torchdata.nodes.map import Mapper
 from torchdata.nodes.pin_memory import PinMemory
 from torchdata.nodes.prefetch import Prefetcher
 
-from .utils import Collate, IterInitError, MockSource, run_test_save_load_state
+from .utils import Collate, IterInitError, MockSource, run_test_save_load_state, StatefulRangeNode
 
 
 @unittest.skipIf(not TEST_CUDA, "CUDA unavailable")
@@ -70,7 +70,7 @@ class TestPinMemory(TestCase):
     def test_save_load_state_stateful(self, midpoint: int, snapshot_frequency: int):
         batch_size = 6
         n = 200
-        node = MockSource(num_samples=n)
+        node = StatefulRangeNode(n=n)
         node = Batcher(node, batch_size=batch_size, drop_last=False)
         node = Mapper(node, Collate())
         node = PinMemory(node, snapshot_frequency=snapshot_frequency)

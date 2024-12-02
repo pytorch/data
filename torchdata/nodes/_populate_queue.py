@@ -46,7 +46,11 @@ def _populate_queue(
     # Include a monotonic index starting from 0 to each item in the queue
     idx = MonotonicIndex()
 
-    def _put(item, block: bool = True, snapshot: Optional[Dict[str, Any]] = None):
+    def _put(
+        item,
+        block: bool = True,
+        snapshot: Optional[Union[Dict[str, Any], StartupExceptionWrapper]] = None,
+    ):
         _idx = idx.get()
         if snapshot:
             snapshot_store.append(snapshot=snapshot, version=_idx)
@@ -56,10 +60,10 @@ def _populate_queue(
         assert (
             isinstance(snapshot_frequency, int) and snapshot_frequency >= 0
         ), f"snapshot_frequency must be non-negative integer! Got {snapshot_frequency}"
-        snapshot_store.append(snapshot=source.state_dict(), version=-1)
+        snapshot_store.append_initial_snapshot(snapshot=source.state_dict())
     except Exception:
         e = StartupExceptionWrapper(where="in _populate_queue startup for device")
-        _put(e, block=False, snapshot=e)
+        snapshot_store.append_initial_snapshot(snapshot=e)
         return
 
     yielded = 0
