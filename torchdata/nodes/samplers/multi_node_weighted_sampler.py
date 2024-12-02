@@ -11,7 +11,7 @@ import torch
 from torchdata.nodes.base_node import BaseNode, T
 from torchdata.nodes.samplers.stop_criteria import StopCriteria
 
-from .utils import _get_rank_seed, _update_epoch_seed, get_rank_and_world_size
+from .utils import _get_rank_seed, get_rank_and_world_size
 
 
 class MultiNodeWeightedSampler(BaseNode[T]):
@@ -66,7 +66,6 @@ class MultiNodeWeightedSampler(BaseNode[T]):
     ) -> None:
         super().__init__()
 
-        # Initialize basic attributes
         self.source_nodes = source_nodes
         self.weights = weights
         self.stop_criteria = stop_criteria
@@ -82,7 +81,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
             self.rank = rank
             self.world_size = world_size
 
-        self._epoch_random_seed = _update_epoch_seed(self.seed * self.world_size + self.rank)
+        self._epoch_random_seed = 0
 
         # Validate input
         self._validate()
@@ -129,7 +128,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
             self._num_yielded = 0
 
             if self._started:
-                self._epoch_random_seed = _update_epoch_seed(self._epoch_random_seed)
+                self._epoch_random_seed += 1
                 self._weighted_sampler = self._get_new_weighted_sampler()
 
             self._datasets_exhausted = {key: False for key in self.weights.keys()}
