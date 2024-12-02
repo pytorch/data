@@ -17,7 +17,7 @@ from torchdata.nodes.map import Mapper, ParallelMapper
 from torchdata.nodes.pin_memory import PinMemory
 from torchdata.nodes.prefetch import Prefetcher
 
-from .utils import MockSource, RandomSleepUdf, run_test_save_load_state, udf_raises
+from .utils import MockSource, RandomSleepUdf, run_test_save_load_state, StatefulRangeNode, udf_raises
 
 
 class TestMap(TestCase):
@@ -120,7 +120,7 @@ class TestMap(TestCase):
         method = "thread"
         batch_size = 6
         n = 80
-        src = MockSource(num_samples=n)
+        src = StatefulRangeNode(n=n)
         node = Batcher(src, batch_size=batch_size, drop_last=False)
         node = ParallelMapper(
             node,
@@ -145,7 +145,7 @@ class TestMap(TestCase):
         batch_size = 6
         n = 80
         multiprocessing_context = None if IS_WINDOWS else "forkserver"
-        src = MockSource(num_samples=n)
+        src = StatefulRangeNode(n=n)
         node = Batcher(src, batch_size=batch_size, drop_last=False)
         node = ParallelMapper(
             node,

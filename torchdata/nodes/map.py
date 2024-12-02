@@ -6,18 +6,21 @@
 
 import queue
 import threading
+import time
 from typing import Any, Callable, Dict, Iterator, List, Literal, Optional, Protocol, TypeVar, Union
 
 import torch.multiprocessing as mp
 from torchdata.nodes.base_node import BaseNode, T
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
-from torchdata.nodes.snapshot_store import DequeSnapshotStore, SnapshotStore
+from torchdata.nodes.snapshot_store import QueueSnapshotStore, SnapshotStore
 
 from ._apply_udf import _apply_udf
 
 from ._populate_queue import _populate_queue
 
 from .constants import QUEUE_TIMEOUT
+
+ACK_TIMEOUT = 300  # Timeout after 5 minutes
 
 
 # We define this protocol for type checking
@@ -147,7 +150,7 @@ class _ParallelMapperIter(Iterator[T]):
         else:
             self._snapshot = None
             self.source.reset()
-        self._snapshot_store = DequeSnapshotStore()
+        self._snapshot_store = QueueSnapshotStore()
 
         self._read_thread = threading.Thread(
             target=_populate_queue,
@@ -191,6 +194,9 @@ class _ParallelMapperIter(Iterator[T]):
             t.start()
         if self.in_order:
             self._sort_thread.start()
+
+        time.sleep(0.01)
+        self._snapshot = self._snapshot_store.get_initial_snapshot(thread=self._read_thread, timeout=ACK_TIMEOUT)
 
         for i in range(fast_forward):
             try:
@@ -250,13 +256,14 @@ class _ParallelMapperIter(Iterator[T]):
     def _shutdown(self):
         self._stop.set()
         self._mp_stop.set()
-        if self._read_thread.is_alive():
+        if hasattr(self, "_read_thread") and self._read_thread.is_alive():
             self._read_thread.join(timeout=QUEUE_TIMEOUT * 5)
-        if self._sort_thread.is_alive():
+        if hasattr(self, "_sort_thread") and self._sort_thread.is_alive():
             self._sort_thread.join(timeout=QUEUE_TIMEOUT * 5)
-        for t in self._workers:
-            if t.is_alive():
-                t.join(timeout=QUEUE_TIMEOUT * 5)
+        if hasattr(self, "_workers"):
+            for t in self._workers:
+                if t.is_alive():
+                    t.join(timeout=QUEUE_TIMEOUT * 5)
 
 
 class ParallelMapper(BaseNode[T]):
@@ -403,7 +410,7 @@ class _SingleThreadedMapper(Iterator[T]):
         else:
             self._snapshot = None
             self.source.reset()
-        self._snapshot_store = DequeSnapshotStore()
+        self._snapshot_store = QueueSnapshotStore()
         self._thread = threading.Thread(
             target=self.worker,
             args=(
@@ -417,6 +424,10 @@ class _SingleThreadedMapper(Iterator[T]):
             daemon=True,
         )
         self._thread.start()
+
+        # Try and get initial snapshot
+        self._snapshot = self._snapshot_store.get_initial_snapshot(thread=self._thread, timeout=ACK_TIMEOUT)
+
         for i in range(self._fast_forward):
             try:
                 next(self)
@@ -471,5 +482,5 @@ class _SingleThreadedMapper(Iterator[T]):
 
     def _shutdown(self):
         self._stop_event.set()
-        if self._thread.is_alive():
+        if hasattr(self, "_thread") and self._thread.is_alive():
             self._thread.join(timeout=QUEUE_TIMEOUT * 5)
