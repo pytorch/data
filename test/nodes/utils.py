@@ -118,6 +118,36 @@ class StatefulRange(Stateful):
         self._next_start = state_dict["_num_yielded"]
 
 
+class StatefulRangeNode(BaseNode[Dict[str, int]]):
+    def __init__(self, n: int) -> None:
+        super().__init__()
+        self.n = n
+        self.i = 0
+        self.num_resets = 0
+
+    def reset(self, initial_state: Optional[Dict[str, Any]] = None):
+        super().reset(initial_state)
+        if initial_state is not None:
+            self.i = initial_state["i"]
+            self.num_resets = initial_state["num_resets"]
+        else:
+            self.i = 0
+            self.num_resets += 1
+
+    def next(self) -> Iterator[Dict[str, int]]:
+        if self.i == self.n:
+            raise StopIteration()
+        ret = {"i": self.i, "resets": self.num_resets}
+        self.i += 1
+        return ret
+
+    def get_state(self) -> Dict[str, Any]:
+        return {
+            "i": self.i,
+            "num_resets": self.num_resets,
+        }
+
+
 def run_test_save_load_state(test, node: BaseNode, midpoint: int):
     ##############################
     # Generate initial, midpoint, and end state_dict's

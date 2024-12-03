@@ -39,7 +39,11 @@ def _pin_memory_loop(
 
     idx = MonotonicIndex()
 
-    def _put(item, block: bool = True, snapshot: Optional[Dict[str, Any]] = None):
+    def _put(
+        item,
+        block: bool = True,
+        snapshot: Optional[Union[Dict[str, Any], StartupExceptionWrapper]] = None,
+    ):
         _idx = idx.get()
         if snapshot:
             snapshot_store.append(snapshot=snapshot, version=_idx)
@@ -61,10 +65,10 @@ def _pin_memory_loop(
         assert (
             isinstance(snapshot_frequency, int) and snapshot_frequency >= 0
         ), f"snapshot_frequency must be non-negative integer! Got {snapshot_frequency}"
-        src_iter = iter(source)
+        snapshot_store.append_initial_snapshot(snapshot=source.state_dict())
     except Exception:
         e = StartupExceptionWrapper(where=f"in _pin_memory_loop startup for device {device_id}")
-        _put(e, block=False)
+        snapshot_store.append_initial_snapshot(snapshot=e)
         return
 
     yielded = 0
@@ -72,7 +76,7 @@ def _pin_memory_loop(
         if not semaphore.acquire(blocking=True, timeout=0.1):
             continue
         try:
-            item = next(src_iter)
+            item = next(source)
             item = pin_memory(item, device)
             yielded += 1
             snapshot = None
