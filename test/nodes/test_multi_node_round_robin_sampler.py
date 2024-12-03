@@ -5,15 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 import collections
-import itertools
-from enum import unique
 
 import torch
-
-from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
+
 from torchdata.nodes.adapters import IterableWrapper
 from torchdata.nodes.batch import Batcher
+from torchdata.nodes.loader import Loader
 from torchdata.nodes.prefetch import Prefetcher
 from torchdata.nodes.samplers.multi_node_round_robin_sampler import MultiNodeRoundRobinSampler
 from torchdata.nodes.samplers.stop_criteria import StopCriteria
@@ -135,6 +133,26 @@ class TestMultiNodeRoundRobinSampler(TestCase):
 
         self.assertEqual(batch_number, 2)
 
+    def test_unequal_batch_size(self) -> None:
+        datasets = self.get_unequal_dataset(self._num_samples, self._num_datasets)
+
+        node1 = Batcher(datasets["ds0"], 1)
+        node2 = Batcher(datasets["ds1"], 2)
+        node3 = Batcher(datasets["ds2"], 3)
+
+        node = MultiNodeRoundRobinSampler(
+            {"node1": node1, "node2": node2, "node3": node3},
+            StopCriteria.ALL_DATASETS_EXHAUSTED,
+        )
+
+        loader = Loader(node, 1)
+        for batch_num, batch in enumerate(loader):
+            self.assertGreater(len(batch), 0)
+            datasets_in_batch = list({result["name"] for result in batch})
+            self.assertEqual(len(datasets_in_batch), 1)
+            self.assertEqual(datasets_in_batch[0], f"ds{batch_num}")
+            self.assertEqual(len(batch), batch_num + 1)
+
     def test_get_state(self) -> None:
         datasets = self.get_equal_dataset(self._num_samples, self._num_datasets)
         sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED)
@@ -155,3 +173,19 @@ class TestMultiNodeRoundRobinSampler(TestCase):
         sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.ALL_DATASETS_EXHAUSTED)
         prefetcher = Prefetcher(sampler, 3)
         run_test_save_load_state(self, prefetcher, 400)
+
+    def test_multiple_epochs(self) -> None:
+        num_epochs = 2
+
+        datasets = self.get_unequal_dataset(self._num_samples, self._num_datasets)
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED)
+        batch_size = 3
+        batcher = Batcher(sampler, batch_size=batch_size)
+        loader = Loader(batcher)
+        results = {}
+
+        for epoch in range(num_epochs):
+            results[epoch] = []
+            for batch in loader:
+                results[epoch].append(batch)
+        self.assertEqual(results[0], results[1])
