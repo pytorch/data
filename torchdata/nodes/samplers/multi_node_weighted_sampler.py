@@ -26,7 +26,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
     The node implements the state using the following keys:
     - DATASET_NODE_STATES_KEY: A dictionary of states for each source node.
     - DATASETS_EXHAUSTED_KEY: A dictionary of booleans indicating whether each source node is exhausted.
-    - EPOCH: An epoch counter used to initialize the random number generator.
+    - EPOCH_KEY: An epoch counter used to initialize the random number generator.
     - NUM_YIELDED_KEY: The number of items yielded.
     - WEIGHTED_SAMPLER_STATE_KEY: The state of the weighted sampler.
 
@@ -51,7 +51,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
 
     DATASET_NODE_STATES_KEY = "dataset_node_states"
     DATASETS_EXHAUSTED_KEY = "datasets_exhausted"
-    EPOCH = "epoch"
+    EPOCH_KEY = "epoch"
     NUM_YIELDED_KEY = "num_yielded"
     WEIGHTED_SAMPLER_STATE_KEY = "weighted_sampler_state"
 
@@ -114,7 +114,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         super().reset(initial_state)
         if initial_state is not None:
             self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
-            self._epoch = initial_state[self.EPOCH]
+            self._epoch = initial_state[self.EPOCH_KEY]
             self._weighted_sampler = self._get_new_weighted_sampler(initial_state)
             self._datasets_exhausted = initial_state[self.DATASETS_EXHAUSTED_KEY]
             for k in self.dataset_names:
@@ -194,7 +194,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         return {
             self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
             self.DATASET_NODE_STATES_KEY: {k: self.source_nodes[k].state_dict() for k in self.dataset_names},
-            self.EPOCH: self._epoch,
+            self.EPOCH_KEY: self._epoch,
             self.NUM_YIELDED_KEY: self._num_yielded,
             self.WEIGHTED_SAMPLER_STATE_KEY: self._weighted_sampler.state_dict(),
         }
