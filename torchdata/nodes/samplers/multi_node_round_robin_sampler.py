@@ -27,7 +27,6 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
     - FIRST_DATASET_EXHAUSTED: Stop when the first dataset is exhausted.
     - ALL_DATASETS_EXHAUSTED: Stop when all datasets are exhausted.
 
-    #TODO: Add examples of usage and output
     On complete exhaustion of the source nodes, the node will raise StopIteration.
 
     Parameters:
@@ -68,10 +67,14 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
         if initial_state is not None:
             self._datasets_exhausted = initial_state[self.DATASETS_EXHAUSTED_KEY]
             for k in range(self.num_datasets):
-                self.source_nodes[k].reset(initial_state[self.DATASET_NODE_STATES_KEY][k])
+                self.source_nodes[k].reset(
+                    initial_state[self.DATASET_NODE_STATES_KEY][k]
+                )
+            self.current_dataset_index = initial_state[self.CURRENT_DATASET_INDEX_KEY]
         else:
             # Force a fresh iterator from all source nodes
             self._datasets_exhausted = [False for _ in range(self.num_datasets)]
+            self.current_dataset_index = 0
             for k in range(self.num_datasets):
                 self.source_nodes[k].reset()
 
@@ -84,7 +87,9 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
         # Raise StopIteration is StopCriteria is FIRST_DATASET_EXHAUSTED and
         # the first dataset is exhausted. Doing this to correctly catch StopIteration
         # when trying next(it) on already exhausted iterator
-        if self.stop_criteria == StopCriteria.FIRST_DATASET_EXHAUSTED and any(self._datasets_exhausted):
+        if self.stop_criteria == StopCriteria.FIRST_DATASET_EXHAUSTED and any(
+            self._datasets_exhausted
+        ):
             raise StopIteration()
 
         return
@@ -102,7 +107,9 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
                 ):
                     # Before fetching a new item check if the current dataset is already
                     # exhaused and if StopCriteria is ALL_DATASETS_EXHAUSTED, move to next dataset
-                    self.current_dataset_index = (self.current_dataset_index + 1) % self.num_datasets
+                    self.current_dataset_index = (
+                        self.current_dataset_index + 1
+                    ) % self.num_datasets
                     continue
                 item = next(current_iterator)
             except StopIteration:
@@ -123,7 +130,9 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
             break
 
         # If we did't throw StopIteration, increment the number of items yielded and return the item
-        self.current_dataset_index = (self.current_dataset_index + 1) % self.num_datasets
+        self.current_dataset_index = (
+            self.current_dataset_index + 1
+        ) % self.num_datasets
 
         return item
 
@@ -131,6 +140,8 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
         state = {
             self.CURRENT_DATASET_INDEX_KEY: self.current_dataset_index,
             self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
-            self.DATASET_NODE_STATES_KEY: {k: self.source_nodes[k].state_dict() for k in range(self.num_datasets)},
+            self.DATASET_NODE_STATES_KEY: {
+                k: self.source_nodes[k].state_dict() for k in range(self.num_datasets)
+            },
         }
         return state

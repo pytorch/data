@@ -13,7 +13,9 @@ from torch.testing._internal.common_utils import TestCase
 from torchdata.nodes.adapters import IterableWrapper
 from torchdata.nodes.batch import Batcher
 from torchdata.nodes.prefetch import Prefetcher
-from torchdata.nodes.samplers.multi_node_round_robin_sampler import MultiNodeRoundRobinSampler
+from torchdata.nodes.samplers.multi_node_round_robin_sampler import (
+    MultiNodeRoundRobinSampler,
+)
 from torchdata.nodes.samplers.stop_criteria import StopCriteria
 
 from .utils import DummyIterableDataset, run_test_save_load_state
@@ -26,18 +28,24 @@ class TestMultiNodeRoundRobinSampler(TestCase):
         self._num_datasets = 3
 
     def get_equal_dataset(self, num_samples, num_datasets):
-        datasets = {f"ds{i}": IterableWrapper(DummyIterableDataset(num_samples, f"ds{i}")) for i in range(num_datasets)}
+        datasets = {
+            f"ds{i}": IterableWrapper(DummyIterableDataset(num_samples, f"ds{i}"))
+            for i in range(num_datasets)
+        }
         return datasets
 
     def get_unequal_dataset(self, num_samples, num_datasets):
         datasets = {
-            f"ds{i}": IterableWrapper(DummyIterableDataset(num_samples + i, f"ds{i}")) for i in range(num_datasets)
+            f"ds{i}": IterableWrapper(DummyIterableDataset(num_samples + i, f"ds{i}"))
+            for i in range(num_datasets)
         }
         return datasets
 
     def test_multi_node_round_robin_sampler_equal_dataset(self) -> None:
         datasets = self.get_equal_dataset(self._num_samples, self._num_datasets)
-        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED)
+        sampler = MultiNodeRoundRobinSampler(
+            datasets, StopCriteria.FIRST_DATASET_EXHAUSTED
+        )
         batch_size = 3
         num_epochs = 1
         # each dataset has 1 sample, so the first and only epoch must be ['ds0', 'ds1', 'ds2']
@@ -52,7 +60,9 @@ class TestMultiNodeRoundRobinSampler(TestCase):
 
     def test_multi_node_round_robin_sampler_unequal_dataset(self) -> None:
         datasets = self.get_unequal_dataset(self._num_samples, self._num_datasets)
-        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.ALL_DATASETS_EXHAUSTED)
+        sampler = MultiNodeRoundRobinSampler(
+            datasets, StopCriteria.ALL_DATASETS_EXHAUSTED
+        )
         batch_size = 3
         num_epochs = 2
         batcher = Batcher(sampler, batch_size=batch_size)
@@ -78,7 +88,9 @@ class TestMultiNodeRoundRobinSampler(TestCase):
 
     def test_get_state(self) -> None:
         datasets = self.get_equal_dataset(self._num_samples, self._num_datasets)
-        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED)
+        sampler = MultiNodeRoundRobinSampler(
+            datasets, StopCriteria.FIRST_DATASET_EXHAUSTED
+        )
         state = sampler.get_state()
         self.assertIn("current_dataset_index", state)
         self.assertIn("datasets_exhausted", state)
@@ -88,6 +100,15 @@ class TestMultiNodeRoundRobinSampler(TestCase):
         num_samples = 1500
         num_datasets = 3
         datasets = self.get_equal_dataset(num_samples, num_datasets)
-        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.ALL_DATASETS_EXHAUSTED)
+        sampler = MultiNodeRoundRobinSampler(
+            datasets, StopCriteria.ALL_DATASETS_EXHAUSTED
+        )
+        prefetcher = Prefetcher(sampler, 3)
+        run_test_save_load_state(self, prefetcher, 400)
+
+        datasets = self.get_unequal_dataset(num_samples, num_datasets)
+        sampler = MultiNodeRoundRobinSampler(
+            datasets, StopCriteria.ALL_DATASETS_EXHAUSTED
+        )
         prefetcher = Prefetcher(sampler, 3)
         run_test_save_load_state(self, prefetcher, 400)
