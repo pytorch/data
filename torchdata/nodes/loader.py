@@ -4,7 +4,7 @@ from torchdata.nodes.base_node import BaseNode, T
 
 
 class Loader(Generic[T]):
-    """An iterator class that wraps a root node and provides a stateful iterator interface.
+    """An iterable class that wraps a root node and provides a stateful iterator interface.
 
     The state of the iterator is saved in the state_dict() method, and can be loaded from the
     load_state_dict() method. It leverages a LoaderIterator object to save/reset the state of
