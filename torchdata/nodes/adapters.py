@@ -96,7 +96,6 @@ class SamplerWrapper(BaseNode[T]):
     :param epoch_updater: Optional[Callable[[int], int]] = None - callback to update epoch at start of new iteration. It's called at the beginning of each iterator request, except the first one.
     """
 
-    NEXT_EPOCH_KEY = "_next_epoch"
     NUM_YIELDED_KEY = "_num_yielded"
     EPOCH_KEY = "_epoch"
     SAMPLER_KEY = "_sampler"
