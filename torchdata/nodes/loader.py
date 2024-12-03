@@ -12,7 +12,7 @@ class Loader(Generic[T]):
 
     Parameters:
         root (BaseNode[T]): The root node of the data pipeline.
-        restart_on_stop_iteration (bool, optional): Whether to restart the iterator when it reaches the end. Default is True
+        restart_on_stop_iteration (bool): Whether to restart the iterator when it reaches the end. Default is True
     """
 
     def __init__(self, root: BaseNode[T], restart_on_stop_iteration: bool = True):

@@ -14,13 +14,24 @@ from ._populate_queue import _populate_queue
 
 
 class Prefetcher(BaseNode[T]):
+    """Prefetcher is a node that prefetches data from the source node and stores it in a queue.
+    When the queue is full, it will wait for the queue to be drained before prefetching more data.
+
+    Parameters:
+        source (BaseNode[T]): The source node to prefetch data from.
+        prefetch_factor (int): The number of batches to prefetch ahead of time.
+        snapshot_frequency (int): The frequency at which to snapshot the state of the source node. Default is
+            1, which means that the state of the source node will be snapshotted after every batch. If set
+            to a higher value, the state of the source node will be snapshotted after every snapshot_frequency
+            batches.
+    """
+
     def __init__(self, source: BaseNode[T], prefetch_factor: int, snapshot_frequency: int = 1):
         super().__init__()
         self.source = source
         self.prefetch_factor = prefetch_factor
         self.snapshot_frequency = snapshot_frequency
         self._it: Optional[_SingleThreadedMapper[T]] = None
-        self._iter_for_state_dict: bool = False
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
