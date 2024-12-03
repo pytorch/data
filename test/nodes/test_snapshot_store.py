@@ -13,7 +13,7 @@ from torchdata.nodes.exception_wrapper import StartupExceptionWrapper
 from torchdata.nodes.snapshot_store import QueueSnapshotStore
 
 
-class TestDequeSnapshotStore(TestCase):
+class TestQueueSnapshotStore(TestCase):
     def test_snapshot_store(self) -> None:
         for _ in range(100):
             store = QueueSnapshotStore()
@@ -55,31 +55,34 @@ class TestDequeSnapshotStore(TestCase):
             self.assertEqual(len(store._q.queue), 0)
 
     def test_init_error(self) -> None:
-        store = QueueSnapshotStore()
-        sleep_time = 0.1
-        thread = threading.Thread(target=_worker_init_error, args=(store, sleep_time))
-        thread.start()
-        with self.assertRaisesRegex(RuntimeError, "Test Startup Exception"):
-            store.get_initial_snapshot(thread, sleep_time)
-        thread.join()
+        for _ in range(10):
+            store = QueueSnapshotStore()
+            sleep_time = 0.1
+            thread = threading.Thread(target=_worker_init_error, args=(store, sleep_time))
+            thread.start()
+            with self.assertRaisesRegex(RuntimeError, "Test Startup Exception"):
+                store.get_initial_snapshot(thread, sleep_time)
+            thread.join()
 
     def test_timeout_error(self) -> None:
-        store = QueueSnapshotStore()
-        sleep_time = 0.1
-        thread = threading.Thread(target=time.sleep, args=(sleep_time,))
-        thread.start()
-        with self.assertRaisesRegex(RuntimeError, "Failed to get initial snapshot"):
-            store.get_initial_snapshot(thread, sleep_time * 0.1)
-        thread.join()
+        for _ in range(10):
+            store = QueueSnapshotStore()
+            sleep_time = 0.1
+            thread = threading.Thread(target=time.sleep, args=(sleep_time,))
+            thread.start()
+            with self.assertRaisesRegex(RuntimeError, "Failed to get initial snapshot"):
+                store.get_initial_snapshot(thread, sleep_time * 0.1)
+            thread.join()
 
     def test_thread_dead_error(self) -> None:
         # Test when thread is alive for longer than QUEUE_TIMEOUT but dies afterwards
-        store = QueueSnapshotStore()
-        thread = threading.Thread(target=time.sleep, args=(QUEUE_TIMEOUT * 3.0,))
-        thread.start()
-        with self.assertRaisesRegex(RuntimeError, r"thread.is_alive\(\)=False"):
-            store.get_initial_snapshot(thread, QUEUE_TIMEOUT * 4.0)
-        thread.join()
+        for _ in range(10):  # Should be reliable
+            store = QueueSnapshotStore()
+            thread = threading.Thread(target=time.sleep, args=(QUEUE_TIMEOUT * 3.0,))
+            thread.start()
+            with self.assertRaisesRegex(RuntimeError, r"thread.is_alive\(\)=False"):
+                store.get_initial_snapshot(thread, QUEUE_TIMEOUT * 5.0)
+            thread.join()
 
 
 def _worker_init_error(store, sleep_time):
