@@ -105,3 +105,49 @@ datasets. (For single datasets, they're a great abstraction and will continue to
 
 `torchdata.nodes` helps to address and scale multi-dataset dataloading by only dealing with Iterators, thereby forcing
 samplers and datasets together, focusing on composing smaller primitives nodes into a more complex dataloading pipeline.
+
+### IterableDataset + multiprocessing requires additional dataset sharding
+
+Dataset sharding is required for data-parallel training, which is fairly reasonable. But what about sharding between
+dataloader workers? With Map-style datasets, distribution of work between workers is handled by the main process, which
+distributes sampler indices to workers. With IterableDatasets, each worker needs to figure out (through
+`torch.utils.data.get_worker_info`) what data it should be returning.
+
+## Design choices
+
+### No Generator BaseNodes
+
+See https://github.com/pytorch/data/pull/1362 for more thoughts.
+
+One difficult choice we made was to disallow Generators when defining a new BaseNode implementation. However we dropped
+it and moved to an Iterator-only foundation for a few reasons around state management:
+
+1. We require explicit state handling in BaseNode implementations. Generators store state implicitly on the stack and we
+   found that we needed to jump through hoops and write very convoluted code to get basic state working with Generators
+2. End-of-iteration state dict: Iterables may feel more natural, however a bunch of issues come up around state
+   management. Consider the end-of-iteration state dict. If you load this state_dict into your iterable, shoudl this
+   represent the end-of-iteration or the start of the next iteration?
+3. Loading state: If you call load_state_dict() on an iterable, most users would expect the next iterator requested from
+   it to start with the loaded state. However what if iter is called twice before iteration begins?
+4. Multiple Live Iterator problem: if you have one instance of an Iterable, but two live iterators, what does it mean to
+   call state_dict() on the Iterable? In dataloading, this is very rare, however we still need to work around it and
+   make a bunch of assumptions. Forcing devs that are implementing BaseNodes to reason about these scenarios is, in our
+   opinion, worse than disallowing generators and Iterables.
+
+`torchdata.nodes.BaseNode` implementations are Iterators. Iterators define `next()`, `get_state()`, and
+`reset(initial_state | None)`. All re-initialization should be done in reset(), including initializing with a particular
+state if one is passed.
+
+However, end-users are used to dealing with Iterables, for example,
+
+```
+for epoch in range(5):
+  # Most frameworks and users don't expect to call loader.reset()
+  for batch in loader:
+    ...
+  sd = loader.state_dict()
+  # Loading sd should not throw StopIteration right away, but instead start at the next epoch
+```
+
+To handle this we keep all of the assumptions and special end-of-epoch handling in a single `Loader` class which takes
+any BaseNode and makes it an Iterable, handling the reset() calls and end-of-epoch state_dict loading.
