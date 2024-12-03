@@ -125,7 +125,7 @@ it and moved to an Iterator-only foundation for a few reasons around state manag
 1. We require explicit state handling in BaseNode implementations. Generators store state implicitly on the stack and we
    found that we needed to jump through hoops and write very convoluted code to get basic state working with Generators
 2. End-of-iteration state dict: Iterables may feel more natural, however a bunch of issues come up around state
-   management. Consider the end-of-iteration state dict. If you load this state_dict into your iterable, shoudl this
+   management. Consider the end-of-iteration state dict. If you load this state_dict into your iterable, should this
    represent the end-of-iteration or the start of the next iteration?
 3. Loading state: If you call load_state_dict() on an iterable, most users would expect the next iterator requested from
    it to start with the loaded state. However what if iter is called twice before iteration begins?
