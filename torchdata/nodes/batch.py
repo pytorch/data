@@ -11,7 +11,7 @@ from torchdata.nodes.base_node import BaseNode, T
 
 class Batcher(BaseNode[List[T]]):
     """Batcher node batches the data from the source node into batches of size batch_size.
-    If the source node is exhausted, it will raise StopIteration.
+    If the source node is exhausted, it will return the batch or raise StopIteration.
     If drop_last is True, the last batch will be dropped if it is smaller than batch_size.
     If drop_last is False, the last batch will be returned even if it is smaller than batch_size.
 

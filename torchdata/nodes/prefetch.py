@@ -15,7 +15,6 @@ from ._populate_queue import _populate_queue
 
 class Prefetcher(BaseNode[T]):
     """Prefetcher is a node that prefetches data from the source node and stores it in a queue.
-    When the queue is full, it will wait for the queue to be drained before prefetching more data.
 
     Parameters:
         source (BaseNode[T]): The source node to prefetch data from.
