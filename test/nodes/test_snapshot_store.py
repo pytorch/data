@@ -68,7 +68,7 @@ class TestQueueSnapshotStore(TestCase):
         for _ in range(10):
             store = QueueSnapshotStore()
             sleep_time = 0.1
-            thread = threading.Thread(target=time.sleep, args=(sleep_time,))
+            thread = threading.Thread(target=_worker_raises_after, args=(sleep_time,))
             thread.start()
             with self.assertRaisesRegex(RuntimeError, "Failed to get initial snapshot"):
                 store.get_initial_snapshot(thread, sleep_time * 0.1)
@@ -78,7 +78,7 @@ class TestQueueSnapshotStore(TestCase):
         # Test when thread is alive for longer than QUEUE_TIMEOUT but dies afterwards
         for _ in range(10):  # Should be reliable
             store = QueueSnapshotStore()
-            thread = threading.Thread(target=time.sleep, args=(QUEUE_TIMEOUT * 3.0,))
+            thread = threading.Thread(target=_worker_raises_after, args=(QUEUE_TIMEOUT * 3.0,))
             thread.start()
             with self.assertRaisesRegex(RuntimeError, r"thread.is_alive\(\)=False"):
                 store.get_initial_snapshot(thread, QUEUE_TIMEOUT * 5.0)
@@ -86,10 +86,14 @@ class TestQueueSnapshotStore(TestCase):
 
 
 def _worker_init_error(store, sleep_time):
-    # time.sleep(0.1 * sleep_time)
     try:
         raise RuntimeError("Test Startup Exception")
     except Exception as e:
         e = StartupExceptionWrapper(where="_worker_init_error")
         store.append_initial_snapshot(e)
     time.sleep(sleep_time)
+
+
+def _worker_raises_after(sleep_time):
+    time.sleep(sleep_time)
+    raise RuntimeError(f"Thread dying {sleep_time=}")
