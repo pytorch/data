@@ -1,5 +1,6 @@
 import torch
-from torch.utils.data import default_collate 
+from torch.utils.data import default_collate
+
 
 def map_fn_bert(item, max_len, tokenizer):
     """
@@ -56,7 +57,7 @@ def train_bert(model, train_batcher, test_batcher, num_epochs, batch_size):
     # Define optimizer and loss function
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
     loss_fn = torch.nn.CrossEntropyLoss()
-    
+
     # Train the model
     for epoch in range(num_epochs):
         model.train()
@@ -72,15 +73,15 @@ def train_bert(model, train_batcher, test_batcher, num_epochs, batch_size):
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
-        print(f"Epoch {epoch+1}, Loss: {total_loss / num_loop}")
+        print(f"Epoch {epoch + 1}, Loss: {total_loss / num_loop}")
         model.eval()
         test_loss = 0
         correct = 0
         with torch.no_grad():
-            num_samples_tested=0
-            num_loops=0
+            num_samples_tested = 0
+            num_loops = 0
             for batch in test_batcher:
-                
+
                 batch = default_collate(batch)
                 input_ids = batch["input_ids"].to(device)
                 attention_mask = batch["attention_mask"].to(device)
@@ -93,7 +94,7 @@ def train_bert(model, train_batcher, test_batcher, num_epochs, batch_size):
                 num_samples_tested += 128
                 num_loops += 1
         accuracy = correct / num_samples_tested
-        print(f"Test Loss: {test_loss / num_loops}, Accuracy: {accuracy:.4f}")
+        print(f"Test Loss : {test_loss / num_loops}, Accuracy: {accuracy : .4f}")
     return model
 
 
@@ -120,10 +121,10 @@ def get_prediction_bert(review, model, max_len, tokenizer):
         return_attention_mask=True,
         return_tensors="pt",
     )
-    input_ids = encoding["input_ids"].flatten().unsqueeze(0) 
-    attention_mask = encoding["attention_mask"].flatten().unsqueeze(0) 
+    input_ids = encoding["input_ids"].flatten().unsqueeze(0)
+    attention_mask = encoding["attention_mask"].flatten().unsqueeze(0)
     model.eval()
-    
+
     with torch.no_grad():
         outputs = model(input_ids, attention_mask=attention_mask)
         logits = outputs.logits
@@ -132,4 +133,3 @@ def get_prediction_bert(review, model, max_len, tokenizer):
             print("Negative")
         else:
             print("Positive")
-    
