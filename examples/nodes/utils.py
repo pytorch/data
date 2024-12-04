@@ -97,7 +97,7 @@ def train_bert(model, train_batcher, test_batcher, num_epochs, batch_size):
     return model
 
 
-def get_prediction(review, model, max_len, tokenizer):
+def get_prediction_bert(review, model, max_len, tokenizer):
     """
     Gets the prediction of a BERT model for a given review.
     Args:
