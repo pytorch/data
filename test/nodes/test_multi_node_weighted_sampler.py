@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import itertools
-from enum import unique
 
 from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
@@ -38,7 +37,7 @@ class TestMultiNodeWeightedSampler(TestCase):
         except ImportError:
             self.fail("MultiNodeWeightedSampler or StopCriteria failed to import")
 
-    def _setup_multi_node_wighted_sampler(self, num_samples, num_datasets, weights_fn, stop_criteria) -> Prefetcher:
+    def _setup_multi_node_weighted_sampler(self, num_samples, num_datasets, weights_fn, stop_criteria) -> Prefetcher:
 
         datasets = {f"ds{i}": IterableWrapper(DummyIterableDataset(num_samples, f"ds{i}")) for i in range(num_datasets)}
         weights = {f"ds{i}": weights_fn(i) for i in range(num_datasets)}
@@ -95,7 +94,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             )
 
     def test_multi_node_weighted_sampler_first_exhausted(self) -> None:
-        mixer = self._setup_multi_node_wighted_sampler(
+        mixer = self._setup_multi_node_weighted_sampler(
             self._num_samples,
             self._num_datasets,
             self._weights_fn,
@@ -116,7 +115,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             mixer.reset()
 
     def test_multi_node_weighted_sampler_all_dataset_exhausted(self) -> None:
-        mixer = self._setup_multi_node_wighted_sampler(
+        mixer = self._setup_multi_node_weighted_sampler(
             self._num_samples,
             self._num_datasets,
             self._weights_fn,
@@ -140,7 +139,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             mixer.reset()
 
     def test_multi_node_weighted_sampler_cycle_until_all_exhausted(self) -> None:
-        mixer = self._setup_multi_node_wighted_sampler(
+        mixer = self._setup_multi_node_weighted_sampler(
             self._num_samples,
             self._num_datasets,
             self._weights_fn,
@@ -165,7 +164,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             ],
         )
     )
-    def test_save_load_state_stateful(self, midpoint: int, stop_criteria: str):
+    def test_save_load_state_mixer(self, midpoint: int, stop_criteria: str):
         mixer = MultiNodeWeightedSampler(self.datasets, self.weights, stop_criteria)
         run_test_save_load_state(self, mixer, midpoint)
 
@@ -183,7 +182,7 @@ class TestMultiNodeWeightedSampler(TestCase):
         num_samples = 1500
         num_datasets = 5
 
-        mixer = self._setup_multi_node_wighted_sampler(
+        mixer = self._setup_multi_node_weighted_sampler(
             num_samples,
             num_datasets,
             self._weights_fn,
@@ -210,3 +209,77 @@ class TestMultiNodeWeightedSampler(TestCase):
             if results not in unique_results:
                 unique_results.append(results)
         self.assertEqual(unique_results, global_results)
+
+    def test_multi_node_weighted_batch_sampler_results_for_multiple_epochs(self):
+        # Check the mixer node
+        mixer = MultiNodeWeightedSampler(
+            self.datasets,
+            self.weights,
+        )
+
+        overall_results = []
+        for i in range(self._num_epochs):
+            results = list(mixer)
+            overall_results.append(results)
+            mixer.reset()
+
+        unique_results = []
+        for results in overall_results:
+            if results not in unique_results:
+                unique_results.append(results)
+
+        self.assertEqual(unique_results, overall_results)
+
+        # Check mixer along with Prefetcher node
+        node = self._setup_multi_node_weighted_sampler(
+            self._num_samples,
+            self._num_datasets,
+            self._weights_fn,
+            stop_criteria=StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
+        )
+
+        overall_results = []
+        for i in range(self._num_epochs):
+            results = list(node)
+            overall_results.append(results)
+            node.reset()
+
+        unique_results = []
+        for results in overall_results:
+            if results not in unique_results:
+                unique_results.append(results)
+
+        self.assertEqual(unique_results, overall_results)
+
+    @parameterized.expand(
+        itertools.product(
+            [1, 4, 7],
+            [
+                StopCriteria.ALL_DATASETS_EXHAUSTED,
+                StopCriteria.FIRST_DATASET_EXHAUSTED,
+                StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
+            ],
+        )
+    )
+    def test_save_load_state_mixer_over_multiple_epochs(self, midpoint: int, stop_criteria: str):
+        node = MultiNodeWeightedSampler(self.datasets, self.weights, stop_criteria)
+        run_test_save_load_state(self, node, midpoint)
+
+    @parameterized.expand(
+        itertools.product(
+            [1, 4, 7],
+            [
+                StopCriteria.ALL_DATASETS_EXHAUSTED,
+                StopCriteria.FIRST_DATASET_EXHAUSTED,
+                StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
+            ],
+        )
+    )
+    def test_save_load_state_mixer_over_multiple_epochs_with_prefetcher(self, midpoint: int, stop_criteria: str):
+        node = self._setup_multi_node_weighted_sampler(
+            self._num_samples,
+            self._num_datasets,
+            self._weights_fn,
+            stop_criteria=stop_criteria,
+        )
+        run_test_save_load_state(self, node, midpoint)

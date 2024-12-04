@@ -24,10 +24,11 @@ class MultiNodeWeightedSampler(BaseNode[T]):
     weights for sampling. `seed` is used to initialize the random number generator.
 
     The node implements the state using the following keys:
+    - DATASET_NODE_STATES_KEY: A dictionary of states for each source node.
+    - DATASETS_EXHAUSTED_KEY: A dictionary of booleans indicating whether each source node is exhausted.
+    - EPOCH_KEY: An epoch counter used to initialize the random number generator.
     - NUM_YIELDED_KEY: The number of items yielded.
     - WEIGHTED_SAMPLER_STATE_KEY: The state of the weighted sampler.
-    - DATASETS_EXHAUSTED_KEY: A dictionary of booleans indicating whether each source node is exhausted.
-    - DATASET_NODE_STATES_KEY: A dictionary of states for each source node.
 
     We support multiple stopping criteria:
     - CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED: Cycle through the source nodes until all datasets
@@ -49,9 +50,10 @@ class MultiNodeWeightedSampler(BaseNode[T]):
     """
 
     DATASET_NODE_STATES_KEY = "dataset_node_states"
+    DATASETS_EXHAUSTED_KEY = "datasets_exhausted"
+    EPOCH_KEY = "epoch"
     NUM_YIELDED_KEY = "num_yielded"
     WEIGHTED_SAMPLER_STATE_KEY = "weighted_sampler_state"
-    DATASETS_EXHAUSTED_KEY = "datasets_exhausted"
 
     def __init__(
         self,
@@ -63,18 +65,23 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         seed: int = 0,
     ) -> None:
         super().__init__()
+
         self.source_nodes = source_nodes
         self.weights = weights
         self.stop_criteria = stop_criteria
         self.dataset_names = list(self.source_nodes.keys())
         self._num_yielded = 0
+        self._started = False
         self.seed = seed
 
+        # Setup rank and world size
         if rank is None or world_size is None:
             self.rank, self.world_size = get_rank_and_world_size()
         else:
             self.rank = rank
             self.world_size = world_size
+
+        self._epoch = 0
 
         self._validate()
 
@@ -105,31 +112,35 @@ class MultiNodeWeightedSampler(BaseNode[T]):
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
-
         if initial_state is not None:
             self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
-            self._weighted_sampler = _WeightedSampler(
-                weights=self.weights,
-                seed=self.seed,
-                rank=self.rank,
-                world_size=self.world_size,
-                initial_state=initial_state[self.WEIGHTED_SAMPLER_STATE_KEY],
-            )
+            self._epoch = initial_state[self.EPOCH_KEY]
+            self._weighted_sampler = self._get_new_weighted_sampler(initial_state)
             self._datasets_exhausted = initial_state[self.DATASETS_EXHAUSTED_KEY]
             for k in self.dataset_names:
                 self.source_nodes[k].reset(initial_state[self.DATASET_NODE_STATES_KEY][k])
         else:
             # Force a fresh iterator from all source nodes
             self._num_yielded = 0
-            self._weighted_sampler = _WeightedSampler(
-                weights=self.weights,
-                seed=self.seed,
-                rank=self.rank,
-                world_size=self.world_size,
-            )
+
+            if self._started:
+                self._epoch += 1
+            self._weighted_sampler = self._get_new_weighted_sampler()
+
             self._datasets_exhausted = {key: False for key in self.weights.keys()}
             for k in self.dataset_names:
                 self.source_nodes[k].reset()
+        self._started = False
+
+    def _get_new_weighted_sampler(self, initial_state=None):
+        return _WeightedSampler(
+            weights=self.weights,
+            seed=self.seed,
+            rank=self.rank,
+            world_size=self.world_size,
+            epoch=self._epoch,
+            initial_state=(initial_state[self.WEIGHTED_SAMPLER_STATE_KEY] if initial_state is not None else None),
+        )
 
     def _check_for_stop_iteration(self) -> None:
         if all(self._datasets_exhausted.values()):
@@ -146,6 +157,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         return
 
     def next(self) -> T:
+        self._started = True
         while True:
             self._check_for_stop_iteration()
 
@@ -180,10 +192,11 @@ class MultiNodeWeightedSampler(BaseNode[T]):
 
     def get_state(self) -> Dict[str, Any]:
         return {
-            self.NUM_YIELDED_KEY: self._num_yielded,
-            self.WEIGHTED_SAMPLER_STATE_KEY: self._weighted_sampler.state_dict(),
             self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
             self.DATASET_NODE_STATES_KEY: {k: self.source_nodes[k].state_dict() for k in self.dataset_names},
+            self.EPOCH_KEY: self._epoch,
+            self.NUM_YIELDED_KEY: self._num_yielded,
+            self.WEIGHTED_SAMPLER_STATE_KEY: self._weighted_sampler.state_dict(),
         }
 
 
@@ -194,6 +207,7 @@ class _WeightedSampler:
         seed: int,
         rank: int,
         world_size: int,
+        epoch: int,
         randon_tensor_batch_size: int = 1000,
         initial_state: Optional[Dict[str, Any]] = None,
     ):
@@ -210,14 +224,13 @@ class _WeightedSampler:
         self._g = torch.Generator()
         self._g_rank = torch.Generator()
 
-        seed = _get_rank_seed(seed, self._g_rank, rank, world_size)
+        self.epoch = epoch
+        seed = _get_rank_seed(seed, self._g_rank, rank, world_size, self.epoch)
         self._g.manual_seed(seed)
 
         self._g_snapshot = self._g.get_state()
-        self._g_rank_snapshot = self._g_rank.get_state()
         if initial_state is not None:
             self._g.set_state(initial_state["g_state"])
-            self._g_rank.set_state(initial_state["g_rank_state"])
             self._offset = initial_state["offset"]
         else:
             self._offset = 0
@@ -226,7 +239,6 @@ class _WeightedSampler:
 
     def _get_batch_of_indices(self) -> list[int]:
         self._g_snapshot = self._g.get_state()
-        self._g_rank_snapshot = self._g_rank.get_state()
         return torch.multinomial(
             self.weights,
             num_samples=self.randon_tensor_batch_size,
@@ -248,6 +260,5 @@ class _WeightedSampler:
     def state_dict(self):
         return {
             "g_state": self._g_snapshot,
-            "g_rank_state": self._g_rank_snapshot,
             "offset": self._offset,
         }
