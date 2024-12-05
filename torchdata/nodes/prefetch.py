@@ -14,15 +14,15 @@ from ._populate_queue import _populate_queue
 
 
 class Prefetcher(BaseNode[T]):
-    """Prefetcher is a node that prefetches data from the source node and stores it in a queue.
+    """Prefetches data from the source node and stores it in a queue.
 
     Parameters:
         source (BaseNode[T]): The source node to prefetch data from.
-        prefetch_factor (int): The number of batches to prefetch ahead of time.
+        prefetch_factor (int): The number of items to prefetch ahead of time.
         snapshot_frequency (int): The frequency at which to snapshot the state of the source node. Default is
             1, which means that the state of the source node will be snapshotted after every batch. If set
             to a higher value, the state of the source node will be snapshotted after every snapshot_frequency
-            batches.
+            items.
     """
 
     def __init__(self, source: BaseNode[T], prefetch_factor: int, snapshot_frequency: int = 1):

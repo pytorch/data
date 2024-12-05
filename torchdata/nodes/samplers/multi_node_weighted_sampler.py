@@ -213,7 +213,8 @@ class _WeightedSampler:
         seed (int): The seed for the random number generator.
         rank (int): The rank of the current process.
         world_size (int): The world size of the distributed environment.
-        randon_tensor_batch_size (int): The batch size for the random tensor. Default is 1000.
+        random_tensor_batch_size (int): Generating random numbers in batches is faster than individually.
+            This setting controls the batch size, but is invisible to users and shouldn't need to be tuned. Default is 1000.
         initial_state (Optional[Dict[str, Any]]): The initial state of the sampler. Default is None.
     """
 
@@ -224,7 +225,7 @@ class _WeightedSampler:
         rank: int,
         world_size: int,
         epoch: int,
-        randon_tensor_batch_size: int = 1000,
+        random_tensor_batch_size: int = 1000,
         initial_state: Optional[Dict[str, Any]] = None,
     ):
         _names, _weights = [], []
@@ -235,7 +236,7 @@ class _WeightedSampler:
         self.names = _names
         self.weights = torch.tensor(_weights, dtype=torch.float64)
 
-        self.randon_tensor_batch_size = randon_tensor_batch_size
+        self.random_tensor_batch_size = random_tensor_batch_size
 
         self._g = torch.Generator()
         self._g_rank = torch.Generator()
@@ -257,7 +258,7 @@ class _WeightedSampler:
         self._g_snapshot = self._g.get_state()
         return torch.multinomial(
             self.weights,
-            num_samples=self.randon_tensor_batch_size,
+            num_samples=self.random_tensor_batch_size,
             replacement=True,
             generator=self._g,
         ).tolist()

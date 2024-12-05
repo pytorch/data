@@ -4,11 +4,10 @@ from torchdata.nodes.base_node import BaseNode, T
 
 
 class Loader(Generic[T]):
-    """An iterable class that wraps a root node and provides a stateful iterator interface.
+    """Wraps the root node (iterator) and provides a stateful iterable interface.
 
-    The state of the iterator is saved in the state_dict() method, and can be loaded from the
-    load_state_dict() method. It leverages a LoaderIterator object to save/reset the state of
-    the underlying data node.
+    The state of the last-returned iterator is returned by the state_dict() method, and can be
+    loaded using the load_state_dict() method.
 
     Parameters:
         root (BaseNode[T]): The root node of the data pipeline.
