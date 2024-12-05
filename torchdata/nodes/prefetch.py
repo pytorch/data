@@ -20,7 +20,7 @@ class Prefetcher(BaseNode[T]):
         source (BaseNode[T]): The source node to prefetch data from.
         prefetch_factor (int): The number of items to prefetch ahead of time.
         snapshot_frequency (int): The frequency at which to snapshot the state of the source node. Default is
-            1, which means that the state of the source node will be snapshotted after every batch. If set
+            1, which means that the state of the source node will be snapshotted after every item. If set
             to a higher value, the state of the source node will be snapshotted after every snapshot_frequency
             items.
     """
