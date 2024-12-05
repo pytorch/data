@@ -45,7 +45,7 @@ jobs:
           else
             PT_CHANNEL="https://download.pytorch.org/whl/nightly/cpu"
           fi
-          echo "value=$PT_CHANNEL" >> $GITHUB_OUTPUT
+          echo "value=$PT_CHANNEL" >> "$GITHUB_OUTPUT"
         id: pytorch_channel
       - name: Setup additional system libraries
         if: startsWith( matrix.os, 'ubuntu' )
