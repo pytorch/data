@@ -1,6 +1,12 @@
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import default_collate
+from torchdata.nodes.batch import Batcher
+from torchdata.nodes.loader import Loader
+
+from torchdata.nodes.samplers.multi_node_weighted_sampler import MultiNodeWeightedSampler
 
 
 def map_fn_bert(item, max_len, tokenizer):
@@ -224,3 +230,71 @@ def train_mnist_model(model, num_epochs, train_loader, test_loader, loss_fn, opt
             if epoch == num_epochs - 1:
                 print(f"Test Accuracy: {acc} %")
     return model, loss_list, accuracy_list
+
+
+def csv_reader(filename):
+    """
+    Reads a CSV file and returns its contents as a list of lists.
+    Args:
+        filename (str): The path to the CSV file to be read.
+    Returns:
+        list: A list of lists, where each inner list represents a row in the CSV file.
+    Notes:
+        This function assumes that the CSV file has a header row that should be skipped.
+        It also assumes that each row in the CSV file contains only numeric values.
+    """
+    with open(filename) as csvfile:
+        data = []
+        for line_number, line in enumerate(csvfile):
+            if line_number == 0:
+                continue
+            row = [float(x) for x in line.strip().split(",")]
+            data.append(row)
+    return data
+
+
+class MDS_Net(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(1, 128)  # input layer (1) -> hidden layer (128)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(128, 128)
+
+        self.fc3 = nn.Linear(128, 1)  # hidden layer (128) -> output layer (1)
+
+    def forward(self, x):
+        x = self.relu(self.fc1(x))
+        x = self.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+
+def train_mds_model(datasets, weights, batch_size=512):
+    """
+    Train a model using the provided multiple datasets and weights.
+    Args:
+        model (nn.Module): The MDS model to be trained. If None, a new MDS_Net model will be created.
+        datasets (Dict[str, BaseNode]): A dictionary mapping dataset names to their corresponding BaseNode objects.
+        weights (Dict[str, float]): A dictionary mapping dataset names to their corresponding weightages for sampling in the training batch.
+        batch_size (int, optional): The batch size for training. Defaults to 512.
+    Returns:
+        nn.Module: The trained MDS model.
+    """
+    model = MDS_Net()
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.01)
+    node = MultiNodeWeightedSampler(datasets, weights)
+    train_batcher = Loader(Batcher(node, batch_size, drop_last=True))
+    # Train the model
+    for epoch in range(100):
+        for batch in train_batcher:
+            batch = default_collate(batch)
+            x = batch["x"]
+            y = batch["y"]
+            optimizer.zero_grad()
+            outputs = model(x)
+            loss = criterion(outputs, y)
+            loss.backward()
+            optimizer.step()
+
+    return model
