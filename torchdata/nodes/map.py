@@ -278,6 +278,16 @@ class ParallelMapper(BaseNode[T]):
 
     If in_order is true, the iterator will return items in the order from which they arrive
     from source's iterator, potentially blocking even if other items are available.
+
+    Parameters:
+        source (BaseNode[X]): The source node to map over.
+        map_fn (Callable[[X], T]): The function to apply to each item from the source node.
+        num_workers (int): The number of workers to use for parallel processing.
+        in_order (bool): Whether to return items in the order from which they arrive from. Default is True.
+        method (Literal["thread", "process"]): The method to use for parallel processing. Default is "thread".
+        multiprocessing_context (Optional[str]): The multiprocessing context to use for parallel processing. Default is None.
+        max_concurrent (Optional[int]): The maximum number of items to process at once. Default is None.
+        snapshot_frequency (int): The frequency at which to snapshot the state of the source node. Default is 1.
     """
 
     def __init__(

@@ -4,6 +4,16 @@ from torchdata.nodes.base_node import BaseNode, T
 
 
 class Loader(Generic[T]):
+    """Wraps the root node (iterator) and provides a stateful iterable interface.
+
+    The state of the last-returned iterator is returned by the state_dict() method, and can be
+    loaded using the load_state_dict() method.
+
+    Parameters:
+        root (BaseNode[T]): The root node of the data pipeline.
+        restart_on_stop_iteration (bool): Whether to restart the iterator when it reaches the end. Default is True
+    """
+
     def __init__(self, root: BaseNode[T], restart_on_stop_iteration: bool = True):
         super().__init__()
         self.root = root
@@ -49,6 +59,16 @@ class Loader(Generic[T]):
 
 
 class LoaderIterator(BaseNode[T]):
+    """An iterator class that wraps a root node and works with the Loader class.
+
+    The LoaderIterator object saves state of the underlying root node, and calls reset on the root node when
+    the iterator is exhausted or on a reset call. We look one step ahead to determine if the iterator is exhausted.
+    The state of the iterator is saved in the state_dict() method, and can be loaded on reset calls.
+
+    Parameters:
+        loader (Loader[T]): The loader object that contains the root node.
+    """
+
     NUM_YIELDED_KEY = "num_yielded"
     ROOT_KEY = "root"
 

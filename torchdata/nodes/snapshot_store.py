@@ -84,7 +84,7 @@ class QueueSnapshotStore(SnapshotStore):
                 # thread may inadvertently report "is_alive()==False"
                 break
 
-        if isinstance(snapshot, ExceptionWrapper):
+        if snapshot is not None and isinstance(snapshot, ExceptionWrapper):
             snapshot.reraise()
 
         if snapshot is None or ver != self.SNAPSHOT_INIT_VERSION:

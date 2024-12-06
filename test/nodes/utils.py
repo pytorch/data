@@ -134,7 +134,7 @@ class StatefulRangeNode(BaseNode[Dict[str, int]]):
             self.i = 0
             self.num_resets += 1
 
-    def next(self) -> Iterator[Dict[str, int]]:
+    def next(self) -> Dict[str, int]:
         if self.i == self.n:
             raise StopIteration()
         ret = {"i": self.i, "resets": self.num_resets}
