@@ -1,5 +1,4 @@
 import torch
-from torch.utils.data import default_collate
 
 
 def map_fn_bert(item, max_len, tokenizer):
@@ -63,7 +62,9 @@ def train_bert(model, train_batcher, test_batcher, num_epochs, batch_size):
         model.train()
         total_loss = 0
         for num_loop, batch in enumerate(train_batcher):
-            batch = default_collate(batch)
+            if num_loop == 128:
+                # we just want to process 128 batches
+                break
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
             labels = batch["labels"].to(device)
@@ -81,8 +82,8 @@ def train_bert(model, train_batcher, test_batcher, num_epochs, batch_size):
             num_samples_tested = 0
             num_loops = 0
             for batch in test_batcher:
-
-                batch = default_collate(batch)
+                if num_loops == 32:
+                    break
                 input_ids = batch["input_ids"].to(device)
                 attention_mask = batch["attention_mask"].to(device)
                 labels = batch["labels"].to(device)
@@ -91,7 +92,7 @@ def train_bert(model, train_batcher, test_batcher, num_epochs, batch_size):
                 test_loss += loss.item()
                 _, predicted = torch.max(outputs.logits, dim=1)
                 correct += (predicted == labels).sum().item()
-                num_samples_tested += 128
+                num_samples_tested += batch_size
                 num_loops += 1
         accuracy = correct / num_samples_tested
         print(f"Test Loss : {test_loss / num_loops}, Accuracy: {accuracy : .4f}")
