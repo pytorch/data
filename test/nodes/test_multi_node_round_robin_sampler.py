@@ -49,6 +49,14 @@ class TestMultiNodeRoundRobinSampler(TestCase):
         }
         return datasets
 
+    def test_empty_datasets(self) -> None:
+        datasets = self.get_equal_dataset(0, self._num_datasets)
+        sampler = MultiNodeRoundRobinSampler(
+            datasets, StopCriteria.FIRST_DATASET_EXHAUSTED
+        )
+        for item in sampler:
+            self.fail("Expected no batches as each dataset is empty.")
+
     def test_empty_datasets_batched(self) -> None:
         datasets = self.get_equal_dataset(0, self._num_datasets)
         sampler = MultiNodeRoundRobinSampler(
@@ -58,6 +66,16 @@ class TestMultiNodeRoundRobinSampler(TestCase):
         batcher = Batcher(sampler, batch_size=batch_size)
         for batch in batcher:
             self.fail("Expected no batches as each dataset is empty.")
+
+    @parameterized.expand([4, 8, 16])
+    def test_single_dataset(self, num_samples: int) -> None:
+        datasets = self.get_equal_dataset(num_samples, 1)
+        sampler = MultiNodeRoundRobinSampler(
+            datasets, StopCriteria.FIRST_DATASET_EXHAUSTED
+        )
+        for num_sample, item in enumerate(sampler):
+            pass
+        self.assertEqual(num_sample + 1, num_samples)
 
     @parameterized.expand([4, 8, 16])
     def test_single_dataset_batched(self, num_samples: int) -> None:
@@ -98,6 +116,18 @@ class TestMultiNodeRoundRobinSampler(TestCase):
         else:
             self.assertEqual(num_batches, math.ceil(num_samples / batch_size))
 
+    def test_stop_criteria_all_datasets_exhausted(self) -> None:
+        datasets = self.get_unequal_dataset(self._num_samples, self._num_datasets)
+        total_items = sum(
+            range(self._num_samples, self._num_samples + self._num_datasets)
+        )
+        sampler = MultiNodeRoundRobinSampler(
+            datasets, StopCriteria.ALL_DATASETS_EXHAUSTED
+        )
+        for num_sample, item in enumerate(sampler):
+            pass
+        self.assertEqual(num_sample + 1, total_items)
+
     def test_stop_criteria_all_datasets_exhausted_batched(self) -> None:
         datasets = self.get_unequal_dataset(self._num_samples, self._num_datasets)
         total_items = sum(
@@ -113,6 +143,15 @@ class TestMultiNodeRoundRobinSampler(TestCase):
             num_batches += 1
         self.assertEqual(num_batches, total_items // batch_size)
 
+    def test_stop_criteria_first_dataset_exhausted(self) -> None:
+        datasets = self.get_unequal_dataset(self._num_samples, self._num_datasets)
+        sampler = MultiNodeRoundRobinSampler(
+            datasets, StopCriteria.FIRST_DATASET_EXHAUSTED
+        )
+        for num_sample, item in enumerate(sampler):
+            pass
+        self.assertEqual(num_sample + 1, self._num_datasets)
+
     def test_stop_criteria_first_dataset_exhausted_batched(self) -> None:
         num_samples = 4
         datasets = self.get_unequal_dataset(
@@ -127,6 +166,18 @@ class TestMultiNodeRoundRobinSampler(TestCase):
         for batch in batcher:
             num_batches += 1
         self.assertEqual(num_batches, num_samples * self._num_datasets // batch_size)
+
+    def test_stop_criteria_cycle_until_all_datasets_exhausted(self) -> None:
+        num_samples = 4
+        datasets = self.get_unequal_dataset(num_samples, self._num_datasets)
+        sampler = MultiNodeRoundRobinSampler(
+            datasets, StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED
+        )
+        for num_sample, item in enumerate(sampler):
+            pass
+        self.assertEqual(
+            num_sample + 1, self._num_datasets * (num_samples + self._num_datasets - 1)
+        )
 
     def test_stop_criteria_cycle_until_all_datasets_exhausted_batched(self) -> None:
         num_samples = 4
