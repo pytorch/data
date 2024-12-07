@@ -65,7 +65,7 @@ jobs:
           - pure
         exclude:
           - os: windows-latest
-            python-version: pure
+            python-version: [pure, "3.13"]
     steps:
       - name: Checkout Source Repository
         uses: actions/checkout@v3
