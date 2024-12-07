@@ -44,6 +44,7 @@ The following is the corresponding `torchdata` versions and supported Python ver
 | `torch`              | `torchdata`        | `python`                                |
 | -------------------- | ------------------ | --------------------------------------- |
 | `master` / `nightly` | `main` / `nightly` | `>=3.9`, `<=3.12` (`3.13` experimental) |
+| `2.5.0`              | `0.10.0`           | `>=3.9`, `<=3.12`                       |
 | `2.5.0`              | `0.9.0`            | `>=3.9`, `<=3.12`                       |
 | `2.4.0`              | `0.8.0`            | `>=3.8`, `<=3.12`                       |
 | `2.0.0`              | `0.6.0`            | `>=3.8`, `<=3.11`                       |
