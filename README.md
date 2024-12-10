@@ -39,7 +39,8 @@ examples
 
 torchdata.nodes is a library of composable iterators (not iterables!) that let you chain together common dataloading and
 pre-proc operations. It follows a streaming programming model, although "sampler + Map-style" can still be configured if
-you desire. See [torchdata.nodes main page](torchdata/nodes) for more details.
+you desire. See [torchdata.nodes main page](torchdata/nodes) for more details. Stay tuned for tutorial on
+torchdata.nodes coming soon!
 
 ## Installation
 
