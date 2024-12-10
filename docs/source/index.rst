@@ -37,6 +37,7 @@ Features described in this documentation are classified by release status:
    :caption: API Reference:
 
    torchdata.stateful_dataloader.rst
+   torchdata.nodes.rst
 
 
 .. toctree::
