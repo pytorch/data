@@ -5,32 +5,30 @@ Install torchdata with pip.
 
 .. code:: bash
 
-   pip install torchdata>=0.10.0
-
-
+    pip install torchdata>=0.10.0
 
 Generator Example
 ~~~~~~~~~~~~~~~~~
 
-Wrap a generator (or any iterable) to convert it to a BaseNode and get
-started
+Wrap a generator (or any iterable) to convert it to a BaseNode and get started
 
 .. code:: python
 
-   from torchdata.nodes import IterableWrapper, ParallelMapper, Loader
+    from torchdata.nodes import IterableWrapper, ParallelMapper, Loader
 
-   node = IterableWrapper(range(10))
-   node = ParallelMapper(node, map_fn=lambda x: x**2, num_workers=3, method="thread")
-   loader = Loader(node)
-   result = list(loader)
-   print(result)
-   # [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+    node = IterableWrapper(range(10))
+    node = ParallelMapper(node, map_fn=lambda x: x**2, num_workers=3, method="thread")
+    loader = Loader(node)
+    result = list(loader)
+    print(result)
+    # [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
 
 Sampler Example
 ~~~~~~~~~~~~~~~
 
 Samplers are still supported, and you can use your existing
-``torch.utils.data.Dataset``\ s
+``torch.utils.data.Dataset``\'s. See :ref:`migrate-to-nodes-from-utils` for an in-depth
+example.
 
 .. code:: python
 

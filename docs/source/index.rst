@@ -38,7 +38,7 @@ Features described in this documentation are classified by release status:
    what_is_torchdata_nodes.rst
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: API Reference:
 
    torchdata.nodes.rst
@@ -50,6 +50,7 @@ Features described in this documentation are classified by release status:
    :caption: Tutorial and Examples:
 
    getting_started_with_torchdata_nodes.rst
+   migrate_to_nodes_from_utils.rst
    stateful_dataloader_tutorial.rst
 
 
