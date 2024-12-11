@@ -10,6 +10,8 @@ from typing import Any, Dict, Protocol, runtime_checkable
 
 @runtime_checkable
 class Stateful(Protocol):
+    """Protocol for objects implementing both ``state_dict()`` and ``load_state_dict(state_dict: Dict[str, Any])``"""
+
     def state_dict(self) -> Dict[str, Any]:
         ...
 

@@ -97,7 +97,7 @@ def _pin_memory_loop(
 class PinMemory(BaseNode[T]):
     """Pins the data of the underlying node to a device. This is backed by torch.utils.data._utils.pin_memory._pin_memory_loop.
 
-    Parameters:
+    Args:
         source (BaseNode[T]): The source node to pin the data from.
         pin_memory_device (str): The device to pin the data to. Default is "".
         snapshot_frequency (int): The frequency at which to snapshot the state of the source node. Default is
