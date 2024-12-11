@@ -88,6 +88,8 @@ the main process, which distributes sampler indices to workers. With
 IterableDatasets, each worker needs to figure out (through
 ``torch.utils.data.get_worker_info``) what data it should be returning.
 
+.. _how-does-nodes-perform:
+
 How does ``torchdata.nodes`` perform?
 -------------------------------------
 
@@ -148,7 +150,7 @@ with a particular state if one is passed.
 
 However, end-users are used to dealing with Iterables, for example,
 
-::
+.. code:: python
 
    for epoch in range(5):
      # Most frameworks and users don't expect to call loader.reset()

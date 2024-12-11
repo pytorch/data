@@ -9,7 +9,8 @@ to get started with ``torchdata.nodes``, and provide a starting ground for defin
 your own dataloading pipelines.
 
 We'll demonstrate how to achieve the most common DataLoader features, re-use existing samplers and datasets,
-and load/save dataloader state.
+and load/save dataloader state. It performs at least as well as ``DataLoader`` and ``StatefulDataLoader``,
+see :ref:`how-does-nodes-perform`.
 
 Map-Style Datasets
 ~~~~~~~~~~~~~~~~~~
