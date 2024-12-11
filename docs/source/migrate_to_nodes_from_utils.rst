@@ -59,7 +59,8 @@ Now let's look at what an equivalent implementation for DataLoader might look li
     from torch.utils.data import RandomSampler, SequentialSampler, default_collate, Dataset
 
     class MapAndCollate:
-        """A simple transform that takes a batch of indices, maps with dataset, and then applies collate
+        """A simple transform that takes a batch of indices, maps with dataset, and then applies
+        collate.
         TODO: make this a standard utility in torchdata.nodes
         """
         def __init__(self, dataset, collate_fn):
@@ -90,17 +91,19 @@ Now let's look at what an equivalent implementation for DataLoader might look li
         # Now let's batch sampler indices together
         node = tn.Batcher(node, batch_size=batch_size, drop_last=drop_last)
 
-        # Create a Map Function that accepts a list of indices, applies getitem to it, and then collates them
+        # Create a Map Function that accepts a list of indices, applies getitem to it, and
+        # then collates them
         map_and_collate = MapAndCollate(dataset, collate_fn or default_collate)
 
-        # MapAndCollate is doing most of the heavy lifting, so let's parallelize it. We could choose process or thread workers.
-        # Note that if you're not using Free-Threaded Python (eg 3.13t) with -Xgil=0, then multi-threading might result
-        # in GIL contention, and slow down training.
+        # MapAndCollate is doing most of the heavy lifting, so let's parallelize it. We could
+        # choose process or thread workers. Note that if you're not using Free-Threaded
+        # Python (eg 3.13t) with -Xgil=0, then multi-threading might result in GIL contention,
+        # and slow down training.
         node = tn.ParallelMapper(
             node,
             map_fn=map_and_collate,
             num_workers=num_workers,
-            method="process",
+            method="process",  # Set this to "thread" for multi-threading
             in_order=True,
         )
 
@@ -109,14 +112,16 @@ Now let's look at what an equivalent implementation for DataLoader might look li
             node = tn.PinMemory(node)
         node = tn.Prefetcher(node, prefetch_factor=num_workers * 2)
 
-        # Note that node is an iterator, and once it's exhausted, you'll need to call .reset() on it
-        # to start a new Epoch.
-        # We wrap the node in a Loader, which is an iterable and handles reset. It also provides
-        # state_dict and load_state_dict methods
+        # Note that node is an iterator, and once it's exhausted, you'll need to call .reset()
+        # on it to start a new Epoch.
+        # Insteaad, we wrap the node in a Loader, which is an iterable and handles reset. It
+        # also provides state_dict and load_state_dict methods.
         return tn.Loader(node)
 
+Now let's test this out with a useless dataset, and demonstrate how state management works.
 
-    # Now let's create a silly dataset
+.. code:: python
+
     class SquaredDataset(Dataset):
         def __init__(self, len: int):
             self.len = len
@@ -125,8 +130,6 @@ Now let's look at what an equivalent implementation for DataLoader might look li
         def __getitem__(self, i: int) -> int:
             return i**2
 
-
-    # Here's how to use the state features
     loader = NodesDataLoader(
         dataset=SquaredDataset(14),
         batch_size=3,
@@ -146,8 +149,15 @@ Now let's look at what an equivalent implementation for DataLoader might look li
 
     loader.load_state_dict(state_dict)
     batches_after_loading = list(loader)
+    print(batches[3:])
+    # [tensor([ 81, 100, 121]), tensor([144, 169])]
+    print(batches_after_loading)
+    # [tensor([ 81, 100, 121]), tensor([144, 169])]
 
-    # Let's also compare this to torch.utils.data.DataLoader
+Let's also compare this to torch.utils.data.DataLoader, as a sanity check.
+
+.. code:: python
+
     loaderv1 = torch.utils.data.DataLoader(
         dataset=SquaredDataset(14),
         batch_size=3,
@@ -158,15 +168,11 @@ Now let's look at what an equivalent implementation for DataLoader might look li
         drop_last=False,
         persistent_workers=False,  # Coming soon to torchdata.nodes!
     )
+    print(list(loaderv1))
+    # [tensor([0, 1, 4]), tensor([ 9, 16, 25]), tensor([36, 49, 64]), tensor([ 81, 100, 121]), tensor([144, 169])]
+    print(batches)
+    # [tensor([0, 1, 4]), tensor([ 9, 16, 25]), tensor([36, 49, 64]), tensor([ 81, 100, 121]), tensor([144, 169])]
 
-    print("torch.utils.data.DataLoader:\n", list(loaderv1))
-    print("Full dataset:\n", batches)
-    print("After loading state_dict:", batches_after_loading)
-    # torch.utils.data.DataLoader:
-    # [tensor([0, 1, 4]), tensor([ 9, 16, 25]), tensor([36, 49, 64]), tensor([ 81, 100, 121]), tensor([144, 169])]
-    # Full dataset:
-    # [tensor([0, 1, 4]), tensor([ 9, 16, 25]), tensor([36, 49, 64]), tensor([ 81, 100, 121]), tensor([144, 169])]
-    # After loading state_dict: [tensor([ 81, 100, 121]), tensor([144, 169])]
 
 IterableDatasets
 ~~~~~~~~~~~~~~~~

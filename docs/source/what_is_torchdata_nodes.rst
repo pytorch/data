@@ -88,6 +88,26 @@ the main process, which distributes sampler indices to workers. With
 IterableDatasets, each worker needs to figure out (through
 ``torch.utils.data.get_worker_info``) what data it should be returning.
 
+How does ``torchdata.nodes`` perform?
+-------------------------------------
+
+We presented some results from an early version of ``torchdata.nodes``
+on a video-decoding benchmark at `PyTorch Conf 2024 <https://pytorch2024.sched.com/event/1fHn5/blobs-to-clips-efficient-end-to-end-video-data-loading-andrew-ho-ahmad-sharif-meta>`_
+where we showed that:
+
+* torchdata.nodes performs on-par or better with ``torch.utils.data.DataLoader``
+  when using multi-processing (see :ref:`migrate-to-nodes-from-utils`)
+
+* With GIL python, torchdata.nodes with multi-threading performs better than
+  multi-processing in some scenarios, but makes features like GPU pre-proc
+  easier to perform which can boost
+
+We ran a benchmark loading the Imagenet dataset from disk,
+and manage to saturate main-memory bandwidth with Free-Threaded Python (3.13t)
+at a significantly lower CPU utilization than with multi-process workers
+(blogpost expected eary 2025). See ``examples/nodes/imagenet_benchmark.py``.
+
+
 Design choices
 --------------
 
