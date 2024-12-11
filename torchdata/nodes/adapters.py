@@ -25,9 +25,11 @@ class IterableWrapper(BaseNode[T]):
     If iterable implements the Stateful Protocol, it will be saved and restored with its
     state_dict/load_state_dict methods.
 
-    If the iterator resulting from iter(iterable) is Stateful it is IGNORED.
+    Args:
+        iterable (Iterable[T]): Iterable to convert to BaseNode. IterableWrapper calls iter() on it.
 
-    :param iterable: Iterable to wrap. IterableWrapper calls iter() on it.
+    :warning: Note the distinction between state_dict/load_state_dict defined on Iterable, vs Iterator.
+        Only the Iterable's state_dict/load_state_dict are used.
     """
 
     NUM_YIELDED_KEY = "_num_yielded"
@@ -77,8 +79,9 @@ def MapStyleWrapper(map_dataset: Mapping[K, T], sampler: Sampler[K]) -> BaseNode
     """Thin Wrapper that converts any MapDataset in to a torchdata.node
     If you want parallelism, copy this and replace Mapper with ParallelMapper.
 
-    :param map_dataset: Mapping[K, T] - Apply map_dataset.__getitem__ to the outputs of sampler.
-    :param sampler: Sampler[K]
+    Args:
+        map_dataset (Mapping[K, T]): - Apply map_dataset.__getitem__ to the outputs of sampler.
+        sampler (Sampler[K]):
     """
     sampler_node: SamplerWrapper[K] = SamplerWrapper(sampler)
     mapper_node = Mapper(sampler_node, map_dataset.__getitem__)
@@ -91,9 +94,10 @@ class SamplerWrapper(BaseNode[T]):
     IterableWrapper except it includes a hook to call set_epoch on the sampler,
     if it supports it.
 
-    :param sampler: Sampler - to wrap.
-    :param initial_epoch: int - initial epoch to set on the sampler
-    :param epoch_updater: Optional[Callable[[int], int]] = None - callback to update epoch at start of new iteration. It's called at the beginning of each iterator request, except the first one.
+    Args:
+        sampler (Sampler): Sampler to wrap.
+        initial_epoch (int): initial epoch to set on the sampler
+        epoch_updater (Optional[Callable[[int], int]] = None): callback to update epoch at start of new iteration. It's called at the beginning of each iterator request, except the first one.
     """
 
     NUM_YIELDED_KEY = "_num_yielded"

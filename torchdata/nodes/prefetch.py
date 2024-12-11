@@ -16,7 +16,7 @@ from ._populate_queue import _populate_queue
 class Prefetcher(BaseNode[T]):
     """Prefetches data from the source node and stores it in a queue.
 
-    Parameters:
+    Args:
         source (BaseNode[T]): The source node to prefetch data from.
         prefetch_factor (int): The number of items to prefetch ahead of time.
         snapshot_frequency (int): The frequency at which to snapshot the state of the source node. Default is

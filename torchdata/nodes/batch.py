@@ -15,13 +15,10 @@ class Batcher(BaseNode[List[T]]):
     If drop_last is True, the last batch will be dropped if it is smaller than batch_size.
     If drop_last is False, the last batch will be returned even if it is smaller than batch_size.
 
-    Parameters:
+    Args:
         source (BaseNode[T]): The source node to batch the data from.
         batch_size (int): The size of the batch.
         drop_last (bool): Whether to drop the last batch if it is smaller than batch_size. Default is True.
-
-    Attributes:
-        SOURCE_KEY (str): The key for the source node in the state dict.
     """
 
     SOURCE_KEY = "source"
