@@ -119,7 +119,7 @@ Now let's look at what an equivalent implementation for DataLoader might look li
         # also provides state_dict and load_state_dict methods.
         return tn.Loader(node)
 
-Now let's test this out with a useless dataset, and demonstrate how state management works.
+Now let's test this out with a trivial dataset, and demonstrate how state management works.
 
 .. code:: python
 

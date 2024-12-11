@@ -14,10 +14,10 @@ T = TypeVar("T", covariant=True)
 
 
 class BaseNode(Iterator[T]):
-    """BaseNodes are the base class for creating composable dataloading dags in ``torchdata.nodes``.
+    """BaseNodes are the base class for creating composable dataloading DAGs in ``torchdata.nodes``.
 
     Most end-users will not iterate over a BaseNode instance directly, but instead
-    wrap it in a :class:`torchdata.nodes.Loader` which converts the dag into a more familiar Iterable.
+    wrap it in a :class:`torchdata.nodes.Loader` which converts the DAG into a more familiar Iterable.
 
     .. code-block:: python
 
