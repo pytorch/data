@@ -6,6 +6,7 @@
 
 
 def stateful_dataloader_test():
+    from torchdata.nodes import Loader
     from torchdata.stateful_dataloader import StatefulDataLoader
 
 

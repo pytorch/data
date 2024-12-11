@@ -207,7 +207,7 @@ class _WeightedSampler:
     - g_rank_state: The state of the random number generator for the rank.
     - offset: The offset of the batch of indices.
 
-    Parameters:
+    Args:
         weights (Dict[str, float]): A dictionary of weights for each source node.
         seed (int): The seed for the random number generator.
         rank (int): The rank of the current process.
