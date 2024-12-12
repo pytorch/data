@@ -31,19 +31,26 @@ Features described in this documentation are classified by release status:
   binary distributions like PyPI or Conda, except sometimes behind run-time
   flags, and are at an early stage for feedback and testing.
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Developer Notes:
+
+   what_is_torchdata_nodes.rst
 
 .. toctree::
    :maxdepth: 2
    :caption: API Reference:
 
-   torchdata.stateful_dataloader.rst
    torchdata.nodes.rst
+   torchdata.stateful_dataloader.rst
 
 
 .. toctree::
    :maxdepth: 2
    :caption: Tutorial and Examples:
 
+   getting_started_with_torchdata_nodes.rst
+   migrate_to_nodes_from_utils.rst
    stateful_dataloader_tutorial.rst
 
 
