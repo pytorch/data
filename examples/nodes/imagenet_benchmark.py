@@ -1,3 +1,34 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+#
+# From within the data directory run:
+# > IMGNET_TRAIN=/path/to/imagenet/train
+# > python examples/nodes/imagenet_benchmark.py --loader=process -d $IMGNET_TRAIN --max-steps 1000 --num-workers 4
+#
+# For FT-python, you need python 3.13t and run as:
+# > python -Xgil=0 examples/nodes/imagenet_benchmark.py --loader=process -d $IMGNET_TRAIN --max-steps 1000 --num-workers 4
+#
+# Some example runs on Linux, with Python 3.13t below, using 4 workers
+# ================================================================================
+# Baseline, with torch.utils.data.DataLoader:
+# > python -Xgil=1 examples/nodes/imagenet_benchmark.py --loader=classic -d $IMGNET_TRAIN --max-steps 1000 --num-workers 4
+# 835.2034686705912 img/sec, 52.20021679191195 batches/sec
+#
+# Multi-PROCESSING with the GIL
+# > python -Xgil=1 examples/nodes/imagenet_benchmark.py --loader=process -d $IMGNET_TRAIN --max-steps 1000 --num-workers 4
+# 905.5019281357543 img/sec, 56.59387050848464 batches/sec
+#
+# Multi-threading with the GIL:
+# > python -Xgil=1 examples/nodes/imagenet_benchmark.py --loader=thread -d $IMGNET_TRAIN --max-steps 1000 --num-workers 4
+# 692.0924763926637 img/sec, 43.25577977454148 batches/sec
+#
+# Multi-threading with no GIL:
+# > python -Xgil=0 examples/nodes/imagenet_benchmark.py --loader=thread -d $IMGNET_TRAIN --max-steps 1000 --num-workers 4
+# 922.3858393659006 img/sec, 57.649114960368784 batches/sec
+
 import argparse
 
 import os
