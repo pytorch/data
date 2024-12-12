@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>TorchData &mdash; TorchData main documentation</title>
+  <title>Getting Started With torchdata.nodes (beta) &mdash; TorchData main documentation</title>
   
 
   
@@ -34,7 +34,8 @@
   <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="What is torchdata.nodes (beta)?" href="what_is_torchdata_nodes.html" />
+    <link rel="next" title="Migrating to torchdata.nodes from torch.utils.data" href="migrate_to_nodes_from_utils.html" />
+    <link rel="prev" title="Stateful DataLoader" href="torchdata.stateful_dataloader.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -299,8 +300,8 @@
 <li class="toctree-l1"><a class="reference internal" href="torchdata.stateful_dataloader.html">Stateful DataLoader</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="getting_started_with_torchdata_nodes.html">Getting Started With <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> (beta)</a></li>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started With <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> (beta)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="migrate_to_nodes_from_utils.html">Migrating to <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> from <code class="docutils literal notranslate"><span class="pre">torch.utils.data</span></code></a></li>
 <li class="toctree-l1"><a class="reference internal" href="stateful_dataloader_tutorial.html">Stateful DataLoader Tutorial</a></li>
 </ul>
@@ -345,7 +346,7 @@
   <ul class="pytorch-breadcrumbs">
     
       <li>
-        <a href="#">
+        <a href="index.html">
           
             Docs
           
@@ -353,13 +354,13 @@
       </li>
 
         
-      <li>TorchData</li>
+      <li>Getting Started With <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> (beta)</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="_sources/index.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
+            <a href="_sources/getting_started_with_torchdata_nodes.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -400,85 +401,56 @@ users are advised to pin to <cite>torchdata&lt;=0.9.0</cite> or an older version
 releases will not include DataPipes or DataLoaderV2.
 Please reach out if you suggestions or comments (please use <a class="reference external" href="https://github.com/pytorch/data/issues/1196">this issue</a> for feedback)</p>
 </div>
-<section id="torchdata">
-<h1>TorchData<a class="headerlink" href="#torchdata" title="Permalink to this heading">¶</a></h1>
-<p>This library is part of the <a class="reference external" href="http://pytorch.org/">PyTorch</a> project. PyTorch is an open source
-machine learning framework.</p>
-<p><code class="xref py py-mod docutils literal notranslate"><span class="pre">torchdata</span></code> is a Beta library of common modular data loading primitives for
-easily constructing flexible and performant data pipelines. And, there are
-a few features still in prototype stage.</p>
-<p>Features described in this documentation are classified by release status:</p>
-<blockquote>
-<div><p><em>Stable:</em>  These features will be maintained long-term and there should generally
-be no major performance limitations or gaps in documentation.
-We also expect to maintain backwards compatibility (although
-breaking changes can happen and notice will be given one release ahead
-of time).</p>
-<p><em>Beta:</em>  Features are tagged as Beta because the API may change based on
-user feedback, because the performance needs to improve, or because
-coverage across operators is not yet complete. For Beta features, we are
-committing to seeing the feature through to the Stable classification.
-We are not, however, committing to backwards compatibility.</p>
-<p><em>Prototype:</em>  These features are typically not available as part of
-binary distributions like PyPI or Conda, except sometimes behind run-time
-flags, and are at an early stage for feedback and testing.</p>
-</div></blockquote>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Developer Notes:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="what_is_torchdata_nodes.html">What is <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> (beta)?</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="what_is_torchdata_nodes.html#why-torchdata-nodes">Why <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code>?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="what_is_torchdata_nodes.html#how-does-torchdata-nodes-perform">How does <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> perform?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="what_is_torchdata_nodes.html#design-choices">Design choices</a></li>
-</ul>
-</li>
-</ul>
+<section id="getting-started-with-torchdata-nodes-beta">
+<h1>Getting Started With <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> (beta)<a class="headerlink" href="#getting-started-with-torchdata-nodes-beta" title="Permalink to this heading">¶</a></h1>
+<p>Install torchdata with pip.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>torchdata&gt;<span class="o">=</span><span class="m">0</span>.10.0
+</pre></div>
 </div>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.nodes.html"><code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> (beta)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.stateful_dataloader.html">Stateful DataLoader</a></li>
-</ul>
+<section id="generator-example">
+<h2>Generator Example<a class="headerlink" href="#generator-example" title="Permalink to this heading">¶</a></h2>
+<p>Wrap a generator (or any iterable) to convert it to a BaseNode and get started</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torchdata.nodes</span> <span class="kn">import</span> <span class="n">IterableWrapper</span><span class="p">,</span> <span class="n">ParallelMapper</span><span class="p">,</span> <span class="n">Loader</span>
+
+<span class="n">node</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+<span class="n">node</span> <span class="o">=</span> <span class="n">ParallelMapper</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">map_fn</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">num_workers</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;thread&quot;</span><span class="p">)</span>
+<span class="n">loader</span> <span class="o">=</span> <span class="n">Loader</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">loader</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="c1"># [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]</span>
+</pre></div>
 </div>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="getting_started_with_torchdata_nodes.html">Getting Started With <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> (beta)</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="getting_started_with_torchdata_nodes.html#generator-example">Generator Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting_started_with_torchdata_nodes.html#sampler-example">Sampler Example</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="migrate_to_nodes_from_utils.html">Migrating to <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> from <code class="docutils literal notranslate"><span class="pre">torch.utils.data</span></code></a><ul>
-<li class="toctree-l2"><a class="reference internal" href="migrate_to_nodes_from_utils.html#map-style-datasets">Map-Style Datasets</a></li>
-<li class="toctree-l2"><a class="reference internal" href="migrate_to_nodes_from_utils.html#iterabledatasets">IterableDatasets</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="stateful_dataloader_tutorial.html">Stateful DataLoader Tutorial</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="stateful_dataloader_tutorial.html#saving-and-loading-state">Saving and loading state</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stateful_dataloader_tutorial.html#saving-custom-state-with-map-style-datasets">Saving Custom State with Map-Style Datasets</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stateful_dataloader_tutorial.html#saving-custom-state-with-iterable-style-datasets">Saving Custom State with Iterable-Style Datasets</a></li>
-</ul>
-</li>
-</ul>
+</section>
+<section id="sampler-example">
+<h2>Sampler Example<a class="headerlink" href="#sampler-example" title="Permalink to this heading">¶</a></h2>
+<p>Samplers are still supported, and you can use your existing
+<code class="docutils literal notranslate"><span class="pre">torch.utils.data.Dataset</span></code>'s. See <a class="reference internal" href="migrate_to_nodes_from_utils.html#migrate-to-nodes-from-utils"><span class="std std-ref">Migrating to torchdata.nodes from torch.utils.data</span></a> for an in-depth
+example.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch.utils.data</span>
+<span class="kn">from</span> <span class="nn">torchdata.nodes</span> <span class="kn">import</span> <span class="n">SamplerWrapper</span><span class="p">,</span> <span class="n">ParallelMapper</span><span class="p">,</span> <span class="n">Loader</span>
+
+
+<span class="k">class</span> <span class="nc">SquaredDataset</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">i</span><span class="o">**</span><span class="mi">2</span>
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">10</span>
+
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">SquaredDataset</span><span class="p">()</span>
+<span class="n">sampler</span> <span class="o">=</span> <span class="n">RandomSampler</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+
+<span class="c1"># For fine-grained control of iteration order, define your own sampler</span>
+<span class="n">node</span> <span class="o">=</span> <span class="n">SamplerWrapper</span><span class="p">(</span><span class="n">sampler</span><span class="p">)</span>
+<span class="c1"># Simply apply dataset&#39;s __getitem__ as a map function to the indices generated from sampler</span>
+<span class="n">node</span> <span class="o">=</span> <span class="n">ParallelMapper</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">map_fn</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">,</span> <span class="n">num_workers</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;thread&quot;</span><span class="p">)</span>
+<span class="c1"># Loader is used to convert a node (iterator) into an Iterable that may be reused for multi epochs</span>
+<span class="n">loader</span> <span class="o">=</span> <span class="n">Loader</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">loader</span><span class="p">))</span>
+<span class="c1"># [25, 36, 9, 49, 0, 81, 4, 16, 64, 1]</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">loader</span><span class="p">))</span>
+<span class="c1"># [0, 4, 1, 64, 49, 25, 9, 16, 81, 36]</span>
+</pre></div>
 </div>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/docs">PyTorch</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/torchtune">torchtune</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/audio">torchaudio</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/vision">torchvision</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/elastic/">TorchElastic</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/serve">TorchServe</a></li>
-<li class="toctree-l1"><a class="reference external" href="http://pytorch.org/xla/">PyTorch on XLA Devices</a></li>
-</ul>
-</div>
-<section id="indices">
-<h2>Indices<a class="headerlink" href="#indices" title="Permalink to this heading">¶</a></h2>
-<ul class="simple">
-<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
-</ul>
 </section>
 </section>
 
@@ -490,8 +462,10 @@ flags, and are at an early stage for feedback and testing.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="what_is_torchdata_nodes.html" class="btn btn-neutral float-right" title="What is torchdata.nodes (beta)?" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="migrate_to_nodes_from_utils.html" class="btn btn-neutral float-right" title="Migrating to torchdata.nodes from torch.utils.data" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
       
+      
+        <a href="torchdata.stateful_dataloader.html" class="btn btn-neutral" title="Stateful DataLoader" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -523,8 +497,9 @@ flags, and are at an early stage for feedback and testing.</p>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">TorchData</a><ul>
-<li><a class="reference internal" href="#indices">Indices</a></li>
+<li><a class="reference internal" href="#">Getting Started With <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> (beta)</a><ul>
+<li><a class="reference internal" href="#generator-example">Generator Example</a></li>
+<li><a class="reference internal" href="#sampler-example">Sampler Example</a></li>
 </ul>
 </li>
 </ul>

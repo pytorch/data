@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>TorchData &mdash; TorchData main documentation</title>
+  <title>What is torchdata.nodes (beta)? &mdash; TorchData main documentation</title>
   
 
   
@@ -34,7 +34,8 @@
   <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="What is torchdata.nodes (beta)?" href="what_is_torchdata_nodes.html" />
+    <link rel="next" title="torchdata.nodes (beta)" href="torchdata.nodes.html" />
+    <link rel="prev" title="TorchData" href="index.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -290,8 +291,8 @@
             
             
               <p class="caption" role="heading"><span class="caption-text">Developer Notes:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="what_is_torchdata_nodes.html">What is <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> (beta)?</a></li>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">What is <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> (beta)?</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
 <ul>
@@ -345,7 +346,7 @@
   <ul class="pytorch-breadcrumbs">
     
       <li>
-        <a href="#">
+        <a href="index.html">
           
             Docs
           
@@ -353,13 +354,13 @@
       </li>
 
         
-      <li>TorchData</li>
+      <li>What is <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> (beta)?</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="_sources/index.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
+            <a href="_sources/what_is_torchdata_nodes.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -400,85 +401,151 @@ users are advised to pin to <cite>torchdata&lt;=0.9.0</cite> or an older version
 releases will not include DataPipes or DataLoaderV2.
 Please reach out if you suggestions or comments (please use <a class="reference external" href="https://github.com/pytorch/data/issues/1196">this issue</a> for feedback)</p>
 </div>
-<section id="torchdata">
-<h1>TorchData<a class="headerlink" href="#torchdata" title="Permalink to this heading">¶</a></h1>
-<p>This library is part of the <a class="reference external" href="http://pytorch.org/">PyTorch</a> project. PyTorch is an open source
-machine learning framework.</p>
-<p><code class="xref py py-mod docutils literal notranslate"><span class="pre">torchdata</span></code> is a Beta library of common modular data loading primitives for
-easily constructing flexible and performant data pipelines. And, there are
-a few features still in prototype stage.</p>
-<p>Features described in this documentation are classified by release status:</p>
-<blockquote>
-<div><p><em>Stable:</em>  These features will be maintained long-term and there should generally
-be no major performance limitations or gaps in documentation.
-We also expect to maintain backwards compatibility (although
-breaking changes can happen and notice will be given one release ahead
-of time).</p>
-<p><em>Beta:</em>  Features are tagged as Beta because the API may change based on
-user feedback, because the performance needs to improve, or because
-coverage across operators is not yet complete. For Beta features, we are
-committing to seeing the feature through to the Stable classification.
-We are not, however, committing to backwards compatibility.</p>
-<p><em>Prototype:</em>  These features are typically not available as part of
-binary distributions like PyPI or Conda, except sometimes behind run-time
-flags, and are at an early stage for feedback and testing.</p>
-</div></blockquote>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Developer Notes:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="what_is_torchdata_nodes.html">What is <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> (beta)?</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="what_is_torchdata_nodes.html#why-torchdata-nodes">Why <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code>?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="what_is_torchdata_nodes.html#how-does-torchdata-nodes-perform">How does <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> perform?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="what_is_torchdata_nodes.html#design-choices">Design choices</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.nodes.html"><code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> (beta)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torchdata.stateful_dataloader.html">Stateful DataLoader</a></li>
-</ul>
-</div>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Tutorial and Examples:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="getting_started_with_torchdata_nodes.html">Getting Started With <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> (beta)</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="getting_started_with_torchdata_nodes.html#generator-example">Generator Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting_started_with_torchdata_nodes.html#sampler-example">Sampler Example</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="migrate_to_nodes_from_utils.html">Migrating to <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> from <code class="docutils literal notranslate"><span class="pre">torch.utils.data</span></code></a><ul>
-<li class="toctree-l2"><a class="reference internal" href="migrate_to_nodes_from_utils.html#map-style-datasets">Map-Style Datasets</a></li>
-<li class="toctree-l2"><a class="reference internal" href="migrate_to_nodes_from_utils.html#iterabledatasets">IterableDatasets</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="stateful_dataloader_tutorial.html">Stateful DataLoader Tutorial</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="stateful_dataloader_tutorial.html#saving-and-loading-state">Saving and loading state</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stateful_dataloader_tutorial.html#saving-custom-state-with-map-style-datasets">Saving Custom State with Map-Style Datasets</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stateful_dataloader_tutorial.html#saving-custom-state-with-iterable-style-datasets">Saving Custom State with Iterable-Style Datasets</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">PyTorch Libraries</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/docs">PyTorch</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/torchtune">torchtune</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/audio">torchaudio</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/vision">torchvision</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/elastic/">TorchElastic</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://pytorch.org/serve">TorchServe</a></li>
-<li class="toctree-l1"><a class="reference external" href="http://pytorch.org/xla/">PyTorch on XLA Devices</a></li>
-</ul>
-</div>
-<section id="indices">
-<h2>Indices<a class="headerlink" href="#indices" title="Permalink to this heading">¶</a></h2>
+<section id="what-is-torchdata-nodes-beta">
+<h1>What is <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> (beta)?<a class="headerlink" href="#what-is-torchdata-nodes-beta" title="Permalink to this heading">¶</a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> is a library of composable iterators (not
+iterables!) that let you chain together common dataloading and pre-proc
+operations. It follows a streaming programming model, although “sampler
++ Map-style” can still be configured if you desire.</p>
+<p><code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> adds more flexibility to the standard
+<code class="docutils literal notranslate"><span class="pre">torch.utils.data</span></code> offering, and introduces multi-threaded parallelism
+in addition to multi-process (the only supported approach in
+<code class="docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code>), as well as first-class support for
+mid-epoch checkpointing through a <code class="docutils literal notranslate"><span class="pre">state_dict/load_state_dict</span></code>
+interface.</p>
+<p><code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> strives to include as many useful operators as
+possible, however it’s designed to be extensible. New nodes are required
+to subclass <code class="docutils literal notranslate"><span class="pre">torchdata.nodes.BaseNode</span></code>, (which itself subclasses
+<code class="docutils literal notranslate"><span class="pre">typing.Iterator</span></code>) and implement <code class="docutils literal notranslate"><span class="pre">next()</span></code>, <code class="docutils literal notranslate"><span class="pre">reset(initial_state)</span></code>
+and <code class="docutils literal notranslate"><span class="pre">get_state()</span></code> operations (notably, not <code class="docutils literal notranslate"><span class="pre">__next__</span></code>,
+<code class="docutils literal notranslate"><span class="pre">load_state_dict</span></code>, nor <code class="docutils literal notranslate"><span class="pre">state_dict</span></code>)</p>
+<p>See <a class="reference internal" href="getting_started_with_torchdata_nodes.html"><span class="doc">Getting Started With torchdata.nodes (beta)</span></a> to get started</p>
+<section id="why-torchdata-nodes">
+<h2>Why <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code>?<a class="headerlink" href="#why-torchdata-nodes" title="Permalink to this heading">¶</a></h2>
+<p>We get it, <code class="docutils literal notranslate"><span class="pre">torch.utils.data</span></code> just works for many many use cases.
+However it definitely has a bunch of rough spots:</p>
+<section id="multiprocessing-sucks">
+<h3>Multiprocessing sucks<a class="headerlink" href="#multiprocessing-sucks" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
-<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p>You need to duplicate memory stored in your Dataset (because of
+Python copy-on-read)</p></li>
+<li><p>IPC is slow over multiprocess queues and can introduce slow startup
+times</p></li>
+<li><p>You’re forced to perform batching on the workers instead of
+main-process to reduce IPC overhead, increasing peak memory.</p></li>
+<li><p>With GIL-releasing functions and Free-Threaded Python,
+multi-threading may not be GIL-bound like it used to be.</p></li>
 </ul>
+<p><code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> enables both multi-threading and multi-processing so
+you can choose what works best for your particular set up. Parallelism
+is primarily configured in Mapper operators giving you flexibility in
+the what, when, and how to parallelize.</p>
+</section>
+<section id="map-style-and-random-access-doesnt-scale">
+<h3>Map-style and random-access doesn’t scale<a class="headerlink" href="#map-style-and-random-access-doesnt-scale" title="Permalink to this heading">¶</a></h3>
+<p>Current map dataset approach is great for datasets that fit in memory,
+but true random-access is not going to be very performant once your
+dataset grows beyond memory limitations unless you jump through some
+hoops with a special sampler.</p>
+<p><code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> follows a streaming data model, where operators are
+Iterators that can be combined together to define a dataloading and
+pre-proc pipeline. Samplers are still supported (see example above) and
+can be combined with a Mapper to produce an Iterator</p>
+</section>
+<section id="multi-datasets-do-not-fit-well-with-the-current-implementation-in-torch-utils-data">
+<h3>Multi-Datasets do not fit well with the current implementation in <code class="docutils literal notranslate"><span class="pre">torch.utils.data</span></code><a class="headerlink" href="#multi-datasets-do-not-fit-well-with-the-current-implementation-in-torch-utils-data" title="Permalink to this heading">¶</a></h3>
+<p>The current Sampler (one per dataloader) concepts start to break down
+when you start trying to combine multiple datasets. (For single
+datasets, they’re a great abstraction and will continue to be
+supported!)</p>
+<ul class="simple">
+<li><p>For multi-datasets, consider this scenario: <code class="docutils literal notranslate"><span class="pre">len(dsA):</span> <span class="pre">10</span></code>
+<code class="docutils literal notranslate"><span class="pre">len(dsB):</span> <span class="pre">20</span></code>. Now we want to do round-robin (or sample uniformly)
+between these two datasets to feed to our trainer. With just a single
+sampler, how can you implement that strategy? Maybe a sampler that
+emits tuples? What if you want to swap with RandomSampler, or
+DistributedSampler? How will <code class="docutils literal notranslate"><span class="pre">sampler.set_epoch</span></code> work?</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> helps to address and scale multi-dataset dataloading
+by only dealing with Iterators, thereby forcing samplers and datasets
+together, focusing on composing smaller primitives nodes into a more
+complex dataloading pipeline.</p>
+</section>
+<section id="iterabledataset-multiprocessing-requires-additional-dataset-sharding">
+<h3>IterableDataset + multiprocessing requires additional dataset sharding<a class="headerlink" href="#iterabledataset-multiprocessing-requires-additional-dataset-sharding" title="Permalink to this heading">¶</a></h3>
+<p>Dataset sharding is required for data-parallel training, which is fairly
+reasonable. But what about sharding between dataloader workers? With
+Map-style datasets, distribution of work between workers is handled by
+the main process, which distributes sampler indices to workers. With
+IterableDatasets, each worker needs to figure out (through
+<code class="docutils literal notranslate"><span class="pre">torch.utils.data.get_worker_info</span></code>) what data it should be returning.</p>
+</section>
+</section>
+<section id="how-does-torchdata-nodes-perform">
+<span id="how-does-nodes-perform"></span><h2>How does <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> perform?<a class="headerlink" href="#how-does-torchdata-nodes-perform" title="Permalink to this heading">¶</a></h2>
+<p>We presented some results from an early version of <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code>
+on a video-decoding benchmark at <a class="reference external" href="https://pytorch2024.sched.com/event/1fHn5/blobs-to-clips-efficient-end-to-end-video-data-loading-andrew-ho-ahmad-sharif-meta">PyTorch Conf 2024</a>
+where we showed that:</p>
+<ul class="simple">
+<li><p>torchdata.nodes performs on-par or better with <code class="docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code>
+when using multi-processing (see <a class="reference internal" href="migrate_to_nodes_from_utils.html#migrate-to-nodes-from-utils"><span class="std std-ref">Migrating to torchdata.nodes from torch.utils.data</span></a>)</p></li>
+<li><p>With GIL python, torchdata.nodes with multi-threading performs better than
+multi-processing in some scenarios, but makes features like GPU pre-proc
+easier to perform which can boost</p></li>
+</ul>
+<p>We ran a benchmark loading the Imagenet dataset from disk,
+and manage to saturate main-memory bandwidth with Free-Threaded Python (3.13t)
+at a significantly lower CPU utilization than with multi-process workers
+(blogpost expected eary 2025). See <code class="docutils literal notranslate"><span class="pre">examples/nodes/imagenet_benchmark.py</span></code>.</p>
+</section>
+<section id="design-choices">
+<h2>Design choices<a class="headerlink" href="#design-choices" title="Permalink to this heading">¶</a></h2>
+<section id="no-generator-basenodes">
+<h3>No Generator BaseNodes<a class="headerlink" href="#no-generator-basenodes" title="Permalink to this heading">¶</a></h3>
+<p>See <a class="reference external" href="https://github.com/pytorch/data/pull/1362">https://github.com/pytorch/data/pull/1362</a> for more thoughts.</p>
+<p>One difficult choice we made was to disallow Generators when defining a
+new BaseNode implementation. However we dropped it and moved to an
+Iterator-only foundation for a few reasons around state management:</p>
+<ol class="arabic simple">
+<li><p>We require explicit state handling in BaseNode implementations.
+Generators store state implicitly on the stack and we found that we
+needed to jump through hoops and write very convoluted code to get
+basic state working with Generators</p></li>
+<li><p>End-of-iteration state dict: Iterables may feel more natural, however
+a bunch of issues come up around state management. Consider the
+end-of-iteration state dict. If you load this state_dict into your
+iterable, should this represent the end-of-iteration or the start of
+the next iteration?</p></li>
+<li><p>Loading state: If you call load_state_dict() on an iterable, most
+users would expect the next iterator requested from it to start with
+the loaded state. However what if iter is called twice before
+iteration begins?</p></li>
+<li><p>Multiple Live Iterator problem: if you have one instance of an
+Iterable, but two live iterators, what does it mean to call
+state_dict() on the Iterable? In dataloading, this is very rare,
+however we still need to work around it and make a bunch of
+assumptions. Forcing devs that are implementing BaseNodes to reason
+about these scenarios is, in our opinion, worse than disallowing
+generators and Iterables.</p></li>
+</ol>
+<p><code class="docutils literal notranslate"><span class="pre">torchdata.nodes.BaseNode</span></code> implementations are Iterators. Iterators
+define <code class="docutils literal notranslate"><span class="pre">next()</span></code>, <code class="docutils literal notranslate"><span class="pre">get_state()</span></code>, and <code class="docutils literal notranslate"><span class="pre">reset(initial_state</span> <span class="pre">|</span> <span class="pre">None)</span></code>.
+All re-initialization should be done in reset(), including initializing
+with a particular state if one is passed.</p>
+<p>However, end-users are used to dealing with Iterables, for example,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+  <span class="c1"># Most frameworks and users don&#39;t expect to call loader.reset()</span>
+  <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">loader</span><span class="p">:</span>
+    <span class="o">...</span>
+  <span class="n">sd</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()</span>
+  <span class="c1"># Loading sd should not throw StopIteration right away, but instead start at the next epoch</span>
+</pre></div>
+</div>
+<p>To handle this we keep all of the assumptions and special end-of-epoch
+handling in a single <code class="docutils literal notranslate"><span class="pre">Loader</span></code> class which takes any BaseNode and makes
+it an Iterable, handling the reset() calls and end-of-epoch state_dict
+loading.</p>
+</section>
 </section>
 </section>
 
@@ -490,8 +557,10 @@ flags, and are at an early stage for feedback and testing.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="what_is_torchdata_nodes.html" class="btn btn-neutral float-right" title="What is torchdata.nodes (beta)?" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="torchdata.nodes.html" class="btn btn-neutral float-right" title="torchdata.nodes (beta)" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
       
+      
+        <a href="index.html" class="btn btn-neutral" title="TorchData" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -523,8 +592,19 @@ flags, and are at an early stage for feedback and testing.</p>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">TorchData</a><ul>
-<li><a class="reference internal" href="#indices">Indices</a></li>
+<li><a class="reference internal" href="#">What is <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> (beta)?</a><ul>
+<li><a class="reference internal" href="#why-torchdata-nodes">Why <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code>?</a><ul>
+<li><a class="reference internal" href="#multiprocessing-sucks">Multiprocessing sucks</a></li>
+<li><a class="reference internal" href="#map-style-and-random-access-doesnt-scale">Map-style and random-access doesn’t scale</a></li>
+<li><a class="reference internal" href="#multi-datasets-do-not-fit-well-with-the-current-implementation-in-torch-utils-data">Multi-Datasets do not fit well with the current implementation in <code class="docutils literal notranslate"><span class="pre">torch.utils.data</span></code></a></li>
+<li><a class="reference internal" href="#iterabledataset-multiprocessing-requires-additional-dataset-sharding">IterableDataset + multiprocessing requires additional dataset sharding</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#how-does-torchdata-nodes-perform">How does <code class="docutils literal notranslate"><span class="pre">torchdata.nodes</span></code> perform?</a></li>
+<li><a class="reference internal" href="#design-choices">Design choices</a><ul>
+<li><a class="reference internal" href="#no-generator-basenodes">No Generator BaseNodes</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
