@@ -4,12 +4,12 @@ from torchdata.nodes.base_node import BaseNode, T
 
 
 class Loader(Generic[T]):
-    """Wraps the root node (iterator) and provides a stateful iterable interface.
+    """Wraps the root BaseNode (an iterator) and provides a stateful iterable interface.
 
     The state of the last-returned iterator is returned by the state_dict() method, and can be
     loaded using the load_state_dict() method.
 
-    Parameters:
+    Args:
         root (BaseNode[T]): The root node of the data pipeline.
         restart_on_stop_iteration (bool): Whether to restart the iterator when it reaches the end. Default is True
     """
@@ -49,9 +49,21 @@ class Loader(Generic[T]):
         return self._it
 
     def load_state_dict(self, state_dict: Dict[str, Any]):
+        """Loads a state_dict which will be used to initialize the next iter() requested
+        from this loader.
+
+        Args:
+            state_dict (Dict[str, Any]): The state_dict to load. Should be generated from a call to state_dict().
+        """
         self._next_iter_state_dict = state_dict
 
     def state_dict(self) -> Dict[str, Any]:
+        """Returns a state_dict which can be passed to load_state_dict() in the future to
+        resume iteration.
+
+        The state_dict will come from the iterator returned by the most recent call to iter().
+        If no iterator has been created, a new iterator will be created and the state_dict returned from it.
+        """
         if self._it is None:
             iter(self)
             self._iter_for_state_dict = True
@@ -65,7 +77,7 @@ class LoaderIterator(BaseNode[T]):
     the iterator is exhausted or on a reset call. We look one step ahead to determine if the iterator is exhausted.
     The state of the iterator is saved in the state_dict() method, and can be loaded on reset calls.
 
-    Parameters:
+    Args:
         loader (Loader[T]): The loader object that contains the root node.
     """
 

@@ -10,11 +10,11 @@ class StopCriteria:
     Stopping criteria for the dataset samplers.
 
     1) CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED: Stop once the last unseen dataset is exhausted.
-        All datasets are seen at least once. In certain cases, some datasets may be
-        seen more than once when there are still non-exhausted datasets.
+       All datasets are seen at least once. In certain cases, some datasets may be
+       seen more than once when there are still non-exhausted datasets.
 
     2) ALL_DATASETS_EXHAUSTED: Stop once all have the datasets are exhausted. Each
-        dataset is seen exactly once. No wraparound or restart will be performed.
+       dataset is seen exactly once. No wraparound or restart will be performed.
 
     3) FIRST_DATASET_EXHAUSTED: Stop when the first dataset is exhausted.
     """

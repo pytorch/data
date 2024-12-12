@@ -31,14 +31,13 @@ class MultiNodeWeightedSampler(BaseNode[T]):
     - WEIGHTED_SAMPLER_STATE_KEY: The state of the weighted sampler.
 
     We support multiple stopping criteria:
-    - CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED: Cycle through the source nodes until all datasets
-        are exhausted. This is the default behavior.
+    - CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED: Cycle through the source nodes until all datasets are exhausted. This is the default behavior.
     - FIRST_DATASET_EXHAUSTED: Stop when the first dataset is exhausted.
     - ALL_DATASETS_EXHAUSTED: Stop when all datasets are exhausted.
 
     On complete exhaustion of the source nodes, the node will raise StopIteration.
 
-    Parameters:
+    Args:
         source_nodes (Mapping[str, BaseNode[T]]): A dictionary of source nodes.
         weights (Dict[str, float]): A dictionary of weights for each source node.
         stop_criteria (str): The stopping criteria. Default is CYCLE_UNTIL_ALL_DATASETS_EXHAUST
@@ -208,7 +207,7 @@ class _WeightedSampler:
     - g_rank_state: The state of the random number generator for the rank.
     - offset: The offset of the batch of indices.
 
-    Parameters:
+    Args:
         weights (Dict[str, float]): A dictionary of weights for each source node.
         seed (int): The seed for the random number generator.
         rank (int): The rank of the current process.

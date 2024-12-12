@@ -39,6 +39,12 @@ X = TypeVar("X")
 
 
 def Mapper(source: BaseNode[X], map_fn: Callable[[X], T]) -> "ParallelMapper[T]":
+    """Returns a :class:`ParallelMapper` node with num_workers=0, which will execute map_fn in the current process/thread.
+
+    Args:
+        source (BaseNode[X]): The source node to map over.
+        map_fn (Callable[[X], T]): The function to apply to each item from the source node.
+    """
     return ParallelMapper(
         source=source,
         map_fn=map_fn,
@@ -279,7 +285,7 @@ class ParallelMapper(BaseNode[T]):
     If in_order is true, the iterator will return items in the order from which they arrive
     from source's iterator, potentially blocking even if other items are available.
 
-    Parameters:
+    Args:
         source (BaseNode[X]): The source node to map over.
         map_fn (Callable[[X], T]): The function to apply to each item from the source node.
         num_workers (int): The number of workers to use for parallel processing.
