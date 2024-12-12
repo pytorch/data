@@ -17,15 +17,15 @@
 # > python -Xgil=1 examples/nodes/imagenet_benchmark.py --loader=classic -d $IMGNET_TRAIN --max-steps 1000 --num-workers 4
 # 835.2034686705912 img/sec, 52.20021679191195 batches/sec
 #
-# Multi-PROCESSING with the GIL
+# torchdata.nodes with Multi-Processing:
 # > python -Xgil=1 examples/nodes/imagenet_benchmark.py --loader=process -d $IMGNET_TRAIN --max-steps 1000 --num-workers 4
 # 905.5019281357543 img/sec, 56.59387050848464 batches/sec
 #
-# Multi-threading with the GIL:
+# torchdata.nodes with Multi-Threading with the GIL:
 # > python -Xgil=1 examples/nodes/imagenet_benchmark.py --loader=thread -d $IMGNET_TRAIN --max-steps 1000 --num-workers 4
 # 692.0924763926637 img/sec, 43.25577977454148 batches/sec
 #
-# Multi-threading with no GIL:
+# torchdata.nodes with Multi-Threading with no GIL:
 # > python -Xgil=0 examples/nodes/imagenet_benchmark.py --loader=thread -d $IMGNET_TRAIN --max-steps 1000 --num-workers 4
 # 922.3858393659006 img/sec, 57.649114960368784 batches/sec
 
