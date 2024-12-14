@@ -106,9 +106,10 @@ where we showed that:
 
 * With No-GIL / Free-Threaded python (3.13t), we ran a benchmark loading the
   Imagenet dataset from disk, and manage to saturate main-memory bandwidth
-  with Free-Threaded Python (3.13t) at a significantly lower CPU utilization
-  than with multi-process workers (blogpost expected eary 2025).
-  See `imagenet_benchmark.py <https://github.com/pytorch/data/blob/main/examples/nodes/imagenet_benchmark.py>`_.
+  at a significantly lower CPU utilization than with multi-process workers
+  (blogpost expected eary 2025).  See
+  `imagenet_benchmark.py <https://github.com/pytorch/data/blob/main/examples/nodes/imagenet_benchmark.py>`_
+  to try on your own hardware.
 
 
 Design choices
