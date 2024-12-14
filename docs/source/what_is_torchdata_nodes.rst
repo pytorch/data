@@ -55,7 +55,7 @@ hoops with a special sampler.
 
 ``torchdata.nodes`` follows a streaming data model, where operators are
 Iterators that can be combined together to define a dataloading and
-pre-proc pipeline. Samplers are still supported (see example above) and
+pre-proc pipeline. Samplers are still supported (see :ref:`migrate-to-nodes-from-utils`) and
 can be combined with a Mapper to produce an Iterator
 
 Multi-Datasets do not fit well with the current implementation in ``torch.utils.data``
