@@ -102,12 +102,13 @@ where we showed that:
 
 * With GIL python, torchdata.nodes with multi-threading performs better than
   multi-processing in some scenarios, but makes features like GPU pre-proc
-  easier to perform which can boost
+  easier to perform, which can boost throughput for many use cases.
 
-We ran a benchmark loading the Imagenet dataset from disk,
-and manage to saturate main-memory bandwidth with Free-Threaded Python (3.13t)
-at a significantly lower CPU utilization than with multi-process workers
-(blogpost expected eary 2025). See ``examples/nodes/imagenet_benchmark.py``.
+* With No-GIL / Free-Threaded python (3.13t), we ran a benchmark loading the
+  Imagenet dataset from disk, and manage to saturate main-memory bandwidth
+  with Free-Threaded Python (3.13t) at a significantly lower CPU utilization
+  than with multi-process workers (blogpost expected eary 2025).
+  See `imagenet_benchmark.py <https://github.com/pytorch/data/blob/main/examples/nodes/imagenet_benchmark.py>`_.
 
 
 Design choices
