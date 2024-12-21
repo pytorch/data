@@ -24,6 +24,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
     weights for sampling. `seed` is used to initialize the random number generator.
 
     The node implements the state using the following keys:
+
     - DATASET_NODE_STATES_KEY: A dictionary of states for each source node.
     - DATASETS_EXHAUSTED_KEY: A dictionary of booleans indicating whether each source node is exhausted.
     - EPOCH_KEY: An epoch counter used to initialize the random number generator.
@@ -31,6 +32,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
     - WEIGHTED_SAMPLER_STATE_KEY: The state of the weighted sampler.
 
     We support multiple stopping criteria:
+
     - CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED: Cycle through the source nodes until all datasets are exhausted. This is the default behavior.
     - FIRST_DATASET_EXHAUSTED: Stop when the first dataset is exhausted.
     - ALL_DATASETS_EXHAUSTED: Stop when all datasets are exhausted.
@@ -203,6 +205,7 @@ class _WeightedSampler:
     """A weighted sampler that samples from a list of weights.
 
     The class implements the state using the following keys:
+
     - g_state: The state of the random number generator.
     - g_rank_state: The state of the random number generator for the rank.
     - offset: The offset of the batch of indices.
