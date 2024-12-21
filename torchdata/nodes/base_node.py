@@ -59,14 +59,16 @@ class BaseNode(Iterator[T]):
     def get_state(self) -> Dict[str, Any]:
         """Subclasses must implement this method, instead of ``state_dict()``. Should only be called by BaseNode.
 
-        :return: Dict[str, Any] - a state dict that may be passed to ``reset()`` at some point in the future
+        Returns:
+            Dict[str, Any] - a state dict that may be passed to ``reset()`` at some point in the future
         """
         raise NotImplementedError(type(self))
 
     def next(self) -> T:
         """Subclasses must implement this method, instead of ``__next__``. Should only be called by BaseNode.
 
-        :return: T - the next value in the sequence, or throw StopIteration
+        Returns:
+            T - the next value in the sequence, or throw StopIteration
         """
         raise NotImplementedError(type(self))
 
@@ -86,7 +88,8 @@ class BaseNode(Iterator[T]):
     def state_dict(self) -> Dict[str, Any]:
         """Get a state_dict for this BaseNode.
 
-        :return: Dict[str, Any] - a state dict that may be passed to ``reset()`` at some point in the future.
+        Returns:
+            Dict[str, Any] - a state dict that may be passed to ``reset()`` at some point in the future.
         """
         try:
             self.__initialized
