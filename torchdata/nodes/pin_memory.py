@@ -115,7 +115,8 @@ class PinMemory(BaseNode[T]):
         super().__init__()
         self.source = source
         self.snapshot_frequency = snapshot_frequency
-        self._pin_memory = torch.cuda.is_available()
+        self._pin_memory = torch.cuda.is_available() or getattr(torch,
+                                                                torch._C._get_privateuse1_backend_name()).is_available()
         if len(pin_memory_device) == 0:
             self._pin_memory_device = None
         else:
