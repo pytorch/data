@@ -58,7 +58,7 @@ class Batcher(BaseNode[List[T]]):
         return {self.SOURCE_KEY: self.source.state_dict()}
 
 
-class Unbatcher(BaseNode[Sequence[T]]):
+class Unbatcher(BaseNode[T]):
     """Unbatcher will flatten batches pulled from source, and
     yields elements in sequential order when next() is called on it.
 
