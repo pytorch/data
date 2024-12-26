@@ -7,10 +7,11 @@
 import queue
 import threading
 import time
-from typing import Any, Callable, Dict, Iterator, List, Literal, Optional, Protocol, TypeVar, Union
+from typing import Any, Callable, Dict, Iterator, List, Literal, Optional, Protocol, Sequence, TypeVar, Union
 
 import torch.multiprocessing as mp
 from torchdata.nodes.base_node import BaseNode, T
+from torchdata.nodes.batch import Batcher, Unbatcher
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
 from torchdata.nodes.snapshot_store import QueueSnapshotStore, SnapshotStore
 
@@ -50,6 +51,14 @@ def Mapper(source: BaseNode[X], map_fn: Callable[[X], T]) -> "ParallelMapper[T]"
         map_fn=map_fn,
         num_workers=0,
     )
+
+
+class MapOverBatch(Callable[[Sequence[X]], T]):
+    def __init__(self, map_fn: Callable[[X], T]):
+        self.map_fn = map_fn
+
+    def __call__(self, xlist: Sequence[X]) -> Sequence[T]:
+        return [self.map_fn(x) for x in xlist]
 
 
 def _sort_worker(in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_event: threading.Event):
@@ -272,28 +281,12 @@ class _ParallelMapperIter(Iterator[T]):
                     t.join(timeout=QUEUE_TIMEOUT * 5)
 
 
-class ParallelMapper(BaseNode[T]):
-    """ParallelMapper executes map_fn in parallel either in num_workers threads or
-    processes. For processes, multiprocessing_context can be spawn, forkserver, fork,
-    or None (chooses OS default). At most max_concurrent items will be either processed
-    or in the iterator's output queue, to limit CPU and Memory utilization. If None
-    (default) the value will be 2 * num_workers.
+class _ParallelMapperImpl(BaseNode[T]):
+    """This class implements _ParallelMapperIter as a BaseNode, allowing it
+    to be composed with other BaseNodes.
 
-    At most one iter() is created from source, and at most one thread will call
-    next() on it at once.
-
-    If in_order is true, the iterator will return items in the order from which they arrive
-    from source's iterator, potentially blocking even if other items are available.
-
-    Args:
-        source (BaseNode[X]): The source node to map over.
-        map_fn (Callable[[X], T]): The function to apply to each item from the source node.
-        num_workers (int): The number of workers to use for parallel processing.
-        in_order (bool): Whether to return items in the order from which they arrive from. Default is True.
-        method (Literal["thread", "process"]): The method to use for parallel processing. Default is "thread".
-        multiprocessing_context (Optional[str]): The multiprocessing context to use for parallel processing. Default is None.
-        max_concurrent (Optional[int]): The maximum number of items to process at once. Default is None.
-        snapshot_frequency (int): The frequency at which to snapshot the state of the source node. Default is 1.
+    TODO: In the future, this class may go away once we implement reset() on
+    _ParallelMapperIter itself so we don't need this additional level of abstraction
     """
 
     def __init__(
@@ -329,19 +322,18 @@ class ParallelMapper(BaseNode[T]):
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
         if self._it is not None:
-            self._it._shutdown()
             del self._it
 
         if self.num_workers > 0:
-            self._parallel_reset(initial_state)
+            self._it = self._parallel_reset(initial_state)
         else:
-            self._inline_reset(initial_state)
+            self._it = self._inline_reset(initial_state)
 
     def _inline_reset(self, initial_state: Optional[Dict[str, Any]]):
-        self._it = _InlineMapperIter(source=self.source, map_fn=self.map_fn, initial_state=initial_state)
+        return _InlineMapperIter(source=self.source, map_fn=self.map_fn, initial_state=initial_state)
 
     def _parallel_reset(self, initial_state: Optional[Dict[str, Any]]):
-        self._it = _ParallelMapperIter(
+        return _ParallelMapperIter(
             source=self.source,
             map_fn=self.map_fn,
             num_workers=self.num_workers,
@@ -358,6 +350,93 @@ class ParallelMapper(BaseNode[T]):
 
     def get_state(self) -> Dict[str, Any]:
         return self._it.get_state()  # type: ignore[union-attr]
+
+
+class ParallelMapper(BaseNode[T]):
+    """ParallelMapper executes map_fn in parallel either in num_workers threads or
+    processes. For processes, multiprocessing_context can be spawn, forkserver, fork,
+    or None (chooses OS default). At most max_concurrent items will be either processed
+    or in the iterator's output queue, to limit CPU and Memory utilization. If None
+    (default) the value will be 2 * num_workers.
+
+    At most one iter() is created from source, and at most one thread will call
+    next() on it at once.
+
+    If in_order is true, the iterator will return items in the order from which they arrive
+    from source's iterator, potentially blocking even if other items are available.
+
+    Args:
+        source (BaseNode[X]): The source node to map over.
+        map_fn (Callable[[X], T]): The function to apply to each item from the source node.
+        num_workers (int): The number of workers to use for parallel processing.
+        in_order (bool): Whether to return items in the order from which they arrive from. Default is True.
+        method (Literal["thread", "process"]): The method to use for parallel processing. Default is "thread".
+        multiprocessing_context (Optional[str]): The multiprocessing context to use for parallel processing. Default is None.
+        max_concurrent (Optional[int]): The maximum number of items to process at once. Default is None.
+        snapshot_frequency (int): The frequency at which to snapshot the state of the source node. Default is 1.
+        prebatch (Optional[int]): Optionally perform pre-batching of items from source before mapping.
+          For small items, this may improve throughput at the expense of peak memory.
+    """
+
+    IT_STATE_KEY = "it_state"
+
+    def __init__(
+        self,
+        source: BaseNode[X],
+        map_fn: Callable[[X], T],
+        num_workers: int,
+        in_order: bool = True,
+        method: Literal["thread", "process"] = "thread",
+        multiprocessing_context: Optional[str] = None,
+        max_concurrent: Optional[int] = None,
+        snapshot_frequency: int = 1,
+        prebatch: Optional[int] = None,
+    ):
+        super().__init__()
+        assert method in ["thread", "process"]
+        self.source = source
+        self.map_fn = map_fn
+        self.num_workers = num_workers
+        self.in_order = in_order
+        self.method = method
+        self.multiprocessing_context = multiprocessing_context
+        if max_concurrent is not None and num_workers > 0:
+            if not isinstance(max_concurrent, int) and max_concurrent > num_workers:
+                raise ValueError(f"{max_concurrent=} should be >= {num_workers=}!")
+        self.max_concurrent = max_concurrent
+        self.snapshot_frequency = snapshot_frequency
+        self.prebatch = prebatch
+        if self.prebatch is not None:
+            assert prebatch > 0, f"{prebatch=} must be a positive integer!"
+            self.map_fn = MapOverBatch(map_fn=self.map_fn)
+            self.source = Batcher(self.source, batch_size=prebatch, drop_last=False)
+
+        self._it: Optional[Union[_InlineMapperIter[T], _ParallelMapperIter[T]]] = _ParallelMapperImpl(
+            source=self.source,
+            map_fn=self.map_fn,
+            num_workers=self.num_workers,
+            in_order=self.in_order,
+            method=self.method,
+            multiprocessing_context=self.multiprocessing_context,
+            max_concurrent=self.max_concurrent,
+            snapshot_frequency=self.snapshot_frequency,
+        )
+
+        if self.prebatch is not None:
+            self._it = Unbatcher(self._it)
+
+    def reset(self, initial_state: Optional[Dict[str, Any]] = None):
+        super().reset(initial_state)
+        if initial_state is not None:
+            self._it.reset(initial_state[self.IT_STATE_KEY])
+        else:
+            self._it.reset()
+
+    def next(self):
+        return next(self._it)  # type: ignore[arg-type, union-attr]
+
+    def get_state(self) -> Dict[str, Any]:
+        return {self.IT_STATE_KEY: self._it.state_dict()}  # type: ignore[union-attr]
 
 
 _WorkerType = Callable[
