@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import logging
+import time
 from typing import Any, Dict, Iterator, Optional, TypeVar
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,8 @@ class BaseNode(Iterator[T]):
     def __init__(self, *args, **kwargs):
         """Subclasses must implement this method and call super().__init__(*args, **kwargs)"""
         self.__initialized = False
+        self._n = 0
+        self._dt = 0.0
 
     def __iter__(self):
         return self
@@ -79,7 +82,14 @@ class BaseNode(Iterator[T]):
                 raise NotImplementedError(
                     f"Failed to initialize after .reset(), did you call super().reset() in your .reset() method? {type(self)=}"
                 )
-        return self.next()
+        t0 = time.perf_counter()
+        item = self.next()
+        self._n += 1
+        self._dt += time.perf_counter() - t0
+        return item
+
+    def _show_qps(self):
+        print(f"QPS: {self._n / (self._dt or 1)}, {self._dt=}, {self._n=}, {repr(self)}")
 
     def state_dict(self) -> Dict[str, Any]:
         """Get a state_dict for this BaseNode.

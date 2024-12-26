@@ -14,7 +14,7 @@ from torchdata.nodes.base_node import BaseNode, T
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
 from torchdata.nodes.snapshot_store import QueueSnapshotStore, SnapshotStore
 
-from ._apply_udf import _apply_udf
+from ._apply_udf import _apply_stream, _apply_udf
 
 from ._populate_queue import _populate_queue
 
@@ -305,6 +305,8 @@ class ParallelMapper(BaseNode[T]):
         method: Literal["thread", "process"] = "thread",
         multiprocessing_context: Optional[str] = None,
         max_concurrent: Optional[int] = None,
+        streamer: bool = False,
+        first_node=None,
         snapshot_frequency: int = 1,
     ):
         super().__init__()
@@ -322,6 +324,11 @@ class ParallelMapper(BaseNode[T]):
         if max_concurrent is not None and num_workers > 0:
             if not isinstance(max_concurrent, int) and max_concurrent > num_workers:
                 raise ValueError(f"{max_concurrent=} should be >= {num_workers=}!")
+        self.streamer = streamer
+        self.first_node = first_node
+        if self.streamer:
+            assert self.in_order is False
+            assert self.first_node is not None
         self.max_concurrent = max_concurrent
         self.snapshot_frequency = snapshot_frequency
         self._it: Optional[Union[_InlineMapperIter[T], _ParallelMapperIter[T]]] = None
@@ -341,17 +348,31 @@ class ParallelMapper(BaseNode[T]):
         self._it = _InlineMapperIter(source=self.source, map_fn=self.map_fn, initial_state=initial_state)
 
     def _parallel_reset(self, initial_state: Optional[Dict[str, Any]]):
-        self._it = _ParallelMapperIter(
-            source=self.source,
-            map_fn=self.map_fn,
-            num_workers=self.num_workers,
-            in_order=self.in_order,
-            method=self.method,
-            mp_context=self._mp_context,
-            max_concurrent=self.max_concurrent,
-            snapshot_frequency=self.snapshot_frequency,
-            initial_state=initial_state,
-        )
+        if self.streamer:
+            self._it = _ParallelStreamerIter(
+                source=self.source,
+                first_node=self.first_node,
+                map_fn=self.map_fn,
+                num_workers=self.num_workers,
+                in_order=self.in_order,
+                method=self.method,
+                mp_context=self._mp_context,
+                max_concurrent=self.max_concurrent,
+                snapshot_frequency=self.snapshot_frequency,
+                initial_state=initial_state,
+            )
+        else:
+            self._it = _ParallelMapperIter(
+                source=self.source,
+                map_fn=self.map_fn,
+                num_workers=self.num_workers,
+                in_order=self.in_order,
+                method=self.method,
+                mp_context=self._mp_context,
+                max_concurrent=self.max_concurrent,
+                snapshot_frequency=self.snapshot_frequency,
+                initial_state=initial_state,
+            )
 
     def next(self):
         return next(self._it)  # type: ignore[arg-type, union-attr]
@@ -500,3 +521,175 @@ class _SingleThreadedMapper(Iterator[T]):
         self._stop_event.set()
         if hasattr(self, "_thread") and self._thread.is_alive():
             self._thread.join(timeout=QUEUE_TIMEOUT * 5)
+
+
+class _ParallelStreamerIter(Iterator[T]):
+    """_ParallelMapperIter will start at least two threads, one running
+    _populate_queue, and one for _apply_udf. If in_order == True, a
+    third thread will be started to read from _apply_udf's result q
+    and block the output_q until the appropriate in_order element is available,
+    buffering outputs as needed.
+
+    A BoundedSemaphore with initial value max_concurrent will limit the number
+    of items in flight, and in all of the queues.
+    """
+
+    def __init__(
+        self,
+        source: BaseNode[X],
+        first_node: BaseNode[X],
+        map_fn: Callable[[X], T],
+        num_workers: int,
+        in_order: bool,
+        method: Literal["thread", "process"],
+        mp_context: _MultiprocessContext,
+        max_concurrent: Optional[int],
+        snapshot_frequency: int,
+        initial_state: Optional[Dict[str, Any]],
+    ):
+        self.source = source
+        self.first_node = first_node
+        self.map_fn = map_fn
+        self.num_workers = num_workers
+        self.in_order = in_order
+        self.method = method
+        self.mp_context = mp_context
+        self.snapshot_frequency = snapshot_frequency
+
+        self._in_q: Union[queue.Queue, mp.Queue] = [
+            queue.Queue() if method == "thread" else mp_context.Queue() for _ in range(num_workers)
+        ]
+        self._intermed_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
+        self._max_tasks = 2 * self.num_workers if max_concurrent is None else max_concurrent
+        # self._sem = threading.BoundedSemaphore(value=self._max_tasks)
+        self._sem = None
+
+        self._done = False
+
+        self._stop = threading.Event()
+        self._mp_stop = mp_context.Event()
+
+        self._steps_since_snapshot = 0
+        fast_forward = 0
+        if initial_state is not None:
+            self._snapshot = initial_state["snapshot"]
+            fast_forward = initial_state["steps_since_snapshot"]
+            self.source.reset(self._snapshot)
+        else:
+            self._snapshot = None
+            self.source.reset()
+        self._snapshot_store = QueueSnapshotStore()
+
+        self._read_thread = threading.Thread(
+            target=_populate_queue,
+            args=(
+                self.source,
+                self._in_q,
+                self._snapshot_store,
+                self.snapshot_frequency,
+                self._sem,
+                self._stop,
+            ),
+            daemon=True,
+        )
+        self._workers: List[Union[threading.Thread, mp.Process]] = []
+        for worker_id in range(self.num_workers):
+            args = (
+                worker_id,
+                self._in_q[worker_id],
+                self._intermed_q,
+                self.map_fn,
+                self._stop if self.method == "thread" else self._mp_stop,
+                self.first_node,
+            )
+            self._workers.append(
+                threading.Thread(target=_apply_stream, args=args, daemon=True)
+                if self.method == "thread"
+                else mp_context.Process(target=_apply_stream, args=args, daemon=True)
+            )
+        self._sort_q: queue.Queue = queue.Queue()
+        self._sort_thread = threading.Thread(
+            target=_sort_worker,
+            args=(self._intermed_q, self._sort_q, self._stop),
+            daemon=True,
+        )
+
+        self._out_q = self._intermed_q
+        if self.in_order:
+            self._out_q = self._sort_q
+
+        self._read_thread.start()
+        for t in self._workers:
+            t.start()
+        if self.in_order:
+            self._sort_thread.start()
+
+        time.sleep(0.01)
+        self._snapshot = self._snapshot_store.get_initial_snapshot(thread=self._read_thread, timeout=ACK_TIMEOUT)
+
+        for i in range(fast_forward):
+            try:
+                next(self)
+            except StopIteration:
+                raise ValueError(
+                    f"Tried to fast-forward {fast_forward} items during init but "
+                    f"hit StopIteration after {i} items, this is likely a bug or malformed state_dict"
+                )
+
+    def __iter__(self) -> Iterator[T]:
+        return self
+
+    def __next__(self) -> T:
+        while True:
+            if self._stop.is_set():
+                raise StopIteration()
+            elif self._done:  # and self._sem._value == self._max_tasks:
+                # Don't stop if we still have items in the queue
+                self._stop.set()
+                self._mp_stop.set()
+                raise StopIteration()
+            try:
+                item, idx = self._out_q.get(block=True, timeout=QUEUE_TIMEOUT)
+            except queue.Empty:
+                continue
+
+            if isinstance(item, StopIteration):
+                self._done = True
+                # self._sem.release()
+                # Make sure queues are flushed before returning early
+                continue
+            elif isinstance(item, ExceptionWrapper):
+                # if not isinstance(item, StartupExceptionWrapper):
+                # self._sem.release()
+                item.reraise()
+
+            self._steps_since_snapshot += 1
+            # self._sem.release()
+            self._maybe_update_snapshot(idx)
+            return item
+
+    def get_state(self) -> Dict[str, Any]:
+        return {
+            "snapshot": self._snapshot,
+            "steps_since_snapshot": self._steps_since_snapshot,
+        }
+
+    def _maybe_update_snapshot(self, idx: int):
+        if (snapshot := self._snapshot_store.pop_version(idx)) is not None:
+            self._snapshot = snapshot
+            self._steps_since_snapshot = 0
+
+    def __del__(self):
+        self._shutdown()
+
+    def _shutdown(self):
+        self._stop.set()
+        self._mp_stop.set()
+        if hasattr(self, "_read_thread") and self._read_thread.is_alive():
+            self._read_thread.join(timeout=QUEUE_TIMEOUT * 5)
+        if hasattr(self, "_sort_thread") and self._sort_thread.is_alive():
+            self._sort_thread.join(timeout=QUEUE_TIMEOUT * 5)
+        if hasattr(self, "_workers"):
+            for t in self._workers:
+                if t.is_alive():
+                    t.join(timeout=QUEUE_TIMEOUT * 5)

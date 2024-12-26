@@ -13,5 +13,5 @@ requires = [
     "wheel",
     "ninja",
     "cmake",
-    "torch",
+    # "torch",
 ]

@@ -46,6 +46,10 @@ def _populate_queue(
     # Include a monotonic index starting from 0 to each item in the queue
     idx = MonotonicIndex()
 
+    if not isinstance(q, list):
+        q = [q]
+    n_qs = len(q)
+
     def _put(
         item,
         block: bool = True,
@@ -54,7 +58,7 @@ def _populate_queue(
         _idx = idx.get()
         if snapshot:
             snapshot_store.append(snapshot=snapshot, version=_idx)
-        q.put((item, _idx), block=block, timeout=1.0 if block else None)
+        q[_idx % n_qs].put((item, _idx), block=block, timeout=1.0 if block else None)
 
     try:
         assert (
@@ -68,7 +72,7 @@ def _populate_queue(
 
     yielded = 0
     while not stop_event.is_set():
-        if not semaphore.acquire(blocking=True, timeout=QUEUE_TIMEOUT):
+        if semaphore is not None and not semaphore.acquire(blocking=True, timeout=QUEUE_TIMEOUT):
             continue
         try:
             item = next(source)  # FIXME: This may hang!
@@ -78,9 +82,11 @@ def _populate_queue(
                 snapshot = source.state_dict()
             _put(item, block=False, snapshot=snapshot)
         except StopIteration as e:
-            _put(e, block=False)
+            for _ in range(n_qs):  # Tell all workers to stop
+                _put(e, block=False)
             break
         except Exception:
             item = ExceptionWrapper(where="in _populate_queue")
-            _put(item, block=False)
+            for _ in range(n_qs):  # notify all workers of exception
+                _put(item, block=False)
             break
