@@ -6,7 +6,7 @@
 
 from .adapters import IterableWrapper, MapStyleWrapper, SamplerWrapper
 from .base_node import BaseNode, T
-from .batch import Batcher
+from .batch import Batcher, Unbatcher
 from .loader import Loader
 from .map import Mapper, ParallelMapper
 from .pin_memory import PinMemory
@@ -31,6 +31,7 @@ __all__ = [
     "Stateful",
     "StopCriteria",
     "T",
+    "Unbatcher",
 ]
 
 assert sorted(__all__) == __all__
