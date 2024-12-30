@@ -7,7 +7,7 @@
 import queue
 import threading
 import time
-from typing import Any, Callable, Dict, Iterator, List, Literal, Optional, Protocol, Sequence, TypeVar, Union
+from typing import Any, Callable, Dict, Generic, Iterator, List, Literal, Optional, Protocol, Sequence, TypeVar, Union
 
 import torch.multiprocessing as mp
 from torchdata.nodes.base_node import BaseNode, T
@@ -53,7 +53,11 @@ def Mapper(source: BaseNode[X], map_fn: Callable[[X], T]) -> "ParallelMapper[T]"
     )
 
 
-class MapOverBatch(Callable[[Sequence[X]], T]):
+Xseq = Sequence[X]
+Tseq = Sequence[T]
+
+
+class MapOverBatch(Generic[X, T]):
     def __init__(self, map_fn: Callable[[X], T]):
         self.map_fn = map_fn
 
@@ -346,7 +350,7 @@ class _ParallelMapperImpl(BaseNode[T]):
             initial_state=initial_state,
         )
 
-    def next(self):
+    def next(self) -> T:
         return next(self._it)  # type: ignore[arg-type, union-attr]
 
     def get_state(self) -> Dict[str, Any]:
@@ -395,8 +399,6 @@ class ParallelMapper(BaseNode[T]):
     ):
         super().__init__()
         assert method in ["thread", "process"]
-        self.source = source
-        self.map_fn = map_fn
         self.num_workers = num_workers
         self.in_order = in_order
         self.method = method
@@ -407,12 +409,16 @@ class ParallelMapper(BaseNode[T]):
         self.max_concurrent = max_concurrent
         self.snapshot_frequency = snapshot_frequency
         self.prebatch = prebatch
-        if self.prebatch is not None:
-            assert prebatch > 0, f"{prebatch=} must be a positive integer!"
-            self.map_fn = MapOverBatch(map_fn=self.map_fn)
-            self.source = Batcher(self.source, batch_size=prebatch, drop_last=False)
+        if prebatch is None:
+            self.map_fn = map_fn
+            self.source = source
+        else:
+            if prebatch <= 0:
+                raise ValueError(f"{prebatch=} must be a positive integer!")
+            self.map_fn = MapOverBatch(map_fn=map_fn)  # type: ignore[assignment]
+            self.source = Batcher(self.source, batch_size=prebatch, drop_last=False)  # type: ignore[assignment]
 
-        self._it: Optional[Union[_InlineMapperIter[T], _ParallelMapperIter[T]]] = _ParallelMapperImpl(
+        _it = _ParallelMapperImpl(
             source=self.source,
             map_fn=self.map_fn,
             num_workers=self.num_workers,
@@ -423,8 +429,10 @@ class ParallelMapper(BaseNode[T]):
             snapshot_frequency=self.snapshot_frequency,
         )
 
-        if self.prebatch is not None:
-            self._it = Unbatcher(self._it)
+        if self.prebatch is None:
+            self._it = _it
+        else:
+            self._it = Unbatcher(_it)  # type: ignore[arg-type, assignment]
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
@@ -433,7 +441,7 @@ class ParallelMapper(BaseNode[T]):
         else:
             self._it.reset()
 
-    def next(self):
+    def next(self) -> T:
         return next(self._it)  # type: ignore[arg-type, union-attr]
 
     def get_state(self) -> Dict[str, Any]:
