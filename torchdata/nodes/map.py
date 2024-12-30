@@ -416,7 +416,7 @@ class ParallelMapper(BaseNode[T]):
             if prebatch <= 0:
                 raise ValueError(f"{prebatch=} must be a positive integer!")
             self.map_fn = MapOverBatch(map_fn=map_fn)  # type: ignore[assignment]
-            self.source = Batcher(self.source, batch_size=prebatch, drop_last=False)  # type: ignore[assignment]
+            self.source = Batcher(source, batch_size=prebatch, drop_last=False)  # type: ignore[assignment]
 
         _it = _ParallelMapperImpl(
             source=self.source,
