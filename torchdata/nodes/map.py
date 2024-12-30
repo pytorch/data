@@ -282,11 +282,12 @@ class _ParallelMapperIter(Iterator[T]):
 
 
 class _ParallelMapperImpl(BaseNode[T]):
-    """This class implements _ParallelMapperIter as a BaseNode, allowing it
-    to be composed with other BaseNodes.
+    """This class implements _ParallelMapperIter and _InlineMapperIter as a BaseNode,
+    allowing them to be composed with other BaseNodes.
 
     TODO: In the future, this class may go away once we implement reset() on
-    _ParallelMapperIter itself so we don't need this additional level of abstraction
+    _ParallelMapperIter and _InlineMapperIter themselves so we don't need this
+    additional level of abstraction.
     """
 
     def __init__(
