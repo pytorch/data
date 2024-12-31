@@ -266,7 +266,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.11.0a0+62092dd ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.11.0a0+88c7b96 ) &#x25BC</a>
     </div>
     
 
@@ -973,6 +973,54 @@ seen more than once when there are still non-exhausted datasets.</p></li>
 dataset is seen exactly once. No wraparound or restart will be performed.</p></li>
 <li><p>FIRST_DATASET_EXHAUSTED: Stop when the first dataset is exhausted.</p></li>
 </ol>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="torchdata.nodes.Unbatcher">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torchdata.nodes.</span></span><span class="sig-name descname"><span class="pre">Unbatcher</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#torchdata.nodes.BaseNode" title="torchdata.nodes.base_node.BaseNode"><span class="pre">BaseNode</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.nodes.Unbatcher" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#torchdata.nodes.BaseNode" title="torchdata.nodes.base_node.BaseNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseNode</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">T</span></code>]</p>
+<p>Unbatcher will flatten batches pulled from source, and
+yields elements in sequential order when next() is called on it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>source</strong> (<a class="reference internal" href="#torchdata.nodes.BaseNode" title="torchdata.nodes.BaseNode"><em>BaseNode</em></a><em>[</em><em>T</em><em>]</em>) – The source node to pull batches from.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.nodes.Unbatcher.get_state">
+<span class="sig-name descname"><span class="pre">get_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#torchdata.nodes.Unbatcher.get_state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Subclasses must implement this method, instead of <code class="docutils literal notranslate"><span class="pre">state_dict()</span></code>. Should only be called by BaseNode.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dict[str, Any] - a state dict that may be passed to <code class="docutils literal notranslate"><span class="pre">reset()</span></code> at some point in the future</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.nodes.Unbatcher.next">
+<span class="sig-name descname"><span class="pre">next</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">T</span></span></span><a class="headerlink" href="#torchdata.nodes.Unbatcher.next" title="Permalink to this definition">¶</a></dt>
+<dd><p>Subclasses must implement this method, instead of <code class="docutils literal notranslate"><span class="pre">__next__</span></code>. Should only be called by BaseNode.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>T - the next value in the sequence, or throw StopIteration</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.nodes.Unbatcher.reset">
+<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.nodes.Unbatcher.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resets the iterator to the beginning, or to the state passed in by initial_state.</p>
+<p>Reset is a good place to put expensive initialization, as it will be lazily called when <code class="docutils literal notranslate"><span class="pre">next()</span></code> or <code class="docutils literal notranslate"><span class="pre">state_dict()</span></code> is called.
+Subclasses must call <code class="docutils literal notranslate"><span class="pre">super().reset(initial_state)</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>initial_state</strong> – Optional[dict] - a state dict to pass to the node. If None, reset to the beginning.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 </section>
