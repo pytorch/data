@@ -47,9 +47,10 @@ from torch.testing._internal.common_utils import (
 )
 
 from torch.utils.data import (
-    dataloader, _utils,
+    _utils,
     ChainDataset,
     ConcatDataset,
+    dataloader,
     Dataset,
     IterableDataset,
     IterDataPipe,
@@ -588,7 +589,6 @@ def print_traces_of_all_threads(pid):
 # its `.exception` attribute.
 # Inspired by https://stackoverflow.com/a/33599967
 class ErrorTrackingProcess(mp.Process):
-
     # Why no *args?
     #   py2 doesn't support def fn(x, *args, key=val, **kwargs)
     # Setting disable_stderr=True may generate a lot of unrelated error outputs
@@ -1767,7 +1767,6 @@ except RuntimeError as e:
         self._test_shuffle(DataLoader(self.dataset, batch_size=2, shuffle=True, num_workers=4, prefetch_factor=3))
 
     def test_random_sampler(self):
-
         from collections import Counter
 
         from torch.utils.data import RandomSampler
@@ -1888,7 +1887,6 @@ except RuntimeError as e:
             DistributedSampler(dataset, 3, -1)
 
     def test_duplicating_data_with_drop_last(self):
-
         from torch.utils.data.distributed import DistributedSampler
 
         num_processes = 4
@@ -2085,7 +2083,6 @@ except RuntimeError as e:
         for is_iterable_dataset, use_workers, pin_memory, hold_iter_reference in itertools.product(
             [True, False], repeat=4
         ):
-
             # `hold_iter_reference` specifies whether we hold a reference to the
             # iterator. This is interesting because Python3 error traces holds a
             # reference to the frames, which hold references to all the local
