@@ -50,6 +50,7 @@ from torch.utils.data import (
     _utils,
     ChainDataset,
     ConcatDataset,
+    dataloader,
     Dataset,
     IterableDataset,
     IterDataPipe,
@@ -588,7 +589,6 @@ def print_traces_of_all_threads(pid):
 # its `.exception` attribute.
 # Inspired by https://stackoverflow.com/a/33599967
 class ErrorTrackingProcess(mp.Process):
-
     # Why no *args?
     #   py2 doesn't support def fn(x, *args, key=val, **kwargs)
     # Setting disable_stderr=True may generate a lot of unrelated error outputs
@@ -1767,7 +1767,6 @@ except RuntimeError as e:
         self._test_shuffle(DataLoader(self.dataset, batch_size=2, shuffle=True, num_workers=4, prefetch_factor=3))
 
     def test_random_sampler(self):
-
         from collections import Counter
 
         from torch.utils.data import RandomSampler
@@ -1888,7 +1887,6 @@ except RuntimeError as e:
             DistributedSampler(dataset, 3, -1)
 
     def test_duplicating_data_with_drop_last(self):
-
         from torch.utils.data.distributed import DistributedSampler
 
         num_processes = 4
@@ -2085,7 +2083,6 @@ except RuntimeError as e:
         for is_iterable_dataset, use_workers, pin_memory, hold_iter_reference in itertools.product(
             [True, False], repeat=4
         ):
-
             # `hold_iter_reference` specifies whether we hold a reference to the
             # iterator. This is interesting because Python3 error traces holds a
             # reference to the frames, which hold references to all the local
@@ -2330,51 +2327,51 @@ except RuntimeError as e:
 
     def test_default_convert_mapping_keep_type(self):
         data = CustomDict({"a": 1, "b": 2})
-        converted = _utils.collate.default_convert(data)
+        converted = dataloader.default_convert(data)
 
         self.assertEqual(converted, data)
 
     def test_default_convert_sequence_keep_type(self):
         data = CustomList([1, 2, 3])
-        converted = _utils.collate.default_convert(data)
+        converted = dataloader.default_convert(data)
 
         self.assertEqual(converted, data)
 
     def test_default_convert_sequence_dont_keep_type(self):
         data = range(2)
-        converted = _utils.collate.default_convert(data)
+        converted = dataloader.default_convert(data)
 
         self.assertEqual(converted, [0, 1])
 
     def test_default_collate_dtype(self):
         arr = [1, 2, -1]
-        collated = _utils.collate.default_collate(arr)
+        collated = dataloader.default_collate(arr)
         self.assertEqual(collated, torch.tensor(arr))
         self.assertEqual(collated.dtype, torch.int64)
 
         arr = [1.1, 2.3, -0.9]
-        collated = _utils.collate.default_collate(arr)
+        collated = dataloader.default_collate(arr)
         self.assertEqual(collated, torch.tensor(arr, dtype=torch.float64))
 
         arr = [True, False]
-        collated = _utils.collate.default_collate(arr)
+        collated = dataloader.default_collate(arr)
         self.assertEqual(collated, torch.tensor(arr))
         self.assertEqual(collated.dtype, torch.bool)
 
         # Should be a no-op
         arr = ["a", "b", "c"]
-        self.assertEqual(arr, _utils.collate.default_collate(arr))
+        self.assertEqual(arr, dataloader.default_collate(arr))
 
     def test_default_collate_mapping_keep_type(self):
         batch = [CustomDict({"a": 1, "b": 2}), CustomDict({"a": 3, "b": 4})]
-        collated = _utils.collate.default_collate(batch)
+        collated = dataloader.default_collate(batch)
 
         expected = CustomDict({"a": torch.tensor([1, 3]), "b": torch.tensor([2, 4])})
         self.assertEqual(collated, expected)
 
     def test_default_collate_sequence_keep_type(self):
         batch = [CustomList([1, 2, 3]), CustomList([4, 5, 6])]
-        collated = _utils.collate.default_collate(batch)
+        collated = dataloader.default_collate(batch)
 
         expected = CustomList(
             [
@@ -2387,7 +2384,7 @@ except RuntimeError as e:
 
     def test_default_collate_sequence_dont_keep_type(self):
         batch = [range(2), range(2)]
-        collated = _utils.collate.default_collate(batch)
+        collated = dataloader.default_collate(batch)
 
         self.assertEqual(collated, [torch.tensor([0, 0]), torch.tensor([1, 1])])
 
@@ -2397,16 +2394,16 @@ except RuntimeError as e:
 
         # Should be a no-op
         arr = np.array(["a", "b", "c"])
-        self.assertEqual(arr, _utils.collate.default_collate(arr))
+        self.assertEqual(arr, dataloader.default_collate(arr))
 
         arr = np.array([[["a", "b", "c"]]])
-        self.assertRaises(TypeError, lambda: _utils.collate.default_collate(arr))
+        self.assertRaises(TypeError, lambda: dataloader.default_collate(arr))
 
         arr = np.array([object(), object(), object()])
-        self.assertRaises(TypeError, lambda: _utils.collate.default_collate(arr))
+        self.assertRaises(TypeError, lambda: dataloader.default_collate(arr))
 
         arr = np.array([[[object(), object(), object()]]])
-        self.assertRaises(TypeError, lambda: _utils.collate.default_collate(arr))
+        self.assertRaises(TypeError, lambda: dataloader.default_collate(arr))
 
     @unittest.skipIf(not TEST_NUMPY, "numpy unavailable")
     def test_default_collate_numpy_memmap(self):
@@ -2417,14 +2414,14 @@ except RuntimeError as e:
             arr_memmap = np.memmap(f, dtype=arr.dtype, mode="w+", shape=arr.shape)
             arr_memmap[:] = arr[:]
             arr_new = np.memmap(f, dtype=arr.dtype, mode="r", shape=arr.shape)
-            tensor = _utils.collate.default_collate(list(arr_new))
+            tensor = dataloader.default_collate(list(arr_new))
 
         self.assertTrue((tensor == tensor.new_tensor([[0, 1], [2, 3], [4, 5], [6, 7]])).all().item())
 
     def test_default_collate_bad_sequence_type(self):
         batch = [["X"], ["X", "X"]]
-        self.assertRaises(RuntimeError, lambda: _utils.collate.default_collate(batch))
-        self.assertRaises(RuntimeError, lambda: _utils.collate.default_collate(batch[::-1]))
+        self.assertRaises(RuntimeError, lambda: dataloader.default_collate(batch))
+        self.assertRaises(RuntimeError, lambda: dataloader.default_collate(batch[::-1]))
 
     @unittest.skipIf(not TEST_NUMPY, "numpy unavailable")
     def test_default_collate_shared_tensor(self):
@@ -2435,8 +2432,8 @@ except RuntimeError as e:
 
         self.assertEqual(t_in.is_shared(), False)
 
-        self.assertEqual(_utils.collate.default_collate([t_in]).is_shared(), False)
-        self.assertEqual(_utils.collate.default_collate([n_in]).is_shared(), False)
+        self.assertEqual(dataloader.default_collate([t_in]).is_shared(), False)
+        self.assertEqual(dataloader.default_collate([n_in]).is_shared(), False)
 
         # FIXME: fix the following hack that makes `default_collate` believe
         #        that it is in a worker process (since it tests
@@ -2444,8 +2441,8 @@ except RuntimeError as e:
         old = _utils.worker._worker_info
         try:
             _utils.worker._worker_info = "x"
-            self.assertEqual(_utils.collate.default_collate([t_in]).is_shared(), True)
-            self.assertEqual(_utils.collate.default_collate([n_in]).is_shared(), True)
+            self.assertEqual(dataloader.default_collate([t_in]).is_shared(), True)
+            self.assertEqual(dataloader.default_collate([n_in]).is_shared(), True)
         finally:
             _utils.worker._worker_info = old
 
