@@ -410,7 +410,7 @@ Please reach out if you suggestions or comments (please use <a class="reference 
 <section id="generator-example">
 <h2>Generator Example<a class="headerlink" href="#generator-example" title="Permalink to this heading">¶</a></h2>
 <p>Wrap a generator (or any iterable) to convert it to a BaseNode and get started</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torchdata.nodes</span> <span class="kn">import</span> <span class="n">IterableWrapper</span><span class="p">,</span> <span class="n">ParallelMapper</span><span class="p">,</span> <span class="n">Loader</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torchdata.nodes</span><span class="w"> </span><span class="kn">import</span> <span class="n">IterableWrapper</span><span class="p">,</span> <span class="n">ParallelMapper</span><span class="p">,</span> <span class="n">Loader</span>
 
 <span class="n">node</span> <span class="o">=</span> <span class="n">IterableWrapper</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
 <span class="n">node</span> <span class="o">=</span> <span class="n">ParallelMapper</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">map_fn</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">num_workers</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;thread&quot;</span><span class="p">)</span>
@@ -426,14 +426,14 @@ Please reach out if you suggestions or comments (please use <a class="reference 
 <p>Samplers are still supported, and you can use your existing
 <code class="docutils literal notranslate"><span class="pre">torch.utils.data.Dataset</span></code>'s. See <a class="reference internal" href="migrate_to_nodes_from_utils.html#migrate-to-nodes-from-utils"><span class="std std-ref">Migrating to torchdata.nodes from torch.utils.data</span></a> for an in-depth
 example.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch.utils.data</span>
-<span class="kn">from</span> <span class="nn">torchdata.nodes</span> <span class="kn">import</span> <span class="n">SamplerWrapper</span><span class="p">,</span> <span class="n">ParallelMapper</span><span class="p">,</span> <span class="n">Loader</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch.utils.data</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torchdata.nodes</span><span class="w"> </span><span class="kn">import</span> <span class="n">SamplerWrapper</span><span class="p">,</span> <span class="n">ParallelMapper</span><span class="p">,</span> <span class="n">Loader</span>
 
 
-<span class="k">class</span> <span class="nc">SquaredDataset</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SquaredDataset</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">i</span><span class="o">**</span><span class="mi">2</span>
-    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="mi">10</span>
 
 <span class="n">dataset</span> <span class="o">=</span> <span class="n">SquaredDataset</span><span class="p">()</span>
