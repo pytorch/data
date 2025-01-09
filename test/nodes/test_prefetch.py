@@ -14,12 +14,7 @@ from torchdata.nodes.batch import Batcher
 from torchdata.nodes.loader import Loader
 from torchdata.nodes.prefetch import Prefetcher
 
-from .utils import (
-    IterInitError,
-    MockSource,
-    run_test_save_load_state,
-    StatefulRangeNode,
-)
+from .utils import IterInitError, MockSource, run_test_save_load_state, StatefulRangeNode
 
 
 class TestPrefetcher(TestCase):
@@ -37,12 +32,8 @@ class TestPrefetcher(TestCase):
             for i in range(3):
                 for j in range(batch_size):
                     self.assertEqual(results[i][j]["step"], i * batch_size + j)
-                    self.assertEqual(
-                        results[i][j]["test_tensor"], torch.tensor([i * batch_size + j])
-                    )
-                    self.assertEqual(
-                        results[i][j]["test_str"], f"str_{i * batch_size + j}"
-                    )
+                    self.assertEqual(results[i][j]["test_tensor"], torch.tensor([i * batch_size + j]))
+                    self.assertEqual(results[i][j]["test_str"], f"str_{i * batch_size + j}")
 
     def test_iter_init_error(self):
         node = IterInitError()
@@ -57,7 +48,5 @@ class TestPrefetcher(TestCase):
         n = 200
         src = StatefulRangeNode(n=n)
         node = Batcher(src, batch_size=batch_size, drop_last=False)
-        node = Prefetcher(
-            node, prefetch_factor=8, snapshot_frequency=snapshot_frequency
-        )
+        node = Prefetcher(node, prefetch_factor=8, snapshot_frequency=snapshot_frequency)
         run_test_save_load_state(self, node, midpoint)

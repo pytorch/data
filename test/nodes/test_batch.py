@@ -19,9 +19,7 @@ class TestBatcher(TestCase):
     def test_batcher(self) -> None:
         batch_size = 6
         src = MockSource(num_samples=20)
-        node = Loader(
-            Batcher(src, batch_size=batch_size, drop_last=True), num_workers=8
-        )
+        node = Loader(Batcher(src, batch_size=batch_size, drop_last=True), num_workers=8)
 
         results = list(node)
         print(results)
@@ -29,17 +27,13 @@ class TestBatcher(TestCase):
         for i in range(3):
             for j in range(batch_size):
                 self.assertEqual(results[i][j]["step"], i * batch_size + j)
-                self.assertEqual(
-                    results[i][j]["test_tensor"], torch.tensor([i * batch_size + j])
-                )
+                self.assertEqual(results[i][j]["test_tensor"], torch.tensor([i * batch_size + j]))
                 self.assertEqual(results[i][j]["test_str"], f"str_{i * batch_size + j}")
 
     def test_batcher_drop_last_false(self) -> None:
         batch_size = 6
         src = MockSource(num_samples=20)
-        root = Loader(
-            Batcher(src, batch_size=batch_size, drop_last=False), num_workers=8
-        )
+        root = Loader(Batcher(src, batch_size=batch_size, drop_last=False), num_workers=8)
 
         results = list(root)
         self.assertEqual(len(results), 4)
@@ -47,9 +41,7 @@ class TestBatcher(TestCase):
             n = batch_size if i < 3 else 2
             for j in range(n):
                 self.assertEqual(results[i][j]["step"], i * batch_size + j)
-                self.assertEqual(
-                    results[i][j]["test_tensor"], torch.tensor([i * batch_size + j])
-                )
+                self.assertEqual(results[i][j]["test_tensor"], torch.tensor([i * batch_size + j]))
                 self.assertEqual(results[i][j]["test_str"], f"str_{i * batch_size + j}")
 
     @parameterized.expand(itertools.product([0, 2], [True, False]))

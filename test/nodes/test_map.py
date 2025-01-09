@@ -19,13 +19,7 @@ from torchdata.nodes.map import Mapper, ParallelMapper
 from torchdata.nodes.pin_memory import PinMemory
 from torchdata.nodes.prefetch import Prefetcher
 
-from .utils import (
-    MockSource,
-    RandomSleepUdf,
-    run_test_save_load_state,
-    StatefulRangeNode,
-    udf_raises,
-)
+from .utils import MockSource, RandomSleepUdf, run_test_save_load_state, StatefulRangeNode, udf_raises
 
 
 class TestMap(TestCase):

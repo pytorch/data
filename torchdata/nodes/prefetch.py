@@ -25,9 +25,7 @@ class Prefetcher(BaseOperator[T]):
             items.
     """
 
-    def __init__(
-        self, source: BaseNode[T], prefetch_factor: int, snapshot_frequency: int = 1
-    ):
+    def __init__(self, source: BaseNode[T], prefetch_factor: int, snapshot_frequency: int = 1):
         super().__init__()
         self.source = source
         self.prefetch_factor = prefetch_factor

@@ -63,9 +63,7 @@ class BaseOperator(Generic[T]):
             if self._q.empty():
                 self._executor.submit(
                     self.get_source().get,
-                    callback=functools.partial(
-                        self.callback_wrapper, callback=callback
-                    ),
+                    callback=functools.partial(self.callback_wrapper, callback=callback),
                 )
             else:
                 self._executor.submit(callback, self._q.get())
@@ -101,9 +99,7 @@ class BaseOperator(Generic[T]):
         try:
             self.__initialized
         except AttributeError:
-            raise NotImplementedError(
-                f"self.__initialized not found, did you call super().__init__()? {type(self)=}"
-            )
+            raise NotImplementedError(f"self.__initialized not found, did you call super().__init__()? {type(self)=}")
 
         if not self.__initialized:
             self.reset(None)
@@ -170,9 +166,7 @@ class BaseNode(Iterator[T], BaseOperator[T]):
         try:
             self.__initialized
         except AttributeError:
-            raise NotImplementedError(
-                f"self.__initialized not found, did you call super().__init__()? {type(self)=}"
-            )
+            raise NotImplementedError(f"self.__initialized not found, did you call super().__init__()? {type(self)=}")
         if not self.__initialized:
             self.reset(None)
             if not self.__initialized:
