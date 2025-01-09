@@ -55,6 +55,9 @@ class IterInitError(BaseNode[int]):
         super().__init__()
         self.msg = msg
 
+    def get_source(self):
+        return None
+
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
         raise ValueError(self.msg)
@@ -124,6 +127,9 @@ class StatefulRangeNode(BaseNode[Dict[str, int]]):
         self.n = n
         self.i = 0
         self.num_resets = 0
+
+    def get_source(self):
+        return None
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)

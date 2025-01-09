@@ -63,7 +63,9 @@ class BaseOperator(Generic[T]):
             if self._q.empty():
                 self._executor.submit(
                     self.get_source().get,
-                    callback=functools.partial(self.callback_wrapper, callback=callback),
+                    callback=functools.partial(
+                        self.callback_wrapper, callback=callback
+                    ),
                 )
             else:
                 self._executor.submit(callback, self._q.get())
@@ -78,7 +80,9 @@ class BaseOperator(Generic[T]):
             initial_state: Optional[dict] - a state dict to pass to the node. If None, reset to the beginning.
         """
 
-        self.__initialized = True
+        with self.lock:
+            self.__initialized = True
+            self._q = queue.Queue()
 
     def get_state(self) -> Dict[str, Any]:
         """Subclasses must implement this method, instead of ``state_dict()``. Should only be called by BaseNode.
@@ -97,7 +101,9 @@ class BaseOperator(Generic[T]):
         try:
             self.__initialized
         except AttributeError:
-            raise NotImplementedError(f"self.__initialized not found, did you call super().__init__()? {type(self)=}")
+            raise NotImplementedError(
+                f"self.__initialized not found, did you call super().__init__()? {type(self)=}"
+            )
 
         if not self.__initialized:
             self.reset(None)
@@ -164,7 +170,9 @@ class BaseNode(Iterator[T], BaseOperator[T]):
         try:
             self.__initialized
         except AttributeError:
-            raise NotImplementedError(f"self.__initialized not found, did you call super().__init__()? {type(self)=}")
+            raise NotImplementedError(
+                f"self.__initialized not found, did you call super().__init__()? {type(self)=}"
+            )
         if not self.__initialized:
             self.reset(None)
             if not self.__initialized:

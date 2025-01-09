@@ -6,14 +6,14 @@
 
 from typing import Any, Dict, Optional
 
-from torchdata.nodes import BaseNode, T
+from torchdata.nodes.base_node import BaseNode, BaseOperator, T
 
 from torchdata.nodes.map import _SingleThreadedMapper
 
 from ._populate_queue import _populate_queue
 
 
-class Prefetcher(BaseNode[T]):
+class Prefetcher(BaseOperator[T]):
     """Prefetches data from the source node and stores it in a queue.
 
     Args:
@@ -25,28 +25,35 @@ class Prefetcher(BaseNode[T]):
             items.
     """
 
-    def __init__(self, source: BaseNode[T], prefetch_factor: int, snapshot_frequency: int = 1):
+    def __init__(
+        self, source: BaseNode[T], prefetch_factor: int, snapshot_frequency: int = 1
+    ):
         super().__init__()
         self.source = source
         self.prefetch_factor = prefetch_factor
         self.snapshot_frequency = snapshot_frequency
         self._it: Optional[_SingleThreadedMapper[T]] = None
+        self._tasks_outstanding = 0
+
+    def get_source(self):
+        return self.source
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
-        if self._it is not None:
-            self._it._shutdown()
-            del self._it
-        self._it = _SingleThreadedMapper(
-            source=self.source,
-            prefetch_factor=self.prefetch_factor,
-            worker=_populate_queue,
-            snapshot_frequency=self.snapshot_frequency,
-            initial_state=initial_state,
-        )
+        self.source.reset(initial_state)
+        # if self._it is not None:
+        #     self._it._shutdown()
+        #     del self._it
+        # self._it = _SingleThreadedMapper(
+        #     source=self.source,
+        #     prefetch_factor=self.prefetch_factor,
+        #     worker=_populate_queue,
+        #     snapshot_frequency=self.snapshot_frequency,
+        #     initial_state=initial_state,
+        # )
 
-    def next(self):
-        return next(self._it)  # type: ignore[arg-type]
+    def process(self, item) -> T:
+        return [item]
 
     def get_state(self) -> Dict[str, Any]:
-        return self._it.get_state()  # type: ignore[union-attr]
+        return self.source.get_state()  # type: ignore[union-attr]

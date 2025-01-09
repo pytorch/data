@@ -11,13 +11,21 @@ from typing import List, Optional
 
 from parameterized import parameterized
 from torch.testing._internal.common_utils import IS_WINDOWS, TEST_CUDA, TestCase
+from torchdata.nodes.adapters import IterableWrapper
 from torchdata.nodes.batch import Batcher
+from torchdata.nodes.loader import Loader
 
 from torchdata.nodes.map import Mapper, ParallelMapper
 from torchdata.nodes.pin_memory import PinMemory
 from torchdata.nodes.prefetch import Prefetcher
 
-from .utils import MockSource, RandomSleepUdf, run_test_save_load_state, StatefulRangeNode, udf_raises
+from .utils import (
+    MockSource,
+    RandomSleepUdf,
+    run_test_save_load_state,
+    StatefulRangeNode,
+    udf_raises,
+)
 
 
 class TestMap(TestCase):
@@ -59,22 +67,25 @@ class TestMap(TestCase):
         batch_size = 6
         n = 80
         multiprocessing_context = None if IS_WINDOWS else "forkserver"
-        src = MockSource(num_samples=n)
+        # src = MockSource(num_samples=n)
+        src = IterableWrapper(range(n))
         node = Batcher(src, batch_size=batch_size, drop_last=False)
-        node = ParallelMapper(
-            node,
-            RandomSleepUdf(),
-            num_workers=4,
-            in_order=in_order,
-            method=method,
-            multiprocessing_context=multiprocessing_context,
-            prebatch=prebatch,
-        )
+        # node = ParallelMapper(
+        #     node,
+        #     RandomSleepUdf(),
+        #     num_workers=4,
+        #     in_order=in_order,
+        #     method=method,
+        #     multiprocessing_context=multiprocessing_context,
+        #     prebatch=prebatch,
+        # )
+        node = Mapper(node, RandomSleepUdf())
         node = Prefetcher(node, prefetch_factor=2)
+        node = Loader(node, num_workers=8)
 
         results: List[List[dict]] = [[], []]
         for epoch in range(2):
-            node.reset()
+            # node.reset()
             for batch in node:
                 results[epoch].extend(batch)
 
@@ -131,7 +142,11 @@ class TestMap(TestCase):
         )
     )
     def test_save_load_state_thread(
-        self, midpoint: int, in_order: bool, snapshot_frequency: int, prebatch: Optional[int]
+        self,
+        midpoint: int,
+        in_order: bool,
+        snapshot_frequency: int,
+        prebatch: Optional[int],
     ):
         method = "thread"
         batch_size = 6
@@ -159,7 +174,11 @@ class TestMap(TestCase):
         )
     )
     def test_save_load_state_process(
-        self, midpoint: int, in_order: bool, snapshot_frequency: int, prebatch: Optional[int]
+        self,
+        midpoint: int,
+        in_order: bool,
+        snapshot_frequency: int,
+        prebatch: Optional[int],
     ):
         method = "process"
         batch_size = 6

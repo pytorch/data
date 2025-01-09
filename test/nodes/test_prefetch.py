@@ -14,7 +14,12 @@ from torchdata.nodes.batch import Batcher
 from torchdata.nodes.loader import Loader
 from torchdata.nodes.prefetch import Prefetcher
 
-from .utils import IterInitError, MockSource, run_test_save_load_state, StatefulRangeNode
+from .utils import (
+    IterInitError,
+    MockSource,
+    run_test_save_load_state,
+    StatefulRangeNode,
+)
 
 
 class TestPrefetcher(TestCase):
@@ -22,22 +27,26 @@ class TestPrefetcher(TestCase):
         batch_size = 6
         src = MockSource(num_samples=20)
         node = Batcher(src, batch_size=batch_size, drop_last=True)
-        root = Prefetcher(node, prefetch_factor=2)
+        root = Loader(Prefetcher(node, prefetch_factor=2))
 
         # Test multi epoch shutdown and restart
-        for _ in range(2):
-            root.reset()
+        for epoch in range(2):
+            # root.reset()
             results = list(root)
-            self.assertEqual(len(results), 3)
+            self.assertEqual(len(results), 3, f"results: {results}, epoch: {epoch}")
             for i in range(3):
                 for j in range(batch_size):
                     self.assertEqual(results[i][j]["step"], i * batch_size + j)
-                    self.assertEqual(results[i][j]["test_tensor"], torch.tensor([i * batch_size + j]))
-                    self.assertEqual(results[i][j]["test_str"], f"str_{i * batch_size + j}")
+                    self.assertEqual(
+                        results[i][j]["test_tensor"], torch.tensor([i * batch_size + j])
+                    )
+                    self.assertEqual(
+                        results[i][j]["test_str"], f"str_{i * batch_size + j}"
+                    )
 
     def test_iter_init_error(self):
         node = IterInitError()
-        root = Prefetcher(node, prefetch_factor=2)
+        root = Loader(Prefetcher(node, prefetch_factor=2))
 
         with self.assertRaisesRegex(ValueError, "Iter Init Error"):
             list(root)
@@ -48,5 +57,7 @@ class TestPrefetcher(TestCase):
         n = 200
         src = StatefulRangeNode(n=n)
         node = Batcher(src, batch_size=batch_size, drop_last=False)
-        node = Prefetcher(node, prefetch_factor=8, snapshot_frequency=snapshot_frequency)
+        node = Prefetcher(
+            node, prefetch_factor=8, snapshot_frequency=snapshot_frequency
+        )
         run_test_save_load_state(self, node, midpoint)

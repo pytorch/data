@@ -21,6 +21,7 @@ class Loader(Generic[T]):
         root: BaseNode[T],
         restart_on_stop_iteration: bool = True,
         num_workers: int = 1,
+        prefetch_factor: int = 2,
     ):
         super().__init__()
         self.root = root
@@ -38,6 +39,7 @@ class Loader(Generic[T]):
         # for _ in it: ...
         self._iter_for_state_dict: bool = False
         self.num_workers = 1
+        self.prefetch_factor = prefetch_factor
         self._executor = ThreadPoolExecutor(max_workers=num_workers)
         self.root.set_executor(self._executor)
 
@@ -116,6 +118,9 @@ class LoaderIterator(BaseNode[T]):
             self._num_yielded = 0
         self._cached_item = None
 
+        for _ in range(self.loader.prefetch_factor):
+            self._prefetch()
+
     def has_next(self) -> bool:
         if self._cached_item is None:
             try:
@@ -128,23 +133,21 @@ class LoaderIterator(BaseNode[T]):
         return self._cached_item is not None
 
     def callback(self, val: Any):
-        print(f"Callback entered {val=}")
         self._q.put(val)
 
+    def _prefetch(self):
+        self.loader._executor.submit(self.root.get, callback=self.callback)
+
     def _get_next(self) -> T:
-        with self.lock:
-            self.return_val = None
-            self.loader._executor.submit(self.root.get, callback=self.callback)
-            while True:
-                try:
-                    item = self._q.get(timeout=1)
-                except TimeoutError:
-                    continue
-                if isinstance(item, StopIteration):
-                    print("Raising StopIteration")
-                    raise StopIteration
-                print(f"Returning {item=}")
-                return item
+        while True:
+            try:
+                item = self._q.get(timeout=1)
+            except queue.Empty:
+                continue
+            if isinstance(item, StopIteration):
+                raise StopIteration
+            self._prefetch()
+            return item
 
     def next(self):
         if self._cached_item is not None:

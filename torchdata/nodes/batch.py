@@ -43,24 +43,19 @@ class Batcher(BaseOperator[List[T]]):
     def process(self, item):  # -> List[T]:
         # batch: List[T] = []
         # while len(batch) < self.batch_size:
-        print(f"batcher process {len(self.batch)=}, {item=}")
         if isinstance(item, StopIteration):
             if len(self.batch) > 0 and not self.drop_last:
                 ret = [self.batch, item]
             else:
                 ret = [item]
             self.batch = []
-            print(f"Batcher returning {ret=}")
             return ret
         else:
             self.batch.append(item)
             if len(self.batch) == self.batch_size:
                 ret = [self.batch]
                 self.batch = []
-                print(f"Batcher returning {ret=}")
                 return ret
-            else:
-                print("batcher returning None")
 
         # try:
         #     item = next(self.source)
