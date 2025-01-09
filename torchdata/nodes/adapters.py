@@ -40,6 +40,9 @@ class IterableWrapper(BaseNode[T]):
         self.iterable = iterable
         self._it: Optional[Iterator[T]] = None
 
+    def get_source(self):
+        return None
+
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         self._num_yielded = 0
         self._it = None
@@ -117,6 +120,9 @@ class SamplerWrapper(BaseNode[T]):
         self._started = False
         self.epoch_updater = epoch_updater or self._default_epoch_updater
         self._it: Optional[Iterator[T]] = None
+
+    def get_source(self):
+        return None
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)

@@ -1,3 +1,5 @@
+import queue
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, Generic, Optional
 
 from torchdata.nodes.base_node import BaseNode, T
@@ -14,7 +16,12 @@ class Loader(Generic[T]):
         restart_on_stop_iteration (bool): Whether to restart the iterator when it reaches the end. Default is True
     """
 
-    def __init__(self, root: BaseNode[T], restart_on_stop_iteration: bool = True):
+    def __init__(
+        self,
+        root: BaseNode[T],
+        restart_on_stop_iteration: bool = True,
+        num_workers: int = 1,
+    ):
         super().__init__()
         self.root = root
         self.restart_on_stop_iteration = restart_on_stop_iteration
@@ -30,6 +37,9 @@ class Loader(Generic[T]):
         # it = iter(loader)  # We don't want to reset the iterator here again
         # for _ in it: ...
         self._iter_for_state_dict: bool = False
+        self.num_workers = 1
+        self._executor = ThreadPoolExecutor(max_workers=num_workers)
+        self.root.set_executor(self._executor)
 
     def __iter__(self):
         if self._it is None:
@@ -94,6 +104,7 @@ class LoaderIterator(BaseNode[T]):
         self._cached_item = None
         self._cached_state_dict: Optional[Dict[str, Any]] = None
         self._num_yielded = 0
+        self._q = queue.Queue()
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
@@ -111,10 +122,29 @@ class LoaderIterator(BaseNode[T]):
                 # Cache the current state dict
                 self._cached_state_dict = self.state_dict()
                 # Load and save the next item
-                self._cached_item = next(self)
+                self._cached_item = self._get_next()  # next(self)
             except StopIteration:
                 pass
         return self._cached_item is not None
+
+    def callback(self, val: Any):
+        print(f"Callback entered {val=}")
+        self._q.put(val)
+
+    def _get_next(self) -> T:
+        with self.lock:
+            self.return_val = None
+            self.loader._executor.submit(self.root.get, callback=self.callback)
+            while True:
+                try:
+                    item = self._q.get(timeout=1)
+                except TimeoutError:
+                    continue
+                if isinstance(item, StopIteration):
+                    print("Raising StopIteration")
+                    raise StopIteration
+                print(f"Returning {item=}")
+                return item
 
     def next(self):
         if self._cached_item is not None:
@@ -122,7 +152,7 @@ class LoaderIterator(BaseNode[T]):
             self._cached_item = None
             self._cached_state_dict = None
         else:
-            item = next(self.root)
+            item = self._get_next()  # next(self.root)
         self._num_yielded += 1
         return item
 

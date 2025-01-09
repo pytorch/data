@@ -10,6 +10,7 @@ import torch
 from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
 from torchdata.nodes.batch import Batcher, Unbatcher
+from torchdata.nodes.loader import Loader
 
 from .utils import MockSource, run_test_save_load_state
 
@@ -18,9 +19,10 @@ class TestBatcher(TestCase):
     def test_batcher(self) -> None:
         batch_size = 6
         src = MockSource(num_samples=20)
-        node = Batcher(src, batch_size=batch_size, drop_last=True)
+        node = Loader(Batcher(src, batch_size=batch_size, drop_last=True))
 
         results = list(node)
+        print(results)
         self.assertEqual(len(results), 3)
         for i in range(3):
             for j in range(batch_size):
@@ -31,7 +33,7 @@ class TestBatcher(TestCase):
     def test_batcher_drop_last_false(self) -> None:
         batch_size = 6
         src = MockSource(num_samples=20)
-        root = Batcher(src, batch_size=batch_size, drop_last=False)
+        root = Loader(Batcher(src, batch_size=batch_size, drop_last=False))
 
         results = list(root)
         self.assertEqual(len(results), 4)
@@ -56,7 +58,7 @@ class TestUnbatcher(TestCase):
         n = 20
         src = MockSource(num_samples=n)
         node = Batcher(src, batch_size=batch_size, drop_last=False)
-        node = Unbatcher(node)
+        node = Loader(Unbatcher(node))
 
         results = list(node)
         self.assertEqual(len(results), n)

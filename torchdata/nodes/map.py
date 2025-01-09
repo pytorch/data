@@ -324,6 +324,9 @@ class _ParallelMapperImpl(BaseNode[T]):
         self.snapshot_frequency = snapshot_frequency
         self._it: Optional[Union[_InlineMapperIter[T], _ParallelMapperIter[T]]] = None
 
+    def get_source(self):
+        return self.source
+
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
         if self._it is not None:
@@ -433,6 +436,9 @@ class ParallelMapper(BaseNode[T]):
             self._it = _it
         else:
             self._it = Unbatcher(_it)  # type: ignore[arg-type, assignment]
+
+    def get_source(self):
+        return self._it
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)

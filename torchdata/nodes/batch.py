@@ -6,10 +6,10 @@
 
 from typing import Any, Dict, List, Optional, Sequence
 
-from torchdata.nodes.base_node import BaseNode, T
+from torchdata.nodes.base_node import BaseNode, BaseOperator, T
 
 
-class Batcher(BaseNode[List[T]]):
+class Batcher(BaseOperator[List[T]]):
     """Batcher node batches the data from the source node into batches of size batch_size.
     If the source node is exhausted, it will return the batch or raise StopIteration.
     If drop_last is True, the last batch will be dropped if it is smaller than batch_size.
@@ -28,6 +28,10 @@ class Batcher(BaseNode[List[T]]):
         self.source = source
         self.batch_size = batch_size
         self.drop_last = drop_last
+        self.batch = []
+
+    def get_source(self):
+        return self.source
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
@@ -36,29 +40,48 @@ class Batcher(BaseNode[List[T]]):
         else:
             self.source.reset()
 
-    def next(self) -> List[T]:
-        batch: List[T] = []
-        while len(batch) < self.batch_size:
-            try:
-                item = next(self.source)
-            except StopIteration:
-                break
-            batch.append(item)
-            if len(batch) == self.batch_size:
-                return batch
-
-        if len(batch) == self.batch_size:
-            return batch
-        elif len(batch) and not self.drop_last:
-            return batch
+    def process(self, item):  # -> List[T]:
+        # batch: List[T] = []
+        # while len(batch) < self.batch_size:
+        print(f"batcher process {len(self.batch)=}, {item=}")
+        if isinstance(item, StopIteration):
+            if len(self.batch) > 0 and not self.drop_last:
+                ret = [self.batch, item]
+            else:
+                ret = [item]
+            self.batch = []
+            print(f"Batcher returning {ret=}")
+            return ret
         else:
-            raise StopIteration()
+            self.batch.append(item)
+            if len(self.batch) == self.batch_size:
+                ret = [self.batch]
+                self.batch = []
+                print(f"Batcher returning {ret=}")
+                return ret
+            else:
+                print("batcher returning None")
+
+        # try:
+        #     item = next(self.source)
+        # except StopIteration:
+        #     break
+        # batch.append(item)
+        # if len(batch) == self.batch_size:
+        #     return batch
+
+        # if len(batch) == self.batch_size:
+        #     return batch
+        # elif len(batch) and not self.drop_last:
+        #     return batch
+        # else:
+        #     raise StopIteration()
 
     def get_state(self) -> Dict[str, Any]:
         return {self.SOURCE_KEY: self.source.state_dict()}
 
 
-class Unbatcher(BaseNode[T]):
+class Unbatcher(BaseOperator[T]):
     """Unbatcher will flatten batches pulled from source, and
     yields elements in sequential order when next() is called on it.
 
@@ -73,37 +96,41 @@ class Unbatcher(BaseNode[T]):
         super().__init__(self)
         self.source = source
 
+    def get_source(self):
+        return self.source
+
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
-        if initial_state is not None:
-            self.source.reset(initial_state[self.SOURCE_KEY])
-            self._cached_state_dict = initial_state[self.SOURCE_KEY]
-            try:
-                self._batch = next(self.source)
-                self._batch_idx = initial_state[self.BATCH_IDX_KEY]
-            except StopIteration:
-                # next(self.source) will be called upon subsequent self.next() call
-                # and raise StopIteration in the correct place.
-                self._batch = []
-                self._batch_idx = 0
-        else:
-            self.source.reset()
-            self._batch = []
-            self._cached_state_dict = None
-            self._batch_idx = 0
+        # if initial_state is not None:
+        #     self.source.reset(initial_state[self.SOURCE_KEY])
+        #     self._cached_state_dict = initial_state[self.SOURCE_KEY]
+        #     try:
+        #         self._batch = next(self.source)
+        #         self._batch_idx = initial_state[self.BATCH_IDX_KEY]
+        #     except StopIteration:
+        #         # next(self.source) will be called upon subsequent self.next() call
+        #         # and raise StopIteration in the correct place.
+        #         self._batch = []
+        #         self._batch_idx = 0
+        # else:
+        #     self.source.reset()
+        #     self._batch = []
+        #     self._cached_state_dict = None
+        #     self._batch_idx = 0
 
-    def next(self) -> T:
-        while self._batch_idx >= len(self._batch):
-            self._cached_state_dict = self.source.state_dict()
-            self._batch = next(self.source)
-            self._batch_idx = 0
+    def process(self, item) -> T:
+        return item
+        # while self._batch_idx >= len(self._batch):
+        #     self._cached_state_dict = self.source.state_dict()
+        #     self._batch = next(self.source)
+        #     self._batch_idx = 0
 
-        self._batch_idx += 1
-        return self._batch[self._batch_idx - 1]
+        # self._batch_idx += 1
+        # return self._batch[self._batch_idx - 1]
 
     def get_state(self) -> Dict[str, Any]:
-        if self._cached_state_dict is None:
-            self._cached_state_dict = self.source.state_dict()
+        # if self._cached_state_dict is None:
+        #     self._cached_state_dict = self.source.state_dict()
 
         return {
             self.SOURCE_KEY: self._cached_state_dict,
