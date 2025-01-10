@@ -68,7 +68,7 @@ jobs:
             python-version: pure
     steps:
       - name: Checkout Source Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch }}
           submodules: recursive
@@ -167,7 +167,7 @@ jobs:
           aws-region: us-east-1
       - name: Download Artifacts from Github
         continue-on-error: true
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: torchdata-artifact
       - name: Determine if Wheel Uploading is needed
@@ -220,7 +220,7 @@ jobs:
         with:
           python-version: 3.9
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch }}
           submodules: recursive
