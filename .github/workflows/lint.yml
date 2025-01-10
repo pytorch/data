@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: "3.9"
       - name: Check out source repository
@@ -43,7 +43,7 @@ jobs:
           echo "value=$PT_CHANNEL" >> $GITHUB_OUTPUT
         id: pytorch_channel
       - name: Setup Python environment
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: 3.9
       - name: Check out source repository
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: "3.9"
       - name: Check out source repository
