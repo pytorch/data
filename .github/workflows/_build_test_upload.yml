@@ -141,7 +141,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: torchdata-artifact
+          name: torchdata-artifact-${{ matrix.runs-on }}
           path: dist/torchdata*.whl
 
   wheel_upload:
@@ -169,7 +169,8 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
-          name: torchdata-artifact
+          name: torchdata-artifact-*
+          merge-multiple: true
       - name: Determine if Wheel Uploading is needed
         run: |
           upload=false
