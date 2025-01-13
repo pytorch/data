@@ -68,13 +68,13 @@ jobs:
             python-version: pure
     steps:
       - name: Checkout Source Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch }}
           submodules: recursive
       - name: Setup Python ${{ matrix.python-version }} for Windows
         if: ${{ startsWith( matrix.os, 'windows' ) }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Add temp runner environment variables
@@ -139,9 +139,9 @@ jobs:
 
       - name: Upload Wheels to Github
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: torchdata-artifact
+          name: torchdata-artifact-${{ matrix.os }}-${{ matrix.python-version }}
           path: dist/torchdata*.whl
 
   wheel_upload:
@@ -167,9 +167,10 @@ jobs:
           aws-region: us-east-1
       - name: Download Artifacts from Github
         continue-on-error: true
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: torchdata-artifact
+          pattern: torchdata-artifact-*
+          merge-multiple: true
       - name: Determine if Wheel Uploading is needed
         run: |
           upload=false
@@ -216,11 +217,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup Python 3.9
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.9
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch }}
           submodules: recursive
