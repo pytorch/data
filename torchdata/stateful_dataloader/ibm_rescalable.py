@@ -587,23 +587,24 @@ def load_distributed_state_dict(
     nworkers = base["_snapshot"]["_main_snapshot"]["_num_workers"]
     rank = loader.dataset.rank
     dstate = __pop_dstate(base, device_mesh, [dtensor.placement_types.Shard(0)])  # placements)
+    inp = {"state":base, "dstate":dstate}
     # Read nondistributed state dict
-    ckp_ws = 0 if not os.path.exists(path) else len([x for x in os.listdir(path) if "__nondist_cp_" in x])
-    # Check that number of loaders matches
-    if ckp_ws == loader.dataset.worldsize:
-        state = torch.load(os.path.join(path, f"__nondist_cp_{rank}.pth"))
-        # Check that number of workers matches
-        if nworkers != state["_snapshot"]["_main_snapshot"]["_num_workers"]:
-            state = base
-    else:
-        # On mismatch, discard saved non-reshardable loader state and start fresh
-        state = base
+    ckp_ws = 0 if not os.path.exists(path) else len(os.listdir(path))
     # Read distributed state dict
     reader = checkpoint.FileSystemReader(path)
     checkpoint.load_state_dict(
-        dstate,
+        inp,
         reader,
     )
+    dstate = inp["dstate"]
+    # Check that number of loaders matches
+    if ckp_ws == loader.dataset.worldsize:
+        # Check that number of workers matches
+        if nworkers != state["_snapshot"]["_main_snapshot"]["_num_workers"]:
+            state = inp["state"]
+    else:
+        # On mismatch, discard saved non-reshardable loader state and start fresh
+        state = base
     # Get local tensors from dtensors, and slice over workers
     dstate = {k: v.to_local().chunk(nworkers) for k, v in dstate.items()}
     # Flip dict[list[tensor]] to list[dict[tensor]]
