@@ -585,9 +585,8 @@ def load_distributed_state_dict(
     """
     base = loader.state_dict()
     nworkers = base["_snapshot"]["_main_snapshot"]["_num_workers"]
-    rank = loader.dataset.rank
     dstate = __pop_dstate(base, device_mesh, [dtensor.placement_types.Shard(0)])  # placements)
-    inp = {"state":base, "dstate":dstate}
+    inp = {"state":deepcopy(base), "dstate":dstate}
     # Read nondistributed state dict
     ckp_ws = 0 if not os.path.exists(path) else len(os.listdir(path))
     # Read distributed state dict
