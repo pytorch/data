@@ -560,14 +560,15 @@ def save_distributed_state_dict(
     rank = loader.dataset.rank
     state = deepcopy(loader.state_dict())
     dstate = __pop_dstate(state, device_mesh, [dtensor.placement_types.Shard(0)])
+    out = {"state":state, "dstate":dstate}
     # Write distributed state dict
     writer = checkpoint.FileSystemWriter(path)
     checkpoint.save(
-        dstate,
+        out,
         writer,
     )
-    # Write nondistributed state dict
-    torch.save(state, os.path.join(path, f"__nondist_cp_{rank}.pth"))
+    # # Write nondistributed state dict
+    # torch.save(state, os.path.join(path, f"__nondist_cp_{rank}.pth"))
 
 
 def load_distributed_state_dict(
