@@ -557,7 +557,6 @@ def save_distributed_state_dict(
     Rescalable worker states are compiled into a dtensor across ranks, and saved 
     using pytorch distributed checkpointing.
     """
-    rank = loader.dataset.rank
     state = deepcopy(loader.state_dict())
     dstate = __pop_dstate(state, device_mesh, [dtensor.placement_types.Shard(0)])
     out = {"state":state, "dstate":dstate}
@@ -567,8 +566,6 @@ def save_distributed_state_dict(
         out,
         writer,
     )
-    # # Write nondistributed state dict
-    # torch.save(state, os.path.join(path, f"__nondist_cp_{rank}.pth"))
 
 
 def load_distributed_state_dict(
@@ -587,8 +584,6 @@ def load_distributed_state_dict(
     nworkers = base["_snapshot"]["_main_snapshot"]["_num_workers"]
     dstate = __pop_dstate(base, device_mesh, [dtensor.placement_types.Shard(0)])  # placements)
     inp = {"state":deepcopy(base), "dstate":dstate}
-    # Read nondistributed state dict
-    ckp_ws = 0 if not os.path.exists(path) else len(os.listdir(path))
     # Read distributed state dict
     reader = checkpoint.FileSystemReader(path)
     checkpoint.load_state_dict(
@@ -597,6 +592,7 @@ def load_distributed_state_dict(
     )
     dstate = inp["dstate"]
     # Check that number of loaders matches
+    ckp_ws = 0 if not os.path.exists(path) else len(os.listdir(path))
     if ckp_ws == loader.dataset.worldsize:
         # Check that number of workers matches
         if nworkers != state["_snapshot"]["_main_snapshot"]["_num_workers"]:
