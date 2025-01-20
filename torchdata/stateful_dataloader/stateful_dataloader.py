@@ -1527,11 +1527,14 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         return data
 
     def _take_snapshot(self):
-        main_snapshot_idx, main_snapshot = self._main_snapshots.popleft()
+        main_snapshot_idx = None
         while len(self._main_snapshots) and (self._main_snapshots[0][0] <= self._rcvd_idx - 1):
             main_snapshot_idx, main_snapshot = self._main_snapshots.popleft()
-        if self._in_order:
-            assert main_snapshot_idx == self._rcvd_idx - 1, (main_snapshot_idx, self._rcvd_idx - 1)
+        if not self._in_order and main_snapshot_idx is None:
+            # in_order is False and no main snapshot is available as we're ahead of rcvd_idx
+            # we can't take a snapshot with the current implementation
+            return
+        assert main_snapshot_idx == self._rcvd_idx - 1, (main_snapshot_idx, self._rcvd_idx - 1)
         self._update_snapshot(
             self._num_yielded + 1,
             self._last_yielded_worker_id,
