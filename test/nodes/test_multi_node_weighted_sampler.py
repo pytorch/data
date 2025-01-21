@@ -30,6 +30,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             for i in range(self._num_datasets)
         }
         self.weights = {f"ds{i}": self._weights_fn(i) for i in range(self._num_datasets)}
+        self.equal_weights = {f"ds{i}": 1.0 for i in range(self._num_datasets)}
 
     def test_torchdata_nodes_imports(self) -> None:
         try:
@@ -148,6 +149,23 @@ class TestMultiNodeWeightedSampler(TestCase):
             # check that all datasets are exhausted
             self.assertEqual(sorted(datasets_in_results), ["ds0", "ds1", "ds2", "ds3"])
             mixer.reset()
+
+    def test_multi_node_weighted_sampler_cycle_forever(self) -> None:
+        """Test MultiNodeWeightedSampler with stop criteria CYCLE_FOREVER"""
+        mixer = MultiNodeWeightedSampler(
+            self.datasets,
+            self.equal_weights,
+            stop_criteria=StopCriteria.CYCLE_FOREVER,
+        )
+
+        num_yielded = 0
+        _it = iter(mixer)
+        while num_yielded < 256:  # total number of samples is 4 * 10 = 40, 256 is an arbitrary larger number
+            next(_it)
+            num_yielded += 1
+
+        mixer_num_yielded = mixer.get_state()[MultiNodeWeightedSampler.NUM_YIELDED_KEY]
+        self.assertEqual(mixer_num_yielded, num_yielded)
 
     @parameterized.expand([(1, 8), (8, 32)])
     def test_multi_node_weighted_batch_sampler_set_rank_world_size(self, rank, world_size):
