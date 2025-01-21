@@ -1,18 +1,21 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-#
-# All rights reserved.
-#
-# This source code is licensed under the BSD-style license found in the
-# LICENSE file in the root directory of this source tree.
 from typing import Any, Callable, Dict, Iterator, Literal, Optional, TypeVar
-
 from torchdata.nodes.base_node import BaseNode
-from torchdata.nodes.map import Mapper, ParallelMapper
-
+from torchdata.nodes.map import ParallelMapper
 T = TypeVar("T", covariant=True)
 
-
 class Filter(BaseNode[T]):
+    """
+    A node that filters data samples based on a given predicate.
+    Args:
+        source (BaseNode[T]): The source node providing data samples.
+        predicate (Callable[[T], bool]): A function that takes a data sample and returns a boolean indicating whether to include it.
+        num_workers (int): The number of worker processes to use for parallel filtering. Defaults to 0.
+        in_order (bool): Whether to return items in the order from which they arrive from. Default is True.
+        method (Literal["thread", "process"]): The method to use for parallel processing. Default is "thread".
+        multiprocessing_context (Optional[str]): The multiprocessing context to use for parallel processing. Default is None.
+        max_concurrent (Optional[int]): The maximum number of items to process at once. Default is None.
+        snapshot_frequency (int): The frequency at which to snapshot the state of the source node. Default is 1.
+    """
     def __init__(
         self,
         source: BaseNode[T],
@@ -33,12 +36,6 @@ class Filter(BaseNode[T]):
         self.multiprocessing_context = multiprocessing_context
         self.max_concurrent = max_concurrent
         self.snapshot_frequency = snapshot_frequency
-        self._it: Optional[Iterator[T]] = None
-
-    def reset(self, initial_state: Optional[Dict[str, Any]] = None):
-        super().reset(initial_state)
-        if self._it is not None:
-            del self._it
         if self.num_workers > 0:
             self._it = _ParallelFilterIter(
                 source=self.source,
@@ -49,54 +46,60 @@ class Filter(BaseNode[T]):
                 multiprocessing_context=self.multiprocessing_context,
                 max_concurrent=self.max_concurrent,
                 snapshot_frequency=self.snapshot_frequency,
-                initial_state=initial_state,
             )
-
         else:
-            self._it = _InlineFilterIter(
-                source=self.source,
-                predicate=self.predicate,
-                initial_state=initial_state,
-            )
-
-    def next(self):
-        return next(self._it)  # type: ignore[arg-type]
-
+            self._it = _InlineFilterIter(source=self.source, predicate=self.predicate)
+    def reset(self, initial_state: Optional[Dict[str, Any]] = None) -> None:
+        """Resets the filter node to its initial state."""
+        super().reset(initial_state)
+        if self._it is not None:
+            self._it.reset(initial_state)
+    def next(self) -> T:
+        """Returns the next filtered item."""
+        return next(self._it)
     def get_state(self) -> Dict[str, Any]:
-        return self._it.get_state()  # type: ignore[union-attr]
-
+        """Returns the current state of the filter node."""
+        return self._it.get_state()
 
 class _InlineFilterIter(Iterator[T]):
-    def __init__(
-        self,
-        source: BaseNode[T],
-        predicate: Callable[[T], bool],
-        initial_state: Optional[Dict[str, Any]] = None,
-    ):
+    """
+    An iterator that filters data samples inline.
+    Args:
+        source (BaseNode[T]): The source node providing data samples.
+        predicate (Callable[[T], bool]): A function that takes a data sample and returns a boolean indicating whether to include it.
+    """
+    SOURCE_KEY = "source"
+
+    def __init__(self, source: BaseNode[T], predicate: Callable[[T], bool]) -> None:
         self.source = source
         self.predicate = predicate
-        if initial_state is not None:
-            self.source.reset(initial_state["source"])
+
+    def reset(self, initial_state: Optional[Dict[str, Any]] = None) -> None:
+        """Resets the inline filter iterator to its initial state."""
+        if initial_state:
+            self.source.reset(initial_state[self.SOURCE_KEY])
         else:
             self.source.reset()
 
     def __iter__(self) -> Iterator[T]:
+        """Returns the iterator object itself."""
         return self
-
     def __next__(self) -> T:
+        """Returns the next filtered item."""
         while True:
-            item = next(self.source)
-            if self.predicate(item):
-                return item
-
+            try:
+                item = next(self.source)
+                if self.predicate(item):
+                    return item
+            except StopIteration:
+                raise
     def get_state(self) -> Dict[str, Any]:
-        return {"source": self.source.state_dict()}
-
+        """Returns the current state of the inline filter iterator."""
+        return {self.SOURCE_KEY: self.source.state_dict()}
 
 class _ParallelFilterIter(Iterator[T]):
     """
     An iterator that filters data samples in parallel.
-
     Args:
         source (BaseNode[T]): The source node providing data samples.
         predicate (Callable[[T], bool]): A function that takes a data sample and returns a boolean indicating whether to include it.
@@ -106,9 +109,8 @@ class _ParallelFilterIter(Iterator[T]):
         multiprocessing_context (Optional[str]): The multiprocessing context to use.
         max_concurrent (Optional[int]): The maximum number of concurrent tasks.
         snapshot_frequency (int): The frequency at which to take snapshots.
-        initial_state (Optional[Dict[str, Any]]): The initial state to start with.
     """
-
+    MAPPER_KEY = "mapper"
     def __init__(
         self,
         source: BaseNode[T],
@@ -119,7 +121,6 @@ class _ParallelFilterIter(Iterator[T]):
         multiprocessing_context: Optional[str],
         max_concurrent: Optional[int],
         snapshot_frequency: int,
-        initial_state: Optional[Dict[str, Any]] = None,
     ):
         self.source = source
         self.predicate = predicate
@@ -140,42 +141,26 @@ class _ParallelFilterIter(Iterator[T]):
             max_concurrent=self.max_concurrent,
             snapshot_frequency=self.snapshot_frequency,
         )
-        if initial_state is not None:
-            self.mapper.reset(initial_state)
-
+    def reset(self, initial_state: Optional[Dict[str, Any]] = None) -> None:
+        """Resets the parallel filter iterator to its initial state."""
+        if initial_state:
+            self.mapper.reset(initial_state[self.MAPPER_KEY])
+        else:
+            self.mapper.reset()
     def __iter__(self) -> Iterator[T]:
-        """
-        Returns the iterator object itself.
-
-        Returns:
-            Iterator[T]: The iterator object itself.
-        """
+        """Returns the iterator object itself."""
         return self
-
     def __next__(self) -> T:
-        """
-        Returns the next filtered data sample.
-
-        Returns:
-            T: The next filtered data sample.
-        """
+        """Returns the next filtered item."""
         while True:
-            try:
-                item, passed_predicate = next(self.mapper)
-                if passed_predicate:
-                    return item
-            except StopIteration:
-                raise
+
+            item, passed_predicate = next(self.mapper)
+            if passed_predicate:
+                return item
 
     def get_state(self) -> Dict[str, Any]:
-        """
-        Returns the current state of the parallel filter iterator.
-
-        Returns:
-            Dict[str, Any]: The current state of the parallel filter iterator.
-        """
-        return self.mapper.get_state()
-
+        """Returns the current state of the parallel filter iterator."""
+        return {self.MAPPER_KEY: self.mapper.get_state()}
     def __del__(self):
         # Clean up resources when the iterator is deleted
         del self.mapper

@@ -15,9 +15,10 @@ from torch.testing._internal.common_utils import IS_WINDOWS, TEST_CUDA, TestCase
 
 from torchdata.nodes.base_node import BaseNode
 from torchdata.nodes.filter import Filter
+from torchdata.nodes.batch import Batcher
 
 from .utils import MockSource, run_test_save_load_state, StatefulRangeNode
-
+from torchdata.nodes.samplers.multi_node_weighted_sampler import MultiNodeWeightedSampler
 
 class TestFilter(TestCase):
     def _test_filter(self, num_workers, in_order, method):
@@ -52,11 +53,23 @@ class TestFilter(TestCase):
     def test_filter_parallel_process(self):
         self._test_filter(num_workers=4, in_order=True, method="process")
 
+    @parameterized.expand([100, 200, 300])
+    def test_filter_batcher(self, n):
+        src = StatefulRangeNode(n=n)
+        node = Batcher(src, batch_size=2)
+        predicate = lambda x : (x[0]["i"]+x[1]["i"])%3==0
+        node = Filter(node, predicate, num_workers=2)
+        results = list(node)
+        self.assertEqual(len(results), n//6)
+
+
+
+
     @parameterized.expand(
         itertools.product(
-            [0],  # , 7, 13],
+            [10, 20 , 40],
             [True],  # TODO: define and fix in_order = False
-            [0],  # , 1, 9],  # TODO: define and fix in_order = False
+            [1, 2, 4],  
         )
     )
     def test_save_load_state_thread(
@@ -64,13 +77,13 @@ class TestFilter(TestCase):
     ):
         method = "thread"
         n = 100
-        predicate = lambda x: True
+        predicate = lambda x: x["i"]%2==0
         src = StatefulRangeNode(n=n)
 
         node = Filter(
             source=src,
             predicate=predicate,
-            num_workers=4,
+            num_workers=1,
             in_order=in_order,
             method=method,
             snapshot_frequency=snapshot_frequency,
