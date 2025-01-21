@@ -43,7 +43,7 @@ class TestMultiNodeWeightedSampler(TestCase):
         datasets = {f"ds{i}": IterableWrapper(DummyIterableDataset(num_samples, f"ds{i}")) for i in range(num_datasets)}
         weights = {f"ds{i}": weights_fn(i) for i in range(num_datasets)}
         node = MultiNodeWeightedSampler(datasets, weights, stop_criteria)
-        return Prefetcher(node, prefetch_factor=1)
+        return Prefetcher(node, prefetch_factor=3)
 
     def test_multi_node_weighted_sampler_weight_sampler_keys_mismatch(self) -> None:
         """Test validation logic for MultiNodeWeightedSampler if the keys of source_nodes and weights are not the same"""
