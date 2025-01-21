@@ -88,12 +88,7 @@ class TestMultiNodeWeightedSampler(TestCase):
 
     def test_multi_node_weighted_sampler_first_exhausted(self) -> None:
         """Test MultiNodeWeightedSampler with stop criteria FIRST_DATASET_EXHAUSTED"""
-        mixer = self._setup_multi_node_weighted_sampler(
-            self._num_samples,
-            self._num_datasets,
-            self._weights_fn,
-            stop_criteria=StopCriteria.FIRST_DATASET_EXHAUSTED,
-        )
+        mixer = MultiNodeWeightedSampler(self.datasets, self.weights, StopCriteria.FIRST_DATASET_EXHAUSTED)
 
         for _ in range(self._num_epochs):
             results = list(mixer)
