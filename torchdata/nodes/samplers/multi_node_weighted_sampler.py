@@ -158,17 +158,21 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         # the first dataset is exhausted. Doing this to correctly catch StopIteration
         # when trying next(it) on already exhausted iterator
         if self.stop_criteria == StopCriteria.FIRST_DATASET_EXHAUSTED and any(self._datasets_exhausted.values()):
+            print(self._datasets_exhausted)
+            print("Stopping: First dataset exhausted.")
             raise StopIteration()
 
         return
 
     def next(self) -> T:
         self._started = True
+        
         while True:
             self._check_for_stop_iteration()
 
             # Fetch the next item's key from the weighted sampler
             key = next(self._weighted_sampler)
+            print(f"The next key selected is {key}")
             try:
                 if self._datasets_exhausted[key] and self.stop_criteria == StopCriteria.ALL_DATASETS_EXHAUSTED:
                     # Before fetching a new item check if key corresponds to an already
@@ -190,6 +194,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
                 # reset the iterator and try again
                 self.source_nodes[key].reset()
                 item = next(self.source_nodes[key])
+            print(self._datasets_exhausted)
             break
 
         # If we did't throw StopIteration, increment the number of items yielded and return the item
