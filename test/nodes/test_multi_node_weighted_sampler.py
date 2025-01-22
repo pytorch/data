@@ -24,7 +24,7 @@ class TestMultiNodeWeightedSampler(TestCase):
         self._num_datasets = 4
         self._weights_fn = lambda i: 0.1 * (i + 1)
         self._num_epochs = 3
-
+        self._seed = 42
         self.datasets = {
             f"ds{i}": IterableWrapper(DummyIterableDataset(self._num_samples, f"ds{i}"))
             for i in range(self._num_datasets)
@@ -38,11 +38,11 @@ class TestMultiNodeWeightedSampler(TestCase):
         except ImportError:
             self.fail("MultiNodeWeightedSampler or StopCriteria failed to import")
 
-    def _setup_multi_node_weighted_sampler(self, num_samples, num_datasets, weights_fn, stop_criteria) -> Prefetcher:
+    def _setup_multi_node_weighted_sampler(self, num_samples, num_datasets, weights_fn, stop_criteria, seed) -> Prefetcher:
 
         datasets = {f"ds{i}": IterableWrapper(DummyIterableDataset(num_samples, f"ds{i}")) for i in range(num_datasets)}
         weights = {f"ds{i}": weights_fn(i) for i in range(num_datasets)}
-        node = MultiNodeWeightedSampler(datasets, weights, stop_criteria)
+        node = MultiNodeWeightedSampler(datasets, weights, stop_criteria, seed=seed)
         return Prefetcher(node, prefetch_factor=3)
 
     def test_multi_node_weighted_sampler_weight_sampler_keys_mismatch(self) -> None:
@@ -54,6 +54,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             MultiNodeWeightedSampler(
                 self.datasets,
                 {f"dummy{i}": self._weights_fn(i) for i in range(self._num_datasets)},
+                seed=self._seed
             )
 
     def test_multi_node_weighted_batch_sampler_invalid_weights_tensor_shape(
@@ -64,6 +65,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             MultiNodeWeightedSampler(
                 self.datasets,
                 weights={f"ds{i}": [[1.0]] for i in range(self._num_datasets)},
+                seed=self._seed
             )
 
     def test_multi_node_weighted_batch_sampler_negative_weights(
@@ -74,6 +76,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             MultiNodeWeightedSampler(
                 self.datasets,
                 weights={f"ds{i}": -1 for i in range(self._num_datasets)},
+                seed=self._seed
             )
 
     def test_multi_node_weighted_batch_sampler_zero_weights(
@@ -84,6 +87,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             MultiNodeWeightedSampler(
                 self.datasets,
                 weights={f"ds{i}": 10 * i for i in range(self._num_datasets)},
+                seed=self._seed
             )
 
     def test_multi_node_weighted_sampler_first_exhausted(self) -> None:
@@ -93,6 +97,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             self._num_datasets,
             self._weights_fn,
             stop_criteria=StopCriteria.FIRST_DATASET_EXHAUSTED,
+            seed=self._seed
         )
 
         for _ in range(self._num_epochs):
@@ -115,6 +120,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             self._num_datasets,
             self._weights_fn,
             stop_criteria=StopCriteria.ALL_DATASETS_EXHAUSTED,
+            seed=self._seed
         )
 
         for _ in range(self._num_epochs):
@@ -140,6 +146,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             self._num_datasets,
             self._weights_fn,
             stop_criteria=StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
+            seed=self._seed
         )
 
         for _ in range(self._num_epochs):
@@ -156,6 +163,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             self.datasets,
             self.equal_weights,
             stop_criteria=StopCriteria.CYCLE_FOREVER,
+            seed=self._seed
         )
 
         num_yielded = 0
@@ -170,7 +178,7 @@ class TestMultiNodeWeightedSampler(TestCase):
     @parameterized.expand([(1, 8), (8, 32)])
     def test_multi_node_weighted_batch_sampler_set_rank_world_size(self, rank, world_size):
         """Test MultiNodeWeightedSampler with different rank and world size"""
-        mixer = MultiNodeWeightedSampler(self.datasets, self.weights, rank=rank, world_size=world_size)
+        mixer = MultiNodeWeightedSampler(self.datasets, self.weights, rank=rank, world_size=world_size, seed=self._seed)
         self.assertEqual(mixer.rank, rank)
         self.assertEqual(mixer.world_size, world_size)
 
@@ -179,7 +187,7 @@ class TestMultiNodeWeightedSampler(TestCase):
         world_size = 8
         global_results = []
         for rank in range(world_size):
-            mixer = MultiNodeWeightedSampler(self.datasets, self.weights, rank=rank, world_size=world_size)
+            mixer = MultiNodeWeightedSampler(self.datasets, self.weights, rank=rank, world_size=world_size, seed=self._seed)
             results = list(mixer)
             global_results.append(results)
 
@@ -196,6 +204,7 @@ class TestMultiNodeWeightedSampler(TestCase):
         mixer = MultiNodeWeightedSampler(
             self.datasets,
             self.weights,
+            seed=self._seed
         )
 
         overall_results = []
@@ -217,6 +226,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             self._num_datasets,
             self._weights_fn,
             stop_criteria=StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
+            seed=self._seed
         )
 
         overall_results = []
@@ -244,7 +254,7 @@ class TestMultiNodeWeightedSampler(TestCase):
     )
     def test_save_load_state_mixer_over_multiple_epochs(self, midpoint: int, stop_criteria: str):
         """Test MultiNodeWeightedSampler with saving and loading of state across multiple epochs"""
-        node = MultiNodeWeightedSampler(self.datasets, self.weights, stop_criteria)
+        node = MultiNodeWeightedSampler(self.datasets, self.weights, stop_criteria, seed=self._seed)
         run_test_save_load_state(self, node, midpoint)
 
     @parameterized.expand(
@@ -263,6 +273,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             self._num_datasets,
             self._weights_fn,
             stop_criteria=stop_criteria,
+            seed=self._seed
         )
         run_test_save_load_state(self, node, midpoint)
 
@@ -286,5 +297,6 @@ class TestMultiNodeWeightedSampler(TestCase):
             num_datasets,
             self._weights_fn,
             stop_criteria,
+            seed=self._seed
         )
         run_test_save_load_state(self, mixer, midpoint)
