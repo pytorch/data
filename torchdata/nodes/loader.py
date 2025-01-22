@@ -1,3 +1,4 @@
+import concurrent.futures
 from typing import Any, Dict, Generic, Optional
 
 from torchdata.nodes.base_node import BaseNode, T
@@ -14,10 +15,30 @@ class Loader(Generic[T]):
         restart_on_stop_iteration (bool): Whether to restart the iterator when it reaches the end. Default is True
     """
 
-    def __init__(self, root: BaseNode[T], restart_on_stop_iteration: bool = True):
+    def __init__(
+        self,
+        root: BaseNode[T],
+        restart_on_stop_iteration: bool = True,
+        num_workers: int = 2,
+        pool_type: str = "thread",
+    ):
         super().__init__()
         self.root = root
         self.restart_on_stop_iteration = restart_on_stop_iteration
+        self.num_workers = 2
+        if pool_type == "thread":
+            self._executor = concurrent.futures.ThreadPoolExecutor(
+                max_workers=num_workers
+            )
+        elif pool_type == "process":
+            self._executor = concurrent.futures.ProcessPoolExecutor(
+                max_workers=num_workers
+            )
+        else:
+            raise ValueError(pool_type)
+
+        self.root.set_executor(self._executor)
+
         self._next_iter_state_dict: Optional[Dict[str, Any]] = None
         self._it: Optional[LoaderIterator[T]] = None
         # Tracks whether an iterator was created solely for getting a state_dict, in which case

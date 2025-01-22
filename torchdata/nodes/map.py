@@ -4,16 +4,34 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import concurrent.futures
 import queue
 import threading
 import time
-from typing import Any, Callable, Dict, Generic, Iterator, List, Literal, Optional, Protocol, Sequence, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    Iterator,
+    List,
+    Literal,
+    Optional,
+    Protocol,
+    Sequence,
+    TypeVar,
+    Union,
+)
 
 import torch.multiprocessing as mp
 from torchdata.nodes.base_node import BaseNode, T
 from torchdata.nodes.batch import Batcher, Unbatcher
 from torchdata.nodes.exception_wrapper import ExceptionWrapper, StartupExceptionWrapper
-from torchdata.nodes.snapshot_store import QueueSnapshotStore, SnapshotStore
+from torchdata.nodes.snapshot_store import (
+    MonotonicIndex,
+    QueueSnapshotStore,
+    SnapshotStore,
+)
 
 from ._apply_udf import _apply_udf
 
@@ -26,14 +44,11 @@ ACK_TIMEOUT = 300  # Timeout after 5 minutes
 
 # We define this protocol for type checking
 class _MultiprocessContext(Protocol):
-    def Process(self, *args, **kwargs):
-        ...
+    def Process(self, *args, **kwargs): ...
 
-    def Event(self, *args, **kwargs):
-        ...
+    def Event(self, *args, **kwargs): ...
 
-    def Queue(self, *args, **kwargs):
-        ...
+    def Queue(self, *args, **kwargs): ...
 
 
 X = TypeVar("X")
@@ -65,7 +80,9 @@ class MapOverBatch(Generic[X, T]):
         return [self.map_fn(x) for x in xlist]
 
 
-def _sort_worker(in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_event: threading.Event):
+def _sort_worker(
+    in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_event: threading.Event
+):
     buffer: Dict[int, Any] = {}
     cur_idx = 0
     while not stop_event.is_set():
@@ -80,7 +97,9 @@ def _sort_worker(in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_ev
             if idx in buffer:
                 # This is the easiest way to create an exception wrapper
                 try:
-                    raise ValueError(f"Duplicate index {idx=}, {buffer.keys()=}, {item=}")
+                    raise ValueError(
+                        f"Duplicate index {idx=}, {buffer.keys()=}, {item=}"
+                    )
                 except Exception:
                     item = ExceptionWrapper(where="in _sort_worker")
                 out_q.put((item, idx), block=False)
@@ -141,6 +160,7 @@ class _ParallelMapperIter(Iterator[T]):
         max_concurrent: Optional[int],
         snapshot_frequency: int,
         initial_state: Optional[Dict[str, Any]],
+        executor: concurrent.futures.Executor,
     ):
         self.source = source
         self.map_fn = map_fn
@@ -149,10 +169,17 @@ class _ParallelMapperIter(Iterator[T]):
         self.method = method
         self.mp_context = mp_context
         self.snapshot_frequency = snapshot_frequency
+        self._executor = executor
 
-        self._in_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
-        self._intermed_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
-        self._max_tasks = 2 * self.num_workers if max_concurrent is None else max_concurrent
+        self._in_q: Union[queue.Queue, mp.Queue] = (
+            queue.Queue() if method == "thread" else mp_context.Queue()
+        )
+        self._intermed_q: Union[queue.Queue, mp.Queue] = (
+            queue.Queue() if method == "thread" else mp_context.Queue()
+        )
+        self._max_tasks = (
+            2 * self.num_workers if max_concurrent is None else max_concurrent
+        )
         self._sem = threading.BoundedSemaphore(value=self._max_tasks)
 
         self._done = False
@@ -172,31 +199,32 @@ class _ParallelMapperIter(Iterator[T]):
         self._snapshot_store = QueueSnapshotStore()
 
         self._read_thread = threading.Thread(
-            target=_populate_queue,
-            args=(
-                self.source,
-                self._in_q,
-                self._snapshot_store,
-                self.snapshot_frequency,
-                self._sem,
-                self._stop,
-            ),
+            # target=_populate_queue,
+            target=self._task_scheduler,
+            # args=(
+            #     self.source,
+            #     self._in_q,
+            #     self._snapshot_store,
+            #     self.snapshot_frequency,
+            #     self._sem,
+            #     self._stop,
+            # ),
             daemon=True,
         )
-        self._workers: List[Union[threading.Thread, mp.Process]] = []
-        for worker_id in range(self.num_workers):
-            args = (
-                worker_id,
-                self._in_q,
-                self._intermed_q,
-                self.map_fn,
-                self._stop if self.method == "thread" else self._mp_stop,
-            )
-            self._workers.append(
-                threading.Thread(target=_apply_udf, args=args, daemon=True)
-                if self.method == "thread"
-                else mp_context.Process(target=_apply_udf, args=args, daemon=True)
-            )
+        # self._workers: List[Union[threading.Thread, mp.Process]] = []
+        # for worker_id in range(self.num_workers):
+        #     args = (
+        #         worker_id,
+        #         self._in_q,
+        #         self._intermed_q,
+        #         self.map_fn,
+        #         self._stop if self.method == "thread" else self._mp_stop,
+        #     )
+        #     self._workers.append(
+        #         threading.Thread(target=_apply_udf, args=args, daemon=True)
+        #         if self.method == "thread"
+        #         else mp_context.Process(target=_apply_udf, args=args, daemon=True)
+        #     )
         self._sort_q: queue.Queue = queue.Queue()
         self._sort_thread = threading.Thread(
             target=_sort_worker,
@@ -209,13 +237,15 @@ class _ParallelMapperIter(Iterator[T]):
             self._out_q = self._sort_q
 
         self._read_thread.start()
-        for t in self._workers:
-            t.start()
+        # for t in self._workers:
+        #     t.start()
         if self.in_order:
             self._sort_thread.start()
 
         time.sleep(0.01)
-        self._snapshot = self._snapshot_store.get_initial_snapshot(thread=self._read_thread, timeout=ACK_TIMEOUT)
+        self._snapshot = self._snapshot_store.get_initial_snapshot(
+            thread=self._read_thread, timeout=ACK_TIMEOUT
+        )
 
         for i in range(fast_forward):
             try:
@@ -225,6 +255,71 @@ class _ParallelMapperIter(Iterator[T]):
                     f"Tried to fast-forward {fast_forward} items during init but "
                     f"hit StopIteration after {i} items, this is likely a bug or malformed state_dict"
                 )
+
+    def _apply_udf(
+        self,
+        item: X,
+        idx: int,
+    ):
+        if isinstance(item, ExceptionWrapper):
+            self._intermed_q.put((item, idx), block=False)
+        elif isinstance(item, StopIteration):
+            self._intermed_q.put((item, idx), block=False)
+        else:
+            try:
+                y = self.map_fn(item)
+            except Exception:
+                y = ExceptionWrapper(where="in _apply_udf")
+
+            self._intermed_q.put((y, idx), block=False)
+
+    def _task_scheduler(self):
+        # Include a monotonic index starting from 0 to each item in the queue
+        snapshot_frequency = self.snapshot_frequency
+        snapshot_store = self._snapshot_store
+        stop_event = self._stop
+        source = self.source
+        semaphore = self._sem
+        idx = MonotonicIndex()
+
+        def _put(
+            item,
+            block: bool = True,
+            snapshot: Optional[Union[Dict[str, Any], StartupExceptionWrapper]] = None,
+        ):
+            _idx = idx.get()
+            if snapshot:
+                snapshot_store.append(snapshot=snapshot, version=_idx)
+            self._executor.submit(self._apply_udf, item, _idx)
+
+        try:
+            assert (
+                isinstance(snapshot_frequency, int) and snapshot_frequency >= 0
+            ), f"snapshot_frequency must be non-negative integer! Got {snapshot_frequency}"
+            snapshot_store.append_initial_snapshot(snapshot=source.state_dict())
+        except Exception:
+            e = StartupExceptionWrapper(where="in _populate_queue startup for device")
+            snapshot_store.append_initial_snapshot(snapshot=e)
+            return
+
+        yielded = 0
+        while not stop_event.is_set():
+            if not semaphore.acquire(blocking=True, timeout=QUEUE_TIMEOUT):
+                continue
+            try:
+                item = next(source)  # FIXME: This may hang!
+                yielded += 1
+                snapshot = None
+                if snapshot_frequency > 0 and yielded % snapshot_frequency == 0:
+                    snapshot = source.state_dict()
+                _put(item, block=False, snapshot=snapshot)
+            except StopIteration as e:
+                _put(e, block=False)
+                break
+            except Exception:
+                item = ExceptionWrapper(where="in _populate_queue")
+                _put(item, block=False)
+                break
 
     def __iter__(self) -> Iterator[T]:
         return self
@@ -279,10 +374,10 @@ class _ParallelMapperIter(Iterator[T]):
             self._read_thread.join(timeout=QUEUE_TIMEOUT * 5)
         if hasattr(self, "_sort_thread") and self._sort_thread.is_alive():
             self._sort_thread.join(timeout=QUEUE_TIMEOUT * 5)
-        if hasattr(self, "_workers"):
-            for t in self._workers:
-                if t.is_alive():
-                    t.join(timeout=QUEUE_TIMEOUT * 5)
+        # if hasattr(self, "_workers"):
+        #     for t in self._workers:
+        #         if t.is_alive():
+        #             t.join(timeout=QUEUE_TIMEOUT * 5)
 
 
 class _ParallelMapperImpl(BaseNode[T]):
@@ -335,9 +430,12 @@ class _ParallelMapperImpl(BaseNode[T]):
             self._it = self._inline_reset(initial_state)
 
     def _inline_reset(self, initial_state: Optional[Dict[str, Any]]):
-        return _InlineMapperIter(source=self.source, map_fn=self.map_fn, initial_state=initial_state)
+        return _InlineMapperIter(
+            source=self.source, map_fn=self.map_fn, initial_state=initial_state
+        )
 
     def _parallel_reset(self, initial_state: Optional[Dict[str, Any]]):
+        assert self._executor is not None
         return _ParallelMapperIter(
             source=self.source,
             map_fn=self.map_fn,
@@ -348,6 +446,7 @@ class _ParallelMapperImpl(BaseNode[T]):
             max_concurrent=self.max_concurrent,
             snapshot_frequency=self.snapshot_frequency,
             initial_state=initial_state,
+            executor=self._executor,
         )
 
     def next(self) -> T:
@@ -530,7 +629,9 @@ class _SingleThreadedMapper(Iterator[T]):
         self._thread.start()
 
         # Try and get initial snapshot
-        self._snapshot = self._snapshot_store.get_initial_snapshot(thread=self._thread, timeout=ACK_TIMEOUT)
+        self._snapshot = self._snapshot_store.get_initial_snapshot(
+            thread=self._thread, timeout=ACK_TIMEOUT
+        )
 
         for i in range(self._fast_forward):
             try:

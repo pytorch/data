@@ -12,12 +12,19 @@ from typing import List, Optional
 from parameterized import parameterized
 from torch.testing._internal.common_utils import IS_WINDOWS, TEST_CUDA, TestCase
 from torchdata.nodes.batch import Batcher
+from torchdata.nodes.loader import Loader
 
 from torchdata.nodes.map import Mapper, ParallelMapper
 from torchdata.nodes.pin_memory import PinMemory
 from torchdata.nodes.prefetch import Prefetcher
 
-from .utils import MockSource, RandomSleepUdf, run_test_save_load_state, StatefulRangeNode, udf_raises
+from .utils import (
+    MockSource,
+    RandomSleepUdf,
+    run_test_save_load_state,
+    StatefulRangeNode,
+    udf_raises,
+)
 
 
 class TestMap(TestCase):
@@ -71,11 +78,12 @@ class TestMap(TestCase):
             prebatch=prebatch,
         )
         node = Prefetcher(node, prefetch_factor=2)
+        loader = Loader(node, num_workers=4, pool_type=method)
 
         results: List[List[dict]] = [[], []]
         for epoch in range(2):
-            node.reset()
-            for batch in node:
+            # node.reset()
+            for batch in loader:
                 results[epoch].extend(batch)
 
         for result in results:
@@ -131,7 +139,11 @@ class TestMap(TestCase):
         )
     )
     def test_save_load_state_thread(
-        self, midpoint: int, in_order: bool, snapshot_frequency: int, prebatch: Optional[int]
+        self,
+        midpoint: int,
+        in_order: bool,
+        snapshot_frequency: int,
+        prebatch: Optional[int],
     ):
         method = "thread"
         batch_size = 6
@@ -159,7 +171,11 @@ class TestMap(TestCase):
         )
     )
     def test_save_load_state_process(
-        self, midpoint: int, in_order: bool, snapshot_frequency: int, prebatch: Optional[int]
+        self,
+        midpoint: int,
+        in_order: bool,
+        snapshot_frequency: int,
+        prebatch: Optional[int],
     ):
         method = "process"
         batch_size = 6

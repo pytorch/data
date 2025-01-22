@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import concurrent.futures
 import logging
 from typing import Any, Dict, Iterator, Optional, TypeVar
 
@@ -40,6 +41,7 @@ class BaseNode(Iterator[T]):
     def __init__(self, *args, **kwargs):
         """Subclasses must implement this method and call super().__init__(*args, **kwargs)"""
         self.__initialized = False
+        self._executor: Optional[concurrent.futures.Executor] = None
 
     def __iter__(self):
         return self
@@ -76,7 +78,9 @@ class BaseNode(Iterator[T]):
         try:
             self.__initialized
         except AttributeError:
-            raise NotImplementedError(f"self.__initialized not found, did you call super().__init__()? {type(self)=}")
+            raise NotImplementedError(
+                f"self.__initialized not found, did you call super().__init__()? {type(self)=}"
+            )
         if not self.__initialized:
             self.reset(None)
             if not self.__initialized:
@@ -94,7 +98,9 @@ class BaseNode(Iterator[T]):
         try:
             self.__initialized
         except AttributeError:
-            raise NotImplementedError(f"self.__initialized not found, did you call super().__init__()? {type(self)=}")
+            raise NotImplementedError(
+                f"self.__initialized not found, did you call super().__init__()? {type(self)=}"
+            )
 
         if not self.__initialized:
             self.reset(None)
@@ -103,3 +109,13 @@ class BaseNode(Iterator[T]):
                     f"Failed to initialize after .reset(), did you call super().reset() in your .reset() method? {type(self)=}"
                 )
         return self.get_state()
+
+    def set_executor(self, executor: concurrent.futures.Executor):
+        if self._executor is not None:
+            print(f"Executor already set for {self=}")
+            return
+
+        self._executor = executor
+        for attr in self.__dict__.values():
+            if isinstance(attr, BaseNode):
+                attr.set_executor(executor)
