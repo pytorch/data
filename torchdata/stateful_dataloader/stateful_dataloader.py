@@ -1170,6 +1170,12 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._worker_snapshots[worker_key].apply_delta(state_dict)
 
     def state_dict(self):
+        if not self._in_order:
+            # TODO: remove warning log when state management is supported with in_order=False
+            logger.warning(
+                "using in_order=False with multiple workers does not give any guarantees for state management "
+                "and loading from a checkpoint may not work as expected."
+            )
         steps_since_snapshot = self._num_yielded - self._snapshot[self._SNAPSHOT_STEP]
         state_dict = {
             self._SNAPSHOT: self._snapshot,
