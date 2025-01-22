@@ -1,7 +1,10 @@
 from typing import Any, Callable, Dict, Iterator, Literal, Optional, TypeVar
+
 from torchdata.nodes.base_node import BaseNode
 from torchdata.nodes.map import ParallelMapper
+
 T = TypeVar("T", covariant=True)
+
 
 class Filter(BaseNode[T]):
     """
@@ -16,6 +19,7 @@ class Filter(BaseNode[T]):
         max_concurrent (Optional[int]): The maximum number of items to process at once. Default is None.
         snapshot_frequency (int): The frequency at which to snapshot the state of the source node. Default is 1.
     """
+
     def __init__(
         self,
         source: BaseNode[T],
@@ -49,17 +53,21 @@ class Filter(BaseNode[T]):
             )
         else:
             self._it = _InlineFilterIter(source=self.source, predicate=self.predicate)
+
     def reset(self, initial_state: Optional[Dict[str, Any]] = None) -> None:
         """Resets the filter node to its initial state."""
         super().reset(initial_state)
         if self._it is not None:
             self._it.reset(initial_state)
+
     def next(self) -> T:
         """Returns the next filtered item."""
         return next(self._it)
+
     def get_state(self) -> Dict[str, Any]:
         """Returns the current state of the filter node."""
         return self._it.get_state()
+
 
 class _InlineFilterIter(Iterator[T]):
     """
@@ -68,6 +76,7 @@ class _InlineFilterIter(Iterator[T]):
         source (BaseNode[T]): The source node providing data samples.
         predicate (Callable[[T], bool]): A function that takes a data sample and returns a boolean indicating whether to include it.
     """
+
     SOURCE_KEY = "source"
 
     def __init__(self, source: BaseNode[T], predicate: Callable[[T], bool]) -> None:
@@ -84,6 +93,7 @@ class _InlineFilterIter(Iterator[T]):
     def __iter__(self) -> Iterator[T]:
         """Returns the iterator object itself."""
         return self
+
     def __next__(self) -> T:
         """Returns the next filtered item."""
         while True:
@@ -93,9 +103,11 @@ class _InlineFilterIter(Iterator[T]):
                     return item
             except StopIteration:
                 raise
+
     def get_state(self) -> Dict[str, Any]:
         """Returns the current state of the inline filter iterator."""
         return {self.SOURCE_KEY: self.source.state_dict()}
+
 
 class _ParallelFilterIter(Iterator[T]):
     """
@@ -110,7 +122,9 @@ class _ParallelFilterIter(Iterator[T]):
         max_concurrent (Optional[int]): The maximum number of concurrent tasks.
         snapshot_frequency (int): The frequency at which to take snapshots.
     """
+
     MAPPER_KEY = "mapper"
+
     def __init__(
         self,
         source: BaseNode[T],
@@ -141,15 +155,18 @@ class _ParallelFilterIter(Iterator[T]):
             max_concurrent=self.max_concurrent,
             snapshot_frequency=self.snapshot_frequency,
         )
+
     def reset(self, initial_state: Optional[Dict[str, Any]] = None) -> None:
         """Resets the parallel filter iterator to its initial state."""
         if initial_state:
             self.mapper.reset(initial_state[self.MAPPER_KEY])
         else:
             self.mapper.reset()
+
     def __iter__(self) -> Iterator[T]:
         """Returns the iterator object itself."""
         return self
+
     def __next__(self) -> T:
         """Returns the next filtered item."""
         while True:
@@ -161,6 +178,3 @@ class _ParallelFilterIter(Iterator[T]):
     def get_state(self) -> Dict[str, Any]:
         """Returns the current state of the parallel filter iterator."""
         return {self.MAPPER_KEY: self.mapper.get_state()}
-    def __del__(self):
-        # Clean up resources when the iterator is deleted
-        del self.mapper

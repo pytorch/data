@@ -1,3 +1,4 @@
+#This is a local file for testing and will be deleted in the future.
 from torchdata.nodes.adapters import IterableWrapper
 from torchdata.nodes.batch import Batcher
 from torchdata.nodes.filter import Filter
@@ -7,13 +8,14 @@ from torchdata.nodes.samplers.stop_criteria import StopCriteria
 from utils import MockSource, run_test_save_load_state, StatefulRangeNode
 
 
-
 a = list(range(60))
 base_node = IterableWrapper(a)
 
+
 def is_even(x):
     return x % 2 == 0
-    
+
+
 node = Filter(base_node, is_even, num_workers=2)
 
 print(node.get_state())
