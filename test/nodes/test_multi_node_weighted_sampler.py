@@ -95,7 +95,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             seed=seed,
         )
 
-        for _ in range(3):
+        for _ in range(self._num_epochs):
             results = list(mixer)
 
             datasets_in_results = [result["name"] for result in results]
