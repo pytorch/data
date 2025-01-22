@@ -84,7 +84,7 @@ class TestMultiNodeWeightedSampler(TestCase):
                 self.datasets, weights={f"ds{i}": 10 * i for i in range(self._num_datasets)}, seed=self._seed
             )
 
-    @parameterized.expand([0, 1, 42]) 
+    @parameterized.expand([0, 1, 42])
     def test_multi_node_weighted_sampler_first_exhausted(self, seed) -> None:
         """Test MultiNodeWeightedSampler with stop criteria FIRST_DATASET_EXHAUSTED"""
         mixer = self._setup_multi_node_weighted_sampler(
@@ -95,7 +95,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             seed=seed,
         )
 
-        for _ in range(3): 
+        for _ in range(3):
             results = list(mixer)
 
             datasets_in_results = [result["name"] for result in results]
@@ -103,12 +103,12 @@ class TestMultiNodeWeightedSampler(TestCase):
 
             # Check max item count for dataset is exactly _num_samples
             self.assertEqual(max(dataset_counts_in_results), self._num_samples)
-            
+
             # Check that max items are taken from at least one dataset
             self.assertGreaterEqual(dataset_counts_in_results.count(self._num_samples), 1)
             mixer.reset()
 
-    @parameterized.expand([0, 1, 42]) 
+    @parameterized.expand([0, 1, 42])
     def test_multi_node_weighted_sampler_all_dataset_exhausted(self, seed) -> None:
         """Test MultiNodeWeightedSampler with stop criteria ALL_DATASETS_EXHAUSTED"""
         mixer = self._setup_multi_node_weighted_sampler(
@@ -135,7 +135,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             self.assertEqual(sorted(set(datasets_in_results)), ["ds0", "ds1", "ds2", "ds3"])
             mixer.reset()
 
-    @parameterized.expand([0, 1, 42]) 
+    @parameterized.expand([0, 1, 42])
     def test_multi_node_weighted_sampler_cycle_until_all_exhausted(self, seed) -> None:
         """Test MultiNodeWeightedSampler with stop criteria CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED"""
         mixer = self._setup_multi_node_weighted_sampler(
@@ -154,7 +154,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             self.assertEqual(sorted(datasets_in_results), ["ds0", "ds1", "ds2", "ds3"])
             mixer.reset()
 
-    @parameterized.expand([0, 1, 42]) 
+    @parameterized.expand([0, 1, 42])
     def test_multi_node_weighted_sampler_cycle_forever(self, seed) -> None:
         """Test MultiNodeWeightedSampler with stop criteria CYCLE_FOREVER"""
         mixer = MultiNodeWeightedSampler(
