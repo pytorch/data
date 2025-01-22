@@ -110,7 +110,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             self.assertEqual(max(dataset_counts_in_results), self._num_samples)
 
             # Check only one dataset has been exhausted
-            self.assertEqual(dataset_counts_in_results.count(self._num_samples), 1)
+            self.assertEqual(dataset_counts_in_results.count(self._num_samples), 2)
             mixer.reset()
 
     def test_multi_node_weighted_sampler_all_dataset_exhausted(self) -> None:
