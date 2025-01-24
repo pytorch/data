@@ -91,6 +91,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
             StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
             StopCriteria.ALL_DATASETS_EXHAUSTED,
             StopCriteria.FIRST_DATASET_EXHAUSTED,
+            StopCriteria.CYCLE_FOREVER,
         ]:
             raise ValueError(
                 f"Invalid {self.stop_criteria=}. stop_criteria must be one of: CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED, FIRST_DATASET_EXHAUSTED, ALL_DATASETS_EXHAUSTED"
@@ -144,6 +145,10 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         )
 
     def _check_for_stop_iteration(self) -> None:
+        if self.stop_criteria == StopCriteria.CYCLE_FOREVER:
+            # If StopCriteria is CYCLE_FOREVER, we should never raise StopIteration
+            return
+
         if all(self._datasets_exhausted.values()):
             # Raise StopIteration if all datasets are exhausted,
             # this covers for both ALL_DATASETS_EXHAUSTED and CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED
@@ -174,14 +179,14 @@ class MultiNodeWeightedSampler(BaseNode[T]):
                 # Mark the dataset as exhausted
                 self._datasets_exhausted[key] = True
 
-                # Based on updated _check_for_stop_iteration, check if we should raise StopIteration
+                # Based on updated _datasets_exhausted, use _check_for_stop_iteration to check if we should raise StopIteration
                 self._check_for_stop_iteration()
 
                 # If StopCriteria is ALL_DATASETS_EXHAUSTED, move to next key
                 if self.stop_criteria == StopCriteria.ALL_DATASETS_EXHAUSTED:
                     continue
 
-                # If StopCriteria is CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
+                # If StopCriteria is CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED or CYCLE_FOREVER,
                 # reset the iterator and try again
                 self.source_nodes[key].reset()
                 item = next(self.source_nodes[key])
