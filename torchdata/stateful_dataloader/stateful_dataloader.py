@@ -181,6 +181,8 @@ class StatefulDataLoader(DataLoader[_T_co]):
 
     .. warning:: Setting `in_order` to `False` can harm reproducibility and may lead to a skewed data distribution being fed to the trainer in cases with imbalanced data.
 
+    .. warning:: Setting `in_order` to `False` currently has no guarantees for state management.
+
     .. _multiprocessing context:
         https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
     """
@@ -231,6 +233,13 @@ class StatefulDataLoader(DataLoader[_T_co]):
 
         if persistent_workers and num_workers == 0:
             raise ValueError("persistent_workers option needs num_workers > 0")
+
+        if num_workers > 0 and not in_order:
+            # TODO: remove warning log when state management is supported with in_order=False
+            logger.warning(
+                "using in_order=False with multiple workers does not give any guarantees for state management "
+                "and loading from a checkpoint may not work as expected."
+            )
 
         self.dataset = dataset
         self.num_workers = num_workers
@@ -1161,6 +1170,12 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._worker_snapshots[worker_key].apply_delta(state_dict)
 
     def state_dict(self):
+        if not self._in_order:
+            # TODO: remove warning log when state management is supported with in_order=False
+            logger.warning(
+                "using in_order=False with multiple workers does not give any guarantees for state management "
+                "and loading from a checkpoint may not work as expected."
+            )
         steps_since_snapshot = self._num_yielded - self._snapshot[self._SNAPSHOT_STEP]
         state_dict = {
             self._SNAPSHOT: self._snapshot,
