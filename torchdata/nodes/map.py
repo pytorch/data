@@ -318,8 +318,8 @@ class _ParallelMapperImpl(BaseNode[T]):
             self._mp_context = mp.get_context(self.multiprocessing_context)
 
         if max_concurrent is not None and num_workers > 0:
-            if not isinstance(max_concurrent, int) and max_concurrent > num_workers:
-                raise ValueError(f"{max_concurrent=} should be >= {num_workers=}!")
+            if isinstance(max_concurrent, int) and max_concurrent > num_workers:
+                raise ValueError(f"{max_concurrent=} should be <= {num_workers=}!")
         self.max_concurrent = max_concurrent
         self.snapshot_frequency = snapshot_frequency
         self._it: Optional[Union[_InlineMapperIter[T], _ParallelMapperIter[T]]] = None
@@ -404,8 +404,8 @@ class ParallelMapper(BaseNode[T]):
         self.method = method
         self.multiprocessing_context = multiprocessing_context
         if max_concurrent is not None and num_workers > 0:
-            if not isinstance(max_concurrent, int) and max_concurrent > num_workers:
-                raise ValueError(f"{max_concurrent=} should be >= {num_workers=}!")
+            if isinstance(max_concurrent, int) and max_concurrent > num_workers:
+                raise ValueError(f"{max_concurrent=} should be <= {num_workers=}!")
         self.max_concurrent = max_concurrent
         self.snapshot_frequency = snapshot_frequency
         self.prebatch = prebatch
