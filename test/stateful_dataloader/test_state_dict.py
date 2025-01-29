@@ -1684,9 +1684,12 @@ class TestOutOfOrderWithCheckpointing(TestCase):
         output = []
         for i, data in enumerate(dataloader):
             output.append(data)
-            if i == 5:
+            if i == 3:
                 state_dict = dataloader.state_dict()
                 break
+
+        # 0 is the slow index, assert it isn't in the output before the pause
+        self.assertNotIn(0, output)
 
         new_dataloader = StatefulDataLoader(dataset, num_workers=2, in_order=False)
         new_dataloader.load_state_dict(state_dict)
@@ -1697,7 +1700,7 @@ class TestOutOfOrderWithCheckpointing(TestCase):
         self.assertNotEqual(output, list(range(10)))
         self.assertEqual(sorted(output), list(range(10)))
 
-    def test_out_of_order_iterable_ds(self):
+    def test_out_of_order_iterable_ds_one_completed_worker(self):
         dataset = _TestSlowIterableDataset(start=0, end=10)
         dataloader = StatefulDataLoader(
             dataset,
@@ -1717,6 +1720,37 @@ class TestOutOfOrderWithCheckpointing(TestCase):
         worker_0_ended = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"]["fetcher_ended"]
         worker_1_ended = state_dict["_snapshot"]["_worker_snapshots"]["worker_1"]["fetcher_state"]["fetcher_ended"]
         self.assertTrue(worker_0_ended)
+        self.assertFalse(worker_1_ended)
+
+        new_dataloader = StatefulDataLoader(dataset, batch_size=1, num_workers=2, in_order=False)
+        new_dataloader.load_state_dict(state_dict)
+        for i, data in enumerate(new_dataloader):
+            output.append(data)
+
+        self.assertEqual(len(output), 10)
+        self.assertEqual(output, list(range(10)))
+        self.assertNotEqual(output, [0, 5, 1, 6, 2, 7, 3, 8, 4, 9])
+
+    def test_out_of_order_iterable_ds_no_completed_workers(self):
+        dataset = _TestSlowIterableDataset(start=0, end=10)
+        dataloader = StatefulDataLoader(
+            dataset,
+            num_workers=2,
+            prefetch_factor=2,
+            in_order=False,
+        )
+
+        # break early - both workers will resume
+        output = []
+        for i, data in enumerate(dataloader):
+            output.append(data)
+            if i == 3:
+                state_dict = dataloader.state_dict()
+                break
+
+        worker_0_ended = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"]["fetcher_ended"]
+        worker_1_ended = state_dict["_snapshot"]["_worker_snapshots"]["worker_1"]["fetcher_state"]["fetcher_ended"]
+        self.assertFalse(worker_0_ended)
         self.assertFalse(worker_1_ended)
 
         new_dataloader = StatefulDataLoader(dataset, batch_size=1, num_workers=2, in_order=False)
