@@ -1440,6 +1440,47 @@ class TestFastStateDictRequestRoundRobin_shard3(TestCase):
     def test_fast_state_dict_request_skip_steps(self) -> None:
         self._run_test(17, 19)
 
+class TestMultiEpochState(TestCase):
+    def get_map_dl(self, data_size=100, num_workers=0, batch_size=1, shuffle=False):
+        dataset = DummyMapDataset(data_size, shuffle=shuffle)
+        return StatefulDataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            batch_size=batch_size,
+            multiprocessing_context=(
+                "forkserver" if IS_MACOS and num_workers else None
+            ),
+        )
+    
+    def _run(self, data_size, num_workers, batch_size, shuffle=False):
+        dataloader = self.get_map_dl(data_size=data_size,num_workers=num_workers, batch_size=batch_size, shuffle=shuffle)
+        # Run through the dataloader for 2 epochs and count the number of items yielded
+        num_items_yielded = 0
+        for _ in range(2):
+            for _ in dataloader:
+                num_items_yielded += 1
+        # Save the state dict
+        state_dict = dataloader.state_dict()
+        # Create a new StatefulDataLoader instance and load the state dict
+        new_dataloader = self.get_map_dl(
+            num_workers=num_workers, batch_size=batch_size, shuffle=shuffle
+        )
+        new_dataloader.load_state_dict(state_dict)
+        # Run through the new dataloader for another 2 epochs and count the number of items yielded
+        additional_num_items_yielded = 0
+        for i in range(2):
+            epoch_num_items_yielded = 0
+            for _ in new_dataloader:
+                epoch_num_items_yielded += 1
+            additional_num_items_yielded += epoch_num_items_yielded
+        # Check that the total number of items yielded is correct
+        self.assertEqual(num_items_yielded + additional_num_items_yielded, data_size*4)
+
+
+    def test_main_process(self):
+        self._run(100, 0, 1, False)
+    def test_multiprocess(self):
+        self._run(100, 2, 1, False)
 
 class TestMultiEpochState_shard0(TestCase):
     def get_iterable_dl(self, pw, num_workers):
