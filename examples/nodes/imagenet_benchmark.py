@@ -40,7 +40,7 @@ import torchdata.nodes as tn
 
 import torchvision.transforms.functional as F
 from PIL import Image
-from torch.utils.data import default_collate
+from torch.utils.data import default_collate, SequentialSampler
 
 
 class ImagenetTransform:
@@ -109,33 +109,79 @@ class ImagenetDataset(torch.utils.data.Dataset):
     def __getitem__(self, i: int) -> dict:
         return self.tx(self.imagenet_data[i])
 
+    
+from torchvision.datasets import ImageNet
+from torchvision.transforms import CenterCrop, Compose, PILToTensor, Resize
+def get_tv_imgnet(root):
+    return ImageNet(
+        root=root,
+        split="val",
+        transform=Compose(
+            [
+                Resize(256),
+                CenterCrop(224),
+                PILToTensor(),
+            ]
+        ),
+    )
 
 def setup_classic(args):
-    dataset = ImagenetDataset(args.imagenet_dir)
-    assert args.in_order is False, "torch.utils.data.DataLoader does not support out-of-order iteration yet!"
+    #dataset = ImagenetDataset(args.imagenet_dir)
+    dataset = get_tv_imgnet(args.imagenet_dir)
+    assert args.in_order is True, "torch.utils.data.DataLoader does not support out-of-order iteration yet!"
     loader = torch.utils.data.DataLoader(
         dataset,
         num_workers=args.num_workers,
         batch_size=args.batch_size,
         pin_memory=args.pin_memory,
         shuffle=args.shuffle,
+        multiprocessing_context="forkserver",
     )
     return loader
 
 
+from spdl.dataloader import get_pytorch_dataloader
+def setup_spdl_pt(args):
+    #dataset = ImagenetDataset(args.imagenet_dir)
+    dataset = get_tv_imgnet(args.imagenet_dir)
+    loader = get_pytorch_dataloader(
+        dataset,
+        num_workers=args.num_workers,
+        batch_size=args.batch_size,
+        #pin_memory=args.pin_memory,
+        #shuffle=args.shuffle,
+        multiprocessing_context="forkserver",
+        #collate_fn=default_collate,
+    )
+    return loader
+
+
+class MapAndCollate:
+    def __init__(self, dataset):
+        self.dataset = dataset
+    
+    def __call__(self, x):
+        return default_collate(
+            [self.dataset[i] for i in x]
+        )
+
+
 def setup(args):
     assert args.loader in ("thread", "process")
-    if args.shuffle:
-        dataset = ImagenetLister(args.imagenet_dir)
-        sampler = torch.utils.data.RandomSampler(dataset)
-        node = tn.MapStyleWrapper(map_dataset=dataset, sampler=sampler)
-    else:
-        node = tn.IterableWrapper(ImagenetLister(args.imagenet_dir))
+    # if args.shuffle:
+    #     dataset = ImagenetLister(args.imagenet_dir)
+    #     sampler = torch.utils.data.RandomSampler(dataset)
+    #     node = tn.MapStyleWrapper(map_dataset=dataset, sampler=sampler)
+    # else:
+    #     node = tn.IterableWrapper(ImagenetLister(args.imagenet_dir))
+    dataset = get_tv_imgnet(args.imagenet_dir)
+    node = tn.SamplerWrapper(SequentialSampler(dataset))
 
     node = tn.Batcher(node, batch_size=args.batch_size)
     node = tn.ParallelMapper(
         node,
-        map_fn=ImagenetTransform(),
+        # map_fn=ImagenetTransform(),
+        map_fn=MapAndCollate(dataset),
         num_workers=args.num_workers,
         method=args.loader,
     )
@@ -153,11 +199,13 @@ def run_benchmark(args):
         loader = setup_classic(args)
     elif args.loader in ("thread", "process"):
         loader = setup(args)
+    elif args.loader == "spdl_pt":
+        loader = setup_spdl_pt(args)
     else:
         raise ValueError(f"Unknown loader {args.loader}")
 
     start = time.perf_counter()
-    it = iter(loader)
+    # it = iter(loader)
     create_iter_dt = time.perf_counter() - start
     print(f"create iter took {create_iter_dt} seconds")
 
@@ -172,11 +220,14 @@ def run_benchmark(args):
     progress_freq = 100
     last_reported: float = time.perf_counter()
     start = time.perf_counter()
-    for i in range(args.max_steps):
+    # for i in range(args.max_steps):
+    for i, (imgs, _) in enumerate(loader):
+        if i >= args.max_steps:
+            break
         if i % progress_freq == 0 or time.perf_counter() - last_reported > 5.0:
             print(f"{i} / {args.max_steps}, {time.perf_counter() - start} seconds elapsed")
             last_reported = time.perf_counter()
-        next(it)
+        # next(it)
         if time.perf_counter() - start > args.max_duration:
             print(f"reached {args.max_duration=}")
             break
@@ -197,7 +248,7 @@ def main():
     parser.add_argument(
         "--loader",
         default="thread",
-        choices=["thread", "process", "classic"],
+        choices=["thread", "process", "classic", "spdl_pt"],
         help="Whether to use multi-threaded parallelism, multi-process parallelism, or the classic torch.utils.data.DataLoader (multi-process only)",
     )
     parser.add_argument(
