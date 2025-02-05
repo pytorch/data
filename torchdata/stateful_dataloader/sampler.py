@@ -113,11 +113,6 @@ class _BatchSamplerIterator(Iterator[list[int]], Stateful):
             # We skip x samples if underlying sampler is not stateful
             for _ in range(self.samples_yielded):
                 next(self.sampler_iter)
-        # elif self.samples_yielded > 0:
-        #     print("no fast forward, reset")
-        #     # don't re-create sampler_iter unless necessary, we may already have one from init
-        #     self.sampler_iter = iter(self.sampler)
-        #     self.samples_yielded = 0
 
 
 class BatchSampler(torch.utils.data.sampler.BatchSampler):
