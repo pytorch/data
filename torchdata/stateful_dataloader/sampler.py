@@ -107,18 +107,16 @@ class _BatchSamplerIterator(Iterator[list[int]], Stateful):
         if self._SAMPLER_ITER_STATE in state_dict:
             assert isinstance(self.sampler_iter, Stateful)
             self.sampler_iter.load_state_dict(state_dict[self._SAMPLER_ITER_STATE])
-        if not (
-            isinstance(self.sampler, Stateful)
-            or isinstance(self.sampler_iter, Stateful)
+
+        if not (isinstance(self.sampler, Stateful) or isinstance(self.sampler_iter, Stateful)) and not isinstance(
+            self.sampler, _InfiniteConstantSampler
         ):
             # We skip x samples if underlying sampler is not stateful
             for _ in range(self.samples_yielded):
                 next(self.sampler_iter)
-        # Skip one epoch if we were at the end of the last epoch
-        if hasattr(self.sampler, "__len__") and self.samples_yielded == len(
-            self.sampler
-        ):
 
+        # Skip one epoch if we were at the end of the last epoch
+        if hasattr(self.sampler, "__len__") and self.samples_yielded == len(self.sampler):
             for _ in self.sampler_iter:
                 pass
 
