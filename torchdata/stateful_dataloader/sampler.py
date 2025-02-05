@@ -48,7 +48,11 @@ class _StatefulRandomSamplerIterator(Iterator[int], Stateful):
 
 class RandomSampler(torch.utils.data.sampler.RandomSampler):
     def __init__(
-        self, data_source: Sized, replacement: bool = False, num_samples: Optional[int] = None, generator=None
+        self,
+        data_source: Sized,
+        replacement: bool = False,
+        num_samples: Optional[int] = None,
+        generator=None,
     ):
         if generator is None:
             # Ensure that underlying sampler has something repeatable
@@ -60,16 +64,31 @@ class RandomSampler(torch.utils.data.sampler.RandomSampler):
         return _StatefulRandomSamplerIterator(self, super().__iter__())
 
 
-class BatchSampler(torch.utils.data.sampler.BatchSampler, Stateful):
+class _BatchSamplerIterator(Iterator[list[int]], Stateful):
     _SAMPLES_YIELDED = "samples_yielded"
     _SAMPLER_STATE = "sampler_state"
     _SAMPLER_ITER_STATE = "sampler_iter_state"
 
-    def __init__(self, sampler, batch_size, drop_last):
-        super().__init__(sampler, batch_size, drop_last)
+    def __init__(self, sampler, batch_size: int, drop_last: bool):
+        self.sampler = sampler
+        self.sampler_iter = iter(self.sampler)
+        self.batch_size = batch_size
+        self.drop_last = drop_last
         self.samples_yielded = 0
-        self.next_yielded = None
-        self.sampler_iter = iter(sampler)
+
+    def __next__(self) -> list[int]:
+        batch = []
+        try:
+            for _ in range(self.batch_size):
+                batch.append(next(self.sampler_iter))
+                self.samples_yielded += 1
+            return batch
+        except StopIteration:
+            if self.drop_last or len(batch) == 0:
+                # Reset the iterator for the next epoch
+                raise StopIteration
+            else:
+                return batch
 
     def state_dict(self) -> Dict[str, Any]:
         sd: Dict[str, Any] = {self._SAMPLES_YIELDED: self.samples_yielded}
@@ -80,7 +99,7 @@ class BatchSampler(torch.utils.data.sampler.BatchSampler, Stateful):
         return sd
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
-        self.next_yielded = state_dict[self._SAMPLES_YIELDED]
+        self.samples_yielded = state_dict[self._SAMPLES_YIELDED]
         if self._SAMPLER_STATE in state_dict:
             assert isinstance(self.sampler, Stateful)
             self.sampler.load_state_dict(state_dict[self._SAMPLER_STATE])
@@ -88,45 +107,32 @@ class BatchSampler(torch.utils.data.sampler.BatchSampler, Stateful):
         if self._SAMPLER_ITER_STATE in state_dict:
             assert isinstance(self.sampler_iter, Stateful)
             self.sampler_iter.load_state_dict(state_dict[self._SAMPLER_ITER_STATE])
+        if not (
+            isinstance(self.sampler, Stateful)
+            or isinstance(self.sampler_iter, Stateful)
+        ):
+            # We skip x samples if underlying sampler is not stateful
+            for _ in range(self.samples_yielded):
+                next(self.sampler_iter)
+        # Skip one epoch if we were at the end of the last epoch
+        if hasattr(self.sampler, "__len__") and self.samples_yielded == len(
+            self.sampler
+        ):
+
+            for _ in self.sampler_iter:
+                pass
+
+
+class BatchSampler(torch.utils.data.sampler.BatchSampler):
+    def __init__(self, sampler, batch_size, drop_last):
+        super().__init__(sampler, batch_size, drop_last)
 
     def __iter__(self):
-        if self.next_yielded is not None:
-            self.samples_yielded = self.next_yielded
-            if not (isinstance(self.sampler, Stateful) or isinstance(self.sampler_iter, Stateful)) and not isinstance(
-                self.sampler, _InfiniteConstantSampler
-            ):
-                # We skip x samples if underlying sampler is not stateful
-                for _ in range(self.next_yielded):
-                    next(self.sampler_iter)
-            self.next_yielded = None
-        elif self.samples_yielded > 0:
-            # don't re-create sampler_iter unless necessary, we may already have one from init
-            self.sampler_iter = iter(self.sampler)
-            self.samples_yielded = 0
-
-        if self.drop_last:
-            while True:
-                try:
-                    batch = []
-                    for _ in range(self.batch_size):
-                        batch.append(next(self.sampler_iter))
-                        self.samples_yielded += 1
-                    yield batch
-                except StopIteration:
-                    break
-        else:
-            batch = [0] * self.batch_size
-            idx_in_batch = 0
-            for idx in self.sampler_iter:
-                self.samples_yielded += 1
-                batch[idx_in_batch] = idx
-                idx_in_batch += 1
-                if idx_in_batch == self.batch_size:
-                    yield batch
-                    idx_in_batch = 0
-                    batch = [0] * self.batch_size
-            if idx_in_batch > 0:
-                yield batch[:idx_in_batch]
+        return _BatchSamplerIterator(
+            sampler=self.sampler,
+            batch_size=self.batch_size,
+            drop_last=self.drop_last,
+        )
 
 
 class StatefulDistributedSampler(torch.utils.data.distributed.DistributedSampler):
