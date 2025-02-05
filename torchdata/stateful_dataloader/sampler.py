@@ -7,6 +7,8 @@
 import itertools
 from typing import Any, Dict, Iterator, Optional, Sized
 
+import numpy as np
+
 import torch.utils.data.sampler
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import _InfiniteConstantSampler
@@ -48,12 +50,18 @@ class _StatefulRandomSamplerIterator(Iterator[int], Stateful):
 
 class RandomSampler(torch.utils.data.sampler.RandomSampler):
     def __init__(
-        self, data_source: Sized, replacement: bool = False, num_samples: Optional[int] = None, generator=None
+        self,
+        data_source: Sized,
+        replacement: bool = False,
+        num_samples: Optional[int] = None,
+        generator=None,
     ):
         if generator is None:
             # Ensure that underlying sampler has something repeatable
+            # Using the initial seed of the current process
+            seed = torch.initial_seed()
             generator = torch.Generator()
-            generator.manual_seed(1)
+            generator.manual_seed(seed)
         super().__init__(data_source, replacement, num_samples, generator)
 
     def __iter__(self):
@@ -92,9 +100,10 @@ class BatchSampler(torch.utils.data.sampler.BatchSampler, Stateful):
     def __iter__(self):
         if self.next_yielded is not None:
             self.samples_yielded = self.next_yielded
-            if not (isinstance(self.sampler, Stateful) or isinstance(self.sampler_iter, Stateful)) and not isinstance(
-                self.sampler, _InfiniteConstantSampler
-            ):
+            if not (
+                isinstance(self.sampler, Stateful)
+                or isinstance(self.sampler_iter, Stateful)
+            ) and not isinstance(self.sampler, _InfiniteConstantSampler):
                 # We skip x samples if underlying sampler is not stateful
                 for _ in range(self.next_yielded):
                     next(self.sampler_iter)
