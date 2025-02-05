@@ -7,8 +7,6 @@
 import itertools
 from typing import Any, Dict, Iterator, Optional, Sized
 
-import numpy as np
-
 import torch.utils.data.sampler
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import _InfiniteConstantSampler
@@ -100,10 +98,9 @@ class BatchSampler(torch.utils.data.sampler.BatchSampler, Stateful):
     def __iter__(self):
         if self.next_yielded is not None:
             self.samples_yielded = self.next_yielded
-            if not (
-                isinstance(self.sampler, Stateful)
-                or isinstance(self.sampler_iter, Stateful)
-            ) and not isinstance(self.sampler, _InfiniteConstantSampler):
+            if not (isinstance(self.sampler, Stateful) or isinstance(self.sampler_iter, Stateful)) and not isinstance(
+                self.sampler, _InfiniteConstantSampler
+            ):
                 # We skip x samples if underlying sampler is not stateful
                 for _ in range(self.next_yielded):
                     next(self.sampler_iter)
