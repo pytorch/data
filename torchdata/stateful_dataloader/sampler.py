@@ -107,17 +107,18 @@ class _BatchSamplerIterator(Iterator[list[int]], Stateful):
             assert isinstance(self.sampler_iter, Stateful)
             self.sampler_iter.load_state_dict(state_dict[self._SAMPLER_ITER_STATE])
 
-        if not (isinstance(self.sampler, Stateful) or isinstance(self.sampler_iter, Stateful)) and not isinstance(
-            self.sampler, _InfiniteConstantSampler
-        ):
+        if not (
+            isinstance(self.sampler, Stateful)
+            or isinstance(self.sampler_iter, Stateful)
+        ) and not isinstance(self.sampler, _InfiniteConstantSampler):
             # We skip x samples if underlying sampler is not stateful
             for _ in range(self.samples_yielded):
                 next(self.sampler_iter)
-
-        # Skip one epoch if we were at the end of the last epoch
-        if hasattr(self.sampler, "__len__") and self.samples_yielded == len(self.sampler):
-            for _ in self.sampler_iter:
-                pass
+        # elif self.samples_yielded > 0:
+        #     print("no fast forward, reset")
+        #     # don't re-create sampler_iter unless necessary, we may already have one from init
+        #     self.sampler_iter = iter(self.sampler)
+        #     self.samples_yielded = 0
 
 
 class BatchSampler(torch.utils.data.sampler.BatchSampler):
