@@ -85,7 +85,6 @@ class _BatchSamplerIterator(Iterator[list[int]], Stateful):
             return batch
         except StopIteration:
             if self.drop_last or len(batch) == 0:
-                # Reset the iterator for the next epoch
                 raise StopIteration
             else:
                 return batch
