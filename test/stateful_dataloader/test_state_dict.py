@@ -1445,7 +1445,7 @@ class TestFastStateDictRequestRoundRobin_shard3(TestCase):
 
 
 class TestMultiEpochSDL_shard0(TestCase):
-    def get_map_dl(self, data_size=100, num_workers=0, batch_size=1, shuffle=False):
+    def get_map_dl(self, data_size, num_workers, batch_size, shuffle):
         dataset = DummyMapDataset(data_size, shuffle=False)
         return StatefulDataLoader(
             dataset=dataset,
@@ -1455,7 +1455,7 @@ class TestMultiEpochSDL_shard0(TestCase):
             multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
         )
 
-    def _run(self, data_size, num_workers, batch_size, shuffle=False):
+    def _run(self, data_size, num_workers, batch_size, shuffle):
         dl1 = self.get_map_dl(
             data_size=data_size,
             num_workers=num_workers,
@@ -1518,7 +1518,7 @@ class TestMultiEpochSDL_shard0(TestCase):
 
 
 class TestEndOfEpochBehavior_shard0(TestCase):
-    def get_map_dl(self, data_size=100, num_workers=0, batch_size=1, shuffle=False):
+    def get_map_dl(self, data_size, num_workers, batch_size, shuffle):
         dataset = DummyMapDataset(data_size, shuffle=False)
         return StatefulDataLoader(
             dataset=dataset,
@@ -1534,7 +1534,7 @@ class TestEndOfEpochBehavior_shard0(TestCase):
             num_items_yielded += 1
         return num_items_yielded
 
-    def _run(self, data_size, num_workers, batch_size, shuffle=False):
+    def _run(self, data_size, num_workers, batch_size, shuffle):
         dl = self.get_map_dl(
             data_size=data_size,
             num_workers=num_workers,
