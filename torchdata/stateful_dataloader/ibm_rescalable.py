@@ -614,7 +614,7 @@ def load_distributed_state_dict(
     )
     dstate = inp["dstate"]
     # Check that number of workers matches
-    ckp_ws = 0 if not os.path.exists(path) else len([x for x in os.lisdtdir(path) if "loader" in x])
+    ckp_ws = 0 if not os.path.exists(path) else len([x for x in os.listdir(path) if "loader" in x])
     if ckp_ws == loader.dataset.worldsize and nworkers == state["_snapshot"]["_main_snapshot"]["_num_workers"]:
         state = inp["state"]
     else:
