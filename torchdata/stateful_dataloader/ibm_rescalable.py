@@ -463,7 +463,7 @@ class ScalableReader(_StatefulDataset):
                             # Update position
                             self.shard_states[i][3] = chunk_pos+1
                             # Yield chunk
-                            yield torch.tensor(self._construct_chunk(chunk_pos, doc, nchunks))  # TODO: REMOVE TENSOR CALL!!!
+                            yield self._construct_chunk(chunk_pos, doc, nchunks)
                         # Reset chunk_pos after finishing doc
                         self.shard_states[i][3] = 0
                     # Reset doc_pos after finishing file
