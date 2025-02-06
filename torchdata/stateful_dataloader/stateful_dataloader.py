@@ -531,11 +531,11 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
             self._sampler_iter = iter(self._index_sampler)
             if state_dict[_SAMPLER_ITER_STATE] is not None:
                 self._sampler_iter = try_to_deserialize(self._sampler_iter, state_dict[_SAMPLER_ITER_STATE])
-            if state_dict[_ITERATOR_FINISHED]:
-                try:
-                    next(self._sampler_iter)
-                except StopIteration:
-                    pass
+                if state_dict[_ITERATOR_FINISHED]:
+                    try:
+                        next(self._sampler_iter)
+                    except StopIteration:
+                        pass
         else:
             if not isinstance(
                 self._index_sampler,
