@@ -614,7 +614,7 @@ def load_distributed_state_dict(
     )
     dstate = inp["dstate"]
     # De-DTensor-fy the shard states
-    dstate["ScalableReader.shard_states"] = dstate["ScalableReader.shard_states"].to_local()
+    dstate["ScalableReader.shard_states"] = dstate["ScalableReader.shard_states"].full_tensor()
     # Check that number of workers matches
     ckp_ws = 0 if not os.path.exists(path) else len([x for x in os.listdir(path) if "loader" in x])
     if ckp_ws == loader.dataset.worldsize and nworkers == state["_snapshot"]["_main_snapshot"]["_num_workers"]:
