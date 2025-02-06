@@ -211,22 +211,21 @@ class TestDataLoader(TestCase):
 
         seed = 0
         torch.manual_seed(seed)
-        generator = torch.Generator()
-        generator.manual_seed(seed)
-        dl1 = StatefulDataLoader(self.dataset, batch_size=1, shuffle=True, generator=generator)
+        dl1 = StatefulDataLoader(self.dataset, batch_size=1, shuffle=True)
         data_dl1 = []
         for batch in dl1:
             data_dl1.append(batch)
 
-        generator.manual_seed(seed)
-        dl2 = StatefulDataLoader(self.dataset, batch_size=1, shuffle=True, generator=generator)
+        seed = 0
+        torch.manual_seed(seed)
+        dl2 = StatefulDataLoader(self.dataset, batch_size=1, shuffle=True)
         data_dl2 = []
         for batch in dl2:
             data_dl2.append(batch)
 
         seed = 1
-        generator.manual_seed(seed)
-        dl3 = StatefulDataLoader(self.dataset, batch_size=1, shuffle=True, generator=generator)
+        torch.manual_seed(seed)
+        dl3 = StatefulDataLoader(self.dataset, batch_size=1, shuffle=True)
         data_dl3 = []
         for batch in dl3:
             data_dl3.append(batch)

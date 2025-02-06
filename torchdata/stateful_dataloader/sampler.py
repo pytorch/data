@@ -56,8 +56,7 @@ class RandomSampler(torch.utils.data.sampler.RandomSampler):
     ):
         if generator is None:
             # Ensure that underlying sampler has something repeatable
-            # Using the initial seed of the current process
-            seed = torch.initial_seed()
+            seed = int(torch.empty((), dtype=torch.int64).random_().item())
             generator = torch.Generator()
             generator.manual_seed(seed)
         super().__init__(data_source, replacement, num_samples, generator)
