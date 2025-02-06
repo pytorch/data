@@ -32,7 +32,6 @@ class _StatefulRandomSamplerIterator(Iterator[int], Stateful):
 
             self.yielded = self.next_yielded
             self.next_yielded = None
-
         val = next(self.parent_iterator)
         self.yielded += 1
         return val
@@ -41,6 +40,9 @@ class _StatefulRandomSamplerIterator(Iterator[int], Stateful):
         self.generator_state = state_dict[self._GENERATOR]
         self.sampler.generator.set_state(state_dict[self._GENERATOR])
         self.next_yielded = state_dict[self._YIELDED]
+
+    def update_state_dict(self) -> None:
+        self.generator_state = self.sampler.generator.get_state()
 
     def state_dict(self) -> Dict[str, Any]:
         return {self._GENERATOR: self.generator_state, self._YIELDED: self.yielded}
@@ -113,6 +115,10 @@ class _BatchSamplerIterator(Iterator[list[int]], Stateful):
             # We skip x samples if underlying sampler is not stateful
             for _ in range(self.samples_yielded):
                 next(self.sampler_iter)
+
+    def update_state_dict(self) -> None:
+        if isinstance(self.sampler_iter, Stateful) and hasattr(self.sampler_iter, "update_state_dict"):
+            self.sampler_iter.update_state_dict()
 
 
 class BatchSampler(torch.utils.data.sampler.BatchSampler):
