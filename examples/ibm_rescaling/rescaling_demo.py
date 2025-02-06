@@ -138,7 +138,7 @@ else:
     vals = dist.tensor.DTensor.from_local(vals, mesh, placement).full_tensor()
 
     # Diag save
-    os.makedirs(os.path.join(args.ckpt_path, "diag"))
+    os.makedirs(os.path.join(args.ckpt_path, "diag"), exist_ok=True)
     torch.save(data.state_dict(), os.path.join(args.ckpt_path, "diag", f"loader_state_{rank}.pth"))
     time.sleep(10)
 
