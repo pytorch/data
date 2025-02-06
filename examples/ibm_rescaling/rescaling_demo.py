@@ -56,20 +56,20 @@ assert args.n_steps*args.b_size*world_size < 3000, f"Number of items drawn befor
 datapath = os.path.join(args.ckpt_path, "dataset")
 if not os.path.exists(datapath):
     os.makedirs(datapath)
-schema = pa.schema([pa.field("tokens", pa.uint32())])
-with pa.ipc.new_file(
-    os.path.join(datapath, "fileshard_1.arrow"), schema
-) as writer:
-    for i in range(500):
-        out = list(range(i * 100, i * 100 + 100))
-        writer.write(pa.record_batch([out], schema=schema))
-
-with pa.ipc.new_file(
-    os.path.join(datapath, "subfolder/fileshard_2.arrow"), schema
-) as writer:
-    for i in range(500):
-        out = list(range(50000 + i * 100, 50000 + i * 100 + 100))
-        writer.write(pa.record_batch([out], schema=schema))
+    schema = pa.schema([pa.field("tokens", pa.uint32())])
+    with pa.ipc.new_file(
+        os.path.join(datapath, "fileshard_1.arrow"), schema
+    ) as writer:
+        for i in range(500):
+            out = list(range(i * 100, i * 100 + 100))
+            writer.write(pa.record_batch([out], schema=schema))
+    os.makedirs(os.path.join(datapath, "subfolder"))
+    with pa.ipc.new_file(
+        os.path.join(datapath, "subfolder/fileshard_2.arrow"), schema
+    ) as writer:
+        for i in range(500):
+            out = list(range(50000 + i * 100, 50000 + i * 100 + 100))
+            writer.write(pa.record_batch([out], schema=schema))
 
 # Build dataloader
 data = ScalableReader(datapath, rank, world_size, ArrowHandler, -1, seed=args.seed, max_chunksize=30, n_logical_shards=args.logical_shards)
