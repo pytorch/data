@@ -54,7 +54,7 @@ assert args.n_steps*args.b_size*world_size < 3000, f"Number of items drawn befor
 
 # Build dataset
 datapath = os.path.join(args.ckpt_path, "dataset")
-if not os.path.exists(datapath):
+if rank==0 and not os.path.exists(datapath):
     os.makedirs(datapath)
     schema = pa.schema([pa.field("tokens", pa.uint32())])
     with pa.ipc.new_file(
