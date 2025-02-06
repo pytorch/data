@@ -79,7 +79,7 @@ if not os.path.exists(datapath):
 # Build dataloader
 data = ScalableReader(datapath, rank, world_size, ArrowHandler, -1, seed=args.seed, max_chunksize=30, n_logical_shards=args.logical_shards)
 # Pad entries to make them batch-able
-data = PreprocessDataset(data, lambda x: x + [-1]*(30-len))
+data = PreprocessDataset(data, lambda x: x + [-1]*(30-len(x)))
 # Statelessly convert all outputs to tensors
 data = PreprocessDataset(data, torch.tensor)
 # Wrap in StatefulDataLoader
