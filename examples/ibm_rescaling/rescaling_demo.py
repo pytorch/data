@@ -22,6 +22,7 @@ from torchdata.stateful_dataloader.ibm_rescalable import (
 # Example usage:
 # torchrun [torchrun args] examples/ibm_rescaling/rescaling_demo.py --ckpt_path=~/ckpts/rescale_test --logical_shards=48 --num_workers=6
 
+# Do not change the batch size or number of steps between the first and second runs!
 
 parser = argparse.ArgumentParser(description="Script to validate rescaling of dataloader checkpoints")
 parser.add_argument("--ckpt_path", type=str, default="./rescale_test")
@@ -54,7 +55,7 @@ assert args.n_steps*args.b_size*world_size < 3000, f"Number of items drawn befor
 # Build dataset
 datapath = os.path.join(args.ckpt_path, "dataset")
 if not os.path.exists(datapath):
-    os.mkdir(datapath)
+    os.makedirs(datapath)
 schema = pa.schema([pa.field("tokens", pa.uint32())])
 with pa.ipc.new_file(
     os.path.join(datapath, "fileshard_1.arrow"), schema
