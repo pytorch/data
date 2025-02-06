@@ -137,6 +137,10 @@ else:
     # Get all vals onto each rank
     vals = dist.tensor.DTensor.from_local(vals, mesh, placement).full_tensor()
 
+    # Diag save
+    os.makedirs(os.path.join(args.ckpt_path, "diag"))
+    torch.save(data.state_dict(), os.path.join(args.ckpt_path, "diag", f"loader_state_{rank}.pth"))
+
     # Perform data coverage check on rank 0 only
     if rank == 0:
         # Invert avoid to get expected vals
