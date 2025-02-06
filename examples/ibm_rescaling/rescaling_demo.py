@@ -95,12 +95,12 @@ if not os.path.exists(ckpt_path) or len(os.listdir(ckpt_path)) == 0:
 
     avoid = []
     for i, inp in enumerate(data):
-        if i == args.n_steps:
+        avoid.append(inp[:,0])
+        if i == args.n_steps-1:
             if rank == 0:
                 print("Iteration complete!")
             save_distributed_state_dict(data, ckpt_path, mesh)
             break
-        avoid.append(inp[:,0])
     avoid = torch.cat(avoid)
     # Get all vals onto each rank
     avoid = dist.tensor.DTensor.from_local(
@@ -140,6 +140,8 @@ else:
     # Diag save
     os.makedirs(os.path.join(args.ckpt_path, "diag"), exist_ok=True)
     torch.save(data.state_dict(), os.path.join(args.ckpt_path, "diag", f"loader_state_{rank}.pth"))
+    if rank == 0:
+        torch.save(vals, os.path.join(args.ckpt_path, "diag", "vals.pth"))
     time.sleep(10)
 
     # Perform data coverage check on rank 0 only
