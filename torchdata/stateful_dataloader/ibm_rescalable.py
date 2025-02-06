@@ -604,7 +604,7 @@ def load_distributed_state_dict(
     """
     base = loader.state_dict()
     nworkers = base["_snapshot"]["_main_snapshot"]["_num_workers"]
-    dstate = __pop_dstate(base, device_mesh, [dtensor.placement_types.Replicate(0)], True)
+    dstate = __pop_dstate(base, device_mesh, [dtensor.placement_types.Replicate()], True)
     inp = {"state":deepcopy(base), "dstate":dstate}
     # Read distributed state dict
     reader = checkpoint.FileSystemReader(path)
