@@ -525,8 +525,7 @@ class ScalableReader(_StatefulDataset):
             # Reverse sort incomplete shards by length
             incomplete_shards.sort(key=len, reverse=True)
 
-            if self.rank == 0:
-                print([len(x) for x in completed_shards], [len(x) for x in incomplete_shards])
+            print("shardlen", [len(x) for x in completed_shards], [len(x) for x in incomplete_shards])
 
             # Pull out shard allocation for this worker
             # (sort/reverse-sort ensures allocations are off by no more than 1)
