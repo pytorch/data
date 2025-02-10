@@ -479,7 +479,7 @@ class ScalableReader(_StatefulDataset):
         # Values to save: shard states (shard/repl), filesizes (single/repl)
         # Deepcopy required to prevent in-place modification from later prefetches
         return deepcopy({
-            self.statename("shard_states"): self.shard_states.unsqueeze(0),
+            self.statename("shard_states"): self.shard_states,
             self.statename("file_info"): self.filesizes if self.rank == 0 else None
         })
     
@@ -498,8 +498,8 @@ class ScalableReader(_StatefulDataset):
             self.shard_states = shard_states[self.rank]
         else:
             print("GOTHERE 3")
-            shard_states = [s[0] for s in shard_states.split(1)]  # [w] n 5
-            shard_states = torch.cat(shard_states, dim=0)  # wn 5
+            # shard_states = [s[0] for s in shard_states.split(1)]  # [w] n 5
+            # shard_states = torch.cat(shard_states, dim=0)  # wn 5
             # Sort shards by epoch count
             sorted, indices = torch.sort(shard_states[:,4], descending=True, stable=True)
             shard_states = shard_states[indices]
