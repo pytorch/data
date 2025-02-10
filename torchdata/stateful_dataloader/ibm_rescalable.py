@@ -492,6 +492,7 @@ class ScalableReader(_StatefulDataset):
         print(shard_states.size(0), self.worldsize)
         if self.rank == 0:
             print(shard_states.shape, shard_states)
+            torch.save(shard_states, "/gpfs/davis/test.pth")
         if shard_states.size(0) == self.worldsize:
             self.filesizes = file_info
             self.shard_states = shard_states[self.rank]
