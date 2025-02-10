@@ -85,6 +85,10 @@ data = PreprocessDataset(data, torch.tensor)
 # Wrap in StatefulDataLoader
 data = StatefulDataLoader(data, batch_size=args.b_size, num_workers=args.num_workers)
 
+# TODO: debug: can't change n_workers when reloading - keyerror
+# TODO: debug: going from 4/2/2 gpu/bsize/workers to 6/1/2 causes epoch not to finish
+
+
 # If checkpoint does not exist, create it
 ckpt_path = os.path.join(args.ckpt_path, "loader_dcp_state")
 if not os.path.exists(ckpt_path) or len(os.listdir(ckpt_path)) == 0:
@@ -126,7 +130,7 @@ else:
     # Finish out epoch (extra 2*ceil(ndocs/nshards) steps to account for worst-case uneven finishing times)
     vals = []
     n_steps = (
-        math.ceil((3000 - len(avoid)) / (world_size * args.num_workers)) 
+        math.ceil((3000 - len(avoid)) / (world_size * args.b_size)) 
         + 2 * math.ceil(1000/args.logical_shards)
     )
     for i, inp in enumerate(data):
