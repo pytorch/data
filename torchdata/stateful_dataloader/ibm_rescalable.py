@@ -493,6 +493,7 @@ class ScalableReader(_StatefulDataset):
             self.filesizes = file_info
             self.shard_states = shard_states[self.rank]
         else:
+            print("GOTHERE 3")
             shard_states = [s[0] for s in shard_states.split(1)]  # [w] n 5
             shard_states = torch.cat(shard_states, dim=0)  # wn 5
             # Sort shards by epoch count
