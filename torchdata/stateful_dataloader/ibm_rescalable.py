@@ -484,6 +484,7 @@ class ScalableReader(_StatefulDataset):
         })
     
     def load_state_dict(self, state_dict):
+        print("GOTHERE 2")
         self.setup()
         # Load back shard states (global), filesizes (all)
         shard_states = state_dict[self.statename("shard_states")]
@@ -631,4 +632,5 @@ def load_distributed_state_dict(
     for i in range(nworkers):
         state["_snapshot"]["_worker_snapshots"][f"worker_{i}"]["dataset_state"] = dstate[i]
     # Load into loader
+    print("GOTHERE")
     loader.load_state_dict(state)
