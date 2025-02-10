@@ -633,6 +633,7 @@ def load_distributed_state_dict(
         # On mismatch, discard saved non-reshardable loader state and start fresh
         state = base
     # Repeat global tensor over all workers
+    print(inp["dstate"])
     dstate = [inp["dstate"],]*nworkers
     # Re-insert worker states into loader state
     for i in range(nworkers):
