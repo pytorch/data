@@ -489,6 +489,7 @@ class ScalableReader(_StatefulDataset):
         # Load back shard states (global), filesizes (all)
         shard_states = state_dict[self.statename("shard_states")]
         file_info = state_dict[self.statename("file_info")]
+        print(shard_states.size(0), self.worldsize)
         if shard_states.size(0) == self.worldsize:
             self.filesizes = file_info
             self.shard_states = shard_states[self.rank]
@@ -541,6 +542,7 @@ class ScalableReader(_StatefulDataset):
             # Pad out with dummy shards if needed
             self.shard_states[len(shard_states):,0] = -1
             self.shard_states[len(shard_states):,4] = torch.iinfo(torch.int).max
+        print("GOTHERE 4")
         return None
 
 
