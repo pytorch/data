@@ -490,6 +490,8 @@ class ScalableReader(_StatefulDataset):
         shard_states = state_dict[self.statename("shard_states")]
         file_info = state_dict[self.statename("file_info")]
         print(shard_states.size(0), self.worldsize)
+        if self.rank == 0:
+            print(shard_states)
         if shard_states.size(0) == self.worldsize:
             self.filesizes = file_info
             self.shard_states = shard_states[self.rank]
