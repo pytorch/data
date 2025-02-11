@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import itertools
-from typing import Any, Dict, Iterator, Optional, Sized
+from typing import Any, Dict, Iterator, List, Optional, Sized
 
 import torch.utils.data.sampler
 from torch.utils.data import Dataset
