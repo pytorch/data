@@ -208,30 +208,29 @@ class TestDataLoader(TestCase):
         )
 
     def test_seed_replicability(self):
-
-        seed = 0
+        # Test that the same seed will result in the same data order
+        # We first pick a random number as seed, then use it to initialize two dataloaders
+        min_seed, max_seed = 0, 1000  # [min_seed, max_seed)
+        seed = torch.randint(min_seed, max_seed, (1,), dtype=torch.int64).item()
         torch.manual_seed(seed)
-        dl1 = StatefulDataLoader(self.dataset, batch_size=1, shuffle=True)
-        data_dl1 = []
-        for batch in dl1:
-            data_dl1.append(batch)
 
-        seed = 0
+        dataloader1 = StatefulDataLoader(self.dataset, batch_size=1, shuffle=True)
+        results1 = list(dataloader1)
+
+        # Repeat the same process with the same seed
         torch.manual_seed(seed)
-        dl2 = StatefulDataLoader(self.dataset, batch_size=1, shuffle=True)
-        data_dl2 = []
-        for batch in dl2:
-            data_dl2.append(batch)
+        dataloader2 = StatefulDataLoader(self.dataset, batch_size=1, shuffle=True)
+        results2 = list(dataloader2)
 
-        seed = 1
+        # Repeat the same process with a different seed, making sure that the seed is different
+        min_seed, max_seed = 1000, 2000  # [min_seed, max_seed)
+        seed = torch.randint(min_seed, max_seed, (1,), dtype=torch.int64).item()
         torch.manual_seed(seed)
-        dl3 = StatefulDataLoader(self.dataset, batch_size=1, shuffle=True)
-        data_dl3 = []
-        for batch in dl3:
-            data_dl3.append(batch)
+        dataloader3 = StatefulDataLoader(self.dataset, batch_size=1, shuffle=True)
+        results3 = list(dataloader3)
 
-        self.assertEqual(data_dl1, data_dl2, "Data should be replicable with same seed")
-        self.assertNotEqual(data_dl1, data_dl3, "Data should not be replicable with different seed")
+        self.assertEqual(results1, results2, "Data should be replicable with same seed")
+        self.assertNotEqual(results1, results3, "Data should not be replicable with different seed")
 
 
 if __name__ == "__main__":
