@@ -10,61 +10,145 @@ from typing import Any, Dict, Iterator, Optional, Sized
 import torch.utils.data.sampler
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import _InfiniteConstantSampler
+from torch.utils.data.sampler import Sampler
 
 from .stateful import Stateful
 
 
-class _StatefulRandomSamplerIterator(Iterator[int], Stateful):
+class StatefulRandomSamplerIterator(Iterator[int], Stateful):
     _GENERATOR = "generator"
     _YIELDED = "yielded"
 
-    def __init__(self, sampler, parent_iterator: Iterator[int]):
+    def __init__(self, sampler):
         self.sampler = sampler
-        self.parent_iterator = parent_iterator
-        self.yielded = 0
-        self.next_yielded = None
-        self.generator_state = sampler.generator.get_state()
-
-    def __next__(self) -> int:
-        if self.next_yielded is not None:
-            for _ in range(self.next_yielded):
-                next(self.parent_iterator)
-
-            self.yielded = self.next_yielded
-            self.next_yielded = None
-        val = next(self.parent_iterator)
-        self.yielded += 1
-        return val
-
-    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
-        self.generator_state = state_dict[self._GENERATOR]
-        self.sampler.generator.set_state(state_dict[self._GENERATOR])
-        self.next_yielded = state_dict[self._YIELDED]
-
-    def update_state_dict(self) -> None:
         self.generator_state = self.sampler.generator.get_state()
         self.yielded = 0
+        self.next_yielded = None
+        self.n = len(sampler.data_source)
+        self.replacement = sampler.replacement
+        self.num_samples = sampler.num_samples
+        self.chunk_size = 32
+        self.chunk_index = 0
+        self.perm_index = 0
+        self.perm = None
 
-    def state_dict(self) -> Dict[str, Any]:
-        return {self._GENERATOR: self.generator_state, self._YIELDED: self.yielded}
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.replacement:
+            num_full_chunks = self.num_samples // self.chunk_size
+            remainder = self.num_samples % self.chunk_size
+            if self.chunk_index < num_full_chunks:
+                if self.perm is None or not self.perm:
+                    self.perm = torch.randint(
+                        high=self.n,
+                        size=(self.chunk_size,),
+                        dtype=torch.int64,
+                        generator=self.sampler.generator,
+                    ).tolist()
+                    self.perm_index = 0
+                value = self.perm[self.perm_index]
+                self.perm_index += 1
+                if self.perm_index == self.chunk_size:
+                    self.chunk_index += 1
+                    self.perm = None
+                self.yielded += 1
+                return value
+            elif remainder > 0:
+                if self.perm is None or not self.perm:
+                    self.perm = torch.randint(
+                        high=self.n,
+                        size=(remainder,),
+                        dtype=torch.int64,
+                        generator=self.sampler.generator,
+                    ).tolist()
+                    self.perm_index = 0
+                value = self.perm[self.perm_index]
+                self.perm_index += 1
+                if self.perm_index == remainder:
+                    raise StopIteration
+                self.yielded += 1
+                return value
+            else:
+                raise StopIteration
+        else:
+            num_full_perms = self.num_samples // self.n
+            remainder = self.num_samples % self.n
+            if self.chunk_index < num_full_perms:
+                if self.perm is None or not self.perm:
+                    self.perm = torch.randperm(self.n, generator=self.sampler.generator).tolist()
+                    self.perm_index = 0
+                value = self.perm[self.perm_index]
+                self.perm_index += 1
+                if self.perm_index == self.n:
+                    self.chunk_index += 1
+                    self.perm = None
+                self.yielded += 1
+                return value
+            elif remainder > 0:
+                if self.perm is None or not self.perm:
+                    self.perm = torch.randperm(self.n, generator=self.sampler.generator).tolist()[:remainder]
+                    self.perm_index = 0
+                value = self.perm[self.perm_index]
+                self.perm_index += 1
+                if self.perm_index == remainder:
+                    raise StopIteration
+                self.yielded += 1
+                return value
+            else:
+                raise StopIteration
+
+    def state_dict(self) -> dict:
+        return {
+            self._YIELDED: self.yielded,
+            self._GENERATOR: self.generator_state,
+        }
+
+    def load_state_dict(self, state_dict: dict) -> None:
+        self.next_yielded = state_dict[self._YIELDED]
+        self.generator_state = state_dict[self._GENERATOR]
+        self.sampler.generator.set_state(self.generator_state)
+        if self.next_yielded is not None:
+            for _ in range(self.next_yielded - self.yielded):
+                next(self)
+            self.yielded = self.next_yielded
+            self.next_yielded = None
 
 
-class RandomSampler(torch.utils.data.sampler.RandomSampler):
+class RandomSampler(Sampler[int]):
     def __init__(
         self,
         data_source: Sized,
         replacement: bool = False,
         num_samples: Optional[int] = None,
         generator=None,
-    ):
+    ) -> None:
+        self.data_source = data_source
+        self.replacement = replacement
+        self._num_samples = num_samples
         if generator is None:
             # Ensure that underlying sampler has something repeatable
             generator = torch.Generator()
             generator.manual_seed(1)
-        super().__init__(data_source, replacement, num_samples, generator)
+        self.generator = generator
+        if not isinstance(self.replacement, bool):
+            raise TypeError(f"replacement should be a boolean value, but got replacement={self.replacement}")
+        if not isinstance(self.num_samples, int) or self.num_samples <= 0:
+            raise ValueError(f"num_samples should be a positive integer value, but got num_samples={self.num_samples}")
 
-    def __iter__(self):
-        return _StatefulRandomSamplerIterator(self, super().__iter__())
+    @property
+    def num_samples(self) -> int:
+        # dataset size might change at runtime
+        if self._num_samples is None:
+            return len(self.data_source)
+        return self._num_samples
+
+    def __iter__(self) -> Iterator[int]:
+        return StatefulRandomSamplerIterator(self)
+
+    def __len__(self) -> int:
+        return self.num_samples
 
 
 class _BatchSamplerIterator(Iterator[list[int]], Stateful):

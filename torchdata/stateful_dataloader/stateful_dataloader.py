@@ -449,11 +449,6 @@ class _StatefulBaseDataLoaderIter(_BaseDataLoaderIter):
         try:
             return super().__next__()
         except StopIteration:
-            # If we are at the end of the iteration, we want to update the state dict of _sampler_iter.
-            # because in __iter__ after self._iterator is set using self._get_iterator() [which makes self.next_iter_state = None],
-            # it is checked if self._iterator._finished is True, and if it is, self._iterator is reset with next_iter_state = None.
-            if hasattr(self._sampler_iter, "update_state_dict"):
-                self._sampler_iter.update_state_dict()
             self._finished = True
             raise
 
@@ -536,7 +531,6 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
             self._sampler_iter = iter(self._index_sampler)
             if state_dict[_SAMPLER_ITER_STATE] is not None:
                 self._sampler_iter = try_to_deserialize(self._sampler_iter, state_dict[_SAMPLER_ITER_STATE])
-
         else:
             if not isinstance(
                 self._index_sampler,
