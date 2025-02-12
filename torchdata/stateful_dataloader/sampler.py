@@ -28,77 +28,34 @@ class _StatefulRandomSamplerIterator(Iterator[int], Stateful):
         self.replacement = sampler.replacement
         self.num_samples = sampler.num_samples
         self.chunk_size = 32
-        self.chunk_index = 0
+        self.perm: List[int] = self._get_perm()
         self.perm_index = 0
-        self.perm = None
+        self.chunk_index = 0
 
     def __iter__(self):
         return self
 
-    def _get_perm(self, replacement: bool, num_samples: int) -> List[int]:
-        if replacement:
+    def _get_perm(self) -> List[int]:
+        if self.replacement:
             return torch.randint(
                 high=self.n,
-                size=(num_samples,),
+                size=(self.chunk_size,),
                 dtype=torch.int64,
                 generator=self.sampler.generator,
             ).tolist()
         else:
-            return torch.randperm(self.n, generator=self.sampler.generator).tolist()[:num_samples]
+            return torch.randperm(self.n, generator=self.sampler.generator).tolist()
 
     def __next__(self):
-        if self.replacement:
-            num_full_chunks = self.num_samples // self.chunk_size
-            remainder = self.num_samples % self.chunk_size
-            if self.chunk_index < num_full_chunks:
-                if self.perm is None:
-                    self.perm = self._get_perm(self.replacement, self.chunk_size)
-                    self.perm_index = 0
-                value = self.perm[self.perm_index]
-                self.perm_index += 1
-                if self.perm_index == self.chunk_size:
-                    self.chunk_index += 1
-                    self.perm = None
-                self.yielded += 1
-                return value
-            elif remainder > 0:
-                if self.perm is None:
-                    self.perm = self._get_perm(self.replacement, remainder)
-                    self.perm_index = 0
-                value = self.perm[self.perm_index]
-                self.perm_index += 1
-                if self.perm_index == remainder:
-                    raise StopIteration
-                self.yielded += 1
-                return value
-            else:
-                raise StopIteration
-        else:
-            num_full_perms = self.num_samples // self.n
-            remainder = self.num_samples % self.n
-            if self.chunk_index < num_full_perms:
-                if self.perm is None:
-                    self.perm = self._get_perm(self.replacement, self.n)
-                    self.perm_index = 0
-                value = self.perm[self.perm_index]
-                self.perm_index += 1
-                if self.perm_index == self.n:
-                    self.chunk_index += 1
-                    self.perm = None
-                self.yielded += 1
-                return value
-            elif remainder > 0:
-                if self.perm is None:
-                    self.perm = self._get_perm(self.replacement, remainder)
-                    self.perm_index = 0
-                value = self.perm[self.perm_index]
-                self.perm_index += 1
-                if self.perm_index == remainder:
-                    raise StopIteration
-                self.yielded += 1
-                return value
-            else:
-                raise StopIteration
+        if self.yielded == self.num_samples:
+            raise StopIteration()
+        if self.perm_index == len(self.perm):
+            self.perm = self._get_perm()
+            self.perm_index = 0
+        val = self.perm[self.perm_index]
+        self.perm_index += 1
+        self.yielded += 1
+        return val
 
     def state_dict(self) -> dict:
         return {
@@ -110,7 +67,9 @@ class _StatefulRandomSamplerIterator(Iterator[int], Stateful):
         self.next_yielded = state_dict[self._YIELDED]
         self.generator_state = state_dict[self._GENERATOR]
         self.sampler.generator.set_state(self.generator_state)
+
         if self.next_yielded is not None:
+            self.perm = self._get_perm()
             for _ in range(self.next_yielded - self.yielded):
                 next(self)
             self.yielded = self.next_yielded
