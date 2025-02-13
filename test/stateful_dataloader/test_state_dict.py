@@ -1591,7 +1591,7 @@ class TestNotStatefulSamplerSDL_shard0(TestCase):
         )
 
     def _run(self, data_size, num_workers, batch_size, interrupt, sampler_cls):
-        torch.manual_seed(0)
+        torch.manual_seed(0)  # Fixing seed for deterministic results
         dataloader1 = self.get_map_dl(
             data_size=data_size,
             num_workers=num_workers,
@@ -1606,7 +1606,9 @@ class TestNotStatefulSamplerSDL_shard0(TestCase):
                 break
         state_dict = dataloader1.state_dict()
 
-        torch.manual_seed(0)
+        torch.manual_seed(
+            0
+        )  # We need to fix seed again so that before fast forwarding we are at the same state of gen as before
         resumed_dataloader1 = self.get_map_dl(
             data_size=data_size,
             num_workers=num_workers,
