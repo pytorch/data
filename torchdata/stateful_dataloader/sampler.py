@@ -55,7 +55,7 @@ class RandomSampler(torch.utils.data.sampler.RandomSampler):
         generator=None,
     ):
         if generator is None:
-            # Ensure that underlying sampler has something repeatable
+            # Prevoiusly the random seed was fixed as 1. We then changed it system generated seed to ensure deterministic randomness.
             seed = int(torch.empty((), dtype=torch.int64).random_().item())
             generator = torch.Generator()
             generator.manual_seed(seed)
