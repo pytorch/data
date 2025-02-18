@@ -479,7 +479,11 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
             self.load_state_dict(next_iter_state)
         else:
             self._dataset_fetcher = _DatasetKind.create_fetcher(
-                self._dataset_kind, self._dataset, self._auto_collation, self._collate_fn, self._drop_last
+                self._dataset_kind,
+                self._dataset,
+                self._auto_collation,
+                self._collate_fn,
+                self._drop_last,
             )
 
     def _next_data(self):
@@ -528,7 +532,10 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
             if state_dict[_SAMPLER_ITER_STATE] is not None:
                 self._sampler_iter = try_to_deserialize(self._sampler_iter, state_dict[_SAMPLER_ITER_STATE])
         else:
-            if not isinstance(self._index_sampler, torch.utils.data.dataloader._InfiniteConstantSampler):
+            if not isinstance(
+                self._index_sampler,
+                torch.utils.data.dataloader._InfiniteConstantSampler,
+            ):
                 # Fallback to fastforward
                 self._sampler_iter = itertools.islice(self._index_sampler, self._sampler_iter_yielded, None)
         self._num_yielded = state_dict[self._NUM_YIELDED]
@@ -542,7 +549,11 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
         if state_dict[_DATASET_STATE] is not None and isinstance(self._dataset, Stateful):
             self._dataset = try_to_deserialize(self._dataset, state_dict[_DATASET_STATE])
         self._dataset_fetcher = _DatasetKind.create_fetcher(
-            self._dataset_kind, self._dataset, self._auto_collation, self._collate_fn, self._drop_last
+            self._dataset_kind,
+            self._dataset,
+            self._auto_collation,
+            self._collate_fn,
+            self._drop_last,
         )
         if self._dataset_kind == _DatasetKind.Iterable:
             # If either dataset or it's iter is stateful, we don't fast-forward
@@ -907,7 +918,10 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         #   Additional worker init function will take care of sharding in MP and Distributed
         if isinstance(self._dataset, (IterDataPipe, MapDataPipe)):
             self._worker_init_fn = functools.partial(
-                _sharding_worker_init_fn, self._worker_init_fn, self._world_size, self._rank
+                _sharding_worker_init_fn,
+                self._worker_init_fn,
+                self._world_size,
+                self._rank,
             )
 
         # No certainty which module multiprocessing_context is
@@ -1462,7 +1476,10 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             if state_dict[_SAMPLER_ITER_STATE] is not None:
                 self._sampler_iter = try_to_deserialize(self._sampler_iter, state_dict[_SAMPLER_ITER_STATE])
         else:
-            if not isinstance(self._index_sampler, torch.utils.data.dataloader._InfiniteConstantSampler):
+            if not isinstance(
+                self._index_sampler,
+                torch.utils.data.dataloader._InfiniteConstantSampler,
+            ):
                 # Fallback to fastforward
                 self._sampler_iter = itertools.islice(self._index_sampler, self._sampler_iter_yielded, None)
         self._IterableDataset_len_called = state_dict[_ITERABLEDATASET_LEN_CALLED]
@@ -1540,7 +1557,10 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             # in_order is False and no main snapshot is available as we're ahead of rcvd_idx
             # we can't take a snapshot with the current implementation
             return
-        assert main_snapshot_idx == self._rcvd_idx - 1, (main_snapshot_idx, self._rcvd_idx - 1)
+        assert main_snapshot_idx == self._rcvd_idx - 1, (
+            main_snapshot_idx,
+            self._rcvd_idx - 1,
+        )
         self._update_snapshot(
             self._num_yielded + 1,
             self._last_yielded_worker_id,
