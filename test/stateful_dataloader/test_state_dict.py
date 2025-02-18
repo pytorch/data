@@ -85,7 +85,9 @@ class DummySampler(torch.utils.data.Sampler):
         return self.size
 
 
-class DummyIteratorIterableDataset(torch.utils.data.IterableDataset, Iterator, Stateful):
+class DummyIteratorIterableDataset(
+    torch.utils.data.IterableDataset, Iterator, Stateful
+):
     def __init__(self, samples, shuffle, include_generator):
         self.samples = samples
         self.shuffle = shuffle
@@ -141,7 +143,10 @@ class DummyIterableDataset(torch.utils.data.IterableDataset):
 class DummyMapDataset(torch.utils.data.Dataset):
     def __init__(self, size, shuffle, include_generator=True):
         self.size = size
-        self.data = [{"id": i, "strcol": f"strcol_{i}", "listcol": [i, i + 1, i + 2]} for i in range(size)]
+        self.data = [
+            {"id": i, "strcol": f"strcol_{i}", "listcol": [i, i + 1, i + 2]}
+            for i in range(size)
+        ]
         self.shuffle = shuffle
         self.include_generator = include_generator
 
@@ -204,7 +209,9 @@ class TestStatefulDataLoaderIterable_shard0(TestCase):
     def _get_dataset(self, shuffle):
         return DummyIterableDataset([0, 100, 37], shuffle=shuffle)
 
-    def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
+    def _run_and_checkpoint(
+        self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False
+    ):
         dataset = self._get_dataset(shuffle)
         dl = StatefulDataLoader(
             dataset=dataset,
@@ -272,7 +279,9 @@ class TestStatefulDataLoaderIterable_shard0(TestCase):
     def test_mp_every_n_steps(self):
         batch_size = 7
         for every_n_steps, interrupt in itertools.product([2, 5], [0, 1, 10]):
-            with self.subTest(every_n_steps=every_n_steps, batch_size=batch_size, interrupt=interrupt):
+            with self.subTest(
+                every_n_steps=every_n_steps, batch_size=batch_size, interrupt=interrupt
+            ):
                 self._run_and_checkpoint(
                     num_workers=3,
                     batch_size=batch_size,
@@ -293,7 +302,9 @@ class TestStatefulDataLoaderIterable_shard0(TestCase):
 
 
 class TestStatefulDataLoaderMap_shard1(TestStatefulDataLoaderIterable_shard0):
-    def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
+    def _run_and_checkpoint(
+        self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False
+    ):
         if num_workers == 0:
             return
         dataset = DummyMapDataset(100, shuffle=shuffle)
@@ -346,7 +357,9 @@ class TestStatefulDataLoaderMap_shard1(TestStatefulDataLoaderIterable_shard0):
 
 
 class TestStatefulSampler_shard1(TestStatefulDataLoaderIterable_shard0):
-    def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
+    def _run_and_checkpoint(
+        self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False
+    ):
         dataset = DummyMapDataset(100, shuffle=shuffle)
         sampler = DummySampler(len(dataset))
         dl = StatefulDataLoader(
@@ -474,7 +487,9 @@ class GeneratorSampler(torch.utils.data.Sampler):
 
 
 class TestStatefulDataLoaderGenerator_shard2(TestStatefulDataLoaderIterable_shard0):
-    def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
+    def _run_and_checkpoint(
+        self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False
+    ):
         dataset = GeneratorIterable([0, 100, 37])
         dl = StatefulDataLoader(
             dataset=dataset,
@@ -523,8 +538,12 @@ class TestStatefulDataLoaderGenerator_shard2(TestStatefulDataLoaderIterable_shar
         self.assertEqual(batches, exp)
 
 
-class TestStatefulDataLoaderGeneratorNoState_shard2(TestStatefulDataLoaderIterable_shard0):
-    def _run_and_checkpoint(self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False):
+class TestStatefulDataLoaderGeneratorNoState_shard2(
+    TestStatefulDataLoaderIterable_shard0
+):
+    def _run_and_checkpoint(
+        self, num_workers, batch_size, pw, interrupt, every_n_steps=1, shuffle=False
+    ):
         dataset = GeneratorIterableNoState([0, 100, 37])
         dl = StatefulDataLoader(
             dataset=dataset,
@@ -584,7 +603,9 @@ class TestSnapshotZero_shard2(TestCase):
                 collate_fn=identity,
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
 
             it = iter(dl)
@@ -607,7 +628,9 @@ class TestSnapshotZero_shard2(TestCase):
                 collate_fn=identity,
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
 
             it = iter(dl)
@@ -630,7 +653,9 @@ class TestSnapshotZero_shard2(TestCase):
                 collate_fn=identity,
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
 
             it = iter(dl)
@@ -654,7 +679,9 @@ class TestSnapshotZero_shard2(TestCase):
                 collate_fn=identity,
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
 
             it = iter(dl)
@@ -669,7 +696,9 @@ class TestSnapshotZero_shard2(TestCase):
     def test_map_iterrupted_shuffle(self):
         every_n_steps = 10
 
-        for pw, num_workers, every_n_steps in itertools.product([False, True], [0, 2], [1, 15]):
+        for pw, num_workers, every_n_steps in itertools.product(
+            [False, True], [0, 2], [1, 15]
+        ):
             dataset = DummyMapDataset(10, shuffle=True)
             dl = StatefulDataLoader(
                 dataset=dataset,
@@ -678,7 +707,9 @@ class TestSnapshotZero_shard2(TestCase):
                 collate_fn=identity,
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw if num_workers > 0 else False,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
 
             it = iter(dl)
@@ -714,7 +745,9 @@ class TestSnapshotEnd_shard2(TestCase):
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
                 batch_size=bs,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
             exp = list(dl)
             state_end = dl.state_dict()
@@ -730,7 +763,9 @@ class TestSnapshotEnd_shard2(TestCase):
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
                 batch_size=bs,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
             it = iter(dl)
             for _ in range(2):
@@ -752,7 +787,9 @@ class TestSnapshotEnd_shard2(TestCase):
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
                 batch_size=bs,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
             exp = list(dl)
             state_end = dl.state_dict()
@@ -768,7 +805,9 @@ class TestSnapshotEnd_shard2(TestCase):
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
                 batch_size=bs,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
             it = iter(dl)
             for _ in range(2):
@@ -793,7 +832,9 @@ class TestSnapshotEnd_shard2(TestCase):
                 persistent_workers=pw,
                 batch_size=bs,
                 generator=g,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
             list(dl)
             state_end = dl.state_dict()
@@ -808,7 +849,9 @@ class TestSnapshotEnd_shard2(TestCase):
                 persistent_workers=pw,
                 batch_size=bs,
                 generator=g,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
             dl.load_state_dict(state_end)
             batches = list(dl)
@@ -830,7 +873,9 @@ class TestSnapshotEnd_shard2(TestCase):
                 persistent_workers=pw,
                 batch_size=bs,
                 generator=generator,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
             list(dl)
             state_end = dl.state_dict()
@@ -845,7 +890,9 @@ class TestSnapshotEnd_shard2(TestCase):
                 persistent_workers=pw,
                 batch_size=bs,
                 generator=generator,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
             dl.load_state_dict(state_end)
             batches = list(dl)
@@ -865,7 +912,9 @@ class TestSnapshotEnd_shard2(TestCase):
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
                 batch_size=bs,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
             list(dl)
             state_end = dl.state_dict()
@@ -880,7 +929,9 @@ class TestSnapshotEnd_shard2(TestCase):
                 snapshot_every_n_steps=every_n_steps,
                 persistent_workers=pw,
                 batch_size=bs,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
             dl.load_state_dict(state_end)
             batches = list(dl)
@@ -898,7 +949,9 @@ class TestNumWorkersMismatch_shard3(TestCase):
                 dataset=dataset,
                 num_workers=initial_num_workers,
                 collate_fn=identity,
-                multiprocessing_context=("forkserver" if IS_MACOS and initial_num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and initial_num_workers else None
+                ),
             )
             state = dl.state_dict()
 
@@ -910,7 +963,9 @@ class TestNumWorkersMismatch_shard3(TestCase):
                 dataset=dataset,
                 num_workers=num_workers,
                 collate_fn=identity,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
             dl.load_state_dict(state)
             try:
@@ -996,7 +1051,9 @@ class TestFastStateDictRequest_shard3(TestCase):
 class TestJsonSerDe_shard3(TestCase):
     def _run_test_iterable(self, num_workers):
         interrupt = 4
-        dataset = DummyIterableDataset([0, 100, 37], shuffle=False, include_generator=False)
+        dataset = DummyIterableDataset(
+            [0, 100, 37], shuffle=False, include_generator=False
+        )
         dl = StatefulDataLoader(
             dataset=dataset,
             num_workers=num_workers,
@@ -1258,7 +1315,9 @@ class TestInitialState_shard0(TestCase):
 class TestStatefulDataLoaderIterable2_shard0(TestStatefulDataLoaderIterable_shard0):
     # Perform sanity test checks with the iterable dataset that is also an iterator
     def _get_dataset(self, shuffle):
-        return DummyIteratorIterableDataset(list(range(100)), shuffle=shuffle, include_generator=True)
+        return DummyIteratorIterableDataset(
+            list(range(100)), shuffle=shuffle, include_generator=True
+        )
 
 
 class TestDynamicStateIterableDataset_shard0(TestCase):
@@ -1276,7 +1335,9 @@ class TestDynamicStateIterableDataset_shard0(TestCase):
         for _ in range((num_workers + 1) * 2):
             next(it)
         state_dict = dl.state_dict()
-        worker_state = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"]["dataset_iter_state"]
+        worker_state = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"][
+            "fetcher_state"
+        ]["dataset_iter_state"]
         self.assertEqual(len(worker_state), 7)
         deep_copy_state_dict = deepcopy(state_dict)
 
@@ -1286,9 +1347,9 @@ class TestDynamicStateIterableDataset_shard0(TestCase):
         next_state_dict = dl.state_dict()
         self.assertEqual(state_dict, deep_copy_state_dict)
         self.assertFalse(state_dict == next_state_dict)
-        worker_state = next_state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"][
-            "dataset_iter_state"
-        ]
+        worker_state = next_state_dict["_snapshot"]["_worker_snapshots"]["worker_0"][
+            "fetcher_state"
+        ]["dataset_iter_state"]
         self.assertEqual(len(worker_state), 11)
 
         dl = StatefulDataLoader(
@@ -1304,19 +1365,25 @@ class TestDynamicStateIterableDataset_shard0(TestCase):
             exp.extend(next(it))
         state_dict = dl.state_dict()
         self.assertEqual(exp, [3, 3])
-        worker_state = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"]["dataset_iter_state"]
+        worker_state = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"][
+            "fetcher_state"
+        ]["dataset_iter_state"]
         self.assertEqual(len(worker_state), 9)
 
 
 class TestDatasetIteratorStateDuplication_shard0(TestCase):
     def test(self):
-        dataset = DummyIteratorIterableDataset(list(range(100)), shuffle=True, include_generator=True)
+        dataset = DummyIteratorIterableDataset(
+            list(range(100)), shuffle=True, include_generator=True
+        )
         for num_workers in (0, 2):
             dl = StatefulDataLoader(
                 dataset=dataset,
                 num_workers=num_workers,
                 collate_fn=identity,
-                multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+                multiprocessing_context=(
+                    "forkserver" if IS_MACOS and num_workers else None
+                ),
             )
             it = iter(dl)
             # Fetch at least one batch from each worker
@@ -1328,13 +1395,15 @@ class TestDatasetIteratorStateDuplication_shard0(TestCase):
                 for i in range(num_workers):
                     # Ensure worker state is stored only once if the dataset is also the iterator
                     self.assertEqual(
-                        state_dict["_snapshot"]["_worker_snapshots"][f"worker_{i}"]["dataset_state"],
+                        state_dict["_snapshot"]["_worker_snapshots"][f"worker_{i}"][
+                            "dataset_state"
+                        ],
                         None,
                     )
                     self.assertTrue(
-                        state_dict["_snapshot"]["_worker_snapshots"][f"worker_{i}"]["fetcher_state"][
-                            "dataset_iter_state"
-                        ]
+                        state_dict["_snapshot"]["_worker_snapshots"][f"worker_{i}"][
+                            "fetcher_state"
+                        ]["dataset_iter_state"]
                     )
             else:
                 self.assertEqual(state_dict["dataset_state"], None)
@@ -1454,10 +1523,14 @@ class TestMultiEpochSDL_shard0(TestCase):
             num_workers=num_workers,
             batch_size=batch_size,
             shuffle=shuffle,
-            multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            multiprocessing_context=(
+                "forkserver" if IS_MACOS and num_workers else None
+            ),
         )
 
     def _run(self, data_size, num_workers, batch_size, shuffle):
+        # For reproducibility of testing, fixing the seed
+        torch.manual_seed(0)
         dataloader1 = self.get_map_dl(
             data_size=data_size,
             num_workers=num_workers,
@@ -1490,9 +1563,13 @@ class TestMultiEpochSDL_shard0(TestCase):
                 epoch_num_items_yielded += 1
             additional_num_items_yielded += epoch_num_items_yielded
         # Check that the total number of items yielded is correct
-        self.assertEqual(num_items_yielded + additional_num_items_yielded, data_size * 4)
+        self.assertEqual(
+            num_items_yielded + additional_num_items_yielded, data_size * 4
+        )
 
         # now run a second dataloder for 4 epochs and check if the order is same.
+        # we need to fix the seed again since we want to bring the initial conditions to the same state as at the time of instantiating the first dataloader
+        torch.manual_seed(0)
         dataloader2 = self.get_map_dl(
             data_size=data_size,
             num_workers=num_workers,
@@ -1519,7 +1596,9 @@ class TestEndOfEpochBehavior_shard0(TestCase):
             num_workers=num_workers,
             batch_size=batch_size,
             shuffle=shuffle,
-            multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            multiprocessing_context=(
+                "forkserver" if IS_MACOS and num_workers else None
+            ),
         )
 
     def _count_items_yielded(self, data_loader: StatefulDataLoader) -> int:
@@ -1587,7 +1666,9 @@ class TestNotStatefulSamplerSDL_shard0(TestCase):
             num_workers=num_workers,
             batch_size=batch_size,
             sampler=sampler,
-            multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            multiprocessing_context=(
+                "forkserver" if IS_MACOS and num_workers else None
+            ),
         )
 
     def _run(self, data_size, num_workers, batch_size, interrupt, sampler_cls):
@@ -1642,7 +1723,9 @@ class TestNotStatefulSamplerSDL_shard0(TestCase):
             [torch.utils.data.RandomSampler, torch.utils.data.SequentialSampler],
         )
     )
-    def test_notstatefulSDL(self, data_size, num_workers, batch_size, interrupt, sampler_cls):
+    def test_notstatefulSDL(
+        self, data_size, num_workers, batch_size, interrupt, sampler_cls
+    ):
         self._run(100, 0, 1, interrupt, sampler_cls)
 
 
@@ -1657,7 +1740,9 @@ class TestMultiEpochState_shard0(TestCase):
             num_workers=num_workers,
             persistent_workers=pw,
             collate_fn=identity,
-            multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            multiprocessing_context=(
+                "forkserver" if IS_MACOS and num_workers else None
+            ),
         )
 
     def _run(self, pw: bool, num_workers: int):
@@ -1718,7 +1803,9 @@ class CountIterCallsIter(torch.utils.data.IterableDataset):
             num_workers = torch.utils.data.get_worker_info().num_workers
 
         num_samples = (int)(self.length / num_workers)
-        self.iter_state = IterationState(num_samples * worker_id, num_samples * (worker_id + 1))
+        self.iter_state = IterationState(
+            num_samples * worker_id, num_samples * (worker_id + 1)
+        )
         return self
 
     def __next__(self):
@@ -1744,29 +1831,39 @@ class TestSingleIterCalled_shard0(TestCase):
 
         if w_states[0]["dataset_state"] is not None:
             return [x["dataset_state"]["iter_calls"] for x in w_states]
-        return [x["fetcher_state"]["dataset_iter_state"]["iter_calls"] for x in w_states]
+        return [
+            x["fetcher_state"]["dataset_iter_state"]["iter_calls"] for x in w_states
+        ]
 
     def _run_test(self, num_workers, dataset, expected_iter_calls):
         dl = StatefulDataLoader(
             dataset=dataset,
             num_workers=num_workers,
-            multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            multiprocessing_context=(
+                "forkserver" if IS_MACOS and num_workers else None
+            ),
         )
         iter(dl)
         state = dl.state_dict()
         # Ensure iter is called only once per worker
-        self.assertEqual(self._get_iter_calls(state), [expected_iter_calls[0]] * max(1, num_workers))
+        self.assertEqual(
+            self._get_iter_calls(state), [expected_iter_calls[0]] * max(1, num_workers)
+        )
 
         dl2 = StatefulDataLoader(
             dataset=dataset,
             num_workers=num_workers,
-            multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            multiprocessing_context=(
+                "forkserver" if IS_MACOS and num_workers else None
+            ),
         )
         dl2.load_state_dict(state)
         iter(dl2)
         state2 = dl2.state_dict()
         # Ensure that iter is called only once per worker even when dataloader resumes from a state
-        self.assertEqual(self._get_iter_calls(state2), [expected_iter_calls[1]] * max(1, num_workers))
+        self.assertEqual(
+            self._get_iter_calls(state2), [expected_iter_calls[1]] * max(1, num_workers)
+        )
 
     def test_inline(self):
         self._run_test(0, CountIterCalls(100), [1, 2])
@@ -1807,7 +1904,9 @@ class TestStateInitializationDataset(TestCase):
             dataset=dataset,
             num_workers=num_workers,
             collate_fn=identity,
-            multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            multiprocessing_context=(
+                "forkserver" if IS_MACOS and num_workers else None
+            ),
         )
         it = iter(dl)
         data = []
@@ -1821,7 +1920,9 @@ class TestStateInitializationDataset(TestCase):
             dataset=dataset,
             num_workers=num_workers,
             collate_fn=identity,
-            multiprocessing_context=("forkserver" if IS_MACOS and num_workers else None),
+            multiprocessing_context=(
+                "forkserver" if IS_MACOS and num_workers else None
+            ),
         )
         dl2.load_state_dict(state)
         it = iter(dl2)
@@ -1868,7 +1969,9 @@ class _TestSlowIterableDataset(torch.utils.data.IterableDataset):
 
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
-        per_worker = int(math.ceil((self.end - self.start) / float(worker_info.num_workers)))
+        per_worker = int(
+            math.ceil((self.end - self.start) / float(worker_info.num_workers))
+        )
         worker_id = worker_info.id
         iter_start = self.start + worker_id * per_worker
         iter_end = min(iter_start + per_worker, self.end)
@@ -1922,12 +2025,18 @@ class TestOutOfOrderWithCheckpointing(TestCase):
                 state_dict = dataloader.state_dict()
                 break
 
-        worker_0_ended = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"]["fetcher_ended"]
-        worker_1_ended = state_dict["_snapshot"]["_worker_snapshots"]["worker_1"]["fetcher_state"]["fetcher_ended"]
+        worker_0_ended = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"][
+            "fetcher_state"
+        ]["fetcher_ended"]
+        worker_1_ended = state_dict["_snapshot"]["_worker_snapshots"]["worker_1"][
+            "fetcher_state"
+        ]["fetcher_ended"]
         self.assertTrue(worker_0_ended)
         self.assertFalse(worker_1_ended)
 
-        new_dataloader = StatefulDataLoader(dataset, batch_size=1, num_workers=2, in_order=False)
+        new_dataloader = StatefulDataLoader(
+            dataset, batch_size=1, num_workers=2, in_order=False
+        )
         new_dataloader.load_state_dict(state_dict)
         for i, data in enumerate(new_dataloader):
             output.append(data)
@@ -1953,12 +2062,18 @@ class TestOutOfOrderWithCheckpointing(TestCase):
                 state_dict = dataloader.state_dict()
                 break
 
-        worker_0_ended = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"]["fetcher_state"]["fetcher_ended"]
-        worker_1_ended = state_dict["_snapshot"]["_worker_snapshots"]["worker_1"]["fetcher_state"]["fetcher_ended"]
+        worker_0_ended = state_dict["_snapshot"]["_worker_snapshots"]["worker_0"][
+            "fetcher_state"
+        ]["fetcher_ended"]
+        worker_1_ended = state_dict["_snapshot"]["_worker_snapshots"]["worker_1"][
+            "fetcher_state"
+        ]["fetcher_ended"]
         self.assertFalse(worker_0_ended)
         self.assertFalse(worker_1_ended)
 
-        new_dataloader = StatefulDataLoader(dataset, batch_size=1, num_workers=2, in_order=False)
+        new_dataloader = StatefulDataLoader(
+            dataset, batch_size=1, num_workers=2, in_order=False
+        )
         new_dataloader.load_state_dict(state_dict)
         for i, data in enumerate(new_dataloader):
             output.append(data)
