@@ -129,11 +129,11 @@ else:
     # time.sleep(10000)
     avoid = torch.load(os.path.join(args.ckpt_path, "avoid.pth")).tolist()
 
-    # Finish out epoch (extra 2*ceil(ndocs/nshards) steps to account for worst-case uneven finishing times)
+    # Finish out epoch (extra 2*ceil(n_items/n_shards) steps to account for worst-case uneven finishing times)
     vals = []
     n_steps = (
         math.ceil((3000 - len(avoid)) / (world_size * args.b_size)) 
-        + 2 * math.ceil(1000/args.logical_shards)
+        + 2 * math.ceil(3000/args.logical_shards)
     )
     for i, inp in enumerate(data):
         if i == n_steps:
@@ -146,9 +146,9 @@ else:
     # Diag save
     os.makedirs(os.path.join(args.ckpt_path, "diag"), exist_ok=True)
     torch.save(data.state_dict(), os.path.join(args.ckpt_path, "diag", f"loader_state_{rank}.pth"))
-    if rank == 0:
-        torch.save(vals, os.path.join(args.ckpt_path, "diag", "vals.pth"))
-    time.sleep(10)
+    # if rank == 0:
+    #     torch.save(vals, os.path.join(args.ckpt_path, "diag", "vals.pth"))
+    # time.sleep(10)
 
     # Perform data coverage check on rank 0 only
     if rank == 0:

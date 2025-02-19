@@ -534,16 +534,12 @@ class ScalableReader(_StatefulDataset):
             # Reverse sort incomplete shards by length
             incomplete_shards.sort(key=len, reverse=True)
 
-            print("shardlen", [len(x) for x in completed_shards], [len(x) for x in incomplete_shards])
-
             # Pull out shard allocation for this worker
             # (sort/reverse-sort ensures allocations are off by no more than 1)
             shards = [
                 completed_shards[self.rank],
                 incomplete_shards[self.rank]
             ]
-            if self.rank == 4:
-                print(shards)
             shard_states = torch.cat(shards)
             # Order shards by global ID (for steady file progression)
             _, indices = shard_states[:,0].sort()
