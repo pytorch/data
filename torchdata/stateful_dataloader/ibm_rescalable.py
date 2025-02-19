@@ -97,9 +97,12 @@ class _StatefulDataset(data.IterableDataset):
                     self.worldsize = self.worldsize * self.local_worldsize
                     self.rank = self.local_worldsize * self.rank + info.id
 
-    def statename(self, x: str):
+    def statename(self, x: str, rank=None):
         # Note that this naming convention implicitly disallows repeated layers in the dataset pipeline
-        return self.__class__.__name__ + "." + x
+        out = self.__class__.__name__ + "." + x
+        if rank is not None:
+            out = "rank" + str(rank) + "." + out
+        return out
 
     def state_dict(self):
         """
@@ -478,29 +481,28 @@ class ScalableReader(_StatefulDataset):
         self.setup()
         # Values to save: shard states (shard/repl), filesizes (single/repl)
         # Deepcopy required to prevent in-place modification from later prefetches
-        return deepcopy({
-            self.statename("shard_states"): self.shard_states,
-            self.statename("file_info"): self.filesizes if self.rank == 0 else None
-        })
+        out = {self.statename("shard_states", rank=self.rank): self.shard_states}
+        if self.rank==0:
+            out[self.statename("file_info")] = self.filesizes
+        return deepcopy(out)
     
     def load_state_dict(self, state_dict):
-        print("GOTHERE 2")
         self.setup()
         # Load back shard states (global), filesizes (all)
         shard_states = state_dict[self.statename("shard_states")]
         file_info = state_dict[self.statename("file_info")]
-        print(shard_states.size(0), self.worldsize)
-        if self.rank == 0:
-            print(shard_states.shape, shard_states)
-            torch.save(shard_states, "/gpfs/davis/test.pth")
-        if shard_states.size(0) == self.worldsize:
+        # print(shard_states.size(0), self.worldsize)
+        # if self.rank == 0:
+        #     print(shard_states.shape, shard_states)
+        #     torch.save(shard_states, "/gpfs/davis/test.pth")
+        if len(shard_states) == self.worldsize:
             self.filesizes = file_info
             self.shard_states = shard_states[self.rank]
         else:
-            print("GOTHERE 3")
             # shard_states = [s[0] for s in shard_states.split(1)]  # [w] n 5
             # shard_states = torch.cat(shard_states, dim=0)  # wn 5
             # Sort shards by epoch count
+            shard_states = torch.cat(shard_states, dim=0)
             sorted, indices = torch.sort(shard_states[:,4], descending=True, stable=True)
             shard_states = shard_states[indices]
             # Strip out dummy shards
@@ -545,7 +547,6 @@ class ScalableReader(_StatefulDataset):
             # Pad out with dummy shards if needed
             self.shard_states[len(shard_states):,0] = -1
             self.shard_states[len(shard_states):,4] = torch.iinfo(torch.int).max
-        print("GOTHERE 4")
         return None
 
 
@@ -559,20 +560,22 @@ def __pop_dstate(state, device_mesh, placements, create_dtensor=False):
     """
     dstate = state["_snapshot"]["_worker_snapshots"]
     dstate = [dstate[f"worker_{i}"].pop("dataset_state") for i in range(len(dstate))]
-    # Flip list[dict[tensor]] to dict[list[tensor]], and concat
-    shardstate = "ScalableReader.shard_states"
-    fileinfo = "ScalableReader.file_info"
-    dstate_dict = {
-        shardstate: torch.cat([d[shardstate] for d in dstate], 0)
-    }
-    if create_dtensor == True:
-        dstate_dict[shardstate] = dtensor.DTensor.from_local(
-            dstate_dict[shardstate],
-            device_mesh,
-            placements,
-        )
-    dstate_dict[fileinfo] = dstate[0][fileinfo]
-    return dstate_dict
+    # Fuse dstate dicts
+    return {k:v for d in dstate for k,v in d.items()}
+    # # Flip list[dict[tensor]] to dict[list[tensor]], and concat
+    # shardstate = "ScalableReader.shard_states"
+    # fileinfo = "ScalableReader.file_info"
+    # dstate_dict = {
+    #     shardstate: torch.cat([d[shardstate] for d in dstate], 0)
+    # }
+    # if create_dtensor == True:
+    #     dstate_dict[shardstate] = dtensor.DTensor.from_local(
+    #         dstate_dict[shardstate],
+    #         device_mesh,
+    #         placements,
+    #     )
+    # dstate_dict[fileinfo] = dstate[0][fileinfo]
+    # return dstate_dict
 
 
 def save_distributed_state_dict(
@@ -588,9 +591,9 @@ def save_distributed_state_dict(
     """
     state = deepcopy(loader.state_dict())
     dstate = __pop_dstate(state, device_mesh, [dtensor.placement_types.Shard(0)], True)
-    # Prune empty fileinfos
-    if dstate["ScalableReader.file_info"] is None:
-        dstate.pop("ScalableReader.file_info")
+    # # Prune empty fileinfos
+    # if dstate["ScalableReader.file_info"] is None:
+    #     dstate.pop("ScalableReader.file_info")
     out = {"state":state, "dstate":dstate}
     # Write distributed state dict
     writer = checkpoint.FileSystemWriter(path)
@@ -618,13 +621,19 @@ def load_distributed_state_dict(
     inp = {"state":deepcopy(base), "dstate":dstate}
     # Read distributed state dict
     reader = checkpoint.FileSystemReader(path)
-    checkpoint.load_state_dict(
-        inp,
-        reader,
-    )
+    inp = checkpoint._load_state_dict_from_keys(storage_reader = reader)  # NOTE: assumes inp["state"] is same across all devices
+    # checkpoint.load_state_dict(
+    #     inp,
+    #     reader,
+    # )
     dstate = inp["dstate"]
-    # De-DTensor-fy the shard states
-    dstate["ScalableReader.shard_states"] = dstate["ScalableReader.shard_states"].full_tensor()
+    # Re-pack the set of rankX args
+    ranked_state = {k:dstate.pop(k) for k in dstate if "rank" in k}
+    ranked_keylist = sorted(list(ranked_state.keys()))
+    compiled_ranked = [ranked_state[k] for k in ranked_keylist]
+    dstate[ranked_keylist[0][6:]] = compiled_ranked  # Drop "rank0." prefix
+    # # De-DTensor-fy the shard states
+    # dstate["ScalableReader.shard_states"] = dstate["ScalableReader.shard_states"].full_tensor()
     # Check that number of workers matches
     ckp_ws = 0 if not os.path.exists(path) else len([x for x in os.listdir(path) if "loader" in x])
     if ckp_ws == loader.dataset.worldsize and nworkers == state["_snapshot"]["_main_snapshot"]["_num_workers"]:
@@ -633,11 +642,10 @@ def load_distributed_state_dict(
         # On mismatch, discard saved non-reshardable loader state and start fresh
         state = base
     # Repeat global tensor over all workers
-    print(inp["dstate"]["ScalableReader.shard_states"][:,0])
+    # print(inp["dstate"]["ScalableReader.shard_states"][:,0])
     dstate = [inp["dstate"],]*nworkers
     # Re-insert worker states into loader state
     for i in range(nworkers):
         state["_snapshot"]["_worker_snapshots"][f"worker_{i}"]["dataset_state"] = dstate[i]
     # Load into loader
-    print("GOTHERE")
     loader.load_state_dict(state)
