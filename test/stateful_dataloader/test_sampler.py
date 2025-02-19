@@ -14,7 +14,7 @@ from torch.testing._internal.common_utils import TEST_WITH_ASAN, TEST_WITH_TSAN,
 from torch.utils.data import Dataset
 
 from torchdata.stateful_dataloader import StatefulDataLoader
-from torchdata.stateful_dataloader.sampler import StatefulDistributedSampler
+from torchdata.stateful_dataloader.sampler import RandomSampler, StatefulDistributedSampler
 
 
 class MockDataset(Dataset):
@@ -34,7 +34,10 @@ class MockDataset(Dataset):
     "Fails with TSAN with the following error: starting new threads after multi-threaded "
     "fork is not supported. Dying (set die_after_fork=0 to override)",
 )
-@unittest.skipIf(TEST_WITH_ASAN, "DataLoader tests hang in ASAN, see: https://github.com/pytorch/pytorch/issues/66223")
+@unittest.skipIf(
+    TEST_WITH_ASAN,
+    "DataLoader tests hang in ASAN, see: https://github.com/pytorch/pytorch/issues/66223",
+)
 class TestDataLoader(TestCase):
     def setUp(self):
         super().setUp()
@@ -44,7 +47,12 @@ class TestDataLoader(TestCase):
     def test_initialization_StatefulDistributedSampler(self):
 
         sampler = StatefulDistributedSampler(
-            self.dataset, num_replicas=10, rank=0, shuffle=False, seed=42, drop_last=False
+            self.dataset,
+            num_replicas=10,
+            rank=0,
+            shuffle=False,
+            seed=42,
+            drop_last=False,
         )
         self.assertEqual(sampler.dataset, self.dataset)
         self.assertEqual(sampler.num_replicas, 10)
@@ -139,7 +147,8 @@ class TestDataLoader(TestCase):
         )
 
         self.assertTrue(
-            len(indices_with_drop) <= len(indices_without_drop), "Drop last should result in fewer or equal indices"
+            len(indices_with_drop) <= len(indices_without_drop),
+            "Drop last should result in fewer or equal indices",
         )
 
     def test_data_order_with_shuffle(self):
@@ -153,7 +162,11 @@ class TestDataLoader(TestCase):
         for batch in dataloader:
             data_loaded.extend(batch)
         self.assertEqual(len(data_loaded), len(self.dataset), "All data should be loaded")
-        self.assertEqual(data_loaded, data_sampled, "Data loaded by DataLoader should match data sampled by sampler")
+        self.assertEqual(
+            data_loaded,
+            data_sampled,
+            "Data loaded by DataLoader should match data sampled by sampler",
+        )
 
     def test_data_order_without_shuffle(self):
         sampler = StatefulDistributedSampler(self.dataset, num_replicas=1, rank=0, shuffle=False)
@@ -167,8 +180,16 @@ class TestDataLoader(TestCase):
         for batch in dataloader:
             data_loaded.extend(batch)
         self.assertEqual(len(data_loaded), len(self.dataset), "All data should be loaded")
-        self.assertEqual(data_loaded, data_sampled, "Data loaded by DataLoader should match data sampled by sampler")
-        self.assertEqual(data_loaded, list(range(100)), "Data loaded by DataLoader should be in original order")
+        self.assertEqual(
+            data_loaded,
+            data_sampled,
+            "Data loaded by DataLoader should match data sampled by sampler",
+        )
+        self.assertEqual(
+            data_loaded,
+            list(range(100)),
+            "Data loaded by DataLoader should be in original order",
+        )
 
     def test_data_distribution_across_replicas(self):
         num_replicas = 5
@@ -181,8 +202,35 @@ class TestDataLoader(TestCase):
                 data_loaded.extend([int(x.item()) for x in batch])
             all_data.extend(data_loaded)
         self.assertEqual(
-            sorted(all_data), list(range(100)), "All data points should be covered exactly once across all replicas"
+            sorted(all_data),
+            list(range(100)),
+            "All data points should be covered exactly once across all replicas",
         )
+
+    def test_seed_replicability(self):
+        # Test that the same seed will result in the same data order
+        # We first pick a random number as seed, then use it to initialize two dataloaders
+        min_seed, max_seed = 0, 1000  # [min_seed, max_seed)
+        seed = torch.randint(min_seed, max_seed, (1,), dtype=torch.int64).item()
+        torch.manual_seed(seed)
+
+        dataloader1 = StatefulDataLoader(self.dataset, batch_size=1, shuffle=True)
+        results1 = list(dataloader1)
+
+        # Repeat the same process with the same seed
+        torch.manual_seed(seed)
+        dataloader2 = StatefulDataLoader(self.dataset, batch_size=1, shuffle=True)
+        results2 = list(dataloader2)
+
+        # Repeat the same process with a different seed, making sure that the seed is different
+        min_seed, max_seed = 1000, 2000  # [min_seed, max_seed)
+        seed = torch.randint(min_seed, max_seed, (1,), dtype=torch.int64).item()
+        torch.manual_seed(seed)
+        dataloader3 = StatefulDataLoader(self.dataset, batch_size=1, shuffle=True)
+        results3 = list(dataloader3)
+
+        self.assertEqual(results1, results2, "Data should be replicable with same seed")
+        self.assertNotEqual(results1, results3, "Data should not be replicable with different seed")
 
 
 if __name__ == "__main__":
