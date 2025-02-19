@@ -629,6 +629,7 @@ def load_distributed_state_dict(
     #     inp,
     #     reader,
     # )
+    print(inp)
     dstate = inp["dstate"]
     # Re-pack the set of rankX args
     ranked_state = {k:dstate.pop(k) for k in dstate if "rank" in k}
