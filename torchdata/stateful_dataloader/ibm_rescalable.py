@@ -633,7 +633,8 @@ def load_distributed_state_dict(
     print(inp)
     dstate = inp["dstate"]
     # Re-pack the set of rankX args
-    ranked_state = {k:dstate.pop(k) for k in dstate if "rank" in k}
+    keys = list(dstate.keys())
+    ranked_state = {k:dstate.pop(k) for k in keys if "rank" in k}
     ranked_keylist = sorted(list(ranked_state.keys()))
     compiled_ranked = [ranked_state[k] for k in ranked_keylist]
     dstate[ranked_keylist[0][6:]] = compiled_ranked  # Drop "rank0." prefix
