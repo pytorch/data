@@ -538,10 +538,13 @@ class ScalableReader(_StatefulDataset):
 
             # Pull out shard allocation for this worker
             # (sort/reverse-sort ensures allocations are off by no more than 1)
-            shard_states = torch.cat([
+            shards = [
                 completed_shards[self.rank],
                 incomplete_shards[self.rank]
-            ])
+            ]
+            if self.rank == 4:
+                print(shards)
+            shard_states = torch.cat(shards)
             # Order shards by global ID (for steady file progression)
             _, indices = shard_states[:,0].sort()
             self.shard_states[:len(shard_states)] = shard_states[indices]
@@ -630,7 +633,6 @@ def load_distributed_state_dict(
     #     inp,
     #     reader,
     # )
-    print(inp)
     dstate = inp["dstate"]
     # Re-pack the set of rankX args
     keys = list(dstate.keys())
