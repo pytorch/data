@@ -7,7 +7,7 @@ from typing import Any, Callable, List, Optional, Set
 
 import torch
 from torch.distributed import checkpoint
-from torch.distributed.checkpoint import _load_state_dict_from_keys
+from torch.distributed.checkpoint.state_dict_loader import _load_state_dict_from_keys
 import torch.distributed.tensor as dtensor
 import torch.distributed as dist
 import torch.utils.data as data
