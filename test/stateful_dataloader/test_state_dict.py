@@ -1458,6 +1458,8 @@ class TestMultiEpochSDL_shard0(TestCase):
         )
 
     def _run(self, data_size, num_workers, batch_size, shuffle):
+        # For reproducibility of testing, fixing the seed
+        torch.manual_seed(0)
         dataloader1 = self.get_map_dl(
             data_size=data_size,
             num_workers=num_workers,
@@ -1493,6 +1495,8 @@ class TestMultiEpochSDL_shard0(TestCase):
         self.assertEqual(num_items_yielded + additional_num_items_yielded, data_size * 4)
 
         # now run a second dataloder for 4 epochs and check if the order is same.
+        # we need to fix the seed again since we want to bring the initial conditions to the same state as at the time of instantiating the first dataloader
+        torch.manual_seed(0)
         dataloader2 = self.get_map_dl(
             data_size=data_size,
             num_workers=num_workers,
