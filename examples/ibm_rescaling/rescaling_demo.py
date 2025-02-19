@@ -125,8 +125,8 @@ else:
     if rank == 0:
         print("Checkpoint detected!")
     load_distributed_state_dict(data, ckpt_path, mesh)
-    print("FINAL")
-    time.sleep(10000)
+    # print("FINAL")
+    # time.sleep(10000)
     avoid = torch.load(os.path.join(args.ckpt_path, "avoid.pth")).tolist()
 
     # Finish out epoch (extra 2*ceil(ndocs/nshards) steps to account for worst-case uneven finishing times)
