@@ -44,7 +44,7 @@ args = parser.parse_args()
 # Setup
 rank = int(os.getenv("RANK", 0))
 world_size = int(os.getenv("WORLD_SIZE", 1))
-dist.init_process_group()
+dist.init_process_group(backend="gloo")
 mesh = dist.device_mesh.init_device_mesh("cpu", [world_size])
 placement = [dist.tensor.placement_types.Shard(0)]
 

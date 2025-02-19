@@ -622,7 +622,9 @@ def load_distributed_state_dict(
     inp = {"state":deepcopy(base), "dstate":dstate}
     # Read distributed state dict
     reader = checkpoint.FileSystemReader(path)
-    inp = _load_state_dict_from_keys(storage_reader = reader)  # NOTE: assumes inp["state"] is same across all devices
+    inp = _load_state_dict_from_keys(
+        storage_reader = reader,
+    )  # NOTE: assumes inp["state"] is same across all devices
     # checkpoint.load_state_dict(
     #     inp,
     #     reader,
