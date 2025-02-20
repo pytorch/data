@@ -12,13 +12,6 @@ on:
       pytorch_version:
         required: true
         type: string
-      do-upload:
-        required: false
-        default: true
-        type: boolean
-    secrets:
-      PYPI_TOKEN:
-        required: false
 
 permissions:
   id-token: write
