@@ -42,7 +42,7 @@ jobs:
 
   build_docs:
     if: always() && inputs.branch != ''
-    needs: [get_release_type, wheel_upload]
+    needs: get_release_type
     runs-on: ubuntu-latest
     steps:
       - name: Setup Python 3.9
