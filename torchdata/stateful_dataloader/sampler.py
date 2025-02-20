@@ -88,9 +88,10 @@ class RandomSampler(Sampler[int]):
         self.replacement = replacement
         self._num_samples = num_samples
         if generator is None:
-            # Ensure that underlying sampler has something repeatable
+            # Prevoiusly the random seed was fixed as 1. We then changed it to system generated seed to ensure deterministic randomness.
+            seed = int(torch.empty((), dtype=torch.int64).random_().item())
             generator = torch.Generator()
-            generator.manual_seed(1)
+            generator.manual_seed(seed)
         self.generator = generator
         if not isinstance(self.replacement, bool):
             raise TypeError(f"replacement should be a boolean value, but got replacement={self.replacement}")
