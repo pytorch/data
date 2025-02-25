@@ -53,7 +53,7 @@ class TestFilter(TestCase):
     def test_save_load_state(self, midpoint: int):
         n = 50
         source = StatefulRangeNode(n=n)
-        node = Filter(source, lambda x: x % 3 == 0)  # Keep items divisible by 3
+        node = Filter(source, lambda x: x['i'] % 3 == 0)  # Keep items where 'i' is divisible by 3
         run_test_save_load_state(self, node, midpoint)
 
     def test_filter_reset_state(self) -> None:
