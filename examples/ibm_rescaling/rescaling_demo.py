@@ -15,7 +15,7 @@ from torchdata.stateful_dataloader.ibm_rescalable import (
     save_distributed_state_dict,
 )
 
-# This example script validates the rescaling behavior of the ibm rescalable distributed datasets.
+# This example script validates the rescaling behavior of the ScalableReader.
 # On first run, creates a dummy dataset and saves a distributed checkpoint at the desired location.
 # On subsequent runs, loads the checkpoint (possibly on a different world size / num workers)
 # and verifies that all remaining data is covered by the time the epoch finishes.
@@ -23,7 +23,7 @@ from torchdata.stateful_dataloader.ibm_rescalable import (
 # Example usage:
 # torchrun [torchrun args] examples/ibm_rescaling/rescaling_demo.py --ckpt_path=~/ckpts/rescale_test --logical_shards=48 --num_workers=6
 
-# Do not change the batch size or number of steps between the first and second runs!
+# Do not change the number of steps between the first and second runs!
 
 parser = argparse.ArgumentParser(description="Script to validate rescaling of dataloader checkpoints")
 parser.add_argument("--ckpt_path", type=str, default="./rescale_test")
@@ -85,10 +85,6 @@ data = PreprocessDataset(data, torch.tensor)
 # Wrap in StatefulDataLoader
 data = StatefulDataLoader(data, batch_size=args.b_size, num_workers=args.num_workers)
 
-# TODO: debug: can't change n_workers when reloading - keyerror
-# TODO: debug: going from 4/2/2 gpu/bsize/workers to 6/1/2 causes epoch not to finish
-
-
 # If checkpoint does not exist, create it
 ckpt_path = os.path.join(args.ckpt_path, "loader_dcp_state")
 if not os.path.exists(ckpt_path) or len(os.listdir(ckpt_path)) == 0:
@@ -125,30 +121,25 @@ else:
     if rank == 0:
         print("Checkpoint detected!")
     load_distributed_state_dict(data, ckpt_path, mesh)
-    # print("FINAL")
-    # time.sleep(10000)
     avoid = torch.load(os.path.join(args.ckpt_path, "avoid.pth")).tolist()
 
-    # Finish out epoch (extra 2*ceil(n_items/n_shards) steps to account for worst-case uneven finishing times)
+    # Finish out epoch (extra 2*ceil(ceil(n_items/n_shards)/bsize) steps to account for worst-case uneven finishing times)
     vals = []
     n_steps = (
         math.ceil((3000 - len(avoid)) / (world_size * args.b_size)) 
-        + 2 * math.ceil(3000/args.logical_shards)
+        + 2 * math.ceil(math.ceil(3000/args.logical_shards)/args.b_size)
     )
     for i, inp in enumerate(data):
+        vals.append(inp)
         if i == n_steps:
             break
-        vals.append(inp)
     vals = torch.cat(vals)
     # Get all vals onto each rank
     vals = dist.tensor.DTensor.from_local(vals, mesh, placement).full_tensor()
 
-    # Diag save
+    # Save final state dicts for diagnostic purposes
     os.makedirs(os.path.join(args.ckpt_path, "diag"), exist_ok=True)
     torch.save(data.state_dict(), os.path.join(args.ckpt_path, "diag", f"loader_state_{rank}.pth"))
-    # if rank == 0:
-    #     torch.save(vals, os.path.join(args.ckpt_path, "diag", "vals.pth"))
-    # time.sleep(10)
 
     # Perform data coverage check on rank 0 only
     if rank == 0:
