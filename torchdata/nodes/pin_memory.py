@@ -31,15 +31,20 @@ def _pin_memory_loop(
     device_id: Union[int, str],
     device: Optional[str],
 ):
-    # this is fork of from torch.utils.data._utils.pin_memory import _pin_memory_loop
-    # to remove the index tuples
+    """This is fork of from torch.utils.data._utils.pin_memory import _pin_memory_loop
+    to remove the index tuples.
 
-    # This setting is thread local, and prevents the copy in pin_memory from
-    # consuming all CPU cores.
+    This setting is thread local, and prevents the copy in pin_memory from
+    consuming all CPU cores.
+    """
 
     idx = MonotonicIndex()
 
-    def _put(item, block: bool = True, snapshot: Optional[Dict[str, Any]] = None):
+    def _put(
+        item,
+        block: bool = True,
+        snapshot: Optional[Union[Dict[str, Any], StartupExceptionWrapper]] = None,
+    ):
         _idx = idx.get()
         if snapshot:
             snapshot_store.append(snapshot=snapshot, version=_idx)
@@ -61,10 +66,10 @@ def _pin_memory_loop(
         assert (
             isinstance(snapshot_frequency, int) and snapshot_frequency >= 0
         ), f"snapshot_frequency must be non-negative integer! Got {snapshot_frequency}"
-        src_iter = iter(source)
+        snapshot_store.append_initial_snapshot(snapshot=source.state_dict())
     except Exception:
         e = StartupExceptionWrapper(where=f"in _pin_memory_loop startup for device {device_id}")
-        _put(e, block=False)
+        snapshot_store.append_initial_snapshot(snapshot=e)
         return
 
     yielded = 0
@@ -72,7 +77,7 @@ def _pin_memory_loop(
         if not semaphore.acquire(blocking=True, timeout=0.1):
             continue
         try:
-            item = next(src_iter)
+            item = next(source)
             item = pin_memory(item, device)
             yielded += 1
             snapshot = None
@@ -90,6 +95,17 @@ def _pin_memory_loop(
 
 
 class PinMemory(BaseNode[T]):
+    """Pins the data of the underlying node to a device. This is backed by torch.utils.data._utils.pin_memory._pin_memory_loop.
+
+    Args:
+        source (BaseNode[T]): The source node to pin the data from.
+        pin_memory_device (str): The device to pin the data to. Default is "".
+        snapshot_frequency (int): The frequency at which to snapshot the state of the source node. Default is
+            1, which means that the state of the source node will be snapshotted after every item. If set
+            to a higher value, the state of the source node will be snapshotted after every snapshot_frequency
+            items.
+    """
+
     def __init__(
         self,
         source: BaseNode[T],
@@ -99,7 +115,6 @@ class PinMemory(BaseNode[T]):
         super().__init__()
         self.source = source
         self.snapshot_frequency = snapshot_frequency
-        self._pin_memory = torch.cuda.is_available()
         if len(pin_memory_device) == 0:
             self._pin_memory_device = None
         else:

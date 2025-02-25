@@ -9,12 +9,12 @@ import os
 import re
 import threading
 
-import torchvision.datasets as datasets
 import torchvision.datasets.folder
-import torchvision.transforms as transforms
 from PIL import Image
 from torch.utils.data import DataLoader
 from torchdata.datapipes.iter import FileLister, HttpReader, IterDataPipe
+
+from torchvision import datasets, transforms
 
 IMAGES_ROOT = os.path.join("fakedata", "imagefolder")
 

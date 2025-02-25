@@ -13,6 +13,8 @@ from torchdata.nodes.adapters import IterableWrapper
 from torchdata.nodes.base_node import BaseNode
 from torchdata.nodes.loader import Loader
 
+from torchdata.nodes.types import Stateful
+
 
 class MockGenerator:
     def __init__(self, num_samples: int) -> None:
@@ -65,7 +67,7 @@ class IterInitError(BaseNode[int]):
 
 
 class DummyIterableDataset(torch.utils.data.IterableDataset):
-    def __init__(self, num_samples: int, name: str) -> None:
+    def __init__(self, num_samples: int, name: str = "test") -> None:
         self.num_samples = num_samples
         self.name = name
 
@@ -80,14 +82,70 @@ class DummyIterableDataset(torch.utils.data.IterableDataset):
 
 
 class DummyMapDataset(torch.utils.data.Dataset):
-    def __init__(self, num_samples: int) -> None:
+    def __init__(self, num_samples: int, name: str = "test") -> None:
         self.num_samples = num_samples
+        self.name = name
 
     def __len__(self) -> int:
         return self.num_samples
 
     def __getitem__(self, i: int) -> dict:
-        return {"step": i, "test_tensor": torch.tensor([i]), "test_str": f"str_{i}"}
+        return {
+            "name": self.name,
+            "step": i,
+            "test_tensor": torch.tensor([i]),
+            "test_str": f"str_{i}",
+        }
+
+
+class StatefulRange(Stateful):
+    def __init__(self, n: int) -> None:
+        self.n = n
+        self._num_yielded = 0
+        self._next_start = 0
+
+    def __iter__(self) -> Iterator[int]:
+        self._num_yielded = self._next_start  # Reset for next iter call
+        self._next_start = 0
+        for i in range(self._num_yielded, self.n):
+            self._num_yielded += 1
+            yield i
+
+    def state_dict(self) -> Dict[str, Any]:
+        return {"_num_yielded": self._num_yielded}
+
+    def load_state_dict(self, state_dict: Dict[str, Any]):
+        self._next_start = state_dict["_num_yielded"]
+
+
+class StatefulRangeNode(BaseNode[Dict[str, int]]):
+    def __init__(self, n: int) -> None:
+        super().__init__()
+        self.n = n
+        self.i = 0
+        self.num_resets = 0
+
+    def reset(self, initial_state: Optional[Dict[str, Any]] = None):
+        super().reset(initial_state)
+        if initial_state is not None:
+            self.i = initial_state["i"]
+            self.num_resets = initial_state["num_resets"]
+        else:
+            self.i = 0
+            self.num_resets += 1
+
+    def next(self) -> Dict[str, int]:
+        if self.i == self.n:
+            raise StopIteration()
+        ret = {"i": self.i, "resets": self.num_resets}
+        self.i += 1
+        return ret
+
+    def get_state(self) -> Dict[str, Any]:
+        return {
+            "i": self.i,
+            "num_resets": self.num_resets,
+        }
 
 
 def run_test_save_load_state(test, node: BaseNode, midpoint: int):

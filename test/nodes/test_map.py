@@ -7,7 +7,7 @@
 import itertools
 
 import unittest
-from typing import List
+from typing import List, Optional
 
 from parameterized import parameterized
 from torch.testing._internal.common_utils import IS_WINDOWS, TEST_CUDA, TestCase
@@ -17,7 +17,7 @@ from torchdata.nodes.map import Mapper, ParallelMapper
 from torchdata.nodes.pin_memory import PinMemory
 from torchdata.nodes.prefetch import Prefetcher
 
-from .utils import MockSource, RandomSleepUdf, run_test_save_load_state, udf_raises
+from .utils import MockSource, RandomSleepUdf, run_test_save_load_state, StatefulRangeNode, udf_raises
 
 
 class TestMap(TestCase):
@@ -55,7 +55,7 @@ class TestMap(TestCase):
     def test_exception_handling_mapper_multiprocess_cuda(self):
         self._test_exception_handling_mapper(True, "process")
 
-    def _test_map(self, in_order, method) -> None:
+    def _test_map(self, in_order, method, prebatch) -> None:
         batch_size = 6
         n = 80
         multiprocessing_context = None if IS_WINDOWS else "forkserver"
@@ -68,6 +68,7 @@ class TestMap(TestCase):
             in_order=in_order,
             method=method,
             multiprocessing_context=multiprocessing_context,
+            prebatch=prebatch,
         )
         node = Prefetcher(node, prefetch_factor=2)
 
@@ -98,29 +99,44 @@ class TestMap(TestCase):
                 )
 
     def test_in_order_threads(self):
-        self._test_map(True, "thread")
+        self._test_map(True, "thread", None)
 
     def test_out_of_order_threads(self):
-        self._test_map(False, "thread")
+        self._test_map(False, "thread", None)
 
     def test_in_order_process(self):
-        self._test_map(True, "process")
+        self._test_map(True, "process", None)
 
     def test_out_of_order_process(self):
-        self._test_map(False, "process")
+        self._test_map(False, "process", None)
+
+    def test_in_order_thread_prebatch(self):
+        self._test_map(True, "thread", 3)
+
+    def test_out_of_order_thread_prebatch(self):
+        self._test_map(False, "thread", 3)
+
+    def test_in_order_process_prebatch(self):
+        self._test_map(True, "process", 3)
+
+    def test_out_of_order_process_prebatch(self):
+        self._test_map(False, "process", 3)
 
     @parameterized.expand(
         itertools.product(
             [0, 7, 13],
             [True],  # TODO: define and fix in_order = False
             [0, 1, 9],  # TODO: define and fix in_order = False
+            [None, 3],  # prebatch
         )
     )
-    def test_save_load_state_thread(self, midpoint: int, in_order: bool, snapshot_frequency: int):
+    def test_save_load_state_thread(
+        self, midpoint: int, in_order: bool, snapshot_frequency: int, prebatch: Optional[int]
+    ):
         method = "thread"
         batch_size = 6
         n = 80
-        src = MockSource(num_samples=n)
+        src = StatefulRangeNode(n=n)
         node = Batcher(src, batch_size=batch_size, drop_last=False)
         node = ParallelMapper(
             node,
@@ -129,6 +145,7 @@ class TestMap(TestCase):
             in_order=in_order,
             method=method,
             snapshot_frequency=snapshot_frequency,
+            prebatch=prebatch,
         )
         node = Prefetcher(node, prefetch_factor=2)
         run_test_save_load_state(self, node, midpoint)
@@ -138,14 +155,17 @@ class TestMap(TestCase):
             [0, 7, 13],
             [True],  # TODO: define and fix in_order = False
             [0, 1, 9],  # TODO: define and fix in_order = False
+            [None, 3],  # prebatch
         )
     )
-    def test_save_load_state_process(self, midpoint: int, in_order: bool, snapshot_frequency: int):
+    def test_save_load_state_process(
+        self, midpoint: int, in_order: bool, snapshot_frequency: int, prebatch: Optional[int]
+    ):
         method = "process"
         batch_size = 6
         n = 80
         multiprocessing_context = None if IS_WINDOWS else "forkserver"
-        src = MockSource(num_samples=n)
+        src = StatefulRangeNode(n=n)
         node = Batcher(src, batch_size=batch_size, drop_last=False)
         node = ParallelMapper(
             node,
@@ -155,6 +175,7 @@ class TestMap(TestCase):
             method=method,
             multiprocessing_context=multiprocessing_context,
             snapshot_frequency=snapshot_frequency,
+            prebatch=prebatch,
         )
         node = Prefetcher(node, prefetch_factor=2)
         run_test_save_load_state(self, node, midpoint)

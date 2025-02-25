@@ -147,6 +147,8 @@ class StatefulDataLoader(DataLoader[_T_co]):
             maintain the workers `Dataset` instances alive. (default: ``False``)
         pin_memory_device (str, optional): the device to :attr:`pin_memory` to if ``pin_memory`` is
             ``True``.
+        in_order (bool, optional): If ``False``, the data loader will not enforce that batches
+            are returned in a first-in, first-out order. Only applies when ``num_workers > 0``. (default: ``True``)
         snapshot_every_n_steps (int, optional): Defines how often the state is
             transferred from the dataloader workers to the dataloader. By default, it is set to ``1``, i.e., state is transferred every step. If the state is large, this value can be increased (and ideally set to the frequency of training checkpointing) to reduce the overhead of transferring state every step.
 
@@ -177,6 +179,10 @@ class StatefulDataLoader(DataLoader[_T_co]):
     .. warning:: See `Reproducibility <https://pytorch.org/docs/stable/notes/randomness.html#reproducibility>`_, and `Dataloader-workers-random-seed <https://pytorch.org/docs/stable/notes/faq.html#dataloader-workers-random-seed>`_, and
                  `Data-loading-randomness <https://pytorch.org/docs/stable/data.html#data-loading-randomness>`_ notes for random seed related questions.
 
+    .. warning:: Setting `in_order` to `False` can harm reproducibility and may lead to a skewed data distribution being fed to the trainer in cases with imbalanced data.
+
+    .. warning:: Setting `in_order` to `False` currently has no guarantees for state management.
+
     .. _multiprocessing context:
         https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
     """
@@ -202,6 +208,7 @@ class StatefulDataLoader(DataLoader[_T_co]):
         prefetch_factor: Optional[int] = None,
         persistent_workers: bool = False,
         pin_memory_device: str = "",
+        in_order: bool = True,
         snapshot_every_n_steps: Optional[int] = 1,
     ):
         torch._C._log_api_usage_once("python.stateful_data_loader")
@@ -227,6 +234,13 @@ class StatefulDataLoader(DataLoader[_T_co]):
         if persistent_workers and num_workers == 0:
             raise ValueError("persistent_workers option needs num_workers > 0")
 
+        if num_workers > 0 and not in_order:
+            # TODO: remove warning log when state management is supported with in_order=False
+            logger.warning(
+                "using in_order=False with multiple workers does not give any guarantees for state management "
+                "and loading from a checkpoint may not work as expected."
+            )
+
         self.dataset = dataset
         self.num_workers = num_workers
         self.prefetch_factor = prefetch_factor
@@ -235,6 +249,7 @@ class StatefulDataLoader(DataLoader[_T_co]):
         self.timeout = timeout
         self.worker_init_fn = worker_init_fn
         self.multiprocessing_context = multiprocessing_context
+        self.in_order = in_order
 
         # Adds forward compatibilities so classic DataLoader can work with DataPipes:
         #   _DataPipeSerializationWrapper container makes it easier to serialize without redefining pickler
@@ -464,7 +479,11 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
             self.load_state_dict(next_iter_state)
         else:
             self._dataset_fetcher = _DatasetKind.create_fetcher(
-                self._dataset_kind, self._dataset, self._auto_collation, self._collate_fn, self._drop_last
+                self._dataset_kind,
+                self._dataset,
+                self._auto_collation,
+                self._collate_fn,
+                self._drop_last,
             )
 
     def _next_data(self):
@@ -513,7 +532,10 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
             if state_dict[_SAMPLER_ITER_STATE] is not None:
                 self._sampler_iter = try_to_deserialize(self._sampler_iter, state_dict[_SAMPLER_ITER_STATE])
         else:
-            if not isinstance(self._index_sampler, torch.utils.data.dataloader._InfiniteConstantSampler):
+            if not isinstance(
+                self._index_sampler,
+                torch.utils.data.dataloader._InfiniteConstantSampler,
+            ):
                 # Fallback to fastforward
                 self._sampler_iter = itertools.islice(self._index_sampler, self._sampler_iter_yielded, None)
         self._num_yielded = state_dict[self._NUM_YIELDED]
@@ -527,7 +549,11 @@ class _StatefulSingleProcessDataLoaderIter(_StatefulBaseDataLoaderIter):
         if state_dict[_DATASET_STATE] is not None and isinstance(self._dataset, Stateful):
             self._dataset = try_to_deserialize(self._dataset, state_dict[_DATASET_STATE])
         self._dataset_fetcher = _DatasetKind.create_fetcher(
-            self._dataset_kind, self._dataset, self._auto_collation, self._collate_fn, self._drop_last
+            self._dataset_kind,
+            self._dataset,
+            self._auto_collation,
+            self._collate_fn,
+            self._drop_last,
         )
         if self._dataset_kind == _DatasetKind.Iterable:
             # If either dataset or it's iter is stateful, we don't fast-forward
@@ -876,6 +902,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         super().__init__(loader)
         self._snapshot_interval = loader.snapshot_every_n_steps
         self._prefetch_factor = loader.prefetch_factor
+        self._in_order = loader.in_order
 
         assert self._num_workers > 0
         assert self._prefetch_factor > 0
@@ -891,7 +918,10 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         #   Additional worker init function will take care of sharding in MP and Distributed
         if isinstance(self._dataset, (IterDataPipe, MapDataPipe)):
             self._worker_init_fn = functools.partial(
-                _sharding_worker_init_fn, self._worker_init_fn, self._world_size, self._rank
+                _sharding_worker_init_fn,
+                self._worker_init_fn,
+                self._world_size,
+                self._rank,
             )
 
         # No certainty which module multiprocessing_context is
@@ -1083,6 +1113,11 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         # It does not mean that a worker is dead. In case of `_persistent_workers`,
         # the worker will be reset to available in the next epoch.
         self._workers_status = [True for i in range(self._num_workers)]
+        # A list of integers representing how many tasks are outstanding for each worker
+        # Incremented when a task is dispatched to the worker
+        # Decremented when that data has been given to the main thread
+        # Each worker should have at most self._prefetch_factor tasks outstanding
+        self._workers_num_tasks = [0 for i in range(self._num_workers)]
         # Reset the worker queue cycle so it resumes next epoch at worker 0
         self._worker_queue_idx_cycle = itertools.cycle(range(self._num_workers))
         remaining = self._num_workers
@@ -1149,6 +1184,12 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._worker_snapshots[worker_key].apply_delta(state_dict)
 
     def state_dict(self):
+        if not self._in_order:
+            # TODO: remove warning log when state management is supported with in_order=False
+            logger.warning(
+                "using in_order=False with multiple workers does not give any guarantees for state management "
+                "and loading from a checkpoint may not work as expected."
+            )
         steps_since_snapshot = self._num_yielded - self._snapshot[self._SNAPSHOT_STEP]
         state_dict = {
             self._SNAPSHOT: self._snapshot,
@@ -1352,11 +1393,12 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             # call and `_IterableDatasetStopIteration` check below can mark
             # extra worker(s) as dead.
             while self._rcvd_idx < self._send_idx:
-                info = self._task_info[self._rcvd_idx]
-                worker_id = info[0]
-                if len(info) == 2 or self._workers_status[worker_id]:  # has data or is still active
-                    break
-                del self._task_info[self._rcvd_idx]
+                info = self._task_info.get(self._rcvd_idx, None)
+                if info:
+                    worker_id = info[0]
+                    if len(info) == 2 or self._workers_status[worker_id]:  # has data or is still active
+                        break
+                    del self._task_info[self._rcvd_idx]
                 self._rcvd_idx += 1
             else:
                 # no valid `self._rcvd_idx` is found (i.e., didn't break)
@@ -1374,6 +1416,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                     self._rcvd_idx += 1
                     continue
                 else:
+                    self._rcvd_idx += 1
                     return self._process_data(data, worker_id, state_dict)
 
             assert not self._shutdown and self._tasks_outstanding > 0
@@ -1394,6 +1437,13 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
 
             if idx != self._rcvd_idx:
                 # store out-of-order samples
+                if not self._in_order:
+                    # don't store it for later, process now
+                    if isinstance(data, _utils.worker._IterableDatasetStopIteration):
+                        self._update_worker_snapshot(self._worker_key(data.worker_id), state_dict)
+                        continue
+                    del self._task_info[idx]
+                    return self._process_data(data, worker_id, state_dict)
                 self._task_info[idx] += ((data, worker_id, state_dict),)
             else:
                 del self._task_info[idx]
@@ -1402,6 +1452,7 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
                     self._rcvd_idx += 1
                     continue
                 else:
+                    self._rcvd_idx += 1
                     return self._process_data(data, worker_id, state_dict)
 
     def _get_main_state(self):
@@ -1425,7 +1476,10 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
             if state_dict[_SAMPLER_ITER_STATE] is not None:
                 self._sampler_iter = try_to_deserialize(self._sampler_iter, state_dict[_SAMPLER_ITER_STATE])
         else:
-            if not isinstance(self._index_sampler, torch.utils.data.dataloader._InfiniteConstantSampler):
+            if not isinstance(
+                self._index_sampler,
+                torch.utils.data.dataloader._InfiniteConstantSampler,
+            ):
                 # Fallback to fastforward
                 self._sampler_iter = itertools.islice(self._index_sampler, self._sampler_iter_yielded, None)
         self._IterableDataset_len_called = state_dict[_ITERABLEDATASET_LEN_CALLED]
@@ -1433,7 +1487,8 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         self._base_seed = state_dict[self._BASE_SEED]
 
     def _try_put_index(self):
-        assert self._tasks_outstanding < self._prefetch_factor * self._num_workers
+        max_tasks = self._prefetch_factor * self._num_workers
+        assert self._tasks_outstanding < max_tasks
 
         try:
             index = self._next_index()
@@ -1461,7 +1516,12 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         for _ in range(self._num_workers):  # find the next active worker, if any
             worker_queue_idx = next(self._worker_queue_idx_cycle)
             if self._workers_status[worker_queue_idx]:
-                break
+                if self._in_order:
+                    break
+                elif self._workers_num_tasks[worker_queue_idx] < max_tasks // sum(self._workers_status):
+                    # when self._in_order is False, distribute work to a worker if it has capacity
+                    # _workers_status is updated only in this thread, so the sum is guaranteed > 0
+                    break
         else:
             # not found (i.e., didn't break)
             return
@@ -1472,11 +1532,12 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
 
         self._index_queues[worker_queue_idx].put((self._send_idx, (index, snapshot)))  # type: ignore[possibly-undefined]
         self._task_info[self._send_idx] = (worker_queue_idx,)
+        self._workers_num_tasks[worker_queue_idx] += 1
         self._tasks_outstanding += 1
         self._send_idx += 1
 
     def _process_data(self, data, worker_id, state_dict):
-        self._rcvd_idx += 1
+        self._workers_num_tasks[worker_id] -= 1
         self._try_put_index()
         if isinstance(data, ExceptionWrapper):
             data.reraise()
@@ -1489,9 +1550,17 @@ class _StatefulMultiProcessingDataLoaderIter(_StatefulBaseDataLoaderIter):
         return data
 
     def _take_snapshot(self):
+        main_snapshot_idx = None
         while len(self._main_snapshots) and (self._main_snapshots[0][0] <= self._rcvd_idx - 1):
             main_snapshot_idx, main_snapshot = self._main_snapshots.popleft()
-        assert main_snapshot_idx == self._rcvd_idx - 1, (main_snapshot_idx, self._rcvd_idx - 1)
+        if not self._in_order and main_snapshot_idx is None:
+            # in_order is False and no main snapshot is available as we're ahead of rcvd_idx
+            # we can't take a snapshot with the current implementation
+            return
+        assert main_snapshot_idx == self._rcvd_idx - 1, (
+            main_snapshot_idx,
+            self._rcvd_idx - 1,
+        )
         self._update_snapshot(
             self._num_yielded + 1,
             self._last_yielded_worker_id,

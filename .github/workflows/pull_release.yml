@@ -7,6 +7,10 @@ on:
       - .github/workflows/pull_release.yml
       - .github/workflows/_build_test_upload.yml
 
+permissions:
+  contents: write
+  id-token: write
+
 jobs:
   build_test_upload:
     if: github.repository == 'pytorch/data'
@@ -16,5 +20,3 @@ jobs:
       pre_dev_release: true
       pytorch_version: ""
       do-upload: false
-    secrets:
-      CONDA_TEST_PYTORCHBOT_TOKEN: ""

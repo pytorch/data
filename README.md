@@ -35,22 +35,31 @@ provides state_dict and load_state_dict functionality. See
 examples
 [in this Colab notebook](https://colab.research.google.com/drive/1tonoovEd7Tsi8EW8ZHXf0v3yHJGwZP8M?usp=sharing).
 
+## torchdata.nodes
+
+torchdata.nodes is a library of composable iterators (not iterables!) that let you chain together common dataloading and
+pre-proc operations. It follows a streaming programming model, although "sampler + Map-style" can still be configured if
+you desire. See [torchdata.nodes main page](torchdata/nodes) for more details. Stay tuned for tutorial on
+torchdata.nodes coming soon!
+
 ## Installation
 
 ### Version Compatibility
 
 The following is the corresponding `torchdata` versions and supported Python versions.
 
-| `torch`              | `torchdata`        | `python`                                |
-| -------------------- | ------------------ | --------------------------------------- |
-| `master` / `nightly` | `main` / `nightly` | `>=3.9`, `<=3.12` (`3.13` experimental) |
-| `2.5.0`              | `0.9.0`            | `>=3.9`, `<=3.12`                       |
-| `2.4.0`              | `0.8.0`            | `>=3.8`, `<=3.12`                       |
-| `2.0.0`              | `0.6.0`            | `>=3.8`, `<=3.11`                       |
-| `1.13.1`             | `0.5.1`            | `>=3.7`, `<=3.10`                       |
-| `1.12.1`             | `0.4.1`            | `>=3.7`, `<=3.10`                       |
-| `1.12.0`             | `0.4.0`            | `>=3.7`, `<=3.10`                       |
-| `1.11.0`             | `0.3.0`            | `>=3.7`, `<=3.10`                       |
+| `torch`              | `torchdata`        | `python`          |
+| -------------------- | ------------------ | ----------------- |
+| `master` / `nightly` | `main` / `nightly` | `>=3.9`, `<=3.13` |
+| `2.6.0`              | `0.11.0`           | `>=3.9`, `<=3.13` |
+| `2.5.0`              | `0.10.0`           | `>=3.9`, `<=3.12` |
+| `2.5.0`              | `0.9.0`            | `>=3.9`, `<=3.12` |
+| `2.4.0`              | `0.8.0`            | `>=3.8`, `<=3.12` |
+| `2.0.0`              | `0.6.0`            | `>=3.8`, `<=3.11` |
+| `1.13.1`             | `0.5.1`            | `>=3.7`, `<=3.10` |
+| `1.12.1`             | `0.4.1`            | `>=3.7`, `<=3.10` |
+| `1.12.0`             | `0.4.0`            | `>=3.7`, `<=3.10` |
+| `1.11.0`             | `0.3.0`            | `>=3.7`, `<=3.10` |
 
 ### Local pip or conda
 
