@@ -1,18 +1,7 @@
-# TorchData (see note below on current status)
+# TorchData
 
 [**What is TorchData?**](#what-is-torchdata) | [**Stateful DataLoader**](#stateful-dataloader) |
 [**Install guide**](#installation) | [**Contributing**](#contributing) | [**License**](#license)
-
-**:warning: June 2024 Status Update: Removing DataPipes and DataLoader V2**
-
-**We are re-focusing the torchdata repo to be an iterative enhancement of torch.utils.data.DataLoader. We do not plan on
-continuing development or maintaining the [`DataPipes`] and [`DataLoaderV2`] solutions, and they will be removed from
-the torchdata repo. We'll also be revisiting the `DataPipes` references in pytorch/pytorch. In release
-`torchdata==0.8.0` (July 2024) they will be marked as deprecated, and sometime after 0.9.0 (Oct 2024) they will be
-deleted. Existing users are advised to pin to `torchdata==0.9.0` or an older version until they are able to migrate
-away. Subsequent releases will not include DataPipes or DataLoaderV2. The old version of this README is
-[available here](https://github.com/pytorch/data/blob/v0.7.1/README.md). Please reach out if you suggestions or comments
-(please use [#1196](https://github.com/pytorch/data/issues/1196) for feedback).**
 
 ##
 
