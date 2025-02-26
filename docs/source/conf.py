@@ -117,4 +117,3 @@ def setup(app):
 intersphinx_mapping = {
     "graphviz": ("https://graphviz.readthedocs.io/en/stable/", None),
 }
-
