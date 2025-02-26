@@ -123,7 +123,7 @@ class LoaderIterator(BaseNode[T]):
             self._cached_state_dict = None
         else:
             item = next(self.root)
-        self._num_yielded += 1
+            self._num_yielded += 1
         return item
 
     def get_state(self) -> Dict[str, Any]:
