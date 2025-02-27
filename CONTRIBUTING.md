@@ -24,7 +24,7 @@ Your contributions may fall into the following categories:
 
 - If you plan to contribute new features, utility functions or extensions, please first open an issue and discuss the
   feature with us.
-  - We have a checklist of things to go through while adding a new DataPipe. See below.
+  - We have a checklist of things to go through while adding a new Node. See below.
 - If you would like to feature a usage example in our documentation, discuss that with us in an issue.
 
 ## Issues
