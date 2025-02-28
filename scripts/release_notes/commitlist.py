@@ -111,22 +111,6 @@ class CommitList:
             if CommitList.keywordInFile(file, ["docker/", ".github", "packaging/"]):
                 category = "releng"
                 break
-            if CommitList.keywordInFile(
-                file,
-                [
-                    "torchdata/dataloader2",
-                ],
-            ):
-                category = "dataloader2"
-                break
-            if CommitList.keywordInFile(
-                file,
-                [
-                    "torchdata/datapipes",
-                ],
-            ):
-                category = "datapipe"
-                break
 
         return Commit(commit_hash, category, topic, title)
 
