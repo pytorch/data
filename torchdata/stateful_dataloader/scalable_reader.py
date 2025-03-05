@@ -125,7 +125,7 @@ class _StatefulDataset(data.IterableDataset):
         [setattr(self, flag, state_dict[self.statename(flag)]) for flag in self.state_params]
 
 
-class _WrapperDataset(_StatefulDataset):
+class _NestedStatefulDataset(_StatefulDataset):
     """
     Stub for nested wrappers of _StatefulDatasets. Extends state fns with recursion.
     Requires a single instantiated sub-dataset (which may be replicated during setup fn).
@@ -276,7 +276,7 @@ class ArrowHandler(ShardFileHandler):
 #### -------------------------    DATASET LAYERS    ------------------------- ####
 
 
-class PreprocessDataset(_WrapperDataset):
+class PreprocessDataset(_NestedStatefulDataset):
     """
     Wrapper for a _StatefulDataset that applies a specified preprocessing
     or augmentation function to dataset outputs.
