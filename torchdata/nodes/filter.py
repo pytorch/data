@@ -1,4 +1,5 @@
-from typing import Any, Callable, Dict, TypeVar, Optional
+from typing import Any, Callable, Dict, Optional, TypeVar
+
 from torchdata.nodes import BaseNode
 
 
@@ -28,7 +29,7 @@ class Filter(BaseNode[T]):
         self.source = source_node
         self.filter_fn = filter_fn
         self._num_filtered = 0  # Count of items that did NOT pass the filter
-        self._num_yielded = 0   # Count of items that DID pass the filter
+        self._num_yielded = 0  # Count of items that DID pass the filter
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         """Reset the node to its initial state or to the provided state.
@@ -71,5 +72,5 @@ class Filter(BaseNode[T]):
         return {
             self.SOURCE_KEY: self.source.state_dict(),
             self.NUM_FILTERED_KEY: self._num_filtered,
-            self.NUM_YIELDED_KEY: self._num_yielded
+            self.NUM_YIELDED_KEY: self._num_yielded,
         }
