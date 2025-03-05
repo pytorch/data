@@ -2,6 +2,7 @@ import logging
 import math
 import os
 import pyarrow as pa
+from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 from typing import Any, Callable, List, Optional, Set
 
@@ -183,7 +184,7 @@ class _WrapperDataset(_StatefulDataset):
 #### -------------------------    FILE HANDLERS    ------------------------- ####
 
 
-class _ShardFileHandler:
+class ShardFileHandler(object, metaclass=ABCMeta):
     """
     Stub for shard file readers of different formats.
     Must implement open, length, indexing, and slicing functions.
@@ -196,20 +197,23 @@ class _ShardFileHandler:
         """
         return os.path.isfile(filepath)
 
+    @abstractmethod
     def open(self, path: str):
         """
         Open the file, to be indexed via self.get() method.
         Avoid reading entire multi-Gb files when possible!
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def length(self, path: str):
         """
         Calculate the number of documents in the given file.
         Avoid reading entire multi-Gb files when possible!
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get(self, reader, index: int, drop_tokens: Set):
         """
         Given the output of self.open() and an index, return the document at that index.
@@ -218,8 +222,9 @@ class _ShardFileHandler:
         but this is less important than avoiding reading entire files as above.
         Output must support len() method.
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def slice(self, doc, index: int, n_pull: int) -> List:
         """
         Given a long document, retrieve n_pull consecutive items starting from index.
@@ -227,10 +232,10 @@ class _ShardFileHandler:
         and self.open() is far more important.
         Must return a python list.
         """
-        raise NotImplementedError
+        pass
 
 
-class ArrowHandler(_ShardFileHandler):
+class ArrowHandler(ShardFileHandler):
     """
     Reader for indexable, pre-tokenized PyArrow shard files.
     Pyarrow shard files are expected to hold multiple RecordBatches,
@@ -318,7 +323,7 @@ class ScalableReader(_StatefulDataset):
         datapath: str, 
         rank: int, 
         worldsize: int,
-        filehandler: _ShardFileHandler,
+        filehandler: ShardFileHandler,
         delimiter_token: Any,
         bos_token: Optional[Any] = None,
         strip_tokens: Optional[Set[Any]] = set(),
