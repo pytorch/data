@@ -7,7 +7,7 @@ import torch
 from torch import distributed as dist
 
 from torchdata.stateful_dataloader import StatefulDataLoader
-from torchdata.stateful_dataloader.ibm_rescalable import (
+from torchdata.stateful_dataloader.scalable_reader import (
     ArrowHandler,
     PreprocessDataset,
     ScalableReader,
