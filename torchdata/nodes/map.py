@@ -197,15 +197,15 @@ class _ParallelMapperIter(Iterator[T]):
                 if self.method == "thread"
                 else mp_context.Process(target=_apply_udf, args=args, daemon=True)
             )
-        self._sort_q: queue.Queue = queue.Queue()
-        self._sort_thread = threading.Thread(
-            target=_sort_worker,
-            args=(self._intermed_q, self._sort_q, self._stop),
-            daemon=True,
-        )
 
         self._out_q = self._intermed_q
         if self.in_order:
+            self._sort_q: queue.Queue = queue.Queue()
+            self._sort_thread = threading.Thread(
+                target=_sort_worker,
+                args=(self._intermed_q, self._sort_q, self._stop),
+                daemon=True,
+            )
             self._out_q = self._sort_q
 
         self._read_thread.start()
