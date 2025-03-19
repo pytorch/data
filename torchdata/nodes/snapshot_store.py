@@ -58,6 +58,7 @@ class QueueSnapshotStore(SnapshotStore):
     def pop_version(self, version: int) -> Optional[Any]:
         ver, val = None, None
         with self._lock:
+            # pop all items that have a lesser version index
             while self._q.queue and version >= self._q.queue[0][0]:
                 ver, val = self._q.get_nowait()
 
