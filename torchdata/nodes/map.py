@@ -485,7 +485,7 @@ class _SingleThreadedMapper(Iterator[T]):
     - any other item: return the item
 
     A Bounded semaphore is used to limit concurrency and memory utilization.
-    If N items have been pulled from the source (i.e. acquire the semaphones),
+    If N items have been pulled from the source (i.e. acquire the semaphore),
     and M items have been yielded by this iterator (i.e. release the semaphore),
     we maintain the invariant that semaphore.value + (M - N) == prefetch_factor (modulo
     non-atomicness of operations).
