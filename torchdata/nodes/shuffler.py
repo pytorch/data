@@ -25,8 +25,7 @@ class Shuffler(BaseNode[T]):
     SOURCE_KEY = "source"
     RNG_STATE_KEY = "rng_state"
     BUFFER_KEY = "buffer"
-    NUM_SHUFFLED_KEY = "num_shuffled"
-    RANDOM_STATE_KEY = "random_state"
+    NUM_YIELDED_KEY = "num_yielded"
 
     def __init__(self, source_node: BaseNode[T], buffer_size: int, seed: Optional[int] = None):
         super().__init__()
@@ -37,7 +36,7 @@ class Shuffler(BaseNode[T]):
         self.buffer: Deque[T] = deque()
         self.rng = random.Random(seed)
         self._initial_seed = seed
-        self._num_shuffled = 0
+        self._num_yielded = 0
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         """Reset the node to its initial state or to the provided state.
@@ -47,29 +46,37 @@ class Shuffler(BaseNode[T]):
         """
         super().reset(initial_state)
         self.buffer.clear()
-        self._num_shuffled = 0
+        self._num_yielded = 0
 
         if initial_state is not None:
-            self.source.reset(initial_state.get(self.SOURCE_KEY))
-            self.rng.setstate(initial_state.get(self.RNG_STATE_KEY))
-            self.buffer = initial_state.get(self.BUFFER_KEY, [])
-            self._num_shuffled = initial_state.get(self.NUM_SHUFFLED_KEY, 0)
+            # Be strict about required keys in the state
+            self.source.reset(initial_state[self.SOURCE_KEY])
+            self.rng.setstate(initial_state[self.RNG_STATE_KEY])
+            self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
+
+            # Buffer will be refilled on next call to next()
         else:
             self.source.reset(None)
             if self._initial_seed is not None:
                 self.rng = random.Random(self._initial_seed)
 
     def _fill_buffer(self) -> bool:
-        """Fill buffer with items from source.
+        """Fill buffer with items from source until it reaches buffer_size or source is exhausted.
 
         Returns:
-            True if any items were added to the buffer, False otherwise.
+            True if the buffer contains any items after the call, False if the buffer is empty.
         """
+        if len(self.buffer) >= self.buffer_size:
+            return True  # Buffer is already full
+
         try:
+            items_added = 0
             while len(self.buffer) < self.buffer_size:
                 self.buffer.append(next(self.source))
-            return True
+                items_added += 1
+            return True  # Buffer is now full
         except StopIteration:
+            # Source is exhausted, check if we have any items in the buffer
             return len(self.buffer) > 0
 
     def next(self) -> T:
@@ -92,20 +99,20 @@ class Shuffler(BaseNode[T]):
 
         # Try to refill buffer
         self._fill_buffer()
-        self._num_shuffled += 1
+        self._num_yielded += 1
         return item
 
     def get_state(self) -> Dict[str, Any]:
         """Get the current state of the node.
 
         Returns:
-            A dictionary containing the state of the source node, buffer,
-            number of items shuffled, and random state.
+            Dict[str, Any]: A dictionary containing the state of the source node,
+            number of items yielded, and random generator state. The buffer
+            contents are not included to avoid serialization issues with large
+            or complex objects.
         """
         return {
             self.SOURCE_KEY: self.source.state_dict(),
+            self.NUM_YIELDED_KEY: self._num_yielded,
             self.RNG_STATE_KEY: self.rng.getstate(),
-            self.BUFFER_KEY: list(self.buffer),
-            self.NUM_SHUFFLED_KEY: self._num_shuffled,
-            self.RANDOM_STATE_KEY: self.rng.getstate(),
         }
