@@ -37,8 +37,9 @@ class Header(BaseNode[T]):
         """
         super().reset(initial_state)
         if initial_state is not None:
-            self.source.reset(initial_state.get(self.SOURCE_KEY))
-            self._num_yielded = initial_state.get(self.NUM_YIELDED_KEY, 0)
+            # Be strict about required keys in the state
+            self.source.reset(initial_state[self.SOURCE_KEY])
+            self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
         else:
             self.source.reset(None)
             self._num_yielded = 0
@@ -63,7 +64,7 @@ class Header(BaseNode[T]):
         """Get the current state of the node.
 
         Returns:
-            A dictionary containing the state of the source node and number of items yielded.
+            Dict[str, Any] - A dictionary containing the state of the source node and number of cycles completed.
         """
         return {
             self.SOURCE_KEY: self.source.state_dict(),
