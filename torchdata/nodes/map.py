@@ -181,6 +181,7 @@ class _ParallelMapperIter(Iterator[T]):
                 self._sem,
                 self._stop,
             ),
+            name="read_thread(target=_populate_queue)",
             daemon=True,
         )
         self._workers: List[Union[threading.Thread, mp.Process]] = []
@@ -193,7 +194,12 @@ class _ParallelMapperIter(Iterator[T]):
                 self._stop if self.method == "thread" else self._mp_stop,
             )
             self._workers.append(
-                threading.Thread(target=_apply_udf, args=args, daemon=True)
+                threading.Thread(
+                    target=_apply_udf,
+                    args=args,
+                    daemon=True,
+                    name=f"worker_thread_{worker_id}(target=_apply_udf)",
+                )
                 if self.method == "thread"
                 else mp_context.Process(target=_apply_udf, args=args, daemon=True)
             )
@@ -205,6 +211,7 @@ class _ParallelMapperIter(Iterator[T]):
                 target=_sort_worker,
                 args=(self._intermed_q, self._sort_q, self._stop),
                 daemon=True,
+                name="sort_thread(target=_sort_worker)",
             )
             self._out_q = self._sort_q
 
@@ -231,10 +238,10 @@ class _ParallelMapperIter(Iterator[T]):
 
     def __next__(self) -> T:
         while True:
-            if self._stop.is_set():
+            if self._stop.is_set() or self._mp_stop.is_set():
                 raise StopIteration()
             elif self._done and self._sem._value == self._max_tasks:
-                # Don't stop if we still have items in the queue
+                # _done is set, and semaphore is back at initial value, so we can stop
                 self._stop.set()
                 self._mp_stop.set()
                 raise StopIteration()
@@ -468,7 +475,7 @@ class _SingleThreadedMapper(Iterator[T]):
     Prefetcher and PinMemory.
 
     A thread is started on __init__ and stopped on __del__/_shutdown.
-    The thread runs _populate_queue, which acquires a BoundedSemaphore with initial value
+    The thread runs worker, which acquires a BoundedSemaphore with initial value
     of `prefetch_factor`.
 
     When next() is called on this iterator, it will block until an item is available on _q.
@@ -478,14 +485,15 @@ class _SingleThreadedMapper(Iterator[T]):
     - any other item: return the item
 
     A Bounded semaphore is used to limit concurrency and memory utilization.
-    If N items have been pulled from the source, and M items have been yielded by this iterator,
-    we maintain the invariant that semaphore.value + (N - M) == prefetch_factor (modulo
+    If N items have been pulled from the source (i.e. acquire the semaphore),
+    and M items have been yielded by this iterator (i.e. release the semaphore),
+    we maintain the invariant that semaphore.value + (M - N) == prefetch_factor (modulo
     non-atomicness of operations).
 
-    _populate_queue calls semaphore.acquire. When we pull an item from the queue, we
-    call semaphore.release (unless it's a StartupExceptionWrapper, because _populate_queue
+    worker calls semaphore.acquire. When we pull an item from the queue, we
+    call semaphore.release (unless it's a StartupExceptionWrapper, because worker
     does not acquire sempahores in this case). All outstanding items are either being
-    processed in _populate_queue, in the _q, or about to be returned by an in-flight next() call.
+    processed in worker, in the _q, or about to be returned by an in-flight next() call.
     """
 
     def __init__(
@@ -526,6 +534,7 @@ class _SingleThreadedMapper(Iterator[T]):
                 self._stop_event,
             ),
             daemon=True,
+            name=f"worker_thread(target={self.worker.__name__})",
         )
         self._thread.start()
 
