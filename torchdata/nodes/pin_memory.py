@@ -135,13 +135,16 @@ class PinMemory(BaseNode[T]):
         if self._it is not None:
             self._it._shutdown()
             del self._it
+
         self._it = _SingleThreadedMapper(
             source=self.source,
             prefetch_factor=1,
-            worker=functools.partial(
-                _pin_memory_loop,
-                device_id=self._current_device,
-                device=self._pin_memory_device,
+            worker=functools.wraps(_pin_memory_loop)(
+                functools.partial(
+                    _pin_memory_loop,
+                    device_id=self._current_device,
+                    device=self._pin_memory_device,
+                )
             ),
             snapshot_frequency=self.snapshot_frequency,
             initial_state=initial_state,
