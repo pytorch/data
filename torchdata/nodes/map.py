@@ -7,7 +7,9 @@
 import queue
 import threading
 import time
-from typing import Any, Callable, Dict, Generic, Iterator, List, Literal, Optional, Protocol, Sequence, TypeVar, Union
+
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from typing import Any, Callable, Dict, Generic, Iterator, Literal, Optional, Protocol, Sequence, TypeVar, Union
 
 import torch.multiprocessing as mp
 from torchdata.nodes.base_node import BaseNode, T
@@ -186,25 +188,37 @@ class _ParallelMapperIter(Iterator[T]):
             name="read_thread(target=_populate_queue)",
             daemon=self.daemonic_reading,
         )
-        self._workers: List[Union[threading.Thread, mp.Process]] = []
-        for worker_id in range(self.num_workers):
-            args = (
-                worker_id,
-                self._in_q,
-                self._intermed_q,
-                self.map_fn,
-                self._stop if self.method == "thread" else self._mp_stop,
-            )
-            self._workers.append(
-                threading.Thread(
-                    target=_apply_udf,
-                    args=args,
-                    daemon=True,
-                    name=f"worker_thread_{worker_id}(target=_apply_udf)",
-                )
-                if self.method == "thread"
-                else mp_context.Process(target=_apply_udf, args=args, daemon=True)
-            )
+
+        if self.method == "process":
+            self.pool = ProcessPoolExecutor(max_workers=self.num_workers)
+        elif self.method == "thread":
+            self.pool = ThreadPoolExecutor(max_workers=self.num_workers)
+
+        self._transformation_thread = threading.Thread(
+            target=self._transformation_pool,
+            name="transformation_thread(target=transformation_pool)",
+            daemon=True,
+        )
+        self._transformation_thread.start()
+
+        # for worker_id in range(self.num_workers):
+        #     args = (
+        #         worker_id,
+        #         self._in_q,
+        #         self._intermed_q,
+        #         self.map_fn,
+        #         self._stop if self.method == "thread" else self._mp_stop,
+        #     )
+        #     self._workers.append(
+        #         threading.Thread(
+        #             target=_apply_udf,
+        #             args=args,
+        #             daemon=True,
+        #             name=f"worker_thread_{worker_id}(target=_apply_udf)",
+        #         )
+        #         if self.method == "thread"
+        #         else mp_context.Process(target=_apply_udf, args=args, daemon=True)
+        #     )
 
         self._out_q = self._intermed_q
         if self.in_order:
@@ -218,8 +232,8 @@ class _ParallelMapperIter(Iterator[T]):
             self._out_q = self._sort_q
 
         self._read_thread.start()
-        for t in self._workers:
-            t.start()
+        # for t in self._workers:
+        #     t.start()
         if self.in_order:
             self._sort_thread.start()
 
@@ -234,6 +248,17 @@ class _ParallelMapperIter(Iterator[T]):
                     f"Tried to fast-forward {fast_forward} items during init but "
                     f"hit StopIteration after {i} items, this is likely a bug or malformed state_dict"
                 )
+
+    def _transformation_pool(self):
+        for worker_id in range(self.num_workers):
+            args = (
+                worker_id,
+                self._in_q,
+                self._intermed_q,
+                self.map_fn,
+                self._stop if self.method == "thread" else self._mp_stop,
+            )
+            self.pool.submit(_apply_udf, *args)  # type: ignore[union-attr]
 
     def __iter__(self) -> Iterator[T]:
         return self
@@ -288,10 +313,11 @@ class _ParallelMapperIter(Iterator[T]):
             self._read_thread.join(timeout=QUEUE_TIMEOUT * 5)
         if hasattr(self, "_sort_thread") and self._sort_thread.is_alive():
             self._sort_thread.join(timeout=QUEUE_TIMEOUT * 5)
-        if hasattr(self, "_workers"):
-            for t in self._workers:
-                if t.is_alive():
-                    t.join(timeout=QUEUE_TIMEOUT * 5)
+        # if hasattr(self, "_workers"):
+        #     for t in self._workers:
+        #         if t.is_alive():
+        #             t.join(timeout=QUEUE_TIMEOUT * 5)
+        self.pool.shutdown(wait=True)
 
 
 class _ParallelMapperImpl(BaseNode[T]):
