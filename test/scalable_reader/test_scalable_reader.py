@@ -32,7 +32,8 @@ def create_temp_dir(dir=None):
 class TestScalableReader(TestCase):
     def setUp(self):
         super().setUp()
-        datapath = create_temp_dir()
+        data = create_temp_dir()
+        datapath = data.name
         schema = pa.schema([pa.field("tokens", pa.uint32())])
         with pa.ipc.new_file(
             os.path.join(datapath, "fileshard_1.arrow"), schema
@@ -48,6 +49,7 @@ class TestScalableReader(TestCase):
                 out = list(range(50000 + i * 100, 50000 + i * 100 + 100))
                 writer.write(pa.record_batch([out], schema=schema))
         self.datapath = datapath.name
+        self.data = data
 
     def create_scalable(
         self,
