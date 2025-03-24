@@ -410,7 +410,7 @@ class ParallelMapper(BaseNode[T]):
         max_concurrent: Optional[int] = None,
         snapshot_frequency: int = 1,
         prebatch: Optional[int] = None,
-        daemonic_reading: Optional[bool] = False,
+        daemonic_reading: bool = False,
     ):
         super().__init__()
         assert method in ["thread", "process"]
