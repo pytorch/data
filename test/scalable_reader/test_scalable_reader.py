@@ -7,12 +7,12 @@
 import math
 import os
 import pyarrow as pa
+import tempfile
 import unittest
 
 import torch
 
 from torch.testing._internal.common_utils import TestCase
-from .._utils._common_utils_for_test import create_temp_dir
 
 from torchdata.stateful_dataloader import StatefulDataLoader
 from torchdata.stateful_dataloader.scalable_reader import ScalableReader, PreprocessDataset, ArrowHandler
@@ -22,6 +22,12 @@ from torchdata.stateful_dataloader.scalable_reader import ScalableReader, Prepro
 # and likely fail in horrible ways. Mostly here for discussion/reference at this stage.
 
 # TODO: test actual save/load distributed functions via multiprocessing
+
+def create_temp_dir(dir=None):
+    # The temp dir and files within it will be released and deleted in tearDown().
+    # Adding `noqa: P201` to avoid mypy's warning on not releasing the dir handle within this function.
+    temp_dir = tempfile.TemporaryDirectory(dir=dir)  # noqa: P201
+    return temp_dir
 
 class TestScalableReader(TestCase):
     def setUp(self):
