@@ -283,9 +283,7 @@ class _ParallelMapperIter(Iterator[T]):
 
     def _shutdown(self):
         self._stop.set()
-        print("ss...")
         self._mp_stop.set()
-        print("ss.!!..")
         if hasattr(self, "_read_thread") and self._read_thread.is_alive():
             self._read_thread.join(timeout=QUEUE_TIMEOUT * 5)
         if hasattr(self, "_sort_thread") and self._sort_thread.is_alive():
