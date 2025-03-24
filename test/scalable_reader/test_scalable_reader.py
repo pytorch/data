@@ -48,7 +48,7 @@ class TestScalableReader(TestCase):
             for i in range(500):
                 out = list(range(50000 + i * 100, 50000 + i * 100 + 100))
                 writer.write(pa.record_batch([out], schema=schema))
-        self.datapath = datapath.name
+        self.datapath = datapath
         self.data = data
 
     def create_scalable(
