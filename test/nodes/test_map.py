@@ -48,12 +48,12 @@ class TestMap(TestCase):
     def test_exception_handling_mapper_cuda(self):
         self._test_exception_handling_mapper(True, "thread")
 
-    # def test_exception_handling_mapper_multiprocess(self):
-    #     self._test_exception_handling_mapper(False, "process")
+    def test_exception_handling_mapper_multiprocess(self):
+        self._test_exception_handling_mapper(False, "process")
 
-    # @unittest.skipIf(not TEST_CUDA, "CUDA not found")
-    # def test_exception_handling_mapper_multiprocess_cuda(self):
-    #     self._test_exception_handling_mapper(True, "process")
+    @unittest.skipIf(not TEST_CUDA, "CUDA not found")
+    def test_exception_handling_mapper_multiprocess_cuda(self):
+        self._test_exception_handling_mapper(True, "process")
 
     def _test_map(self, in_order, method, prebatch) -> None:
         batch_size = 6
