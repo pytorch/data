@@ -131,7 +131,11 @@ class TestMap(TestCase):
         )
     )
     def test_save_load_state_thread(
-        self, midpoint: int, in_order: bool, snapshot_frequency: int, prebatch: Optional[int]
+        self,
+        midpoint: int,
+        in_order: bool,
+        snapshot_frequency: int,
+        prebatch: Optional[int],
     ):
         method = "thread"
         batch_size = 6
@@ -159,7 +163,11 @@ class TestMap(TestCase):
         )
     )
     def test_save_load_state_process(
-        self, midpoint: int, in_order: bool, snapshot_frequency: int, prebatch: Optional[int]
+        self,
+        midpoint: int,
+        in_order: bool,
+        snapshot_frequency: int,
+        prebatch: Optional[int],
     ):
         method = "process"
         batch_size = 6
