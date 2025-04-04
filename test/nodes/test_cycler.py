@@ -2,7 +2,7 @@ import itertools
 
 from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
-from torchdata.nodes import Cycler
+from torchdata.nodes import Cycler, Prefetcher
 from torchdata.nodes.adapters import IterableWrapper
 
 from .utils import MockSource, run_test_save_load_state, StatefulRangeNode
@@ -113,24 +113,94 @@ class TestCycler(TestCase):
         next(node)
         self.assertEqual(node._num_cycles, 1)
 
-    @parameterized.expand([[0]])  # Simplified to just one test case
+    @parameterized.expand(itertools.product([0, 3, 7]))
     def test_save_load_state(self, midpoint: int) -> None:
-        # Use a small, non-empty range to avoid issues
-        source = IterableWrapper(range(3))
-        node = Cycler(source)
+        # Use StatefulRangeNode like in test_header.py
+        n = 50
+        source = StatefulRangeNode(n=n)
+        node = Cycler(source, max_cycles=2)
+        run_test_save_load_state(self, node, midpoint)
 
-        # Manually run a simplified state saving/loading test
-        # Consume a few items
-        for _ in range(2):
+    def test_cycler_with_prefetcher(self) -> None:
+        # Test with Prefetcher after Cycler
+        n = 5
+        source = IterableWrapper(range(n))
+        cycler = Cycler(source)
+        node = Prefetcher(cycler, prefetch_factor=3)
+
+        # Collect 12 items (more than in the source)
+        results = []
+        for _ in range(12):
+            results.append(next(node))
+
+        # First 5 should match source, then it should cycle
+        expected = [0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1]
+        self.assertEqual(results, expected)
+
+        # Verify cycles counter in the cycler
+        self.assertEqual(cycler._num_cycles, 2)  # Completed 2 full cycles (5 + 5 items)
+
+    def test_cycler_with_max_cycles(self) -> None:
+        # Test with max_cycles parameter
+        source = IterableWrapper(range(3))
+        node = Cycler(source, max_cycles=2)  # Limit to 2 cycles
+
+        # Collect all items (should be 6 with max_cycles=2)
+        results = list(node)
+
+        # Should have exactly 2 cycles of the source
+        expected = [0, 1, 2, 0, 1, 2]
+        self.assertEqual(results, expected)
+
+        # Verify cycles counter
+        self.assertEqual(node._num_cycles, 2)
+
+        # Trying to iterate more should raise StopIteration
+        with self.assertRaises(StopIteration):
             next(node)
 
-        # Save state
-        state = node.state_dict()
+    def test_max_cycles_state_preservation(self) -> None:
+        # Test that max_cycles is properly preserved in state
+        source = IterableWrapper(range(3))
+        node = Cycler(source, max_cycles=2)
 
-        # Create a new node and load the state
-        new_node = Cycler(IterableWrapper(range(3)))
+        # Go through one full cycle and start the next
+        for _ in range(3):
+            next(node)
+
+        # At this point, we've consumed [0,1,2] but haven't yet triggered the cycle
+        next(node)  # This will trigger StopIteration internally and return the first item of the next cycle
+
+        # Now we should have completed 1 cycle
+        self.assertEqual(node._num_cycles, 1)
+
+        # Get state and create a new node
+        state = node.state_dict()
+        new_node = Cycler(IterableWrapper(range(3)), max_cycles=5)  # Different max_cycles
         new_node.reset(state)
 
-        # New node should continue from where old node left off
-        self.assertEqual(next(new_node), 2)
-        self.assertEqual(next(new_node), 0)  # Should have cycled
+        # max_cycles should be preserved from state
+        self.assertEqual(new_node.max_cycles, 2)
+
+        # Should only be able to get 2 more items (remaining from 2nd cycle)
+        results = []
+        for _ in range(2):
+            results.append(next(new_node))
+
+        self.assertEqual(results, [1, 2])  # We already got 0 before saving state
+
+        # Next item should be from the start of cycle 3, but we hit max_cycles=2
+        with self.assertRaises(StopIteration):
+            next(new_node)
+
+        # We should have completed 2 cycles
+        self.assertEqual(new_node._num_cycles, 2)
+
+    @parameterized.expand(itertools.product([0, 3, 7]))
+    def test_save_load_state_with_prefetcher(self, midpoint: int) -> None:
+        # Test save/load state with Prefetcher after Cycler
+        n = 50
+        source = StatefulRangeNode(n=n)
+        cycler = Cycler(source, max_cycles=1)
+        node = Prefetcher(cycler, prefetch_factor=2)
+        run_test_save_load_state(self, node, midpoint)
