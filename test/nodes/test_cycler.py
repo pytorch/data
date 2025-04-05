@@ -121,6 +121,15 @@ class TestCycler(TestCase):
         node = Cycler(source, max_cycles=2)
         run_test_save_load_state(self, node, midpoint)
 
+    @parameterized.expand(itertools.product([0, 3, 7]))
+    def test_save_load_state_with_prefetcher(self, midpoint: int) -> None:
+        # Test save/load state with Prefetcher after Cycler
+        n = 50
+        source = StatefulRangeNode(n=n)
+        cycler = Cycler(source, max_cycles=1)
+        node = Prefetcher(cycler, prefetch_factor=2)
+        run_test_save_load_state(self, node, midpoint)
+
     def test_cycler_with_prefetcher(self) -> None:
         # Test with Prefetcher after Cycler
         n = 5
@@ -195,12 +204,3 @@ class TestCycler(TestCase):
 
         # We should have completed 2 cycles
         self.assertEqual(new_node._num_cycles, 2)
-
-    @parameterized.expand(itertools.product([0, 3, 7]))
-    def test_save_load_state_with_prefetcher(self, midpoint: int) -> None:
-        # Test save/load state with Prefetcher after Cycler
-        n = 50
-        source = StatefulRangeNode(n=n)
-        cycler = Cycler(source, max_cycles=1)
-        node = Prefetcher(cycler, prefetch_factor=2)
-        run_test_save_load_state(self, node, midpoint)
