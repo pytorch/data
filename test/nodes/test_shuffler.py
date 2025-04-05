@@ -6,7 +6,7 @@ from torch.testing._internal.common_utils import TestCase
 from torchdata.nodes import Shuffler
 from torchdata.nodes.adapters import IterableWrapper
 
-from .utils import MockSource, run_test_save_load_state, StatefulRangeNode
+from .utils import MockSource, StatefulRangeNode
 
 
 class TestShuffler(TestCase):
