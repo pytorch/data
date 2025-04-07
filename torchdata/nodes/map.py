@@ -294,6 +294,7 @@ class _ParallelMapperIter(Iterator[T]):
             elif isinstance(item, ExceptionWrapper):
                 if not isinstance(item, StartupExceptionWrapper):
                     self._sem.release()
+                    self._shutdown()
                 item.reraise()
 
             self._steps_since_snapshot += 1
