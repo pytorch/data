@@ -7,6 +7,8 @@
 import queue
 import threading
 import time
+
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Dict, Generic, Iterator, List, Literal, Optional, Protocol, Sequence, TypeVar, Union
 
 import torch.multiprocessing as mp
@@ -65,7 +67,11 @@ class MapOverBatch(Generic[X, T]):
         return [self.map_fn(x) for x in xlist]
 
 
-def _sort_worker(in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_event: threading.Event):
+def _sort_worker(
+    in_q: Union[queue.Queue, mp.Queue],
+    out_q: queue.Queue,
+    stop_event: threading.Event,
+):
     buffer: Dict[int, Any] = {}
     cur_idx = 0
     while not stop_event.is_set():
@@ -89,6 +95,25 @@ def _sort_worker(in_q: Union[queue.Queue, mp.Queue], out_q: queue.Queue, stop_ev
         while cur_idx in buffer:
             out_q.put((buffer.pop(cur_idx), cur_idx), block=False)
             cur_idx += 1
+
+
+def _transformation_pool(
+    pool: ThreadPoolExecutor,
+    num_workers: int,
+    in_q: queue.Queue,
+    out_q: queue.Queue,
+    map_fn: Callable[[X], T],
+    stop_event: threading.Event,
+):
+    for worker_id in range(num_workers):
+        args = (
+            worker_id,
+            in_q,
+            out_q,
+            map_fn,
+            stop_event,
+        )
+        pool.submit(_apply_udf, *args)
 
 
 class _InlineMapperIter(Iterator[T]):
@@ -186,40 +211,49 @@ class _ParallelMapperIter(Iterator[T]):
             name="read_thread(target=_populate_queue)",
             daemon=self.daemonic_reading,
         )
-        self._workers: List[Union[threading.Thread, mp.Process]] = []
-        for worker_id in range(self.num_workers):
-            args = (
-                worker_id,
+        self._read_thread.start()
+
+        if self.method == "thread":
+            self.pool = ThreadPoolExecutor(max_workers=self.num_workers)
+
+            _transformation_pool(
+                self.pool,
+                self.num_workers,
                 self._in_q,
                 self._intermed_q,
                 self.map_fn,
-                self._stop if self.method == "thread" else self._mp_stop,
+                self._stop,
             )
-            self._workers.append(
-                threading.Thread(
-                    target=_apply_udf,
-                    args=args,
-                    daemon=True,
-                    name=f"worker_thread_{worker_id}(target=_apply_udf)",
+
+        elif self.method == "process":
+            self._workers: List[mp.Process] = []
+            for worker_id in range(self.num_workers):
+                args = (
+                    worker_id,
+                    self._in_q,
+                    self._intermed_q,
+                    self.map_fn,
+                    self._mp_stop,
                 )
-                if self.method == "thread"
-                else mp_context.Process(target=_apply_udf, args=args, daemon=True)
-            )
+                self._workers.append(mp_context.Process(target=_apply_udf, args=args, daemon=True))
+            for t in self._workers:
+                t.start()
 
         self._out_q = self._intermed_q
         if self.in_order:
             self._sort_q: queue.Queue = queue.Queue()
             self._sort_thread = threading.Thread(
                 target=_sort_worker,
-                args=(self._intermed_q, self._sort_q, self._stop),
+                args=(
+                    self._intermed_q,
+                    self._sort_q,
+                    self._stop,
+                ),
                 daemon=True,
                 name="sort_thread(target=_sort_worker)",
             )
             self._out_q = self._sort_q
 
-        self._read_thread.start()
-        for t in self._workers:
-            t.start()
         if self.in_order:
             self._sort_thread.start()
 
@@ -260,6 +294,7 @@ class _ParallelMapperIter(Iterator[T]):
             elif isinstance(item, ExceptionWrapper):
                 if not isinstance(item, StartupExceptionWrapper):
                     self._sem.release()
+                    self._shutdown()
                 item.reraise()
 
             self._steps_since_snapshot += 1
@@ -286,12 +321,14 @@ class _ParallelMapperIter(Iterator[T]):
         self._mp_stop.set()
         if hasattr(self, "_read_thread") and self._read_thread.is_alive():
             self._read_thread.join(timeout=QUEUE_TIMEOUT * 5)
-        if hasattr(self, "_sort_thread") and self._sort_thread.is_alive():
-            self._sort_thread.join(timeout=QUEUE_TIMEOUT * 5)
+        if hasattr(self, "pool"):
+            self.pool.shutdown(wait=True)
         if hasattr(self, "_workers"):
             for t in self._workers:
                 if t.is_alive():
                     t.join(timeout=QUEUE_TIMEOUT * 5)
+        if hasattr(self, "_sort_thread") and self._sort_thread.is_alive():
+            self._sort_thread.join(timeout=QUEUE_TIMEOUT * 5)
 
 
 class _ParallelMapperImpl(BaseNode[T]):
