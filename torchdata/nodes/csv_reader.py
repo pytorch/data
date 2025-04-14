@@ -52,9 +52,7 @@ class CSVReader(BaseNode[Union[List[str], Dict[str, str]]]):
             if self.return_dict:
                 if self._header is None:
                     raise ValueError("return_dict=True requires has_header=True")
-                self._reader = csv.DictReader(
-                    self._file, delimiter=self.delimiter, fieldnames=self._header
-                )
+                self._reader = csv.DictReader(self._file, delimiter=self.delimiter, fieldnames=self._header)
             else:
                 self._reader = csv.reader(self._file, delimiter=self.delimiter)
 
