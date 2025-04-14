@@ -13,47 +13,31 @@ from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
 from torchdata.nodes.base_node import BaseNode
 
-from torchdata.nodes.csv_dataloader import CSVReader
+from torchdata.nodes.csv_reader import CSVReader
 
 from .utils import run_test_save_load_state
 
 
 class TestCSVReader(TestCase):
     def setUp(self):
-        pass
+        self.test_data = [
+            ["Alice", "30", "New York"],
+            ["Bob", "25", "London"],
+            ["Charlie", "35", "Paris"],
+            ["David", "40", "Rome"],
+            ["Eve", "45", "Tokyo"],
+            ["Frank", "50", "Beijing"],
+            ["Grace", "55", "Shanghai"],
+            ["Harry", "60", "Seoul"],
+            ["Iris", "65", "Buenos Aires"],
+            ["Jack", "70", "Sao Paulo"],
+            ["Katy", "75", "Mexico City"],
+            ["Lily", "80", "Bogota"],
+        ]
 
     def _create_temp_csv(self, delimiter=",", header=True):
         if header:
-            self.test_data = [
-                ["name", "age", "city"],
-                ["Alice", "30", "New York"],
-                ["Bob", "25", "London"],
-                ["Charlie", "35", "Paris"],
-                ["David", "40", "Rome"],
-                ["Eve", "45", "Tokyo"],
-                ["Frank", "50", "Beijing"],
-                ["Grace", "55", "Shanghai"],
-                ["Harry", "60", "Seoul"],
-                ["Iris", "65", "Buenos Aires"],
-                ["Jack", "70", "São Paulo"],
-                ["Katy", "75", "Mexico City"],
-                ["Lily", "80", "Bogotá"],
-            ]
-        else:
-            self.test_data = [
-                ["Alice", "30", "New York"],
-                ["Bob", "25", "London"],
-                ["Charlie", "35", "Paris"],
-                ["David", "40", "Rome"],
-                ["Eve", "45", "Tokyo"],
-                ["Frank", "50", "Beijing"],
-                ["Grace", "55", "Shanghai"],
-                ["Harry", "60", "Seoul"],
-                ["Iris", "65", "Buenos Aires"],
-                ["Jack", "70", "Sao Paulo"],
-                ["Katy", "75", "Mexico City"],
-                ["Lily", "80", "Bogota"],
-            ]
+            self.test_data.insert(0, ["name", "age", "city"])
         fd, path = tempfile.mkstemp(suffix=".csv")
         with os.fdopen(fd, "w", newline="") as f:
             writer = csv.writer(f, delimiter=delimiter)
@@ -64,7 +48,6 @@ class TestCSVReader(TestCase):
         path = self._create_temp_csv(header=False)
         node = CSVReader(path, has_header=False)
         results = list(node)
-        print(results)
         self.assertEqual(len(results), len(self.test_data))
         self.assertEqual(results[0], ["Alice", "30", "New York"])
         self.assertEqual(results[-1], ["Lily", "80", "Bogota"])
@@ -77,6 +60,7 @@ class TestCSVReader(TestCase):
         self.assertEqual(len(results), len(self.test_data) - 1)
         self.assertEqual(results[0], {"name": "Alice", "age": "30", "city": "New York"})
         self.assertEqual(results[1]["city"], "London")
+        node.close()
 
     def test_different_delimiters(self):
         path = self._create_temp_csv(delimiter="|")
@@ -85,6 +69,7 @@ class TestCSVReader(TestCase):
 
         self.assertEqual(len(results), len(self.test_data) - 1)
         self.assertEqual(results[2]["city"], "Paris")
+        node.close()
 
     def test_state_management(self):
         path = self._create_temp_csv()
@@ -103,12 +88,14 @@ class TestCSVReader(TestCase):
 
         self.assertEqual(item["name"], "Lily")
         self.assertEqual(state[CSVReader.LINE_NUM_KEY], 11)
+        node.close()
 
     @parameterized.expand([3, 5, 7])
     def test_save_load_state(self, midpoint: int):
         path = self._create_temp_csv(header=True)
         node = CSVReader(path, has_header=True)
         run_test_save_load_state(self, node, midpoint)
+        node.close()
 
     def test_empty_file(self):
         path = self._create_temp_csv()
@@ -119,9 +106,12 @@ class TestCSVReader(TestCase):
         node = CSVReader(path, has_header=False)
         with self.assertRaises(StopIteration):
             next(node)
+        node.close()
 
     def test_header_validation(self):
-        with self.assertRaisesRegex(ValueError, "return_dict=True requires has_header=True"):
+        with self.assertRaisesRegex(
+            ValueError, "return_dict=True requires has_header=True"
+        ):
             CSVReader("dummy.csv", has_header=False, return_dict=True)
 
     def test_multi_epoch(self):
@@ -136,6 +126,7 @@ class TestCSVReader(TestCase):
         node.reset()
         epoch2 = list(node)
         self.assertEqual(epoch1, epoch2)
+        node.close()
 
     def test_partial_read_resume(self):
         path = self._create_temp_csv(header=True)
@@ -156,6 +147,7 @@ class TestCSVReader(TestCase):
         # Resume from second state
         node.reset(state2)
         self.assertEqual(next(node), self.test_data[3])
+        node.close()
 
     def test_file_closure(self):
         path = self._create_temp_csv()
@@ -166,6 +158,7 @@ class TestCSVReader(TestCase):
 
         # Verify file is closed
         self.assertTrue(node._file.closed)
+        node.close()
 
     def test_state_with_header(self):
         path = self._create_temp_csv()
@@ -179,6 +172,7 @@ class TestCSVReader(TestCase):
         node.reset(state)
         item = next(node)
         self.assertEqual(item["city"], "London")
+        node.close()
 
     def tearDown(self):
         # Clean up temporary files

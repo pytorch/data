@@ -1,12 +1,10 @@
 import csv
-from typing import Any, Dict, Iterator, List, Optional, TextIO, TypeVar, Union
+from typing import Any, Dict, Iterator, List, Optional, Sequence, TextIO, TypeVar, Union
 
-from torchdata.nodes.base_node import BaseNode
-
-T = TypeVar("T", bound=Union[List[str], Dict[str, str]])
+from torchdata.nodes.base_node import BaseNode, T
 
 
-class CSVReader(BaseNode[T]):
+class CSVReader(BaseNode[Union[List[str], Dict[str, str]]]):
     """Node for reading CSV files with state management and header support.
     Args:
         file_path: Path to CSV file
@@ -34,8 +32,8 @@ class CSVReader(BaseNode[T]):
             raise ValueError("return_dict=True requires has_header=True")
         self._file: Optional[TextIO] = None
         self._reader: Optional[Iterator[Union[List[str], Dict[str, str]]]] = None
-        self._header = None
-        self._line_num = 0
+        self._header: Optional[Sequence[str]] = None
+        self._line_num: int = 0
         self.reset()  # Initialize reader
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
@@ -54,10 +52,13 @@ class CSVReader(BaseNode[T]):
             if self.return_dict:
                 if self._header is None:
                     raise ValueError("return_dict=True requires has_header=True")
-                self._reader = csv.DictReader(self._file, delimiter=self.delimiter, fieldnames=self._header)
+                self._reader = csv.DictReader(
+                    self._file, delimiter=self.delimiter, fieldnames=self._header
+                )
             else:
                 self._reader = csv.reader(self._file, delimiter=self.delimiter)
 
+            assert isinstance(self._reader, Iterator)
             if self.has_header:
                 next(self._reader)  # Skip header
             for _ in range(target_line_num - self._line_num):
@@ -76,12 +77,13 @@ class CSVReader(BaseNode[T]):
                 if self.has_header:
                     self._header = next(self._reader)
 
-    def next(self) -> T:
+    def next(self) -> Union[List[str], Dict[str, str]]:
         try:
             assert isinstance(self._reader, Iterator)
             row = next(self._reader)
             self._line_num += 1
             return row
+
         except StopIteration:
             self.close()
             raise
