@@ -80,9 +80,7 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
         if initial_state is not None:
             self._datasets_exhausted = initial_state[self.DATASETS_EXHAUSTED_KEY]
             for k in range(self.num_datasets):
-                self.source_nodes[k].reset(
-                    initial_state[self.DATASET_NODE_STATES_KEY][k]
-                )
+                self.source_nodes[k].reset(initial_state[self.DATASET_NODE_STATES_KEY][k])
             self._current_dataset_index = initial_state[self.CURRENT_DATASET_INDEX_KEY]
         else:
             # Force a fresh iterator from all source nodes
@@ -99,9 +97,7 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
         # Raise StopIteration is StopCriteria is FIRST_DATASET_EXHAUSTED and
         # the first dataset is exhausted. Doing this to correctly catch StopIteration
         # when trying next(it) on already exhausted iterator
-        if self.stop_criteria == StopCriteria.FIRST_DATASET_EXHAUSTED and any(
-            self._datasets_exhausted
-        ):
+        if self.stop_criteria == StopCriteria.FIRST_DATASET_EXHAUSTED and any(self._datasets_exhausted):
             raise StopIteration()
         return
 
@@ -116,9 +112,7 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
                     self._datasets_exhausted[self._current_dataset_index]
                     and self.stop_criteria == StopCriteria.ALL_DATASETS_EXHAUSTED
                 ):
-                    self._current_dataset_index = (
-                        self._current_dataset_index + 1
-                    ) % self.num_datasets
+                    self._current_dataset_index = (self._current_dataset_index + 1) % self.num_datasets
                     continue
                 item = next(current_iterator)
             except StopIteration:
@@ -135,17 +129,13 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
                 item = next(self.source_nodes[self._current_dataset_index])
             break
         # If we did't throw StopIteration, increment the number of items yielded and return the item
-        self._current_dataset_index = (
-            self._current_dataset_index + 1
-        ) % self.num_datasets
+        self._current_dataset_index = (self._current_dataset_index + 1) % self.num_datasets
         return item
 
     def get_state(self) -> Dict[str, Any]:
         state = {
             self.CURRENT_DATASET_INDEX_KEY: self._current_dataset_index,
             self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
-            self.DATASET_NODE_STATES_KEY: {
-                k: self.source_nodes[k].state_dict() for k in range(self.num_datasets)
-            },
+            self.DATASET_NODE_STATES_KEY: {k: self.source_nodes[k].state_dict() for k in range(self.num_datasets)},
         }
         return state
