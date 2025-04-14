@@ -1,7 +1,9 @@
 import csv
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterator, List, Optional, TextIO, TypeVar, Union
 
-from torchdata.nodes.base_node import BaseNode, T
+from torchdata.nodes.base_node import BaseNode
+
+T = TypeVar("T", bound=Union[List[str], Dict[str, str]])
 
 
 class CSVReader(BaseNode[T]):
@@ -30,8 +32,8 @@ class CSVReader(BaseNode[T]):
         self.return_dict = return_dict
         if return_dict and not has_header:
             raise ValueError("return_dict=True requires has_header=True")
-        self._file = None
-        self._reader = None
+        self._file: Optional[TextIO] = None
+        self._reader: Optional[Iterator[Union[List[str], Dict[str, str]]]] = None
         self._header = None
         self._line_num = 0
         self.reset()  # Initialize reader
@@ -50,6 +52,8 @@ class CSVReader(BaseNode[T]):
             target_line_num = initial_state[self.LINE_NUM_KEY]
 
             if self.return_dict:
+                if self._header is None:
+                    raise ValueError("return_dict=True requires has_header=True")
                 self._reader = csv.DictReader(self._file, delimiter=self.delimiter, fieldnames=self._header)
             else:
                 self._reader = csv.reader(self._file, delimiter=self.delimiter)
@@ -74,6 +78,7 @@ class CSVReader(BaseNode[T]):
 
     def next(self) -> T:
         try:
+            assert isinstance(self._reader, Iterator)
             row = next(self._reader)
             self._line_num += 1
             return row
