@@ -7,11 +7,9 @@
 import csv
 import os
 import tempfile
-from typing import Any, Dict, List, Union
 
 from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
-from torchdata.nodes.base_node import BaseNode
 
 from torchdata.nodes.csv_reader import CSVReader
 
@@ -61,6 +59,7 @@ class TestCSVReader(TestCase):
         self.assertEqual(len(results), len(self.test_data) - 1)
         self.assertEqual(results[0], {"name": "Alice", "age": "30", "city": "New York"})
         self.assertEqual(results[1]["city"], "London")
+        self.assertEqual(results[-1]["city"], "Bogota")
         node.close()
 
     def test_different_delimiters(self):
@@ -70,25 +69,27 @@ class TestCSVReader(TestCase):
 
         self.assertEqual(len(results), len(self.test_data) - 1)
         self.assertEqual(results[2]["city"], "Paris")
+        self.assertEqual(results[-1]["city"], "Bogota")
         node.close()
 
     def test_state_management(self):
         path = self._create_temp_csv()
         node = CSVReader(path, has_header=True, return_dict=True)
-
+        print(f"initial state: {node.state_dict()}")
         for _ in range(11):
-            next(node)
+            _ = next(node)
+            print(f"element = {_}, state: {node.state_dict()}")
 
         state = node.state_dict()
 
         node.reset(state)
-
         item = next(node)
+
         with self.assertRaises(StopIteration):
             next(node)
 
         self.assertEqual(item["name"], "Lily")
-        self.assertEqual(state[CSVReader.LINE_NUM_KEY], 11)
+        self.assertEqual(state[CSVReader.NUM_LINES_YIELDED], 11)
         node.close()
 
     @parameterized.expand([3, 5, 7])
@@ -96,6 +97,28 @@ class TestCSVReader(TestCase):
         path = self._create_temp_csv(header=True)
         node = CSVReader(path, has_header=True)
         run_test_save_load_state(self, node, midpoint)
+        node.close()
+
+    def test_load_wrong_state(self):
+        path = self._create_temp_csv(header=True)
+        node = CSVReader(path, has_header=True)
+
+        state = node.state_dict()
+        state[CSVReader.HEADER_KEY] = None
+        with self.assertRaisesRegex(ValueError, "Check if has_header=True matches the state header=None"):
+            node.reset(state)
+
+        node.close()
+
+        node = CSVReader(path, has_header=False)
+        state = node.state_dict()
+        state[CSVReader.HEADER_KEY] = ["name", "age"]
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Check if has_header=False matches the state header=\['name', 'age'\]",
+        ):
+            node.reset(state)
+
         node.close()
 
     def test_empty_file(self):
