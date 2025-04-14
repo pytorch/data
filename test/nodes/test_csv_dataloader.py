@@ -51,6 +51,7 @@ class TestCSVReader(TestCase):
         self.assertEqual(len(results), len(self.test_data))
         self.assertEqual(results[0], ["Alice", "30", "New York"])
         self.assertEqual(results[-1], ["Lily", "80", "Bogota"])
+        node.close()
 
     def test_basic_read_dict(self):
         path = self._create_temp_csv()
@@ -135,7 +136,6 @@ class TestCSVReader(TestCase):
         # Read partial and get state
         _ = next(node)  # Line 0
         state1 = node.state_dict()
-        print(_, self.test_data[1])
 
         _ = next(node)  # Line 1
         state2 = node.state_dict()
