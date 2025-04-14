@@ -1,5 +1,5 @@
 import csv
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 
 from torchdata.nodes.base_node import BaseNode, T
 
@@ -42,7 +42,7 @@ class CSVReader(BaseNode[T]):
         if self._file and not self._file.closed:
             self._file.close()
 
-        self._file = open(self.file_path, "r", newline="", encoding="utf-8")
+        self._file = open(self.file_path, newline="", encoding="utf-8")
         self._line_num = 0
 
         if initial_state:
@@ -50,9 +50,7 @@ class CSVReader(BaseNode[T]):
             target_line_num = initial_state[self.LINE_NUM_KEY]
 
             if self.return_dict:
-                self._reader = csv.DictReader(
-                    self._file, delimiter=self.delimiter, fieldnames=self._header
-                )
+                self._reader = csv.DictReader(self._file, delimiter=self.delimiter, fieldnames=self._header)
             else:
                 self._reader = csv.reader(self._file, delimiter=self.delimiter)
 
@@ -74,7 +72,7 @@ class CSVReader(BaseNode[T]):
                 if self.has_header:
                     self._header = next(self._reader)
 
-    def next(self) -> Union[Dict[str, str], List[str]]:
+    def next(self) -> T:
         try:
             row = next(self._reader)
             self._line_num += 1
