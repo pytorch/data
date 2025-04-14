@@ -1,7 +1,7 @@
 import csv
-from typing import Any, Dict, Iterator, List, Optional, Sequence, TextIO, TypeVar, Union
+from typing import Any, Dict, Iterator, List, Optional, Sequence, TextIO, Union
 
-from torchdata.nodes.base_node import BaseNode, T
+from torchdata.nodes.base_node import BaseNode
 
 
 class CSVReader(BaseNode[Union[List[str], Dict[str, str]]]):
