@@ -110,9 +110,7 @@ class TestCSVReader(TestCase):
         node.close()
 
     def test_header_validation(self):
-        with self.assertRaisesRegex(
-            ValueError, "return_dict=True requires has_header=True"
-        ):
+        with self.assertRaisesRegex(ValueError, "return_dict=True requires has_header=True"):
             CSVReader("dummy.csv", has_header=False, return_dict=True)
 
     def test_multi_epoch(self):
