@@ -113,7 +113,7 @@ class TestCSVReader(TestCase):
     def test_empty_file(self):
         path = self._create_temp_csv()
         # Overwrite with empty file
-        with open(path, "w") as f:
+        with open(path, "w") as _:
             pass
 
         node = CSVReader(path, has_header=False)
@@ -121,9 +121,7 @@ class TestCSVReader(TestCase):
             next(node)
 
     def test_header_validation(self):
-        with self.assertRaisesRegex(
-            ValueError, "return_dict=True requires has_header=True"
-        ):
+        with self.assertRaisesRegex(ValueError, "return_dict=True requires has_header=True"):
             CSVReader("dummy.csv", has_header=False, return_dict=True)
 
     def test_multi_epoch(self):
