@@ -32,7 +32,7 @@ example.
 
 .. code:: python
 
-   import torch.utils.data
+   from torch.utils.data import RandomSampler
    from torchdata.nodes import SamplerWrapper, ParallelMapper, Loader
 
 
