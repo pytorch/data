@@ -23,6 +23,7 @@ class Shuffler(BaseNode[T]):
     """
 
     SOURCE_KEY = "source"
+    BUFFER_SIZE_KEY = "buffer_size"
     RNG_STATE_KEY = "rng_state"
     BUFFER_KEY = "buffer"
     NUM_YIELDED_KEY = "num_yielded"
@@ -43,6 +44,9 @@ class Shuffler(BaseNode[T]):
 
         Args:
             initial_state: Optional state dictionary to restore from.
+
+        Raises:
+            ValueError: If the buffer size in the state doesn't match the current buffer size.
         """
         super().reset(initial_state)
         self.buffer.clear()
@@ -51,10 +55,26 @@ class Shuffler(BaseNode[T]):
         if initial_state is not None:
             # Be strict about required keys in the state
             self.source.reset(initial_state[self.SOURCE_KEY])
-            self.rng.setstate(initial_state[self.RNG_STATE_KEY])
-            self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
 
-            # Buffer will be refilled on next call to next()
+            # Validate buffer size matches
+            if initial_state[self.BUFFER_SIZE_KEY] != self.buffer_size:
+                raise ValueError(
+                    f"Buffer size mismatch: state has {initial_state[self.BUFFER_SIZE_KEY]}, "
+                    f"but current shuffler has {self.buffer_size}"
+                )
+
+            self.rng.setstate(initial_state[self.RNG_STATE_KEY])
+            target_num_yielded = initial_state[self.NUM_YIELDED_KEY]
+
+            # Fast-forward to the target position
+            while self._num_yielded < target_num_yielded:
+                try:
+                    next(self)
+                except StopIteration:
+                    raise ValueError(
+                        f"Tried to fast-forward {target_num_yielded} items during init but "
+                        f"hit StopIteration after {self._num_yielded} items, this is likely a bug or malformed state_dict"
+                    )
         else:
             self.source.reset(None)
             if self._initial_seed is not None:
@@ -70,10 +90,8 @@ class Shuffler(BaseNode[T]):
             return True  # Buffer is already full
 
         try:
-            items_added = 0
             while len(self.buffer) < self.buffer_size:
                 self.buffer.append(next(self.source))
-                items_added += 1
             return True  # Buffer is now full
         except StopIteration:
             # Source is exhausted, check if we have any items in the buffer
@@ -113,6 +131,7 @@ class Shuffler(BaseNode[T]):
         """
         return {
             self.SOURCE_KEY: self.source.state_dict(),
+            self.BUFFER_SIZE_KEY: self.buffer_size,
             self.NUM_YIELDED_KEY: self._num_yielded,
             self.RNG_STATE_KEY: self.rng.getstate(),
         }
