@@ -229,3 +229,21 @@ class TestShuffler(TestCase):
 
         with self.assertRaises(ValueError):
             Shuffler(source, buffer_size=-3)
+
+    def test_buffer_size_mismatch(self) -> None:
+        # Create a shuffler with initial buffer size
+        source = IterableWrapper(range(10))
+        node = Shuffler(source, buffer_size=5, seed=42)
+
+        # Consume some items and get state
+        for _ in range(3):
+            next(node)
+        state = node.state_dict()
+
+        # Try to load state into a shuffler with different buffer size
+        new_source = IterableWrapper(range(10))
+        new_node = Shuffler(new_source, buffer_size=10, seed=42)  # Different buffer size
+
+        # Should raise ValueError due to buffer size mismatch
+        with self.assertRaises(ValueError):
+            new_node.reset(state)
