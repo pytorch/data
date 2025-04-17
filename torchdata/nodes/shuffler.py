@@ -64,17 +64,9 @@ class Shuffler(BaseNode[T]):
                 )
 
             self.rng.setstate(initial_state[self.RNG_STATE_KEY])
-            target_num_yielded = initial_state[self.NUM_YIELDED_KEY]
+            self._num_yielded = initial_state[self.NUM_YIELDED_KEY]
 
-            # Fast-forward to the target position
-            while self._num_yielded < target_num_yielded:
-                try:
-                    next(self)
-                except StopIteration:
-                    raise ValueError(
-                        f"Tried to fast-forward {target_num_yielded} items during init but "
-                        f"hit StopIteration after {self._num_yielded} items, this is likely a bug or malformed state_dict"
-                    )
+            # Buffer will be refilled on next call to next()
         else:
             self.source.reset(None)
             if self._initial_seed is not None:
