@@ -49,16 +49,18 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
     """
 
     CURRENT_DATASET_INDEX_KEY = "current_dataset_index"
+    DATASET_KEYS = "dataset_keys"
     DATASET_NODE_STATES_KEY = "dataset_node_states"
     DATASETS_EXHAUSTED_KEY = "datasets_exhausted"
-
+    
     def __init__(
         self,
         source_nodes: Mapping[str, BaseNode[T]],
         stop_criteria: str = StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
     ) -> None:
         super().__init__()
-        self.source_nodes = [source_nodes[k] for k in source_nodes.keys()]
+        self.dataset_keys = sorted(source_nodes.keys())
+        self.source_nodes = [source_nodes[k] for k in self.dataset_keys]
         self.num_datasets = len(self.source_nodes)
         self.stop_criteria = stop_criteria
         self._current_dataset_index = 0
@@ -75,9 +77,16 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
                 f"Invalid {self.stop_criteria=}. stop_criteria must be one of: CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED, ALL_DATASETS_EXHAUSTED, FIRST_DATASET_EXHAUSTED"
             )
 
+    def _validate_reset_dataset_keys(self, reset_keys)-> None:
+        if self.dataset_keys != reset_keys:
+            raise ValueError(
+                f"Invalid {self.dataset_keys=}. There is a mismatch between the dataset keys in the state and the current dataset keys. \n {self.dataset_keys=} \n {reset_keys=}"
+            )
+
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
         if initial_state is not None:
+            self._validate_reset_dataset_keys(initial_state[self.DATASET_KEYS])
             self._datasets_exhausted = initial_state[self.DATASETS_EXHAUSTED_KEY]
             for k in range(self.num_datasets):
                 self.source_nodes[k].reset(initial_state[self.DATASET_NODE_STATES_KEY][k])
@@ -135,7 +144,9 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
     def get_state(self) -> Dict[str, Any]:
         state = {
             self.CURRENT_DATASET_INDEX_KEY: self._current_dataset_index,
-            self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
+            self.DATASET_KEYS: copy.deepcopy(self.dataset_keys),
             self.DATASET_NODE_STATES_KEY: {k: self.source_nodes[k].state_dict() for k in range(self.num_datasets)},
+            self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
+            
         }
         return state
