@@ -275,11 +275,13 @@ class _ParallelMapperIter(Iterator[T]):
     def __next__(self) -> T:
         while True:
             if self._stop.is_set() or self._mp_stop.is_set():
+                self._shutdown()
                 raise StopIteration()
             elif self._done and self._sem._value == self._max_tasks:
                 # _done is set, and semaphore is back at initial value, so we can stop
                 self._stop.set()
                 self._mp_stop.set()
+                self._shutdown()
                 raise StopIteration()
             try:
                 item, idx = self._out_q.get(block=True, timeout=QUEUE_TIMEOUT)
