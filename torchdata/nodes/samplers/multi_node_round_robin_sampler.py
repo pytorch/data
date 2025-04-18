@@ -52,7 +52,7 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
     DATASET_KEYS = "dataset_keys"
     DATASET_NODE_STATES_KEY = "dataset_node_states"
     DATASETS_EXHAUSTED_KEY = "datasets_exhausted"
-    
+
     def __init__(
         self,
         source_nodes: Mapping[str, BaseNode[T]],
@@ -77,7 +77,7 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
                 f"Invalid {self.stop_criteria=}. stop_criteria must be one of: CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED, ALL_DATASETS_EXHAUSTED, FIRST_DATASET_EXHAUSTED"
             )
 
-    def _validate_reset_dataset_keys(self, reset_keys)-> None:
+    def _validate_reset_dataset_keys(self, reset_keys) -> None:
         if self.dataset_keys != reset_keys:
             raise ValueError(
                 f"Invalid {self.dataset_keys=}. There is a mismatch between the dataset keys in the state and the current dataset keys. \n {self.dataset_keys=} \n {reset_keys=}"
@@ -147,6 +147,5 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
             self.DATASET_KEYS: copy.deepcopy(self.dataset_keys),
             self.DATASET_NODE_STATES_KEY: {k: self.source_nodes[k].state_dict() for k in range(self.num_datasets)},
             self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
-            
         }
         return state
