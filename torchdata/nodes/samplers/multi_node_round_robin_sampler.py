@@ -4,15 +4,18 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 import copy
-from typing import Any, Dict, Mapping, Optional
+import logging
+from typing import Any, Dict, List, Mapping, Optional, Union
 
 from torchdata.nodes.base_node import BaseNode, T
 from torchdata.nodes.samplers.stop_criteria import StopCriteria
 
+logger = logging.getLogger(__name__)
+
 
 class MultiNodeRoundRobinSampler(BaseNode[T]):
     """A node that samples from multiple datasets in a round robin fashion.
-    This node expects to take in a dictionary of source nodes.
+    This node expects to take in a list or dictionary of source nodes. If a list is provided, it assumed that the order of the source nodes will be the same when the sampler is reset.
     The node implements the state using the following keys:
     - CURRENT_DATASET_INDEX_KEY: The index of the current dataset.
     - DATASET_NODE_STATES_KEY: A dictionary of states for each source node.
@@ -55,10 +58,16 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
 
     def __init__(
         self,
-        source_nodes: Mapping[str, BaseNode[T]],
+        source_nodes: Union[Mapping[str, BaseNode[T]], List[BaseNode[T]]],
         stop_criteria: str = StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
     ) -> None:
         super().__init__()
+        if isinstance(source_nodes, list):
+            logger.warning(
+                "source_nodes are provided as a list. Thus, if resetting the sampler with an initial_state, please make sure that the order of the source_nodes is same as in the previous state."
+            )
+            source_nodes = {f"ds_{i}": node for i, node in enumerate(source_nodes)}
+
         self.dataset_keys = sorted(source_nodes.keys())
         self.source_nodes = [source_nodes[k] for k in self.dataset_keys]
         self.num_datasets = len(self.source_nodes)
