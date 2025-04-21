@@ -467,11 +467,30 @@ class TestMultiNodeRoundRobinSampler(TestCase):
         batch_size = 3
         batcher = Batcher(sampler, batch_size=batch_size)
         next(batcher)
-        state_before_reset = sampler.get_state()
+        state_before_reset = batcher.get_state()
 
         datasets = self.get_equal_dataset(self._num_samples, self._num_datasets + 1)
         sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED)
-
+        batcher = Batcher(sampler, batch_size=batch_size)
         with self.assertRaises(ValueError) as cm:
-            sampler.reset(state_before_reset)
+            batcher.reset(state_before_reset)
+        self.assertIn("mismatch between the dataset keys", str(cm.exception))
+
+    def test_different_state_reset(self) -> None:
+        datasets = self.get_equal_dataset(self._num_samples, self._num_datasets)
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED)
+        batch_size = 3
+        batcher = Batcher(sampler, batch_size=batch_size)
+        next(batcher)
+        state_before_reset = batcher.get_state()
+
+        datasets = {}
+        datset_indices = list(range(self._num_datasets))
+        datset_indices.reverse()
+        for i in datset_indices:
+            datasets[f"ds{i}"] = IterableWrapper(DummyIterableDataset(self._num_samples, f"ds{i}"))
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED)
+        batcher = Batcher(sampler, batch_size=batch_size)
+        with self.assertRaises(ValueError) as cm:
+            batcher.reset(state_before_reset)
         self.assertIn("mismatch between the dataset keys", str(cm.exception))

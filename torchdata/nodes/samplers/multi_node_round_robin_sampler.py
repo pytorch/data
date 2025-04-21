@@ -68,7 +68,7 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
             )
             source_nodes = {f"ds_{i}": node for i, node in enumerate(source_nodes)}
 
-        self.dataset_keys = sorted(source_nodes.keys())
+        self.dataset_keys = list(source_nodes.keys())
         self.source_nodes = [source_nodes[k] for k in self.dataset_keys]
         self.num_datasets = len(self.source_nodes)
         self.stop_criteria = stop_criteria
