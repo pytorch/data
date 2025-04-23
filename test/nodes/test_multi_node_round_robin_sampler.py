@@ -30,13 +30,17 @@ class TestMultiNodeRoundRobinSampler(TestCase):
         self._num_samples = 1
         self._num_datasets = 3
 
-    def get_equal_dataset(self, num_samples, num_datasets, as_list=False) -> Union[List[BaseNode], Dict[str, BaseNode]]:
+    def get_equal_dataset(
+        self, num_samples, num_datasets, as_list=False
+    ) -> Union[List[BaseNode[T]], Dict[str, BaseNode[T]]]:
         """Returns a dictionary of datasets with the same number of samples"""
         if as_list:
             return [IterableWrapper(DummyIterableDataset(num_samples, f"ds{i}")) for i in range(num_datasets)]
         return {f"ds{i}": IterableWrapper(DummyIterableDataset(num_samples, f"ds{i}")) for i in range(num_datasets)}
 
-    def get_unequal_dataset(self, num_samples, num_datasets, as_list=False):
+    def get_unequal_dataset(
+        self, num_samples, num_datasets, as_list=False
+    ) -> Union[List[BaseNode[T]], Dict[str, BaseNode[T]]]:
         """Returns a dictionary of datasets with the different number of samples.
         For example if num_samples = 1 and num_datasets = 3, the datasets will have 1, 2, 3 samples, respectively.
         datasets = {"ds0":[0], "ds1":[0, 1], "ds2":[0, 1, 2]}
@@ -231,7 +235,7 @@ class TestMultiNodeRoundRobinSampler(TestCase):
         batch_size = 2
         batcher = Batcher(sampler, batch_size=batch_size)
         num_batches = 0
-        for batch in batcher:
+        for _ in batcher:
             num_batches += 1
         self.assertEqual(num_batches, num_samples * num_datasets // batch_size)
 
