@@ -4,15 +4,18 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 import copy
-from typing import Any, Dict, Mapping, Optional
+import logging
+from typing import Any, Dict, List, Mapping, Optional, Union
 
 from torchdata.nodes.base_node import BaseNode, T
 from torchdata.nodes.samplers.stop_criteria import StopCriteria
 
+logger = logging.getLogger(__name__)
+
 
 class MultiNodeRoundRobinSampler(BaseNode[T]):
     """A node that samples from multiple datasets in a round robin fashion.
-    This node expects to take in a dictionary of source nodes.
+    This node expects to take in a list or dictionary of source nodes. If a list is provided, it assumed that the order of the source nodes will be the same when the sampler is reset.
     The node implements the state using the following keys:
     - CURRENT_DATASET_INDEX_KEY: The index of the current dataset.
     - DATASET_NODE_STATES_KEY: A dictionary of states for each source node.
@@ -49,16 +52,24 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
     """
 
     CURRENT_DATASET_INDEX_KEY = "current_dataset_index"
+    DATASET_KEYS = "dataset_keys"
     DATASET_NODE_STATES_KEY = "dataset_node_states"
     DATASETS_EXHAUSTED_KEY = "datasets_exhausted"
 
     def __init__(
         self,
-        source_nodes: Mapping[str, BaseNode[T]],
+        source_nodes: Union[Mapping[str, BaseNode[T]], List[BaseNode[T]]],
         stop_criteria: str = StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
     ) -> None:
         super().__init__()
-        self.source_nodes = [source_nodes[k] for k in source_nodes.keys()]
+        if isinstance(source_nodes, list):
+            logger.warning(
+                "source_nodes are provided as a list. Thus, if resetting the sampler with an initial_state, please make sure that the order of the source_nodes is same as in the previous state."
+            )
+            source_nodes = {f"ds_{i}": node for i, node in enumerate(source_nodes)}
+
+        self.dataset_keys = list(source_nodes.keys())
+        self.source_nodes = [source_nodes[k] for k in self.dataset_keys]
         self.num_datasets = len(self.source_nodes)
         self.stop_criteria = stop_criteria
         self._current_dataset_index = 0
@@ -75,9 +86,16 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
                 f"Invalid {self.stop_criteria=}. stop_criteria must be one of: CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED, ALL_DATASETS_EXHAUSTED, FIRST_DATASET_EXHAUSTED"
             )
 
+    def _validate_reset_dataset_keys(self, reset_keys) -> None:
+        if self.dataset_keys != reset_keys:
+            raise ValueError(
+                f"Invalid {self.dataset_keys=}. There is a mismatch between the dataset keys in the state and the current dataset keys. \n {self.dataset_keys=} \n {reset_keys=}"
+            )
+
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
         if initial_state is not None:
+            self._validate_reset_dataset_keys(initial_state[self.DATASET_KEYS])
             self._datasets_exhausted = initial_state[self.DATASETS_EXHAUSTED_KEY]
             for k in range(self.num_datasets):
                 self.source_nodes[k].reset(initial_state[self.DATASET_NODE_STATES_KEY][k])
@@ -135,7 +153,8 @@ class MultiNodeRoundRobinSampler(BaseNode[T]):
     def get_state(self) -> Dict[str, Any]:
         state = {
             self.CURRENT_DATASET_INDEX_KEY: self._current_dataset_index,
-            self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
+            self.DATASET_KEYS: copy.deepcopy(self.dataset_keys),
             self.DATASET_NODE_STATES_KEY: {k: self.source_nodes[k].state_dict() for k in range(self.num_datasets)},
+            self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
         }
         return state
