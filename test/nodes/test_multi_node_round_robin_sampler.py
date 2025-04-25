@@ -90,6 +90,37 @@ class TestMultiNodeRoundRobinSampler(TestCase):
         self.assertEqual(num_sample + 1, num_samples)
 
     @parameterized.expand([4, 8, 16])
+    def test_single_dataset_tagged(self, num_samples: int) -> None:
+        datasets = self.get_equal_dataset(num_samples, 1)
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED, tag_output=True)
+        for num_sample, _ in enumerate(sampler):
+            pass
+        self.assertEqual(num_sample + 1, num_samples)
+
+        datasets = self.get_equal_dataset(num_samples, 1, as_list=True)
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED, tag_output=True)
+        for num_sample, _ in enumerate(sampler):
+            pass
+        self.assertEqual(num_sample + 1, num_samples)
+
+    @parameterized.expand([4, 8, 16])
+    def test_single_dataset_tags(self, num_samples: int) -> None:
+        datasets = self.get_equal_dataset(num_samples, 1)
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED, tag_output=True)
+        for num_sample, element in enumerate(sampler):
+            pass
+
+        self.assertEqual(num_sample + 1, num_samples)
+        self.assertIsInstance(element, dict)
+        self.assertEqual(set(element.keys()), {"dataset", "item"})
+        self.assertEqual(element["dataset"], "ds0")
+        datasets = self.get_equal_dataset(num_samples, 1, as_list=True)
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED, tag_output=True)
+        for num_sample, _ in enumerate(sampler):
+            pass
+        self.assertEqual(num_sample + 1, num_samples)
+
+    @parameterized.expand([4, 8, 16])
     def test_single_dataset_batched(self, num_samples: int) -> None:
         datasets = self.get_equal_dataset(num_samples, 1)
         sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED)
@@ -156,14 +187,14 @@ class TestMultiNodeRoundRobinSampler(TestCase):
         datasets = self.get_unequal_dataset(num_samples, num_datasets)
         total_items = sum(range(num_samples, num_samples + num_datasets))
         sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.ALL_DATASETS_EXHAUSTED)
-        for num_sample, item in enumerate(sampler):
+        for num_sample, _ in enumerate(sampler):
             pass
         self.assertEqual(num_sample + 1, total_items)
 
         datasets = self.get_unequal_dataset(num_samples, num_datasets, as_list=True)
         total_items = sum(range(num_samples, num_samples + num_datasets))
         sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.ALL_DATASETS_EXHAUSTED)
-        for num_sample, item in enumerate(sampler):
+        for num_sample, _ in enumerate(sampler):
             pass
         self.assertEqual(num_sample + 1, total_items)
 
@@ -226,7 +257,7 @@ class TestMultiNodeRoundRobinSampler(TestCase):
         batch_size = 2
         batcher = Batcher(sampler, batch_size=batch_size)
         num_batches = 0
-        for batch in batcher:
+        for _ in batcher:
             num_batches += 1
         self.assertEqual(num_batches, num_samples * num_datasets // batch_size)
 
@@ -249,7 +280,7 @@ class TestMultiNodeRoundRobinSampler(TestCase):
         num_samples = 4
         datasets = self.get_unequal_dataset(num_samples, num_datasets)
         sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED)
-        for num_sample, item in enumerate(sampler):
+        for num_sample, _ in enumerate(sampler):
             pass
         self.assertEqual(
             num_sample + 1,
@@ -258,7 +289,7 @@ class TestMultiNodeRoundRobinSampler(TestCase):
 
         datasets = self.get_unequal_dataset(num_samples, num_datasets, as_list=True)
         sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED)
-        for num_sample, item in enumerate(sampler):
+        for num_sample, _ in enumerate(sampler):
             pass
         self.assertEqual(
             num_sample + 1,
@@ -279,7 +310,7 @@ class TestMultiNodeRoundRobinSampler(TestCase):
         batcher = Batcher(sampler, batch_size=batch_size, drop_last=True)
 
         num_batches = 0
-        for batch in batcher:
+        for _ in batcher:
             num_batches += 1
 
         self.assertEqual(num_batches, 3)
@@ -377,6 +408,92 @@ class TestMultiNodeRoundRobinSampler(TestCase):
 
         self.assertEqual(batch_number, 2)
 
+    def test_tag_default_default_keys(self) -> None:
+        """Test that custom keys for tag_output work correctly."""
+        num_samples = 5
+        num_datasets = 3
+
+        # Test with dictionary input
+        datasets = self.get_equal_dataset(num_samples, num_datasets)
+        custom_keys = ("source", "data")
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED, tag_output=True)
+
+        for i, element in enumerate(sampler):
+            self.assertIsInstance(element, dict)
+            self.assertEqual(set(element.keys()), set(custom_keys))
+            self.assertTrue(element["dataset"].startswith("ds"))
+            # Since we're using round-robin, datasets should appear in order
+            expected_ds = f"ds{i % num_datasets}"
+            self.assertEqual(element["dataset"], expected_ds)
+
+        # Also test with list input
+        datasets = self.get_equal_dataset(num_samples, num_datasets, as_list=True)
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED, tag_output=True)
+
+        for i, element in enumerate(sampler):
+            self.assertIsInstance(element, dict)
+            self.assertEqual(set(element.keys()), set(custom_keys))
+            # Since we're using round-robin, datasets should appear in order
+            expected_ds = f"ds_{i % num_datasets}"  # Note list sources use ds_0 format
+            self.assertEqual(element["dataset"], expected_ds)
+
+    def test_tag_output_custom_keys(self) -> None:
+        """Test that custom keys for tag_output work correctly."""
+        num_samples = 5
+        num_datasets = 3
+
+        # Test with dictionary input
+        datasets = self.get_equal_dataset(num_samples, num_datasets)
+        custom_keys = ("source", "data")
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED, tag_output=custom_keys)
+
+        for i, element in enumerate(sampler):
+            self.assertIsInstance(element, dict)
+            self.assertEqual(set(element.keys()), set(custom_keys))
+            self.assertTrue(element["source"].startswith("ds"))
+            # Since we're using round-robin, datasets should appear in order
+            expected_ds = f"ds{i % num_datasets}"
+            self.assertEqual(element["source"], expected_ds)
+
+        # Also test with list input
+        datasets = self.get_equal_dataset(num_samples, num_datasets, as_list=True)
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED, tag_output=custom_keys)
+
+        for i, element in enumerate(sampler):
+            self.assertIsInstance(element, dict)
+            self.assertEqual(set(element.keys()), set(custom_keys))
+            # Since we're using round-robin, datasets should appear in order
+            expected_ds = f"ds_{i % num_datasets}"  # Note list sources use ds_0 format
+            self.assertEqual(element["source"], expected_ds)
+
+    def test_tag_output_invalid_inputs(self) -> None:
+        """Test validation of invalid tag_output inputs."""
+        datasets = self.get_equal_dataset(3, 3)
+
+        # Test with invalid type
+        with self.assertRaises(ValueError) as cm:
+            MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED, tag_output=123)
+        self.assertIn("tag_output must be a boolean or a tuple", str(cm.exception))
+
+        # Test with tuple of wrong length
+        with self.assertRaises(ValueError) as cm:
+            MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED, tag_output=("just_one",))
+        self.assertIn("tag_output tuple must contain exactly two strings", str(cm.exception))
+
+        # Test with tuple containing non-string elements
+        with self.assertRaises(ValueError) as cm:
+            MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED, tag_output=(123, "item"))
+        self.assertIn("tag_output tuple must contain exactly two strings", str(cm.exception))
+
+        # Test with tuple containing identical strings
+        with self.assertRaises(ValueError) as cm:
+            MultiNodeRoundRobinSampler(
+                datasets,
+                StopCriteria.FIRST_DATASET_EXHAUSTED,
+                tag_output=("same", "same"),
+            )
+        self.assertIn("tag_output[0] should not be equal to tag_output[1]", str(cm.exception))
+
     def test_unequal_batch_size(self) -> None:
         datasets = self.get_unequal_dataset(self._num_samples, self._num_datasets)
 
@@ -413,28 +530,29 @@ class TestMultiNodeRoundRobinSampler(TestCase):
                 StopCriteria.FIRST_DATASET_EXHAUSTED,
                 StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
             ],
+            [True, False, ("dataset_name_key", "item_key")],
         )
     )
-    def test_save_load_state(self, midpoint: int, stop_criteria: str) -> None:
+    def test_save_load_state(self, midpoint: int, stop_criteria: str, tag_output) -> None:
         num_samples = 1500
         num_datasets = 3
         datasets = self.get_equal_dataset(num_samples, num_datasets)
-        sampler = MultiNodeRoundRobinSampler(datasets, stop_criteria)
+        sampler = MultiNodeRoundRobinSampler(datasets, stop_criteria, tag_output)
         prefetcher = Prefetcher(sampler, 3)
         run_test_save_load_state(self, prefetcher, midpoint)
 
         datasets = self.get_unequal_dataset(num_samples, num_datasets)
-        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.ALL_DATASETS_EXHAUSTED)
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.ALL_DATASETS_EXHAUSTED, tag_output)
         prefetcher = Prefetcher(sampler, 3)
         run_test_save_load_state(self, prefetcher, 400)
 
         datasets = self.get_equal_dataset(num_samples, num_datasets, as_list=True)
-        sampler = MultiNodeRoundRobinSampler(datasets, stop_criteria)
+        sampler = MultiNodeRoundRobinSampler(datasets, stop_criteria, tag_output)
         prefetcher = Prefetcher(sampler, 3)
         run_test_save_load_state(self, prefetcher, midpoint)
 
         datasets = self.get_unequal_dataset(num_samples, num_datasets)
-        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.ALL_DATASETS_EXHAUSTED)
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.ALL_DATASETS_EXHAUSTED, tag_output)
         prefetcher = Prefetcher(sampler, 3)
         run_test_save_load_state(self, prefetcher, 400)
 
