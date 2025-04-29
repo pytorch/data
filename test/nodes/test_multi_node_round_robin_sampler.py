@@ -415,12 +415,12 @@ class TestMultiNodeRoundRobinSampler(TestCase):
 
         # Test with dictionary input
         datasets = self.get_equal_dataset(num_samples, num_datasets)
-        custom_keys = ("source", "data")
+        default_keys = ("dataset", "item")
         sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED, tag_output=True)
 
         for i, element in enumerate(sampler):
             self.assertIsInstance(element, dict)
-            self.assertEqual(set(element.keys()), set(custom_keys))
+            self.assertEqual(set(element.keys()), set(default_keys))
             self.assertTrue(element["dataset"].startswith("ds"))
             # Since we're using round-robin, datasets should appear in order
             expected_ds = f"ds{i % num_datasets}"
@@ -432,7 +432,7 @@ class TestMultiNodeRoundRobinSampler(TestCase):
 
         for i, element in enumerate(sampler):
             self.assertIsInstance(element, dict)
-            self.assertEqual(set(element.keys()), set(custom_keys))
+            self.assertEqual(set(element.keys()), set(default_keys))
             # Since we're using round-robin, datasets should appear in order
             expected_ds = f"ds_{i % num_datasets}"  # Note list sources use ds_0 format
             self.assertEqual(element["dataset"], expected_ds)
@@ -493,6 +493,102 @@ class TestMultiNodeRoundRobinSampler(TestCase):
                 tag_output=("same", "same"),
             )
         self.assertIn("tag_output[0] should not be equal to tag_output[1]", str(cm.exception))
+
+    def test_tag_output_with_different_stop_criteria(self) -> None:
+        """Test tagging with different stop criteria."""
+        # Use unequal datasets to better test the behavior
+        datasets = self.get_unequal_dataset(1, 3)
+
+        # ALL_DATASETS_EXHAUSTED
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.ALL_DATASETS_EXHAUSTED, tag_output=True)
+
+        results = list(sampler)
+        # We should have 6 items total (1 + 2 + 3)
+        self.assertEqual(len(results), 6)
+        for item in results:
+            self.assertIsInstance(item, dict)
+            self.assertEqual(set(item.keys()), {"dataset", "item"})
+
+        # Count occurrences of each dataset
+        dataset_counts = {}
+        for item in results:
+            ds = item["dataset"]
+            dataset_counts[ds] = dataset_counts.get(ds, 0) + 1
+
+        self.assertEqual(dataset_counts["ds0"], 1)
+        self.assertEqual(dataset_counts["ds1"], 2)
+        self.assertEqual(dataset_counts["ds2"], 3)
+
+        # FIRST_DATASET_EXHAUSTED
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED, tag_output=True)
+
+        results = list(sampler)
+        # We should have 3 items total (one from each dataset)
+        self.assertEqual(len(results), 3)
+
+        # Count occurrences of each dataset
+        dataset_counts = {}
+        for item in results:
+            ds = item["dataset"]
+            dataset_counts[ds] = dataset_counts.get(ds, 0) + 1
+
+        self.assertEqual(dataset_counts["ds0"], 1)
+        self.assertEqual(dataset_counts["ds1"], 1)
+        self.assertEqual(dataset_counts["ds2"], 1)
+
+        # CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED, tag_output=True)
+
+        results = list(sampler)
+        # We should have items from all datasets, with the smallest dataset repeated until all are exhausted
+        self.assertEqual(len(results), 11)
+
+        dataset_counts = {}
+        for item in results:
+            ds = item["dataset"]
+            dataset_counts[ds] = dataset_counts.get(ds, 0) + 1
+
+        # ds0 should appear the most since it's recycled
+        self.assertEqual(dataset_counts["ds0"], 4)
+        self.assertEqual(dataset_counts["ds1"], 4)
+        self.assertEqual(dataset_counts["ds2"], 3)
+
+    def test_tag_output_with_batching(self) -> None:
+        """Test that tagging works correctly with batching."""
+        num_samples = 6
+        num_datasets = 3
+        batch_size = 3
+
+        datasets = self.get_equal_dataset(num_samples, num_datasets)
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED, tag_output=True)
+
+        batcher = Batcher(sampler, batch_size=batch_size)
+
+        for batch in batcher:
+            self.assertEqual(len(batch), batch_size)
+            for item in batch:
+                self.assertIsInstance(item, dict)
+                self.assertEqual(set(item.keys()), {"dataset", "item"})
+                self.assertTrue(item["dataset"].startswith("ds"))
+
+        # Also test with custom keys
+        custom_keys = ("source", "data")
+        sampler = MultiNodeRoundRobinSampler(datasets, StopCriteria.FIRST_DATASET_EXHAUSTED, tag_output=custom_keys)
+
+        batcher = Batcher(sampler, batch_size=batch_size)
+
+        for batch_idx, batch in enumerate(batcher):
+            self.assertEqual(len(batch), batch_size)
+
+            # Verify the first batch contains one item from each dataset in order
+            if batch_idx == 0:
+                sources = [item["source"] for item in batch]
+                self.assertEqual(sources, ["ds0", "ds1", "ds2"])
+
+            for item in batch:
+                self.assertIsInstance(item, dict)
+                self.assertEqual(set(item.keys()), {"source", "data"})
+                self.assertTrue(item["source"].startswith("ds"))
 
     def test_unequal_batch_size(self) -> None:
         datasets = self.get_unequal_dataset(self._num_samples, self._num_datasets)
