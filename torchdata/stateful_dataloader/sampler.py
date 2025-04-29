@@ -218,7 +218,7 @@ class StatefulDistributedSampler(Sampler[int]):
             raise ValueError(f"Invalid rank {rank}, rank should be in the interval [0, {num_replicas - 1}]")
 
         if hasattr(dataset, "__len__"):
-            dataset_size = len(dataset)
+            self.dataset_size = len(dataset)
         else:
             self.dataset_size = dataset_size
         self.num_replicas = num_replicas
