@@ -199,12 +199,18 @@ class StatefulDistributedSampler(Sampler[int]):
         # Validate inputs
         if dataset is None and dataset_size is None:
             raise ValueError("Either dataset or dataset_size must be provided.")
-        if (
-            dataset is not None
-            and dataset_size is not None
-            and (hasattr(dataset, "__len__") and dataset_size != len(dataset))
-        ):
-            raise ValueError(f"dataset_size must match the length of the dataset. {dataset_size=} and {len(dataset)=}")
+
+        if dataset_size is not None:
+            if dataset is not None and (hasattr(dataset, "__len__") and dataset_size != len(dataset)):
+                raise ValueError(
+                    f"dataset_size must match the length of the dataset. {dataset_size=} and {len(dataset)=}"
+                )
+            self.dataset_size = dataset_size
+        else:
+            if dataset is not None and hasattr(dataset, "__len__"):
+                self.dataset_size = len(dataset)
+            else:
+                raise ValueError("Either a dataset with the __len__ method or dataset_size must be provided.")
 
         if num_replicas is None:
             if not dist.is_available():
@@ -217,10 +223,6 @@ class StatefulDistributedSampler(Sampler[int]):
         if rank >= num_replicas or rank < 0:
             raise ValueError(f"Invalid rank {rank}, rank should be in the interval [0, {num_replicas - 1}]")
 
-        if hasattr(dataset, "__len__"):
-            self.dataset_size = len(dataset)
-        else:
-            self.dataset_size = dataset_size
         self.num_replicas = num_replicas
         self.rank = rank
         self.epoch = 0
