@@ -37,16 +37,18 @@ class MultiNodeRoundRobinSampler(BaseNode[Union[List[Any], Dict[str, Any]]]):
     Args:
         source_nodes (Mapping[str, BaseNode[T]]): A dictionary of source nodes.
         stop_criteria (str): The stopping criteria. Default is CYCLE_UNTIL_ALL_DATASETS_EXHAUST.
+        tag_output (Union[bool, Tuple[str, str]]): If True, the output will be a dictionary with keys "dataset" and "item". If a tuple of two strings, the output will be a dictionary with the keys specified by the tuple. Default is False.
 
     Example:
         >>> # Dataset A: 1 element, Dataset B: 2 elements
         >>> sampler = MultiNodeRoundRobinSampler(
         ...     source_nodes={"A": A_node, "B": B_node},
         ...     stop_criteria=StopCriteria.FIRST_DATASET_EXHAUSTED
+        ...     tag_output=("dataset_name", "batch")
         ... )
         >>> list(sampler)  # Yields: A, B, then A is exhausted
-        [A_item, B_item1]
-        If using StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED:
+        ['dataset_name': 'ds0', 'batch': 'A_item'}, {'dataset_name': 'ds1', 'batch': 'B_item1'}]
+        If using StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED and tag_output=False:
         >>> list(sampler)  # Yields: A, B,  A (exhausted), B , A, then B is exhausted
         [A_item, B_item1, A_item, B_item2, A_item ]
     """
@@ -96,7 +98,8 @@ class MultiNodeRoundRobinSampler(BaseNode[Union[List[Any], Dict[str, Any]]]):
             self.output_keys = tag_output
         else:
             raise ValueError(
-                "tag_output must be a boolean or a tuple of two strings. Provided tag_output: ", tag_output
+                "tag_output must be a boolean or a tuple of two strings. Provided tag_output: ",
+                tag_output,
             )
 
     def _validate_stop_criteria(self) -> None:
@@ -175,7 +178,10 @@ class MultiNodeRoundRobinSampler(BaseNode[Union[List[Any], Dict[str, Any]]]):
         self._current_dataset_index = (dataset_idx + 1) % self.num_datasets
         # Wrap item in dictionary if tagging is enabled
         if self.output_keys is not None:
-            return {self.output_keys[0]: dataset_name, self.output_keys[1]: item}  # Type: ignore[return-value]
+            return {
+                self.output_keys[0]: dataset_name,
+                self.output_keys[1]: item,
+            }  # Type: ignore[return-value]
         return item
 
     def get_state(self) -> Dict[str, Any]:
