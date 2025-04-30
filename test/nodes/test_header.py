@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import itertools
 
 from parameterized import parameterized
@@ -46,7 +52,7 @@ class TestHeader(TestCase):
         node = Header(source, n=7)  # Limit to first 7 items
 
         # Test multi epoch
-        for epoch in range(2):
+        for _ in range(2):
             node.reset()
             results = list(node)
             self.assertEqual(len(results), 7)
