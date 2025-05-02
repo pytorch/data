@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 import copy
 import logging
-from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, List, Mapping, Optional, Union
 
 from torchdata.nodes.base_node import BaseNode, T
 from torchdata.nodes.samplers.stop_criteria import StopCriteria
@@ -13,7 +13,7 @@ from torchdata.nodes.samplers.stop_criteria import StopCriteria
 logger = logging.getLogger(__name__)
 
 
-class MultiNodeRoundRobinSampler(BaseNode[Union[List[Any], Dict[str, Any]]]):
+class MultiNodeRoundRobinSampler(BaseNode[Union[T, Dict[str, Any]]]):
     """A node that samples from multiple datasets in a round robin fashion.
     This node expects to take in a list or dictionary of source nodes. If a list is provided, it assumed that the order of the source nodes will be the same when the sampler is reset.
     The node implements the state using the following keys:
@@ -37,17 +37,17 @@ class MultiNodeRoundRobinSampler(BaseNode[Union[List[Any], Dict[str, Any]]]):
     Args:
         source_nodes (Mapping[str, BaseNode[T]]): A dictionary of source nodes.
         stop_criteria (str): The stopping criteria. Default is CYCLE_UNTIL_ALL_DATASETS_EXHAUST.
-        tag_output (Union[bool, Tuple[str, str]]): If True, the output will be a dictionary with keys "dataset" and "item". If a tuple of two strings, the output will be a dictionary with the keys specified by the tuple. Default is False.
+        tag_output (bool): Whether to tag the output with the dataset name. Default is False.
 
     Example:
         >>> # Dataset A: 1 element, Dataset B: 2 elements
         >>> sampler = MultiNodeRoundRobinSampler(
         ...     source_nodes={"A": A_node, "B": B_node},
         ...     stop_criteria=StopCriteria.FIRST_DATASET_EXHAUSTED
-        ...     tag_output=("dataset_name", "batch")
+        ...     tag_output=True
         ... )
         >>> list(sampler)  # Yields: A, B, then A is exhausted
-        ['dataset_name': 'ds0', 'batch': 'A_item'}, {'dataset_name': 'ds1', 'batch': 'B_item1'}]
+        ['dataset_key': 'ds0', 'data': 'A_item'}, {'dataset_key': 'ds1', 'data': 'B_item1'}]
         If using StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED and tag_output=False:
         >>> list(sampler)  # Yields: A, B,  A (exhausted), B , A, then B is exhausted
         [A_item, B_item1, A_item, B_item2, A_item ]
@@ -62,7 +62,7 @@ class MultiNodeRoundRobinSampler(BaseNode[Union[List[Any], Dict[str, Any]]]):
         self,
         source_nodes: Union[Mapping[str, BaseNode[T]], List[BaseNode[T]]],
         stop_criteria: str = StopCriteria.CYCLE_UNTIL_ALL_DATASETS_EXHAUSTED,
-        tag_output: Union[bool, Tuple[str, str]] = False,
+        tag_output: bool = False,
     ) -> None:
         super().__init__()
         if isinstance(source_nodes, list):
@@ -78,29 +78,9 @@ class MultiNodeRoundRobinSampler(BaseNode[Union[List[Any], Dict[str, Any]]]):
         self._current_dataset_index = 0
         self._validate_stop_criteria()
         self._datasets_exhausted = [False for _ in range(self.num_datasets)]
-        self.output_keys = None
-        if isinstance(tag_output, bool):
-            if tag_output:
-                self.output_keys = ("dataset", "item")
-            else:
-                self.output_keys = None
-        elif isinstance(tag_output, tuple):
-            if (
-                len(tag_output) != 2
-                or not isinstance(tag_output[0], str)
-                or not isinstance(tag_output[1], str)
-                or tag_output[0] == tag_output[1]
-            ):
-                raise ValueError(
-                    "tag_output tuple must contain exactly two strings and tag_output[0] should not be equal to tag_output[1]. Provided tag_output: ",
-                    tag_output,
-                )
-            self.output_keys = tag_output
-        else:
-            raise ValueError(
-                "tag_output must be a boolean or a tuple of two strings. Provided tag_output: ",
-                tag_output,
-            )
+        if not isinstance(tag_output, bool):
+            raise TypeError(f"tag_output must be a boolean (True/False), got {type(tag_output)}")
+        self.output_keys = ("dataset_key", "data") if tag_output else None
 
     def _validate_stop_criteria(self) -> None:
         if self.stop_criteria not in [
@@ -145,7 +125,7 @@ class MultiNodeRoundRobinSampler(BaseNode[Union[List[Any], Dict[str, Any]]]):
             raise StopIteration()
         return
 
-    def next(self) -> Union[List[Any], Dict[str, Any]]:
+    def next(self) -> Union[T, Dict[str, Any]]:
         while True:
             self._check_for_stop_iteration()
             current_iterator = self.source_nodes[self._current_dataset_index]
