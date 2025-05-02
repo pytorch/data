@@ -209,7 +209,7 @@ class _ParallelMapperIter(Iterator[T]):
                 self._stop,
             ),
             name="read_thread(target=_populate_queue)",
-            daemon=self.daemonic_reading,
+            daemon=False,
         )
         self._read_thread.start()
 
@@ -249,7 +249,7 @@ class _ParallelMapperIter(Iterator[T]):
                     self._sort_q,
                     self._stop,
                 ),
-                daemon=True,
+                daemon=False,
                 name="sort_thread(target=_sort_worker)",
             )
             self._out_q = self._sort_q
@@ -581,7 +581,7 @@ class _SingleThreadedMapper(Iterator[T]):
                 self._sem,
                 self._stop_event,
             ),
-            daemon=True,
+            daemon=False,
             name=f"worker_thread(target={self.worker.__name__})",
         )
         self._thread.start()
