@@ -597,6 +597,7 @@ class _SingleThreadedMapper(Iterator[T]):
     def __next__(self) -> T:
         while True:
             if self._stop_event.is_set():
+                self._shutdown()
                 raise StopIteration()
             try:
                 item, idx = self._q.get(block=True, timeout=QUEUE_TIMEOUT)
@@ -606,11 +607,13 @@ class _SingleThreadedMapper(Iterator[T]):
             if isinstance(item, StopIteration):
                 self._sem.release()
                 self._stop_event.set()
+                self._shutdown()
                 raise item
             elif isinstance(item, ExceptionWrapper):
                 if not isinstance(item, StartupExceptionWrapper):
                     # We don't need to release for startup exceptions
                     self._sem.release()
+                    self._shutdown()
                 self._stop_event.set()
                 item.reraise()
             else:
