@@ -377,6 +377,7 @@ class _ParallelMapperImpl(BaseNode[T]):
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
         super().reset(initial_state)
         if self._it is not None:
+            self._it._shutdown()
             del self._it
 
         if self.num_workers > 0:
