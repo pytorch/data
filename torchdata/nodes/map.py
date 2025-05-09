@@ -9,20 +9,7 @@ import threading
 import time
 
 from concurrent.futures import ThreadPoolExecutor
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Generic,
-    Iterator,
-    List,
-    Literal,
-    Optional,
-    Protocol,
-    Sequence,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, Dict, Generic, Iterator, List, Literal, Optional, Protocol, Sequence, TypeVar, Union
 
 import torch.multiprocessing as mp
 from torchdata.nodes.base_node import BaseNode, T
@@ -41,11 +28,14 @@ ACK_TIMEOUT = 300  # Timeout after 5 minutes
 
 # We define this protocol for type checking
 class _MultiprocessContext(Protocol):
-    def Process(self, *args, **kwargs): ...
+    def Process(self, *args, **kwargs):
+        ...
 
-    def Event(self, *args, **kwargs): ...
+    def Event(self, *args, **kwargs):
+        ...
 
-    def Queue(self, *args, **kwargs): ...
+    def Queue(self, *args, **kwargs):
+        ...
 
 
 X = TypeVar("X")
@@ -96,9 +86,7 @@ def _sort_worker(
             if idx in buffer:
                 # This is the easiest way to create an exception wrapper
                 try:
-                    raise ValueError(
-                        f"Duplicate index {idx=}, {buffer.keys()=}, {item=}"
-                    )
+                    raise ValueError(f"Duplicate index {idx=}, {buffer.keys()=}, {item=}")
                 except Exception:
                     item = ExceptionWrapper(where="in _sort_worker")
                 out_q.put((item, idx), block=False)
@@ -168,15 +156,9 @@ class _ParallelMapperIter(Iterator[T]):
         self.mp_context = mp_context
         self.snapshot_frequency = snapshot_frequency
 
-        self._in_q: Union[queue.Queue, mp.Queue] = (
-            queue.Queue() if method == "thread" else mp_context.Queue()
-        )
-        self._intermed_q: Union[queue.Queue, mp.Queue] = (
-            queue.Queue() if method == "thread" else mp_context.Queue()
-        )
-        self._max_tasks = (
-            2 * self.num_workers if max_concurrent is None else max_concurrent
-        )
+        self._in_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
+        self._intermed_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
+        self._max_tasks = 2 * self.num_workers if max_concurrent is None else max_concurrent
         self._sem = threading.BoundedSemaphore(value=self._max_tasks)
 
         self._done = False
@@ -227,9 +209,7 @@ class _ParallelMapperIter(Iterator[T]):
                     self.map_fn,
                     self._mp_stop,
                 )
-                self._workers.append(
-                    mp_context.Process(target=_apply_udf, args=_args, daemon=True)
-                )
+                self._workers.append(mp_context.Process(target=_apply_udf, args=_args, daemon=True))
             for t in self._workers:
                 t.start()
 
@@ -245,9 +225,7 @@ class _ParallelMapperIter(Iterator[T]):
             self._out_q = self._sort_q
 
         time.sleep(0.01)
-        self._snapshot = self._snapshot_store.get_initial_snapshot(
-            thread=_read_future, timeout=ACK_TIMEOUT
-        )
+        self._snapshot = self._snapshot_store.get_initial_snapshot(thread=_read_future, timeout=ACK_TIMEOUT)
 
         for i in range(fast_forward):
             try:
@@ -369,9 +347,7 @@ class _ParallelMapperImpl(BaseNode[T]):
             self._it = self._inline_reset(initial_state)
 
     def _inline_reset(self, initial_state: Optional[Dict[str, Any]]):
-        return _InlineMapperIter(
-            source=self.source, map_fn=self.map_fn, initial_state=initial_state
-        )
+        return _InlineMapperIter(source=self.source, map_fn=self.map_fn, initial_state=initial_state)
 
     def _parallel_reset(self, initial_state: Optional[Dict[str, Any]]):
         return _ParallelMapperIter(
@@ -568,9 +544,7 @@ class _SingleThreadedMapper(Iterator[T]):
         self._thread.start()
 
         # Try and get initial snapshot
-        self._snapshot = self._snapshot_store.get_initial_snapshot(
-            thread=self._thread, timeout=ACK_TIMEOUT
-        )
+        self._snapshot = self._snapshot_store.get_initial_snapshot(thread=self._thread, timeout=ACK_TIMEOUT)
 
         for i in range(self._fast_forward):
             try:
