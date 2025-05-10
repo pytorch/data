@@ -166,7 +166,6 @@ class _ParallelMapperIter(Iterator[T]):
         max_concurrent: Optional[int],
         snapshot_frequency: int,
         initial_state: Optional[Dict[str, Any]],
-        daemonic_reading: bool,
     ):
         self.source = source
         self.map_fn = map_fn
@@ -175,7 +174,6 @@ class _ParallelMapperIter(Iterator[T]):
         self.method = method
         self.mp_context = mp_context
         self.snapshot_frequency = snapshot_frequency
-        self.daemonic_reading = daemonic_reading
 
         self._in_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
         self._intermed_q: Union[queue.Queue, mp.Queue] = queue.Queue() if method == "thread" else mp_context.Queue()
@@ -209,7 +207,7 @@ class _ParallelMapperIter(Iterator[T]):
                 self._stop,
             ),
             name="read_thread(target=_populate_queue)",
-            daemon=self.daemonic_reading,
+            daemon=False,
         )
         self._read_thread.start()
 
@@ -249,7 +247,7 @@ class _ParallelMapperIter(Iterator[T]):
                     self._sort_q,
                     self._stop,
                 ),
-                daemon=True,
+                daemon=False,
                 name="sort_thread(target=_sort_worker)",
             )
             self._out_q = self._sort_q
@@ -352,7 +350,6 @@ class _ParallelMapperImpl(BaseNode[T]):
         multiprocessing_context: Optional[str] = None,
         max_concurrent: Optional[int] = None,
         snapshot_frequency: int = 1,
-        daemonic_reading: bool = True,
     ):
         super().__init__()
         assert method in ["thread", "process"]
@@ -371,7 +368,6 @@ class _ParallelMapperImpl(BaseNode[T]):
                 raise ValueError(f"{max_concurrent=} should be <= {num_workers=}!")
         self.max_concurrent = max_concurrent
         self.snapshot_frequency = snapshot_frequency
-        self.daemonic_reading = daemonic_reading
         self._it: Optional[Union[_InlineMapperIter[T], _ParallelMapperIter[T]]] = None
 
     def reset(self, initial_state: Optional[Dict[str, Any]] = None):
@@ -399,7 +395,6 @@ class _ParallelMapperImpl(BaseNode[T]):
             max_concurrent=self.max_concurrent,
             snapshot_frequency=self.snapshot_frequency,
             initial_state=initial_state,
-            daemonic_reading=self.daemonic_reading,
         )
 
     def next(self) -> T:
@@ -448,7 +443,6 @@ class ParallelMapper(BaseNode[T]):
         max_concurrent: Optional[int] = None,
         snapshot_frequency: int = 1,
         prebatch: Optional[int] = None,
-        daemonic_reading: bool = True,
     ):
         super().__init__()
         assert method in ["thread", "process"]
@@ -462,7 +456,6 @@ class ParallelMapper(BaseNode[T]):
         self.max_concurrent = max_concurrent
         self.snapshot_frequency = snapshot_frequency
         self.prebatch = prebatch
-        self.daemonic_reading = daemonic_reading
         if prebatch is None:
             self.map_fn = map_fn
             self.source = source
@@ -481,7 +474,6 @@ class ParallelMapper(BaseNode[T]):
             multiprocessing_context=self.multiprocessing_context,
             max_concurrent=self.max_concurrent,
             snapshot_frequency=self.snapshot_frequency,
-            daemonic_reading=self.daemonic_reading,
         )
 
         if self.prebatch is None:
@@ -581,7 +573,7 @@ class _SingleThreadedMapper(Iterator[T]):
                 self._sem,
                 self._stop_event,
             ),
-            daemon=True,
+            daemon=False,
             name=f"worker_thread(target={self.worker.__name__})",
         )
         self._thread.start()
@@ -605,6 +597,7 @@ class _SingleThreadedMapper(Iterator[T]):
     def __next__(self) -> T:
         while True:
             if self._stop_event.is_set():
+                self._shutdown()
                 raise StopIteration()
             try:
                 item, idx = self._q.get(block=True, timeout=QUEUE_TIMEOUT)
@@ -614,11 +607,13 @@ class _SingleThreadedMapper(Iterator[T]):
             if isinstance(item, StopIteration):
                 self._sem.release()
                 self._stop_event.set()
+                self._shutdown()
                 raise item
             elif isinstance(item, ExceptionWrapper):
                 if not isinstance(item, StartupExceptionWrapper):
                     # We don't need to release for startup exceptions
                     self._sem.release()
+                    self._shutdown()
                 self._stop_event.set()
                 item.reraise()
             else:
