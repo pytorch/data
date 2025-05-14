@@ -333,10 +333,7 @@ class TestMultiNodeWeightedSampler(TestCase):
 
     def test_multi_node_weighted_sampler_tag_output_non_dict_items(self) -> None:
         """Test MultiNodeWeightedSampler with tag_output=True for non-dictionary items"""
-        non_dict_datasets = {
-            f"ds{i}": IterableWrapper(range(i * 10, (i + 1) * 10))
-            for i in range(self._num_datasets)
-        }
+        non_dict_datasets = {f"ds{i}": IterableWrapper(range(i * 10, (i + 1) * 10)) for i in range(self._num_datasets)}
 
         node = MultiNodeWeightedSampler(
             non_dict_datasets,

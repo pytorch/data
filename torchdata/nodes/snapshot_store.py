@@ -1,8 +1,9 @@
 import queue
 import threading
 import time
+from concurrent.futures import Future
 from dataclasses import dataclass
-from typing import Any, Optional, Protocol
+from typing import Any, Optional, Protocol, Union
 
 from torchdata.nodes.constants import QUEUE_TIMEOUT
 
@@ -34,7 +35,7 @@ class SnapshotStore(Protocol):
     def append_initial_snapshot(self, snapshot: Any):
         ...
 
-    def get_initial_snapshot(self, thread: threading.Thread, timeout: float) -> Any:
+    def get_initial_snapshot(self, thread: Union[Future, threading.Thread], timeout: float) -> Any:
         ...
 
 
@@ -70,7 +71,7 @@ class QueueSnapshotStore(SnapshotStore):
     def append_initial_snapshot(self, snapshot: Any) -> None:
         self.append(snapshot, self.SNAPSHOT_INIT_VERSION)
 
-    def get_initial_snapshot(self, thread: threading.Thread, timeout: float = 60.0) -> Any:
+    def get_initial_snapshot(self, thread: Union[Future, threading.Thread], timeout: float = 60.0) -> Any:
         snapshot = None
         ver = None
 
@@ -80,17 +81,20 @@ class QueueSnapshotStore(SnapshotStore):
                 ver, snapshot = self._q.get(timeout=QUEUE_TIMEOUT)
             except queue.Empty:
                 pass
-            if not thread.is_alive():
-                # Don't test this until after QUEUE_TIMEOUT has elapsed because
-                # thread may inadvertently report "is_alive()==False"
+            # Don't test this until after QUEUE_TIMEOUT has elapsed because
+            # thread may inadvertently report "is_alive()==False"
+            if isinstance(thread, Future) and not thread.running():
+                break
+            if isinstance(thread, threading.Thread) and not thread.is_alive():
                 break
 
         if snapshot is not None and isinstance(snapshot, ExceptionWrapper):
             snapshot.reraise()
 
         if snapshot is None or ver != self.SNAPSHOT_INIT_VERSION:
+            error_msg = thread.is_alive() if isinstance(thread, threading.Thread) else thread.running()
             raise RuntimeError(
-                f"Failed to get initial snapshot after {time.time() - ack_t0} seconds! {thread.is_alive()=}, {snapshot=}, {ver=}"
+                f"Failed to get initial snapshot after {time.time() - ack_t0} seconds! thread.is_alive()={error_msg} {snapshot=}, {ver=}"
             )
 
         return snapshot

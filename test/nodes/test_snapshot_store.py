@@ -6,6 +6,7 @@
 
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 from torch.testing._internal.common_utils import TestCase
 from torchdata.nodes.constants import QUEUE_TIMEOUT
@@ -83,6 +84,16 @@ class TestQueueSnapshotStore(TestCase):
             with self.assertRaisesRegex(RuntimeError, r"thread.is_alive\(\)=False"):
                 store.get_initial_snapshot(thread, QUEUE_TIMEOUT * 5.0)
             thread.join()
+
+    def test_future_dead_error(self) -> None:
+        # Test when thread is alive for longer than QUEUE_TIMEOUT but dies afterwards
+        for _ in range(10):  # Should be reliable
+            store = QueueSnapshotStore()
+            pool = ThreadPoolExecutor()
+            future = pool.submit(_worker_raises_after, QUEUE_TIMEOUT * 3.0)
+            with self.assertRaisesRegex(RuntimeError, r"thread.is_alive\(\)=False"):
+                store.get_initial_snapshot(future, QUEUE_TIMEOUT * 5.0)
+            pool.shutdown()
 
 
 def _worker_init_error(store, sleep_time):
