@@ -48,6 +48,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         world_size (int): The world size of the distributed environment. Default is None, in
             which case the world size will be obtained from the distributed environment.
         seed (int): The seed for the random number generator. Default is 0.
+        tag_output (bool): Whether to tag the output with the dataset name. Default is False.
     """
 
     DATASET_NODE_STATES_KEY = "dataset_node_states"
@@ -64,6 +65,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         rank: Optional[int] = None,
         world_size: Optional[int] = None,
         seed: int = 0,
+        tag_output: bool = False,
     ) -> None:
         super().__init__()
 
@@ -74,6 +76,7 @@ class MultiNodeWeightedSampler(BaseNode[T]):
         self._num_yielded = 0
         self._started = False
         self.seed = seed
+        self.tag_output = tag_output
 
         # Setup rank and world size
         if rank is None or world_size is None:
@@ -194,7 +197,16 @@ class MultiNodeWeightedSampler(BaseNode[T]):
 
         # If we did't throw StopIteration, increment the number of items yielded and return the item
         self._num_yielded += 1
+
+        # If tag_output is True, add the dataset key to the output
+        if self.tag_output:
+            if isinstance(item, dict):  # type: ignore[used-before-def]
+                item["dataset_key"] = key  # type: ignore[used-before-def]
+            else:
+                item = {"dataset_key": key, "data": item}
+
         return item
+
 
     def get_state(self) -> Dict[str, Any]:
         return {

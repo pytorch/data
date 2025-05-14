@@ -573,7 +573,7 @@ class _SingleThreadedMapper(Iterator[T]):
                 self._sem,
                 self._stop_event,
             ),
-            daemon=False,
+            daemon=True,
             name=f"worker_thread(target={self.worker.__name__})",
         )
         self._thread.start()
