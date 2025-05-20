@@ -207,7 +207,6 @@ class MultiNodeWeightedSampler(BaseNode[T]):
 
         return item
 
-
     def get_state(self) -> Dict[str, Any]:
         return {
             self.DATASETS_EXHAUSTED_KEY: copy.deepcopy(self._datasets_exhausted),
