@@ -97,25 +97,6 @@ def _sort_worker(
             cur_idx += 1
 
 
-def _transformation_pool(
-    pool: ThreadPoolExecutor,
-    num_workers: int,
-    in_q: queue.Queue,
-    out_q: queue.Queue,
-    map_fn: Callable[[X], T],
-    stop_event: threading.Event,
-):
-    for worker_id in range(num_workers):
-        args = (
-            worker_id,
-            in_q,
-            out_q,
-            map_fn,
-            stop_event,
-        )
-        pool.submit(_apply_udf, *args)
-
-
 class _InlineMapperIter(Iterator[T]):
     """Non-Parallel implementation of Mapper"""
 
@@ -196,67 +177,55 @@ class _ParallelMapperIter(Iterator[T]):
             self.source.reset()
         self._snapshot_store = QueueSnapshotStore()
 
-        self._read_thread = threading.Thread(
-            target=_populate_queue,
-            args=(
-                self.source,
-                self._in_q,
-                self._snapshot_store,
-                self.snapshot_frequency,
-                self._sem,
-                self._stop,
-            ),
-            name="read_thread(target=_populate_queue)",
-            daemon=False,
+        self.pool = ThreadPoolExecutor(self.num_workers + 2)
+        _read_future = self.pool.submit(
+            _populate_queue,
+            self.source,
+            self._in_q,
+            self._snapshot_store,
+            self.snapshot_frequency,
+            self._sem,
+            self._stop,
         )
-        self._read_thread.start()
 
         if self.method == "thread":
-            self.pool = ThreadPoolExecutor(max_workers=self.num_workers)
-
-            _transformation_pool(
-                self.pool,
-                self.num_workers,
-                self._in_q,
-                self._intermed_q,
-                self.map_fn,
-                self._stop,
-            )
+            for worker_id in range(self.num_workers):
+                self.pool.submit(
+                    _apply_udf,
+                    worker_id,
+                    self._in_q,
+                    self._intermed_q,
+                    self.map_fn,
+                    self._stop,
+                )
 
         elif self.method == "process":
             self._workers: List[mp.Process] = []
             for worker_id in range(self.num_workers):
-                args = (
+                _args = (
                     worker_id,
                     self._in_q,
                     self._intermed_q,
                     self.map_fn,
                     self._mp_stop,
                 )
-                self._workers.append(mp_context.Process(target=_apply_udf, args=args, daemon=True))
+                self._workers.append(mp_context.Process(target=_apply_udf, args=_args, daemon=True))
             for t in self._workers:
                 t.start()
 
         self._out_q = self._intermed_q
         if self.in_order:
             self._sort_q: queue.Queue = queue.Queue()
-            self._sort_thread = threading.Thread(
-                target=_sort_worker,
-                args=(
-                    self._intermed_q,
-                    self._sort_q,
-                    self._stop,
-                ),
-                daemon=False,
-                name="sort_thread(target=_sort_worker)",
+            self.pool.submit(
+                _sort_worker,
+                self._intermed_q,
+                self._sort_q,
+                self._stop,
             )
             self._out_q = self._sort_q
 
-        if self.in_order:
-            self._sort_thread.start()
-
         time.sleep(0.01)
-        self._snapshot = self._snapshot_store.get_initial_snapshot(thread=self._read_thread, timeout=ACK_TIMEOUT)
+        self._snapshot = self._snapshot_store.get_initial_snapshot(thread=_read_future, timeout=ACK_TIMEOUT)
 
         for i in range(fast_forward):
             try:
@@ -319,16 +288,12 @@ class _ParallelMapperIter(Iterator[T]):
     def _shutdown(self):
         self._stop.set()
         self._mp_stop.set()
-        if hasattr(self, "_read_thread") and self._read_thread.is_alive():
-            self._read_thread.join(timeout=QUEUE_TIMEOUT * 5)
         if hasattr(self, "pool"):
             self.pool.shutdown(wait=True)
         if hasattr(self, "_workers"):
             for t in self._workers:
                 if t.is_alive():
                     t.join(timeout=QUEUE_TIMEOUT * 5)
-        if hasattr(self, "_sort_thread") and self._sort_thread.is_alive():
-            self._sort_thread.join(timeout=QUEUE_TIMEOUT * 5)
 
 
 class _ParallelMapperImpl(BaseNode[T]):
@@ -521,7 +486,7 @@ class _SingleThreadedMapper(Iterator[T]):
     When next() is called on this iterator, it will block until an item is available on _q.
     Next will perform the following depending on what is pulled from the q:
     - StopIteration: raise StopIteration. Any subsequent next() calls will also raise StopIteration
-    - ExceptionWrapper: call reraise() on the exception wraper
+    - ExceptionWrapper: call reraise() on the exception wrapper
     - any other item: return the item
 
     A Bounded semaphore is used to limit concurrency and memory utilization.
