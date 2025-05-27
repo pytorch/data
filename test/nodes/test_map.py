@@ -240,3 +240,37 @@ class TestMap(TestCase):
 
             # Verify that shutdown was called
             mock_shutdown.assert_called()
+
+    def test_thread_pool_executor_blocking_shutdown(self):
+        """Test that the ThreadPoolExecutor shutdown respects the blocking parameter."""
+        src = MockSource(num_samples=10)
+        node = ParallelMapper(
+            src,
+            RandomSleepUdf(),
+            num_workers=2,
+            method="thread",
+        )
+
+        node.reset()
+        parallel_mapper_iter = node._it._it  # type: ignore
+
+        for _ in range(5):
+            next(node)
+
+        # Test blocking=True (default)
+        with mock.patch("concurrent.futures.ThreadPoolExecutor.shutdown") as mock_shutdown:
+            parallel_mapper_iter._shutdown(blocking=True)
+            # Verify that shutdown was called with wait=True
+            mock_shutdown.assert_called_with(wait=True)
+
+        node.reset()
+        parallel_mapper_iter = node._it._it  # type: ignore
+
+        for _ in range(5):
+            next(node)
+
+        # Test blocking=False
+        with mock.patch("concurrent.futures.ThreadPoolExecutor.shutdown") as mock_shutdown:
+            parallel_mapper_iter._shutdown(blocking=False)
+            # Verify that shutdown was called with wait=False and cancel_futures=True
+            mock_shutdown.assert_called_with(wait=False, cancel_futures=True)
