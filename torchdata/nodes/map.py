@@ -285,11 +285,14 @@ class _ParallelMapperIter(Iterator[T]):
     def __del__(self):
         self._shutdown()
 
-    def _shutdown(self):
+    def _shutdown(self, blocking=True):
         self._stop.set()
         self._mp_stop.set()
         if hasattr(self, "pool"):
-            self.pool.shutdown(wait=True)
+            if blocking:
+                self.pool.shutdown(wait=True)
+            else:
+                self.pool.shutdown(wait=False, cancel_futures=True)
         if hasattr(self, "_workers"):
             for t in self._workers:
                 if t.is_alive():
