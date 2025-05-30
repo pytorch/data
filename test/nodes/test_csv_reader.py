@@ -105,7 +105,9 @@ class TestCSVReader(TestCase):
 
         state = node.state_dict()
         state[CSVReader.HEADER_KEY] = None
-        with self.assertRaisesRegex(ValueError, "Check if has_header=True matches the state header=None"):
+        with self.assertRaisesRegex(
+            ValueError, "Check if has_header=True matches the state header=None"
+        ):
             node.reset(state)
 
         node.close()
@@ -133,7 +135,9 @@ class TestCSVReader(TestCase):
         node.close()
 
     def test_header_validation(self):
-        with self.assertRaisesRegex(ValueError, "return_dict=True requires has_header=True"):
+        with self.assertRaisesRegex(
+            ValueError, "return_dict=True requires has_header=True"
+        ):
             CSVReader("dummy.csv", has_header=False, return_dict=True)
 
     def test_multi_epoch(self):

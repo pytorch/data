@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import csv
 from itertools import islice
 from typing import Any, Dict, Iterator, List, Optional, Sequence, TextIO, Union
@@ -54,8 +60,12 @@ class CSVReader(BaseNode[Union[List[str], Dict[str, str]]]):
     def _handle_initial_state(self, state: Dict[str, Any]):
         """Restore reader state from checkpoint."""
         # Validate header compatibility
-        if (not self.has_header and self.HEADER_KEY in state) or (self.has_header and state[self.HEADER_KEY] is None):
-            raise ValueError(f"Check if has_header={self.has_header} matches the state header={state[self.HEADER_KEY]}")
+        if (not self.has_header and self.HEADER_KEY in state) or (
+            self.has_header and state[self.HEADER_KEY] is None
+        ):
+            raise ValueError(
+                f"Check if has_header={self.has_header} matches the state header={state[self.HEADER_KEY]}"
+            )
 
         self._header = state.get(self.HEADER_KEY)
         target_line_num = state[self.NUM_LINES_YIELDED]
@@ -63,7 +73,9 @@ class CSVReader(BaseNode[Union[List[str], Dict[str, str]]]):
         # Create appropriate reader
         if self.return_dict:
 
-            self._reader = csv.DictReader(self._file, delimiter=self.delimiter, fieldnames=self._header)
+            self._reader = csv.DictReader(
+                self._file, delimiter=self.delimiter, fieldnames=self._header
+            )
         else:
             self._reader = csv.reader(self._file, delimiter=self.delimiter)
         # Skip header if needed (applies only when file has header)
@@ -112,5 +124,5 @@ class CSVReader(BaseNode[Union[List[str], Dict[str, str]]]):
         }
 
     def close(self):
-        if self._file and not self._file.closed:
+        if self._file is not None and not self._file.closed:
             self._file.close()
