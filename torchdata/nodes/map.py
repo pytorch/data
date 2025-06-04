@@ -121,7 +121,7 @@ class _InlineMapperIter(Iterator[T]):
     def get_state(self) -> Dict[str, Any]:
         return {self.SOURCE_KEY: self.source.state_dict()}
 
-    def _shutdown(self):
+    def _shutdown(self, cancel_futures=False):
         pass
 
 
@@ -165,6 +165,11 @@ class _ParallelMapperIter(Iterator[T]):
 
         self._stop = threading.Event()
         self._mp_stop = mp_context.Event()
+
+        # This ensures that the stop events are set before the iterator is garbage collected.
+        # Theading's _register_atexit() are called before regular atexit handlers and
+        # before threads are joined.
+        threading._register_atexit(self._set_stop_events)  # type: ignore[attr-defined]
 
         self._steps_since_snapshot = 0
         fast_forward = 0
@@ -283,20 +288,37 @@ class _ParallelMapperIter(Iterator[T]):
             self._steps_since_snapshot = 0
 
     def __del__(self):
-        self._shutdown()
+        try:
+            self._shutdown()
+        except Exception:
+            pass
 
-    def _shutdown(self, blocking=True):
+    def _shutdown(self, cancel_futures=False):
         self._stop.set()
         self._mp_stop.set()
         if hasattr(self, "pool"):
-            if blocking:
-                self.pool.shutdown(wait=True)
+            if cancel_futures:
+                # Wait for all threads to finish before returning, but cancel any
+                # futures that are pending. This is used when calling _shutdown()
+                # from downstream shutdown()
+                self.pool.shutdown(wait=True, cancel_futures=True)
             else:
-                self.pool.shutdown(wait=False, cancel_futures=True)
+                # Wait for all threads to finish before returning.
+                # This is used when calling _shutdown() from __del__ or a reset()
+                self.pool.shutdown(wait=True)
         if hasattr(self, "_workers"):
             for t in self._workers:
                 if t.is_alive():
                     t.join(timeout=QUEUE_TIMEOUT * 5)
+
+    def _set_stop_events(self):
+        try:
+            if isinstance(self._in_q, queue.Queue):
+                with self._in_q.mutex:
+                    self._in_q.queue.clear()
+            self._stop.set()
+        except Exception:
+            pass
 
 
 class _ParallelMapperImpl(BaseNode[T]):
@@ -370,6 +392,13 @@ class _ParallelMapperImpl(BaseNode[T]):
 
     def get_state(self) -> Dict[str, Any]:
         return self._it.get_state()  # type: ignore[union-attr]
+
+    def shutdown(self):
+        if hasattr(self, "_it") and self._it is not None:
+            self._it._shutdown(cancel_futures=True)
+
+    def __del__(self):
+        self.shutdown()
 
 
 class ParallelMapper(BaseNode[T]):
@@ -461,6 +490,11 @@ class ParallelMapper(BaseNode[T]):
 
     def get_state(self) -> Dict[str, Any]:
         return {self.IT_STATE_KEY: self._it.state_dict()}  # type: ignore[union-attr]
+
+    def shutdown(self):
+        self._it.shutdown()
+        if hasattr(self.source, "shutdown"):
+            self.source.shutdown()
 
 
 _WorkerType = Callable[

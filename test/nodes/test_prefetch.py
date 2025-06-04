@@ -5,13 +5,12 @@
 # LICENSE file in the root directory of this source tree.
 
 import itertools
+from unittest import mock
 
 import torch
 from parameterized import parameterized
 from torch.testing._internal.common_utils import TestCase
-from torchdata.nodes.adapters import IterableWrapper
 from torchdata.nodes.batch import Batcher
-from torchdata.nodes.loader import Loader
 from torchdata.nodes.prefetch import Prefetcher
 
 from .utils import IterInitError, MockSource, run_test_save_load_state, StatefulRangeNode
@@ -50,3 +49,15 @@ class TestPrefetcher(TestCase):
         node = Batcher(src, batch_size=batch_size, drop_last=False)
         node = Prefetcher(node, prefetch_factor=8, snapshot_frequency=snapshot_frequency)
         run_test_save_load_state(self, node, midpoint)
+
+    def test_explicit_shutdown(self):
+        """Test that the explicit shutdown method properly shuts down the node."""
+        mock_source = mock.MagicMock()
+        mock_source.shutdown = mock.MagicMock()
+        node = Prefetcher(mock_source, prefetch_factor=2)
+        node.reset()
+        # Mock the _shutdown method of the iterator
+        with mock.patch.object(node._it, "_shutdown") as mock_shutdown:
+            node.shutdown()
+            mock_shutdown.assert_called_once()
+            mock_source.shutdown.assert_called_once()

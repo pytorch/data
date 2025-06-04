@@ -241,8 +241,8 @@ class TestMap(TestCase):
             # Verify that shutdown was called
             mock_shutdown.assert_called()
 
-    def test_thread_pool_executor_blocking_shutdown(self):
-        """Test that the ThreadPoolExecutor shutdown respects the blocking parameter."""
+    def test_thread_pool_executor_cancel_futures_shutdown(self):
+        """Test that the ThreadPoolExecutor shutdown respects the cancel_futures parameter."""
         src = MockSource(num_samples=10)
         node = ParallelMapper(
             src,
@@ -257,11 +257,10 @@ class TestMap(TestCase):
         for _ in range(5):
             next(node)
 
-        # Test blocking=True (default)
+        # Test cancel_futures=True
         with mock.patch("concurrent.futures.ThreadPoolExecutor.shutdown") as mock_shutdown:
-            parallel_mapper_iter._shutdown(blocking=True)
-            # Verify that shutdown was called with wait=True
-            mock_shutdown.assert_called_with(wait=True)
+            parallel_mapper_iter._shutdown(cancel_futures=True)
+            mock_shutdown.assert_called_with(wait=True, cancel_futures=True)
 
         node.reset()
         parallel_mapper_iter = node._it._it  # type: ignore
@@ -269,8 +268,49 @@ class TestMap(TestCase):
         for _ in range(5):
             next(node)
 
-        # Test blocking=False
+        # Test cancel_futures=False
         with mock.patch("concurrent.futures.ThreadPoolExecutor.shutdown") as mock_shutdown:
-            parallel_mapper_iter._shutdown(blocking=False)
-            # Verify that shutdown was called with wait=False and cancel_futures=True
-            mock_shutdown.assert_called_with(wait=False, cancel_futures=True)
+            parallel_mapper_iter._shutdown(cancel_futures=False)
+            mock_shutdown.assert_called_with(wait=True)
+
+    def test_explicit_shutdown_thread(self):
+        """Test that the explicit shutdown method properly shuts down the node."""
+        mock_source = mock.MagicMock()
+        mock_source.shutdown = mock.MagicMock()
+
+        node = ParallelMapper(
+            mock_source,
+            RandomSleepUdf(),
+            num_workers=2,
+            method="thread",
+        )
+
+        node.reset()
+
+        with mock.patch.object(node._it._it, "_shutdown") as mock_shutdown:
+            node.shutdown()
+            mock_shutdown.assert_called_once_with(cancel_futures=True)
+            mock_source.shutdown.assert_called_once()
+
+    def test_explicit_shutdown_process(self):
+        """Test that the explicit shutdown method properly shuts down the node with process method."""
+        multiprocessing_context = None if IS_WINDOWS else "forkserver"
+
+        mock_source = mock.MagicMock()
+        mock_source.shutdown = mock.MagicMock()
+
+        node = ParallelMapper(
+            mock_source,
+            RandomSleepUdf(),
+            num_workers=2,
+            method="process",
+            multiprocessing_context=multiprocessing_context,
+        )
+
+        node.reset()
+
+        # Mock the _shutdown method of the iterator
+        with mock.patch.object(node._it._it, "_shutdown") as mock_shutdown:
+            node.shutdown()
+            mock_shutdown.assert_called_once_with(cancel_futures=True)
+            mock_source.shutdown.assert_called_once()
