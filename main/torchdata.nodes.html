@@ -284,7 +284,7 @@
           <div class="pytorch-left-menu-search">
             
     <div class="version">
-      <a href='https://pytorch.org/data/versions.html'>main (0.12.0a0+c66155a ) &#x25BC</a>
+      <a href='https://pytorch.org/data/versions.html'>main (0.12.0a0+240d6f6 ) &#x25BC</a>
     </div>
     
 
@@ -466,6 +466,14 @@ Subclasses must call <code class="docutils literal notranslate"><span class="pre
 <dd class="field-odd"><p><strong>initial_state</strong> – Optional[dict] - a state dict to pass to the node. If None, reset to the beginning.</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.nodes.BaseNode.shutdown">
+<span class="sig-name descname"><span class="pre">shutdown</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.nodes.BaseNode.shutdown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shutdown the node, freeing any resources it may be holding on to.</p>
+<p>Shutting down should be take care of when the node is garbage collected, but it is recommended to call this explicitly
+when the node is no longer needed.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -971,6 +979,14 @@ Subclasses must call <code class="docutils literal notranslate"><span class="pre
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.nodes.ParallelMapper.shutdown">
+<span class="sig-name descname"><span class="pre">shutdown</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.nodes.ParallelMapper.shutdown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shutdown the node, freeing any resources it may be holding on to.</p>
+<p>Shutting down should be take care of when the node is garbage collected, but it is recommended to call this explicitly
+when the node is no longer needed.</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -1025,6 +1041,14 @@ Subclasses must call <code class="docutils literal notranslate"><span class="pre
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.nodes.PinMemory.shutdown">
+<span class="sig-name descname"><span class="pre">shutdown</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.nodes.PinMemory.shutdown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shutdown the node, freeing any resources it may be holding on to.</p>
+<p>Shutting down should be take care of when the node is garbage collected, but it is recommended to call this explicitly
+when the node is no longer needed.</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -1077,6 +1101,14 @@ Subclasses must call <code class="docutils literal notranslate"><span class="pre
 <dd class="field-odd"><p><strong>initial_state</strong> – Optional[dict] - a state dict to pass to the node. If None, reset to the beginning.</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="torchdata.nodes.Prefetcher.shutdown">
+<span class="sig-name descname"><span class="pre">shutdown</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#torchdata.nodes.Prefetcher.shutdown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shutdown the node, freeing any resources it may be holding on to.</p>
+<p>Shutting down should be take care of when the node is garbage collected, but it is recommended to call this explicitly
+when the node is no longer needed.</p>
 </dd></dl>
 
 </dd></dl>
