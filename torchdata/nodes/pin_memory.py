@@ -155,3 +155,9 @@ class PinMemory(BaseNode[T]):
 
     def get_state(self) -> Dict[str, Any]:
         return self._it.get_state()  # type: ignore[union-attr]
+
+    def shutdown(self):
+        if self._it is not None:
+            self._it._shutdown()
+        if hasattr(self.source, "shutdown"):
+            self.source.shutdown()

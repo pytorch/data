@@ -103,3 +103,11 @@ class BaseNode(Iterator[T]):
                     f"Failed to initialize after .reset(), did you call super().reset() in your .reset() method? {type(self)=}"
                 )
         return self.get_state()
+
+    def shutdown(self):
+        """Shutdown the node, freeing any resources it may be holding on to.
+
+        Shutting down should be take care of when the node is garbage collected, but it is recommended to call this explicitly
+        when the node is no longer needed.
+        """
+        pass

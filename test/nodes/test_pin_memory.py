@@ -6,6 +6,7 @@
 
 import itertools
 import unittest
+from unittest import mock
 
 import torch
 
@@ -77,3 +78,17 @@ class TestPinMemory(TestCase):
         node = Prefetcher(node, prefetch_factor=8)
 
         run_test_save_load_state(self, node, midpoint)
+
+    def test_explicit_shutdown(self):
+        """Test that the explicit shutdown method properly shuts down the node."""
+        mock_source = mock.MagicMock()
+        mock_source.shutdown = mock.MagicMock()
+        node = PinMemory(
+            mock_source,
+        )
+        node.reset()
+        # Mock the _shutdown method of the iterator
+        with mock.patch.object(node._it, "_shutdown") as mock_shutdown:
+            node.shutdown()
+            mock_shutdown.assert_called_once()
+            mock_source.shutdown.assert_called_once()
