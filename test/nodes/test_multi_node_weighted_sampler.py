@@ -110,6 +110,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             # Check that max items are taken from at least one dataset
             self.assertGreaterEqual(dataset_counts_in_results.count(self._num_samples), 1)
             node.reset()
+        node.shutdown()
 
     @parameterized.expand(range(10))
     def test_multi_node_weighted_sampler_all_dataset_exhausted(self, seed) -> None:
@@ -137,6 +138,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             # check that all datasets are exhausted
             self.assertEqual(sorted(set(datasets_in_results)), ["ds0", "ds1", "ds2", "ds3"])
             node.reset()
+        node.shutdown()
 
     @parameterized.expand(range(10))
     def test_multi_node_weighted_sampler_cycle_until_all_exhausted(self, seed) -> None:
@@ -156,6 +158,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             # check that all datasets are exhausted
             self.assertEqual(sorted(datasets_in_results), ["ds0", "ds1", "ds2", "ds3"])
             node.reset()
+        node.shutdown()
 
     @parameterized.expand(range(10))
     def test_multi_node_weighted_sampler_cycle_forever(self, seed) -> None:
@@ -219,6 +222,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             results = list(node)
             overall_results.append(results)
             node.reset()
+        node.shutdown()
 
         unique_results = []
         for results in overall_results:
@@ -240,6 +244,7 @@ class TestMultiNodeWeightedSampler(TestCase):
             results = list(node)
             overall_results.append(results)
             node.reset()
+        node.shutdown()
 
         unique_results = []
         for results in overall_results:
