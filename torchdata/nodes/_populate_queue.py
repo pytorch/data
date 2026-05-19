@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 import queue
 import threading
 from typing import Any, Dict, Optional, Union
@@ -75,7 +76,7 @@ def _populate_queue(
             yielded += 1
             snapshot = None
             if snapshot_frequency > 0 and yielded % snapshot_frequency == 0:
-                snapshot = source.state_dict()
+                snapshot = copy.deepcopy(source.state_dict())
             _put(item, block=False, snapshot=snapshot)
         except StopIteration as e:
             _put(e, block=False)
