@@ -61,7 +61,10 @@ def _populate_queue(
         assert (
             isinstance(snapshot_frequency, int) and snapshot_frequency >= 0
         ), f"snapshot_frequency must be non-negative integer! Got {snapshot_frequency}"
-        snapshot_store.append_initial_snapshot(snapshot=source.state_dict())
+        snapshot = source.state_dict()
+        if snapshot is not None:
+            snapshot = copy.deepcopy(snapshot)
+        snapshot_store.append_initial_snapshot(snapshot=snapshot)
     except Exception:
         e = StartupExceptionWrapper(where="in _populate_queue startup for device")
         snapshot_store.append_initial_snapshot(snapshot=e)
