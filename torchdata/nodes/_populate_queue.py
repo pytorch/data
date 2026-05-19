@@ -76,7 +76,9 @@ def _populate_queue(
             yielded += 1
             snapshot = None
             if snapshot_frequency > 0 and yielded % snapshot_frequency == 0:
-                snapshot = copy.deepcopy(source.state_dict())
+                snapshot = source.state_dict()
+                if snapshot is not None:
+                    snapshot = copy.deepcopy(snapshot)
             _put(item, block=False, snapshot=snapshot)
         except StopIteration as e:
             _put(e, block=False)
