@@ -64,3 +64,15 @@ class TestLoader(TestCase):
         restored.load_state_dict(state_dict)
 
         self.assertEqual(list(restored), [None, 2])
+
+    def test_loader_reset_clears_cached_state_dict(self) -> None:
+        checkpoint_source = Loader(IterableWrapper([0, 1, 2]))
+        self.assertEqual(next(iter(checkpoint_source)), 0)
+        state_dict = checkpoint_source.state_dict()
+
+        loader = Loader(IterableWrapper([0, 1, 2]))
+        self.assertTrue(iter(loader).has_next())
+        loader.load_state_dict(state_dict)
+        iter(loader)
+
+        self.assertEqual(loader.state_dict(), state_dict)

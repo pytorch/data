@@ -112,6 +112,7 @@ class LoaderIterator(BaseNode[T]):
             self._num_yielded = 0
         self._cached_item = None
         self._has_cached_item = False
+        self._cached_state_dict = None
 
     def has_next(self) -> bool:
         if not self._has_cached_item:
