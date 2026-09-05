@@ -1,0 +1,230 @@
+{
+  "benchmark": {
+    "batch_size": 64,
+    "cpu": "AMD EPYC 9D64",
+    "cuda_available": false,
+    "dataset": "EuroSAT",
+    "dataset_size": 27000,
+    "first_batch_digest": "6c1cdcb86236df63c1672d99d84e51465be61e04ec51a6d54e1c930eee9b57c7",
+    "logical_cpu_count": 176,
+    "multiprocessing_context": "spawn",
+    "physical_cpu_count": 88,
+    "system_memory_gib": 251,
+    "transform": "decode_image, ToDtype(float32), Resize(256), CenterCrop(224), Normalize(ImageNet)",
+    "trial_isolation": "one configuration per fresh Python process"
+  },
+  "configurations": [
+    {
+      "dataset_copies": 1,
+      "label": "4 workers",
+      "max_batches": 20,
+      "num_workers": 4,
+      "parallel": [
+        {
+          "iterator_creation_s": 6.459528254,
+          "memory_increase_mb": 2627.888671875,
+          "steady_state_samples_per_s": 2043.44063383,
+          "time_to_first_batch_s": 6.718150481
+        },
+        {
+          "iterator_creation_s": 6.53122743301,
+          "memory_increase_mb": 2610.212890625,
+          "steady_state_samples_per_s": 2009.87313824,
+          "time_to_first_batch_s": 6.72102000692
+        },
+        {
+          "iterator_creation_s": 6.18086624308,
+          "memory_increase_mb": 2594.0537109375,
+          "steady_state_samples_per_s": 2024.85446595,
+          "time_to_first_batch_s": 6.36092682101
+        }
+      ],
+      "parallelism": 4,
+      "serial": [
+        {
+          "iterator_creation_s": 24.3089655719,
+          "memory_increase_mb": 2597.0390625,
+          "steady_state_samples_per_s": 2043.02148987,
+          "time_to_first_batch_s": 24.5108624339
+        },
+        {
+          "iterator_creation_s": 24.571293464,
+          "memory_increase_mb": 2547.9501953125,
+          "steady_state_samples_per_s": 2042.68846991,
+          "time_to_first_batch_s": 24.76401586
+        },
+        {
+          "iterator_creation_s": 24.117288638,
+          "memory_increase_mb": 2589.2646484375,
+          "steady_state_samples_per_s": 1759.67751352,
+          "time_to_first_batch_s": 24.309801223
+        }
+      ]
+    },
+    {
+      "dataset_copies": 1,
+      "label": "8 workers",
+      "max_batches": 100,
+      "num_workers": 8,
+      "parallel": [
+        {
+          "iterator_creation_s": 6.90832040308,
+          "memory_increase_mb": 5013.68359375,
+          "steady_state_samples_per_s": 1674.70627128,
+          "time_to_first_batch_s": 7.17180871707
+        },
+        {
+          "iterator_creation_s": 6.74433533696,
+          "memory_increase_mb": 4982.181640625,
+          "steady_state_samples_per_s": 1630.45889078,
+          "time_to_first_batch_s": 7.05485135398
+        },
+        {
+          "iterator_creation_s": 6.84226362407,
+          "memory_increase_mb": 5014.52734375,
+          "steady_state_samples_per_s": 1642.97031959,
+          "time_to_first_batch_s": 7.09947788506
+        },
+        {
+          "iterator_creation_s": 6.55438493704,
+          "memory_increase_mb": 4987.1103515625,
+          "steady_state_samples_per_s": 1683.96028454,
+          "time_to_first_batch_s": 6.89835628204
+        },
+        {
+          "iterator_creation_s": 6.83723487507,
+          "memory_increase_mb": 4996.3017578125,
+          "steady_state_samples_per_s": 1672.4376235,
+          "time_to_first_batch_s": 7.13533435308
+        }
+      ],
+      "parallelism": 8,
+      "serial": [
+        {
+          "iterator_creation_s": 48.510312364,
+          "memory_increase_mb": 4854.34765625,
+          "steady_state_samples_per_s": 1704.1448087,
+          "time_to_first_batch_s": 48.6973868989
+        },
+        {
+          "iterator_creation_s": 48.434756214,
+          "memory_increase_mb": 4883.0322265625,
+          "steady_state_samples_per_s": 1706.35814238,
+          "time_to_first_batch_s": 48.622596637
+        },
+        {
+          "iterator_creation_s": 47.817945773,
+          "memory_increase_mb": 4893.74609375,
+          "steady_state_samples_per_s": 1693.62386606,
+          "time_to_first_batch_s": 48.008408914
+        },
+        {
+          "iterator_creation_s": 49.423561122,
+          "memory_increase_mb": 4884.9033203125,
+          "steady_state_samples_per_s": 1651.58537142,
+          "time_to_first_batch_s": 49.606383073
+        },
+        {
+          "iterator_creation_s": 47.981370407,
+          "memory_increase_mb": 4890.6376953125,
+          "steady_state_samples_per_s": 1690.85020114,
+          "time_to_first_batch_s": 48.1675108051
+        }
+      ]
+    },
+    {
+      "dataset_copies": 1,
+      "label": "16 workers",
+      "max_batches": 20,
+      "num_workers": 16,
+      "parallel": [
+        {
+          "iterator_creation_s": 7.205148713,
+          "memory_increase_mb": 9656.4365234375,
+          "steady_state_samples_per_s": 990.232269872,
+          "time_to_first_batch_s": 7.399865099
+        },
+        {
+          "iterator_creation_s": 7.49139519408,
+          "memory_increase_mb": 9638.2900390625,
+          "steady_state_samples_per_s": 995.042869866,
+          "time_to_first_batch_s": 7.78282247309
+        },
+        {
+          "iterator_creation_s": 6.86259846296,
+          "memory_increase_mb": 9636.9599609375,
+          "steady_state_samples_per_s": 1011.63707007,
+          "time_to_first_batch_s": 7.086684337
+        }
+      ],
+      "parallelism": 16,
+      "serial": [
+        {
+          "iterator_creation_s": 96.110003152,
+          "memory_increase_mb": 9405.8916015625,
+          "steady_state_samples_per_s": 969.294566427,
+          "time_to_first_batch_s": 96.314284798
+        },
+        {
+          "iterator_creation_s": 96.4114377931,
+          "memory_increase_mb": 9330.798828125,
+          "steady_state_samples_per_s": 997.786285612,
+          "time_to_first_batch_s": 96.68976996
+        },
+        {
+          "iterator_creation_s": 96.4198618779,
+          "memory_increase_mb": 9316.13671875,
+          "steady_state_samples_per_s": 999.792104869,
+          "time_to_first_batch_s": 96.781992154
+        }
+      ]
+    },
+    {
+      "dataset_copies": 8,
+      "label": "8 workers\n8x EuroSAT",
+      "max_batches": 20,
+      "num_workers": 8,
+      "parallel": [
+        {
+          "iterator_creation_s": 6.83163690194,
+          "memory_increase_mb": 5113.591796875,
+          "steady_state_samples_per_s": 1571.10079774,
+          "time_to_first_batch_s": 7.15176855493
+        },
+        {
+          "iterator_creation_s": 7.16265605006,
+          "memory_increase_mb": 5117.052734375,
+          "steady_state_samples_per_s": 1601.61151006,
+          "time_to_first_batch_s": 7.47985041898
+        },
+        {
+          "iterator_creation_s": 7.05863357102,
+          "memory_increase_mb": 5131.716796875,
+          "steady_state_samples_per_s": 1607.90439666,
+          "time_to_first_batch_s": 7.40038315696
+        }
+      ],
+      "parallelism": 8,
+      "serial": [
+        {
+          "iterator_creation_s": 48.251543291,
+          "memory_increase_mb": 4952.1220703125,
+          "steady_state_samples_per_s": 1585.99550301,
+          "time_to_first_batch_s": 48.508538962
+        },
+        {
+          "iterator_creation_s": 48.555048406,
+          "memory_increase_mb": 4896.95703125,
+          "steady_state_samples_per_s": 1604.94394768,
+          "time_to_first_batch_s": 48.805435349
+        },
+        {
+          "iterator_creation_s": 48.8287124471,
+          "memory_increase_mb": 4912.3212890625,
+          "steady_state_samples_per_s": 1585.82048838,
+          "time_to_first_batch_s": 49.029678998
+        }
+      ]
+    }
+  ]
+}
